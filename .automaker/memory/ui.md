@@ -66,3 +66,81 @@ usageStats:
 - **Rejected:** Defaulting to 'docs' would increase template adoption but breaks expectation for blank projects. Required radio selection increases friction for blank-project path.
 - **Trade-offs:** Simpler UX (toggle) vs. clearer multi-select semantics (checkboxes). Optional path vs. higher template adoption. Fewer clicks to skip templates vs. explicit mutual exclusivity.
 - **Breaking if changed:** If logic later assumes a starter kit is always present, optional starterKit field becomes a problem. Schema migrations needed if making selection required.
+
+#### [Pattern] Design 6 CSS custom properties (--background, --surface, --border, --primary, --primary-foreground, --foreground) as universal rebrand mechanism (2026-03-15)
+- **Problem solved:** Need to define theming system that allows entire starter kit to be recolored by changing only a few values, matching existing landing-page pattern.
+- **Why this works:** Minimal surface area for theme customization. 6 values directly map to all UI needs (containers, surfaces, borders, brand color, text on brand, text). Mirrors landing-page `global.css` convention in codebase.
+- **Trade-offs:** Simplicity and discoverability for theme authors vs granularity. New colors beyond the 6 require additional CSS variables. Enforces design discipline.
+
+### Target React 19 directly in starter kit (@types/react@^19) and drop ForwardRefExoticComponent workaround used in monorepo atoms (2026-03-15)
+- **Context:** Monorepo main package supports React 18+19 and needs compatibility layer. Starter kit is greenfield, can choose single version.
+- **Why:** React 19 is the current version. Dropping the ForwardRefExoticComponent type cast simplifies code and removes legacy compatibility overhead. Starter kit teaches modern React patterns.
+- **Rejected:** Support React 18 in starter kit (unnecessary complexity for learning template); keep compatibility cast (teaches outdated workarounds)
+- **Trade-offs:** Simpler, cleaner code vs losing React 18 support. Anyone using starter kit with React 18 would hit type errors.
+- **Breaking if changed:** Users trying to use starter kit atoms with React 18 lose type safety. Changing to React 18 support requires re-adding ForwardRefExoticComponent cast to Popover.
+
+### Two-word chunking chosen over per-word or sentence-level chunking for streaming animation (2026-03-15)
+- **Context:** Balancing animation frequency with text readability during streaming responses
+- **Why:** Per-word animation is perceptually too fast and jarring; sentence-level loses the fade-in effect over long text; 2-word provides consistent visual rhythm without overwhelming the reader
+- **Rejected:** Per-word chunking (overwhelming visual flicker); sentence-level (animation effect too sparse); variable-length intelligent chunking (complexity vs marginal UX gain)
+- **Trade-offs:** Simple, predictable animation pacing; sacrifices ability to respect semantic boundaries (punctuation, clause structure); any chunk size change dramatically alters perceived animation speed
+- **Breaking if changed:** Changing chunk size from 2 to 1 or 3+ words fundamentally changes the visual effect — too small becomes jarring, too large feels choppy and less responsive
+
+#### [Gotcha] Citations and markdown features are completely disabled during streaming; only plain text chunks animate (2026-03-15)
+- **Situation:** StreamingTextChunks component accepts citations but ignores them; only ChatMessageMarkdown handles them after streaming completes
+- **Root cause:** Bypassing the full markdown renderer during streaming reduces overhead and complexity of animated rendering; markdown processing happens in a second pass after streaming ends
+- **How to avoid:** Faster streaming render with pure CSS animation; users don't see citations or markdown formatting until the final prose pass completes
+
+#### [Gotcha] Trailing space injected into every chunk via `+ ' '` could create unexpected whitespace at text end (2026-03-15)
+- **Situation:** chunkString function adds space to each chunk so words don't run together when rendered as adjacent spans
+- **Root cause:** Prevents 'HelloworldTest' by ensuring 'Hello world ' and 'Test ' render with internal spacing
+- **How to avoid:** Simple, guaranteed spacing; creates extra space at the very end of prose (after last chunk) which might differ visually from non-streamed text
+
+#### [Gotcha] Animation duration (750ms) is hardcoded in CSS @keyframes and cannot be adjusted per-chunk based on content length (2026-03-15)
+- **Situation:** All chunks fade in over fixed 750ms regardless of word count or text complexity
+- **Root cause:** CSS @keyframes requires static duration; decoupled from JavaScript chunking logic which could compute ideal duration per chunk
+- **How to avoid:** Simple CSS; predictable animation across all messages; cannot create 'reading pace' that adapts to text length or complexity
+
+### Root layout (__root.tsx) uses inline styles `style={{}}` for sidebar instead of Tailwind classes, despite Tailwind being configured in Vite. (2026-03-15)
+- **Context:** Root layout with navigation is foundational; must render correctly before any CSS framework code loads
+- **Why:** Root layout renders before Tailwind CSS bundle loads in dev/prod. Using Tailwind classes creates bootstrap dependency: if CSS fails to load, sidebar nav breaks. Inline styles guarantee rendering regardless of CSS loading state. Once child routes mount, they use Tailwind normally.
+- **Rejected:** Tailwind classes at root level create invisible failure mode; CSS-in-JS utilities (styled-components, etc.) add unnecessary bundle size for static root layout
+- **Trade-offs:** Root layout less maintainable long-term (inline styles vs classes); small performance cost for static inline styles; decouples foundational UI from CSS framework; child routes keep full Tailwind access
+- **Breaking if changed:** Switching root to Tailwind classes introduces CSS loading race condition; if Tailwind CSS chunk fails or is slow, entire app appears broken on first load
+
+#### [Gotcha] WeatherCard renderer registration via side-effect import to global toolResultRegistry creates implicit coupling (2026-03-15)
+- **Situation:** Custom tool result renderers are registered dynamically. WeatherCard imports and registers itself on module load.
+- **Root cause:** Dynamic registry approach allows clean composition without explicit mapping file. Renderers declare their own existence.
+- **How to avoid:** Gains: clean separation, new renderers added without touching core. Loses: implicit dependency, if import is removed the renderer silently vanishes with no error or warning.
+
+#### [Pattern] Use a sidebar mode toggle (palette ↔ property inspector) instead of two fixed panels to conserve canvas width (2026-03-15)
+- **Problem solved:** The builder needs both a node palette for drag-drop and a property inspector for editing. Two simultaneous panels halve available canvas width.
+- **Why this works:** The palette and inspector are mutually exclusive by workflow: palette is for 'what to add', inspector is for 'what's selected'. A toggle keeps the UI compact. Users rarely need both visible simultaneously.
+- **Trade-offs:** Compact layout vs. higher interaction cost — users must learn to deselect nodes to return to palette mode. Discovery of available node types is less obvious.
+
+#### [Pattern] Three-zone split layout: sidebar (template list) + top editor + bottom streaming test chat in single view (2026-03-15)
+- **Problem solved:** Prompt development requires quickly iterating between editing and testing without tab switching
+- **Why this works:** Collocates input (editor), validation (streaming test), and discovery (sidebar) to minimize context switching during iterative prompt refinement
+- **Trade-offs:** Gained: tight feedback loop for prompt development. Cost: vertical space contention on smaller screens; test area state not persistent across navigation
+
+### Include token count estimate in editor toolbar; requires LLM awareness in UI (2026-03-15)
+- **Context:** Prompt developers need to know token usage before sending to model API
+- **Why:** Token limits are hard constraints in LLM systems. Inline estimation prevents user frustration from silent truncation or rejection.
+- **Rejected:** Show token count only after sending to API (too late for iteration); no token count (user discovers limit via error)
+- **Trade-offs:** Gained: early feedback, prevents wasted API calls. Cost: toolbar needs token estimation logic; estimate may drift from actual tokenizer
+- **Breaking if changed:** Removing token count removes ability to pre-validate prompt size; increases failed API calls from oversized prompts
+
+#### [Pattern] Starter templates are classified by category ('docs', 'portfolio', 'landing-page', 'ai') to organize them in the UI picker. Category is metadata on each template entry. (2026-03-15)
+- **Problem solved:** AI Agent App template added with category: 'ai' to group it with other AI/ML focused starters.
+- **Why this works:** Allows UI to cluster related templates and help users discover templates by use case/domain. 'ai' category signals this is for AI applications.
+- **Trade-offs:** Adds metadata field to every template definition, but enables discovery; forces template owners to make explicit category choice
+
+#### [Pattern] HTML generator selects semantic elements (`<button>`, `<nav>`, `<h1>–<h6>`, `<label>`, `<article>`) via name + type heuristics, not explicit element annotation in design doc. (2026-03-15)
+- **Problem solved:** Generating accessible, semantic HTML without requiring designers to specify element types
+- **Why this works:** Reduces design document complexity while producing valid semantic HTML. Reasonable defaults improve usability; heuristics can be refined without changing design format.
+- **Trade-offs:** Heuristics can mis-classify (e.g., 'Header' might be a container, not `<h1>`), but sensible defaults outweigh configuration burden for most use cases
+
+#### [Pattern] Zero-config story discovery via import.meta.glob + glob parsing at runtime, rather than static story registry or manifest file (2026-03-15)
+- **Problem solved:** Ladle and similar tools auto-discover stories. For a self-contained template, needed a discovery mechanism that requires no configuration and survives copy-paste into different projects.
+- **Why this works:** Dynamic discovery via glob pattern means adding a new .stories.tsx file automatically makes it visible in the sidebar without touching config, tsconfig, or any build script. Maximizes developer velocity for rapidly prototyping components.
+- **Trade-offs:** Easier: drop-and-go file creation, zero config changes. Harder: relies on naming convention (*.stories.tsx) being enforced by team discipline; glob pattern is tightly coupled to file structure.

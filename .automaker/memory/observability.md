@@ -5,9 +5,9 @@ relevantTo: [observability]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 26
-  referenced: 3
-  successfulFeatures: 3
+  loaded: 29
+  referenced: 6
+  successfulFeatures: 6
 ---
 <!-- domain: Observability & Tracing | Langfuse tracing, cost tracking, performance measurement -->
 
@@ -49,3 +49,8 @@ usageStats:
 - **Rejected:** Logging only a counter of unclassified failures (would require manual investigation). Logging the entire reason string unbounded (could leak secrets or create excessive log volume).
 - **Trade-offs:** Slightly more log volume (bounded by 200 char limit) vs significant improvement in debuggability and pattern discovery velocity.
 - **Breaking if changed:** If raw reason text is removed, operators lose the ability to spot new patterns from production behavior.
+
+#### [Pattern] Tracing uses automatic upgrade path: write local JSON traces by default, upgrade to Langfuse via environment variables (LANGFUSE_PUBLIC_KEY + LANGFUSE_SECRET_KEY) with zero code changes. (2026-03-15)
+- **Problem solved:** Supporting both development (zero-config local tracing) and production (external observability) from same codebase
+- **Why this works:** Environment variable detection in createTracingConfig() branch logic lets both modes coexist. Dev gets instant feedback (local .traces/ files), production gets external tracing, same code path handles both. No if-statements in application code; no conditional imports; single source of truth.
+- **Trade-offs:** Simpler than feature flags, but requires knowing about env vars (not discoverable from code)

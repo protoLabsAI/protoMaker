@@ -235,3 +235,15 @@ usageStats:
 - **Rejected:** Keeping void: Hides errors entirely. Using await: Would block event handler. Using Promise.resolve().then(): Verbose and less idiomatic than .catch().
 - **Trade-offs:** 3 extra lines of code; gains observability into async failures without changing execution semantics (still non-blocking).
 - **Breaking if changed:** If .catch() is removed, unhandled rejections from stopFeature will silently fail and not be logged, making it hard to debug feature shutdown issues.
+
+### Zod v3 (via zod-to-json-schema library) and Zod v4 (native .toJSONSchema()) dual support in toMCPTool adapter; checks for .toJSONSchema() first, falls back to zod-to-json-schema (2026-03-15)
+- **Context:** Zod v4 introduced native .toJSONSchema() method; existing codebases use v3 with zod-to-json-schema; starter kit users may have either version installed
+- **Why:** Smooth upgrade path for users migrating from v3 to v4. Doesn't force version lock; enables both old and new patterns. If user has v4, native method is faster (no external library). If v3, library handles conversion.
+- **Rejected:** Pick one version only (either require v4 or stick with v3) — forces users to upgrade or downgrade; blocks smooth migration
+- **Trade-offs:** Adapter code more complex (version detection logic). Slight runtime overhead checking method presence. Benefit: maximum compatibility, users not blocked by version mismatch, graceful degradation.
+- **Breaking if changed:** If removed from adapter, users on v3 can't generate MCP schemas. If removed v4 check, users on v4 still pull zod-to-json-schema even though native method available.
+
+#### [Pattern] Per-node OTel span wrapping with flow-node:{name} spans provides granular observability of individual node execution, latency, and errors without wrapping the entire graph in a single span. (2026-03-15)
+- **Problem solved:** GraphBuilder wraps each node execution with OTel tracing to monitor node-level performance and errors.
+- **Why this works:** Granular spans identify slow or failing nodes quickly. Spans are named with node identity (flow-node:{name}) for easy filtering. Per-node context enables better debugging of complex flows.
+- **Trade-offs:** More spans increase Langfuse tracing costs vs better visibility into node behavior. Developers pay for granularity.

@@ -5,9 +5,9 @@ relevantTo: [documentation]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 375
-  referenced: 92
-  successfulFeatures: 92
+  loaded: 418
+  referenced: 122
+  successfulFeatures: 122
 ---
 <!-- domain: Documentation | Docs standards, structure, maintenance patterns -->
 
@@ -56,3 +56,18 @@ usageStats:
 - **Rejected:** A single comprehensive page would have higher coupling — changes to one layer would require updating the whole page. Separate pages by concern allow independent evolution.
 - **Trade-offs:** Multiple smaller pages (modular, easier to update independently, clearer audience separation) vs fewer larger pages (complete picture in one place, less navigation). Cross-linking between pages mitigates navigation friction.
 - **Breaking if changed:** If add-a-starter.md is removed, contributors won't have guidance on registration paths and will likely make incorrect decisions (e.g., trying to scaffold a clone kit or vice versa). Architecture.md removal breaks understanding of the internal flow. The modular structure means each page is essential to different stakeholders.
+
+#### [Pattern] Bilingual cross-linking strategy: inline docs links throughout sections PLUS centralized documentation table at end (2026-03-15)
+- **Problem solved:** Starter template README needs to serve two audiences: sequential learners (who discover inline links while reading a section) and reference-seeking users (who scan the full docs inventory)
+- **Why this works:** Inline links provide just-in-time context; centralized table prevents documentation discoverability gaps where users don't realize features exist
+- **Trade-offs:** Makes README slightly longer, but dramatically improves user onboarding by meeting both learning styles
+
+#### [Pattern] Concrete example-driven feature discovery: 'What can I build?' section with six real-world project types instead of abstract feature list (2026-03-15)
+- **Problem solved:** Starter template users need to understand what's possible, but abstract feature lists (e.g., 'LangGraph support', 'MCP integration') don't translate to mental models
+- **Why this works:** Concrete use cases (customer support bot, code review agent, research assistant) trigger pattern-matching in users' heads: 'Oh, I could build X'
+- **Trade-offs:** Makes README longer but converts passive feature scanning into active 'I could build that' moments
+
+#### [Pattern] Turnkey copy-paste configuration snippets for multiple integration points (Claude Code, Claude Desktop, Docker, environment setup) (2026-03-15)
+- **Problem solved:** Integration friction is high when users must translate generic instructions to their specific tools/environments
+- **Why this works:** Exact, copy-paste examples remove translation burden — users can ctrl-c/ctrl-v instead of interpreting pseudocode
+- **Trade-offs:** More verbose documentation but dramatically reduces setup friction and support questions

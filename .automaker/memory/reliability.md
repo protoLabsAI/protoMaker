@@ -5,9 +5,9 @@ relevantTo: [reliability]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 25
-  referenced: 10
-  successfulFeatures: 10
+  loaded: 26
+  referenced: 11
+  successfulFeatures: 11
 ---
 <!-- domain: Reliability | Retry logic, error recovery, resilience patterns -->
 
