@@ -34,6 +34,8 @@ import {
 } from 'ai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { z } from 'zod';
+import { traceStore } from '../tracing/trace-store.js';
+import { buildTrace, type StepData } from '../tracing/build-trace.js';
 
 const router = Router();
 
@@ -84,6 +86,10 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
     apiKey: process.env['ANTHROPIC_API_KEY'],
   });
 
+  // Trace bookkeeping — assign a unique ID and record the start time
+  const traceId = crypto.randomUUID();
+  const traceStartedAt = new Date();
+
   // Build and pipe the UI message stream to the HTTP response.
   // createUIMessageStream wraps the async generator and handles backpressure;
   // pipeUIMessageStreamToResponse sets the correct headers and flushes to the client.
@@ -105,6 +111,36 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
           // stopWhen: stepCountIs(n) stops after n model steps, preventing
           // runaway tool-call chains.  Clients may pass maxSteps to override.
           stopWhen: stepCountIs(Math.max(1, maxSteps)),
+
+          // ── Observability: capture trace on completion ────────────────────
+          onFinish: ({ steps }) => {
+            const traceEndedAt = new Date();
+            const stepData: StepData[] = steps.map((s) => ({
+              text: s.text,
+              toolCalls: (s.toolCalls ?? []).map((tc) => ({
+                toolCallId: tc.toolCallId,
+                toolName: tc.toolName,
+                input: tc.input,
+              })),
+              toolResults: (s.toolResults ?? []).map((tr) => ({
+                toolCallId: tr.toolCallId,
+                toolName: tr.toolName,
+                result: tr.output,
+              })),
+              usage: {
+                inputTokens: s.usage?.inputTokens,
+                outputTokens: s.usage?.outputTokens,
+              },
+            }));
+            const trace = buildTrace(
+              traceId,
+              resolvedModelId,
+              traceStartedAt,
+              traceEndedAt,
+              stepData,
+            );
+            traceStore.add(trace);
+          },
         });
 
         // Merge the streamText events (text deltas, tool calls, step

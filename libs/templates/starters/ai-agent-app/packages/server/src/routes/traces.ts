@@ -1,68 +1,31 @@
 /**
- * GET /api/traces — trace viewer data endpoint.
+ * GET /api/traces       → list of all stored traces (newest first)
+ * GET /api/traces/:id   → single trace by ID
  *
- * Returns all trace records written to the `.traces/` directory by
- * `FileTracer`.  Useful for a local trace viewer or debugging dashboard.
- *
- * ## Response
- * ```json
- * {
- *   "traces": [ { "traceId": "…", "name": "chat", "model": "…", … } ],
- *   "count": 3
- * }
- * ```
- *
- * ## Configuration
- * Set the `TRACES_DIR` environment variable to change the directory.
- * Defaults to `.traces` relative to `process.cwd()`.
- *
- * ## Mount
- * ```ts
- * import { tracesHandler } from './routes/traces.js';
- * app.get('/api/traces', tracesHandler);
- * ```
+ * Traces are populated by the POST /api/chat handler via the onFinish callback.
+ * Data is stored in-memory; restart the server to clear it.
  */
 
-import { readdir, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import type { Request, Response } from 'express';
+import { Router, type Request, type Response } from 'express';
+import { traceStore } from '../tracing/trace-store.js';
 
-const TRACES_DIR = process.env['TRACES_DIR'] ?? join(process.cwd(), '.traces');
+const router = Router();
 
-/**
- * Express handler — reads all `trace-*.json` files and returns them as an
- * array, sorted newest-first (by filename, which includes a UUID whose
- * creation order roughly matches insertion order via the FileTracer naming
- * convention `trace-<traceId>.json`).
- */
-export async function tracesHandler(_req: Request, res: Response): Promise<void> {
-  let files: string[];
+// ── GET / ─────────────────────────────────────────────────────────────────────
 
-  try {
-    files = await readdir(TRACES_DIR);
-  } catch {
-    // Directory doesn't exist yet — no traces written
-    res.json({ traces: [], count: 0 });
+router.get('/', (_req: Request, res: Response): void => {
+  res.json(traceStore.list());
+});
+
+// ── GET /:id ──────────────────────────────────────────────────────────────────
+
+router.get('/:id', (req: Request, res: Response): void => {
+  const trace = traceStore.get(String(req.params['id'] ?? ''));
+  if (!trace) {
+    res.status(404).json({ error: 'Trace not found' });
     return;
   }
+  res.json(trace);
+});
 
-  const jsonFiles = files
-    .filter((f) => f.startsWith('trace-') && f.endsWith('.json'))
-    .sort()
-    .reverse();
-
-  const results = await Promise.all(
-    jsonFiles.map(async (file) => {
-      try {
-        const content = await readFile(join(TRACES_DIR, file), 'utf-8');
-        return JSON.parse(content) as unknown;
-      } catch {
-        return null;
-      }
-    })
-  );
-
-  const traces = results.filter(Boolean);
-
-  res.json({ traces, count: traces.length });
-}
+export default router;
