@@ -137,8 +137,21 @@ export default function DesignRoute() {
     if (cached) return cached;
 
     try {
-      // Cast pen types to codegen's structural types
-      const cDoc = doc as unknown as CodegenDoc;
+      // Bridge pen parser's Record<string, PenVariable> to codegen's PenVariable[]
+      const varsArray = doc.variables
+        ? Object.entries(doc.variables).map(([name, v]) => {
+            const penVar = v as unknown as { type: string; value: unknown };
+            return {
+              id: name,
+              name,
+              type: penVar.type ?? 'string',
+              values: typeof penVar.value === 'object' && penVar.value !== null && !Array.isArray(penVar.value)
+                ? (penVar.value as Record<string, unknown>)
+                : { default: penVar.value },
+            };
+          })
+        : [];
+      const cDoc = { ...doc, variables: varsArray } as unknown as CodegenDoc;
       const cFrame = selectedFrame as unknown as CodegenFrame;
 
       const reactFile: GeneratedFile = generateComponent(cFrame, cDoc);
