@@ -402,3 +402,20 @@ usageStats:
 - **Problem solved:** Agent tools must reason about actual visual properties; unresolved CSS variables are opaque to contrast calculation
 - **Why this works:** WCAG contrast is calculated on resolved colors; agent must verify that variable-based color pairs meet standards when resolved at runtime
 - **Trade-offs:** Requires maintaining token map in tool memory but enables agent to catch contrast failures that only appear in resolved theme contexts
+
+#### [Pattern] Category auto-inference from component name using regex patterns (e.g., Button→atom, CardFooter→molecule, PageLayout→page) with explicit override option (2026-03-15)
+- **Problem solved:** populateFromGenerated() needs to infer atomic category for auto-registered components without caller specifying it
+- **Why this works:** Reduces boilerplate in bulk registration (codegen workflow). Naming conventions already encode intent; reuse that signal.
+- **Trade-offs:** Convenience in 80% case vs maintenance burden if naming conventions drift. Must document inference rules as first-class constraints.
+
+### Duplicate registration silently returns false/skipped rather than throwing error (2026-03-15)
+- **Context:** register() and registerMany() APIs need to handle re-registration scenarios (e.g., loading multiple config files, retry workflows)
+- **Why:** Makes bulk operations idempotent. Caller can safely merge multiple component sources without guarding against duplicates.
+- **Rejected:** Throw on duplicate (defensive but fails entire batch operation), or overwrite silently (data loss risk)
+- **Trade-offs:** Idempotent and composable vs obscures intent—caller must actively check return value to know if registration succeeded
+- **Breaking if changed:** Callers expecting exceptions for duplicates will not detect failed registrations. Requires explicit `if (!added)` checks in production code.
+
+#### [Gotcha] Tag search uses AND logic (component must have ALL specified tags), not OR (2026-03-15)
+- **Situation:** search({ tags: ['interactive', 'navigation'] }) filters for components tagged with both, not either
+- **Root cause:** Enables precise multi-attribute filtering for specific component combinations (e.g., interactive widgets + navigation use only)
+- **How to avoid:** More expressive queries but counter-intuitive—most developers expect OR by default

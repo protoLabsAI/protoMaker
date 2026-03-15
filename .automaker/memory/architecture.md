@@ -6,8 +6,8 @@ importance: 0.9
 relatedFiles: []
 usageStats:
   loaded: 549
-  referenced: 133
-  successfulFeatures: 133
+  referenced: 134
+  successfulFeatures: 134
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -1713,3 +1713,22 @@ usageStats:
 - **Rejected:** Monolithic codec (harder to test, bug in one stage couples to others). Two-stage (ComponentDef ↔ TSX directly, loses intermediate representation for debugging).
 - **Trade-offs:** More files, more boilerplate (3 modules instead of 1). Better testability: can validate each stage independently. Can use XCL as intermediate for debugging, inspection, caching.
 - **Breaking if changed:** Merging stages → lose ability to test serialization/deserialization independently from codegen. Bugs in one stage pollute test signal in others.
+
+### Zero-dependency regex-based TypeScript source parsing instead of importing parser library (ts-morph, @typescript/compiler-api, etc.) (2026-03-15)
+- **Context:** schema-generator.ts extracts interface definitions and prop metadata from raw TSX source
+- **Why:** Maintains template package zero-dependency principle (consistent with codegen, pen, tokens packages). Avoids 50+ transitive deps that would bloat template size.
+- **Rejected:** Import TypeScript compiler or Babel parser for AST-based extraction (more robust but adds complexity/size)
+- **Trade-offs:** Faster bootstrap + smaller bundle vs fragile interface extraction that requires strict formatting (interface <Name>Props { ... } pattern)
+- **Breaking if changed:** If developers use non-standard interface syntax or variable-width spacing, extraction fails silently. Forces naming discipline on all components.
+
+#### [Pattern] Automatic CSS variable prop extraction from JSDoc comments (/** Overrides CSS var --btn-color */ → creates cssVariable prop metadata) (2026-03-15)
+- **Problem solved:** Bridge design system CSS variables into component prop system without manual duplication
+- **Why this works:** Single source of truth: CSS variable intention documented in component source → automatically surfaced in registry and available to form generators
+- **Trade-offs:** DRY principle and discoverable metadata vs tight coupling: changes to JSDoc format silently break extraction
+
+### populateFromGenerated() method directly consumes codegen output shape without normalization layer (2026-03-15)
+- **Context:** Needs to integrate design-system-codegen GeneratedFile[] output with registry lifecycle
+- **Why:** Single integration point. Codegen output format is stable/controlled. Avoids middleware that duplicates interface contracts.
+- **Rejected:** Separate adapter layer or require codegen to emit registry-compatible format (decoupling overhead)
+- **Trade-offs:** Clean implementation vs tight coupling: if codegen GeneratedFile interface changes, registry breaks
+- **Breaking if changed:** Adding/removing fields from GeneratedComponentFile (e.g., adding designTokens) requires registry code update
