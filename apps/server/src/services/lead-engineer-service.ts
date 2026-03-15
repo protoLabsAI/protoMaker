@@ -6,7 +6,7 @@
  *   WorldStateBuilder         — board snapshot + incremental updates
  *   ActionExecutor            — fast-path rule execution + supervisor
  *   CeremonyOrchestrator      — project completion ceremonies
- *   LeadEngineerSessionStore  — session persistence
+ *   LeadEngineerSessionStore  — session persistence + checkpoint reconciliation
  */
 
 import path from 'path';
@@ -30,6 +30,7 @@ import type { SettingsService } from './settings-service.js';
 import type { MetricsService } from './metrics-service.js';
 import type { CodeRabbitResolverService } from './coderabbit-resolver-service.js';
 import type { PRFeedbackService } from './pr-feedback-service.js';
+import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
 import type { ContextFidelityService } from './context-fidelity-service.js';
 import type { KnowledgeStoreService } from './knowledge-store-service.js';
 import type { LeadHandoffService } from './lead-handoff-service.js';
@@ -112,6 +113,7 @@ export class LeadEngineerService {
   };
   private codeRabbitResolver?: CodeRabbitResolverService;
   private prFeedbackService?: PRFeedbackService;
+  private checkpointService?: PipelineCheckpointService;
   private contextFidelityService?: ContextFidelityService;
   private knowledgeStoreService?: KnowledgeStoreService;
   private handoffService?: LeadHandoffService;
@@ -152,6 +154,9 @@ export class LeadEngineerService {
     });
   }
 
+  setCheckpointService(s: PipelineCheckpointService): void {
+    this.checkpointService = s;
+  }
   setContextFidelityService(s: ContextFidelityService): void {
     this.contextFidelityService = s;
   }
@@ -276,6 +281,11 @@ export class LeadEngineerService {
       await this.start(projectPath, projectSlug, { maxConcurrency });
     });
     logger.info('LeadEngineerService initialized');
+  }
+
+  async reconcileCheckpoints(projectPath: string): Promise<{ deleted: string[] }> {
+    if (!this.checkpointService) return { deleted: [] };
+    return this.sessionStore.reconcileCheckpoints(projectPath, this.checkpointService);
   }
 
   destroy(): void {
@@ -434,11 +444,29 @@ export class LeadEngineerService {
         };
       }
 
+      let resumeFromCheckpoint:
+        | { state: FeatureProcessingState; restoredContext?: Partial<StateContext> }
+        | undefined;
+
+      if (this.checkpointService) {
+        const checkpoint = await this.checkpointService.load(projectPath, featureId);
+        if (checkpoint) {
+          logger.info(
+            `[LeadEngineer] Resuming ${featureId} from checkpoint ${checkpoint.currentState}`
+          );
+          resumeFromCheckpoint = {
+            state: checkpoint.currentState as FeatureProcessingState,
+            restoredContext: this.checkpointService.restoreContext(checkpoint),
+          };
+        }
+      }
+
       const serviceContext = {
         events: this.events,
         featureLoader: this.featureLoader,
         autoModeService: this.autoModeService,
         prFeedbackService: this.prFeedbackService,
+        checkpointService: this.checkpointService,
         contextFidelityService: this.contextFidelityService,
         knowledgeStoreService: this.knowledgeStoreService,
         settingsService: this.settingsService,
@@ -457,6 +485,9 @@ export class LeadEngineerService {
       );
       const isContentFeature = feature.featureType === 'content';
       const stateMachine = new FeatureStateMachine(serviceContext, {
+        checkpointService: workflowSettings.pipeline.checkpointEnabled
+          ? this.checkpointService
+          : undefined,
         events: this.events,
         // Content features bypass PR-centric goal gates (no PR is created)
         goalGatesEnabled: isContentFeature ? false : workflowSettings.pipeline.goalGatesEnabled,
@@ -489,7 +520,7 @@ export class LeadEngineerService {
 
       let result: Awaited<ReturnType<typeof stateMachine.processFeature>>;
       try {
-        result = await stateMachine.processFeature(feature, projectPath);
+        result = await stateMachine.processFeature(feature, projectPath, resumeFromCheckpoint);
       } finally {
         unsubPipelineSync();
       }

@@ -74,9 +74,6 @@ export { useSessions, useSessionHistory, useSessionQueue } from './use-sessions'
 // Git
 export { useGitDiffs } from './use-git';
 
-// Pipeline
-export { usePipelineConfig } from './use-pipeline';
-
 // Spec
 export { useSpecFile, useSpecRegenerationStatus } from './use-spec';
 

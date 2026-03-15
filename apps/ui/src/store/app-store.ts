@@ -39,7 +39,6 @@ export { useTerminalStore } from './terminal-store';
 export { useAIModelsStore } from './ai-models-store';
 export { useWorktreeStore } from './worktree-store';
 export { useThemeStore } from './theme-store';
-export { usePipelineStore } from './pipeline-store';
 
 export interface AppState {
   // Project state

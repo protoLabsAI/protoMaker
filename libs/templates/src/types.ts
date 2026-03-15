@@ -22,7 +22,7 @@ export interface ScaffoldOptions {
 /**
  * Coding rules type determines which language/framework rules to include.
  */
-export type CodingRulesType = 'docs' | 'extension' | 'typescript' | 'react';
+export type CodingRulesType = 'docs' | 'extension' | 'typescript' | 'react' | 'astro-react';
 
 /**
  * A pre-written feature description for a starter kit.
