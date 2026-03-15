@@ -259,8 +259,7 @@ function buildFrameStyle(node: LocalFrame): Record<string, string> {
     }
   }
 
-  const hasPadding =
-    node.paddingTop || node.paddingRight || node.paddingBottom || node.paddingLeft;
+  const hasPadding = node.paddingTop || node.paddingRight || node.paddingBottom || node.paddingLeft;
   if (hasPadding) {
     const t = node.paddingTop ?? 0;
     const r = node.paddingRight ?? 0;
