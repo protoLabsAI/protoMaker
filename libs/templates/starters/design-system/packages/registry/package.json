@@ -1,7 +1,7 @@
 {
-  "name": "@@PROJECT_NAME-mcp",
+  "name": "@@PROJECT_NAME-registry",
   "version": "0.1.0",
-  "description": "MCP (Model Context Protocol) server — expose design system tools to AI agents",
+  "description": "Component registry — store, retrieve, and query design system component definitions",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -11,25 +11,15 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "bin": {
-    "@@PROJECT_NAME-mcp": "./dist/index.js"
-  },
   "files": [
     "dist"
   ],
   "scripts": {
-    "dev": "tsx src/index.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "start": "node dist/index.js",
     "clean": "rm -rf dist"
   },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0"
-  },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "tsx": "^4.19.0",
     "typescript": "^5.0.0"
   },
   "license": "MIT"

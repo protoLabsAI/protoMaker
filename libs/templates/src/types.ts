@@ -13,7 +13,8 @@ export type StarterKitType =
   | 'landing-page'
   | 'extension'
   | 'general'
-  | 'ai-agent-app';
+  | 'ai-agent-app'
+  | 'design-system';
 
 /**
  * Options for scaffolding a new starter kit project.
