@@ -10,6 +10,7 @@ import type { GitHubMonitorConfig, WorkItem } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import type { SchedulerService } from './scheduler-service.js';
 
 const execFileAsync = promisify(execFile);
 const logger = createLogger('GitHubMonitor');
@@ -41,6 +42,8 @@ export interface GitHubPRItem {
  * - PRs ready for merge
  */
 export class GitHubMonitor {
+  static readonly INTERVAL_ID = 'github-monitor:poll';
+
   /** Last PR check timestamp */
   private lastCheckTime?: string;
 
@@ -50,7 +53,14 @@ export class GitHubMonitor {
   /** Project path for gh CLI execution */
   private projectPath?: string;
 
+  /** Scheduler service for centralized timer tracking */
+  private schedulerService?: SchedulerService;
+
   constructor(private events: EventEmitter) {}
+
+  setSchedulerService(schedulerService: SchedulerService): void {
+    this.schedulerService = schedulerService;
+  }
 
   /**
    * Set the project path for GitHub operations
@@ -65,14 +75,23 @@ export class GitHubMonitor {
   async startMonitoring(config: GitHubMonitorConfig): Promise<void> {
     const { pollInterval = 30000, labelFilter = [] } = config;
 
-    // Start polling loop
-    this.interval = setInterval(async () => {
-      try {
-        await this.pollPRs(labelFilter);
-      } catch (error) {
-        logger.error(`Error polling GitHub PRs:`, error);
-      }
-    }, pollInterval);
+    // Start polling loop via schedulerService if available, else raw setInterval
+    if (this.schedulerService) {
+      this.schedulerService.registerInterval(
+        GitHubMonitor.INTERVAL_ID,
+        'GitHub PR Monitor',
+        pollInterval,
+        () => this.pollPRs(labelFilter)
+      );
+    } else {
+      this.interval = setInterval(async () => {
+        try {
+          await this.pollPRs(labelFilter);
+        } catch (error) {
+          logger.error(`Error polling GitHub PRs:`, error);
+        }
+      }, pollInterval);
+    }
 
     logger.info(`Started monitoring GitHub PRs`);
   }
@@ -81,7 +100,10 @@ export class GitHubMonitor {
    * Stop monitoring
    */
   stopAll(): void {
-    if (this.interval) {
+    if (this.schedulerService) {
+      this.schedulerService.unregisterInterval(GitHubMonitor.INTERVAL_ID);
+      logger.info(`Stopped monitoring GitHub PRs`);
+    } else if (this.interval) {
       clearInterval(this.interval);
       this.interval = undefined;
       logger.info(`Stopped monitoring GitHub PRs`);
@@ -207,6 +229,9 @@ export class GitHubMonitor {
    * Check if monitoring is active
    */
   isMonitoring(): boolean {
+    if (this.schedulerService) {
+      return this.schedulerService.listAll().some((t) => t.id === GitHubMonitor.INTERVAL_ID);
+    }
     return this.interval !== undefined;
   }
 }
