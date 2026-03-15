@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 578
-  referenced: 170
-  successfulFeatures: 170
+  loaded: 579
+  referenced: 171
+  successfulFeatures: 171
 ---
 
 <!-- domain: API Design & Integration | GitHub GraphQL, REST endpoints, HTTP client patterns -->

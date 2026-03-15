@@ -323,7 +323,7 @@
           ],
           "complexity": "medium",
           "featureId": "feature-1773570576085-vgklpzblc",
-          "executionStatus": "in-progress"
+          "executionStatus": "blocked"
         },
         {
           "number": 2,
@@ -343,7 +343,7 @@
           ],
           "complexity": "medium",
           "featureId": "feature-1773570576086-yaanyljkd",
-          "executionStatus": "in-progress"
+          "executionStatus": "blocked"
         }
       ],
       "status": "completed",
@@ -375,7 +375,7 @@
           ],
           "complexity": "medium",
           "featureId": "feature-1773570576087-eelauv9o2",
-          "executionStatus": "in-review"
+          "executionStatus": "completed"
         },
         {
           "number": 2,
@@ -396,7 +396,7 @@
           ],
           "complexity": "medium",
           "featureId": "feature-1773570576088-wmul4dxcx",
-          "executionStatus": "blocked"
+          "executionStatus": "pending"
         }
       ],
       "status": "completed",
@@ -519,5 +519,5 @@
     "generatedAt": "2026-03-15T08:30:00.000Z"
   },
   "createdAt": "2026-03-15T08:33:36.469Z",
-  "updatedAt": "2026-03-15T15:25:12.241Z"
+  "updatedAt": "2026-03-15T15:36:47.774Z"
 }
