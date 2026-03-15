@@ -6,6 +6,7 @@ import {
   ARCHIVAL_CHECK_INTERVAL_MS,
   WORKTREE_DRIFT_CHECK_INTERVAL_MS,
 } from '../config/timeouts.js';
+import { getPRWatcherService } from './pr-watcher-service.js';
 
 /** Polling interval for the builtin:electron-idle sensor (30 seconds) */
 const ELECTRON_IDLE_POLL_MS = 30_000;
@@ -33,7 +34,20 @@ export function register(container: ServiceContainer): void {
     archivalService,
     sensorRegistryService,
     worktreeLifecycleService,
+    healthMonitorService,
+    specGenerationMonitor,
+    leadEngineerService,
   } = container;
+
+  // Wire schedulerService into interval-tracked services so their timers
+  // appear in schedulerService.listAll() and can be inspected centrally.
+  healthMonitorService.setSchedulerService(schedulerService);
+  specGenerationMonitor.setSchedulerService(schedulerService);
+  leadEngineerService.setSchedulerService(schedulerService);
+  const prWatcher = getPRWatcherService();
+  if (prWatcher) {
+    prWatcher.setSchedulerService(schedulerService);
+  }
 
   // Scheduler Service initialization and task registration via AutomationService
   schedulerService.initialize(events, dataDir);

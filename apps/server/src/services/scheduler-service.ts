@@ -26,6 +26,7 @@ import { secureFs } from '@protolabsai/platform';
 import path from 'path';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
+import type { TimerRegistryEntry, TimerRegistryMetrics, TimerCategory } from '@protolabsai/types';
 
 const logger = createLogger('Scheduler');
 
@@ -109,31 +110,6 @@ export interface TaskExecutionResult {
 }
 
 /**
- * A named interval registered via registerInterval()
- */
-export interface RegisteredInterval {
-  /** Unique identifier */
-  id: string;
-  /** Human-readable name */
-  name: string;
-  /** Interval period in milliseconds */
-  intervalMs: number;
-}
-
-/**
- * A unified entry returned by listAll() covering both cron tasks and named intervals
- */
-export interface TimerRegistryEntry {
-  id: string;
-  name: string;
-  type: 'cron' | 'interval';
-  /** Present for 'interval' type */
-  intervalMs?: number;
-  /** Present for 'cron' type */
-  cronExpression?: string;
-}
-
-/**
  * Scheduler status for health monitoring
  */
 export interface SchedulerStatus {
@@ -151,6 +127,22 @@ export interface SchedulerStatus {
     executionCount: number;
   }>;
 }
+
+/**
+ * An interval-based timer entry tracked by the scheduler
+ */
+export interface IntervalEntry {
+  kind: 'interval';
+  id: string;
+  name: string;
+  intervalMs: number;
+  registeredAt: string;
+}
+
+/**
+ * Unified timer entry returned by listAll() — either a cron task or an interval
+ */
+export type TimerEntry = (ScheduledTask & { kind: 'cron' }) | IntervalEntry;
 
 /**
  * Day of week name mappings
@@ -349,6 +341,34 @@ export function getNextRunTime(cronExpression: string, after: Date = new Date())
 }
 
 /**
+ * Managed interval task — wraps setInterval with metadata tracking.
+ */
+export interface IntervalTask {
+  /** Unique task identifier */
+  id: string;
+  /** Human-readable task name */
+  name: string;
+  /** Interval duration in milliseconds */
+  intervalMs: number;
+  /** Task handler function */
+  handler: () => Promise<void> | void;
+  /** Whether the task is currently enabled */
+  enabled: boolean;
+  /** ISO string of the last execution */
+  lastRun?: string;
+  /** Duration of the last execution in milliseconds */
+  duration?: number;
+  /** Number of consecutive failures */
+  failureCount: number;
+  /** Total number of executions */
+  executionCount: number;
+  /** Operational category */
+  category: TimerCategory;
+  /** Node.js timer handle — null when paused */
+  handle: NodeJS.Timeout | null;
+}
+
+/**
  * Scheduler Service
  *
  * Manages scheduled tasks with cron-based timing, tracking execution history,
@@ -358,13 +378,15 @@ export class SchedulerService {
   private tasks: Map<string, ScheduledTask> = new Map();
   private parsedCrons: Map<string, ParsedCron> = new Map();
   private persistedMetadata: Map<string, PersistedTaskData> = new Map();
-  private namedIntervals: Map<string, { config: RegisteredInterval; handle: NodeJS.Timeout }> =
-    new Map();
+  private intervalTasks: Map<string, IntervalTask> = new Map();
   private intervalId: NodeJS.Timeout | null = null;
   private running = false;
   private events: EventEmitter | null = null;
   private dataDir: string | null = null;
   private settingsService: SettingsService | null = null;
+
+  /** Managed interval entries (non-cron timers registered via registerInterval) */
+  private intervals: Map<string, { timerId: NodeJS.Timeout; meta: IntervalEntry }> = new Map();
 
   /** Check interval in milliseconds (default: 60 seconds) */
   private checkInterval = 60000;
@@ -699,65 +721,75 @@ export class SchedulerService {
   }
 
   /**
-   * Register a named interval. Unlike cron tasks, intervals fire every N milliseconds
-   * regardless of wall-clock time. Useful for sub-minute or non-calendar-aligned polling.
-   *
-   * Calling registerInterval() with an id that is already registered replaces the
-   * existing interval (the old one is cleared first).
+   * Register a managed setInterval under a named id.
+   * The timer is tracked so it appears in listAll() and can be cleared via unregisterInterval().
+   * If an interval with the same id is already registered, it is replaced.
    */
   registerInterval(
     id: string,
     name: string,
     intervalMs: number,
-    handler: () => void | Promise<void>
+    handler: () => Promise<void> | void
   ): void {
-    if (this.namedIntervals.has(id)) {
-      clearInterval(this.namedIntervals.get(id)!.handle);
-      logger.debug(`Replacing interval "${name}" (${id})`);
+    // Clear any existing interval with the same id
+    const existing = this.intervals.get(id);
+    if (existing) {
+      clearInterval(existing.timerId);
+      logger.debug(`Replaced existing interval "${name}" (${id})`);
     }
 
-    const handle = setInterval(() => {
+    const timerId = setInterval(() => {
       void Promise.resolve(handler()).catch((err) => {
         logger.error(`Interval handler "${name}" (${id}) failed:`, err);
       });
     }, intervalMs);
 
-    this.namedIntervals.set(id, { config: { id, name, intervalMs }, handle });
-    logger.info(`Registered interval "${name}" (${id}): ${intervalMs}ms`);
+    const meta: IntervalEntry = {
+      kind: 'interval',
+      id,
+      name,
+      intervalMs,
+      registeredAt: new Date().toISOString(),
+    };
+
+    this.intervals.set(id, { timerId, meta });
+    logger.info(`Registered interval "${name}" (${id}) every ${intervalMs}ms`);
+
+    this.emitEvent('scheduler:interval_registered', { id, name, intervalMs });
   }
 
   /**
-   * Unregister a named interval, clearing its underlying timer.
+   * Clear a managed interval registered via registerInterval().
+   * Returns true if the interval existed and was removed, false otherwise.
    */
-  unregisterInterval(id: string): void {
-    const entry = this.namedIntervals.get(id);
-    if (entry) {
-      clearInterval(entry.handle);
-      this.namedIntervals.delete(id);
-      logger.info(`Unregistered interval "${entry.config.name}" (${id})`);
+  unregisterInterval(id: string): boolean {
+    const entry = this.intervals.get(id);
+    if (!entry) {
+      return false;
     }
+
+    clearInterval(entry.timerId);
+    this.intervals.delete(id);
+    logger.info(`Unregistered interval "${entry.meta.name}" (${id})`);
+
+    this.emitEvent('scheduler:interval_unregistered', { id, name: entry.meta.name });
+    return true;
   }
 
   /**
-   * Return all registered timers — both cron tasks and named intervals — as a
-   * unified list. Used by the timer registry to enumerate all active timers.
+   * Return all tracked timers — both cron tasks and managed intervals — in a unified list.
    */
-  listAll(): TimerRegistryEntry[] {
-    const tasks: TimerRegistryEntry[] = Array.from(this.tasks.values()).map((t) => ({
-      id: t.id,
-      name: t.name,
-      type: 'cron',
-      cronExpression: t.cronExpression,
+  listAll(): TimerEntry[] {
+    const cronEntries: TimerEntry[] = Array.from(this.tasks.values()).map((task) => ({
+      ...task,
+      kind: 'cron' as const,
     }));
 
-    const intervals: TimerRegistryEntry[] = Array.from(this.namedIntervals.values()).map((i) => ({
-      id: i.config.id,
-      name: i.config.name,
-      type: 'interval',
-      intervalMs: i.config.intervalMs,
-    }));
+    const intervalEntries: TimerEntry[] = Array.from(this.intervals.values()).map(
+      ({ meta }) => meta
+    );
 
-    return [...tasks, ...intervals];
+    return [...cronEntries, ...intervalEntries];
   }
 
   /**
@@ -1030,14 +1062,232 @@ export class SchedulerService {
   }
 
   /**
+   * Register an interval-based managed timer.
+   *
+   * Creates a `setInterval` that fires every `intervalMs` milliseconds and
+   * tracks execution metadata (lastRun, duration, failureCount, executionCount).
+   *
+   * @param id - Unique identifier for this timer
+   * @param name - Human-readable name
+   * @param intervalMs - How often the callback fires in milliseconds
+   * @param handler - Async or sync callback to execute on each tick
+   * @param opts - Optional configuration
+   */
+  registerInterval(
+    id: string,
+    name: string,
+    intervalMs: number,
+    handler: () => Promise<void> | void,
+    opts: { enabled?: boolean; category?: TimerCategory } = {}
+  ): void {
+    if (this.intervalTasks.has(id)) {
+      logger.warn(`Interval task "${id}" is already registered — skipping`);
+      return;
+    }
+
+    const enabled = opts.enabled ?? true;
+    const category = opts.category ?? 'system';
+
+    const task: IntervalTask = {
+      id,
+      name,
+      intervalMs,
+      handler,
+      enabled,
+      failureCount: 0,
+      executionCount: 0,
+      category,
+      handle: null,
+    };
+
+    this.intervalTasks.set(id, task);
+
+    if (enabled) {
+      task.handle = setInterval(() => {
+        void this.runIntervalTask(id);
+      }, intervalMs);
+    }
+
+    logger.info(
+      `Registered interval task "${name}" (${id}) — every ${intervalMs}ms, category: ${category}`
+    );
+    this.emitEvent('scheduler:task_registered', { taskId: id, name, intervalMs, enabled });
+  }
+
+  /**
+   * Execute a single interval task tick, recording metadata.
+   */
+  private async runIntervalTask(id: string): Promise<void> {
+    const task = this.intervalTasks.get(id);
+    if (!task || !task.enabled) return;
+
+    const startTime = Date.now();
+    const executedAt = new Date().toISOString();
+
+    try {
+      await task.handler();
+      task.failureCount = 0;
+    } catch (err) {
+      task.failureCount++;
+      logger.error(`Interval task "${task.name}" (${id}) failed:`, err);
+      this.emitEvent('scheduler:task-failed', {
+        taskId: id,
+        taskName: task.name,
+        error: (err as Error).message,
+        timestamp: executedAt,
+      });
+    }
+
+    task.lastRun = executedAt;
+    task.duration = Date.now() - startTime;
+    task.executionCount++;
+  }
+
+  /**
+   * Return all registered timers (both cron tasks and interval tasks) as a
+   * unified `TimerRegistryEntry[]`.
+   */
+  listAll(): TimerRegistryEntry[] {
+    const cronEntries: TimerRegistryEntry[] = Array.from(this.tasks.values()).map((t) => ({
+      id: t.id,
+      name: t.name,
+      type: 'cron' as const,
+      expression: t.cronExpression,
+      enabled: t.enabled,
+      lastRun: t.lastRun,
+      nextRun: t.nextRun,
+      failureCount: t.failureCount,
+      executionCount: t.executionCount,
+      category: 'system' as TimerCategory,
+    }));
+
+    const intervalEntries: TimerRegistryEntry[] = Array.from(this.intervalTasks.values()).map(
+      (t) => ({
+        id: t.id,
+        name: t.name,
+        type: 'interval' as const,
+        intervalMs: t.intervalMs,
+        enabled: t.enabled,
+        lastRun: t.lastRun,
+        duration: t.duration,
+        failureCount: t.failureCount,
+        executionCount: t.executionCount,
+        category: t.category,
+      })
+    );
+
+    return [...cronEntries, ...intervalEntries];
+  }
+
+  /**
+   * Pause all managed timers (both cron tasks and interval tasks).
+   *
+   * Cron tasks are disabled (their `enabled` flag is set to `false` and
+   * `nextRun` is cleared). Interval task handles are cleared via
+   * `clearInterval` but their state is preserved for resumption.
+   */
+  pauseAll(): void {
+    for (const task of this.tasks.values()) {
+      task.enabled = false;
+      task.nextRun = undefined;
+    }
+
+    for (const task of this.intervalTasks.values()) {
+      if (task.handle !== null) {
+        clearInterval(task.handle);
+        task.handle = null;
+      }
+      task.enabled = false;
+    }
+
+    logger.info(`Paused all timers (${this.tasks.size} cron, ${this.intervalTasks.size} interval)`);
+    this.emitEvent('scheduler:paused_all', {
+      cronCount: this.tasks.size,
+      intervalCount: this.intervalTasks.size,
+    });
+  }
+
+  /**
+   * Resume all managed timers that were previously paused.
+   *
+   * Cron tasks are re-enabled and their `nextRun` times recalculated.
+   * Interval tasks have their `setInterval` handles recreated.
+   */
+  resumeAll(): void {
+    for (const task of this.tasks.values()) {
+      task.enabled = true;
+      task.nextRun = getNextRunTime(task.cronExpression).toISOString();
+    }
+
+    for (const task of this.intervalTasks.values()) {
+      task.enabled = true;
+      if (task.handle === null) {
+        task.handle = setInterval(() => {
+          void this.runIntervalTask(task.id);
+        }, task.intervalMs);
+      }
+    }
+
+    logger.info(
+      `Resumed all timers (${this.tasks.size} cron, ${this.intervalTasks.size} interval)`
+    );
+    this.emitEvent('scheduler:resumed_all', {
+      cronCount: this.tasks.size,
+      intervalCount: this.intervalTasks.size,
+    });
+  }
+
+  /**
+   * Return aggregated metrics across all registered timers.
+   */
+  getMetrics(): TimerRegistryMetrics {
+    const all = this.listAll();
+
+    const byCategory: Record<string, number> = {};
+    const byType: Record<string, number> = { cron: 0, interval: 0 };
+
+    let totalExecutions = 0;
+    let totalFailures = 0;
+    let enabledTimers = 0;
+
+    for (const entry of all) {
+      totalExecutions += entry.executionCount;
+      totalFailures += entry.failureCount;
+      if (entry.enabled) enabledTimers++;
+      byType[entry.type] = (byType[entry.type] ?? 0) + 1;
+      byCategory[entry.category] = (byCategory[entry.category] ?? 0) + 1;
+    }
+
+    return {
+      totalTimers: all.length,
+      enabledTimers,
+      pausedTimers: all.length - enabledTimers,
+      totalExecutions,
+      totalFailures,
+      byCategory: byCategory as TimerRegistryMetrics['byCategory'],
+      byType: byType as TimerRegistryMetrics['byType'],
+    };
+  }
+
+  /**
    * Cleanup resources
    */
   destroy(): void {
-    this.stop();
-    for (const entry of this.namedIntervals.values()) {
-      clearInterval(entry.handle);
+    // Clear all interval task handles before clearing the map
+    for (const task of this.intervalTasks.values()) {
+      if (task.handle !== null) {
+        clearInterval(task.handle);
+        task.handle = null;
+      }
     }
-    this.namedIntervals.clear();
+    this.intervalTasks.clear();
+
+    this.stop();
+    // Clear all managed intervals
+    for (const { timerId } of this.intervals.values()) {
+      clearInterval(timerId);
+    }
+    this.intervals.clear();
     this.tasks.clear();
     this.parsedCrons.clear();
     this.persistedMetadata.clear();
