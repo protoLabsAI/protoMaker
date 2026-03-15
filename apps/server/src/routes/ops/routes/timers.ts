@@ -28,29 +28,7 @@ export function createTimersRoutes(
   // GET / - List all cron + interval timers
   router.get('/', (_req, res) => {
     try {
-      const timers = schedulerService.listAll().map((entry) => {
-        if (entry.kind === 'cron') {
-          return {
-            kind: entry.kind,
-            id: entry.id,
-            name: entry.name,
-            cronExpression: entry.cronExpression,
-            enabled: entry.enabled,
-            lastRun: entry.lastRun,
-            nextRun: entry.nextRun,
-            failureCount: entry.failureCount,
-            executionCount: entry.executionCount,
-            lastError: entry.lastError,
-          };
-        }
-        return {
-          kind: entry.kind,
-          id: entry.id,
-          name: entry.name,
-          intervalMs: entry.intervalMs,
-          registeredAt: entry.registeredAt,
-        };
-      });
+      const timers = schedulerService.listAll();
 
       res.json({ timers, count: timers.length });
     } catch (error) {
