@@ -9,6 +9,7 @@ usageStats:
   referenced: 396
   successfulFeatures: 396
 ---
+
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
 # gotchas
@@ -1063,13 +1064,14 @@ usageStats:
 - **Root cause:** TypeScript's type definition for CSSProperties is a fixed interface without support for arbitrary custom properties. The assertion is the only workaround without pulling in a CSS-in-JS library or losing type safety entirely.
 - **How to avoid:** Type assertion hides the reality that custom properties are string-valued, but it's the least-friction solution without changing TypeScript itself.
 
-
 #### [Gotcha] Dynamic RegExp construction from tag names fails when tag names contain regex metacharacters (e.g., `$frag` contains `$`). Must escape tag name with `/[.*+?^${}()|[\]\\]/g` BEFORE embedding in RegExp pattern. (2026-03-15)
+
 - **Situation:** Deserializer's `findClose()` XML parser built `RegExp` from tag names without escaping. `$frag` → `<$frag>` → regex `<$frag>` where `$` matches end-of-string, not literal `$` character.
 - **Root cause:** RegExp metacharacters have special meaning in patterns. `$` anchors to end-of-string; `.` matches any char; `*` means zero-or-more. Unescaped, they don't match the literal characters in tag names.
 - **How to avoid:** Adding escape overhead (microseconds) prevents silent parsing failures. Makes parsing slower but correct.
 
 #### [Gotcha] Serializer emitted empty conditional class conditions (`default:`) that deserializer filtered out, breaking codec symmetry. Round-trip ComponentDef → XCL → ComponentDef lost classNames in components with empty defaults. (2026-03-15)
+
 - **Situation:** Serializer created conditions for all classNames, even when all classes were empty. Deserializer filtered them. Asymmetry caused test failures in round-trip validation.
 - **Root cause:** The serializer didn't validate `cc.classes` before emitting; filter-on-read in deserializer was meant as safety net but exposed asymmetry. Real fix: filter-on-write.
 - **How to avoid:** Filter at serialization source → smaller XCL (+efficiency), but requires deserializer to expect no empty conditions. Simpler codec logic, harder to debug if one side breaks.

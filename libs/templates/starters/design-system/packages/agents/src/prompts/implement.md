@@ -38,19 +38,22 @@ cannot make semantic decisions — that is your role.
 
 Return **each modified file** in this exact format:
 
-```
+````
 === FILE: Button.tsx (component: Button) ===
 ```tsx
 // refined content here
-```
+````
+
 ```
 
 If a file requires no changes, you may say:
 
 ```
+
 === FILE: Card.tsx ===
 No changes needed.
-```
+
+````
 
 Or, if **none** of the files require further refinement, say:
 
@@ -78,19 +81,19 @@ purpose. Examples:
 >
   {props.children}
 </button>
-```
+````
 
 ### CSS custom properties → Tailwind
 
 When converting to Tailwind, replace `style={{ '--primary': ... }}` patterns with the
 appropriate Tailwind utility classes. Map the design token to the closest semantic class:
 
-| CSS token         | Tailwind class          |
-|-------------------|-------------------------|
-| `--primary`       | `bg-primary` / `text-primary` |
-| `--radius`        | `rounded` / `rounded-lg` |
-| `--spacing-*`     | `p-*` / `m-*`           |
-| `--text-*`        | `text-*`                |
+| CSS token     | Tailwind class                |
+| ------------- | ----------------------------- |
+| `--primary`   | `bg-primary` / `text-primary` |
+| `--radius`    | `rounded` / `rounded-lg`      |
+| `--spacing-*` | `p-*` / `m-*`                 |
+| `--text-*`    | `text-*`                      |
 
 ### Props interface improvements
 

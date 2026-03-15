@@ -9,9 +9,11 @@ usageStats:
   referenced: 3
   successfulFeatures: 3
 ---
+
 # design
 
 ### OKLCH chosen as canonical color space for all internal representations, with exact lightness shade values (50–950) encoded in system prompt. (2026-03-15)
+
 - **Context:** Color agent must generate palettes that pass WCAG contrast ratios and work across light/dark/high-contrast themes.
 - **Why:** OKLCH separates perceptual lightness from hue/chroma, making it ideal for generating WCAG-compliant palettes. Lightness can be used as a predictable proxy for contrast. Encoding shade reference in prompt educates the agent about valid lightness ranges.
 - **Rejected:** HSL/HSV: hue-saturation-value perceptually non-linear in lightness. Hex: loses domain semantics, requires conversion. RGB: no perceptual structure.

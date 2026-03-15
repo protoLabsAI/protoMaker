@@ -215,10 +215,7 @@ async function parsePenFileFromPath(filePath: string): Promise<unknown> {
 }
 
 /** Dynamically import and call the codegen pipeline. */
-async function runCodegen(
-  doc: unknown,
-  options: GeneratorOptions
-): Promise<GeneratedFile[]> {
+async function runCodegen(doc: unknown, options: GeneratorOptions): Promise<GeneratedFile[]> {
   // Resolve the codegen package relative to this file's location.
   // After scaffolding: packages/agents/dist → packages/codegen/dist
   const codegenPath = path.resolve(__dirname, '../../codegen/dist/react-generator.js');
@@ -231,10 +228,7 @@ async function runCodegen(
 }
 
 /** Filter codegen results to a single named component. */
-function filterSingleComponent(
-  files: GeneratedFile[],
-  componentName: string
-): GeneratedFile[] {
+function filterSingleComponent(files: GeneratedFile[], componentName: string): GeneratedFile[] {
   const target = toPascalCase(componentName);
   const match = files.find((f) => f.componentName === target);
   if (!match) {
@@ -324,10 +318,7 @@ function formatFilesForPrompt(files: FileForRefinement[]): string {
 }
 
 /** Parse refined file content out of Claude's response. */
-function parseRefinedFiles(
-  response: string,
-  original: FileForRefinement[]
-): FileForRefinement[] {
+function parseRefinedFiles(response: string, original: FileForRefinement[]): FileForRefinement[] {
   const refined: FileForRefinement[] = [];
 
   for (const file of original) {
@@ -398,9 +389,7 @@ async function refineIteration(
     'already complete',
     'no refinements needed',
   ];
-  const isDone = doneSignals.some((signal) =>
-    responseText.toLowerCase().includes(signal)
-  );
+  const isDone = doneSignals.some((signal) => responseText.toLowerCase().includes(signal));
 
   if (isDone) {
     return files; // Stop iterating early.
@@ -541,9 +530,7 @@ export class ImplementAgent {
           refinements++;
 
           // Check if anything actually changed.
-          const changed = refined.some(
-            (r, idx) => r.content !== filesForOutput[idx]?.content
-          );
+          const changed = refined.some((r, idx) => r.content !== filesForOutput[idx]?.content);
 
           filesForOutput = refined;
 

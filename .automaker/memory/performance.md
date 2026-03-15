@@ -450,13 +450,14 @@ usageStats:
 - **Trade-offs:** Easier: cleaner prompts, focused improvements per turn. Harder: 3x API calls, slower wall-clock time, higher token cost
 - **Breaking if changed:** If max iterations is 1, many semantic improvements (accessibility patterns, full Tailwind conversion) won't be applied
 
-
 #### [Gotcha] Inline pure math (hex→OKLCH conversion) instead of async-importing it from color package to prevent blocking agent startup (2026-03-15)
+
 - **Situation:** Agent initialization path where blocking on async color package import would delay agent readiness
 - **Root cause:** Startup path is critical for agent responsiveness; color package import is async and would delay ColorAgent from being available to the agentic loop
 - **How to avoid:** Code duplication (math inlined) but agent startup unblocked; color package optional for optimization, not critical path
 
 #### [Pattern] Prop shorthand encoding (str/num/bool/node/fn/elm type unions) with special syntax (`:=`, `@`, `#`, `$`) reduces verbose React component prop definitions 80–96%. Input component: 1003 TSX tokens → 98 XCL tokens (90% reduction). (2026-03-15)
+
 - **Problem solved:** LLM context window is expensive. React component definitions are verbose (props, types, handlers). XCL compresses by mapping prop types to compact syntax in XML attributes.
 - **Why this works:** Most props are primitives or event handlers. Shorthand: `x:="10"` (number), `label:="Hi"` (string), `disabled` (bool), `@click={handleClick}` (handler). Removes TypeScript boilerplate from codegen.
 - **Trade-offs:** More tokens: human-readable, self-documenting. Fewer tokens: harder to learn syntax, requires XCL spec reference. Trade compression for learnability.

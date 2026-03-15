@@ -1,4 +1,5 @@
 # Changelog: Design System Platform Starter Kit - AI Agents — A11y + Color
+
 **Generated:** 2026-03-15
 
 ## 📦 Other Changes
