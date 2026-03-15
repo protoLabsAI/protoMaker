@@ -465,6 +465,25 @@ function EditableEventDetail({
               <p className="text-sm whitespace-pre-wrap">{event.description}</p>
             </div>
           )}
+
+          {/* Recurrence (read-only) */}
+          {event.recurrence && (
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Recurrence</Label>
+              <p className="text-sm flex items-center gap-1.5">
+                <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
+                {formatRecurrence(event.recurrence)}
+              </p>
+            </div>
+          )}
+
+          {/* Timezone (read-only) */}
+          {event.timezone && (
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Timezone</Label>
+              <p className="text-sm text-muted-foreground">{event.timezone}</p>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
