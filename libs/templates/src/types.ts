@@ -7,12 +7,12 @@
 /**
  * Starter kit type determines which features and coding rules to include.
  */
-export type StarterKitType = 'docs' | 'extension' | 'general';
+export type StarterKitType = 'docs' | 'extension' | 'general' | 'portfolio';
 
 /**
  * Coding rules type determines which language/framework rules to include.
  */
-export type CodingRulesType = 'docs' | 'extension' | 'typescript' | 'react';
+export type CodingRulesType = 'docs' | 'extension' | 'typescript' | 'react' | 'astro-react';
 
 /**
  * A pre-written feature description for a starter kit.

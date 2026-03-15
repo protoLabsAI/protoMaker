@@ -79,6 +79,45 @@ npm run lint:md       # Lint markdown files
 }
 
 /**
+ * Common commands section for portfolio-type projects (Astro + React).
+ */
+export function getPortfolioCommandsSection(): string {
+  return `## Common Commands
+
+\`\`\`bash
+npm install           # Install dependencies (run inside portfolio directory)
+npm run dev           # Start dev server at localhost:4321
+npm run build         # Production build (static output to dist/)
+npm run preview       # Preview production build locally
+npm run format        # Format with Prettier (including .astro files)
+npm run format:check  # Check formatting (used in CI)
+\`\`\`
+
+## Project Structure
+
+\`\`\`
+src/
+  components/        # Astro section components + React islands
+  content/           # Content Collections (projects, blog, testimonials)
+  layouts/           # Base HTML layout (Layout.astro)
+  pages/             # Astro pages → file-based routing
+  styles/            # global.css with Tailwind v4 @theme tokens
+  content.config.ts  # Content Collection schemas
+dist/                # Production build output (gitignored)
+\`\`\`
+
+## Content Collections
+
+Add portfolio entries by creating files in \`src/content/\`:
+
+- \`src/content/projects/\` — project cards shown in ProjectGrid
+- \`src/content/blog/\` — blog posts with dynamic routes
+
+Schemas are defined in \`src/content.config.ts\`. Run \`npm run build\` after adding entries to validate frontmatter.
+`;
+}
+
+/**
  * Common commands section for extension-type projects.
  */
 export function getExtensionCommandsSection(): string {

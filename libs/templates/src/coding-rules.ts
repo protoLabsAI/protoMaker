@@ -19,6 +19,8 @@ export function getCodingRules(type: CodingRulesType): string {
       return getTypeScriptCodingRules();
     case 'react':
       return getReactCodingRules();
+    case 'astro-react':
+      return getAstroReactCodingRules();
   }
 }
 
@@ -155,6 +157,65 @@ Rules for AI agents working on this codebase.
 
 - Write tests for all new functionality
 - Test behavior, not implementation
+`;
+}
+
+function getAstroReactCodingRules(): string {
+  return `# Coding Rules
+
+Rules for AI agents working on this Astro + React portfolio.
+
+## Astro vs React — When to Use Each
+
+- **Astro components (\`.astro\`)** — static sections, layouts, pages. Zero JavaScript shipped to client.
+- **React components (\`.tsx\`)** — interactive islands only. Use \`client:load\` for above-the-fold interactivity, \`client:visible\` for below-fold.
+- Default to Astro. Only reach for React when the component needs client-side state or event handling.
+
+## Astro Rules
+
+- Keep page components thin — orchestrate layout, delegate content to section components
+- Use Content Collections for all structured data (projects, blog, testimonials)
+  - Define schemas in \`src/content.config.ts\` with \`z\` from \`astro:content\`
+  - Use \`render()\` (Astro 5 API) not \`entry.render()\` for markdown content
+- Use \`<ViewTransitions />\` from \`astro:transitions\` for page transitions (built-in, no package needed)
+- Images: use \`<Image />\` from \`astro:assets\` for automatic optimization
+
+## React Island Rules
+
+- One component per file: \`ProjectGrid.tsx\`, not \`components.tsx\`
+- Use named exports for all island components
+- Keep islands small and focused — co-locate with the Astro section that uses them
+- Inline styles use \`satisfies React.CSSProperties\` for type safety
+
+## TypeScript
+
+- strict mode enabled — no \`any\` types
+- Explicit return types on exported functions
+- Use \`import type\` for type-only imports
+
+## Tailwind CSS v4
+
+- CSS-first configuration via \`@import 'tailwindcss'\` and \`@theme\` block in \`src/styles/global.css\`
+- No \`tailwind.config.js\` — Tailwind v4 is configured in CSS
+- Use semantic token names from \`@theme\` block; never hardcode hex values
+
+## Formatting
+
+- Prettier is configured — run \`npm run format\` before committing
+- \`.astro\` files: prettier-plugin-astro formats them automatically
+- Do NOT manually format code; let Prettier handle it
+
+## Build
+
+- Output mode is \`static\` — all routes must be known at build time
+- Dynamic routes require \`getStaticPaths()\` returning all slugs
+- Run \`npm run build\` to verify before committing
+
+## Deployment
+
+- Deploys to Cloudflare Pages via \`wrangler pages deploy\`
+- Build output: \`dist/\`
+- Environment variables: set in Cloudflare Pages dashboard, not committed
 `;
 }
 
