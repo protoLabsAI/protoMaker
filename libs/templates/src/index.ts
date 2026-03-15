@@ -14,6 +14,7 @@ export type {
   DefaultSettings,
   ClaudeMdOptions,
   WelcomeNoteOptions,
+  ScaffoldOptions,
 } from './types.js';
 
 // Projects
@@ -48,7 +49,11 @@ export { getCodingRules } from './coding-rules.js';
 export { getDocsCI, getExtensionCI } from './ci.js';
 
 // Starter kit context files (write to .automaker/CONTEXT.md in new projects)
-export { getDocsStarterContext } from './starters.js';
+export { getDocsStarterContext, getPortfolioStarterContext } from './starters.js';
+
+// Starter kit scaffolding (copies Astro projects with name/config substitution)
+export { scaffoldDocsStarter, scaffoldPortfolioStarter } from './scaffold.js';
+export type { ScaffoldResult } from './scaffold.js';
 
 // Design tokens
 export { getDesignTokensCss, getDesignTokensThemeBlock, designTokens } from './design-tokens.js';

@@ -7,7 +7,17 @@
 /**
  * Starter kit type determines which features and coding rules to include.
  */
-export type StarterKitType = 'docs' | 'extension' | 'general';
+export type StarterKitType = 'docs' | 'portfolio' | 'extension' | 'general';
+
+/**
+ * Options for scaffolding a new starter kit project.
+ */
+export interface ScaffoldOptions {
+  /** Project name — used as the package.json name and in config substitution. */
+  projectName: string;
+  /** Absolute path to the destination directory (must not already exist). */
+  outputDir: string;
+}
 
 /**
  * Coding rules type determines which language/framework rules to include.

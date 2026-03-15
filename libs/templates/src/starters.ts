@@ -10,6 +10,85 @@
  * Get the agent context file content for the Starlight docs starter kit.
  * Write this to `.automaker/CONTEXT.md` in the new project.
  */
+/**
+ * Get the agent context file content for the portfolio starter kit.
+ * Write this to `.automaker/CONTEXT.md` in the new project.
+ */
+export function getPortfolioStarterContext(): string {
+  return `# Portfolio Starter Kit — Agent Context
+
+This project is a **personal portfolio site** built with Astro 5, React 19, and Tailwind CSS v4.
+
+## Project Structure
+
+\`\`\`
+src/
+  content/
+    blog/          ← Blog posts (MDX)
+    projects/      ← Portfolio project entries (MDX)
+    testimonials/  ← Testimonial entries (MDX)
+    siteConfig/    ← Site-level config: author info, nav, socials
+    docs/          ← Internal agent docs and conventions
+  components/      ← Astro + React components
+  layouts/         ← Page layouts (BaseLayout, BlogLayout, etc.)
+  pages/           ← File-based routes
+  styles/          ← Global CSS and design tokens
+astro.config.mjs   ← Astro config (site URL, integrations)
+\`\`\`
+
+## Content Collections
+
+All content uses Astro's **content collections** via \`src/content/config.ts\`:
+
+- \`blog\` — blog posts with \`title\`, \`date\`, \`description\`, optional \`tags\`
+- \`projects\` — portfolio projects with \`title\`, \`description\`, \`tech\`, \`links\`
+- \`testimonials\` — quotes with \`author\`, \`role\`, \`company\`
+- \`siteConfig\` — a single \`index.mdx\` with site-level metadata
+
+## Page Routes
+
+| File | Route |
+|------|-------|
+| \`src/pages/index.astro\` | \`/\` (home — Hero, Projects, About, Testimonials) |
+| \`src/pages/blog/index.astro\` | \`/blog\` |
+| \`src/pages/blog/[slug].astro\` | \`/blog/:slug\` |
+| \`src/pages/contact.astro\` | \`/contact\` |
+| \`src/pages/rss.xml.ts\` | \`/rss.xml\` |
+
+## Theming
+
+Design tokens live in \`src/styles/global.css\` as CSS custom properties and a Tailwind v4 \`@theme\` block:
+
+\`\`\`css
+@theme {
+  --color-accent: oklch(62% 0.25 264);
+}
+\`\`\`
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| \`npm run dev\` | Start local dev server at localhost:4321 |
+| \`npm run build\` | Build production site to \`dist/\` |
+| \`npm run preview\` | Preview the production build |
+| \`npm run format\` | Format all files with Prettier |
+| \`npm run format:check\` | Check formatting (used in CI) |
+
+## Key Constraints
+
+- React is used for interactive islands only (contact form, mobile menu). Most components are \`.astro\`.
+- Tailwind v4 is configured via the Vite plugin (\`@tailwindcss/vite\`) — no \`tailwind.config.js\` file.
+- \`*.astro\` files are excluded from Prettier — \`prettier-plugin-astro\` is installed locally.
+- Blog posts and project pages use MDX — you can embed React components directly in content.
+- RSS feed at \`/rss.xml\` is auto-generated from the \`blog\` collection.
+`;
+}
+
+/**
+ * Get the agent context file content for the Starlight docs starter kit.
+ * Write this to `.automaker/CONTEXT.md` in the new project.
+ */
 export function getDocsStarterContext(): string {
   return `# Docs Starter Kit — Agent Context
 

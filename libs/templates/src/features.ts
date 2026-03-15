@@ -61,6 +61,39 @@ const DOCS_FEATURES: StarterFeature[] = [
   },
 ];
 
+const PORTFOLIO_FEATURES: StarterFeature[] = [
+  {
+    title: 'Customize site identity',
+    description:
+      'Update src/content/siteConfig/ with your name, bio, social links, and profile photo. Replace the placeholder content throughout the site with real information.',
+    complexity: 'small',
+  },
+  {
+    title: 'Add portfolio projects',
+    description:
+      'Populate src/content/projects/ with your real projects. Each project gets a title, description, tech stack tags, links, and an optional cover image.',
+    complexity: 'small',
+  },
+  {
+    title: 'Write blog posts',
+    description:
+      'Create your first blog posts in src/content/blog/. Posts are MDX and support syntax highlighting, images, and custom components.',
+    complexity: 'medium',
+  },
+  {
+    title: 'Configure custom domain',
+    description:
+      'Set up a custom domain for the portfolio. Update astro.config.mjs with the site URL, configure DNS records, and deploy to Cloudflare Pages.',
+    complexity: 'small',
+  },
+  {
+    title: 'Add testimonials',
+    description:
+      'Collect and add testimonials to src/content/testimonials/. Each testimonial includes a quote, author name, role, and optional avatar.',
+    complexity: 'small',
+  },
+];
+
 const EXTENSION_FEATURES: StarterFeature[] = [
   {
     title: 'Add options page settings',
@@ -102,6 +135,8 @@ export function getStarterFeatures(type: StarterKitType): StarterFeature[] {
   switch (type) {
     case 'docs':
       return [...UNIVERSAL_FEATURES, ...DOCS_FEATURES];
+    case 'portfolio':
+      return [...UNIVERSAL_FEATURES, ...PORTFOLIO_FEATURES];
     case 'extension':
       return [...UNIVERSAL_FEATURES, ...EXTENSION_FEATURES];
     case 'general':
