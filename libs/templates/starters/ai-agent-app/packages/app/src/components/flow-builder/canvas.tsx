@@ -9,7 +9,8 @@
  */
 
 import { useCallback, useRef } from 'react';
-import ReactFlow, {
+import {
+  ReactFlow,
   Background,
   BackgroundVariant,
   Controls,
