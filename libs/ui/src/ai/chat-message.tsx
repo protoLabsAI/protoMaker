@@ -244,6 +244,46 @@ function extractGroupText(group: PartSegment[]): string {
     .join('');
 }
 
+// ---------------------------------------------------------------------------
+// Perplexity-style word fade-in animation for streaming text
+// ---------------------------------------------------------------------------
+
+/**
+ * Split a string into 2-word chunks for the fade-in animation.
+ * Each chunk includes a trailing space so words don't run together.
+ */
+function chunkString(str: string): string[] {
+  const words = str.split(' ');
+  const chunks: string[] = [];
+  for (let i = 0; i < words.length; i += 2) {
+    chunks.push(words.slice(i, i + 2).join(' ') + ' ');
+  }
+  return chunks;
+}
+
+/**
+ * Renders raw text as 2-word animated chunks while streaming.
+ * Each chunk fades in via the `.animate-fade-in-word` CSS class.
+ * Falls back to a plain prose wrapper when not streaming.
+ */
+function StreamingTextChunks({ text, citations }: { text: string; citations: Citation[] }) {
+  const chunks = chunkString(text);
+  return (
+    <div
+      data-slot="chat-message-markdown"
+      className="prose prose-sm dark:prose-invert max-w-none prose-p:mt-0 prose-p:mb-4 prose-p:leading-relaxed"
+    >
+      <p>
+        {chunks.map((chunk, i) => (
+          <span key={i} className="animate-fade-in-word">
+            {chunk}
+          </span>
+        ))}
+      </p>
+    </div>
+  );
+}
+
 /**
  * Render a single non-tool, non-step message part.
  * Tool and step-start parts are handled upstream by the segment loop.
@@ -262,6 +302,12 @@ function MessagePartRenderer({
   if (type === 'text') {
     const text = part.text as string;
     if (!text) return null;
+    // While streaming the last text part, render animated 2-word chunks
+    // instead of passing through the full markdown renderer. This gives the
+    // perplexity-style fade-in effect with zero overhead once streaming ends.
+    if (isStreaming) {
+      return <StreamingTextChunks text={text} citations={citations} />;
+    }
     return <ChatMessageMarkdown content={text} citations={citations} isStreaming={isStreaming} />;
   }
 

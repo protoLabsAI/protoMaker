@@ -1,0 +1,21 @@
+---
+import { getEntry } from 'astro:content';
+
+const stats = await getEntry('sections', 'stats');
+const { items } = stats.data;
+---
+
+<div class="border-y border-white/5 bg-surface-1/50">
+  <div
+    class="max-w-5xl mx-auto px-6 py-10 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 text-center"
+  >
+    {
+      items.map((stat) => (
+        <div>
+          <div class="text-3xl md:text-4xl font-bold font-mono text-white">{stat.value}</div>
+          <div class="mt-1 text-sm text-zinc-500">{stat.label}</div>
+        </div>
+      ))
+    }
+  </div>
+</div>

@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 537
-  referenced: 116
-  successfulFeatures: 116
+  loaded: 554
+  referenced: 137
+  successfulFeatures: 137
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -730,630 +730,1066 @@ usageStats:
 - **Trade-offs:** Adds payload to Feature; enables rich observability and potential future ML feedback loops on assignment quality
 - **Breaking if changed:** Removing metadata would eliminate ability to distinguish high-confidence from low-confidence auto-assignments, making manifest tuning impossible
 
-#### [Pattern] Use documentation guard notes (clarifying disclaimers) to prevent future accidental re-introduction of unimplemented features or configuration options into docs (2026-03-14)
-- **Problem solved:** `manifestPaths` was never in docs and never implemented in code, but could be accidentally documented as a feature later if not explicitly locked
-- **Why this works:** Documentation is the user-facing API contract. Preventing feature drift requires explicit barriers in docs themselves, not just code review or issue tracking.
-- **Trade-offs:** Adds documentation maintenance overhead but ensures users see exactly what's implemented and what isn't; prevents confusion from feature churn
-
-### Backfill route registered directly in routes.ts (not nested in createFeaturesRoutes factory) because projectService dependency is unavailable in the features router factory signature (2026-03-14)
-- **Context:** Endpoint requires projectService to build milestone→project mappings, but the modular features router is created without this dependency
-- **Why:** Avoids expanding createFeaturesRoutes factory surface. Keeps router contract minimal; services that don't own the features domain shouldn't be passed through it
-- **Rejected:** Add projectService to features router factory, but this couples an unrelated service into the features module contract and pollutes the factory signature
-- **Trade-offs:** Easier: features router stays focused. Harder: backfill endpoint lives outside modular structure, requiring explicit knowledge of its location in parent routes.ts
-- **Breaking if changed:** If routes.ts refactored away or projectService API changes, backfill endpoint architecture breaks. Moving the endpoint into features router requires restructuring factory dependencies.
-
-#### [Gotcha] Re-export barrel files don't necessarily export all types from their source packages. Local barrel at `apps/server/src/types/settings.ts` doesn't export `WorkflowSettings`, forcing direct imports from `@protolabsai/types` instead. (2026-03-14)
-- **Situation:** Attempted to use `import('../types/settings.js').WorkflowSettings` in type cast, which failed with 'not exported from file' error
-- **Root cause:** Barrel files are curated re-exports chosen by the barrel maintainer, not exhaustive. Using a barrel creates false expectation that all types from the package are available locally.
-- **How to avoid:** Direct package imports bypass the barrel convenience but guarantee type availability. Adds import scattered across codebase.
-
-#### [Pattern] Retained deprecated `personaOverrides` field in `GlobalSettings` type (with @deprecated JSDoc, optional) during migration rather than deleting it. Ensures old config files load without errors; migration deletes field from disk on first startup. (2026-03-14)
-- **Problem solved:** Moving global feature (personas) to project scope requires one-time data migration without breaking existing installations
-- **Why this works:** Smooth upgrade: old configs load immediately without modification, migration runs silently on next startup, field is gone after first load. Avoids upgrade friction and version compatibility matrix.
-- **Trade-offs:** Temporary type debt (deprecated field in schema) for transparent, automatic migration. Cleanup happens in data, not code.
-
-#### [Pattern] Migration logic placed in `getGlobalSettings()` (startup hook) rather than separate CLI or background job. Reads enabled personas, writes to current project's settings.json, deletes field from global settings in one atomic operation. (2026-03-14)
-- **Problem solved:** One-time migration from global to project scope needs to run exactly once per project, correctly targeting the current project
-- **Why this works:** Guaranteed execution on every startup (idempotent, runs until complete). No separate CLI to run, no background job scheduling, no version tracking. Simplest correctness guarantee.
-- **Trade-offs:** Startup path does extra I/O; guarantees migration happens correctly and automatically. No user action required.
-
-### Implemented exclusive fallback strategy: ledger entries take priority; fallback only fires when ledger returns zero results. Never merge both sources. (2026-03-14)
-- **Context:** Could have synthesized a unified event stream from both ledger + feature metadata, requiring deduplication logic.
-- **Why:** Simplicity and determinism. Ledger is source-of-truth when it has data. Fallback is strictly additive for gaps. No merge conflicts.
-- **Rejected:** Merge strategy combining ledger and feature events with deduplication logic
-- **Trade-offs:** Simpler code/logic vs. incomplete event history if both sources coexist. Assumes ledger backfill won't occur retroactively.
-- **Breaking if changed:** If ledger is retroactively populated with historical entries, fallback events become orphaned. Strategy assumes ledger is populated forward-only after this feature ships.
-
-### Synthetic event IDs use deterministic pattern `${featureId}:created` instead of UUIDs, creating a distinct format from ledger entry IDs (which are UUIDs). (2026-03-14)
-- **Context:** Needed to distinguish synthesized events from real ledger entries and avoid ID collisions.
-- **Why:** Deterministic IDs are regenerable and debuggable. Format prefix (`feature:created` vs UUID) prevents collisions and makes source obvious in logs. Allows safe merging if fallback ever needs to coexist with ledger data.
-- **Rejected:** Using UUIDs for synthetic events (would lose traceability and collision-avoidance semantics)
-- **Trade-offs:** Easier debugging/auditing vs. aesthetic inconsistency with ledger ID format. Requires API clients to handle two ID patterns.
-- **Breaking if changed:** If changed to UUIDs, loses the ledger-vs-synthetic distinction. Deduplication between sources becomes ambiguous.
-
-#### [Pattern] The `featureLoader` dependency was already available in the route factory context (`createProjectsRoutes`), requiring only that it be threaded as a second parameter to the handler factory. (2026-03-14)
-- **Problem solved:** Implementation didn't require building new infrastructure—just wiring existing dependency.
-- **Why this works:** Route factory pattern with dependency injection means new handlers can access dependencies without global state. Smooth integration when extending handlers.
-- **Trade-offs:** Requires parameter threading at call site vs. avoids global state and makes dependencies explicit.
-
-#### [Pattern] Fire-and-forget error handling for cascading side effects: epic auto-completion catches errors and logs as warnings, never blocks the primary feature update flow. (2026-03-14)
-- **Problem solved:** Adding async side effects to a core update operation (feature → epic completion check) without breaking the primary operation if the side effect fails.
-- **Why this works:** Epic completion is a secondary enhancement layered on top of feature updates. Failing the entire operation because epic auto-completion encountered an error would be overreach — the feature update itself was valid. Better to succeed the primary operation and log secondary failures.
-- **Trade-offs:** Feature update always succeeds even if epic fails to auto-complete (better resilience), but epic completion might silently fail and only appear in logs (potential observability gap if logs aren't monitored).
-
-### Reuse existing lifecycle logic (completedAt, status history) for auto-completed epics via the same update() path, rather than special-casing the auto-completion branch. (2026-03-14)
-- **Context:** Epic auto-completion needs to set completedAt timestamp and add a status history entry. The feature update() method already has this lifecycle logic.
-- **Why:** Eliminates duplication and ensures auto-completed epics follow the same lifecycle rules (timestamping, history tracking) as manually-completed epics. Single source of truth for lifecycle behavior.
-- **Rejected:** Direct file writes with custom logic: duplicates lifecycle logic and creates maintenance burden; separate update path for epics: harder to ensure consistency.
-- **Trade-offs:** Less code, auto-completed epics get identical treatment to manual updates (easier to understand), but auto-completion relies on update() lifecycle behavior (creates implicit coupling — lifecycle changes affect auto-completion automatically).
-- **Breaking if changed:** If update() lifecycle logic changes (e.g., how completedAt is set, what history entries are created), auto-completed epics are affected automatically. Requires careful review of lifecycle changes.
-
-### Load all features via getAll() to find epic siblings, accepting O(n) cost per completion event rather than optimizing the query. (2026-03-14)
-- **Context:** Need to check if all children of an epic are done. Could filter the directory listing or build an index, but chose simple getAll().
-- **Why:** getAll() is straightforward, matches existing patterns in the codebase, and works well for current scale. Premature optimization would add complexity without proven need.
-- **Rejected:** Directory filtering: more efficient but requires parallel reads and custom logic; in-memory index: requires cache invalidation logic.
-- **Trade-offs:** Simpler code and consistency with existing queries (easier maintenance), but scales linearly with total feature count (if 1000s of features, each completion triggers 1000s+ loads). Performance optimization is deferred to when needed.
-- **Breaking if changed:** If scale grows to 100k+ features and this becomes a bottleneck, would need to implement directory filtering or indexing — current code assumes getAll() performance is acceptable.
-
-### Three-layer refresh strategy: (1) WebSocket event subscription invalidates React Query cache on specific events, (2) Manual refresh button with 500ms spinner feedback, (3) Auto-poll fallback at 60-second interval. (2026-03-14)
-- **Context:** Timeline must stay fresh with minimal polling load and no stale data, but WebSocket can fail or miss events.
-- **Why:** Layers handle different failure modes: events for normal path (efficient), button for user-perceived staleness (UX control), poll for WebSocket failure recovery (resilience).
-- **Rejected:** Single-layer approach (e.g., only polling or only WebSocket) — would either waste resources or become stale under network degradation.
-- **Trade-offs:** More code/complexity but extremely resilient. User gets instant feedback (button spinner) + automatic background updates (events) + safety net (poll).
-- **Breaking if changed:** Removing any layer breaks a failure scenario: no events = stale until poll; no button = user can't force refresh; no poll = WebSocket outage leaves timeline frozen.
-
-#### [Pattern] Selective event subscription: Only subscribe to `feature:status-changed`, `milestone:completed`, `ceremony:fired`, `pr:merged`, `escalation:signal-received` rather than all events. (2026-03-14)
-- **Problem solved:** Timeline component needed to know when to refresh, but event bus carries many event types that don't affect timeline.
-- **Why this works:** Filtering at subscription level reduces CPU and network overhead. Event processing happens server-side per project, so irrelevant event deliveries are wasted bandwidth.
-- **Trade-offs:** Explicit allowlist is more maintainable and efficient, but requires updating subscription when new timeline-relevant event types are added.
-
-#### [Pattern] useEffect dependency on project ID only, not on subscribeToEvents or cache invalidation functions. Subscription is set up once per project change. (2026-03-14)
-- **Problem solved:** WebSocket subscription needs to be set up when component mounts or project changes, and cleaned up properly.
-- **Why this works:** Minimizes subscription churn. If dependencies included the invalidation function (which changes on every render if defined inline), subscription would be recreated constantly.
-- **Trade-offs:** Requires care: must ensure unsubscribe function is properly returned and called. Fewer subscriptions means better resource efficiency.
-
-### Re-export timeout constants from lead-engineer-types.ts rather than moving all consumer imports to centralized config module (2026-03-14)
-- **Context:** Centralizing timeouts while REVIEW_PENDING_TIMEOUT_MS already had env var support via IIFE in lead-engineer-types.ts, and this file is a public API surface for downstream consumers
-- **Why:** Avoids touching all downstream consumers of lead-engineer-types, preserves existing public API contract, reduces scope of refactor
-- **Rejected:** Complete migration: move all consumers directly to timeouts.ts (would require changes across codebase, higher risk)
-- **Trade-offs:** Adds re-export indirection layer vs cleaner module boundaries; easier adoption vs slightly obfuscated origin
-- **Breaking if changed:** If re-exports removed, all code importing from lead-engineer-types loses access to these constants; if re-export points differ from actual consumer imports, circular references or duplicate definitions
-
-#### [Gotcha] lead-engineer-types.ts functions as de facto public API hub beyond just type definitions (2026-03-14)
-- **Situation:** File named for types but discovered to be re-exporting runtime constants that external services depend on
-- **Root cause:** Evolved module scope not reflected in module name; historical accumulation of exports without architectural refactoring
-- **How to avoid:** Clear naming vs pragmatic public API; architectural purity vs stability
-
-#### [Pattern] Centralized config module where each constant reads from named env var with previous hardcoded value as default (2026-03-14)
-- **Problem solved:** Need to consolidate scattered timeout constants while enabling runtime configuration
-- **Why this works:** Env var with default achieves three goals: backward compatible (no forced env var requirement), enables opt-in override (no config scaffolding needed), auditable (single module to review)
-- **Trade-offs:** More configuration surface vs safer defaults; runtime flexibility vs simpler code; easier to audit vs more indirection to understand actual values
-
-#### [Pattern] Domain-based grouping of constants in central config (execution, polling, networking, cleanup) rather than alphabetical or usage-based (2026-03-14)
-- **Problem solved:** Organizing 10+ timeout constants from disparate services without clear original taxonomy
-- **Why this works:** Domain grouping aids discoverability (find all networking timeouts in one section), enables batch changes (adjust all polling intervals together), mirrors conceptual service responsibilities
-- **Trade-offs:** Better for configuration audits vs harder to find if grouping doesn't match how consumer thinks about them
-
-### Use domain-prefixed exports (EM_POLL_INTERVAL_MS, PROJM_POLL_INTERVAL_MS, PR_FEEDBACK_POLL_INTERVAL_MS) for duplicate constant names rather than consolidating to single POLL_INTERVAL_MS (2026-03-14)
-- **Context:** Multiple services had identically-named constants (POLL_INTERVAL_MS, DRIFT_CHECK_INTERVAL_MS) with different values
-- **Why:** Preserves semantic clarity and prevents accidental coupling—each service's timing policy remains independent and explicit. Prevents bugs if one service's interval accidentally constrains another.
-- **Rejected:** Consolidate to single POLL_INTERVAL_MS with domain-specific overrides or config nesting; merge duplicate timing values
-- **Trade-offs:** More exports in config file (harder to scan) vs clearer intent and safer refactoring. Domain prefix adds verbosity but eliminates ambiguity.
-- **Breaking if changed:** Removing domain prefix requires updating all 11 service import sites; consolidating values would break services with different timing needs
-
-#### [Pattern] Each timeout constant reads from optional env var with previous hardcoded value as default: `process.env.CRDT_HEARTBEAT_MS ?? 5000` (2026-03-14)
-- **Problem solved:** Need runtime configurability for infrastructure timeouts without requiring explicit configuration in every deployment
-- **Why this works:** Provides optional runtime flexibility while maintaining backward compatibility—existing deployments work unchanged, new deployments can tune via env. Single code path, no branching logic.
-- **Trade-offs:** Eliminates need for config schema validation at startup; runtime env var values not validated at compile time. Requires .env.example documentation to surface all available tuning points.
-
-### Establish decision boundary between centralized 'infrastructure timeouts' (CRDT_HEARTBEAT_MS, HEALTH_CHECK_INTERVAL_MS) vs local 'service-private' constants (IDEA_PROCESSING_DELAY_MS, CLAIM_VERIFY_DELAY_MS, NOTIFICATION_RATE_LIMIT_MS) (2026-03-14)
-- **Context:** Feature spec required centralizing timeouts, but not all timing constants are infrastructure policy
-- **Why:** Service-private constants are implementation details (debounces, rate limits within a single service). Centralizing them couples internal logic to global policy and makes service reuse harder. Infrastructure timeouts affect resource consumption and SLAs across the system.
-- **Rejected:** Centralize all timing constants for uniformity; keep everything local for autonomy
-- **Trade-offs:** Hybrid approach adds complexity to the centralization criteria, but better respects separation of concerns. Future contributors must understand which category a new constant belongs to.
-- **Breaking if changed:** Moving service-private constants to central config binds service behavior to global policy; removing centralized infrastructure timeouts reintroduces hardcoded values that are hard to adjust per environment
-
-#### [Pattern] Services keep local constant names but assign from central config: `const HEARTBEAT_MS = timeouts.CRDT_HEARTBEAT_MS` instead of importing directly or renaming all usages (2026-03-14)
-- **Problem solved:** Minimize diff surface and review burden while centralizing source of truth
-- **Why this works:** Local naming (HEARTBEAT_MS) stays unchanged in service files; only import statement changes. Reduces cognitive load during code review—readers see familiar local names. Easier to track which uses depend on central config.
-- **Trade-offs:** Adds one level of indirection (reader must track local const to central source), but minimizes code churn and review complexity. Less explicit that value comes from config.
-
-#### [Gotcha] worktree-lifecycle.module.ts also has DRIFT_CHECK_INTERVAL_MS (5 minutes) but was not included in migration—creates duplicate naming with different value from migrated worktree-lifecycle-service.ts (6 hours) (2026-03-14)
-- **Situation:** Feature spec listed worktree-lifecycle-service.ts but the related .module.ts file had its own constant with same name
-- **Root cause:** Likely conscious scope limitation (feature spec was specific about which files) or oversight. Module-level constants may have been overlooked.
-- **How to avoid:** Avoids scope creep and keeps feature focused, but leaves technical debt. Now two DRIFT_CHECK_INTERVAL_MS exist in same module with different purposes.
-
-#### [Gotcha] Friction tracker only fires on `blocked` status transitions, not `review`. Post-commit rebase conflicts that produced valid PRs silently transitioned to `review`, completely bypassing the friction tracking system and preventing signal accumulation. (2026-03-14)
-- **Situation:** Recurring merge_conflict failures were never being tracked despite happening repeatedly because conflicts resolved to `review` state instead of triggering the block path.
-- **Root cause:** The classifier pattern matching in friction tracker is keyed to specific state transitions. A feature becoming `blocked` invokes the pattern classifier, but `review` transitions skip it entirely. The system assumes all tracked failures flow through the `blocked` state.
-- **How to avoid:** Now requires explicit handling in execution-service to force `blocked` state for post-commit conflicts (more code), but gives accurate signal and prevents noise from legitimate review transitions.
-
-#### [Pattern] Accumulator pattern for failure context with a hard cap (10 entries). Failures are accumulated with full context (feature ID, conflicting files, branch name) before the pattern is resolved and an issue is filed. Context is cleared on resolution to prevent stale data from leaking into re-occurrences. (2026-03-14)
-- **Problem solved:** Needed to capture not just that a failure occurred, but contextual details about what failed and where, across multiple occurrences, to create a rich issue description.
-- **Why this works:** Batching/throttling prevents filing an issue on the first occurrence (noise). Waiting for 10 accumulations ensures signal is strong enough to justify a filed issue. Cap prevents unbounded memory growth. Clearing on resolution prevents old context from polluting new issues.
-- **Trade-offs:** Easier: accurate issue severity based on recurring signal. Harder: delayed feedback (issue only files after 10 occurrences) and extra state management (clearing on resolve).
-
-### Conflicting files are captured at the lowest level (git-utils rebase.ts with `git diff --name-only --diff-filter=U`), then threaded through each layer's return type (RebaseResult → GitWorkflowResult → execution-service) before reaching the friction tracker. (2026-03-14)
-- **Context:** Needed to give developers actionable info about what files caused the conflict, but also needed that data at multiple levels of the call stack.
-- **Why:** Captures data at the source (lowest level where git operations happen), making it available to all callers without duplicating the git call. Each layer that cares about conflicts can access it.
-- **Rejected:** Alternative 1: Capture only at git-utils level, have callers query again if needed. Rejected: duplicates git calls and assumes callers know they need it. Alternative 2: Capture only at execution-service level. Rejected: other callers of git-workflow-service wouldn't have conflict data.
-- **Trade-offs:** Easier: all callers automatically have rich conflict data. Harder: more parameters on intermediate types, coupling between layers.
-- **Breaking if changed:** Removing conflict data from intermediate types (RebaseResult, GitWorkflowResult) means downstream callers lose the information. Friction tracker would only know a conflict happened, not which files caused it.
-
-#### [Gotcha] The `resolvePattern()` method in friction tracker must clear accumulated `failureContexts` for that pattern, otherwise stale context from the resolved failure bleeds into the next occurrence of the same pattern. (2026-03-14)
-- **Situation:** Without clearing, if the same merge_conflict pattern recurs after being resolved, the new issue filed would include context from the old, resolved issue, creating confusion.
-- **Root cause:** The accumulator map persists across pattern occurrences as a class member. If you file an issue and resolve the pattern without clearing the map, the next occurrence adds to the stale data.
-- **How to avoid:** Easier: cleaner issue descriptions. Harder: requires explicit state cleanup logic.
-
-#### [Gotcha] Nested mutex acquisition causes deadlock: calling a mutex-wrapped method from inside its own mutex lock hangs forever because the second call tries to enqueue behind itself (2026-03-14)
-- **Situation:** claim() needed to call update() atomically, but update() acquires the same per-feature mutex that claim() already holds
-- **Root cause:** Promise-chain mutex works by chaining onto prev.then(), but if the caller already holds the chain, enqueuing another call creates a cycle waiting for itself
-- **How to avoid:** Required extraction of _updateCore() helper, splitting public API from internal implementation, but made deadlock impossible
-
-#### [Pattern] Promise-chain mutex via Map<key, Promise>: prev.then(() => fn()) serializes all calls for the same key by chaining microtasks, not blocking threads (2026-03-14)
-- **Problem solved:** JavaScript is single-threaded; traditional mutex/lock primitives don't apply; need lightweight serialization of async I/O operations
-- **Why this works:** Promise chains are idiomatic in Node.js: leverages event loop, no active waiting, GC-friendly, and orders calls by microtask queue semantics without OS involvement
-- **Trade-offs:** Simple and standard JS idiom, but promise chain depth grows with queue length; ordering guaranteed by JS spec, no manual queue management
-
-### Mutex scoped to projectPath::featureId (per-feature) instead of global, allowing updates to different features to run concurrently (2026-03-14)
-- **Context:** Many features may be updated simultaneously; global lock would serialize all operations even on unrelated features
-- **Why:** Reduces artificial bottleneck: only features being modified concurrently need ordering; unrelated operations proceed in parallel for better throughput
-- **Rejected:** Global mutex (single Promise queue for all features) — simpler to implement but creates contention bottleneck even for independent features
-- **Trade-offs:** Requires Map maintenance and key composition (projectPath::featureId string), but eliminates unnecessary serialization of unrelated operations
-- **Breaking if changed:** Reverting to global would restore full serialization, killing concurrent updates entirely; per-feature scoping is essential for scaling
-
-#### [Pattern] Extract _Core() helper method containing original implementation; withMutex() wraps public API while _Core() allows internal callers to skip re-locking (2026-03-14)
-- **Problem solved:** claim() needs to invoke update logic atomically inside its own mutex context, but calling update() would attempt to acquire the same lock it already holds
-- **Why this works:** Decouples lock acquisition (public API concern) from business logic (shared implementation), allowing both mutex-wrapped and non-wrapped callers to reuse the same code
-- **Trade-offs:** Adds an internal method, complicating the public API surface slightly, but guarantees correctness and prevents accidental misuse by external callers
-
-#### [Gotcha] TOCTOU race in claim(): two concurrent callers both observe claimedBy as undefined, both succeed in writing their claim, final state is non-deterministic (2026-03-14)
-- **Situation:** get-check-write sequence in claim() spans multiple async boundaries without atomicity; if each step yields control, another caller can interleave
-- **Root cause:** Without mutex wrapping the entire sequence, the check (is claimedBy undefined?) and the write (set claimedBy) are not atomic; a second caller can read the old state between them
-- **How to avoid:** Mutex must enclose entire get+check+write, increasing lock hold time slightly, but guarantees exactly one claim succeeds
-
-#### [Gotcha] Two parallel tool definition patterns exist in the same codebase: factory-pattern tools (libs/tools) use defineSharedTool with Zod schemas; domain functions (domains/features) use raw async functions with TypeScript interfaces. These are not interchangeable. (2026-03-14)
-- **Situation:** Audit discovered 23 tools with Zod definitions across factories, but 8 domain functions cannot be adapted without migration.
-- **Root cause:** Different layers evolved independently. Domain functions were injected via ToolContext without schema requirements; factories had explicit contract enforcement. No unified pattern existed.
-- **How to avoid:** Domain layer keeps async function simplicity but sacrifices adapter compatibility. Factory tools require upfront schema definition but gain universal adapter access.
-
-### Zod schemas are a strict prerequisite for adapter compatibility (MCP, LangGraph). The adapter converts Zod → JSON Schema because MCP's wire protocol requires JSON Schema, not TypeScript type information. (2026-03-14)
-- **Context:** toMCPTool() and toLangGraphTool() cannot work with tools that only have TypeScript interfaces. This creates a hard architectural boundary.
-- **Why:** Zod provides serializable contracts at runtime. JSON Schema is the wire format MCP expects. TypeScript interfaces only exist at compile time and cannot be runtime-serialized reliably.
-- **Rejected:** Could use reflection or TS AST analysis to generate schemas from interfaces at build time (complex tooling, fragile, loses validation semantics) or accept unvalidated inputs (unsafe).
-- **Trade-offs:** Requires explicit schema definition upfront (more code) but guarantees type-safe serialization and enables multiple adapters without per-adapter schema logic.
-- **Breaking if changed:** If you remove Zod requirement, adapters must either lose type safety or implement their own schema reflection (complexity explosion). Removing the prerequisite cascades to all adapter implementations.
-
-#### [Pattern] Gap analysis documentation (8-item migration checklist) surfaces implicit technical debt as explicit action items, linked to a reference implementation (request-user-input.ts proves the pattern is viable in domain layer). (2026-03-14)
-- **Problem solved:** Before audit, developers could not know why their domain tool could not be adapted without attempting it. Failures would be discovered at integration time, not design time.
-- **Why this works:** Makes blockers predictable and prevents surprise failures downstream. The reference implementation proves the solution is possible; the checklist makes the work explicit and prioritizable.
-- **Trade-offs:** Additional documentation overhead but prevents integration-time surprises and creates a clear migration path. Developers know exactly which 8 tools block which adapters.
-
-#### [Gotcha] request-user-input.ts in domains/hitl/ is the ONLY domain tool that already uses defineSharedTool with Zod, proving the factory pattern is viable in domain layers but is not being consistently followed elsewhere. (2026-03-14)
-- **Situation:** 8 other domain functions use raw async signatures; request-user-input.ts uses defineSharedTool. This inconsistency exists within the same domains/ directory tree.
-- **Root cause:** Likely built later with explicit adapter requirements in mind, or by someone aware of the factory pattern. Earlier domain functions were written before the need for adapter compatibility was clear.
-- **How to avoid:** The split in patterns shows patterns can coexist but creates a mental model burden — developers must learn when each applies. request-user-input.ts serves as proof of correctness for the migration.
-
-### Use structural interface (AgentDeps) instead of importing concrete service class for tool dependencies (2026-03-14)
-- **Context:** libs/tools needs to reference methods from agent service, but mcp-server imports libs/tools, creating circular dependency risk
-- **Why:** Structural typing breaks circular dependency chain without sacrificing type safety. libs/tools depends only on the interface contract, not the concrete implementation.
-- **Rejected:** Import concrete AgentService class directly from mcp-server package
-- **Trade-offs:** Requires maintaining interface separately, but enables clean layered architecture where libs/tools doesn't import server packages
-- **Breaking if changed:** If AgentDeps interface methods don't match actual service signatures (typos, missing methods, parameter mismatches), all tools fail at runtime with opaque method-not-found errors
-
-#### [Pattern] Designate canonical reference implementation for cross-module tool definitions (2026-03-14)
-- **Problem solved:** Agent tools need to be defined consistently in both libs/tools and mcp-server, but no enforcement mechanism prevents drift
-- **Why this works:** Single source of truth (mcp-server implementation) prevents definitions diverging when server's actual capabilities change. libs/tools mirrors it.
-- **Trade-offs:** Requires discipline to consult canonical reference, but prevents silent type-safety violations
-
-### Extract parseGitHubRemote to shared @protolabsai/git-utils library instead of duplicating parseOwnerRepo in each service (2026-03-14)
-- **Context:** Both coderabbit-resolver-service and git-workflow-service implemented identical regex parsing of git remote URLs
-- **Why:** Creates single point of truth for URL parsing that can be security-reviewed once, audit-logged centrally, and updated without coordination. Both services already imported from this package, making extraction clean. Reduces surface area of injection-vulnerable code.
-- **Rejected:** Keep duplicate implementations in each service (standard DRY refactoring rejection) - but this also means security fixes must be duplicated/coordinated
-- **Trade-offs:** Adds a public export to shared library (potential coupling); makes library aware of GitHub-specific parsing (less generic); but eliminates 40+ lines of duplicate regex logic
-- **Breaking if changed:** If the shared library is removed, both services lose access to parseGitHubRemote and must re-implement or fail; the library export must be maintained through package versioning
-
-### Per-session Promise chain serialization using Map<string, Promise<void>> with enqueueForSession() helper (2026-03-14)
-- **Context:** Prevent concurrent race conditions when multiple events fire for the same session's world state
-- **Why:** Serialization ensures atomic updates to session world state; Map allows parallel processing across different sessions (scalability); Promise chaining naturally handles both sync and async tasks
-- **Rejected:** Global event queue (simple but would serialize all sessions, killing parallelism); mutex/locks (more verbose, less JS-idiomatic)
-- **Trade-offs:** Adds memory overhead of per-session chain pointers (minimal); enables true session-level parallelism; requires explicit cleanup on stop/destroy
-- **Breaking if changed:** Removing this chain would reintroduce race conditions where concurrent evaluateAndExecute calls corrupt session world state; two concurrent events could partially apply and leave inconsistent state
-
-#### [Gotcha] onEvent() is synchronous (returns void) but queues async work on the Promise chain; observers cannot await the result (2026-03-14)
-- **Situation:** Service API contracts that events are processed synchronously, but actual processing happens asynchronously on chain
-- **Root cause:** Sync API prevents blocking callers; async execution prevents blocking event loop; mismatch requires explicit chain flushing in tests
-- **How to avoid:** Fire-and-forget API is convenient but requires discipline in testing/observing; enables non-blocking event handling
-
-### Event whitelist approach: !type.startsWith('lead-engineer:') instead of blacklist of specific events (2026-03-14)
-- **Context:** Prevent cascading loops where internal events re-trigger rule evaluation
-- **Why:** Whitelist is more robust as new lead-engineer:* events are added; blacklist would require updating test suite and service code for each new event type; startsWith() pattern-matches entire namespace
-- **Rejected:** Blacklist ['lead-engineer:started', ...] (requires maintenance as events proliferate); allowlist with explicit checks (verbose)
-- **Trade-offs:** Whitelist is slightly slower (string prefix check) but more maintainable; requires conscious awareness of event naming conventions
-- **Breaking if changed:** If whitelist is removed, any lead-engineer:* event firing during evaluation would re-trigger evaluateAndExecute, causing cascading loops and potential infinite recursion
-
-#### [Pattern] Skip rule evaluation when world state refresh fails (worldStateRefreshFailed Set) until next successful refresh (2026-03-14)
-- **Problem solved:** World state refresh can throw errors (e.g., file system access, parsing); using stale/partial state for rule evaluation is dangerous
-- **Why this works:** Prevents rule evaluation on inconsistent data; Set is cleared only on successful refresh (guarantees eventual consistency); skipping is safer than retrying indefinitely
-- **Trade-offs:** Defers evaluation until state is consistent (may miss events); avoids cascading errors from bad state; adds per-session failure tracking
-
-#### [Pattern] Resource counters must use finally blocks instead of scattered symmetric decrements across success/error paths (2026-03-14)
-- **Problem solved:** activeWorkflows counter was decremented in happy path, catch block, but the early return for missing branchName had no decrement. This leaked counter state and broke subsequent workflow processing.
-- **Why this works:** finally block executes regardless of normal return, throw, or early return paths. Any new code path added later is automatically protected. Scattered decrements require explicit tracking and inevitably miss cases (as happened here).
-- **Trade-offs:** finally is slightly less explicit about increment/decrement pairing than synchronized blocks, but provides automatic correctness for any future code path added to the function
-
-#### [Gotcha] Queue advancement operations must execute in both success AND error paths—it is not a success-only operation (2026-03-14)
-- **Situation:** agent-service called setImmediate(() => processNextInQueue()) only after successful agent execution. Errors threw before calling it, permanently freezing the queue for that session's remaining prompts.
-- **Root cause:** Queue advancement is a state machine transition, decoupled from error handling. Errors must still allow the next queued item to be processed; the error propagates but queue machinery must continue. Treating it as success-only couples error handling to queue semantics.
-- **How to avoid:** Requires queue advancement call in both paths (or extract to finally), adding 1-2 lines of code. Benefit: queue remains live across error states.
-
-#### [Gotcha] Async callbacks that follow a synchronous guard check must re-validate that guard condition before mutating state (2026-03-14)
-- **Situation:** feature-scheduler checked isFeatureRunning synchronously, then spawned async isWorktreeLocked operation. While that async operation was pending, the feature transitioned to running state. The callback then executed and removed it from startingFeatures despite it being active.
-- **Root cause:** Time-of-check-time-of-use race: synchronous check passes, state changes during the async gap, callback executes with stale assumptions. Async boundaries break single-threaded reasoning; state must be re-validated before acting.
-- **How to avoid:** Requires condition duplicated in callback (checked twice: once before async, once in callback), adding defensive code. Benefit: prevents phantom cleanup and race-condition-induced state corruption.
-
-#### [Gotcha] String-based error classification from unstructured error messages requires increasingly specific pattern matching to avoid false positives (2026-03-14)
-- **Situation:** Error patterns like 'worktree' and 'timed out' were matching incidentally in error messages, causing incorrect fatal infrastructure failure classification
-- **Root cause:** Unstructured error messages from external systems cannot be safely matched with substring checks; false positives in error classification break state machine correctness
-- **How to avoid:** Specific string matching is maintainable within current codebase but remains brittle to upstream error message format changes; structured errors would be robust but impose integration burden
-
-#### [Pattern] Merge sequential state updates into atomic writes to prevent intermediate state visibility in state machines (2026-03-14)
-- **Problem solved:** Two sequential featureLoader.update() calls (status + failureCount + failureClassification) could be read partially by other processes, leaving system in inconsistent state
-- **Why this works:** State machine correctness depends on related state changes being visible as a unit; partial updates allow other processes to observe intermediate inconsistent states and make incorrect decisions
-- **Trade-offs:** Atomic merged writes are simpler and correct but couple state concerns; separate writes are more modular but require external transaction guarantees
-
-### Derive phase implicitly from context state signals instead of explicitly storing and updating phase on state entry (2026-03-14)
-- **Context:** EscalateProcessor.exit() needs to report originating phase but phase was hardcoded, requiring manual tracking across state transitions
-- **Why:** Implicit derivation avoids dual source of truth; phase is already encoded in observable context (mergeRetryCount > 0 means PUBLISH, prNumber means VERIFY, etc.), so explicitly storing it duplicates information
-- **Rejected:** Could explicitly store phase value at each state entry, making it unambiguous but adding state management complexity and synchronization requirements
-- **Trade-offs:** Implicit derivation is DRY and avoids state redundancy but depends on context signals being unambiguous; explicit storage is redundant but more defensive to ambiguous state
-- **Breaking if changed:** If multiple phases could produce the same context state (e.g., mergeRetryCount > 0 AND prNumber != null), derivation logic becomes ambiguous and reports wrong phase
-
-#### [Gotcha] Retry logic decision points must use explicit error string enumeration instead of broad keyword matching to avoid unintended retries (2026-03-14)
-- **Situation:** MergeProcessor used includes('check') || includes('pending') || includes('required') which matched incidentally in unrelated error messages, causing unintended merge retries
-- **Root cause:** Retry logic decisions are critical state machine transitions; false positives cause infinite retries or incorrect escalations. Keyword matching cannot distinguish intentional matches from incidental ones
-- **How to avoid:** Enumeration is verbose and requires maintenance for new error messages; keyword matching is concise but unsafe and fails unsafe (unintended retries)
-
-#### [Pattern] Use execution context flags (isRecursive parameter) to conditionally skip guards during continuation, rather than delete/re-add patterns on shared tracking state (2026-03-14)
-- **Problem solved:** Recursive feature execution where a feature needs to re-enter itself while maintaining a duplicate execution guard (runningFeatures map)
-- **Why this works:** Delete/re-add creates a critical race window: featureId is absent from runningFeatures between deletion and re-entry, allowing concurrent calls to see it as 'not running' and bypass the duplicate guard. A conditional flag skips the guard without state manipulation, eliminating the gap entirely
-- **Trade-offs:** Flag approach requires one extra parameter but guarantees state consistency; delete/re-add seems simpler initially but introduces subtle, hard-to-reproduce concurrency vulnerabilities
-
-#### [Gotcha] Any gap in tracking state visibility during async continuation creates a race condition vulnerability, even if the gap is microseconds long (2026-03-14)
-- **Situation:** Features need to track running state (runningFeatures.has(featureId)) to prevent concurrent duplicate execution, but recursive calls were deleting before re-entry
-- **Root cause:** In event-loop systems, 'delete then re-add immediately' is not atomic. Concurrent checks can execute in the gap between operations. The assumption that synchronous delete/re-add is safe ignores that other microtasks and I/O can yield control to event loop during the gap
-- **How to avoid:** Using conditional parameter passing adds one layer of explicitness but prevents entire class of race conditions; state mutation during continuation is simpler to reason about initially but creates fragile timing assumptions
-
-### 'review' status should not be classified as TERMINAL_STATUSES because auto-mode legitimately needs to restart execution when features fail CI review (2026-03-14)
-- **Context:** Features that reach 'review' status can fail validation and need re-execution, but TERMINAL_STATUSES blocks re-entry to execution
-- **Why:** Terminal status semantics assumed review is a final state, but in auto-mode flow, review is a transient checkpoint that can legitimately flow back to execution based on feedback. Blocking re-execution defeats auto-mode's core retry capability for failed reviews
-- **Rejected:** Keep review as terminal and implement separate retry logic outside the status machine; create bypass flags instead of removing from TERMINAL_STATUSES
-- **Trade-offs:** Removing review from terminal makes state machine more flexible and auto-mode simpler, but requires external logic to prevent infinite loop if a feature perpetually fails review; keeping it terminal prevents loops but requires special-case handling in auto-mode retry
-- **Breaking if changed:** If review is marked terminal, auto-mode cannot restart work on features that failed CI review, breaking the fundamental validation feedback loop that auto-mode depends on
-
-#### [Pattern] Dual-export pattern: CSS string exports + typed const object for same token set (2026-03-14)
-- **Problem solved:** Design tokens needed to be consumed in two different contexts: Tailwind configuration (CSS strings) and JS/TS runtime (inline styles, canvas, storybook)
-- **Why this works:** CSS strings can be injected into Tailwind config methods, but typed objects enable exhaustive type checking and IDE autocomplete in JS contexts. A single format couldn't serve both well.
-- **Trade-offs:** More code to maintain (mirrored values), but zero friction in either context. Parsing CSS in TS is error-prone; formatting objects as CSS loses type safety.
-
-### Centralize tokens as library module (templates package) rather than scattered across site HTML (2026-03-14)
-- **Context:** Tokens previously embedded in site/index.html CSS; now extracted as single source of truth in @protolabsai/templates
-- **Why:** Single source of truth prevents drift between site and other projects using same brand. Enables consistent updates across all consumers via npm version bump.
-- **Rejected:** Leaving tokens in site HTML: simpler for site, but makes it hard for other packages (docs, extensions) to use same tokens without duplication or copy-paste
-- **Trade-offs:** Site now depends on templates package (added build coupling), but consistency guaranteed across entire monorepo. Updates require rebuild of templates, then all consumers.
-- **Breaking if changed:** Site can no longer operate independently—must import from templates. Removing this pattern requires re-embedding tokens in site or creating alternative distribution mechanism
-
-#### [Pattern] Use 'as const' on designTokens object for exhaustive literal types, not just Record<string, string> (2026-03-14)
-- **Problem solved:** Token object includes nested structure (colors.surface.0, colors.accent.DEFAULT, etc.) typed as `typeof designTokens` const
-- **Why this works:** Exhaustive literal typing enables discriminated unions, type-safe theme interpolation, and IDE autocomplete showing exact keys and values. Generic Record type loses specificity.
-- **Trade-offs:** Slightly larger compiled type definition, but massive DX win (autocomplete, refactoring safety). No runtime cost.
-
-#### [Gotcha] Using `!this.settingsService` (null check on injected dependency) as a feature disable gate conflates two concerns: DI wiring errors and intentional feature flags. Null service suppresses errors instead of failing fast. (2026-03-14)
-- **Situation:** The service checks `if (!this.settingsService) return null` to disable the feature. But if settingsService fails to inject due to a wiring bug, the feature silently disables rather than throwing.
-- **Root cause:** Convenient for testing (can pass null to disable) and allows graceful degradation if settings service isn't available.
-- **How to avoid:** Implicit disable via null is convenient in tests but hides real DI configuration errors. Makes bugs harder to diagnose—code appears to work but feature silently disabled.
-
-### Feature flag requirement exists only at interface/test level; implementation was missing the gate entirely. Type signature (`Promise<HITLFormRequest | null>`) promised null return, but code never returned it. (2026-03-14)
-- **Context:** Tests at lines 93 and 99 expected null when feature disabled, but the create() method had no guard. This suggests requirements were spec'd in the interface contract but implementation was incomplete—possibly added post-facto.
-- **Why:** TypeScript interfaces define contracts; if a method signature says it can return null, the implementation must have a code path that returns null. The absence indicates incomplete implementation against spec.
-- **Rejected:** Could have removed the `| null` from return type if null return was never intended, but tests prove null *was* required.
-- **Trade-offs:** Type-driven development (interface-first) ensures completeness but requires discipline. Ad-hoc implementation (impl-first, types follow) is faster initially but can leave specs incomplete.
-- **Breaking if changed:** If you remove the feature flag gate (the fix), the method violates its type contract and tests fail again. The `| null` in the signature is not decorative—it enforces a contract.
-
-#### [Pattern] Astro components distributed as raw source files via wildcard package.json exports ("./components/*": "./src/components/*") without build or compilation step (2026-03-14)
-- **Problem solved:** Building a shared component library for reuse across multiple Astro projects in a monorepo
-- **Why this works:** Astro components require integration with consumer's styling context, layout engine, and build pipeline. Distributing source files allows each consumer to incorporate components into their own Astro build process, avoiding pre-built bottleneck. Enables per-project optimization.
-- **Trade-offs:** Library maintainer benefits from no build step; consumers must have Astro setup. Components cannot be independently versioned. Tight coupling between library and consumer build pipelines.
-
-### Selective React hydration: only MobileMenu (within Nav) is a React island with client:load; remaining 6 components (Footer, SEO, Button, Badge, Card) are pure zero-JS Astro (2026-03-14)
-- **Context:** Nav component requires mobile menu toggle interactivity; Footer, SEO, Button, Badge, Card are static or CSS-only interactive
-- **Why:** Minimizes JavaScript bundle by hydrating only components that require state/event handling. MobileMenu uses client:load (not client:idle) because mobile menu must be interactive immediately on page load. Other components achieve full functionality through HTML/CSS, avoiding JS overhead.
-- **Rejected:** Could make entire library React-first for consistency, but adds unnecessary JS payload (6 static components). Could use Alpine or HTMX for mobile menu, but React island pattern integrates cleanly with existing Astro/React codebase.
-- **Trade-offs:** Zero-JS for most components (excellent performance) vs. architectural complexity of managing React island within Astro. Future interactivity requests create pressure to add more islands (JS creep).
-- **Breaking if changed:** If future nav variants require complex state management, current client:load decision becomes bottleneck. If other components gain interactivity, decision to avoid hydration strategy breaks down and requires rearchitecture.
-
-#### [Pattern] Zero external dependencies for styling and icons: MobileMenu uses inline styles (satisfies React.CSSProperties); Footer inlines social icon SVG path data as strings (2026-03-14)
-- **Problem solved:** Lightweight component library should minimize dependency surface area and work across diverse Astro projects without imposing toolchain requirements
-- **Why this works:** Removes peerDependencies on styled-components/emotion/tailwind and icon libraries. Inlined SVG keeps asset size constant regardless of adoption. Reduces complexity for consumers who must install and manage additional tools.
-- **Trade-offs:** Lower barrier to adoption (fewer dependencies) and smaller distributed package; maintenance becomes painful if styling or icons need dynamic variation. Works for design system v1, becomes unmaintainable if extensive customization required.
-
-#### [Pattern] Dual distribution model: both direct component imports (via exports wildcard) AND string scaffold templates (src/components.ts functions like getNavComponent()) (2026-03-14)
-- **Problem solved:** Library serves two separate workflows: (1) import-and-use in existing Astro projects; (2) scaffold/code-generate components into new projects
-- **Why this works:** Single source of truth for component source: one template serves both import path and scaffold generation. Avoids code duplication between consumable components and scaffolding strings. Supports both advanced users (direct imports) and scaffolding tools (string generation).
-- **Trade-offs:** Two export surfaces must stay in sync (complexity); more maintainer burden. But avoids split implementations and source-of-truth fragmentation.
-
-### Added *.astro to .prettierignore instead of installing prettier-plugin-astro, despite Prettier being active in monorepo (2026-03-14)
-- **Context:** Monorepo has no prettier-plugin-astro; Prettier will error or mangle .astro files without plugin; installing plugin requires CI infrastructure changes and potential conflicts
-- **Why:** Pragmatic constraint: Installing new Prettier plugin requires CI testing, potential conflict resolution, and downstream impact. For design system library, deferring Astro formatting enforcement is acceptable. .astro formatting is lower priority than .ts/.tsx.
-- **Rejected:** Could install prettier-plugin-astro and enforce, but adds toolchain complexity. Could ignore formatting entirely, but .prettierignore is explicit and prevents accidental formatting attempts.
-- **Trade-offs:** Avoid toolchain friction now (good); no formatting enforcement for .astro files (risky for consistency at scale). Acceptable for small component set; breaks down as library grows.
-- **Breaking if changed:** Installing prettier-plugin-astro later requires reformatting all existing .astro files simultaneously (git history bloat). Upgrading plugin versions risks mass diffs if files were unformatted initially.
-
-#### [Gotcha] Nested monorepo packages (not in workspaces declaration) inherit parent node_modules via npm hoisting. Starlight 0.37 requires Zod v3, but monorepo root has Zod v4. npm hoisted v4 into starter's node_modules, breaking build. Fixed by explicitly pinning 'zod': '^3.25.0' in starter's package.json. (2026-03-14)
-- **Situation:** Creating a documentation starter kit nested inside a monorepo that is not declared as a workspace entry
-- **Root cause:** npm's hoisting algorithm traverses up the directory tree to find dependencies. Without an explicit version pin in the starter's own package.json, it uses the parent's Zod v4, causing a major version mismatch with Starlight's internal Zod v3 usage.
-- **How to avoid:** Explicit version pins in nested package.json prevent version conflicts but add maintenance burden — developers must track when parent versions change and whether nested packages need their own pins
-
-#### [Pattern] Content collections in Astro 5.x require explicit src/content.config.ts with docsLoader() and docsSchema() to avoid deprecation warnings about auto-generating collections from directories. (2026-03-14)
-- **Problem solved:** Setting up Starlight documentation with Astro 5 framework
-- **Why this works:** Astro is sunsetting auto-generated collection schemas. Explicit configuration prevents warnings and ensures forward compatibility through Astro 6 migration.
-- **Trade-offs:** Explicit config adds ~20 lines of boilerplate but guarantees no deprecation warnings and makes the collection schema discoverable in the codebase
-
-### Pinned Starlight to ^0.37.0 (not 0.38+) because 0.38+ requires Astro 6, which is not yet in this repo. Astro 5.9 is current; upgrade path documented as: when moving to Astro 6, upgrade Starlight to ^0.38.0 and remove zod pin. (2026-03-14)
-- **Context:** Choosing Starlight version for a production documentation scaffold that must be compatible with current monorepo Astro 5.x
-- **Why:** Starlight 0.38+ introduced a dependency requirement on Astro 6. Using 0.38+ in an Astro 5.x codebase causes peer dependency errors. 0.37.0 is the last Astro 5-compatible release.
-- **Rejected:** Using latest Starlight 0.38+ (would block on Astro 6 migration); using older Starlight 0.36 (missed features, no Pagefind support)
-- **Trade-offs:** 0.37.0 is stable but will require version bump during Astro 6 migration. No workarounds possible — this is a hard peer dependency constraint.
-- **Breaking if changed:** Installing Starlight 0.38+ with Astro 5 fails peer dependency check. Attempting to skip the check with --legacy-peer-deps creates runtime errors in Starlight internals.
-
-#### [Pattern] Used Starlight's CSS variable override system (in global.css) to customize theme (violet accent, dark zinc surfaces, Geist fonts) instead of forking Starlight components. Pattern: define @theme block in Tailwind v4, then override Starlight's --sl-* variables. (2026-03-14)
-- **Problem solved:** Applying protoLabs brand theme to a Starlight documentation site while maintaining upgrade path
-- **Why this works:** CSS variable customization is non-invasive and survives Starlight version upgrades. Forking components would create maintenance burden and block security updates. Starlight explicitly designed around this pattern.
-- **Trade-offs:** CSS variables are limited to color/spacing properties — complex structural theme changes require component overrides. But for brand theming, variables are sufficient and keep code minimal.
-
-#### [Pattern] Pagefind search is auto-enabled in Starlight with zero configuration — just add @astrojs/pagefind to dependencies, Starlight handles index generation during `astro build`. No CLI invocation or config needed. (2026-03-14)
-- **Problem solved:** Building documentation search functionality in Starlight
-- **Why this works:** Starlight integrates Pagefind as a default, built-in feature. The build hook automatically crawls HTML output and generates the index. This is a deliberate simplification over manual search setup.
-- **Trade-offs:** Zero configuration means no customization of search parameters — Pagefind uses defaults (word tokenization, no typo tolerance). For 5-page starter, this is fine; larger sites may need customization.
-
-#### [Pattern] Used Diataxis framework (tutorial, how-to guide, reference) for sample content structure instead of arbitrary examples. Each content type has different learning goals and structure. (2026-03-14)
-- **Problem solved:** Providing documentation template examples that demonstrate best practices for developers using the starter
-- **Why this works:** Diataxis is a well-researched framework for technical documentation structure. Each quadrant (tutorial, how-to, reference, explanation) serves a different user need. Providing examples in each category teaches developers this structure.
-- **Trade-offs:** Diataxis structure requires 4 different content types (3 provided here: tutorial, how-to, reference). This adds content volume but improves documentation quality. New developers inherit the pattern.
-
-### Tailwind v4 CSS-first approach: use @import 'tailwindcss' + @theme block in global.css instead of tailwind.config.js (2026-03-14)
-- **Context:** Configuring Tailwind v4 with brand design tokens (surface, accent, semantic colors)
-- **Why:** Tailwind v4 is CSS-first; no config file needed. Theme tokens are defined inline in CSS file wired through @tailwindcss/vite. Simpler mental model than v3's JS config.
-- **Rejected:** Traditional tailwind.config.js approach — this doesn't work in Tailwind v4 (v3 legacy approach)
-- **Trade-offs:** Easier: tokens colocated with styles. Harder: no JS-level theme access if future client-side theme switching is needed.
-- **Breaking if changed:** Removing @theme block breaks CSS variable generation; brand colors become undefined, all utility classes fail
-
-#### [Gotcha] View Transitions are built-in to Astro 5 (import from astro:transitions); @astrojs/view-transitions package is not needed and may conflict (2026-03-14)
-- **Situation:** Implementing page transitions in portfolio site
-- **Root cause:** Astro 5 made View Transitions a core feature. Developers upgrading from Astro 4 expect to install a package.
-- **How to avoid:** Easier: fewer dependencies, built-in. Harder: API is different from previous versions; documentation must clarify this.
-
-#### [Pattern] Separate data collections (JSON/YAML, type: 'data') from content collections (markdown, type: 'content') using Zod schemas for validation (2026-03-14)
-- **Problem solved:** Managing testimonials/siteConfig (structured JSON) vs projects/blog (markdown with frontmatter)
-- **Why this works:** Data collections skip markdown rendering pipeline entirely. Zod validation at build time catches schema violations early. Cleaner separation of concerns.
-- **Trade-offs:** Easier: simpler data files, compile-time validation. Harder: two different collection patterns in one project (mental overhead).
-
-### Portfolio is a completely standalone project (zero monorepo coupling); requires its own npm install, not monorepo-linked (2026-03-14)
-- **Context:** Creating reusable starter kit template within monorepo structure
-- **Why:** Monorepo worktree symlinks issue prevents @automaker/types resolution (resolves to main repo instead of worktree). Standalone template can be copied/distributed independently without tooling setup.
-- **Rejected:** Monorepo-linked setup (npm workspaces / pnpm imports) — symlink resolution breaks in development worktrees; increases maintenance burden
-- **Trade-offs:** Easier: independent deployment, no monorepo coupling. Harder: users must run 'npm install' in portfolio directory; not automatically built with monorepo.
-- **Breaking if changed:** Adding monorepo linking would require solving worktree symlink resolution; would then couple template updates to main monorepo release cycle
-
-### Static output mode (output: 'static' in astro.config.mjs) for deployment to Cloudflare Pages / Netlify; no SSR, no dynamic rendering (2026-03-14)
-- **Context:** Targeting static-only hosting platforms with pre-computed routes
-- **Why:** Deployment constraint — Cloudflare Pages and Netlify are static-first. Pre-computing all routes at build time allows zero-infrastructure deployment.
-- **Rejected:** Hybrid or server output mode — would require server infrastructure; increases deployment complexity and costs
-- **Trade-offs:** Easier: instant deployment, no server needed. Harder: all routes must be known at build time; dynamic routes require getStaticPaths() precomputation.
-- **Breaking if changed:** Switching to server output enables dynamic route rendering but requires self-hosted infrastructure; breaks Cloudflare Pages target
-
-#### [Pattern] Use render() function (not entry.render()) in Astro 5 to render content collection entries with layout wrapping (2026-03-14)
-- **Problem solved:** Rendering markdown blog posts and project details with consistent layouts
-- **Why this works:** Astro 5 API change: render() is now the standard method. Automatically handles frontmatter extraction, markdown compilation, and layout injection.
-- **Trade-offs:** Easier: cleaner API, less boilerplate. Harder: code breaks on Astro 4 projects; migration required for upgrades.
-
-#### [Pattern] Context files (.automaker/CONTEXT.md) loaded into agent system prompts—content structure (tables, bullets, code blocks) matters for agent parsing, not just human readability (2026-03-15)
-- **Problem solved:** Docs starter kit needed to provide Starlight structure knowledge to agents working on docs projects
-- **Why this works:** Agent services load context files as part of system prompt. Format directly affects agent comprehension. Structured/scannable format (not prose) enables quick reference during execution.
-- **Trade-offs:** Requires more discipline in content structure (tables/bullets preferred over narrative), but improves agent accuracy and latency
-
-### Scaffolding functions return raw strings (getDocsStarterContext() returns markdown as string) rather than object configs or template engines (2026-03-15)
-- **Context:** Need to generate .automaker/CONTEXT.md and .github/workflows/ci.yml files in new projects
-- **Why:** Simple, Git-trackable, requires no parsing/deserialization. Functions become source of truth—agents and tools read the actual string that gets written.
-- **Rejected:** Template engines (would require template syntax parsing), object configs (would require serialization logic), schema-driven generation (would require validation step)
-- **Trade-offs:** Easier: Git diff shows exact file contents, no runtime parsing. Harder: changes to generated files require modifying string literals, not config.
-- **Breaking if changed:** If scaffolding functions are changed to return objects or use templates, must update all call sites and add serialization/validation logic
-
-### Verify via workspace-level build (npm run build --workspace=libs/templates) rather than attempting to resolve monorepo-wide type checking issues (2026-03-15)
-- **Context:** Pre-existing monorepo-level tsc errors (MobileMenu.tsx, prettier-plugin-astro not at root) encountered during development
-- **Why:** Pragmatic scope boundary: verify the feature package builds cleanly, don't get blocked fixing unrelated monorepo config issues. Reduces blast radius of verification.
-- **Rejected:** Fixing prettier-plugin-astro at monorepo root would affect all packages and require coordinating with other teams
-- **Trade-offs:** Easier: feature ships faster, clear scope. Harder: monorepo-level type safety gap not addressed (but was pre-existing).
-- **Breaking if changed:** If workspace build is removed as verification step, could miss integration issues with monorepo build system
-
-#### [Pattern] Dual-purpose context files: .automaker/CONTEXT.md exists both IN the starter kit (for agents working on that project) AND is returned by getDocsStarterContext() (for scaffolding new projects) (2026-03-15)
-- **Problem solved:** Docs starter kit should both provide context to agents AND serve as template for new docs projects
-- **Why this works:** Single source of truth for structure/constraints. Reuses same documentation for both training agents on existing projects and configuring new projects.
-- **Trade-offs:** Easier: one file to update when Starlight changes. Harder: content must serve both purposes (instruction + template).
-
-### Docs/ directories placed at starter kit root (e.g., libs/templates/starters/portfolio/docs/), NOT inside src/content/ or src/content/docs/. This creates spatial separation between site documentation (consumed by site build) and in-app viewer documentation (consumed by protoLabs Studio UI reading files from disk). (2026-03-15)
-- **Context:** Both starter kits need documentation for the in-app viewer, but each also has its own site content (Starlight auto-generates sidebar from src/content/docs/, portfolio uses Content Collections). Risk of confusion about what's for whom.
-- **Why:** Reduces cognitive load. Site maintainers won't accidentally mix in-app docs with site docs. In-app viewer's file path resolution is deterministic (always looks at <kit-root>/docs/).
-- **Rejected:** Placing docs inside src/content/ with a special prefix (would require the viewer to understand site-specific structure) or generating docs at build time (adds complexity, loses static guarantees).
-- **Trade-offs:** Easier to reason about ownership, but creates duplication of structure knowledge (viewers need to know to look at root /docs/ folder). Harder to share tooling/build steps between site and viewer docs.
-- **Breaking if changed:** If in-app viewer's file resolution changes to look inside src/ instead of root, all file paths would need to be rewritten. Starter kit users won't see these docs if the viewer looks in the wrong place.
-
-#### [Pattern] Content duplication pattern: documentation-philosophy.md appears in both kits with ~80% identical Diataxis framework content, but with kit-specific examples (Starlight autogenerate sidebar vs. Content Collections schema). Instead of templating/generating from shared source, each file is standalone. (2026-03-15)
-- **Problem solved:** Both starter kits need to explain the same foundational documentation philosophy (Diataxis), but applied to different tools and workflows.
-- **Why this works:** Standalone files reduce indirection for users exploring a single kit. Each file is self-contained and discoverable without understanding how it was generated. Kit-specific examples are embedded where they're needed, not in separate examples section.
-- **Trade-offs:** Gains clarity and ease-of-discovery within a kit, but loses DRY principle. Updates to core Diataxis content must be made in both files (maintenance burden). Cache invalidation risk if one kit's philosophy falls out of sync.
-
-### Portfolio starter kit is treated as fully standalone project despite living in a monorepo. Project-structure.md explicitly guides users to run 'npm install' inside the starter kit directory, not from repo root. This affects dependency resolution and tooling behavior. (2026-03-15)
-- **Context:** Portfolio starter kit is a self-contained Astro project that can be extracted and deployed independently. Monorepo context is incidental, not the primary use case.
-- **Why:** Ensures users cloning/forking the starter get a complete, reproducible setup without monorepo assumptions. Simplifies onboarding. Dependencies are explicit in starter kit's own package.json, not inherited.
-- **Rejected:** Treating portfolio as a workspace that shares tooling with main repo (would couple starter kit to monorepo structure, breaks when extracted); documenting both monorepo and standalone flows (adds confusion about which is canonical).
-- **Trade-offs:** Cleaner user onboarding, but duplicates dependency declarations across monorepo and starter kit. npm hoisting in worktrees can cause symlink resolution issues (a known P3 issue in the codebase).
-- **Breaking if changed:** If monorepo structure is reorganized and starter kit paths change, the guidance becomes inaccurate. If users copy the starter but run npm install from repo root instead of inside the kit directory, they'll get unexpected dependency conflicts.
-
-### ProjectGrid implemented as React island (client-side hydration) embedded in Astro SSR context for filtering interactivity (2026-03-15)
-- **Context:** Portfolio page needed static SEO rendering + dynamic client-side tag filtering on same page
-- **Why:** Astro static rendering serves fast HTML; React island hydrates only the interactive piece; reduces JS bundle for non-interactive sections
-- **Rejected:** Full React component (requires client-side rendering of entire page), full Astro with server actions (limits real-time interactivity), htmx (adds dependency, less mature with Astro)
-- **Trade-offs:** Island hydration overhead (small) vs. benefits of selective interactivity; slightly complex setup vs. simplicity of full-client-side app
-- **Breaking if changed:** If island hydration fails or React target element unmounts, filtering won't work; island must be properly scoped to avoid state leaks
-
-#### [Pattern] Portfolio composed of 6 discrete section components (Hero, ProjectGrid, About, Testimonials, Contact, BlogList) imported into index.astro (2026-03-15)
-- **Problem solved:** Building reusable, maintainable portfolio template with multiple distinct content sections
-- **Why this works:** Each section is independent, testable, and reusable; allows portfolio layouts to be built by composing sections; easier to maintain and update individual sections
-- **Trade-offs:** Slightly more files and imports vs. clearer separation of concerns; each section can be styled/updated independently
-
-### Two-surface documentation strategy: separate `docs/` (public, VitePress static) from `docs/internal/` (internal team, in-app viewer). Different audiences, deployment models, and content scopes. (2026-03-15)
-- **Context:** Feature description said 'public-facing' but implementation path was `docs/internal/dev/`. Needed to determine which surface was authoritative.
-- **Why:** Cleanly separates product docs (for adopters) from engineering docs (for contributors). Different CI pipelines: static VitePress deployment vs. in-app reader. Prevents audience confusion.
-- **Rejected:** Single unified docs source with access controls; or content duplication across surfaces.
-- **Trade-offs:** Easier to maintain separate narratives and control audience visibility, but requires conscious decision about where each doc belongs. Links must target correct surface.
-- **Breaking if changed:** Merging into one surface requires access control layer, dilutes audience focus, or forces parallel hierarchies. Docs become ambiguous about intended reader.
-
-#### [Pattern] Use Diataxis framework (explanation/how-to/reference/tutorial) to classify documentation pages. Classification determines structure, tone, depth, and completeness criteria. (2026-03-15)
-- **Problem solved:** New documentation-philosophy page was correctly typed as 'Explanation' — narrative + conceptual, no procedural instructions. This classification shaped the entire page structure.
-- **Why this works:** Diataxis provides proven typology. Each type has predictable structure; readers learn to expect patterns. Explanation type = conceptual deep-dive; how-to type = step-by-step; reference type = lookup-oriented. Classification prevents 'kitchen sink' docs that try to do everything.
-- **Trade-offs:** Adds a classification decision when writing docs (extra thinking), but ensures pages serve clear purpose and have consistent structure across the site. Readers can trust patterns.
-
-#### [Gotcha] VitePress `generateSidebar()` auto-discovers markdown files from directory structure — no manual nav config required. New pages appear in sidebar automatically if placed in correct directory. (2026-03-15)
-- **Situation:** Added documentation-philosophy.md to `docs/internal/dev/` and it was immediately discoverable in the sidebar without touching any config files.
-- **Root cause:** Convention over configuration reduces friction for adding docs. Sidebar generation is filesystem-driven, not config-driven. Placement in directory is the interface.
-- **How to avoid:** Much easier to add new docs (just create file), but nav order/hierarchy is implicit in directory structure and naming — harder to fine-tune manually. Must rely on naming conventions being followed.
-
-### Voice and audience assumptions: documentation assumes reader knows CRDTs, webhooks, TypeScript generics. No marketing language. No hedged prose (avoid 'you might consider', use 'do X'). Second-person imperative. (2026-03-15)
-- **Context:** Brand voice policy explicitly stated: 'Technical, not approachable. Assume the reader knows what a CRDT is.' This shapes every example and sentence.
-- **Why:** Target audience is builders/contributors, not product adopters learning basics. Specific knowledge assumptions allow docs to be concise, technical, and direct. Avoids the need to explain foundational concepts in every page.
-- **Rejected:** Beginner-friendly tone; marketing language; hedged/qualified statements; generic feature lists without examples.
-- **Trade-offs:** Faster to read for target audience (no foundational fluff), but excludes newcomers and requires more domain knowledge from readers. Saves ~50% word count per page.
-- **Breaking if changed:** Changing voice to beginner-friendly requires rewriting all examples and adding foundational explanations — roughly 2x page length. Entire onboarding strategy changes.
-
-#### [Pattern] Consolidate scattered documentation standards (Diataxis mapping, IA principles, content rules, voice guidelines) into a single 'explanation' page that becomes the canonical reference for documentation contributors. (2026-03-15)
-- **Problem solved:** Rules were spread across CLAUDE.md, docs-standard.md, brand.md. New page centralizes them at `docs/internal/dev/documentation-philosophy.md` with links back to upstream Diataxis framework.
-- **Why this works:** Single canonical reference reduces ambiguity, becomes the onboarding/training doc for new contributors, easier to keep in sync. Provides a place for other docs to link to when asking 'why is this doc structured this way?'
-- **Trade-offs:** One place to check/update for all rules (easier maintenance), but requires someone to keep this page in sync with actual practices. Single point of failure if out of date.
-
-### Static generation with Astro `getStaticPaths()` for dynamic routes (`[slug].astro` pages) instead of server-side rendering (2026-03-15)
-- **Context:** Building portfolio with dynamic blog and project detail pages
-- **Why:** Pre-generated static HTML enables Lighthouse 95+ performance, semantic HTML rendering at build-time, static hosting (no server cost), and CDN-friendly caching. Framework renders everything upfront with full control.
-- **Rejected:** Server-side rendering (Next.js, Node.js server) would sacrifice build-time optimizations and require persistent hosting to maintain Lighthouse scores
-- **Trade-offs:** New content requires rebuild/redeploy cycle (via CI/CD) vs instant publishing, but gains: lower hosting cost, better cold-start perf, no server dependencies, predictable performance SLAs
-- **Breaking if changed:** Moving to server-side rendering eliminates static hosting benefits and adds runtime performance overhead. Requires infrastructure change (server scaling, monitoring).
-
-#### [Gotcha] Build-time content collection means new blog posts / projects are invisible until full rebuild completes (2026-03-15)
-- **Situation:** Using Astro Collections API with `getCollection()` fetched at build-time via `getStaticPaths()`
-- **Root cause:** Static generation is a compile-time model, not runtime. Content schema is validated and routes generated during CI/CD, not when server receives requests.
-- **How to avoid:** Trade immediate visibility for reliability (no missed frontmatter fields, type-safe, cached perf). Mitigate with fast CI/CD and web-hook triggers.
-
-#### [Pattern] Centralized SEO meta tag rendering in `BaseLayout.astro` component via accepted props (title, description). All sub-pages inherit SEO consistency. (2026-03-15)
-- **Problem solved:** ~6 pages (about, contact, blog/index, blog/[slug], projects/index, projects/[slug]) need identical meta tag structure (og:*, twitter:card, canonical)
-- **Why this works:** Single source of truth prevents duplication and ensures consistency. Framework-level enforcement means if layout changes meta structure, all pages auto-update. Reduces line count and cognitive load.
-- **Trade-offs:** Child pages must respect layout contract (pass required props) vs full flexibility to override. Gain: 0 duplication, instant schema updates, consistency. Lose: per-page meta overrides require prop drilling.
-
-#### [Pattern] Astro Collections API with schema validation (`content/config.ts`) instead of loose `.md` files in `pages/` directory (2026-03-15)
-- **Problem solved:** Blog posts and projects need consistent structure (frontmatter schema, type safety)
-- **Why this works:** Schema validation catches invalid data at build-time (missing fields, wrong types), enables IDE autocomplete in pages, prevents runtime errors from bad markdown. Type-safe frontmatter is enforced by framework.
-- **Trade-offs:** Schema changes require updates in two places (config.ts + existing content files) vs flexibility to add fields on-the-fly. Gain: type safety, IDE support, build-time validation. Lose: quick ad-hoc additions without validation.
-
-### Integration-based sitemap (`@astrojs/sitemap`) and RSS (`@astrojs/rss`) in `astro.config.mjs` vs manual XML generation (2026-03-15)
-- **Context:** SEO requires sitemap discovery, RSS feed readers expect standard format
-- **Why:** Integrations are declarative (config-driven), automatically discover all routes via Astro's internal route table, handle domain/path logic, maintain spec-compliant XML. Less code, fewer edge cases.
-- **Rejected:** Manual `sitemap.xml.ts` endpoint would give full control but requires manual route enumeration and XML format compliance; error-prone with new routes
-- **Trade-offs:** Config-driven limits customization (e.g., can't exclude routes easily) vs explicit control. Gain: automatic route discovery, less maintenance code, harder to break.
-- **Breaking if changed:** If you remove integrations, you must implement sitemap/RSS from scratch. Integration changes to Astro could affect generation; manual approach gives full control but higher maintenance.
-
-### Created distinct 'astro-react' CodingRulesType variant instead of reusing 'react' rules for portfolio starter (2026-03-15)
-- **Context:** Portfolio is Astro (static site generator) + React islands, fundamentally different from single-page React apps despite sharing React component syntax
-- **Why:** Astro has different mental model: Astro-first component selection, no client: directives by default, Tailwind v4 CSS-first config, static output to disk. Reusing 'react' rules would mislead developers on when to use islands vs static components
-- **Rejected:** Could have added 'useAstro' boolean flag or suffix to existing 'react' rules; would reduce type variants but increase conditional logic and rule conflation
-- **Trade-offs:** More type variants to maintain, but cleaner separation—each variant represents a coherent architectural model
-- **Breaking if changed:** Reusing 'react' rules would cascade wrong guidance: developers treating Astro like an SPA, missing static-first optimization opportunities, misusing client directives
-
-#### [Pattern] CI workflow template selection matched to package manager and deployment target, not build system alone (2026-03-15)
-- **Problem solved:** Portfolio CI uses 'npm ci' and mirrors getDocsCI() structure, while extension CI uses pnpm and different workflow
-- **Why this works:** Package manager affects lock file semantics, caching, and CI performance. Deployment target (Cloudflare Pages) matches docs starter. Reusing wrong template would work but with silent inefficiencies or incompatibilities
-- **Trade-offs:** More CI template variants to maintain, but each is cohesive and directly matches its starter kit's actual tooling. Prevents 'works but slow' scenarios
-
-#### [Pattern] Channel Handler Strategy Pattern: GitHubChannelHandler and UIChannelHandler are pluggable via ChannelRouter, selected based on feature.githubIssueNumber presence (2026-03-15)
-- **Problem solved:** Need to deliver HITL form approval requests to different channels (GitHub issue comments vs in-app UI) without modifying core HITLFormService logic
-- **Why this works:** Strategy pattern allows runtime selection of delivery mechanism. Keeps approval routing decoupled from form creation logic
-- **Trade-offs:** Added layer of indirection and startup wiring, but enables future channel types (Slack, email, etc.) without changing HITLFormService
-
-#### [Gotcha] In-memory pending approval tracking by featureId in GitHubChannelHandler loses state on server restart (2026-03-15)
-- **Situation:** GitHubChannelHandler maintains in-memory keyed map of pending approvals to correlate incoming /approve /reject webhook comments back to specific features
-- **Root cause:** Fast lookup for webhook correlation without database round-trip
-- **How to avoid:** Sub-millisecond lookup vs potential loss of pending approvals on server restart or in multi-server deployments
-
-#### [Gotcha] Module wiring (channel-handlers.module.ts) must execute before pipeline operations but failure is silent—missing call breaks GitHub comment routing without error (2026-03-15)
-- **Situation:** ChannelRouter is set on HITLFormService via setChannelRouter() in channel-handlers.module.ts registration function, which has no validation or error if skipped
-- **Root cause:** Late binding allows dependency injection at startup, avoids constructor coupling
-- **How to avoid:** Flexible ordering vs silent failure mode—missing module wiring leaves default no-op handler in place
-
-#### [Pattern] Silent feature flag gate: HITLFormService.create() returns null when featureFlags.hitlForms is false rather than throwing error (2026-03-15)
-- **Problem solved:** Need to support gradual rollout of HITL form feature without breaking existing pipeline behavior
-- **Why this works:** Null return allows callers to skip form creation logic gracefully; error would force try-catch handling
-- **Trade-offs:** Non-disruptive rollout vs risk of null-reference bugs if callers don't handle null case
-
-#### [Pattern] Dual-path HITL form delivery: GitHubChannelHandler posts approval request and form as GitHub comments; UIChannelHandler relies on hitl:form-requested WebSocket event to surface form in in-app dialog (2026-03-15)
-- **Problem solved:** HITL forms must work both in GitHub issue workflows (for GitHub-originating features) and in in-app UI (for direct board features)
-- **Why this works:** Separates approval notification (routed via ChannelHandler) from form data transport (WebSocket event). Allows both surfaces to be implemented independently
-- **Trade-offs:** Two systems must stay in sync; more moving parts but cleaner separation of concerns between GitHub and UI flows
-
-#### [Pattern] Automatic fallback to UIChannelHandler when githubIssueNumber is missing from feature (2026-03-15)
-- **Problem solved:** GitHubChannelHandler delegates to UIChannelHandler automatically when feature lacks GitHub issue association
-- **Why this works:** Graceful degradation—forms still work via UI channel even if GitHub issue data missing; no explicit error path needed
-- **Trade-offs:** Silent degradation vs explicit error—developers may not realize forms aren't going to GitHub
-
-#### [Gotcha] Path resolution for starter kits uses relative paths from __dirname, assuming a specific dist structure. The function resolveStarterDir() hardcodes '../starters/<kit>' relative to dist output. (2026-03-15)
-- **Situation:** Monorepo with compiled output. Starter kits need to be accessible from both dev and production builds.
-- **Root cause:** Simple and works for the current build configuration, but creates brittle coupling to output structure.
-- **How to avoid:** Simple implementation vs. fragility to build structure changes. Any change to how libs/templates is emitted to dist will break this.
-
-#### [Pattern] Configuration substitution uses regex matching on placeholder values (e.g., /site:\s*['"]https:\/\/[^'"]+['"]/) rather than template variables. Replaces found patterns with substituted values. (2026-03-15)
-- **Problem solved:** Need to customize starter templates (project name, domain, title) after copying from static directory.
-- **Why this works:** Pragmatic: avoids adding a templating dependency or modifying starter source files. Starters remain plain Astro projects.
-- **Trade-offs:** Simple, zero extra dependencies vs. extremely brittle. If starter's astro.config format changes, regex silently fails to match.
-
-#### [Pattern] copyDir() explicitly skips node_modules and package-lock.json during recursive copy. Copies source only, expects npm install in target. (2026-03-15)
-- **Problem solved:** Avoid copying dependency artifacts when scaffolding a new project directory.
-- **Why this works:** Clean slate principle: (1) reduces copy size, (2) avoids platform-specific compiled binaries, (3) ensures fresh dependency resolution in target environment.
-- **Trade-offs:** Smaller/cleaner copy but requires npm install in output dir before project is runnable. Caller must handle dependency installation.
-
-### Scaffold executes after project creation succeeds, with failures non-blocking (scaffold errors do not fail project creation) (2026-03-15)
-- **Context:** Starter kit template scaffolding could happen during project initiation or after. Chose post-creation.
-- **Why:** Decouples template scaffolding from core project creation atomicity. Project exists even if scaffolding fails. Prevents cascading failures when template libraries have issues.
-- **Rejected:** Atomic scaffolding-during-creation would simplify error handling but would fail entire project creation if any template library issue occurs. Leaves incomplete projects on failure.
-- **Trade-offs:** Simpler error handling vs. guaranteed project existence. Users get a project even if docs/portfolio setup partially fails. Requires separate error reporting for scaffold phase.
-- **Breaking if changed:** If scaffold failures become critical, changing to atomic pattern requires migrations for partially-scaffolded projects. Affects monitoring/alerting expectations.
-
-### Scaffold logic routed under /api/setup/* (existing setup routes) rather than under /api/projects/* or new dedicated /api/templates/* (2026-03-15)
-- **Context:** Three options for scaffold endpoint placement: setup (project initialization phase), projects (lifecycle management), or templates (template concern).
-- **Why:** Setup routes handle all project-creation-time operations. Semantically correct: scaffolding is setup work, not lifecycle. Reuses setup auth/validation. Logically groups related initialization endpoints.
-- **Rejected:** /api/projects/* mixes initialization concerns with project management. /api/templates/* creates new service boundary for single use case. Separate templating service premature.
-- **Trade-offs:** Clear semantic grouping vs. flatter API surface. Reuses setup middleware vs. duplicating auth. Mirrors product's setup-phase concept in routing vs. generic projects hierarchy.
-- **Breaking if changed:** Moving scaffold to /api/projects/* breaks routing assumption. If setup routes are ever removed/refactored, orphans scaffold endpoint. Route deprecation ripples.
-
-#### [Pattern] Use framework build helpers (generateSidebar) for content auto-discovery rather than manual registration in config (2026-03-15)
-- **Problem solved:** Adding templates section to VitePress documentation required sidebar configuration without page-by-page code changes
-- **Why this works:** Auto-discovery eliminates registration bottleneck—new .md files automatically appear without modifying config. Scales documentation addition from O(n) code changes to O(1).
-- **Trade-offs:** Self-maintaining documentation structure (+), but alphabetical ordering is fixed and not customizable via config alone (-)
-
-### Only document starter kits that exist as buildable templates with actual files, not those referenced in code but not yet implemented (2026-03-15)
-- **Context:** Extension starter exists in CLI but has no template files yet. Docs and portfolio starters are complete and usable.
-- **Why:** Documenting incomplete features creates broken user journeys and documentation debt. Users cannot scaffold non-existent templates. Better to add guides when feature ships.
-- **Rejected:** Documenting future/planned starters is lower effort now but creates maintenance burden and customer confusion
-- **Trade-offs:** Smaller documentation scope, higher trust in docs (+), but requires process discipline to add extension guide when that kit is built (-)
-- **Breaking if changed:** If extension starter ships without docs, users have no guide. If docs exist for templates that can't be scaffolded, user hits broken onboarding.
-
-#### [Pattern] Use relative cross-section links (../guides/*, ../self-hosting/*) within documentation to establish navigational relationships without URL fragility (2026-03-15)
-- **Problem solved:** Starter kit guides reference existing documentation sections across different hierarchies (guides, self-hosting). ignoreDeadLinks validation requires references to resolve.
-- **Why this works:** Relative links work in local preview and deployed site regardless of base URL or domain. Creates true site relationships that survive restructuring better than absolute URLs.
-- **Trade-offs:** Relative links work anywhere (+), but break if referenced sections move or are renamed (-). Requires documentation structure stability.
+#### [Gotcha] Manifest-driven service layer and synthetic API-layer agent creation represent a dual source of truth that creates impedance mismatches. getResolvedCapabilities() only knows about manifest agents, not synthetic built-in fallbacks created at the route layer. (2026-03-13)
+- **Situation:** Built-in agents are created synthetically in the API route (lines 108–114) when the manifest has no entry for operational resilience. Service methods like getResolvedCapabilities() were designed assuming the manifest is the single source of truth.
+- **Root cause:** The route layer intentionally deviates from manifest-as-canonical for fallback/resilience, but downstream abstractions weren't told about this exception pattern.
+- **How to avoid:** Route-level guard keeps synthetic fallback logic localized and explicit (easier to trace) but distributed the dual-source-of-truth logic. Service layer stays simpler but now has implicit constraints callers must understand.
+
+### The built-in agent fallback (synthetic agent creation + capability lookup) is placed at the API route layer, not in the service layer. This keeps the synthetic fallback pattern co-located with where synthetic agents are created, but distributes dual-source-of-truth handling. (2026-03-13)
+- **Context:** Routes create synthetic agents as a fallback (lines 108–114). Their capabilities also need a fallback. Decision: where should the fallback lookup live?
+- **Why:** Route layer creates the synthetic agents, so route layer is where they're fully understood. Keeps service layer pure/manifest-focused. Alternative (service-layer fallback) would require exposing fallback capability sources through service API, mixing concerns.
+- **Rejected:** Moving to service layer via new method like getCapabilitiesOrBuiltIn() would centralize dual-source logic but require service to know about synthetic agents, coupling service to route-layer operations.
+- **Trade-offs:** Route-level placement is more explicit and keeps service focused (testable in isolation). Cost: route now has special knowledge of how to find built-in capabilities; testing route logic in isolation requires mocking both manifest AND built-in sources.
+- **Breaking if changed:** If service layer ever needs to be the exclusive canonical source of truth (e.g., for caching strategies or audit trails), this pattern blocks that migration. Any code calling service directly bypasses the built-in fallback.
+
+#### [Pattern] Shutdown sequence is ordered — services disposed in specific sequence (after crdtSyncService.shutdown() but before shutdownLangfuse()) (2026-03-13)
+- **Problem solved:** AgentManifestService disposed in middle of shutdown sequence, not arbitrary
+- **Why this works:** Ordered disposal prevents resource dependency issues and ensures cleanup happens when dependent services are still available. Placing in 'service teardown zone' keeps related operations together.
+- **Trade-offs:** Adds cognitive load for new services — developers must understand shutdown ordering. Gains: predictable resource cleanup and no use-after-dispose bugs.
+
+#### [Pattern] Try/catch wrapping lifecycle methods (dispose, shutdown) during graceful shutdown — failures are logged but never block the shutdown path (2026-03-13)
+- **Problem solved:** getAgentManifestService().dispose() wrapped in try/catch with logger.warn fallback
+- **Why this works:** Shutdown must be non-blocking even if individual service cleanup fails. Ensures one broken service doesn't prevent full shutdown sequence.
+- **Trade-offs:** Hides dispose failures from strict error reporting. Gains: guaranteed shutdown completion and no hung processes. Cost: potential silent resource leaks if dispose fails.
+
+### Singleton getter pattern (getAgentManifestService()) used for accessing singleton services in shutdown path, not direct instantiation or dependency injection (2026-03-13)
+- **Context:** Import and call uses getAgentManifestService() getter, consistent with getTerminalService() and getReactiveSpawnerService() patterns throughout codebase
+- **Why:** Getter pattern allows initialization-on-demand and handles uninitialized state. Calling on singleton avoids coupling to construction, letting service optionally be created.
+- **Rejected:** Direct instantiation would require knowledge of constructor; DI would require shutdown.ts to be aware of all services upfront
+- **Trade-offs:** Getter adds indirection and silent no-op if service never initialized. Gains: loose coupling and graceful handling of uninitialized services.
+- **Breaking if changed:** Switching to direct field access would require tracking which services are initialized before calling dispose, adding shutdown fragility
+
+#### [Pattern] UI derives isBuiltIn from ROLE_LABELS (frontend's ground-truth constant) rather than trusting the API's _builtIn flag as source of truth. (2026-03-13)
+- **Problem solved:** Agent suggestion badge needs to identify built-in agents. Could trust API flag or validate against frontend's role registry.
+- **Why this works:** ROLE_LABELS is the frontend's contract for what roles it knows how to label. Deriving from it provides defense against API inconsistencies and creates a validation gate: if a role isn't in ROLE_LABELS, we shouldn't claim it's built-in regardless of what the API says.
+- **Trade-offs:** Trades implicit trust in API for explicit validation, but creates a hidden sync point between frontend and backend role lists that has no verification test.
+
+#### [Gotcha] DEFAULT_PROJECT_AGENT intentionally omits _builtIn field, creating an implicit contract that the API layer must set this flag for built-in agents during response serialization. (2026-03-13)
+- **Situation:** Default agent constant is used as a template for user-created agents. If not handled carefully during API serialization, all agents (user and built-in alike) could inherit missing _builtIn.
+- **Root cause:** DEFAULT_PROJECT_AGENT is user-authored scaffold, so it shouldn't have _builtIn set. But this means there's no 'safe default' for the field—the API must explicitly set it.
+- **How to avoid:** Cleaner manifests vs. implicit responsibility. If the API layer ever forgets to populate _builtIn for a built-in agent, the badge won't show—silent failure rather than explicit default.
+
+#### [Pattern] Used breaking return type change (ProjectAgent | null → MatchResult | null) as a compile-time verification mechanism to force discovery of all call sites. (2026-03-13)
+- **Problem solved:** Refactoring agent manifest scoring from hardcoded 1.0 confidence to computed values. Feature description listed 2 files to update, but TypeScript compilation revealed a third caller (routes/agents.ts) that needed updating.
+- **Why this works:** Return type changes propagate through the type system automatically, ensuring all consumers are found and forced to recompile. This is more reliable than grep-based refactoring for TypeScript APIs.
+- **Trade-offs:** Breaking change requires updating all call sites immediately (harder short-term) vs. ensures no call sites are missed (safer long-term). In a monorepo with build checks, this is low-friction.
+
+### Selected diminishing-returns formula (rawScore / (rawScore + 10)) instead of linear or sigmoid normalization to preserve match ordering invariant. (2026-03-13)
+- **Context:** Confidence scoring needs to reflect match strength while integrating with existing agent routing logic that depends on relative match scores.
+- **Why:** The formula is strictly monotone-increasing: if agent A has rawScore > agent B, then normalize(A) > normalize(B) always holds. This preserves the implicit invariant that 'best match' determined by highest raw score remains the best match in confidence space. Linear normalization (score/maxScore) or sigmoid could reorder matches.
+- **Rejected:** Linear normalization (simpler to understand), sigmoid (tighter bounds at extremes), fixed confidence tiers (easier to reason about in logs). All risk reordering matches in edge cases.
+- **Trade-offs:** Confidence never reaches 1.0 (max ~0.75 at reasonable scores), making the asymptotic behavior less intuitive. But prevents subtle bugs in routing logic where a different agent becomes 'top match' after scoring.
+- **Breaking if changed:** Any code assuming confidence can equal 1.0 or using it as a binary threshold (>= 1.0) will break. Formula change would need systematic re-verification of routing decisions.
+
+#### [Pattern] Implemented scoring formula as a private helper method (_normalizeScore) instead of inlining or externalizing to a separate service. (2026-03-13)
+- **Problem solved:** Normalization logic used in one place (matchFeature return), but likely to be needed in multiple scoring contexts as the system evolves.
+- **Why this works:** Private method creates a single source of truth for the formula, making it impossible for future developers to implement divergent normalization logic. Also keeps the method co-located with the data it operates on (raw match scores).
+- **Trade-offs:** One more private method to maintain, but prevents inconsistent scoring if scoring is needed elsewhere. Low cost for high consistency guarantee.
+
+### Preserve startingFeatures Set throughout the entire async dispatch lifecycle—don't clear it when ConcurrencyManager lease is acquired, only when the dispatch promise resolves. This keeps the synchronous double-start guard intact within a single loop iteration. (2026-03-13)
+- **Context:** startingFeatures serves two purposes: (1) reserve a capacity slot during startup, and (2) provide a cheap, synchronous guard against accidentally starting the same feature twice within one scheduler loop. If the Set is cleared upon lease acquisition, the synchronous guard disappears for the remainder of the iteration.
+- **Why:** The loop iteration is performance-critical and synchronous. Querying ConcurrencyManager state (async-created lease) in the hot path adds latency and creates implicit coupling. The Set provides an O(1) check without async dependencies. Keeping it until dispatch completion maintains clean architectural separation.
+- **Rejected:** Clear the Set immediately when lease acquired to eliminate the overlap window. This pushes the double-start guard responsibility to checking lease state, making the loop logic asynchronous and dependent on ConcurrencyManager implementation details.
+- **Trade-offs:** Keeping the Set in both states costs memory (set membership tracking continues) and requires consistent filtering logic everywhere capacity is calculated. In return, the loop stays synchronous and simple, and the separation between scheduler state and system state remains clean.
+- **Breaking if changed:** Removing the Set entirely and relying solely on ConcurrencyManager leases forces all double-start checks to go async. Clearing the Set immediately after lease acquisition makes it unsafe to check the Set anywhere in the loop after that point, creating fragile coupling between initialization code and state-checking code.
+
+### Poll-based watchers must call timer.unref() to prevent the poller from blocking process shutdown. clearInterval alone is insufficient if the process exits before the interval fires. (2026-03-13)
+- **Context:** setInterval returns a Timer reference that by default keeps the event loop alive. In a server that needs graceful shutdown, this timer can block exit.
+- **Why:** unref() marks the timer as 'non-blocking' — the event loop will exit even if the timer is pending. This is essential for clean server shutdown in production.
+- **Rejected:** Relying on clearInterval alone (process may hang waiting for final interval to fire); explicit shutdown handlers (more complex)
+- **Trade-offs:** unref() adds a single line but prevents shutdown hangs. Cost is negligible; benefit is process lifecycle correctness.
+- **Breaking if changed:** Removing unref() causes process shutdown to block until the next interval fires, potentially causing deployment timeouts or zombie processes
+
+#### [Pattern] File scope in specifications acts as semantic intent signal. When removal task lists only type and doc files (not service files), that signals 'remove, don't implement'—preventing scope creep and misaligned effort. (2026-03-14)
+- **Problem solved:** Feature description listed workflow-settings.ts and agent-manifests.md for modification, but NOT agent-manifest-service.ts. Developer correctly interpreted this as removal-only scope.
+- **Why this works:** Explicit service exclusion communicates: 'we don't want service-level changes.' Ambiguous specs lead to wasted implementation effort on features no one asked for.
+- **Trade-offs:** Minimal scope = faster completion, but requires developers to read scope intent carefully. Verbose specs with 'do NOT modify X' would be clearer but noisier.
+
+#### [Gotcha] Declared-but-never-consumed configuration fields create false APIs. Users can set manifestPaths, see no effect, and either think the feature is broken or doesn't exist—worse than not having the field at all. (2026-03-14)
+- **Situation:** manifestPaths existed in AgentConfig for ~Xmonths but AgentManifestService only hardcoded .automaker/agents.yml and .automaker/agents/ paths. No watcher, no dynamic loading, no effect.
+- **Root cause:** Field was probably added speculatively to 'future-proof' for extensibility. But undocumented constraints (hardcoded paths) + unused field = confusing API surface.
+- **How to avoid:** Removal reduces documentation burden and user confusion, but makes extending manifest paths later require a new field/migration. Trade clarity for flexibility.
+
+#### [Pattern] Exhaustive codebase search (grep all files) before removing config fields validates zero impact. If field only appears in type/doc, removal is objectively safe. (2026-03-14)
+- **Problem solved:** Developer ran: grep manifestPaths across entire repo → found only in type definition + docs, nowhere else. Enabled confident, zero-risk removal.
+- **Why this works:** Config removal is a breaking change if consumers exist. Grep proves non-existence. This is cheap insurance vs. silent breakage.
+- **Trade-offs:** 5 minutes of searching saves potential 2-hour rollback. Automation could enforce this (linter that flags declared-but-unused config fields).
+
+### Prefer minimal configuration surface (only expose what's consumed) over speculative future-proofing. When a feature isn't implemented, remove the declaration—users can request it if needed. (2026-03-14)
+- **Context:** manifestPaths was a speculative field waiting for a feature that never materialized. Keeping it causes confusion; removing it clarifies intent.
+- **Why:** Cognitive load: every extra config field users have to understand is a cost. Unused fields are net negative. Implement when requirements exist, not before.
+- **Rejected:** Keep field with warning docs ('planned for future'). But this leaves dead code that accumulates over time.
+- **Trade-offs:** Removal = simpler API + less documentation. Cost: future custom-path feature needs new field + migration path. But that's rare; most features don't need it.
+- **Breaking if changed:** If someone built automation around manifestPaths (config validation, schema checks), removal breaks it. Mitigated by proving nobody was using it (grep validation).
+
+#### [Pattern] Dual-path template registration: scaffold-based templates require @protolabsai/templates package changes + server route + UI registry entry, while clone-based templates only require UI registry entry. This split is driven by tooling constraints, not API design. (2026-03-15)
+- **Problem solved:** The starter kit system supports both scaffold kits (docs, portfolio, general) and clone kits (extension, future kits with native tooling). Different paths have different provisioning requirements.
+- **Why this works:** Scaffold kits work via local file copying because they're pure template content. Clone kits are necessary when the kit itself includes non-JS native tooling (WXT bundler for extensions) that can't be replicated via local file scaffolding — the git repo IS the distribution mechanism for the complete toolchain.
+- **Trade-offs:** Flexibility to support diverse stacks (easier for future kits) vs cognitive load (developers must understand two registration paths and when to use each). The complexity is unavoidable given the diversity of target stacks.
+
+#### [Gotcha] VitePress sidebar is auto-generated via generateSidebar() which scans docs/templates/ at build time. New .md files automatically appear in sidebar without config changes. This is convenient but creates a fragile assumption: if sidebar config is ever refactored to use explicit entries, auto-discovery breaks silently. (2026-03-15)
+- **Situation:** Three new .md files were added and automatically appeared in sidebar navigation. No manual sidebar config was needed. The feature worked, but the mechanism is undocumented in the codebase.
+- **Root cause:** Auto-generation reduces config maintenance overhead. Developers can add docs pages without understanding sidebar config. Works well for stable directory structures.
+- **How to avoid:** Automatic discovery (lower maintenance, faster doc publishing) vs explicit control (better UX, can curate ordering and visibility). Current approach implicitly assumes all .md files in the directory should be discoverable.
+
+#### [Gotcha] Extension kit is intentionally clone-based only. The server scaffold route validates kitType against ['docs', 'portfolio', 'general', 'my-kit'] — extension is not in this list. This is a tooling constraint (WXT native build tools can't be scaffolded), not an API limitation, but it's not obvious without investigation. (2026-03-15)
+- **Situation:** When writing add-a-starter.md, the absence of extension from the scaffold validation list needed explanation. Investigation revealed this is intentional: WXT bundler and native browser extension tooling require repo-level distribution.
+- **Root cause:** Browser extension projects require WXT build tools, manifest configuration, and specific directory structures that are better maintained in a git repo than scaffolded from a template. Cloning ensures the complete working toolchain is present without users having to install and configure separate build tools.
+- **How to avoid:** Clone approach (works out-of-the-box, users don't configure tooling) vs scaffold approach (smaller, users can update kit version independently). Chose clone because the repo IS the distribution mechanism for the complete, working toolchain.
+
+### Starter kit packages are made zero-dependency on internal monorepo packages (@protolabsai/*). All imports replaced with local implementations or inlined code. (2026-03-15)
+- **Context:** When extracting AI chat components to a starter kit scaffold at libs/templates/starters/ai-agent-app/packages/ui, team chose to copy button.tsx, popover.tsx and inline formatDuration rather than import from @protolabsai packages
+- **Why:** Starter kits must be fully self-contained and usable outside the monorepo context. Dependencies on internal packages would break the starter kit when used standalone or when internal packages are refactored.
+- **Rejected:** Re-exporting @protolabsai/ui and @protolabsai/utils from starter kit packages (would create hidden monorepo coupling)
+- **Trade-offs:** Accepts code duplication (button, popover copied not shared) to gain true independence. Maintenance burden increases when utilities change, but starter kit remains stable.
+- **Breaking if changed:** If this were reversed and starter kit imported from monorepo, it would fail to run outside the monorepo or if internal package structure changes. Users copying the starter kit would inherit broken imports.
+
+#### [Pattern] Tool invocation extensibility pattern: keep the ToolResultRegistry interface but strip all 30 tool-specific implementations (BoardSummaryCard, SitrepCard, HealthCheckCard, etc). Only generic JSON fallback renderer remains. (2026-03-15)
+- **Problem solved:** tool-invocation-part.tsx had hardcoded registry entries for 30 automaker-specific tools. When extracting to starter kit, these were completely removed but the registry interface preserved.
+- **Why this works:** Allows consumers to implement custom tool renderers without inheriting automaker internals. The registry interface is the extension point; the implementations are context-specific.
+- **Trade-offs:** Starter kit is truly generic but requires users to implement their own tool card renderers. Generic fallback (JSON display) is functional but less polished.
+
+#### [Gotcha] Inlining small utility functions like formatDuration creates maintenance coupling: if the logic needs to change, the starter kit copy won't auto-update with the source. (2026-03-15)
+- **Situation:** formatDuration was extracted from @protolabsai/utils and inlined in chain-of-thought.tsx to avoid monorepo dependency
+- **Root cause:** Unavoidable tradeoff when choosing zero-dependency approach. Must choose between monorepo coupling or code duplication.
+- **How to avoid:** Eliminates import dependency at cost of maintenance divergence. If formatDuration behavior needs to change (e.g. new time unit), starter kit won't inherit the fix automatically.
+
+### Use CSS custom properties `bg-[var(--primary)]` with Tailwind arbitrary values instead of semantic Tailwind tokens `bg-primary` in starter kit atoms (2026-03-15)
+- **Context:** Starter kit ai-agent-app lacks @protolabsai/ui themes.css infrastructure to define semantic color tokens. Decision between CSS vars + arbitrary syntax vs building semantic token infrastructure.
+- **Why:** Greenfield starter kit must be self-contained with zero @protolabsai/* dependencies. Semantic tokens require monorepo infrastructure that doesn't exist yet in the template.
+- **Rejected:** Define semantic tokens in starter kit's tailwind.config.js (couples atoms to Tailwind config) or import themes.css from main package (breaks zero-dependency constraint)
+- **Trade-offs:** CSS vars are more flexible for runtime theming but require verbose arbitrary Tailwind syntax. Atoms are portable but will need refactoring when semantic tokens are added in later phases.
+- **Breaking if changed:** If removed, atoms lose CSS variable theming ability and cannot be recolored at runtime. Migration to semantic tokens requires updating all `[var(--*)]` arbitrary values to token names.
+
+### Duplicate `cn()` helper (clsx + tailwind-merge) in starter kit instead of importing from @protolabsai/ui (2026-03-15)
+- **Context:** Atoms need class merging utility for CVA. Could import from monorepo package or reimplement locally.
+- **Why:** Zero monorepo dependencies constraint for starter kit. Ensures atoms work in isolation without npm hoisting or worktree symlink issues. Code duplication is acceptable cost for portability.
+- **Rejected:** Import from @protolabsai/ui (violates zero-dependency constraint); implement custom class merger (reinvent, unmaintained); use Tailwind directly without merge (fails when CVA overrides classes)
+- **Trade-offs:** Duplication vs dependency simplicity. Maintenance burden if clsx/tailwind-merge APIs change, but atoms remain self-contained learning examples.
+- **Breaking if changed:** Removing this duplicate and adding monorepo import breaks the standalone constraint and couples atoms to @protolabsai/ui package existence.
+
+### Use Tailwind CSS 4 `@theme inline` in tokens.css to bridge CSS custom properties to Tailwind utilities (2026-03-15)
+- **Context:** Need CSS vars for runtime theming but also need Tailwind utilities to consume those vars. Tailwind v4 introduced @theme inline directive.
+- **Why:** @theme inline allows embedding theme values directly in CSS without separate tailwind.config.js, keeping tokens centralized in one source file. Avoids duplication between CSS vars and Tailwind config.
+- **Rejected:** Duplicate values in tailwind.config.js theme object (maintenance burden, sync issues); use CSS vars only without @theme (loses Tailwind utility optimization); traditional config (adds another config file to maintain)
+- **Trade-offs:** Clean single source of truth vs potential Tailwind version coupling if @theme inline API changes. Works for Tailwind v4+ only.
+- **Breaking if changed:** Removing @theme inline requires replicating all 6 values in tailwind.config.js theme.colors. Downgrading to Tailwind v3 breaks the @theme syntax entirely.
+
+### ToolContext implemented as generic Record<string, unknown> interface with index signature, not a specific typed interface with required properties (2026-03-15)
+- **Context:** Extracting tool definitions into standalone starter-kit package; needed to avoid framework-specific types (@protolabsai, @automaker, Feature, FeatureStatus)
+- **Why:** Generic Record enables zero-contamination, framework-agnostic tool definitions. Single definition compiles across MCP, LangGraph, Express without coupling to any framework's type system. Allows package reuse outside protoMaker ecosystem.
+- **Rejected:** Specific typed interface with required properties (e.g., interface ToolContext { userId: string; tenantId: string }) — would couple adapters to framework concerns and prevent reuse
+- **Trade-offs:** Flexibility vs type safety. Callers lose compile-time validation of required context properties; runtime errors if context missing expected keys. Must document context shape in JSDoc.
+- **Breaking if changed:** If changed to specific types, any adapter supporting multiple frameworks breaks. Package loses zero-contamination property. Starter-kit becomes framework-specific.
+
+#### [Gotcha] LangGraph adapter uses dynamic require('@langchain/core/tools') to avoid hard compile-time dependency, but fails silently at package install and only breaks at runtime when toLangGraphTool() called without @langchain/core installed (2026-03-15)
+- **Situation:** Wanted @langchain/core as optional adapter support, not hard requirement. Package should install clean without it.
+- **Root cause:** Reduces install size and dependency tree for users who only need MCP or Express adapters. Matches LangGraph's optional usage pattern in runtime environment.
+- **How to avoid:** Install-time clarity vs runtime discovery of missing optional dependency. Users get cleaner install tree but must handle runtime dependency missing errors. Package manifests don't signal dependency requirement at graph resolution time.
+
+#### [Pattern] define-once-deploy-everywhere: single SharedTool<TInput, TOutput> definition with Zod schemas compiles via three adapters (toMCPTool, toLangGraphTool, toExpressRouter) to MCP JSON Schema, LangGraph DynamicStructuredTool, Express typed routes respectively (2026-03-15)
+- **Problem solved:** Problem: maintaining separate tool definitions for each runtime (MCP tools.ts, LangGraph tool_nodes.ts, API routes.ts) with identical behavior but different type representations causes drift and duplicate validation logic
+- **Why this works:** Single source of truth for tool behavior, validation, error handling, examples. Adapters are thin translation layers to runtime-specific schemas. Any fix or feature in tool definition automatically propagates to all runtimes. Reduces cognitive load: one tool definition to reason about.
+- **Trade-offs:** Adapter complexity increases (must understand MCP JSON Schema, LangGraph DynamicStructuredTool, Express middleware). Single point of failure: adapter bug affects all three runtimes. Benefit: consistency guarantees, reduced maintenance surface.
+
+#### [Gotcha] Zod v4 broke the generic factory pattern `<TInputSchema extends z.ZodTypeAny>` used in the source. ZodTypeAny was deprecated and ZodTypeDef removed. Fixed by switching to direct type inference: `<TInput, TOutput>` with `z.ZodType<TInput>`. (2026-03-15)
+- **Situation:** defineSharedTool factory didn't compile under stricter tsconfig in worktree with Zod v4 (^4.3.6)
+- **Root cause:** Zod v4 changed its type architecture fundamentally. The pattern of constraining a generic to ZodTypeAny no longer works. Direct type parameters bypass the ZodTypeDef requirement.
+- **How to avoid:** Direct inference is cleaner but less expressive — can't do complex schema validation on the ZodType itself. Gain: simpler, Zod v4-compatible API.
+
+### ToolContext is generic `Record<string, unknown>` instead of coupled to Feature/FeatureStatus types from @protolabsai/core. This was intentional to make the starter kit fully standalone and usable outside the monorepo. (2026-03-15)
+- **Context:** Extracting @protolabsai/tools pattern into ai-agent-app-starter-kit packages/tools as zero-monorepo-dependency
+- **Why:** Starter kit must be copy-paste-able and self-contained. Coupling to Feature would force users to import from @protolabsai/core, breaking the 'define-once-deploy-everywhere' independence. Generic Record allows tools to accept any context shape.
+- **Rejected:** Using Feature/FeatureStatus from monorepo — would require starter kit users to import from @protolabsai packages, creating unwanted dependency.
+- **Trade-offs:** Loss: type safety on what context contains. Gain: true starter kit independence, users can define their own ToolContext shape.
+- **Breaking if changed:** If changed back to Feature-coupled, starter kit is no longer standalone — users must depend on @protolabsai/core.
+
+#### [Pattern] LangGraph adapter uses dynamic require('@langchain/core/tools') instead of static import. This avoids forcing @langchain/core as a hard dependency while still supporting LangGraph users. (2026-03-15)
+- **Problem solved:** Adapter pattern needed to support multiple orchestration frameworks (MCP, LangGraph, Express) without bloating the package
+- **Why this works:** Most users will only use one orchestration framework. Hard dependency on @langchain/core would bloat bundles for Express-only users. Dynamic require makes it optional — users install it if they need it.
+- **Trade-offs:** Easier: minimal bundle size for Express-only users. Harder: users must know to install @langchain/core separately for LangGraph support (requires runtime error messaging).
+
+### Included all three adapters (MCP, LangGraph, Express) in a single packages/tools module instead of separate adapter packages. This enables the 'define once, deploy everywhere' pattern — a single SharedTool definition works across MCP, LangGraph orchestration, and Express REST. (2026-03-15)
+- **Context:** Designing a reusable tool system for the starter kit that works with multiple framework choices
+- **Why:** Users need flexibility to switch between orchestration frameworks without rewriting tools. Single definition with multiple adapters is the simplest composition model.
+- **Rejected:** Separate @protolabsai/tools-mcp, @protolabsai/tools-langgraph packages — would fragment the tool definition across repos and require users to understand multiple APIs.
+- **Trade-offs:** Easier: unified tool API, easy framework switching. Harder: all three adapters must live in one package, slightly increased bundle size (though adapters are tree-shakeable).
+- **Breaking if changed:** Removing any adapter breaks the 'deploy everywhere' promise — users lose a framework option without code rewrite.
+
+#### [Gotcha] Text input not normalized before chunking — multiple spaces or special formatting could break chunking logic (2026-03-15)
+- **Situation:** chunkString assumes single spaces between words via split(' '); edge cases like 'word  word' (two spaces) would create empty string tokens
+- **Root cause:** Simple implementation assumes clean input; real streaming might include formatting, markdown, or spacing artifacts
+- **How to avoid:** Simplest implementation for typical English prose; fragile with non-standard spacing or unicode edge cases
+
+#### [Pattern] Streaming text features implemented only in main app; starter kit deferral creates split feature implementation (2026-03-15)
+- **Problem solved:** Part 2 targets starter kit files that don't exist yet (UI extraction phase incomplete); only Part 1 (main app) shipped
+- **Why this works:** Starter kit is under active development; UI files will exist eventually, so implementation was scoped as 'add when available' rather than blocking on file creation
+- **Trade-offs:** Main app gets feature immediately; starter kit gets it later via manual copy-paste pattern; creates intentional code duplication and drift risk
+
+### Use static imports for all three provider SDKs (Anthropic, OpenAI, Google) instead of dynamic conditional imports (2026-03-15)
+- **Context:** Multi-provider model resolver supporting three different AI providers in a starter kit template
+- **Why:** Keeps TypeScript types fully resolved at compile time, ensuring IDE autocompletion and type checking work correctly for all providers regardless of which one is actually used at runtime. Critical for developer experience in a starter kit.
+- **Rejected:** Dynamic imports with require()/import() - would break TypeScript type resolution for unused providers and degrade IDE experience
+- **Trade-offs:** All three SDK dependencies bundled even if only one is used in practice. For a starter kit, DX and type safety outweigh dependency bloat.
+- **Breaking if changed:** Switching to dynamic imports would lose type checking and IDE support for model IDs and client methods from non-imported providers
+
+#### [Pattern] Lazy singleton client factories—provider clients instantiated only on first use, not at server startup (2026-03-15)
+- **Problem solved:** Multi-provider system where developers may not have all API keys configured initially
+- **Why this works:** Prevents hard startup failures when some API keys are missing. Server remains operational with partial provider configuration, allowing developers to add providers incrementally without restarts.
+- **Trade-offs:** First request to a provider incurs client instantiation overhead. Acceptable tradeoff for the flexibility of optional provider configuration.
+
+#### [Pattern] Multi-level model resolution with fallback chain: alias → provider prefix detection → MODEL env var → hard default (2026-03-15)
+- **Problem solved:** Resolving user-provided model names to actual provider model IDs without requiring explicit configuration
+- **Why this works:** Each fallback layer addresses a different user sophistication level: aliases for common models (haiku/sonnet/opus), full IDs for explicit specification, env var for runtime control, default for zero-config. Eliminates multiple competing ways to achieve the same outcome.
+- **Trade-offs:** Adds routing logic to resolveModel() but provides single unified resolution path that serves multiple use cases without duplication.
+
+### Use `git ls-remote --heads origin <branch>` to check epic branch existence on remote before attempting PR creation, not error-driven PR creation with try-catch (2026-03-15)
+- **Context:** When prBaseBranch='dev', child PRs merge directly to dev and epic branch never gets created on remote. Service blindly tried to create epic-to-dev PR from non-existent branch, causing failures and blocking epic.
+- **Why:** Remote-direct check (no local fetch needed), returns empty output (not error) when absent — clean boolean mapping. Error-driven approach would block epic in error state instead of auto-recovering. Checking local branch won't work for unfetched refs.
+- **Rejected:** Catch errors from `gh pr create` and retry logic — this blocks epic in error state instead of safe auto-completion path. Check local git state — incomplete without fetch.
+- **Trade-offs:** Adds one extra git command per epic completion. Gains: cleaner recovery logic, no transient network failures permanently blocking epic. Loses: no explicit error context if branch was deleted vs never created.
+- **Breaking if changed:** Without this check, epic blocks when children merge directly to dev (reintroduces original bug). Existing PR-creation flow fully preserved when branch exists.
+
+#### [Gotcha] Catch block intentionally returns `false` (branch absent) instead of throwing when git command fails, treating transient failures as 'branch doesn't exist' (2026-03-15)
+- **Situation:** Network hiccup or git config issue during `git ls-remote` — should not permanently block epic
+- **Root cause:** False positive (assuming branch absent when it exists) is less harmful than blocking epic — false positive triggers safe direct-completion path. True negative (missing real branch) is caught by the normal case.
+- **How to avoid:** Trades precise error diagnostics for resilience — you won't know if the git command actually failed vs branch really absent
+
+#### [Pattern] Asymmetric dedup claim timing: direct-completion path claims dedup before any async ops; PR-creation path claims only after successful PR (2026-03-15)
+- **Problem solved:** Two paths to epic.done have different failure modes — direct completion is sync, PR creation can fail. Each uses different strategy to avoid losing epics on retry.
+- **Why this works:** Direct path: all operations succeed or throw, so dedup can be claimed upfront. PR path: gh pr create can fail transiently, so dedup must be claimed only after success to allow retries without losing the epic.
+- **Trade-offs:** Gains: resilience to transient failures in each path. Loses: code duplication and asymmetry that must be maintained
+
+#### [Gotcha] Epic branch nonexistence is used as a proxy signal for 'children merged directly to base', but this relies on implicit invariant: if epic.branchName is set, it exists on remote IFF children went through it (2026-03-15)
+- **Situation:** When prBaseBranch='dev', epic.branchName is set but branch never created on remote. Service detects this via absence to infer bypass behavior.
+- **Root cause:** Epic branch is only created when child PRs target it. If children target dev directly, epic branch never exists. Absence → bypass is deterministic.
+- **How to avoid:** Implicit detection is flexible (auto-adapts if config changes mid-project) but fragile — breaks if someone manually deletes epic branch on remote after creation
+
+#### [Pattern] Convergence point for cascade completion: both PR path and direct path call emit('feature:completed') + checkMilestoneCompletion, but code is duplicated (2026-03-15)
+- **Problem solved:** When epic completes (either via PR auto-merge or direct completion), parent milestone must be checked for completion. This logic appears in both paths.
+- **Why this works:** Milestone completion cascade must trigger in both cases — epic completion (any path) can unlock milestone. Currently duplicated to avoid shared mutable state.
+- **Trade-offs:** Duplication is clearer (explicit in both paths) but violates DRY; extracted helper is DRYer but adds indirection that obscures the cascade responsibility
+
+#### [Pattern] Tool profiles (chat/execution/review) enable context-aware tool availability in ToolRegistry (2026-03-15)
+- **Problem solved:** ToolRegistry stores and vends tools with optional profile markers that filter tool sets by execution context
+- **Why this works:** Allows same tool registry to provide different tool subsets depending on caller context — e.g., 'chat' profile excludes destructive tools, 'execution' profile includes them. Encodes policy without duplicating tools.
+- **Trade-offs:** Flexibility: can swap profiles at runtime. Cost: need to define and maintain profile metadata for each tool; adds complexity to tool registration.
+
+### Anthropic agentic loop implemented server-side (POST /chat handler) — detects tool_use blocks, executes via registry, feeds results back, repeats until end_turn (2026-03-15)
+- **Context:** Server owns the orchestration of multi-turn tool interactions rather than delegating to client
+- **Why:** Server maintains control over tool execution (security, logging, auditing); encapsulates Anthropic SDK specifics; centralizes retry/error-handling logic. Client sees simple request-response.
+- **Rejected:** Alternative: client-side loop (client detects tool_use, decides execution, makes follow-up calls). This exposes Anthropic protocol to client, loses server control.
+- **Trade-offs:** Simpler client contract. Cost: server must manage stateless multi-turn context (each call needs message history); more verbose API traffic.
+- **Breaking if changed:** If loop moves to client, server can no longer audit/intercept tool calls; client must understand Anthropic tool-use protocol.
+
+#### [Pattern] Server package defines local tools (getCurrentTimeTool in tools/example.ts) using defineSharedTool from tools package, not just importing pre-built tools (2026-03-15)
+- **Problem solved:** Tools can be defined anywhere (not just in tools package) using the shared tool infrastructure
+- **Why this works:** Allows server-specific tools without cluttering the shared tools package. Demonstrates that defineSharedTool is a reusable primitive for defining tools in any context, not just the tools package.
+- **Trade-offs:** Flexibility: tools can be defined where they're used. Cost: tool definitions scattered across codebase; harder to discover/audit all tools.
+
+### Cross-package TypeScript setup uses tsconfig paths + project references (tools package builds with composite:true, server references it and uses paths mapping to dist declarations) (2026-03-15)
+- **Context:** Server needs types from tools package at compile time; tools package provides declarations to dist/
+- **Why:** Project references ensure proper incremental compilation and type-safe cross-package dependencies. paths mapping lets server import from tools package using @@PROJECT_NAME-tools alias. Tools builds declarations first (composite:true) so types are available during server compilation.
+- **Rejected:** Alternative: import directly from tools package source (no composite). This loses incremental build benefits and can cause circular dependency issues in monorepos.
+- **Trade-offs:** Robust type safety and build ordering. Cost: requires understanding TypeScript project references; build failures if tools package declarations aren't generated.
+- **Breaking if changed:** Removing composite:true or references will cause 'cannot find module' errors in server during typecheck. Changing paths mapping breaks imports.
+
+#### [Pattern] Streaming pipeline: streamText → toUIMessageStream → createUIMessageStream → pipeUIMessageStreamToResponse. Each step transforms the stream for the next layer (inference→UI→HTTP). (2026-03-15)
+- **Problem solved:** Building a server endpoint that streams agentic inference results back to a client using useChat hook
+- **Why this works:** Each transformation is necessary: streamText produces raw inference stream; toUIMessageStream parses AI messages; createUIMessageStream adds event framing; pipeUIMessageStreamToResponse formats for HTTP text/event-stream
+- **Trade-offs:** More abstraction layers increase complexity but ensure compatibility with Vercel ecosystem; single-purpose transformations make debugging easier
+
+### Tools execute server-side (getCurrentTime runs on server, result streamed back), not delegated to client. Tool output is streamed inline within the agent response. (2026-03-15)
+- **Context:** Designing tool execution model for a server-side agentic loop
+- **Why:** Server-side execution keeps sensitive logic and state centralized; streaming results back keeps the conversation fluent for the client (no round-trip delay for each tool call)
+- **Rejected:** Client-side execution (requires tool definitions shipped to client, logic duplication); polling for tool results (higher latency, complexity)
+- **Trade-offs:** Server must be capable of executing tools; reduces client complexity; enables tools with side effects (server state, APIs)
+- **Breaking if changed:** If tools are moved to client, the agent loop breaks (model expects tool results inline); if tool results aren't streamed, response latency increases per tool call
+
+#### [Pattern] VitePress auto-scans `docs/templates/` directory to generate sidebar; new `.md` files appear without manual sidebar config changes (2026-03-15)
+- **Problem solved:** Documentation site needs to maintain sidebar consistency as new starter kits are added
+- **Why this works:** Convention over configuration reduces config coupling and eliminates friction for adding documentation. Developers just drop a file and it appears.
+- **Trade-offs:** Pro: Zero config overhead. Con: Sidebar generation becomes 'magic'; developers unfamiliar with convention might not realize it's auto-generated and waste time trying to manually configure.
+
+#### [Gotcha] Documentation describes `ai-agent-app` as a scaffold kit, but the server route at `apps/server/src/routes/setup/routes/scaffold-starter.ts` only validates `'docs' | 'portfolio' | 'landing-page' | 'general'` — `ai-agent-app` is not yet in the validation list (2026-03-15)
+- **Situation:** Docs were written for a feature that isn't fully wired into the backend scaffold route
+- **Root cause:** Documentation was written forward-compatible to describe the intended API/UX. Server-side wiring is a separate task. This decouples docs from implementation completion.
+- **How to avoid:** Pro: Docs describe intended feature. Con: Users following docs might attempt to use `ai-agent-app` via CLI and fail with validation error, creating expectation mismatch.
+
+#### [Pattern] Landing page starter uses JSON-driven content via Astro Content Collections — section content lives in JSON files, not in templates; rebranding needs only 6 CSS custom property changes (2026-03-15)
+- **Problem solved:** Starter kits need to be easily customizable by users without requiring template edits
+- **Why this works:** Separating content from presentation enables rebranding with data changes only. Single source of truth for customizable values reduces risk of inconsistency.
+- **Trade-offs:** Pro: Rebranding is just JSON + CSS. Con: Extra indirection; developers need to understand Content Collections schema and JSON structure.
+
+#### [Pattern] AI agent app starter uses `defineSharedTool` pattern where single tool definition compiles to MCP, LangGraph, and Express adapters (2026-03-15)
+- **Problem solved:** Multiple runtime targets (different AI frameworks) need identical tool definitions without duplication
+- **Why this works:** Single source of truth prevents tool definition divergence. Avoids maintaining same schema across three different adapter formats. Compilation ensures type safety across all targets.
+- **Trade-offs:** Pro: One schema to maintain, automatic consistency. Con: Requires understanding compilation targets; tool authors must think about multi-adapter compatibility from the start.
+
+### Browser extension kit uses `git clone` from GitHub; other kits use file scaffold from `@protolabsai/templates` package (2026-03-15)
+- **Context:** Different starter kits have different provisioning requirements
+- **Why:** WXT (browser extension tooling) requires native build scripts that `git clone` preserves. File copy can't reliably reproduce native behavior. Other kits don't have this constraint, so scaffold is preferred (offline capable, automatic name substitution).
+- **Rejected:** Could scaffold browser extension via file copy, but npm hoisting would not preserve custom WXT build hooks
+- **Trade-offs:** Clone: Network required, manual naming, native scripts work. Scaffold: Works offline, automatic naming, simpler provisioning. Right tool for each job.
+- **Breaking if changed:** If browser extension moves to scaffold, native build scripts may fail due to npm hoisting losing build context
+
+#### [Pattern] AI agent app uses three-package monorepo structure: `packages/server` (agentic loop), `packages/ui` (streaming chat), `packages/tools` (shared tool definitions) (2026-03-15)
+- **Problem solved:** Single application needs separate runtime concerns with different deployment and usage targets
+- **Why this works:** Separates concerns by responsibility. Tools can be reused by different clients (Express server, LangGraph flows, etc.). UI can be swapped independently. Server can be replaced with different runtime.
+- **Trade-offs:** Pro: Clear responsibility boundaries, tool reusability. Con: npm hoisting complexity (documented as P3 known issue with symlinks)
+
+### Used `any` type for optional Langfuse SDK dependency with dynamic import, rather than attempting complex conditional TypeScript types (2026-03-15)
+- **Context:** Needed to support Langfuse as optional peer dependency so package installs without hard Langfuse requirement, but can still use it if available
+- **Why:** TypeScript's type system cannot dynamically type based on optional imports at compile time. Conditional types insufficient for this pattern. Using `any` with explicit eslint-disable makes intent clear and trades type safety for flexibility.
+- **Rejected:** Attempting clever conditional type signatures (proved insufficient in practice). Making Langfuse a required dependency (bloats starter kit).
+- **Trade-offs:** Lose type safety on SDK instance, but gain portability. Package stays under ~2KB without langfuse installed.
+- **Breaking if changed:** If dynamic import is removed, either SDK calls break at runtime or types must be tightened, breaking the optional-dependency contract.
+
+#### [Pattern] FileTracer as always-available fallback ensures local observability always works, even without Langfuse or external services (2026-03-15)
+- **Problem solved:** Starter kit needs working observability in dev/test environments where external services may not be configured
+- **Why this works:** Provides immediate tracing capability for debugging and development. File-based backend has no external dependencies. Improves developer experience by removing setup friction.
+- **Trade-offs:** File I/O and disk space overhead (per-trace JSON files) vs guaranteed observability availability. Traces in files are not queryable like Langfuse.
+
+### Zero @protolabsai/* internal imports — package is entirely standalone and portable outside monorepo (2026-03-15)
+- **Context:** Building a 'starter kit' package that may be extracted, reused, or scaffolded into new projects
+- **Why:** Internal imports create tight coupling to monorepo structure. Prevents package from being copy-pasted or npm-installable independently. Starter kits need to work as templates outside their origin.
+- **Rejected:** Using shared utilities from main codebase (would require monorepo resolution). Using @automaker-scoped imports.
+- **Trade-offs:** Duplication of some utility logic (e.g., logger parameter defaults) vs complete independence. Requires discipline to avoid importing @protolabsai.
+- **Breaking if changed:** Any future reference to @protolabsai modules breaks the package's reusability and forces consumers to refactor.
+
+#### [Pattern] Environment-variable-based factory auto-detection (createTracingConfig) couples deployment configuration to feature activation (2026-03-15)
+- **Problem solved:** Need to auto-select between Langfuse and FileTracer based on whether external service is configured
+- **Why this works:** Env vars are the standard deployment configuration mechanism. Checking LANGFUSE_PUBLIC_KEY + LANGFUSE_SECRET_KEY allows ops to enable/disable Langfuse without code changes. Simplifies onboarding: developers get FileTracer by default, ops sets env to upgrade to Langfuse.
+- **Trade-offs:** Feature availability depends on deployment config (good for flexibility, harder to test all paths locally). Env var absence is implicit feature detection, not explicit declaration.
+
+#### [Gotcha] SharedTool type parameter requires <any, any> not <unknown, unknown> due to contravariance on the execute function parameter (2026-03-15)
+- **Situation:** registerTool() accepts any SharedTool variant and wraps registry.register(). TypeScript's contravariance rules made unknown unsuitable.
+- **Root cause:** The execute function is contravariant in its parameters (it must accept *more* general types than the specific tool provides). With unknown representing an unknown-but-specific type, it violates contravariance. Only any (representing truly unconstrained types) satisfies the constraint.
+- **How to avoid:** Loses type safety but necessary for the generic registry pattern. Mitigated with ESLint disable comment to flag the compromise.
+
+#### [Pattern] Use Object.assign on defineSharedTool result instead of importing registry into example.ts to attach requiresConfirmation flag (2026-03-15)
+- **Problem solved:** Need to define server-local tools with confirmation requirements without creating circular import (registry would import example for defaults, example needs registry for the flag)
+- **Why this works:** Breaks circular dependency by keeping example.ts import-light. The flag is attached at call-site, not at definition. Registry stays as the single source of truth for confirmation tracking via registerTool().
+- **Trade-offs:** Adds indirection (Object.assign) but cleaner module boundaries and no import cycles. Slightly less discoverable that requiresConfirmation is registry-managed.
+
+#### [Pattern] Tool profiles (chat, execution, review) as role-scoped tool subsets via getAnthropicToolsForProfile(), not all tools available to all callers (2026-03-15)
+- **Problem solved:** Different agent roles and chat routes need different tool access. Not all tools safe/relevant for all contexts.
+- **Why this works:** Implements least-privilege principle. Caller asks 'what tools does this role use' rather than 'is this tool available'. Profile is source of truth for role→tools mapping.
+- **Trade-offs:** Profile definitions require maintenance as new tools added, but intent is clear and role access is centralized and auditable
+
+### Server-local tools (get_weather with requiresConfirmation) coexist with shared tools (get_current_time). Tool profiles handle visibility, not a separate 'server tools' queue. (2026-03-15)
+- **Context:** Some tools are shared across templates/clients; others are server-specific with custom requirements like human confirmation
+- **Why:** Single registry treats all tools uniformly. The requiresConfirmation flag and profile membership determine behavior per tool, not tool classification. Avoids separate registries and keeps registration consistent.
+- **Rejected:** Separate 'server tools' registry or queue adds complexity and breaks the single source of truth. Shared vs local is implementation detail, not architectural.
+- **Trade-offs:** All tools go through same registerTool() path but can have different profiles/flags. Simpler conceptually but requires discipline to define profiles correctly.
+- **Breaking if changed:** If someone assumes shared tools never have requiresConfirmation or server tools aren't in the main registry, they'll miss the flag or tool entirely
+
+### WebSocket sideband runs on separate port with idempotent lifecycle, independent of HTTP server (2026-03-15)
+- **Context:** Broadcasting real-time tool progress to clients without blocking chat
+- **Why:** Separation of concerns: WS server lifecycle independent from HTTP; port flexibility (WS_PORT env var or explicit arg); startWebSocketServer() is idempotent so safe to call multiple times without coordination logic
+- **Rejected:** Could merge into HTTP server for simplicity, but loses port flexibility and couples unrelated concerns; HTTP SSE/long-polling simpler to wire but higher overhead
+- **Trade-offs:** Adds another port to manage, but gains flexibility to run/stop WS independently; no wiring needed in express routes
+- **Breaking if changed:** If WS merged into HTTP server, would lose ability to configure port separately; clients couldn't connect before HTTP fully initialized
+
+### toolProgress singleton exported from progress.ts; tools import and use directly without knowing about ws.ts (2026-03-15)
+- **Context:** Tools need a way to emit progress; ws.ts handles broadcast, but tools shouldn't import ws module
+- **Why:** Decouples tool code (which is domain logic) from infrastructure (WebSocket, rate limiting). Tools just call emit(); the singleton hides complexity. Keeps tool code testable and reusable outside WS context.
+- **Rejected:** Could require tools to import ws.ts and call broadcastProgress directly (couples domain to infra), or pass emitter as parameter to every tool (friction)
+- **Trade-offs:** Hidden dependency: tool behavior changes based on what's wired in progress.ts, but keeps tool code clean and testable in isolation
+- **Breaking if changed:** If toolProgress singleton removed, every tool using it breaks; if moved to different module, import paths break across codebase
+
+#### [Gotcha] TanStack Router requires routeTree.gen.ts to exist as a pre-seeded stub in templates, despite being auto-generated by Vite plugin on first run. Stub syntax may not match actual generated output across TanStack Router versions. (2026-03-15)
+- **Situation:** Building Vite SPA skeleton with file-based routing; TypeScript must resolve imports in main.tsx before Vite plugin executes
+- **Root cause:** Vite plugin runs during dev server startup, not during initial build validation. TypeScript needs the file to exist for import resolution. Without stub, 'Cannot find module routeTree.gen.ts' errors block the entire build.
+- **How to avoid:** Stub gets overwritten on first dev run (acceptable); syntax mismatches possible across versions (no runtime impact but could confuse developers); committed file that looks like dead code but is essential
+
+### TypeScript tsconfig.json: moduleResolution set to 'bundler' (not 'node') and module set to 'ESNext' (not 'commonjs'), for Vite SPA compatibility. (2026-03-15)
+- **Context:** Building Vite 7 frontend that imports ES modules and Vite-specific plugins
+- **Why:** 'bundler' tells TypeScript to resolve modules the same way Vite does, not how Node.js does. 'ESNext' output prevents TypeScript from transpiling to CommonJS, which Vite cannot optimize. Mismatch causes 'Cannot find module' errors at runtime despite files existing.
+- **Rejected:** moduleResolution: 'node' + module: 'commonjs' causes TypeScript and Vite to disagree on module paths; moduleResolution: 'node' + module: 'esnext' confuses TypeScript about conditional exports
+- **Trade-offs:** 'bundler' mode incompatible with pure Node.js runtime code; ensures TypeScript and bundler agree; loses ability to import CommonJS modules directly
+- **Breaking if changed:** Reverting to 'node' moduleResolution causes mysterious runtime errors for modules that resolve in Vite but not from Node perspective; reverting to 'commonjs' module output breaks Vite treeshaking and dynamic imports
+
+#### [Gotcha] AI SDK v6 does not expose a stepType field directly. Step type must be inferred from content (presence of tool calls = tool-result, otherwise = text). (2026-03-15)
+- **Situation:** UI needs to categorize steps for display but SDK doesn't provide explicit type annotation
+- **Root cause:** SDK design abstracts step classification away; inference from content structure is reliable alternative
+- **How to avoid:** Inference logic adds complexity but avoids external dependencies; makes step type derivation fragile to SDK content changes
+
+#### [Gotcha] AI SDK v6 does not expose per-step wall-clock timings. Step duration must be approximated by distributing total stream duration evenly across steps. (2026-03-15)
+- **Situation:** Latency waterfall visualization requires per-step timing but SDK only provides aggregate metrics
+- **Root cause:** SDK design focuses on aggregate performance; per-step instrumentation would require deeper framework integration
+- **How to avoid:** Even distribution hides actual step bottlenecks; waterfalls are visually accurate but misleading about performance
+
+#### [Pattern] Trace storage uses in-memory ring buffer (max 100 traces) instead of persistent storage or unbounded array. (2026-03-15)
+- **Problem solved:** Starter template needs observability without infrastructure dependency or memory bloat
+- **Why this works:** Ring buffer provides bounded memory guarantee (prevents OOM) while remaining simple; max 100 is reasonable for local dev/demo
+- **Trade-offs:** Traces lost on server restart and when buffer wraps (FIFO); production observability would need persistence and larger limits
+
+### Trace viewer UI uses REST polling (GET /api/traces) instead of WebSocket or Server-Sent Events for updates. (2026-03-15)
+- **Context:** Observability dashboard needs to refresh trace list but starter template should minimize infrastructure
+- **Why:** REST fits existing Express routing pattern; polling is stateless and requires no new protocol
+- **Rejected:** WebSocket — requires persistent connection, more complex server state; SSE — still requires server initiative
+- **Trade-offs:** Manual refresh button required (not real-time); polling can overwhelm server if many clients; simplicity wins for template
+- **Breaking if changed:** Real-time trace visibility requires upgrading to WebSocket or SSE; polling latency grows with scale
+
+#### [Pattern] Flush-before-switch pattern: explicitly save messages to store before switching sessions via handleSwitchSession callback. (2026-03-15)
+- **Problem solved:** Preventing message loss when user switches between chat sessions. Session switches are discontinuous events that break automatic syncing.
+- **Why this works:** Without explicit flush, messages in flight remain in useChat hook's state but never persist to session store. Automatic Zustand updates only capture messages synced via setMessages(), not messages the hook is still holding during a switch.
+- **Trade-offs:** Adds extra localStorage writes per switch but guarantees no message loss. Simpler than debouncing or polling for stale state.
+
+### LRU eviction by updatedAt timestamp, not creation date, with hard cap at 50 sessions. (2026-03-15)
+- **Context:** Limiting localStorage footprint while preserving user accessibility. 50 sessions is typical limit in Discord/Slack clones.
+- **Why:** updatedAt (last activity) is better heuristic than createdAt (creation time) — recently used sessions more likely to be needed again. Hard cap prevents unbounded growth that degrades app performance.
+- **Rejected:** FIFO (oldest created first) — loses recent working sessions. Unbounded growth — localStorage bloat. User-configurable limits — adds UI complexity.
+- **Trade-offs:** Older conversations evicted silently. Users may lose < 50 chats but gain predictable perf. Alternative is manual pruning burden on user.
+- **Breaking if changed:** Remove LRU → unbounded sessions, localStorage can exceed 5-10MB limit on some browsers. Change 50→smaller → aggressive eviction harms UX.
+
+### Zero monorepo dependencies in starter kit: only zustand, ai, @ai-sdk/react. Intentionally omit @protolabsai/* packages (auth, subagent, PR watch, checkpoint rewind). (2026-03-15)
+- **Context:** Starter kit must be copyable by external users who don't have access to protoMaker's internal packages.
+- **Why:** Maintain reusability. External users clone ai-agent-app/ and npm install; if @protolabsai/types was imported, their install fails. Starter kit teaches patterns, not protoMaker internals.
+- **Rejected:** Reuse @protolabsai/types, @protolabsai/auth → forces external users to install monorepo or duplicate types. Creates hard coupling.
+- **Trade-offs:** Can't leverage shared patterns from main app (some duplicated types, some simplified). Simpler onboarding for external users. Maintenance burden: keep in sync manually.
+- **Breaking if changed:** Add @protolabsai/* import → starter kit becomes unmigrateable for external users. Defeats 'zero-monorepo-dependency' constraint.
+
+### Instead of a single configurable createGraph({ topology: 'linear', ...config }) builder, created separate factory functions for each topology: createLinearGraph, createLoopGraph, createBranchingGraph. Each factory is tailored to its topology's router constraints. (2026-03-15)
+- **Context:** Needed a way to create LangGraph state graphs with different control flow patterns (linear sequences, loops, branching decisions).
+- **Why:** Separate factories provide type safety—each topology enforces appropriate router types at compile time. Avoids discriminated union complexity in a single builder. Simpler mental model: developers think about graph topology first, then use the appropriate factory.
+- **Rejected:** Single configurable builder with topology parameter would provide more flexibility but requires runtime type guarding and less clear type inference for routers.
+- **Trade-offs:** Easier to understand and type-safe vs harder to extend—adding a new topology requires a new factory function and code change (not just config). No polymorphic extension mechanism.
+- **Breaking if changed:** Code that calls createLinearGraph or similar expects those functions to exist. Removing a factory function breaks all code using that topology. Changing factory signatures breaks callers.
+
+#### [Pattern] Provided 10 reducer functions (appendReducer, counterReducer, mapMergeReducer, idDedupAppendReducer, etc.) for different state merge semantics instead of a simple replacement strategy. Each reducer handles a specific accumulation or merge pattern. (2026-03-15)
+- **Problem solved:** LangGraph state nodes produce output that needs to be merged into the global state. Different fields require different merge behaviors (append to list, increment counter, merge maps, deduplicate by ID, etc.).
+- **Why this works:** Multi-node flows need field-specific merge semantics. A simple replace loses information (can't accumulate results). Reducers enable declarative merge strategies per field without developers writing merge logic.
+- **Trade-offs:** More abstractions to learn and configure vs cleaner state management without custom logic. Adds 10 functions but saves developers from writing context-specific merge code.
+
+#### [Pattern] createSubgraphBridge pattern for composing interrupt/resume flows. Wraps a subgraph in a bridge node that checks pending approvals and routes accordingly, enabling HITL workflows with checkpointing. (2026-03-15)
+- **Problem solved:** HITL (human-in-the-loop) approval flows need to pause execution for human review, store state, and resume with human decision. LangGraph checkpointing supports this, but composing approval logic with main flow requires a composition pattern.
+- **Why this works:** Subgraph composition keeps approval logic encapsulated and reusable. Bridge pattern separates the composition glue (routing, state mapping) from the subgraph implementation. Enables nested approval flows.
+- **Trade-offs:** Cleaner composition and reusability vs additional abstraction layer. Bridge requires understanding interrupt semantics and command-based resumption.
+
+#### [Pattern] Router composition combinators (combineRoutersAnd, combineRoutersOr) allow combining multiple router conditions without developers writing conditional logic. Routers compose into more complex routing policies. (2026-03-15)
+- **Problem solved:** Complex routing decisions often need AND/OR logic (route if condition1 AND condition2, or condition3). Developers would otherwise write nested conditionals.
+- **Why this works:** Compositional routing enables declarative complex logic. Reduces cognitive load of conditional chains. Makes routing policies reusable and testable.
+- **Trade-offs:** Enables powerful routing composition vs adds abstraction layer that developers must understand (AND semantics, OR semantics).
+
+### Implemented a zero-dependency XML parser (xml-parser.ts) instead of using an external XML library. Parser is custom-built for LLM structured output extraction. (2026-03-15)
+- **Context:** Tool-calling agent example needs to parse XML tool calls from LLM output. Starter kit aims to minimize dependencies.
+- **Why:** Starter kits must minimize dependencies for bundle size and setup friction. Custom parser is optimized for the specific XML structure (tool calls with params). Avoids dependency on full XML parsing library.
+- **Rejected:** Using xml2js, fast-xml-parser, or similar libraries adds dependency and bundle bloat for starter kit.
+- **Trade-offs:** Custom code requires maintenance vs avoiding external dependency. Parser is not feature-complete (no namespaces, CDATA, etc.) but sufficient for LLM tool calls.
+- **Breaking if changed:** If tool call XML structure changes significantly, custom parser requires updates. Removing the parser breaks tool-calling-agent example.
+
+### Tool progress events flow through separate WebSocket sideband (port 3002) rather than main chat stream (2026-03-15)
+- **Context:** Needed to show live tool execution progress (progress label updates) without blocking or cluttering main message stream
+- **Why:** Tool progress is high-frequency, independent of message ordering, has separate lifecycle. Decoupling allows each stream to scale independently. Main stream handles discrete messages; sideband handles continuous state.
+- **Rejected:** Sending progress as streaming updates through main chat API or server-sent events on same connection
+- **Trade-offs:** Gains: independent connection management, cleaner event separation. Loses: requires dual connection management, port 3002 is hardcoded and brittle, dev environment must have progress server running for feature to work.
+- **Breaking if changed:** Removing the sideband connection silently removes all tool progress labels. No error, just missing feature. Breaking change is invisible.
+
+### Use a closed, enumerated set of five domain-specific node types (Agent/Tool/Condition/State/HITL) rather than a generic extensible node system (2026-03-15)
+- **Context:** The flow builder generates valid @langchain/langgraph TypeScript. Each node type has specific code generation semantics (Agent → LLM call, Condition → router with edge conditions, State → transformation, etc.).
+- **Why:** A closed set makes code generation deterministic. Each node type knows exactly how to generate itself: AgentNode → agent executor, ConditionNode → conditional edge routing. A generic 'node with inputs/outputs' would require runtime type inspection, user-specified templates, or schema inference — making code generation intractable.
+- **Rejected:** Fully generic node system (like Obsidian Canvas) offers more expressivity but breaks codegen — you can't auto-generate valid code for arbitrary node shapes without runtime schema metadata.
+- **Trade-offs:** Reduced expressivity (can only model 5 node kinds) vs. reliable, predictable code generation. Adding a new node type requires both a React Flow custom component AND codegen logic.
+- **Breaking if changed:** If types become generic, the code generation system breaks — it no longer knows how to produce valid LangGraph code for arbitrary nodes.
+
+### Commands self-register via side-effect imports (example.ts imported by both chat.ts and commands.ts). This ensures availability regardless of which route initializes first, without explicit factory calls or initialization order management. (2026-03-15)
+- **Context:** Needed to make commands available to both the chat route (for expansion) and the commands endpoint (for listing). Had to ensure registration happened before either route tried to use them.
+- **Why:** Side-effect imports eliminate the need to maintain an explicit initialization order or central registry loader. Both entry points can simply import example.ts and be guaranteed commands exist. Simple and automatic.
+- **Rejected:** Explicit factory pattern with parameterized initialization, or main-level registration orchestration. These require coordination across multiple files.
+- **Trade-offs:** Side-effects are less visible than explicit calls — developers might not realize registration happens on import. But the benefit is complete decoupling of import order.
+- **Breaking if changed:** Removing the import from either chat.ts or commands.ts silently breaks command availability in that route. No compiler error signals the problem.
+
+#### [Pattern] Command detection runs only on the LAST user message, not all messages or history. The parser uses regex returning null for non-commands, which keeps normal chat completely unaffected by command logic. (2026-03-15)
+- **Problem solved:** Need to intercept user commands without blocking normal conversation. Important to avoid false positives or breaking existing chat.
+- **Why this works:** Last message only is the natural UX — user types command at current turn. Null return for non-commands means the expansion branch never executes for normal chat (no performance cost, no side effects). This is fail-safe: command logic is completely isolated.
+- **Trade-offs:** Can't use commands for historical analysis or batch operations. But this simplifies the model's task — it always sees fresh command-expanded context, not historical command artifacts.
+
+#### [Gotcha] The system prompt prepending order matters: `expansion + '\n\n' + resolvedSystem`. If expansion comes after, it can be overridden by default system instructions. The two-newline separator is critical for visual clarity in model interpretation. (2026-03-15)
+- **Situation:** Built-in system prompts could conflict with or override command expansions if the order is wrong. The model sees the concatenated string.
+- **Root cause:** Commands must take precedence because they're explicit user intent. Prepending ensures they appear first in the model's context window. Two newlines provide clear section break (vs. single newline which looks like continuation).
+- **How to avoid:** Double newline adds 2 bytes but significantly improves model readability. The trade-off is worth it for clarity.
+
+### Built minimal inline YAML parser instead of using gray-matter or js-yaml dependency (2026-03-15)
+- **Context:** PromptLoader needs to parse YAML frontmatter from markdown prompt files
+- **Why:** Keep starter kit truly standalone with zero runtime dependencies; simplicity matches the narrow YAML subset needed (key: value, lists)
+- **Rejected:** gray-matter, js-yaml — adds ~100KB dependencies to starter kit when only parsing simple frontmatter is needed
+- **Trade-offs:** Lost: complex YAML features (anchors, refs, nested structures). Gained: zero dependencies, smaller bundle, easier onboarding for beginners scaffolding from this kit
+- **Breaking if changed:** If prompt frontmatter expands to complex YAML (anchors, nested objects), the inline parser fails — forces upgrade to real YAML library
+
+#### [Pattern] Registry ships empty; Loader is separate population mechanism. Registry is pure data structure, Loader couples to file I/O (2026-03-15)
+- **Problem solved:** Need a prompt store that can be tested without file system, but also loaded from disk at runtime
+- **Why this works:** Separation of concerns: registry never needs to know where prompts come from. Enables testing registry in isolation, swapping loaders (disk, HTTP, database) without changing registry API
+- **Trade-offs:** Easier: independent unit testing, runtime flexibility (load from different sources). Harder: two classes to understand instead of one
+
+#### [Pattern] Prompts stored as git-tracked markdown files (not JSON, YAML files, or database) with YAML frontmatter (2026-03-15)
+- **Problem solved:** Need versioned, reviewable prompt evolution as prompts change across releases
+- **Why this works:** Plain markdown makes diffs naturally human-readable; PR review workflow is native (see prompt changes inline); git history tracks why prompts changed; no separate infrastructure needed
+- **Trade-offs:** Easier: natural diffs, zero infra, works with git blame/log. Harder: can't query prompts by metadata without parsing (no full-text search without loading files)
+
+#### [Pattern] Side-effect import registration pattern: roles are registered via `import '../roles/assistant.js'` in the route handler, not explicitly called in code (2026-03-15)
+- **Problem solved:** Roles system needed to auto-register built-in roles without explicit registration calls in route handler
+- **Why this works:** Decouples role definitions from route wiring. Mirrors the commands system pattern. Enables new roles to be added by simply creating a new file + importing it, without modifying route code
+- **Trade-offs:** Less explicit (implicit dependency via side effect) but more flexible for extensibility. New roles require just a file + import, no route changes
+
+#### [Pattern] Separation of registry mechanism (index.ts) from role definitions (assistant.ts): core `registerRole / getRole / listRoles` live in index; actual roles in separate files (2026-03-15)
+- **Problem solved:** Needed extensible role system where new roles can be added without modifying core logic
+- **Why this works:** Creates plugin-like architecture. Reduces cognitive load: registry is the contract, roles are implementations. New roles added by: create file + import it. No modification to index.ts needed
+- **Trade-offs:** More files to maintain but clearer extension points. Requires discipline: each role must import `registerRole` and side-effect import from route
+
+### Switched from direct component render (<TracesPage />) to TanStack Router's RouterProvider to activate file-based route definitions (2026-03-15)
+- **Context:** File-based routes (prompts.tsx, sessions.tsx, etc.) were defined but not being rendered because App.tsx wasn't using RouterProvider
+- **Why:** TanStack Router requires explicit RouterProvider wrapper to activate createFileRoute() definitions. Without it, the routing framework doesn't bootstrap.
+- **Rejected:** Keeping direct component rendering (would require manual route management; file-based routes ignored by framework)
+- **Trade-offs:** Gained: automatic route discovery, type-safe routing, lazy loading support. Cost: RouterProvider is now mandatory wrapper.
+- **Breaking if changed:** Removing RouterProvider breaks all file-based routes (prompts, sessions, flows, settings become unreachable)
+
+#### [Pattern] Store prompts as git-versioned Markdown files with YAML frontmatter + inline {{variable}} extraction instead of database (2026-03-15)
+- **Problem solved:** Prompts need versioning, easy diffing, and version control alongside app code
+- **Why this works:** Treats prompts as code artifacts. Enables git history, collaborative review via PRs, easy restore/rollback without database migrations. Inline {{var}} extraction allows both declarative metadata and template syntax in same file.
+- **Trade-offs:** Gained: git integration, file-based diffs, natural backup/restore, single source of truth. Cost: no real-time multi-server sync, read-from-disk I/O on each request, eventual consistency only
+
+### Bind prompts to specific LLM models via toolbar selector; not model-agnostic (2026-03-15)
+- **Context:** Different models have different prompt engineering best practices (system message placement, token limits, special tokens)
+- **Why:** Model-specific tuning maximizes quality; allows showing model-appropriate constraints (context window, max tokens). Generic prompts rarely optimize for all models.
+- **Rejected:** Model-agnostic prompts (lower quality across all models; no model-specific validation)
+- **Trade-offs:** Gained: model-optimized prompts, appropriate constraints shown. Cost: prompt reuse across models requires manual adjustment
+- **Breaking if changed:** Removing model binding loses model-specific validation; can't warn on incompatible prompt patterns
+
+### Slash commands expand via system-prompt prepending, not message body injection. Command text is stripped from user message before adding to history. (2026-03-15)
+- **Context:** Implementing slash command system that affects how model responds without changing conversation history semantics
+- **Why:** System-prompt prepending keeps the command metadata out of the persisted conversation. User sees clean message history while model gets instruction context. If injected into message body, command text would appear in exports and history.
+- **Rejected:** Message body injection (would pollute conversation history with command syntax)
+- **Trade-offs:** Slightly more complex server logic (detect + extract + prepend) for cleaner conversation semantics
+- **Breaking if changed:** If changed to message injection, exported conversations and chat history would include raw slash command syntax; user experience degrades
+
+#### [Pattern] Agent roles load via side-effect imports in shared registration file (roles/assistant.ts), not explicit wiring. New roles are available immediately after registration without additional setup. (2026-03-15)
+- **Problem solved:** Designing extensibility model for agent roles without requiring manual registration in routing layer
+- **Why this works:** Side-effect imports enable zero-wiring extensibility. File loads on startup, runs registerRole() calls automatically. Developers only touch one file (roles/assistant.ts) to add a role; no routing, no enum updates, no service locator changes needed.
+- **Trade-offs:** Side-effects are harder to trace (why is this module imported?) but easier for developers adding roles (single-file change)
+
+### Starter kit CSS theming uses arbitrary Tailwind syntax (e.g., `bg-[var(--primary)]`) instead of semantic design tokens or @protolabsai/ui dependency. (2026-03-15)
+- **Context:** Keeping starter kit lightweight and self-contained vs integrating with design system infrastructure
+- **Why:** Starter kit has no dependency on design system package. Using CSS variables + arbitrary Tailwind values allows custom theming (color swap via :root vars) without framework lock-in. Keeps template dependencies minimal and bundle small.
+- **Rejected:** Adding @protolabsai/ui dependency (couples starter kit to design system, adds weight); hardcoding colors (not themeable); semantic token system (requires design system infrastructure)
+- **Trade-offs:** Simpler, standalone template at cost of not leveraging shared design patterns. Users upgrading to full design system will need refactoring.
+- **Breaking if changed:** If starter kit later adopts design system tokens, all theme variable names and patterns would need systematic renaming; styling approach fundamentally changes
+
+#### [Pattern] Starter kit uses @@PROJECT_NAME template placeholders in package names, imports, and identifiers, requiring find-replace as first setup step. (2026-03-15)
+- **Problem solved:** Making a single starter template reusable for multiple projects with different names
+- **Why this works:** Placeholders decouple template source from user project naming. Single README/code base serves all users. Find-replace is faster than templating engine and requires no build-time processing. Users understand they're customizing a template.
+- **Trade-offs:** Simple find-replace vs sophisticated templates; users must understand placeholder semantics
+
+#### [Pattern] Tool progress events stream over separate WebSocket sideband (default port 3002), not blocking main REST API. If WebSocket unavailable, tools still execute; only progress labels fail silently. (2026-03-15)
+- **Problem solved:** Providing live feedback for long-running tools without coupling to main request/response cycle
+- **Why this works:** WebSocket sideband is optional for UI polish but not required for functionality. Tools don't wait on sideband connection. Decoupling progress from execution lets main API respond immediately while updates stream asynchronously.
+- **Trade-offs:** Extra port + connection complexity for better UX; graceful degradation if sideband fails
+
+#### [Gotcha] Scaffold functions (scaffoldAiAgentAppStarter) can exist in the template library and be exported without being wired into the feature/context integration system. They are separate concerns. (2026-03-15)
+- **Situation:** Found that scaffoldAiAgentAppStarter was already exported from scaffold.ts but AI_AGENT_APP_FEATURES array and getAiAgentAppStarterContext() were missing, requiring explicit addition despite the scaffolder existing.
+- **Root cause:** Scaffold functions define template file structure. Features and context functions define user onboarding (board items + CONTEXT.md). These are decoupled: a scaffold can exist without onboarding guidance.
+- **How to avoid:** More code needed to integrate new templates, but allows incremental development (scaffold first, onboarding later); forces intentional design of user experience
+
+#### [Pattern] kitType union type is defined independently in 5+ files (setup-client.ts, scaffold.ts, templates.ts, features.ts, starters.ts) rather than imported from a single canonical source. (2026-03-15)
+- **Problem solved:** Each integration point (UI, server, client, orchestrator, library) declares its own kitType union instead of sharing one definition.
+- **Why this works:** Avoids creating a shared type that forces import dependencies between packages. Each package/layer declares the types it needs independently.
+- **Trade-offs:** Must update multiple files when adding new template type (more friction, easier to miss), but each layer remains independently testable and deployable without type coordination
+
+#### [Pattern] Adapter pattern (toMCPTools) bridges internal ToolRegistry format to MCP SDK protocol format, enabling tool definitions to be reused across multiple protocol/consumer implementations without SDK coupling (2026-03-15)
+- **Problem solved:** MCP server must expose tools that were defined in an internal format (ToolRegistry) to the MCP SDK's expected interface
+- **Why this works:** Decouples internal tool representation from external protocol requirements; allows same tool definitions to work with multiple protocols (MCP, HTTP, etc.) without duplication
+- **Trade-offs:** Adds abstraction layer (+indirection cost, +maintenance) but enables protocol independence and tool reusability (-tight coupling)
+
+#### [Pattern] Templated workspace dependencies (@@PROJECT_NAME-tools placeholder) enable generic starter kits where imports use symbolic project names that resolve as workspace symlinks at install time (2026-03-15)
+- **Problem solved:** Starter kit must work for any user project name without hardcoding specific package names; tools package is local and should be referenced generically
+- **Why this works:** Single starter template works for all users; npm workspace resolution automatically creates symlinks for @@PROJECT_NAME-* packages, so code requires zero manual path editing
+- **Trade-offs:** Generic templates work without templating engines (+simplicity) but create unusual import patterns that might confuse IDE tooling and require npm workspace setup
+
+#### [Pattern] Minimal viable example tools (getWeatherTool, searchWebTool) are auto-registered in the server to provide immediate functionality and serve as copy-paste templates for users adding custom tools (2026-03-15)
+- **Problem solved:** Empty MCP server with no tools registered is not useful for testing or demonstration; users need working examples to understand how to add their own tools
+- **Why this works:** Self-documenting through example; users see 'registry.register(getTool)' pattern and can replicate it; server starts with immediate utility rather than requiring configuration before first use
+- **Trade-offs:** Example tools add cognitive load and footprint (+what to remove) but eliminate blank-slate confusion and provide working reference implementation
+
+### Used `@@PROJECT_NAME` placeholder pattern in all documentation code examples instead of hardcoded package names (2026-03-15)
+- **Context:** AI Agent App Starter Kit is a reusable template that users will customize with their own project name
+- **Why:** Enables single-pass find-replace during project setup. Docs become universally applicable regardless of user's project name choice. Avoids maintaining fork-specific documentation.
+- **Rejected:** Hardcoding real package names (e.g., 'my-agent-tools') would bind docs to specific project, requiring per-fork updates or breaking examples
+- **Trade-offs:** Slightly less immediately clear during development/reading, but vastly improves reusability and reduces maintenance burden for all downstream users
+- **Breaking if changed:** Removing this pattern forces every project using the starter kit to manually update docs or creates a new source of truth per fork
+
+#### [Pattern] Applied Diataxis framework to structure 10 documentation files across four categories: tutorials (quickstart), explanations (concepts), how-to guides, and reference (2026-03-15)
+- **Problem solved:** Complex starter kit with multiple subsystems (tools, flows, tracing, MCP, prompts) required coherent documentation strategy
+- **Why this works:** Diataxis separates by user intent: learners follow tutorials, searchers scan references, builders read how-tos, students study explanations. Each doc type answers different questions and optimizes for different reading patterns.
+- **Trade-offs:** More files to maintain but dramatically improves findability, clarity, and user outcomes. Requires discipline to not duplicate content across categories.
+
+### Documentation authored as pure markdown (no code generation, no embedded TypeScript, no dynamic references) (2026-03-15)
+- **Context:** Starter kit needs living docs that evolve independently from runtime code
+- **Why:** Markdown is version-controllable, fork-safe, and human-readable. Separating docs from code prevents docs from becoming outdated when code changes, allows docs to explain intent beyond what code shows, enables copy-paste examples without runtime dependencies.
+- **Rejected:** Auto-generated docs (JSDoc, TypeDoc) would stay in sync but lose narrative flow, teaching value, and ability to show step-by-step progression
+- **Trade-offs:** No automatic sync detection means docs drift if code API changes, but humans can write better examples, explain trade-offs, and guide learning
+- **Breaking if changed:** If docs are auto-generated later, all narrative structure, examples, and teaching content would be lost
+
+#### [Pattern] ASCII architecture diagram in README instead of external image file (2026-03-15)
+- **Problem solved:** Starter template needs to communicate system topology (packages/app → packages/server → packages/mcp with WebSocket sideband)
+- **Why this works:** ASCII diagrams are version-controllable, renderable in plain text terminals, require no external assets, survive git diffs/reviews clearly
+- **Trade-offs:** ASCII is harder to make visually polished but gains portability across all documentation contexts (GitHub, terminals, generated docs)
+
+#### [Pattern] Relative documentation paths (docs/guides/creating-tools.md) instead of absolute URLs in starter template README (2026-03-15)
+- **Problem solved:** Starter template README must work in multiple contexts: GitHub web UI, local git clone, generated documentation sites
+- **Why this works:** Relative paths resolve correctly across all contexts; absolute URLs break during docs restructuring or when served from different origins
+- **Trade-offs:** Relative paths are slightly less flexible for cross-project linking but gain robustness against docs restructuring
+
+#### [Gotcha] Wire format (string fills) vs structured types (object fills) are two different representations. libs/pen-parser/types.ts uses actual .pen wire format (fill?: string); libs/types/pen.ts uses abstracted structured format (PenFill[]). Unified by making wire format authoritative and keeping both representations in types.ts. (2026-03-15)
+- **Situation:** Extracting type definitions from two different sources with incompatible type shapes
+- **Root cause:** The actual pencil.dev .pen format is wire-compatible, not structured. Pen-parser is the source of truth. Attempting to use libs/types shape would require runtime conversions.
+- **How to avoid:** Keep wire format representation = simpler parser, more conversions in style-utils; use structured format = more complex parser, cleaner style layer. Chose former to minimize parser complexity.
+
+### Extracted package has zero npm dependencies. All utilities copied as-is without adding lodash, uuid, or other common helpers. (2026-03-15)
+- **Context:** Creating reusable design-system starter kit package that should work via copy-paste into any project
+- **Why:** Zero dependencies = zero transitive security surface, zero version conflicts, pure copy-paste portability. Starter kits get forked/customized, so external deps become maintenance burden.
+- **Rejected:** Add typed-helpers for common patterns (cleaner code, but dependency lock-in); use utility libraries (standard practice, but conflicts with starter philosophy)
+- **Trade-offs:** Some code duplication vs zero integration friction. Utilities less polished but completely self-contained.
+- **Breaking if changed:** If code adds dependency on lodash (for memoization, defaults, etc), starter kit becomes non-portable—users must manage lodash versions.
+
+### Node types include annotation types (note, prompt, context) as first-class node types, not metadata fields. Brings total from 7 to 15 PenNode types. (2026-03-15)
+- **Context:** Design tool supports design annotations (comments, prompts) that need structure in .pen format
+- **Why:** Treats annotations as structural objects, not attributes. Enables traversal, selection, export like other nodes. Simplifies visitor pattern.
+- **Rejected:** Metadata field on other nodes (less discoverable, complicates traversal); separate annotation document (adds complexity to format)
+- **Trade-offs:** Cleaner traversal = complexity in serialization (annotations must survive round-trip). Union type larger but visitor pattern simpler.
+- **Breaking if changed:** If annotation nodes are later downgraded to metadata, all traversal code must change to check attributes instead of type discriminants.
+
+### Design token variables ($--variable) are extracted as dual mechanisms: CSS custom properties in the style object AND optional TypeScript props on the component interface. This creates a bridge where tokens are both statically declared (from design system) and runtime-overridable (via React props). (2026-03-15)
+- **Context:** Design system variables must serve as defaults from the design system while remaining customizable by consuming applications.
+- **Why:** This pattern solves the tension between design consistency (baked-in tokens) and runtime flexibility (prop overrides). The typed interface makes it explicit which tokens can be overridden and what their types are, enforcing a contract between design system and consumers.
+- **Rejected:** Alt 1: Emit only CSS variables (no props) → loses runtime flexibility. Alt 2: Emit only props (no CSS vars) → loses design system declarative power. Alt 3: Use context/theme provider → indirection overhead and runtime resolution cost.
+- **Trade-offs:** Increases complexity in prop-extractor (tree walk + interface generation) and output size, but gains composable design tokens and type safety at the call site.
+- **Breaking if changed:** Removing either side breaks the pattern: without CSS variables, tokens aren't declarative; without props, they can't be overridden.
+
+### Icon-font nodes from the design system are mapped directly to Lucide React components by converting node names to PascalCase and collecting named imports per component file. (2026-03-15)
+- **Context:** Design system defines icons as font nodes, but React consumers need tree-shakeable component imports without font file dependencies.
+- **Why:** Lucide React provides SVG icons with zero font files, better tree-shaking, and standard React component semantics. Mapping design system icons to Lucide achieves icon portability without runtime font loading.
+- **Rejected:** Alt 1: Embed icon font files → browser compatibility, loading overhead, no tree-shaking. Alt 2: Inline raw SVG → loses icon library ecosystem. Alt 3: Alternative icon library → requires separate remapping logic per library.
+- **Trade-offs:** Couples codegen to Lucide's naming scheme and available icons. Icon name mismatches or Lucide API changes require regeneration or manual fixes.
+- **Breaking if changed:** Removing Lucide dependency breaks all generated icon components. Changing icon library requires rewriting the icon-mapping logic and regenerating all components.
+
+#### [Pattern] Pipeline is structured as five independent, single-purpose modules (css-extractor, prop-extractor, import-generator, jsx-serializer, react-generator), each with explicit input/output contracts. Each module focuses on one concern: CSS rules, TypeScript interfaces, import statements, JSX structure, or orchestration. (2026-03-15)
+- **Problem solved:** Converting design AST to React code requires handling disparate concerns with different syntactic rules, dependency chains, and validation logic.
+- **Why this works:** Single Responsibility Principle enables independent testing, clear separation of concerns, and easier extension for new node types or styling features. Problems in one concern don't cascade into others.
+- **Trade-offs:** Five files instead of one, some information must be computed multiple times (e.g., collecting imports requires analyzing which nodes produce which imports). Clarity and maintainability win over file count.
+
+### @design-system/codegen is intentionally zero-dependency on other workspace packages (@automaker/types, etc.). PenDocument types are self-contained; no imports from sibling packages. (2026-03-15)
+- **Context:** Codegen is part of a monorepo but needs to be publishable, testable, and usable independently outside the monorepo.
+- **Why:** Portability — the package can be published as a standalone npm module, used in non-monorepo projects, and avoids circular dependencies and version entanglement. Clean boundaries make dependency management simpler.
+- **Rejected:** Alt: Import types from @automaker/types → tighter integration, reduced duplication, but loses independence and creates monorepo coupling.
+- **Trade-offs:** Must define or re-export PenDocument types locally; some duplication. Gains complete portability and independence.
+- **Breaking if changed:** Future features importing from other workspace packages violate this constraint and couple codegen to the monorepo, reducing portability.
+
+### Tree-walking terminates at reusable frames with `continue` (no recursion). Each reusable frame becomes an independent, top-level export—no frame depends on importing another frame's output. (2026-03-15)
+- **Context:** Handling nested reusable components during code generation
+- **Why:** Enforces component isolation: each frame is self-contained and testable independently. Consumers choose which components to use without hidden cascading imports.
+- **Rejected:** Could recursively process nested frames and compose them in parent output. Would create implicit component dependency chains and tighter coupling.
+- **Trade-offs:** Simpler individual components vs. consumers managing their own imports for nested compositions
+- **Breaking if changed:** If changed to allow nested composition in output, generators would need to emit import statements and handle circular dependency resolution
+
+### Variables extracted as CSS custom properties in `:root {}` block. Fill/stroke values reference them as `var(--variable)` instead of hard-coded values. (2026-03-15)
+- **Context:** Creating a runtime-themeable design system from static design tokens
+- **Why:** Custom properties are native CSS, override without recompilation, and establish a clear theming API that browsers and CSS-in-JS libraries can hook into.
+- **Rejected:** Hard-code all color/value literals into generated CSS. Separate variable system in JS (CSS-in-JS). Require pre-build time theme selection.
+- **Trade-offs:** Slightly more complex CSS (requires variable declarations), but gains full runtime theming flexibility without tooling
+- **Breaking if changed:** Removing the custom property layer eliminates runtime theming entirely—code must recompile for any design token change
+
+#### [Pattern] BEM (Block Element Modifier) class naming applied consistently: `.block`, `.block__element`, `.block__element--modifier`. Scopes all child nodes under the frame's block class. (2026-03-15)
+- **Problem solved:** Preventing CSS class name collisions across independently generated components
+- **Why this works:** BEM guarantees collision-free naming without runtime JS scoping (CSS modules) or build-time transforms. Output is predictable and inspectable in DevTools.
+- **Trade-offs:** More verbose class names in generated HTML, but no hidden dependencies and explicit visual scoping
+
+### HTML and CSS emitted as separate files linked via `<link rel="stylesheet">` rather than inlined or CSS-in-JS. (2026-03-15)
+- **Context:** Making generated code deployable, cacheable, and testable in isolation
+- **Why:** HTTP caching can preserve `.css` across HTML updates. HTML files can be previewed in browsers without JS. Clear separation enables independent CI/CD of assets.
+- **Rejected:** Inline all styles in `<style>` blocks (bloats HTML, defeats caching). CSS-in-JS (introduces JS runtime, complicates server-side rendering).
+- **Trade-offs:** More files and explicit relative path dependencies, but independent caching and progressive enhancement
+- **Breaking if changed:** If you remove the `<link>` and inline styles, you lose per-asset HTTP caching; if you change the relative path resolver, all links break
+
+### Support both `extensions` and `groups` theme strategies for DTCG theming (dual-strategy extractor/exporters), not just one (2026-03-15)
+- **Context:** Design systems use fundamentally incompatible theming patterns: extensions strategy uses :root variable overrides; groups strategy uses separate isolated theme objects
+- **Why:** Design-system starter must serve diverse users; forcing one strategy excludes design systems built on the other pattern. Abstraction via `themeStrategy` option makes both first-class citizens.
+- **Rejected:** Single strategy (simpler, fewer code paths) — would make starter unusable for half the design system market
+- **Trade-offs:** Extractor and exporter code branches on strategy; more paths to maintain but unblocks support for major incompatible design patterns
+- **Breaking if changed:** Removing either strategy breaks all design systems using it; design-system starter loses compatibility with entire category of user design systems
+
+### Support both Tailwind v3 (JS config object with theme.extend) and v4 (@theme CSS block) with single unified exportToTailwind() API (2026-03-15)
+- **Context:** Tailwind major version transition in progress; users upgrade at different speeds; design-system starter should not force version lock
+- **Why:** Unified API abstracts away incompatible output formats (JS vs CSS); enables gradual user migration without branching; starter remains useful across transition period
+- **Rejected:** v3-only (backwards compat but future-incompatible) or v4-only (forward-looking but breaks existing users)
+- **Trade-offs:** Output code handles two completely different target formats internally; version inference via config flag. Non-trivial to maintain.
+- **Breaking if changed:** Dropping v3 support breaks all users still on v3; dropping v4 support makes starter incompatible with Tailwind's future direction
+
+### Implement composite value interfaces (shadow, gradient, typography, border, transition) as structured types instead of string or union encoding (2026-03-15)
+- **Context:** DTCG spec defines multi-property composite values (e.g., shadow = {offsetX, offsetY, blur, spread, color}); must support both validation and export
+- **Why:** Interfaces enable struct-level validation at compile time; TypeScript catches missing required fields in shadow/gradient definitions before export; export code can safely assume shape without runtime guards
+- **Rejected:** String encoding (JSON stringify) — loses type safety and requires runtime parsing in exporters. Union types — harder to validate all required fields present.
+- **Trade-offs:** Verbose type definitions but enables complete compile-time safety for complex composite values throughout export pipeline
+- **Breaking if changed:** Switching to string encoding requires all export code to add runtime parsing/validation; type system can no longer guarantee valid composite shapes
+
+### Implement strict spec compliance: all 14 W3C DTCG token types (color, dimension, duration, font-family, font-weight, font-size, line-height, stroke-width, border-radius, spacing, sizing, opacity, motion, transition, rotation, scale, skew, transform) as distinct types, not generic value (2026-03-15)
+- **Context:** Building spec-compliant token system that exports to multiple platforms (CSS, Tailwind); need type safety to ensure exports can make assumptions about value shapes
+- **Why:** Distinct types enable platform-specific export logic (e.g., Tailwind sizing exports infer section differently than colors); type system guarantees exporters won't receive invalid shapes; spec alignment ensures interoperability with other DTCG tooling
+- **Rejected:** Generic value type (union of all shapes) — forces exporters to perform extensive runtime type checking and validation
+- **Trade-offs:** Requires careful implementation of 14 type variants but enables strong compile-time validation throughout export pipeline
+- **Breaking if changed:** Reverting to generic type loses compile-time guardrails; export code can no longer safely assume shape properties
+
+#### [Gotcha] Extractor tightly coupled to .pen file format; .pen schema changes immediately break token extraction pipeline (2026-03-15)
+- **Situation:** Extractor reads internal .pen design file format (variables with theme conditions) and converts to DTCG spec
+- **Root cause:** Necessary tight coupling to enable single source of truth: design teams maintain variables in design tools, extractor bridges to open spec. Alternative (separate token definitions) causes divergence.
+- **How to avoid:** Direct coupling to .pen makes starter more fragile but enables zero-copy token workflow from design tooling
+
+### OKLCH color space chosen as primary representation throughout entire engine (scales, harmonies, semantic mapping, palette generation). All outputs emit oklch() CSS strings. (2026-03-15)
+- **Context:** Color science engine must represent colors in a way that is perceptually uniform, maintains stable hue across lightness changes, and maps to modern CSS.
+- **Why:** OKLCH is perceptually uniform (unlike RGB), hue is stable across lightness ranges (unlike HSL), and aligns with CSS Color Module Level 4 standard. Enables predictable scale generation and harmony calculations.
+- **Rejected:** RGB (not perceptually uniform), HSL (hue drifts), HSV (non-uniform), Lab (no hue stability)
+- **Trade-offs:** OKLCH chroma values are lower (0.18) than sRGB saturation 0-100 scale, requiring mental model adjustment. Enables portable, spec-compliant output.
+- **Breaking if changed:** Switching color spaces requires rewriting scale generation, harmony algorithms, and contrast calculations. WCAG luminance calculation must convert to sRGB anyway, so change cascades throughout.
+
+### Semantic scale generation: each role (primary, destructive, warning, success) has its own hue+chroma pair. Scales generated independently, then mapped to semantic tokens. Not: global scale mapped to all roles. (2026-03-15)
+- **Context:** Design system needs semantic meaning (destructive = red-ish, success = green-ish) while maintaining harmonious palette and WCAG compliance across all roles.
+- **Why:** Decouples color meaning from arbitrary role assignment. Allows each role to have perceptually appropriate hue (warm for destructive, cool for info) while maintaining consistent chroma and scale structure. Enables theme consistency.
+- **Rejected:** Single global scale with role-based remapping (loses semantic color meaning, destructive could be blue). Hardcoded RGB values per role (not perceptually uniform, breaks on hue shift).
+- **Trade-offs:** More configuration (DEFAULT_SEMANTIC_HUES lookup table) but enables semantic consistency. Slightly larger config surface but easier to maintain/extend.
+- **Breaking if changed:** Removing role-specific hue/chroma breaks semantic color association. Changing to single scale means success could be red, destructive could be blue—confusing users.
+
+#### [Pattern] Complementary accent generation uses hue rotation ~180° + chroma reduction, not pure hue inversion. Accent is derivation of primary, not independent color. (2026-03-15)
+- **Problem solved:** Palette needs a complementary accent color that is visually balanced, not oversaturated or clashing with primary.
+- **Why this works:** Pure 180° rotation creates oversaturation and visual clash. Reducing chroma on complementary maintains visual hierarchy and prevents accent from dominating primary. Treats accent as secondary role, derived from primary.
+- **Trade-offs:** Accent is constrained by primary choice (less creative freedom) but design system coherence is maintained (easier to skin). Chroma reduction empirically improves designs.
+
+### Zero runtime dependencies: pure TypeScript implementation. No color libraries (tinycolor, chroma.js). Emits oklch() strings for CSS consumption, no runtime color conversion. (2026-03-15)
+- **Context:** Color package is embedded in design-system starter kit template. Must be portable, lightweight, and usable in any JavaScript environment.
+- **Why:** Eliminates transitive dependencies and bundle bloat. Starter kit template should be minimal. CSS handles color natively (oklch() spec), no need for JS runtime conversion. Enables full control over implementation.
+- **Rejected:** Using tinycolor/chroma.js (adds deps, increases template size, less control), shipping runtime converters (adds overhead)
+- **Trade-offs:** Must implement some color science (chroma-js functionality) manually. Gained control and portability, lost convenience and community-maintained bugfixes.
+- **Breaking if changed:** Adding any external dependency changes template surface. If adding deps later, must justify over custom implementation.
+
+#### [Pattern] Preset palettes implemented as factory functions, not static objects: `PRESET_PALETTES.violet()` returns fresh palette, enabling immutability and customization. (2026-03-15)
+- **Problem solved:** Design system provides 7 preset themes (violet, blue, teal, green, amber, rose, slate). Each preset is a complete palette with scales, harmonies, and tokens.
+- **Why this works:** Factories prevent accidental mutations of shared preset object. Each palette invocation is independent. Enables future customization (e.g., `violet({ chromaBoost: 1.2 })`). Cleaner API than static objects.
+- **Trade-offs:** Slight memory overhead (new object per call) but encapsulation and safety gained. Enables extension without breaking compatibility.
+
+### Extension kits use clone-based distribution only, not scaffold-based. Scaffold route validates kitType against allowlist ['docs','portfolio','landing-page','general','ai-agent-app'], excluding 'extension'. (2026-03-15)
+- **Context:** WXT browser extension projects require repo-level build tools, manifest configuration, and specific directory structures that cannot be safely scaffolded.
+- **Why:** Cloning ensures the complete working toolchain is present without users installing/configuring WXT build tools separately. Repos ARE the distribution mechanism for extensions.
+- **Rejected:** Scaffold approach: smaller downloads, independent version updates, but would force users to configure WXT bundler, manifests, and directory structure manually.
+- **Trade-offs:** Clone: out-of-the-box functionality (easier UX), larger footprint. Scaffold: smaller, versioning flexibility, but requires user toolchain setup (barrier to entry).
+- **Breaking if changed:** Switching to scaffold would require users to install WXT, configure manifests, and understand native browser extension project structure — the repo-as-distribution model would be lost.
+
+#### [Pattern] Use @@PROJECT_NAME as template placeholders in scaffold kit documentation. Users find-and-replace during setup per README quickstart. Do NOT substitute with hardcoded names. (2026-03-15)
+- **Problem solved:** ai-agent-app starter kit docs (building-flows.md, mcp.md, tracing-debugging.md, etc.) use @@PROJECT_NAME-tools, @@PROJECT_NAME-tracing, @@PROJECT_NAME-prompts to reference package names.
+- **Why this works:** Same docs must work for any project name without maintaining separate copies. Placeholders + find-replace is simpler than generating docs per-project at scaffold time.
+- **Trade-offs:** Placeholder approach: simple, works forever, but users must run find-replace step (minor friction). Generated approach: tailored per-project, but adds complexity and brittleness.
+
+### Excluded vite.config.ts from tsconfig 'include' array and removed 'rootDir' compiler option to prevent TypeScript from attempting to type-check Vite's build config file (2026-03-15)
+- **Context:** Vite config uses import.meta.glob (dynamic imports), which causes TypeScript compilation errors when included in type checking. The app itself only needs src/ type-checked.
+- **Why:** Vite config is a build-time artifact, not part of the runtime application. Its compilation should be managed by Vite, not tsc. Removing rootDir forces TypeScript to infer root from include, avoiding scope confusion.
+- **Rejected:** Include vite.config.ts and add ts-ignore comments (leaves tech debt); or use separate tsconfig for build (over-complicates packaging)
+- **Trade-offs:** Easier: cleaner type checking, no build-time conflicts. Harder: developers must remember vite.config.ts is not tsc-checked (requires documentation)
+- **Breaking if changed:** If someone adds business logic to vite.config.ts and expects TypeScript validation, it will silently fail to catch errors
+
+#### [Gotcha] import.meta.glob requires explicit 'types': ['vite/client'] in tsconfig.json to resolve. Without it, TypeScript treats import.meta as 'any' and compilation succeeds but IDE/build tools don't understand the type signature. (2026-03-15)
+- **Situation:** auto-discovery of *.stories.tsx files via import.meta.glob succeeded at runtime but lacked proper type definitions, causing downstream issues in prop editor and story parsing.
+- **Root cause:** import.meta is Vite-specific ambient global, not part of DOM or ES spec. Its types live in the @vite/client package and must be explicitly included.
+- **How to avoid:** Easier: one-line tsconfig fix, then import.meta.glob is fully typed. Harder: obscure compiler option, not discoverable without Vite docs.
+
+### Built playground as fully self-contained React + Vite package with zero external dependencies, rather than wrapping/embedding Ladle or Storybook (2026-03-15)
+- **Context:** Needed a component workbench for the design-system starter that could ship as a template without adding production dependencies or long dependency chains.
+- **Why:** Full control over UX, zero lock-in risk, minimal bundle, trivial to customize or strip out. Ladle/Storybook both add transitive dependencies and opinions that conflict with 'zero external deps' template goal.
+- **Rejected:** Integrate Storybook (adds 50+ transitive deps, large bundle, opinionated plugin model); wrap Ladle (same dep bloat, less familiar to most devs)
+- **Trade-offs:** Easier: lightweight, self-contained, teachable. Harder: must implement prop editor, viewport switching, theme toggle from scratch (but small surface area).
+- **Breaking if changed:** If team wants features like a11y testing addons or snapshot testing, those need custom implementation or template modification. No existing plugin ecosystem.
+
+### Docs route auto-generates from existing .stories.tsx files instead of maintaining separate documentation metadata (2026-03-15)
+- **Context:** Two potential sources: (1) extract from stories, (2) maintain parallel docs metadata files
+- **Why:** Stories are already authored with argTypes, parameters.docs.description, and control definitions. Reusing this source is DRY and keeps docs always in sync with actual component implementations
+- **Rejected:** Separate JSDoc annotations or dedicated .docs.tsx files - would create dual authorship burden
+- **Trade-offs:** Easier: single source of truth, lower maintenance. Harder: story format constrains what docs can express; story validation directly impacts docs completeness
+- **Breaking if changed:** If docs source decoupled from stories, maintainers must now track two parallel systems; docs become stale
+
+### Implemented inline markdown renderer (h1-h3, bold, italic, code, fenced blocks) instead of importing markdown library (2026-03-15)
+- **Context:** Feature requires rendering story descriptions as markdown; options: (1) zero-dep inline parser, (2) remark/rehype/markdown-it libraries
+- **Why:** Zero-dependency constraint (noted in acceptance criteria). Inline parser is sufficient for typical story descriptions and avoids bundle bloat
+- **Rejected:** remark + rehype: adds ~50KB, overcomplicated for limited feature set
+- **Trade-offs:** Easier: no external deps, lightweight. Harder: maintenance of custom parser; advanced markdown features (tables, strikethrough, etc.) unsupported. Risk: user writes unsupported markdown, silently renders incorrectly
+- **Breaking if changed:** If zero-dep constraint removed, team might switch to real library and markdown format would need validation
+
+#### [Gotcha] ControlType → TypeScript type string mapping creates temporal coupling between story argTypes and docs rendering (2026-03-15)
+- **Situation:** Props table converts story control types (e.g., 'color', 'text', 'boolean') to human-readable type strings for documentation
+- **Root cause:** Raw control types aren't meaningful to end users; mapping improves UX. Mapping logic lives in docs-generator.ts extractProps
+- **How to avoid:** Easier: consistent, polished docs. Harder: if new control type added to a story, docs-generator.ts must be updated or type renders as unknown
+
+### Used CSS custom properties (--pg-* prefix) for theming instead of theme context provider or inline styles (2026-03-15)
+- **Context:** DocsRoute components need theme awareness for live component examples. Options: (1) CSS vars scoped to DOM, (2) React context, (3) inline styles
+- **Why:** CSS vars work without JS context, enable static generation potential, zero runtime overhead. Prefix (--pg-*) prevents conflicts with app tokens. Works across shadow DOM boundaries
+- **Rejected:** React context: requires provider wrap, adds JS bundle. Inline styles: non-composable, hard to override
+- **Trade-offs:** Easier: decoupled from React state, works in iframes. Harder: browser CSP issues if vars not in stylesheet; variable scoping requires careful naming
+- **Breaking if changed:** If theme switched to context, components must be wrapped in provider; if removed entirely, theme toggle in live examples doesn't work
+
+#### [Gotcha] Playwright test required NODE_PATH environment variable and trial-and-error to locate @playwright/test package (2026-03-15)
+- **Situation:** Running Playwright from CLI with external config file in monorepo caused module resolution failures
+- **Root cause:** Monorepo hoisting makes @playwright/test location non-obvious; NODE_PATH is crude but necessary workaround when npm module resolution fails
+- **How to avoid:** Easier: don't need to install Playwright locally. Harder: NODE_PATH is fragile, breaks if hoisting changes
+
+#### [Pattern] Category-based sidebar grouping of components with per-component main panel (master-detail layout) (2026-03-15)
+- **Problem solved:** DocsRoute must display many components from stories; options: (1) flat list, (2) category groups, (3) search-only
+- **Why this works:** Categories already exist in story organization; grouping reduces cognitive load, helps users discover related components, mirrors playground structure
+- **Trade-offs:** Easier: intuitive navigation, grouping enforces organization discipline. Harder: requires consistent category naming in stories; if categories inconsistent, sidebar becomes cluttered
+
+### Self-hosted TinaCMS (no TinaCloud dependency). Content is git-backed, stored in repo, managed entirely by local tinacms dev server. (2026-03-15)
+- **Context:** Integrating CMS into design-system starter kit without external service dependencies
+- **Why:** Maximizes starter kit autonomy: git versioning automatic, offline-first development, no cloud account setup required. Better for templates/cloning.
+- **Rejected:** TinaCloud would provide hosted admin UI + user management, but introduces vendor lock-in and deployment coupling
+- **Trade-offs:** Developer manages TinaCMS server startup, but gains full git history and offline capability. Schema changes are version-controlled.
+- **Breaking if changed:** Migrating to cloud CMS (Contentful, Sanity) would require major refactor of content storage and admin workflow
+
+#### [Pattern] Admin route performs async health-check to TinaCMS endpoint; if running, redirects to admin; if offline, shows setup instructions (tinacms dev) instead of erroring (2026-03-15)
+- **Problem solved:** TinaCMS backend is optional and may not be running; need graceful UX that doesn't break when optional service is absent
+- **Why this works:** Solves the 'missing optional dependency' problem. Developers see helpful instructions instead of blank/error page. No blocking waits.
+- **Trade-offs:** Adds async logic to page load and must handle health check timeout/failure cases; simpler UX for developers
+
+#### [Pattern] Vite glob imports (`import.meta.glob`) used to statically discover content files at build time. Site.tsx iterates glob results to populate navbar and render pages. (2026-03-15)
+- **Problem solved:** Need to automatically discover markdown files in content/ without hardcoded imports or runtime filesystem scanning
+- **Why this works:** Build-time discovery via Vite static analysis; enables server-less rendering, static file hosting, predictable bundle. No glob() function needed at runtime.
+- **Trade-offs:** Files must match glob pattern exactly or won't be discovered; adds build-time coupling to file structure
+
+### Implemented custom inline frontmatter parser in React component instead of gray-matter dependency. Only parses YAML key:value and ignores complex structures. (2026-03-15)
+- **Context:** Starter kit should minimize bundle size and dependencies. gray-matter adds ~15KB unpacked.
+- **Why:** Starter kits are templates meant to be copied; keeping deps minimal reduces bloat. Simpler frontmatter parsing covers 80% of cases.
+- **Rejected:** gray-matter is battle-tested but adds dependency and bundle size to a starter template that developers will ship directly
+- **Trade-offs:** Limited YAML support (no nested objects, no lists) accepted in exchange for no external dependency
+- **Breaking if changed:** Adding complex frontmatter (arrays, nested objects) breaks the parser; requires migrating to gray-matter or equivalent
+
+### Hash-based routing (#/) instead of HTML5 history API (/#/playground, /#/site, /#/admin). Router implemented in main.tsx, no server-side routing. (2026-03-15)
+- **Context:** Designing a preview/starter kit that should work as static files or on simple HTTP servers without routing config
+- **Why:** Hash routing works everywhere: static hosting (S3, Netlify static), simple HTTP servers, file:// URLs. No server-side routing needed.
+- **Rejected:** Browser history API (/playground, /site, /admin) requires server to handle 404s and route to index.html on every path
+- **Trade-offs:** URLs contain hash (#/site not pretty), but maximum compatibility. Deep linking works but includes hash in bookmarks.
+- **Breaking if changed:** Switching to server-side routing requires URL migration (links change), server config changes, and SEO implications
+
+### Content stored in git repository alongside code (content/pages/index.md, etc). TinaCMS reads/writes directly to repo files. (2026-03-15)
+- **Context:** Choosing content storage model for a git-versioned starter kit
+- **Why:** Content versioning is automatic via git. Content deploys together with code. Offline dev works. Cloning the repo gives you everything.
+- **Rejected:** Headless CMS (Contentful, Firebase) would separate content from repo, require API keys, and add deployment complexity
+- **Trade-offs:** Merge conflicts possible if multiple editors touch same file; content structure changes are breaking changes (like code changes)
+- **Breaking if changed:** Extracting content to external service requires migration tools, schema mapping, losing git history
+
+### State-based responsiveness (resize listener + isMobile/sidebarOpen state) instead of CSS media queries for layout switching (2026-03-15)
+- **Context:** Mobile drawer vs desktop fixed sidebar layout needs to respond to viewport changes
+- **Why:** Consistency with existing codebase pattern (site.tsx). Provides single source of truth in React state for responsive behavior. Allows dynamic sidebar toggle state independent of viewport.
+- **Rejected:** CSS media queries (@media) would be simpler and more standard, but breaks consistency with existing codebase patterns
+- **Trade-offs:** Gains: consistent architecture, centralized state management, easier to test. Loses: CSS-only responsiveness, potential performance (resize listener overhead)
+- **Breaking if changed:** Changing to CSS media queries breaks architectural consistency. SSR would need special handling for window.innerWidth in initial render (noted as safe for Vite SPA only).
+
+#### [Pattern] Token-driven theming via --pg-* CSS custom properties with inline styles, zero external UI library dependencies (2026-03-15)
+- **Problem solved:** Need runtime-customizable theming for documentation site starter template
+- **Why this works:** Matches existing site.tsx pattern. Avoids adding dependencies to starter template. CSS variables enable color customization without component re-architecture. Inline styles keep everything co-located.
+- **Trade-offs:** Gains: no deps, runtime theming, consistent with existing code. Loses: CSS encapsulation, component-local style scoping. Makes inline styles verbose but predictable.
+
+#### [Gotcha] Workspace placeholder packages (@@PROJECT_NAME-*) cannot be listed in package.json dependencies. npm validates package names at install time and rejects placeholders. Must use tsconfig paths + references instead for TypeScript resolution. (2026-03-15)
+- **Situation:** Initial approach put @@PROJECT_NAME-agents in server package.json dependencies, causing npm install failure.
+- **Root cause:** npm performs semantic validation on dependency package names during install. Placeholders are invalid identifiers. TypeScript compilation and npm install operate on different validation layers.
+- **How to avoid:** Complexity: requires dual resolution strategy (tsconfig + npm). Benefit: forces clean separation between generation-time placeholders and runtime dependencies.
+
+#### [Gotcha] TypeScript project references require composite: true in referenced package's tsconfig. Without it, tsc errors with confusing 'must have setting composite' messages. This is a silent failure mode. (2026-03-15)
+- **Situation:** Server package (server/tsconfig.json) references agents package (agents/tsconfig.json) via paths and project references.
+- **Root cause:** TypeScript composite flag enables incremental compilation across project boundaries. Without it, tsc cannot track cross-project dependencies properly.
+- **How to avoid:** Benefit: enables proper incremental builds and type resolution. Complexity: another tsconfig constraint to remember.
+
+#### [Pattern] Include mock tool executors as first-class implementations in agentic code. Agent switches between mock and real MCP calls at execution boundary. Enables self-contained local testing without live external services. (2026-03-15)
+- **Problem solved:** Design agent needs to call Pencil MCP tools (batch_design, set_variables, get_screenshot, snapshot_layout) but Pencil MCP server may not be running locally.
+- **Why this works:** Improves developer experience and test isolation. Mocks are not test doubles but actual production code paths with switchable executors. Allows package to be useful standalone.
+- **Trade-offs:** Benefit: self-contained agents, faster iteration, easier testing. Cost: duplicated tool executor logic (mock + real). Worth it for UX.
+
+#### [Pattern] Monorepo internal packages use tsconfig paths mapping to dist/ directories instead of placeholder workspace dependencies in package.json. Server references agents via paths (../agents/dist/), not via @@PROJECT_NAME-agents dependency. (2026-03-15)
+- **Problem solved:** Server and agents packages are both generated into a single starter kit. Need type resolution between them without npm understanding the relationship.
+- **Why this works:** Maintains clean separation: package.json has only real npm packages (anthropic, express). tsconfig handles internal resolution. Follows established ai-agent-app pattern. Avoids npm validation of placeholder names.
+- **Trade-offs:** Benefit: works with any package manager, no special monorepo tooling required. Cost: requires careful tsconfig paths setup and dist/ output routing.
+
+#### [Pattern] Design prompt (design.md) is a first-class code artifact encoding operational knowledge: token definitions (8pt spacing), type hierarchies, MCP tool schemas, and agent workflow steps. Treated as infrastructure, not documentation. (2026-03-15)
+- **Problem solved:** Agent needs shared understanding of design tokens, component patterns, and valid tool operations. This knowledge was encoded in the prompt itself.
+- **Why this works:** Prompt as code enables version control, code review, and tight coupling between agent reasoning and operational constraints. Design tokens become testable specifications.
+- **Trade-offs:** Benefit: maintainable design specifications, clear agent behavior boundaries. Cost: prompt becomes large (~1K tokens), requires careful organization.
+
+### Agentic loop implements configurable maxIterations (default 10) with screenshot-driven verification: execute → capture screenshot → verify output → adjust → loop. Prevents infinite loops while enabling visual feedback cycles. (2026-03-15)
+- **Context:** Design agent must apply multiple design operations iteratively, verifying each step produces expected visual output.
+- **Why:** Bounded iteration prevents resource exhaustion. Screenshot capture creates concrete feedback for agent to reason about success/failure. Matches human design workflow (apply change, review, adjust).
+- **Rejected:** Unbounded loops (risk of infinite execution), single-shot execution (brittle), external verification (harder to debug)
+- **Trade-offs:** Benefit: self-correcting agent, visual grounding. Cost: extra screenshot calls per iteration, bounded by max iterations.
+- **Breaking if changed:** If maxIterations is removed or set to 0, agent either runs indefinitely or doesn't execute at all.
+
+#### [Pattern] Dynamic runtime imports of sibling packages using absolute paths instead of static npm dependencies with @PROJECT_NAME-* placeholders (2026-03-15)
+- **Problem solved:** Starter kit template projects need to support name substitution (@@PROJECT_NAME-*), but npm can't resolve placeholders at install time
+- **Why this works:** Allows sibling packages (pen, codegen) to be required without hardcoding @PROJECT_NAME names in package.json. Resolves at runtime when the template is instantiated with a real name
+- **Trade-offs:** Easier: template works out-of-box without post-processing. Harder: runtime errors if sibling packages aren't built or paths shift; no static analysis
+
+#### [Gotcha] System prompt (implement.md) must be loaded and embedded in messages.create() call; changes to prompt don't auto-reload in running processes (2026-03-15)
+- **Situation:** Prompt file is external, separate from agent code. If prompt is updated after agent starts, changes won't be visible until restart
+- **Root cause:** Prompt is read via fs.readFileSync() at call time. No hot-reload or caching. This is by design—prompts should be versioned and stable
+- **How to avoid:** Easier: iterate on prompt without rebuilding. Harder: prompt must be present at runtime, not bundled in compiled js
+
+#### [Gotcha] TypeScript statically resolves module names in dynamic imports(). Template placeholders like '@@PROJECT_NAME-a11y' get resolved at compile time even with await import(). String variable indirection required. (2026-03-15)
+- **Situation:** agents/src/a11y-agent.ts uses @@PROJECT_NAME-a11y placeholder; TypeScript tried to resolve it as real module
+- **Root cause:** TypeScript module resolution runs at compile time before runtime code execution. Dynamic imports don't bypass static analysis.
+- **How to avoid:** String variable adds one indirection level but keeps template placeholder intact and compilable
+
+#### [Pattern] @types/jsdom added as devDependency in a11y package even though jsdom is optional peer dependency. Types needed at compile-time TypeScript checking regardless of runtime availability. (2026-03-15)
+- **Problem solved:** axe-wrapper.ts uses jsdom for WCAG audits but doesn't require it at runtime (has mock fallback)
+- **Why this works:** TypeScript's type-checking phase is separate from runtime. Optional peer deps still need type definitions available for compilation.
+- **Trade-offs:** Slight build-time overhead but clean compilation and IDE support regardless of peer dep installation state
+
+#### [Pattern] Dual runtime fallback: axe-wrapper tries real axe-core+jsdom dynamic import, falls back to pattern-matching mock for images, buttons, inputs, landmarks. Both paths in same codebase. (2026-03-15)
+- **Problem solved:** agents package needs accessibility audit capability in varied deployment contexts (full deps vs lightweight)
+- **Why this works:** Agents must function across environments. Real implementation provides accurate WCAG checks when available; mock enables agent operation in resource-constrained settings. Same behavior surface either way.
+- **Trade-offs:** Code complexity increases but agent portability increases significantly. Maintenance burden is contained (mock pattern-matching is simple)
+
+### Semantic analysis layer added to a11y agent beyond axe-core automated checks. Catches: alt text quality, vague link text ('click here'), heading level skips, multiple h1s, div[role=button] without tabindex. (2026-03-15)
+- **Context:** Automated accessibility tools like axe-core have known blind spots in semantic HTML patterns
+- **Why:** Axe-core is regex/DOM-pattern based and misses semantic issues requiring contextual reasoning. Agentic LLM layer can evaluate quality (vague alt) and intent (proper heading hierarchy) that automated tools cannot.
+- **Rejected:** Rely solely on axe-core automated violations — misses ~30-40% of real accessibility problems per accessibility research
+- **Trade-offs:** Agent loop adds latency/cost but remediation quality increases substantially. Semantic checks are AI-specific value-add.
+- **Breaking if changed:** Removing semantic layer reduces agent to mere axe-core wrapper; quality of remediation suggestions degrades
+
+#### [Pattern] Dynamic import of color package at runtime (via `import(colorIndexPath)`) instead of static import to avoid TypeScript rootDir violations in monorepo. (2026-03-15)
+- **Problem solved:** Color agent needs to call color package functions, but static import of `../../color/src/` violates TypeScript's rootDir boundary checks in workspace packages.
+- **Why this works:** TypeScript strictly enforces rootDir to prevent accidental cross-package imports. Dynamic import defers resolution to runtime, bypassing compile-time rootDir checks. This mirrors the pattern already established in implement-agent.ts.
+- **Trade-offs:** Runtime import adds minimal overhead but requires inlining the ColorPackage interface. Gains: type-safe cross-package function calls without compilation errors. Loses: static analysis can't verify the import path exists at build time.
+
+#### [Gotcha] Inline hex→OKLCH conversion at module load time (before async color package import resolves) so agent can immediately parse brand color input. (2026-03-15)
+- **Situation:** Agent receives brand color as hex string. Must convert to OKLCH to feed into palette generation. But color package (which has parseOklch/formatOklch) is loaded asynchronously.
+- **Root cause:** Agent initialization must not wait for async import. Inlining the conversion (simple math) avoids a blocking async operation at startup. Agent can immediately begin its workflow once the result structure is created.
+- **How to avoid:** Gains: non-blocking startup, clear contract (agent always works with OKLCH internally). Loses: duplication of color conversion logic (inlined vs color package). Code maintenance burden if color space conversion rules change.
+
+#### [Pattern] Token accumulation state machine: `resolvedTokens` object grows as tools execute. Each tool reads and writes to this shared map. Later tools (e.g., check_contrast) resolve CSS variable references against accumulated tokens. (2026-03-15)
+- **Problem solved:** generate_palette emits token map. check_contrast must later resolve `--color-primary` style references back to actual hex values to compute contrast ratios.
+- **Why this works:** Agentic loops need shared state to enable tool chaining. By accumulating tokens in a mutable map, downstream tools see upstream results without re-computing. Mirrors functional composition but with imperative state updates.
+- **Trade-offs:** Gains: efficient state threading, supports variable indirection (CSS var → resolved value). Loses: pure functional guarantees, harder to replay/debug individual tool calls in isolation.
+
+### update_tokens tool left as stub (accumulates in result.tokenUpdates). Actual .pen file mutation deferred to later integration phase. (2026-03-15)
+- **Context:** Feature scope: color agent should generate tokens and accessibility-checked palettes. File I/O and design token file format (.pen) are out of scope.
+- **Why:** Incremental delivery: agent logic can be tested/shipped independently of file mutation. Allows full integration phase later without blocking agent feature. Keeps tool set focused on color logic (generate, check, suggest) vs. file operations.
+- **Rejected:** Full implementation would require: .pen file parser, write-back logic, potential file lock handling, dependency on .pen schema. Increases complexity and test surface.
+- **Trade-offs:** Gains: MVP-ready feature, decoupled file I/O. Loses: end-to-end demo (files don't persist).
+- **Breaking if changed:** If downstream code expects update_tokens to mutate .pen files, it will fail. Integration phase must implement the write-back before this stub can be used in production workflows.
+
+#### [Pattern] Rich result accumulation object (ColorAgentResult) that gathers all side effects from the agentic loop: tokens, harmonies, contrast checks, updates, response text, iteration count. (2026-03-15)
+- **Problem solved:** Agent runs in a loop, calling multiple tools. Caller needs visibility into all generated artifacts and validation results, not just final text response.
+- **Why this works:** Agentic loops produce multiple outputs: generated tokens, validation results, suggestions. A single response string is insufficient. Result object allows downstream code to extract any artifact (e.g., tokens for CSS generation, contrast checks for compliance reporting).
+- **Trade-offs:** Gains: structured access to all artifacts, reusable across UI/API/tests. Loses: result object grows with each new tool (maintenance burden).
+
+#### [Pattern] System prompt encodes full workflow (5-step pipeline), critical contrast pairs, OKLCH reference, semantic token mappings (light/dark/high-contrast), and WCAG rules. Prompt acts as executable specification for agent behavior. (2026-03-15)
+- **Problem solved:** Agent must know the workflow (generate → check contrast → suggest harmonies → update tokens), which token mappings apply to which theme, and which contrast pairs must always be validated.
+- **Why this works:** Rather than hard-code business logic in the agent factory, encode it in the prompt. Makes behavior inspectable, updatable without code changes, and testable (prompt can be versioned/compared). Educates the agent about domain constraints (WCAG AA 4.5:1, AAA 7:1, etc.).
+- **Trade-offs:** Gains: behavior as data, prompt versioning, agent can adapt within encoded constraints. Loses: some overhead (larger prompt token count), business logic less obviously tied to code.
+
+#### [Pattern] Use absolute path imports via resolve(__agentDir, '../../color/dist/index.js') for cross-package dependencies in starter kit templates (2026-03-15)
+- **Problem solved:** Starter kit packages have restrictive TypeScript rootDir constraints that prevent relative imports across package boundaries
+- **Why this works:** Relative imports violate rootDir constraints; absolute paths to dist directories work because they reference already-compiled output outside the template's rootDir scope
+- **Trade-offs:** Path is more explicit and verbose but avoids configuration complexity and works reliably with template's TypeScript setup
+
+### Implement update_tokens tool as intentional stub that accumulates in result.tokenUpdates but defers .pen file mutations to integration phase (2026-03-15)
+- **Context:** Tool needs to be present for agentic reasoning but actual file-system side effects belong to different phase with different context/constraints
+- **Why:** Phased architecture separates pure token generation (this phase) from stateful file mutations (integration phase) to maintain phase boundaries and enable testing without side effects
+- **Rejected:** Full implementation in this phase would couple token generation to file-system concerns; pure accumulation allows reasoning decoupling
+- **Trade-offs:** Tool appears 'incomplete' from user perspective but respects architectural phase boundaries; pure accumulation enables unit testing without file I/O
+- **Breaking if changed:** Implementing write-back in this phase would violate established architectural decision to defer file mutations to integration phase
+
+### Implemented zero-dependency custom XML parser instead of using xml2js or similar library. Parser is ~200 LOC, validates XCL-specific grammar only. (2026-03-15)
+- **Context:** XCL codec needs bidirectional XML serialization/deserialization. Options: (1) add xml library dep, (2) use DOMParser (browser-only), (3) write custom parser for XCL subset.
+- **Why:** XCL grammar is simple (nested elements, attributes, text nodes only). Custom parser = zero transitive deps, smaller bundle, faster on XCL-specific format. No external version churn.
+- **Rejected:** xml2js (adds 2+ transitive deps, larger bundle, overkill features). DOMParser (requires jsdom in Node, browser-native only).
+- **Trade-offs:** Easier: zero deps, smaller bundle, tailored performance. Harder: custom parser maintenance, no battle-tested XML edge cases, limited to XCL grammar.
+- **Breaking if changed:** Switching to xml2js → bundle grows 50-100KB, introduces transitive dependency security surface. Switching to DOM → requires runtime environment shim.
+
+### Three-stage codec: ComponentDef (TypeScript types) → XCL (XML format) → TSX (React 19 code). Each stage has its own module, separate from adjacent stages. (2026-03-15)
+- **Context:** Converting between 3 representations: semantic types, compact wire format, runnable code. Each stage has different concerns (validation, optimization, codegen).
+- **Why:** Separation of concerns: types module is pure data, serializer focuses on optimization, deserializer focuses on parsing correctness, xcl-to-tsx focuses on code generation. Each can be tested independently. Bidirectional: ComponentDef ↔ XCL is lossless; XCL → TSX is codegen (not lossless, but intentional).
+- **Rejected:** Monolithic codec (harder to test, bug in one stage couples to others). Two-stage (ComponentDef ↔ TSX directly, loses intermediate representation for debugging).
+- **Trade-offs:** More files, more boilerplate (3 modules instead of 1). Better testability: can validate each stage independently. Can use XCL as intermediate for debugging, inspection, caching.
+- **Breaking if changed:** Merging stages → lose ability to test serialization/deserialization independently from codegen. Bugs in one stage pollute test signal in others.
+
+### Zero-dependency regex-based TypeScript source parsing instead of importing parser library (ts-morph, @typescript/compiler-api, etc.) (2026-03-15)
+- **Context:** schema-generator.ts extracts interface definitions and prop metadata from raw TSX source
+- **Why:** Maintains template package zero-dependency principle (consistent with codegen, pen, tokens packages). Avoids 50+ transitive deps that would bloat template size.
+- **Rejected:** Import TypeScript compiler or Babel parser for AST-based extraction (more robust but adds complexity/size)
+- **Trade-offs:** Faster bootstrap + smaller bundle vs fragile interface extraction that requires strict formatting (interface <Name>Props { ... } pattern)
+- **Breaking if changed:** If developers use non-standard interface syntax or variable-width spacing, extraction fails silently. Forces naming discipline on all components.
+
+#### [Pattern] Automatic CSS variable prop extraction from JSDoc comments (/** Overrides CSS var --btn-color */ → creates cssVariable prop metadata) (2026-03-15)
+- **Problem solved:** Bridge design system CSS variables into component prop system without manual duplication
+- **Why this works:** Single source of truth: CSS variable intention documented in component source → automatically surfaced in registry and available to form generators
+- **Trade-offs:** DRY principle and discoverable metadata vs tight coupling: changes to JSDoc format silently break extraction
+
+### populateFromGenerated() method directly consumes codegen output shape without normalization layer (2026-03-15)
+- **Context:** Needs to integrate design-system-codegen GeneratedFile[] output with registry lifecycle
+- **Why:** Single integration point. Codegen output format is stable/controlled. Avoids middleware that duplicates interface contracts.
+- **Rejected:** Separate adapter layer or require codegen to emit registry-compatible format (decoupling overhead)
+- **Trade-offs:** Clean implementation vs tight coupling: if codegen GeneratedFile interface changes, registry breaks
+- **Breaking if changed:** Adding/removing fields from GeneratedComponentFile (e.g., adding designTokens) requires registry code update
+
+#### [Gotcha] Dynamic imports of sibling packages from dist/ paths creates hidden build dependency order: MCP server initialization requires all sibling packages (@automaker/pen, @automaker/color, etc.) to be built first (2026-03-15)
+- **Situation:** Tool handlers import design, token, component, a11y packages dynamically at runtime rather than import-time
+- **Root cause:** Avoids worktree npm hoisting issues and circular dependency problems, but shifts failure point from build to runtime
+- **How to avoid:** Runtime initialization becomes more flexible but debugging build ordering failures is harder; error messages are vague if a sibling package dist/ is missing
+
+#### [Pattern] Tool aggregation pattern: separate files per category (design-tools.ts, token-tools.ts, etc.) export arrays, then centralized index.ts collects via spread operator and converts with toMCPTools (2026-03-15)
+- **Problem solved:** Organizing 14 tools across 4 categories while maintaining single MCP registration point
+- **Why this works:** Scales better than single file and provides category-based code organization, but avoids registry pattern complexity that might be premature for 14 tools
+- **Trade-offs:** Adding a tool requires: (1) define in category file, (2) export from that file, (3) import and spread in index. Three touchpoints vs one file, but forces explicit tool ownership
+
+#### [Gotcha] defineSharedTool pattern implemented inline in src/lib/define-tool.ts with no external tools package dependency. This creates tight coupling between schema definition and MCP registration logic (2026-03-15)
+- **Situation:** Could have extracted to @automaker/tools package (like ai-agent-app starter kit), but chose inline implementation
+- **Root cause:** Faster to bootstrap, avoids package dependency, but trades reusability for velocity on this specific starter kit
+- **How to avoid:** Design system MCP is self-contained and doesn't need to share tool definition pattern with other projects; but if pattern improves in ai-agent-app, this won't benefit
+
+#### [Pattern] Feature branching for monorepo starter kits: skeleton feature (minimal scaffold) and implementation feature (build-mcp-server with tools) kept in separate branches to prevent merge conflicts and scope creep (2026-03-15)
+- **Problem solved:** Discovered during merge conflict resolution that tool files (define-tool.ts, *-tools.ts) and package-lock.json were incorrectly in skeleton branch; they belonged in build-mcp-server feature
+- **Why this works:** Allows parallel development of scaffold logic and feature implementations without coupling; keeps skeleton lightweight and reusable across different configurations
+- **Trade-offs:** Requires careful feature boundary discipline in code review, but enables true separation of concerns — skeleton provides structure, features add content
+
+### Token substitution pattern using `@@PROJECT_NAME` placeholders instead of runtime variable injection for file-based templates (2026-03-15)
+- **Context:** Starter kit templates are static files that need to be customized with project-specific names and values during scaffolding; can't execute code at distribution time
+- **Why:** File-based templates lack runtime execution context; text-based token replacement is simpler to implement and distribute than parameterized file copying or template engines
+- **Rejected:** Runtime template variables (e.g., lodash templates), shell parameter expansion, or generating from code — each adds dependencies or execution overhead
+- **Trade-offs:** Simple portable distribution of templates (just git clone) vs. requires scaffolding step to process tokens after copying; can't use in CI/CD without extra step
+- **Breaking if changed:** Removing token replacement leaves all generated files with literal `@@PROJECT_NAME` strings; affects immediate usability of scaffolded projects
+
+#### [Pattern] npm workspaces monorepo with `"moduleResolution": "NodeNext"` to enable workspace-aware package resolution for inter-package imports (2026-03-15)
+- **Problem solved:** 11 packages need to import from each other using `@scope/package-name` syntax; workspace dependency resolution only works with specific TypeScript settings
+- **Why this works:** NodeNext module resolution understands npm workspace package.json exports and workspaces field, enabling proper `@scope/*` imports at development time and build time
+- **Trade-offs:** Proper workspace resolution throughout development vs. must use NodeNext which is newer and less familiar to some developers
+
+#### [Pattern] Deliberately minimal MCP server skeleton: just `createMcpServer()` function with TODO comment, no tool implementations or SDK integration (2026-03-15)
+- **Problem solved:** MCP tools (a11y-tools, component-tools, design-tools, token-tools) belong in separate build-mcp-server feature, not skeleton; discovered when merge conflict removed them
+- **Why this works:** Skeleton should provide structure (package setup, build config, entry point) without prescribing implementation; tool-specific code is a separate feature concern that differs by use case
+- **Trade-offs:** Minimal skeleton stays reusable and clean vs. users need to add tool code themselves; better as learning progression
+
+### Monorepo structure with 11 separate packages (pen, codegen, tokens, color, a11y, xcl, registry, agents, mcp, app, server) instead of fewer larger packages (2026-03-15)
+- **Context:** Design system starter kit needs to teach users how real design systems are architected; each package has distinct responsibility and learning value
+- **Why:** Each package represents a separate learning unit and mirrors production design system organization; enables incremental learning and demonstrates separation of concerns explicitly
+- **Rejected:** Consolidating into 3-4 larger packages (codegen, tokens, runtime, apps) — simpler scaffolding but obscures architectural boundaries
+- **Trade-offs:** Higher initial complexity and setup time vs. users learn correct architecture patterns; more maintainable long-term because each package has single responsibility
+- **Breaking if changed:** Merging packages reduces learning value and makes it harder for users to understand which responsibilities should be isolated in their own design systems
+
+### Derived .pen format specification from TypeScript types.ts interfaces as authoritative source rather than independent prose documentation (2026-03-15)
+- **Context:** Creating comprehensive reference documentation for 15 node types with complex type hierarchies (PenFill union, Stroke variants, etc.)
+- **Why:** TypeScript interfaces are the runtime source of truth - deriving docs ensures specification accuracy and prevents drift between documented API and actual implementation
+- **Rejected:** Independent prose documentation would allow richer narrative context and examples, but creates maintenance burden and risks divergence as types evolve
+- **Trade-offs:** Guaranteed accuracy and reduced drift vs. reduced editorial freedom; documentation structure must mirror type structure; requires code literacy to understand generated docs
+- **Breaking if changed:** If types.ts changes without flagging documentation dependencies, specification becomes stale and misleading to users
+
+#### [Pattern] Diataxis taxonomy (Quickstart → Concepts → Guides → Reference) separates four distinct information types rather than narrative flow (2026-03-15)
+- **Problem solved:** Organizing multi-role documentation for design-to-code pipeline where readers have different needs: new users need setup, existing users need concepts, hands-on users need how-to guides, reference implementers need specifications
+- **Why this works:** Diataxis acknowledges that different reader types at different stages need different language, depth, and narrative style. Mixing these (e.g., putting reference details in quickstart) reduces searchability and confuses readers
+- **Trade-offs:** Modularity and clarity for different use cases vs. loss of continuous narrative flow; requires users to understand doc taxonomy to find answers efficiently
+
+#### [Pattern] Documentation as purely additive, non-compiled content decoupled from build system and test pipeline (2026-03-15)
+- **Problem solved:** 5 markdown files added without touching build configuration, TypeScript compilation, or Playwright tests; build verification still passed 18/18 tasks
+- **Why this works:** Markdown documentation is static content independent of runtime - decoupling docs from build enables parallel development, allows docs to be written/reviewed asynchronously, and prevents docs from being blocked by unrelated build failures
+- **Trade-offs:** Development velocity and independence vs. higher risk of docs describing unimplemented/removed features; requires discipline to keep docs synchronized

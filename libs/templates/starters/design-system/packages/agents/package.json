@@ -1,0 +1,25 @@
+{
+  "name": "@@PROJECT_NAME-agents",
+  "version": "0.1.0",
+  "description": "AI agents for the design system starter kit — generate and refine React components from .pen design files",
+  "type": "module",
+  "main": "./dist/implement-agent.js",
+  "types": "./dist/implement-agent.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/implement-agent.js",
+      "types": "./dist/implement-agent.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

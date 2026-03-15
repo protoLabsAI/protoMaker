@@ -9,6 +9,7 @@ usageStats:
   referenced: 26
   successfulFeatures: 26
 ---
+
 <!-- domain: Security | Auth guards, input validation, secure file operations, HMAC verification -->
 
 # security
@@ -105,30 +106,34 @@ usageStats:
 - **Why this works:** State parameter is OAuth 2.0 standard (RFC 6749). In-memory Map is simplest implementation for single instance. 10-minute window is long enough for OAuth flow but short enough to prevent state reuse.
 - **Trade-offs:** In-memory state is fast and simple but loses state across process restarts and doesn't scale to multiple servers.
 
+#### [Pattern] CORS policy controlled by runtime config flag 'hivemindEnabled'. When true, middleware sets Access-Control-Allow-Origin: \*. When false, restrictive CORS (same-origin only). (2026-03-11)
 
-#### [Pattern] CORS policy controlled by runtime config flag 'hivemindEnabled'. When true, middleware sets Access-Control-Allow-Origin: *. When false, restrictive CORS (same-origin only). (2026-03-11)
 - **Problem solved:** Default: app runs single-origin. Hivemind mode: same app instance accessed from multiple origins (multi-client scenario).
 - **Why this works:** Standard single-origin CORS sufficient for normal use. Hivemind requires cross-origin access; feature gate prevents accidental exposure.
 - **Trade-offs:** Runtime flexibility + explicit feature gate vs. security gap risk if flag accidentally enabled without understanding implications
 
 #### [Pattern] CORS allowAllOrigins flag is conditional on hivemind.enabled, creating a dev-only CORS policy. Production never enables permissive CORS unless hivemind feature is active. (2026-03-11)
+
 - **Problem solved:** Balancing developer convenience in local testing with production security lockdown
 - **Why this works:** hivemind is explicit development feature; tying CORS to it ensures CORS exposure is never accidental in production. Fail-secure default.
 - **Trade-offs:** Gained: Impossible to accidentally expose permissive CORS in production. Lost: CORS availability is implicit in feature flag, adds discovery burden
 
 ### Conditional CORS: setupMiddleware() accepts allowAllOrigins parameter, set to true only when hivemind is enabled (2026-03-11)
-- **Context:** Hivemind (multi-peer mesh) requires Access-Control-Allow-Origin: * for cross-peer requests. Single-node deployment should restrict CORS.
+
+- **Context:** Hivemind (multi-peer mesh) requires Access-Control-Allow-Origin: \* for cross-peer requests. Single-node deployment should restrict CORS.
 - **Why:** CORS policy should match deployment topology. Hivemind peers communicate directly, so need permissive CORS. Single-node is isolated behind reverse proxy, so restrictive CORS is safer. Configuration-driven behavior avoids hardcoding policy.
 - **Rejected:** Always allow all origins - security issue. Always restrict origins - breaks hivemind mesh communication.
 - **Trade-offs:** Deployment must correctly set hivemind config flag. If misconfigured (e.g., CORS enabled in single-node mode), security posture is weakened.
 - **Breaking if changed:** If allowAllOrigins parameter is removed and hardcoded to false, hivemind deployments will fail with CORS errors. If hardcoded to true, single-node deployments lose CORS protection.
 
 #### [Gotcha] SDK cwd is a hint, not a fence. Node.js doesn't enforce working directory restrictions; agents can always use absolute paths to write anywhere on the filesystem. (2026-03-11)
+
 - **Situation:** Original implementation only validated workDir at startup. Agents in worktrees bypassed this by using absolute paths in file operations.
 - **Root cause:** Node's fs APIs don't restrict operations based on process.cwd(). The cwd is informational only, useful for relative path resolution but provides no security boundary.
 - **How to avoid:** Requires runtime validation on every tool execution (PreToolUse hook) rather than one-time startup check. Small performance cost for critical security.
 
 ### Implemented worktree path validation as a PreToolUse hook that intercepts ALL tool calls (Write, Edit, Bash, etc.) rather than patching individual tool implementations. (2026-03-11)
+
 - **Context:** Needed to prevent agents from writing outside worktree boundaries across multiple tool types and execution contexts.
 - **Why:** Hook-based approach centralizes security logic, applies uniformly to all tools, and validates at actual execution time (not just startup). Single point of enforcement.
 - **Rejected:** 1) Patching each tool individually (fragile, easy to miss one). 2) Modifying SDK cwd enforcement (not feasible, external dep). 3) Startup-only validation (proven insufficient).
@@ -136,11 +141,13 @@ usageStats:
 - **Breaking if changed:** If hook is bypassed or disabled, all tool-based isolation breaks. Agents gain unrestricted filesystem access despite worktree setup.
 
 #### [Gotcha] File-path-based guards are insufficient. Agents can bypass write restrictions using Bash with `git -C /path/to/main`, `cp src dst`, `mv src dst`, or shell redirections. (2026-03-11)
+
 - **Situation:** Initial fix blocked direct Write/Edit calls but agents could still manipulate files via Bash commands to the main repo.
 - **Root cause:** Bash commands operate on the full filesystem; relative paths in Bash resolve against cwd, but absolute paths or `git -C` override cwd entirely. Command composition adds complexity.
 - **How to avoid:** Guard must parse and validate Bash command patterns (more complex) but catches more bypass vectors. Regex patterns on command args vs security completeness.
 
 ### Created explicit exception for `.automaker/features/` directory. Server-side operations can write here regardless of worktree; guard validates only the directory prefix, not filename. (2026-03-11)
+
 - **Context:** Server needs to write feature/PR data to a known location. Can't restrict server output to worktree; must carve out escape hatch.
 - **Why:** Server (not agent) controls what gets written to `.automaker/features/`. Agent can't inject arbitrary paths there; server builds the path. Restricting by directory prefix (not full path) is sufficient.
 - **Rejected:** Blocking all writes outside worktree (breaks server-side output). Allowing all writes to `.automaker/` (too broad, invites abuse).
@@ -148,21 +155,25 @@ usageStats:
 - **Breaking if changed:** If exception is removed, server can't write feature metadata anywhere, breaking feature creation workflow. If exception is widened to more directories, introduces bypass vectors.
 
 #### [Pattern] Guard returns blocking decision with actionable error message (e.g., 'use worktree path instead of main repo path') rather than silent denial or generic error. (2026-03-11)
+
 - **Problem solved:** Agents need guidance to self-correct when guard blocks a tool call. Silent failures lead to confusion and retry loops.
 - **Why this works:** Actionable errors teach agents the constraint (worktree isolation exists) and show the correct path to use. Reduces adversarial feel, aids agent learning.
 - **Trade-offs:** More verbose error messages but improve agent behavior and transparency. Could leak internal path info but guard's purpose is visible anyway.
 
 #### [Pattern] description field is required in SlashCommandSummary type, enabling null-check-free filtering (2026-03-11)
+
 - **Problem solved:** Filter logic iterates description without defensive null checks
 - **Why this works:** Type system enforces description always exists; reduces boilerplate and risk of null-reference bugs in filter predicate
 - **Trade-offs:** Cleaner code vs tight API contract coupling; if description becomes optional later, all filter code breaks silently (no TS error if not careful with narrowing)
 
 #### [Gotcha] CORS allowing all origins is gated by hivemindEnabled feature flag, not explicitly validated in middleware (2026-03-11)
+
 - **Situation:** Server URL override enables multi-origin scenarios (single app, multiple servers). CORS config must match architecture.
 - **Root cause:** hivemindEnabled implies distributed multi-origin setup where CORS must be open. Without hivemind flag, app is single-origin and should restrict CORS. Coupling to proto.config.yaml makes this implicit.
 - **How to avoid:** Feature-flag gating hides the CORS decision in config—easy to miss when reviewing middleware code. Prevents accidental open CORS in single-origin deployments.
 
-### CORS wildcard (Access-Control-Allow-Origin: *) gated by process.env.HIVEMIND_ENABLED flag, not enabled by default (2026-03-11)
+### CORS wildcard (Access-Control-Allow-Origin: \*) gated by process.env.HIVEMIND_ENABLED flag, not enabled by default (2026-03-11)
+
 - **Context:** Headless server needs to accept cross-origin requests from remote clients, but wildcard CORS is a security risk in normal operation
 - **Why:** HIVEMIND_ENABLED is an operational mode flag. Wildcard CORS only enabled when system is explicitly configured for it. Prevents accidental exposure.
 - **Rejected:** Always enable CORS, or require explicit CORS_ORIGIN config per client - too risky or inflexible
@@ -170,6 +181,7 @@ usageStats:
 - **Breaking if changed:** Removing the flag check exposes API to any origin indefinitely. Leaving flag false when hivemind needed breaks remote client connectivity.
 
 ### CORS `allowAllOrigins` feature gated behind `hivemind.enabled` config flag, not hardcoded or always-on (2026-03-11)
+
 - **Context:** Server requires permissive CORS for certain features, but should not expose all origins by default
 - **Why:** Ties security-relevant setting to product feature lifecycle. When hivemind is disabled, CORS restrictions apply automatically.
 - **Rejected:** Hardcoded allowAllOrigins=true (security risk); environment variable (harder to audit feature dependencies)
@@ -177,16 +189,19 @@ usageStats:
 - **Breaking if changed:** Removing feature flag coupling means CORS config must be maintained separately, risking desync where feature is enabled but CORS isn't
 
 #### [Gotcha] Type assertions in gatherBoardContext were removed in favor of trusting upstream types (e.g., changed from `(transitions[i] as { to?: string }).to` to `transitions[i].to`) (2026-03-13)
+
 - **Situation:** statusHistory array elements could be untyped or partially typed; defensive casting hid potential type definition gaps
 - **Root cause:** Cleaner code; but introduces assumption that statusHistory is properly typed elsewhere
 - **How to avoid:** Cleaner code maintenance; runtime errors if statusHistory typing is incomplete; easier to spot type bugs when they surface
 
 #### [Pattern] Conditional prompt inclusion to avoid poisoning empty/malformed research findings (2026-03-13)
+
 - **Problem solved:** Research findings conditionally appended to prompt: `${researchFindings ? ... : ''}`
 - **Why this works:** Prevents empty research section from appearing in prompt (cleaner output); silent failure on missing file avoids error cascading
 - **Trade-offs:** Optional becomes truly optional (graceful), but loses visibility into missing research; no feedback on file corruption
 
 ### promptFile path is resolved relative to projectPath using path.join(), read via secureFs (not arbitrary fs). No validation that promptFile stays within projectPath. (2026-03-13)
+
 - **Context:** Role configuration files live inside the project directory structure. Path could theoretically escape via ../../../etc/passwd if not controlled.
 - **Why:** secureFs.readFile is a sandboxed wrapper that prevents arbitrary file system access. Using projectPath as root is the natural containment.
 - **Rejected:** Could explicitly validate that resolved path is within projectPath before reading, but secureFs is already the sandbox.
@@ -194,6 +209,7 @@ usageStats:
 - **Breaking if changed:** If secureFs.readFile is replaced with raw fs.readFile, path traversal becomes possible. If projectPath is set incorrectly, role files could become inaccessible or wrong files could be read.
 
 ### Replaced exec() with execFile() to construct gh CLI commands - exec() interpolates the entire command string through a shell (interpreting backticks, $(), etc.), while execFile() passes arguments as an array where shell metacharacters are literal bytes (2026-03-14)
+
 - **Context:** Epic titles containing backticks or $(rm -rf /) were being executed as shell code because exec() passes the full command string to /bin/sh -c
 - **Why:** execFile() invokes the OS-level execve() directly with argv array - the shell never sees the data, so metacharacters have no special meaning. This is a security boundary: user data → argument array → OS syscall, not user data → string interpolation → shell → OS
 - **Rejected:** Could have escaped quotes and backticks more thoroughly in the string, but escaping is incomplete (hard to get right for all shell metacharacters) and masks the real problem
@@ -201,21 +217,25 @@ usageStats:
 - **Breaking if changed:** Reverting to exec() + string interpolation reintroduces the injection vulnerability; incomplete escaping in the old code is evidence this approach is fragile
 
 #### [Pattern] Test shell injection prevention by asserting dangerous strings appear as literal array elements in the captured execFile args, not by executing actual dangerous commands (2026-03-14)
+
 - **Problem solved:** Need to verify that $(rm -rf /), backticks, and backslashes in epic titles don't get evaluated
 - **Why this works:** The vulnerability is in the command construction mechanism (shell interpolation), not in downstream execution - verify the args array never gets through a shell. Testing literal safety (args[titleIndex + 1].includes('$(rm -rf /)')) is safer than testing safe execution.
 - **Trade-offs:** Test is white-box (inspects internal args array), not black-box (tests behavior), but it directly validates the security boundary
 
 #### [Gotcha] The original body.replace(/"/g, '\\\"') escaping was a partial mitigation of the shell injection vulnerability, not a complete fix - escaping is fragile because shell metacharacters include backticks, $(), >, |, etc., not just quotes (2026-03-14)
+
 - **Situation:** Code had escaping logic but still vulnerable to backtick and $() injection in epic titles
 - **Root cause:** Shell injection isn't just about quote escaping; you must escape backticks, $(), all expansion syntax. It's hard to enumerate all dangerous patterns. The only secure approach is to not use a shell at all (execFile with args array).
 - **How to avoid:** Removing escaping entirely (not using a shell) is simpler and fundamentally safer than trying to escape correctly
 
 #### [Pattern] Using execFile with argument arrays as core pattern for preventing shell injection when spawning external commands with user-provided data (2026-03-14)
+
 - **Problem solved:** Running gh CLI to create PRs with user-provided epic titles and body text that may contain shell metacharacters like backticks, $(), pipes, redirects
 - **Why this works:** execFile never spawns a shell - arguments are passed directly as literal values to the executable process. This is fundamentally different from exec() which parses the entire string through a shell interpreter. The separation of command from argv prevents any string interpolation.
 - **Trade-offs:** execFile is less syntactically flexible (no pipes, redirects, shell globbing) but provides ironclad security by design. Requires thinking in terms of argument arrays rather than shell command strings.
 
 ### Passing command arguments as distinct array elements ['pr', 'create', '--title', epicTitle, '--body', body] rather than pre-formatted strings or template-based option syntax (2026-03-14)
+
 - **Context:** gh command invocation with user-controlled title and body that must remain separate from command structure to prevent injection
 - **Why:** When arguments are separate array positions, they cannot be misinterpreted as command modifiers or shell syntax - gh receives them in argv. This is structurally enforced, not dependent on escaping logic. No amount of special characters in title can escape the argument boundary.
 - **Rejected:** String templates like `--title='${epicTitle}'` or shell option syntax require manual escaping/quoting and are fragile - easy to forget quotes or get escaping wrong in some edge case
@@ -223,6 +243,7 @@ usageStats:
 - **Breaking if changed:** If refactored to build a command string that's then parsed (even with exec) or to use string interpolation without quotes, requires defensive escaping everywhere user input appears and is a perpetual security liability
 
 ### Use gh CLI's -f (string) and -F (typed) flags for GraphQL variable passing instead of string interpolation (2026-03-14)
+
 - **Context:** Multiple services were concatenating owner/repo/prNumber/body directly into GraphQL query strings, creating injection risk
 - **Why:** gh api graphql natively supports parameterized variables via CLI flags, eliminating the need for manual escaping or interpolation. This treats GraphQL variables as first-class, not text substitution.
 - **Rejected:** Continue using JSON.stringify(body).slice(1, -1) escaping or regex-based sanitization - both fragile and prone to edge cases
@@ -230,8 +251,31 @@ usageStats:
 - **Breaking if changed:** If gh CLI changes or doesn't support -f/-F flags, all variable passing breaks; if omitted, reverts to injection-vulnerable string interpolation
 
 ### Replace `void this.stopFeature(data.featureId)` with `this.stopFeature(data.featureId).catch(err => logger.error(...))`. Explicit .catch() provides error observability while remaining non-blocking. (2026-03-14)
+
 - **Context:** Fire-and-forget async call in event handler. TypeScript's void operator silently swallows promise rejections, hiding errors from logs/monitoring.
 - **Why:** void is semantically 'intentional fire-and-forget' but provides zero observability. Explicit .catch() logs errors without blocking execution, enabling detection of stopFeature failures in production logs.
 - **Rejected:** Keeping void: Hides errors entirely. Using await: Would block event handler. Using Promise.resolve().then(): Verbose and less idiomatic than .catch().
 - **Trade-offs:** 3 extra lines of code; gains observability into async failures without changing execution semantics (still non-blocking).
 - **Breaking if changed:** If .catch() is removed, unhandled rejections from stopFeature will silently fail and not be logged, making it hard to debug feature shutdown issues.
+
+### Zod v3 (via zod-to-json-schema library) and Zod v4 (native .toJSONSchema()) dual support in toMCPTool adapter; checks for .toJSONSchema() first, falls back to zod-to-json-schema (2026-03-15)
+
+- **Context:** Zod v4 introduced native .toJSONSchema() method; existing codebases use v3 with zod-to-json-schema; starter kit users may have either version installed
+- **Why:** Smooth upgrade path for users migrating from v3 to v4. Doesn't force version lock; enables both old and new patterns. If user has v4, native method is faster (no external library). If v3, library handles conversion.
+- **Rejected:** Pick one version only (either require v4 or stick with v3) — forces users to upgrade or downgrade; blocks smooth migration
+- **Trade-offs:** Adapter code more complex (version detection logic). Slight runtime overhead checking method presence. Benefit: maximum compatibility, users not blocked by version mismatch, graceful degradation.
+- **Breaking if changed:** If removed from adapter, users on v3 can't generate MCP schemas. If removed v4 check, users on v4 still pull zod-to-json-schema even though native method available.
+
+#### [Pattern] Per-node OTel span wrapping with flow-node:{name} spans provides granular observability of individual node execution, latency, and errors without wrapping the entire graph in a single span. (2026-03-15)
+
+- **Problem solved:** GraphBuilder wraps each node execution with OTel tracing to monitor node-level performance and errors.
+- **Why this works:** Granular spans identify slow or failing nodes quickly. Spans are named with node identity (flow-node:{name}) for easy filtering. Per-node context enables better debugging of complex flows.
+- **Trade-offs:** More spans increase Langfuse tracing costs vs better visibility into node behavior. Developers pay for granularity.
+
+### No @protolabsai/\* dependencies in agents package; only @anthropic-ai/sdk. Sibling packages (pen, codegen) are dynamic runtime imports (2026-03-15)
+
+- **Context:** Agents package must not create circular dependency chain (agents → pen → agents) or implicit dependency on internal build artifacts
+- **Why:** Keeps agents package lightweight and independent. Can be published to npm without exposing internal tooling. Sibling packages are optional—code gracefully fails if they're missing
+- **Rejected:** Static deps on @protolabsai/pen and @protolabsai/codegen would create circular refs in monorepo and complicate package publishing
+- **Trade-offs:** Easier: publish agents independently, no hidden deps. Harder: must ensure sibling packages are built before calling generate()
+- **Breaking if changed:** If agents tries to import siblings as static npm deps, it will either fail to install (circular) or create implicit dependency on build order

@@ -1,0 +1,33 @@
+{
+  "name": "@@PROJECT_NAME-xcl",
+  "version": "0.1.0",
+  "description": "XCL codec — bidirectional TypeScript types ↔ XML ↔ TSX code generation. Zero dependencies.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "xcl",
+    "codegen",
+    "design-system",
+    "tsx",
+    "react"
+  ],
+  "license": "MIT"
+}

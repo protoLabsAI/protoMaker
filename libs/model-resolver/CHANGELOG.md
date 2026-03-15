@@ -1,5 +1,116 @@
 # @protolabsai/model-resolver
 
+## 0.61.0
+
+### Minor Changes
+
+- ### Features
+  - Design System starter kit — MCP server + monorepo skeleton (#2683)
+  - add MCP server package to design-system starter kit (#2682)
+  - AI a11y agent + axe-core audit package for design-system starter (#2674)
+  - AI design agent for design-system starter kit (#2670)
+  - add TinaCMS site builder to design-system starter kit (#2667)
+  - Vite-native component playground for design-system starter (#2664)
+  - add color science package (OKLCH scales, harmonies, WCAG contrast, semantic tokens) (#2662)
+  - add HTML/CSS output target to design-system starter kit (#2659)
+  - add W3C DTCG design token package to design-system starter (#2661)
+  - pen-to-React pipeline for design system starter kit (#2658)
+  - add MCP server package to ai-agent-app starter kit (#2652)
+  - wire ai-agent-app into scaffold route, UI picker, and starter features (#2651)
+  - add agent role system with GET /api/roles endpoint (#2648)
+  - add slash command system to ai-agent-app starter kit (#2646)
+  - add visual LangGraph flow builder to ai-agent-app starter kit (#2645)
+  - compose chat view with streaming, tool progress, and weather card (#2644)
+  - add session store and chat session hook to ai-agent-app starter kit (#2641)
+  - extract LangGraph state graphs package for ai-agent-app starter kit (#2643)
+  - add trace viewer UI and in-memory tracing (#2639)
+  - add App + State + Chat UI scaffold for ai-agent-app starter kit (#2640)
+  - add WebSocket sideband + ToolProgressEmitter to ai-agent-app starter (#2638)
+  - ToolDefinition + requiresConfirmation registry pattern (#2637)
+  - add observability package with Langfuse + file tracing (#2636)
+  - add POST /api/chat streaming endpoint (#2634)
+  - wire tools package into server with Anthropic agentic loop (#2633)
+  - add model-resolver and Express server to ai-agent-app starter kit (#2631)
+  - add CSS theming system and UI atoms for ai-agent-app (#2627)
+  - add perplexity-style word fade-in animation for streaming responses (#2630)
+  - tools package — define once, deploy everywhere (starter kit) (#2629)
+  - add packages/tools to AI Agent App Starter Kit (#2628)
+  - add ai-agent-app monorepo starter kit (#2624)
+  - Design System starter kit — MCP server + monorepo skeleton (#2683)
+  - add MCP server package to design-system starter kit (#2682)
+  - AI a11y agent + axe-core audit package for design-system starter (#2674)
+  - AI design agent for design-system starter kit (#2670)
+  - add TinaCMS site builder to design-system starter kit (#2667)
+  - Vite-native component playground for design-system starter (#2664)
+  - add color science package (OKLCH scales, harmonies, WCAG contrast, semantic tokens) (#2662)
+  - add HTML/CSS output target to design-system starter kit (#2659)
+  - add W3C DTCG design token package to design-system starter (#2661)
+  - pen-to-React pipeline for design system starter kit (#2658)
+  - AI design agent for design-system starter kit (#2670)
+  - add TinaCMS site builder to design-system starter kit (#2667)
+  - Vite-native component playground for design-system starter (#2664)
+  - add color science package (OKLCH scales, harmonies, WCAG contrast, semantic tokens) (#2662)
+  - add HTML/CSS output target to design-system starter kit (#2659)
+  - add W3C DTCG design token package to design-system starter (#2661)
+  - pen-to-React pipeline for design system starter kit (#2658)
+  - add MCP server package to ai-agent-app starter kit (#2652)
+  - wire ai-agent-app into scaffold route, UI picker, and starter features (#2651)
+  - add agent role system with GET /api/roles endpoint (#2648)
+  - add slash command system to ai-agent-app starter kit (#2646)
+  - add visual LangGraph flow builder to ai-agent-app starter kit (#2645)
+  - compose chat view with streaming, tool progress, and weather card (#2644)
+  - add session store and chat session hook to ai-agent-app starter kit (#2641)
+  - extract LangGraph state graphs package for ai-agent-app starter kit (#2643)
+  - add trace viewer UI and in-memory tracing (#2639)
+  - add App + State + Chat UI scaffold for ai-agent-app starter kit (#2640)
+  - add WebSocket sideband + ToolProgressEmitter to ai-agent-app starter (#2638)
+  - ToolDefinition + requiresConfirmation registry pattern (#2637)
+  - add observability package with Langfuse + file tracing (#2636)
+  - add POST /api/chat streaming endpoint (#2634)
+  - wire tools package into server with Anthropic agentic loop (#2633)
+  - add model-resolver and Express server to ai-agent-app starter kit (#2631)
+  - add CSS theming system and UI atoms for ai-agent-app (#2627)
+  - add perplexity-style word fade-in animation for streaming responses (#2630)
+  - tools package — define once, deploy everywhere (starter kit) (#2629)
+  - add packages/tools to AI Agent App Starter Kit (#2628)
+  - add ai-agent-app monorepo starter kit (#2624)
+
+  ### Bug Fixes
+  - resolve build issues for end-to-end verification (#2686)
+  - add missing git ls-remote mock in completion-detector shell safety test
+  - skip epic PR when children merged directly to dev (no epic branch on remote) (#2632)
+  - resolve build issues for end-to-end verification (#2686)
+  - add missing git ls-remote mock in completion-detector shell safety test
+  - add missing git ls-remote mock in completion-detector shell safety test
+  - skip epic PR when children merged directly to dev (no epic branch on remote) (#2632)
+
+  ### Refactors
+  - End-to-end verification and build test (#2656)
+  - End-to-end verification and build test (#2656)
+  - End-to-end verification and build test (#2656)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.61.0
+
+## 0.60.0
+
+### Minor Changes
+
+- ### Features
+  - add landing page starter kit template
+  - add landing page starter kit template
+
+  ### Refactors
+  - rename Projects to Project Management in sidebar and routes
+  - rename Projects to Project Management in sidebar and routes
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.60.0
+
 ## 0.59.0
 
 ### Minor Changes

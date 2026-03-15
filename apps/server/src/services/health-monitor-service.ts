@@ -26,6 +26,7 @@ import { promisify } from 'util';
 import v8 from 'v8';
 import { getReactiveSpawnerService } from './reactive-spawner-service.js';
 import { HEALTH_CHECK_INTERVAL_MS, STUCK_FEATURE_THRESHOLD_MS } from '../config/timeouts.js';
+import type { SchedulerService } from './scheduler-service.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('HealthMonitor');
@@ -117,6 +118,9 @@ export class HealthMonitorService {
   private config: Required<HealthMonitorConfig>;
   private lastCheckResult: HealthCheckResult | null = null;
   private isRunning = false;
+  private schedulerService: SchedulerService | null = null;
+
+  private static readonly INTERVAL_ID = 'health-monitor:check';
 
   constructor(featureLoader?: FeatureLoader, config?: HealthMonitorConfig) {
     this.featureLoader = featureLoader ?? new FeatureLoader();
@@ -133,6 +137,13 @@ export class HealthMonitorService {
    */
   setEventEmitter(events: EventEmitter): void {
     this.events = events;
+  }
+
+  /**
+   * Set the scheduler service for managed interval tracking
+   */
+  setSchedulerService(schedulerService: SchedulerService): void {
+    this.schedulerService = schedulerService;
   }
 
   /**
@@ -173,12 +184,25 @@ export class HealthMonitorService {
       logger.error('Initial health check failed:', error);
     });
 
-    // Set up periodic checks
-    this.intervalId = setInterval(() => {
-      this.runHealthCheck().catch((error) => {
-        logger.error('Periodic health check failed:', error);
-      });
-    }, this.config.checkIntervalMs);
+    // Set up periodic checks via schedulerService if available, else raw setInterval
+    if (this.schedulerService) {
+      this.schedulerService.registerInterval(
+        HealthMonitorService.INTERVAL_ID,
+        'Health Monitor',
+        this.config.checkIntervalMs,
+        () => {
+          this.runHealthCheck().catch((error) => {
+            logger.error('Periodic health check failed:', error);
+          });
+        }
+      );
+    } else {
+      this.intervalId = setInterval(() => {
+        this.runHealthCheck().catch((error) => {
+          logger.error('Periodic health check failed:', error);
+        });
+      }, this.config.checkIntervalMs);
+    }
   }
 
   /**
@@ -190,7 +214,9 @@ export class HealthMonitorService {
       return;
     }
 
-    if (this.intervalId) {
+    if (this.schedulerService) {
+      this.schedulerService.unregisterInterval(HealthMonitorService.INTERVAL_ID);
+    } else if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }

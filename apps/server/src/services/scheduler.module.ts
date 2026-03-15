@@ -1,6 +1,8 @@
 import { createLogger } from '@protolabsai/utils';
 
 import type { ServiceContainer } from '../server/services.js';
+import { getPRWatcherService } from './pr-watcher-service.js';
+import { getMaintenanceOrchestrator } from './maintenance-orchestrator.js';
 
 const logger = createLogger('Server:Wiring');
 
@@ -22,7 +24,23 @@ export function register(container: ServiceContainer): void {
     featureHealthService,
     integrityWatchdogService,
     featureLoader,
+    healthMonitorService,
+    specGenerationMonitor,
   } = container;
+
+  // Wire schedulerService into interval-tracked services so their timers
+  // appear in schedulerService.listAll() and can be inspected centrally.
+  healthMonitorService.setSchedulerService(schedulerService);
+
+  // Wire MaintenanceOrchestrator into TimerRegistry
+  const maintenanceOrchestrator = getMaintenanceOrchestrator();
+  maintenanceOrchestrator.setEventEmitter(events);
+  maintenanceOrchestrator.setSchedulerService(schedulerService);
+  specGenerationMonitor.setSchedulerService(schedulerService);
+  const prWatcher = getPRWatcherService();
+  if (prWatcher) {
+    prWatcher.setSchedulerService(schedulerService);
+  }
 
   // Scheduler Service initialization and task registration via AutomationService
   schedulerService.initialize(events, dataDir);
@@ -30,6 +48,9 @@ export function register(container: ServiceContainer): void {
   void schedulerService
     .start()
     .then(async () => {
+      // Start MaintenanceOrchestrator sweeps now that the scheduler is running
+      maintenanceOrchestrator.start();
+
       await automationService.syncWithScheduler({
         events,
         autoModeService,

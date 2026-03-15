@@ -1,0 +1,31 @@
+{
+  "name": "@@PROJECT_NAME-tracing",
+  "version": "0.1.0",
+  "description": "Observability package — Langfuse tracing and built-in file-based trace logging",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "dependencies": {},
+  "peerDependencies": {
+    "langfuse": ">=3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "langfuse": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "langfuse": "^3.31.0",
+    "typescript": "^5.7.0"
+  }
+}

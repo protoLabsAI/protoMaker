@@ -10,12 +10,14 @@ This page covers what starter kits are, how to use them, and what each one inclu
 
 ## Available kits
 
-| Kit                                               | Source   | Stack                              | Use case                                           |
-| ------------------------------------------------- | -------- | ---------------------------------- | -------------------------------------------------- |
-| [Documentation site](./docs-starter)              | scaffold | Astro + Starlight + Tailwind CSS 4 | Docs sites, API references, knowledge bases        |
-| [Portfolio / marketing site](./portfolio-starter) | scaffold | Astro + React 19 + Tailwind CSS 4  | Personal sites, marketing pages, project showcases |
-| [Browser extension](#browser-extension)           | clone    | WXT + React 19 + TypeScript        | Chrome + Firefox extensions (Manifest V3)          |
-| [General project](#general-project)               | scaffold | Blank `.automaker/` structure      | Bring-your-own codebase                            |
+| Kit                                               | Source   | Stack                                        | Use case                                           |
+| ------------------------------------------------- | -------- | -------------------------------------------- | -------------------------------------------------- |
+| [Documentation site](./docs-starter)              | scaffold | Astro + Starlight + Tailwind CSS 4           | Docs sites, API references, knowledge bases        |
+| [Portfolio / marketing site](./portfolio-starter) | scaffold | Astro + React 19 + Tailwind CSS 4            | Personal sites, marketing pages, project showcases |
+| [Landing page](./landing-page-starter)            | scaffold | Astro + Tailwind CSS 4 + composable sections | Product landing pages, waitlist pages              |
+| [AI agent app](./ai-agent-app-starter)            | scaffold | Node.js + React 19 + Anthropic SDK           | Chat apps, tool-using agents, AI prototypes        |
+| [Browser extension](#browser-extension)           | clone    | WXT + React 19 + TypeScript                  | Chrome + Firefox extensions (Manifest V3)          |
+| [General project](#general-project)               | scaffold | Blank `.automaker/` structure                | Bring-your-own codebase                            |
 
 ## Scaffold a starter
 
@@ -65,6 +67,26 @@ Creates a portfolio site with React islands for interactive sections (project gr
 
 See [Portfolio site starter](./portfolio-starter) for a full walkthrough.
 
+### Landing page
+
+**Source:** scaffold (local copy)
+**Kit type:** `landing-page`
+**Stack:** Astro 5, Tailwind CSS 4, CSS custom property tokens
+
+Creates a dark-themed product landing page with eight composable sections: Hero, Stats bar, Feature grid, Steps, Pricing, Testimonials, FAQ, and CTA. All section content is driven by JSON files in Astro Content Collections. Scroll-triggered fade-in animations are included via an IntersectionObserver utility. Rebranding requires changing six CSS custom property values.
+
+See [Landing page starter](./landing-page-starter) for a full walkthrough.
+
+### AI agent app
+
+**Source:** scaffold (local copy)
+**Kit type:** `ai-agent-app`
+**Stack:** Node.js, Express, React 19, Anthropic SDK, Vercel AI SDK, Zod
+
+Creates a three-package npm monorepo for building AI agent apps. The `packages/server` package runs an Express server with a server-side agentic loop that detects tool-use blocks, executes registered tools, and streams results back. The `packages/ui` package provides a streaming chat UI with `useChat`. The `packages/tools` package holds shared tool definitions that compile to MCP, LangGraph, or Express adapters via the `defineSharedTool` pattern.
+
+See [AI agent app starter](./ai-agent-app-starter) for a full walkthrough.
+
 ### Browser extension
 
 **Source:** clone (GitHub repository)
@@ -85,16 +107,18 @@ The agent analyzes your codebase on the first run and populates `app_spec.txt` w
 
 ## Scaffold vs clone
 
-|                           | Scaffold                                           | Clone                        |
-| ------------------------- | -------------------------------------------------- | ---------------------------- |
-| How it works              | Files copied from `@protolabsai/templates` package | `git clone` from GitHub      |
-| Offline support           | Yes                                                | No — requires network access |
-| Project name substitution | Automatic (`package.json`, `astro.config.mjs`)     | Manual after clone           |
-| Used by                   | docs, portfolio, general                           | browser-extension            |
+|                           | Scaffold                                             | Clone                        |
+| ------------------------- | ---------------------------------------------------- | ---------------------------- |
+| How it works              | Files copied from `@protolabsai/templates` package   | `git clone` from GitHub      |
+| Offline support           | Yes                                                  | No — requires network access |
+| Project name substitution | Automatic (`package.json`, `astro.config.mjs`)       | Manual after clone           |
+| Used by                   | docs, portfolio, landing-page, ai-agent-app, general | browser-extension            |
 
 ## Next steps
 
 - [Documentation site starter](./docs-starter)
 - [Portfolio site starter](./portfolio-starter)
+- [Landing page starter](./landing-page-starter)
+- [AI agent app starter](./ai-agent-app-starter)
 - [Architecture: how the template system works](./architecture)
 - [Add a new starter kit](./add-a-starter)

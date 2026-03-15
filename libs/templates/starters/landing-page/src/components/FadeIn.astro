@@ -1,0 +1,15 @@
+---
+/**
+ * Wrapper that fades content in on scroll.
+ * Uses IntersectionObserver via fade-in.ts script.
+ */
+interface Props {
+  class?: string;
+}
+
+const { class: className = '' } = Astro.props;
+---
+
+<div class:list={['fade-section', className]}>
+  <slot />
+</div>

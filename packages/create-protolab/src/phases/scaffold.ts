@@ -12,8 +12,11 @@ import * as path from 'node:path';
 import {
   scaffoldDocsStarter,
   scaffoldPortfolioStarter,
+  scaffoldLandingPageStarter,
+  scaffoldAiAgentAppStarter,
   getDocsStarterContext,
   getPortfolioStarterContext,
+  getAiAgentAppStarterContext,
   getStarterFeatures,
 } from '@protolabsai/templates';
 
@@ -75,6 +78,30 @@ export async function scaffoldStarter(
       };
     }
     filesCreated = result.filesCreated;
+  } else if (kitType === 'landing-page') {
+    const result = await scaffoldLandingPageStarter({ projectName, outputDir });
+    if (!result.success) {
+      return {
+        success: false,
+        outputDir,
+        filesCreated: result.filesCreated,
+        starterFeatures: [],
+        error: result.error,
+      };
+    }
+    filesCreated = result.filesCreated;
+  } else if (kitType === 'ai-agent-app') {
+    const result = await scaffoldAiAgentAppStarter({ projectName, outputDir });
+    if (!result.success) {
+      return {
+        success: false,
+        outputDir,
+        filesCreated: result.filesCreated,
+        starterFeatures: [],
+        error: result.error,
+      };
+    }
+    filesCreated = result.filesCreated;
   }
 
   // Write .automaker/CONTEXT.md
@@ -87,6 +114,8 @@ export async function scaffoldStarter(
       contextContent = getDocsStarterContext();
     } else if (kitType === 'portfolio') {
       contextContent = getPortfolioStarterContext();
+    } else if (kitType === 'ai-agent-app') {
+      contextContent = getAiAgentAppStarterContext();
     }
 
     if (contextContent !== null) {

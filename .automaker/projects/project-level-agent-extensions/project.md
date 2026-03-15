@@ -2,9 +2,9 @@
 
 Make agent roles extensible at the project level — discoverable from .automaker/agents/*.yml manifests, wired into execution (model selection + prompt injection), with auto-assignment match rules and a settings UI.
 
-**Status:** active
+**Status:** completed
 **Created:** 2026-03-13T18:25:10.033Z
-**Updated:** 2026-03-13T19:36:50.952Z
+**Updated:** 2026-03-15T05:06:23.790Z
 
 ## PRD
 

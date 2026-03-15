@@ -1,0 +1,32 @@
+{
+  "brand": {
+    "name": "Acme",
+    "tagline": "Build something extraordinary.",
+    "description": "A modern platform that helps teams ship faster, with less friction and more confidence."
+  },
+  "nav": {
+    "links": [
+      { "label": "Features", "href": "#features" },
+      { "label": "Pricing", "href": "#pricing" },
+      { "label": "FAQ", "href": "#faq" },
+      { "label": "Docs", "href": "https://docs.example.com", "external": true }
+    ],
+    "cta": {
+      "label": "Get Started",
+      "href": "#get-started"
+    }
+  },
+  "footer": {
+    "tagline": "Built for teams that ship.",
+    "links": [
+      { "label": "Docs", "href": "https://docs.example.com", "external": true },
+      { "label": "Blog", "href": "/blog" },
+      { "label": "Twitter", "href": "https://x.com/acme", "external": true },
+      { "label": "GitHub", "href": "https://github.com/acme", "external": true }
+    ]
+  },
+  "social": {
+    "twitter": "https://x.com/acme",
+    "github": "https://github.com/acme"
+  }
+}

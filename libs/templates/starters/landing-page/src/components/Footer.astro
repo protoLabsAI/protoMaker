@@ -1,0 +1,31 @@
+---
+import { getEntry } from 'astro:content';
+
+const config = await getEntry('siteConfig', 'main');
+const { brand, footer } = config.data;
+---
+
+<footer class="border-t border-white/5">
+  <div
+    class="max-w-5xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-4"
+  >
+    <div class="flex items-center gap-2 text-sm text-zinc-500">
+      <span class="text-zinc-400">{brand.name}</span>
+      <span class="text-zinc-700">&middot;</span>
+      <span>{footer.tagline}</span>
+    </div>
+    <div class="flex items-center gap-5 text-sm text-zinc-500">
+      {
+        footer.links.map((link) => (
+          <a
+            href={link.href}
+            class="hover:text-zinc-300 transition-colors"
+            {...(link.external ? { target: '_blank', rel: 'noopener' } : {})}
+          >
+            {link.label}
+          </a>
+        ))
+      }
+    </div>
+  </div>
+</footer>

@@ -49,13 +49,20 @@ export { getCodingRules } from './coding-rules.js';
 export { getDocsCI, getExtensionCI } from './ci.js';
 
 // Starter kit context files (write to .automaker/CONTEXT.md in new projects)
-export { getDocsStarterContext, getPortfolioStarterContext } from './starters.js';
+export {
+  getDocsStarterContext,
+  getPortfolioStarterContext,
+  getAiAgentAppStarterContext,
+} from './starters.js';
 
 // Starter kit scaffolding (copies Astro projects with name/config substitution)
 export {
   scaffoldDocsStarter,
   scaffoldPortfolioStarter,
+  scaffoldLandingPageStarter,
   scaffoldGeneralStarter,
+  scaffoldAiAgentAppStarter,
+  scaffoldDesignSystemStarter,
 } from './scaffold.js';
 export type { ScaffoldResult } from './scaffold.js';
 

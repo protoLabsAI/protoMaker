@@ -1,0 +1,25 @@
+{
+  "type": "testimonials",
+  "label": "What People Say",
+  "heading": "Trusted by teams that ship.",
+  "items": [
+    {
+      "quote": "This changed how our team works. We went from weekly deploys to shipping multiple times a day.",
+      "name": "Sarah Chen",
+      "role": "CTO",
+      "company": "Quantum Labs"
+    },
+    {
+      "quote": "The developer experience is incredible. Clean APIs, great docs, and it just works.",
+      "name": "Marcus Rivera",
+      "role": "Lead Engineer",
+      "company": "Baseform"
+    },
+    {
+      "quote": "We evaluated six alternatives. This was the only one that didn't require rearchitecting our codebase.",
+      "name": "Emily Park",
+      "role": "VP Engineering",
+      "company": "Stratos"
+    }
+  ]
+}

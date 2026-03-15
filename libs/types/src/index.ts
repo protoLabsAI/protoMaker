@@ -3,6 +3,16 @@
  * Shared type definitions for AutoMaker
  */
 
+// Maintenance orchestration types
+export type {
+  MaintenanceTier,
+  MaintenanceCheckStatus,
+  MaintenanceContext,
+  MaintenanceCheckResult,
+  MaintenanceCheck,
+  MaintenanceSweepResult,
+} from './maintenance.js';
+
 // Agent definition factory context types
 export type { AgentDefinitionContext, WorldStateSlice } from './agent.js';
 
