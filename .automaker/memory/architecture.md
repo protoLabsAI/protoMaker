@@ -9,6 +9,7 @@ usageStats:
   referenced: 89
   successfulFeatures: 89
 ---
+
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
 # architecture
@@ -521,13 +522,14 @@ usageStats:
 - **Follow-up path detail:** `AutoModeService` captures the conflict reason in `followUpConflictReason` before the rebase try/catch block, then checks and throws after it — this ensures the block-and-throw runs outside the rebase catch scope.
 - **Breaking if changed:** Reverting to warning-only would resume repeated merge_conflict failures for stale branches. The `blocked` status is the only signal to the human that manual rebase is needed.
 
-
 #### [Pattern] Path helpers delegate validation to composed parent function (getProjectDir → validateSlugInput). Validation is inherited implicitly, not validated at each helper level. (2026-03-13)
+
 - **Problem solved:** getResearchMdPath and getResearchArtifactDir both call getProjectDir internally, which handles slug validation automatically.
 - **Why this works:** Composition pattern reduces duplication — validate once at the base level, all derived paths inherit safety. Single source of validation rules.
 - **Trade-offs:** Implicit validation easier to maintain (rules in one place) but harder to trace — caller can't see validation happening without reading implementation.
 
 ### Introduced nested artifact directory convention: artifacts/research-report/ subdirectory under project slug, rather than flat artifact storage. (2026-03-13)
+
 - **Context:** getResearchArtifactDir returns .automaker/projects/{slug}/artifacts/research-report/, establishing a tiered structure for artifact categorization.
 - **Why:** Scalable for multiple artifact types (design-doc, specs, reports, etc.) without flat-dir name collision. Organizes by artifact purpose, not by project.
 - **Rejected:** Flat structure (.automaker/projects/{slug}/research-report/ or similar) — simpler initially but harder to scale if artifacts diversify.
@@ -535,6 +537,7 @@ usageStats:
 - **Breaking if changed:** Code expecting artifacts at project root (.automaker/projects/{slug}/research-report/) will fail. Paths are concrete; moving artifacts breaks all references.
 
 ### Implemented deep merge for nested `ceremonies` object in SettingsService instead of shallow merge/replacement (2026-03-13)
+
 - **Context:** Updating nested settings (ceremonies.dailyStandup) where multiple sibling properties (enabled, lastRunAt) must persist atomically
 - **Why:** Shallow merge would overwrite entire ceremonies.dailyStandup object, losing lastRunAt timestamp when toggling enabled flag. Deep merge preserves all properties in nested objects.
 - **Rejected:** Shallow merge or direct property assignment - these would lose sibling properties in the nested object hierarchy
@@ -542,11 +545,13 @@ usageStats:
 - **Breaking if changed:** If reverted to shallow merge, lastRunAt would be lost on every enabled toggle, causing ceremony automation to lose execution history
 
 #### [Gotcha] GlobalCeremoniesConfig type already existed in global-settings.ts but was not exported from package @protolabsai/types index (2026-03-13)
+
 - **Situation:** Monorepo with multiple packages consuming shared types; type defined in one module but not accessible to cross-package consumers
 - **Root cause:** Package index exports define the public API boundary; internal module definitions are invisible to consumers using package imports
 - **How to avoid:** Explicit exports in index.ts add maintenance burden (must keep in sync) but enforce clean architecture and prevent internal API leakage
 
 ### Placed CeremoniesSection component within Developer settings tab rather than creating dedicated /settings/ceremonies route (2026-03-13)
+
 - **Context:** Ceremony automation feature is new and currently scoped to single ceremony type (Daily Standup); room for future expansion to multiple ceremony types
 - **Why:** Current scope is minimal; co-locating with other developer settings reduces routing complexity. Component can be extracted later if ceremonies becomes first-class feature.
 - **Rejected:** Dedicated settings route - would be premature abstraction given current single-ceremony scope; adds routing maintenance without clear benefit
@@ -554,6 +559,7 @@ usageStats:
 - **Breaking if changed:** If ceremonies system expands to multiple ceremony types and dedicated UX, component placement becomes limiting and requires restructuring settings navigation
 
 ### Created synthetic StandupProjectService adapter to convert board-wide context into standup-flow LangGraph API format, rather than modifying the flow or changing data structures (2026-03-13)
+
 - **Context:** standup-flow expects project-scoped milestone and feature arrays; board context is cross-project and flat
 - **Why:** Allows standup-flow to remain independent and reusable without coupling to board architecture; adapter layer isolates API contract negotiation
 - **Rejected:** Modifying standup-flow to accept board-wide context directly would couple it to this specific board implementation
@@ -561,11 +567,13 @@ usageStats:
 - **Breaking if changed:** If standup-flow changes its input shape, the adapter is the single point of failure for the entire ceremony
 
 #### [Pattern] Multi-level fallback chain for Discord channel resolution: global discord integration → project settings → DISCORD_CHANNEL_DEV env var, with explicit cast to typed interface at each level (2026-03-13)
+
 - **Problem solved:** Discord channel could be configured at global or project level, with env var as safety net; need to resolve without null-coalescing errors
 - **Why this works:** Provides configuration flexibility (global team channels vs project-specific) while maintaining clear precedence; explicit typing at each level prevents silent config misses
 - **Trade-offs:** Easier deployment (many configs work); harder debugging (which level actually won?); type casting complexity increases but clarity improves
 
 ### Dual guards on cron execution: enabled flag AND 20+ hour window since lastRunAt, preventing both admin disable and ceremony fatigue (2026-03-13)
+
 - **Context:** Cron runs every 15 minutes; standup should fire ~once daily but user can pause via settings
 - **Why:** Prevents noisy standups even if somehow triggered multiple times; makes enabled flag meaningful beyond just disable; ensures ceremonies stay valuable
 - **Rejected:** Single enabled flag would allow accidental multiple-standups-per-day if someone forgets to disable; pure time-based would fire even if already ran that day
@@ -573,11 +581,13 @@ usageStats:
 - **Breaking if changed:** Removing the 20-hour window reverts to fire-on-demand behavior; removing enabled check removes operator control
 
 #### [Pattern] Cron task registration delegated to SchedulerModule during startup (scheduler.module.ts calls dailyStandupService.initialize), rather than service self-registering (2026-03-13)
+
 - **Problem solved:** Service exists independently; scheduler infrastructure is environment-specific (might not exist in tests or edge environments)
 - **Why this works:** Cleanly separates concerns: service logic doesn't depend on scheduler; scheduler module has single entry point for all cron tasks; enables testing service without scheduler infrastructure
 - **Trade-offs:** Cleaner testing; requires two files to understand the full flow (service + scheduler); initialization order becomes explicit dependency
 
 ### Board-wide standup aggregation (single aggregated standup across all projects) rather than per-project ceremonies (2026-03-13)
+
 - **Context:** Daily standup is implicit team ritual; board context is cross-project; most other features are project-scoped
 - **Why:** Standup needs to show team-wide activity to be useful; one daily cadence for whole team prevents ceremony fragmentation
 - **Rejected:** Per-project standups would allow project autonomy but fragment communication and require N running agents; project-scoped ceremonies don't capture cross-project dependencies
@@ -585,11 +595,13 @@ usageStats:
 - **Breaking if changed:** If the architecture moves to project isolation, this artifact model becomes incompatible
 
 #### [Pattern] Fire-and-forget HTTP endpoint with async background execution: endpoint validates input and returns {started: true} immediately while research runs async via runResearch(). Route is separate from service to isolate HTTP concerns. (2026-03-13)
+
 - **Problem solved:** Research operations can be long-running (minutes). Blocking HTTP response would cause client timeout.
 - **Why this works:** Decouples request/response cycle from operation duration. Client gets immediate confirmation of acceptance, work proceeds independently. Return value signals initiation success, not completion.
 - **Trade-offs:** Easier: client doesn't hang. Harder: client can't track research progress directly via response, needs separate polling or events.
 
 ### Double-run guard using researchStatus state flag: method checks if researchStatus === 'running' and returns {started: true} without re-queuing. Idempotent pattern prevents duplicate concurrent research on same project. (2026-03-13)
+
 - **Context:** Multiple API calls or auto-triggers could fire research on same project within milliseconds. Prevent resource waste and conflicting results.
 - **Why:** Simple state check is efficient for single-node scenarios. Idempotent behavior (caller gets same response whether it's new or already-running) is correct for async operations.
 - **Rejected:** Distributed locking via Redis would be over-engineered for single-node. Unique job IDs in queue would still allow duplicate queue entries.
@@ -597,11 +609,13 @@ usageStats:
 - **Breaking if changed:** If guard is removed, duplicate research jobs could run simultaneously on same project, wasting compute and producing conflicting outputs.
 
 #### [Pattern] Auto-trigger via event listener with conditional filtering: listens for project:lifecycle:initiated event, checks project.researchOnCreate flag before firing research. Decouples research initiation from project creation logic. (2026-03-13)
+
 - **Problem solved:** Want automated research for some projects (those marked for it) but not all. Don't want to hardcode auto-trigger into creation logic.
 - **Why this works:** Event-driven architecture allows optional behavior. Conditional flag (researchOnCreate) makes feature toggleable per-project without code changes. Service can subscribe/unsubscribe independently.
 - **Trade-offs:** Easier: feature is optional and configurable. Harder: requires event system and listener registration.
 
 ### ResearchStatus added to CreateProjectInput so initiate() can set researchStatus: 'idle' atomically at project creation. Status is pre-populated so auto-trigger listener knows project is ready without separate query. (2026-03-13)
+
 - **Context:** Auto-trigger checks researchStatus === 'idle' to decide whether to fire research. If status is set after creation via separate step, race condition where event fires before status is set.
 - **Why:** Ensures correct initial state at creation time. Eliminates race between project creation event and status initialization. Event listener can trust status is correct.
 - **Rejected:** Setting status in separate step after creation creates race window. Querying project to check status before triggering adds latency.
@@ -609,6 +623,7 @@ usageStats:
 - **Breaking if changed:** If researchStatus is removed from input, auto-trigger becomes racy: event fires before status can be set, trigger sees undefined/null and skips research.
 
 ### Use existing getResearchFilePath() instead of waiting for dedicated getResearchMdPath() function (2026-03-13)
+
 - **Context:** Feature spec referenced getResearchMdPath which doesn't exist yet; getResearchFilePath provides identical path semantics
 - **Why:** Pragmatic unblocking: both return same path, avoids cross-phase dependency wait, reduces implementation blocker
 - **Rejected:** Wait for platform helpers phase to deliver getResearchMdPath; build custom path resolver inline
@@ -616,6 +631,7 @@ usageStats:
 - **Breaking if changed:** If getResearchMdPath semantics differ when implemented, this becomes a hot-spot for bugs during refactoring
 
 ### Maintain dual research sections in PRD prompt: Codebase Research Findings (automated) vs. Research Findings (pre-existing docs) (2026-03-13)
+
 - **Context:** Added Research Findings section separate from existing Codebase Research Findings in prompt template
 - **Why:** Preserves source attribution: distinguishes between dynamically-analyzed code patterns vs. human-curated pre-research; avoids conflating data sources
 - **Rejected:** Merge both sections; replace codebase findings with research.md if available
@@ -623,16 +639,19 @@ usageStats:
 - **Breaking if changed:** If model training shifts to expect merged research sections, prompt structure becomes suboptimal; if source distinction becomes unimportant, dual sections waste context
 
 #### [Pattern] Optional enrichment files in project structure (research.md, artifacts/) enable specialized workflows without burdening all projects (2026-03-13)
+
 - **Problem solved:** Project lifecycle accommodates both minimal projects (just project.md, project.json) and feature-rich projects that generate research notes and ceremony artifacts
 - **Why this works:** Not all projects perform research phase or ceremonies; consumers (PM agent, CeremonyService) handle both cases gracefully. Keeps baseline project structure lightweight.
 - **Trade-offs:** Optional files increase documentation complexity (must explain when/why) but maximize flexibility. PM agent must check file existence before consuming.
 
 #### [Pattern] Single-source-of-truth path helpers (getResearchFilePath) in platform layer abstract path construction from consuming code (2026-03-13)
+
 - **Problem solved:** research.md location is computed via getResearchFilePath(projectPath, projectSlug) instead of having path format scattered across PM agent, setup handlers, and docs
 - **Why this works:** Path structure can change (e.g., new nesting) without updating every consumer. Centralizes validation of path format. Reduces coupling to path conventions.
 - **Trade-offs:** Adds single import/function call cost; gains refactoring safety and consistency. Forces developers to think about path abstraction instead of hardcoding.
 
 ### Under resource constraints (96 files changed, tight turn budget), scoped documentation to single file with concrete bugs rather than broad sweep of all affected docs (2026-03-13)
+
 - **Context:** Feature touched many components; could have attempted to update all 96 files' docs or just the one with duplicate section + research.md gaps
 - **Why:** One accurate, complete doc is better than 96 partially accurate docs. Correctness > coverage. Duplicate section removal is objective correctness fix, not opinion.
 - **Rejected:** Broad doc updates without prioritization would have risked shipping inaccurate docs at scale or missing the quality bar
@@ -640,6 +659,7 @@ usageStats:
 - **Breaking if changed:** If other docs remain inconsistent with project-lifecycle.md canonical source, new developers will have conflicting references. Single source of truth pattern requires discipline to update all references or none.
 
 ### Refactored NewProjectDialog from callback-based (onSubmit/isPending props) to self-contained hook pattern using useCreateProject internally. (2026-03-13)
+
 - **Context:** Dialog needed to handle submission, navigation, and toasts. Original design used parent component callbacks.
 - **Why:** Self-contained hooks pattern eliminates prop drilling, makes side effects (navigation, toasts) local to dialog, cleaner for features with internal complexity. Dialog becomes autonomous unit.
 - **Rejected:** Keep callback delegation pattern (onSubmit/isPending props from ProjectsList). Would require prop threading for each new side effect.
@@ -647,11 +667,13 @@ usageStats:
 - **Breaking if changed:** If future features need dialog to work with different submission logic (e.g., draft saving, different endpoints), you'd need to either parameterize the hook or break out callback pattern again.
 
 #### [Pattern] Multi-source artifact field extraction: Server checks three payload field names (`artifactUrl`, `reportUrl`, `reportPath`) for artifact URL, accepting the first present value. (2026-03-13)
+
 - **Problem solved:** Different ceremony services use different naming conventions for artifact/report URLs. Need to integrate with heterogeneous systems without version negotiation.
 - **Why this works:** Defensive programming for integration with multiple ceremony implementations. Centralizes compatibility logic on server where ceremony knowledge lives.
 - **Trade-offs:** Extraction logic slightly more complex, but supports multiple ceremony implementations without coupling or version negotiation.
 
 ### Server owns ceremony type → label mapping. Ceremony handler contains `CEREMONY_LABELS` dictionary, sends `ceremonyLabel` in TimelineEvent response. UI renders this label in badge. (2026-03-13)
+
 - **Context:** Ceremony type names (e.g., 'standup', 'milestone_retro') are not user-friendly. Need readable labels for timeline UI.
 - **Why:** Ceremony type semantics are business logic; centralizing on server prevents UI from needing to know ceremony taxonomy. Single source of truth for label definitions.
 - **Rejected:** Send raw ceremony type to UI, let client map it (creates duplicate label definitions, harder to maintain, UI depends on ceremony domain knowledge).
@@ -659,16 +681,19 @@ usageStats:
 - **Breaking if changed:** Moving labels to UI requires syncing definitions across systems; removing label logic entirely means UI shows raw ceremony type strings.
 
 #### [Gotcha] Decision and escalation filters were already implemented from prior session. Icon/color configs were already defined. Feature was 'missing last mile' — foundational pieces existed but weren't connected to ceremony events. (2026-03-13)
+
 - **Situation:** Implementing ceremony label and artifact link features. Expected to build filters from scratch; discovered they already existed in codebase.
 - **Root cause:** Parallel feature development with layered implementation. Filter system built, but not applied to ceremony events. No integration work until now.
 - **How to avoid:** Extra audit time up-front (reading existing code) saved duplicate implementation effort. Ensured consistency.
 
 #### [Pattern] Archive deprecated patterns with date/reason instead of deleting them; preserve underlying pattern knowledge while marking use case as inactive (2026-03-13)
+
 - **Problem solved:** Frank auto-spawn IIFE and cooldown patterns were deprecated (crew loops removed 2026-03-04), but the underlying fire-and-forget async pattern and in-memory cooldown approach remain valid for other use cases
 - **Why this works:** Prevents institutional knowledge loss; allows future developers to understand why patterns exist and reuse the pattern logic for similar problems. Archiving with [ARCHIVED — date] signals status without orphaning the technical insight.
 - **Trade-offs:** Requires more doc maintenance (marking sections as archived) but preserves pattern reusability and decision context for future work
 
 ### Rely on strategic decisions document as single source of truth for major changes (Linear removal, crew loops removal); don't require updates to all downstream references if patterns remain conceptually valid (2026-03-13)
+
 - **Context:** Explore agent found deprecated Linear/Frank references across 5+ docs (security.md, performance.md, gotchas.md). Rather than updating all, chose to update only key decision points (architecture.md, templates) and leave historical patterns intact
 - **Why:** Reduces update burden when strategic changes cascade widely. Historical patterns (rate limiting, diagnostic scoping, eventual consistency) remain valid even if specific implementation (Frank, Linear) is removed. Strategic decisions doc serves as authoritative changelog.
 - **Rejected:** Alternative of updating every downstream reference is high effort for low benefit, especially when the patterns themselves are reusable
@@ -676,6 +701,7 @@ usageStats:
 - **Breaking if changed:** If strategic decisions doc is not maintained as source of truth, readers have no way to understand which references are stale vs which patterns are still valid
 
 ### Accept ArtifactEntry with optional content field; provide metadata-as-markdown fallback when content unavailable (2026-03-13)
+
 - **Context:** Component needs to display expandable markdown views, but ArtifactIndexEntry has no content field. Parent component (project-detail.tsx) would need to fetch and enrich artifacts with real content.
 - **Why:** Enables gradual adoption: component is immediately useful with metadata fallback while allowing parent to add content enrichment later without requiring immediate parent refactor. Maintains type compatibility (ArtifactEntry extends ArtifactIndexEntry), so existing callsites work without changes.
 - **Rejected:** Could require content field (breaking change) or wrap ArtifactIndexEntry in separate enrichment type (requires parent coordination)
@@ -683,11 +709,13 @@ usageStats:
 - **Breaking if changed:** Removing metadata fallback would cause artifact cards without content to show nothing; expanding cards becomes pointless for non-enriched data
 
 #### [Pattern] Sort artifacts globally by date-descending before grouping by type; grouping preserves global sort order within each group (2026-03-13)
+
 - **Problem solved:** Need to show artifacts grouped by type (Standup, Ceremony Report, etc.) but also maintain consistent date ordering within and across groups.
 - **Why this works:** Single-pass sort maintains sort invariant across all group boundaries. Alternative (per-group sorting) would require map iteration + individual sorts, adding complexity. This pattern ensures if user views 'All' vs filtered view, relative date ordering is identical.
 - **Trade-offs:** Simpler code (one sort operation), but requires understanding that Map iteration order equals sort order. Makes it harder to implement non-date sorts later (would need post-group resort).
 
 ### Separate filterTypes prop (parent control) from typeFilter state (user control); allow independent filtering dimensions (2026-03-13)
+
 - **Context:** Parent may want to show only certain artifact types (e.g., 'ceremonies only'), while user wants to filter further within that set (e.g., 'standups only'). Both needs must be satisfied without coupling.
 - **Why:** Prop controls scope (what types are available), state controls user selection (which type to focus on). Allows parent to restrict domain (SUPPORTED types) while user navigates freely within it. Cleaner separation of concerns than trying to merge decisions into single state.
 - **Rejected:** Single filter state (requires parent to manage local UI state); no supported-types gate (leaks invalid types into UI)
@@ -695,11 +723,13 @@ usageStats:
 - **Breaking if changed:** Removing SUPPORTED gate allows invalid types into the component; removing typeFilter state removes user control
 
 #### [Gotcha] Two independent code paths (executeFeature and executePipelineSteps) both assemble system prompts but operate independently. Role prompt injection had to be implemented in both locations. (2026-03-13)
+
 - **Situation:** When adding role prompt prefix support, discovered that context files were loaded in two separate flows with no shared helper.
 - **Root cause:** Features can be executed via two different routes, each with its own context assembly logic. No abstraction to unify prompt building.
 - **How to avoid:** Current approach: easier to implement locally, harder to maintain (changes must be applied twice). Shared function: more DRY, but adds an abstraction layer that could complicate context passing.
 
 ### Auto-assignment is opt-OUT, not opt-IN: autoAssignEnabled defaults to true, match logic only skips on explicit false (2026-03-13)
+
 - **Context:** Feature flag for disabling auto-assignment in workflow settings
 - **Why:** Assumes auto-assignment is beneficial by default; requires explicit action to disable. This makes auto-routing the primary product behavior, manual assignment the override.
 - **Rejected:** Opt-IN model (default false, require explicit true) would make auto-assignment secondary, require explicit enablement per workflow
@@ -707,11 +737,13 @@ usageStats:
 - **Breaking if changed:** Changing to opt-IN would require backwards migration of existing workflows and shifts routing from automatic to manual-first
 
 #### [Pattern] Cascading precedence guards: Manual assignedRole → Feature flag → Match call. Each level short-circuits lower levels. (2026-03-13)
+
 - **Problem solved:** Need to respect user intent (manual assignment) while supporting both feature-gating and auto-matching
 - **Why this works:** Respects intent hierarchy: explicit user assignment > organizational configuration > algorithmic suggestion. Avoids expensive match calls unnecessarily.
 - **Trade-offs:** Early exits optimize for manual/disabled case; requires understanding guard order to modify behavior
 
 ### Match errors are non-fatal: caught, logged, execution continues. Manifest parsing/matching failures never block feature execution. (2026-03-13)
+
 - **Context:** AgentManifestService.matchFeature() can throw parsing errors or fail gracefully
 - **Why:** Feature execution is critical path; role assignment is enhancement. Graceful degradation ensures routing never prevents work from starting.
 - **Rejected:** Fail-fast on match error would catch malformed manifests early but would block feature execution entirely
@@ -719,11 +751,13 @@ usageStats:
 - **Breaking if changed:** Fail-fast would require manifest validation before execution and would break any execution when AgentManifestService is unavailable or misconfigured
 
 #### [Pattern] Null from matchFeature signals 'no match found' and triggers no assignedRole update (defensive: does not mutate on null) (2026-03-13)
+
 - **Problem solved:** AgentManifestService.matchFeature() returns null when no rule matches confidence threshold, or a match object with role+metadata
 - **Why this works:** Null is explicit sentinel for 'no match' — cleaner than empty object or success-but-no-role. Defensive null-check before update prevents silent noop mutations.
 - **Trade-offs:** Requires explicit null-handling in code; explicit defensive prevents accidental mutations of assignedRole to undefined
 
 ### routingSuggestion populated with full metadata (confidence, reasoning, autoAssigned flag, suggestedAt timestamp) creating audit trail of auto vs manual assignments (2026-03-13)
+
 - **Context:** Need to track origin and confidence of role assignment for observability and debugging
 - **Why:** Audit trail enables: (1) tracing why a role was assigned, (2) measuring match confidence distribution, (3) retroactively identifying auto-assigned vs manually-assigned features. Autoassigned flag is semantic marker.
 - **Rejected:** Could only store assignedRole without metadata; would lose traceability and confidence signal needed for threshold tuning
@@ -731,11 +765,13 @@ usageStats:
 - **Breaking if changed:** Removing metadata would eliminate ability to distinguish high-confidence from low-confidence auto-assignments, making manifest tuning impossible
 
 #### [Gotcha] Manifest-driven service layer and synthetic API-layer agent creation represent a dual source of truth that creates impedance mismatches. getResolvedCapabilities() only knows about manifest agents, not synthetic built-in fallbacks created at the route layer. (2026-03-13)
+
 - **Situation:** Built-in agents are created synthetically in the API route (lines 108–114) when the manifest has no entry for operational resilience. Service methods like getResolvedCapabilities() were designed assuming the manifest is the single source of truth.
 - **Root cause:** The route layer intentionally deviates from manifest-as-canonical for fallback/resilience, but downstream abstractions weren't told about this exception pattern.
 - **How to avoid:** Route-level guard keeps synthetic fallback logic localized and explicit (easier to trace) but distributed the dual-source-of-truth logic. Service layer stays simpler but now has implicit constraints callers must understand.
 
 ### The built-in agent fallback (synthetic agent creation + capability lookup) is placed at the API route layer, not in the service layer. This keeps the synthetic fallback pattern co-located with where synthetic agents are created, but distributes dual-source-of-truth handling. (2026-03-13)
+
 - **Context:** Routes create synthetic agents as a fallback (lines 108–114). Their capabilities also need a fallback. Decision: where should the fallback lookup live?
 - **Why:** Route layer creates the synthetic agents, so route layer is where they're fully understood. Keeps service layer pure/manifest-focused. Alternative (service-layer fallback) would require exposing fallback capability sources through service API, mixing concerns.
 - **Rejected:** Moving to service layer via new method like getCapabilitiesOrBuiltIn() would centralize dual-source logic but require service to know about synthetic agents, coupling service to route-layer operations.
@@ -743,50 +779,59 @@ usageStats:
 - **Breaking if changed:** If service layer ever needs to be the exclusive canonical source of truth (e.g., for caching strategies or audit trails), this pattern blocks that migration. Any code calling service directly bypasses the built-in fallback.
 
 #### [Pattern] Shutdown sequence is ordered — services disposed in specific sequence (after crdtSyncService.shutdown() but before shutdownLangfuse()) (2026-03-13)
+
 - **Problem solved:** AgentManifestService disposed in middle of shutdown sequence, not arbitrary
 - **Why this works:** Ordered disposal prevents resource dependency issues and ensures cleanup happens when dependent services are still available. Placing in 'service teardown zone' keeps related operations together.
 - **Trade-offs:** Adds cognitive load for new services — developers must understand shutdown ordering. Gains: predictable resource cleanup and no use-after-dispose bugs.
 
 #### [Pattern] Try/catch wrapping lifecycle methods (dispose, shutdown) during graceful shutdown — failures are logged but never block the shutdown path (2026-03-13)
+
 - **Problem solved:** getAgentManifestService().dispose() wrapped in try/catch with logger.warn fallback
 - **Why this works:** Shutdown must be non-blocking even if individual service cleanup fails. Ensures one broken service doesn't prevent full shutdown sequence.
 - **Trade-offs:** Hides dispose failures from strict error reporting. Gains: guaranteed shutdown completion and no hung processes. Cost: potential silent resource leaks if dispose fails.
 
 ### Singleton getter pattern (getAgentManifestService()) used for accessing singleton services in shutdown path, not direct instantiation or dependency injection (2026-03-13)
+
 - **Context:** Import and call uses getAgentManifestService() getter, consistent with getTerminalService() and getReactiveSpawnerService() patterns throughout codebase
 - **Why:** Getter pattern allows initialization-on-demand and handles uninitialized state. Calling on singleton avoids coupling to construction, letting service optionally be created.
 - **Rejected:** Direct instantiation would require knowledge of constructor; DI would require shutdown.ts to be aware of all services upfront
 - **Trade-offs:** Getter adds indirection and silent no-op if service never initialized. Gains: loose coupling and graceful handling of uninitialized services.
 - **Breaking if changed:** Switching to direct field access would require tracking which services are initialized before calling dispose, adding shutdown fragility
 
-#### [Pattern] UI derives isBuiltIn from ROLE_LABELS (frontend's ground-truth constant) rather than trusting the API's _builtIn flag as source of truth. (2026-03-13)
+#### [Pattern] UI derives isBuiltIn from ROLE_LABELS (frontend's ground-truth constant) rather than trusting the API's \_builtIn flag as source of truth. (2026-03-13)
+
 - **Problem solved:** Agent suggestion badge needs to identify built-in agents. Could trust API flag or validate against frontend's role registry.
 - **Why this works:** ROLE_LABELS is the frontend's contract for what roles it knows how to label. Deriving from it provides defense against API inconsistencies and creates a validation gate: if a role isn't in ROLE_LABELS, we shouldn't claim it's built-in regardless of what the API says.
 - **Trade-offs:** Trades implicit trust in API for explicit validation, but creates a hidden sync point between frontend and backend role lists that has no verification test.
 
-#### [Gotcha] DEFAULT_PROJECT_AGENT intentionally omits _builtIn field, creating an implicit contract that the API layer must set this flag for built-in agents during response serialization. (2026-03-13)
-- **Situation:** Default agent constant is used as a template for user-created agents. If not handled carefully during API serialization, all agents (user and built-in alike) could inherit missing _builtIn.
-- **Root cause:** DEFAULT_PROJECT_AGENT is user-authored scaffold, so it shouldn't have _builtIn set. But this means there's no 'safe default' for the field—the API must explicitly set it.
-- **How to avoid:** Cleaner manifests vs. implicit responsibility. If the API layer ever forgets to populate _builtIn for a built-in agent, the badge won't show—silent failure rather than explicit default.
+#### [Gotcha] DEFAULT_PROJECT_AGENT intentionally omits \_builtIn field, creating an implicit contract that the API layer must set this flag for built-in agents during response serialization. (2026-03-13)
+
+- **Situation:** Default agent constant is used as a template for user-created agents. If not handled carefully during API serialization, all agents (user and built-in alike) could inherit missing \_builtIn.
+- **Root cause:** DEFAULT_PROJECT_AGENT is user-authored scaffold, so it shouldn't have \_builtIn set. But this means there's no 'safe default' for the field—the API must explicitly set it.
+- **How to avoid:** Cleaner manifests vs. implicit responsibility. If the API layer ever forgets to populate \_builtIn for a built-in agent, the badge won't show—silent failure rather than explicit default.
 
 #### [Pattern] Used breaking return type change (ProjectAgent | null → MatchResult | null) as a compile-time verification mechanism to force discovery of all call sites. (2026-03-13)
+
 - **Problem solved:** Refactoring agent manifest scoring from hardcoded 1.0 confidence to computed values. Feature description listed 2 files to update, but TypeScript compilation revealed a third caller (routes/agents.ts) that needed updating.
 - **Why this works:** Return type changes propagate through the type system automatically, ensuring all consumers are found and forced to recompile. This is more reliable than grep-based refactoring for TypeScript APIs.
 - **Trade-offs:** Breaking change requires updating all call sites immediately (harder short-term) vs. ensures no call sites are missed (safer long-term). In a monorepo with build checks, this is low-friction.
 
 ### Selected diminishing-returns formula (rawScore / (rawScore + 10)) instead of linear or sigmoid normalization to preserve match ordering invariant. (2026-03-13)
+
 - **Context:** Confidence scoring needs to reflect match strength while integrating with existing agent routing logic that depends on relative match scores.
 - **Why:** The formula is strictly monotone-increasing: if agent A has rawScore > agent B, then normalize(A) > normalize(B) always holds. This preserves the implicit invariant that 'best match' determined by highest raw score remains the best match in confidence space. Linear normalization (score/maxScore) or sigmoid could reorder matches.
 - **Rejected:** Linear normalization (simpler to understand), sigmoid (tighter bounds at extremes), fixed confidence tiers (easier to reason about in logs). All risk reordering matches in edge cases.
 - **Trade-offs:** Confidence never reaches 1.0 (max ~0.75 at reasonable scores), making the asymptotic behavior less intuitive. But prevents subtle bugs in routing logic where a different agent becomes 'top match' after scoring.
 - **Breaking if changed:** Any code assuming confidence can equal 1.0 or using it as a binary threshold (>= 1.0) will break. Formula change would need systematic re-verification of routing decisions.
 
-#### [Pattern] Implemented scoring formula as a private helper method (_normalizeScore) instead of inlining or externalizing to a separate service. (2026-03-13)
+#### [Pattern] Implemented scoring formula as a private helper method (\_normalizeScore) instead of inlining or externalizing to a separate service. (2026-03-13)
+
 - **Problem solved:** Normalization logic used in one place (matchFeature return), but likely to be needed in multiple scoring contexts as the system evolves.
 - **Why this works:** Private method creates a single source of truth for the formula, making it impossible for future developers to implement divergent normalization logic. Also keeps the method co-located with the data it operates on (raw match scores).
 - **Trade-offs:** One more private method to maintain, but prevents inconsistent scoring if scoring is needed elsewhere. Low cost for high consistency guarantee.
 
 ### Preserve startingFeatures Set throughout the entire async dispatch lifecycle—don't clear it when ConcurrencyManager lease is acquired, only when the dispatch promise resolves. This keeps the synchronous double-start guard intact within a single loop iteration. (2026-03-13)
+
 - **Context:** startingFeatures serves two purposes: (1) reserve a capacity slot during startup, and (2) provide a cheap, synchronous guard against accidentally starting the same feature twice within one scheduler loop. If the Set is cleared upon lease acquisition, the synchronous guard disappears for the remainder of the iteration.
 - **Why:** The loop iteration is performance-critical and synchronous. Querying ConcurrencyManager state (async-created lease) in the hot path adds latency and creates implicit coupling. The Set provides an O(1) check without async dependencies. Keeping it until dispatch completion maintains clean architectural separation.
 - **Rejected:** Clear the Set immediately when lease acquired to eliminate the overlap window. This pushes the double-start guard responsibility to checking lease state, making the loop logic asynchronous and dependent on ConcurrencyManager implementation details.
@@ -794,6 +839,7 @@ usageStats:
 - **Breaking if changed:** Removing the Set entirely and relying solely on ConcurrencyManager leases forces all double-start checks to go async. Clearing the Set immediately after lease acquisition makes it unsafe to check the Set anywhere in the loop after that point, creating fragile coupling between initialization code and state-checking code.
 
 ### Poll-based watchers must call timer.unref() to prevent the poller from blocking process shutdown. clearInterval alone is insufficient if the process exits before the interval fires. (2026-03-13)
+
 - **Context:** setInterval returns a Timer reference that by default keeps the event loop alive. In a server that needs graceful shutdown, this timer can block exit.
 - **Why:** unref() marks the timer as 'non-blocking' — the event loop will exit even if the timer is pending. This is essential for clean server shutdown in production.
 - **Rejected:** Relying on clearInterval alone (process may hang waiting for final interval to fire); explicit shutdown handlers (more complex)
@@ -801,21 +847,25 @@ usageStats:
 - **Breaking if changed:** Removing unref() causes process shutdown to block until the next interval fires, potentially causing deployment timeouts or zombie processes
 
 #### [Pattern] File scope in specifications acts as semantic intent signal. When removal task lists only type and doc files (not service files), that signals 'remove, don't implement'—preventing scope creep and misaligned effort. (2026-03-14)
+
 - **Problem solved:** Feature description listed workflow-settings.ts and agent-manifests.md for modification, but NOT agent-manifest-service.ts. Developer correctly interpreted this as removal-only scope.
 - **Why this works:** Explicit service exclusion communicates: 'we don't want service-level changes.' Ambiguous specs lead to wasted implementation effort on features no one asked for.
 - **Trade-offs:** Minimal scope = faster completion, but requires developers to read scope intent carefully. Verbose specs with 'do NOT modify X' would be clearer but noisier.
 
 #### [Gotcha] Declared-but-never-consumed configuration fields create false APIs. Users can set manifestPaths, see no effect, and either think the feature is broken or doesn't exist—worse than not having the field at all. (2026-03-14)
+
 - **Situation:** manifestPaths existed in AgentConfig for ~Xmonths but AgentManifestService only hardcoded .automaker/agents.yml and .automaker/agents/ paths. No watcher, no dynamic loading, no effect.
 - **Root cause:** Field was probably added speculatively to 'future-proof' for extensibility. But undocumented constraints (hardcoded paths) + unused field = confusing API surface.
 - **How to avoid:** Removal reduces documentation burden and user confusion, but makes extending manifest paths later require a new field/migration. Trade clarity for flexibility.
 
 #### [Pattern] Exhaustive codebase search (grep all files) before removing config fields validates zero impact. If field only appears in type/doc, removal is objectively safe. (2026-03-14)
+
 - **Problem solved:** Developer ran: grep manifestPaths across entire repo → found only in type definition + docs, nowhere else. Enabled confident, zero-risk removal.
 - **Why this works:** Config removal is a breaking change if consumers exist. Grep proves non-existence. This is cheap insurance vs. silent breakage.
 - **Trade-offs:** 5 minutes of searching saves potential 2-hour rollback. Automation could enforce this (linter that flags declared-but-unused config fields).
 
 ### Prefer minimal configuration surface (only expose what's consumed) over speculative future-proofing. When a feature isn't implemented, remove the declaration—users can request it if needed. (2026-03-14)
+
 - **Context:** manifestPaths was a speculative field waiting for a feature that never materialized. Keeping it causes confusion; removing it clarifies intent.
 - **Why:** Cognitive load: every extra config field users have to understand is a cost. Unused fields are net negative. Implement when requirements exist, not before.
 - **Rejected:** Keep field with warning docs ('planned for future'). But this leaves dead code that accumulates over time.
@@ -823,16 +873,25 @@ usageStats:
 - **Breaking if changed:** If someone built automation around manifestPaths (config validation, schema checks), removal breaks it. Mitigated by proving nobody was using it (grep validation).
 
 #### [Pattern] Dual-path template registration: scaffold-based templates require @protolabsai/templates package changes + server route + UI registry entry, while clone-based templates only require UI registry entry. This split is driven by tooling constraints, not API design. (2026-03-15)
+
 - **Problem solved:** The starter kit system supports both scaffold kits (docs, portfolio, general) and clone kits (extension, future kits with native tooling). Different paths have different provisioning requirements.
 - **Why this works:** Scaffold kits work via local file copying because they're pure template content. Clone kits are necessary when the kit itself includes non-JS native tooling (WXT bundler for extensions) that can't be replicated via local file scaffolding — the git repo IS the distribution mechanism for the complete toolchain.
 - **Trade-offs:** Flexibility to support diverse stacks (easier for future kits) vs cognitive load (developers must understand two registration paths and when to use each). The complexity is unavoidable given the diversity of target stacks.
 
 #### [Gotcha] VitePress sidebar is auto-generated via generateSidebar() which scans docs/templates/ at build time. New .md files automatically appear in sidebar without config changes. This is convenient but creates a fragile assumption: if sidebar config is ever refactored to use explicit entries, auto-discovery breaks silently. (2026-03-15)
+
 - **Situation:** Three new .md files were added and automatically appeared in sidebar navigation. No manual sidebar config was needed. The feature worked, but the mechanism is undocumented in the codebase.
 - **Root cause:** Auto-generation reduces config maintenance overhead. Developers can add docs pages without understanding sidebar config. Works well for stable directory structures.
 - **How to avoid:** Automatic discovery (lower maintenance, faster doc publishing) vs explicit control (better UX, can curate ordering and visibility). Current approach implicitly assumes all .md files in the directory should be discoverable.
 
-#### [Gotcha] Extension kit is intentionally clone-based only. The server scaffold route validates kitType against ['docs', 'portfolio', 'general', 'my-kit'] — extension is not in this list. This is a tooling constraint (WXT native build tools can't be scaffolded), not an API limitation, but it's not obvious without investigation. (2026-03-15)
+#### [Gotcha] Extension kit is intentionally clone-based only. The server scaffold route validates kitType against ['docs', 'portfolio', 'landing-page', 'general', 'ai-agent-app'] — extension is not in this list. This is a tooling constraint (WXT native build tools can't be scaffolded), not an API limitation, but it's not obvious without investigation. (2026-03-15)
+
 - **Situation:** When writing add-a-starter.md, the absence of extension from the scaffold validation list needed explanation. Investigation revealed this is intentional: WXT bundler and native browser extension tooling require repo-level distribution.
 - **Root cause:** Browser extension projects require WXT build tools, manifest configuration, and specific directory structures that are better maintained in a git repo than scaffolded from a template. Cloning ensures the complete working toolchain is present without users having to install and configure separate build tools.
 - **How to avoid:** Clone approach (works out-of-the-box, users don't configure tooling) vs scaffold approach (smaller, users can update kit version independently). Chose clone because the repo IS the distribution mechanism for the complete, working toolchain.
+
+### `ai-agent-app` is a scaffold kit (not clone-based). Fully wired in PR #2651: scaffold route + UI picker + create-protolab scaffold.ts + starter features. (2026-03-15)
+
+- **Context:** Added `scaffoldAiAgentAppStarter` to `@protolabsai/templates`, wired `'ai-agent-app'` into `scaffold-starter.ts` validation list, added `getAiAgentAppStarterContext()`, and registered in UI templates picker. All five board items in `AI_AGENT_APP_FEATURES` align with the starter kit's 5-phase structure.
+- **`@@PROJECT_NAME` in starter kit docs is intentional:** All import examples in `libs/templates/starters/ai-agent-app/docs/` use `@@PROJECT_NAME-tools`, `@@PROJECT_NAME-tracing`, `@@PROJECT_NAME-prompts`, etc. as template placeholders. These resolve to actual package names after users run the find-and-replace step documented in the README quickstart. Do NOT replace these with hardcoded names — the templates must work for any project name.
+- **Doc review confirmed (2026-03-15):** All 15 docs in `ai-agent-app/docs/` and `packages/server/prompts/` are accurate. Scaffold route includes `ai-agent-app`. README platform overview, quickstart, and all guide docs reflect actual implementation.
