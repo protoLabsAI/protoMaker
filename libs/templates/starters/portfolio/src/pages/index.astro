@@ -1,75 +1,77 @@
 ---
 /**
- * Home page — Hero, Featured Projects, Testimonials
+ * Home page — composes section components into a single landing page.
+ *
+ * All heavy sections live in src/components/sections/ so you can reorder,
+ * remove, or swap them without editing multiple files.
  */
-import { getCollection } from 'astro:content';
-import BaseLayout from '@/layouts/BaseLayout.astro';
-import ProjectCard from '@/components/ProjectCard.astro';
-import TestimonialCard from '@/components/TestimonialCard.astro';
+import { getCollection } from "astro:content";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Hero from "@/components/sections/Hero.astro";
+import ProjectGrid from "@/components/sections/ProjectGrid";
+import Testimonials from "@/components/sections/Testimonials.astro";
+import BlogList from "@/components/sections/BlogList.astro";
+import Contact from "@/components/sections/Contact";
 
-// Load data
-const [configEntry] = await getCollection('siteConfig');
+// ── Site config ─────────────────────────────────────────────────
+const [configEntry] = await getCollection("siteConfig");
 const config = configEntry.data;
 
-const allProjects = await getCollection('projects');
-const featuredProjects = allProjects
-  .filter((p) => p.data.featured)
-  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+// ── Projects ────────────────────────────────────────────────────
+const allProjects = await getCollection("projects");
+const projects = allProjects
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+  .map((p) => ({
+    title: p.data.title,
+    description: p.data.description,
+    techStack: p.data.techStack,
+    slug: p.slug,
+    tags: p.data.tags,
+    liveUrl: p.data.liveUrl,
+    repoUrl: p.data.repoUrl,
+    image: p.data.image,
+    imageAlt: p.data.imageAlt,
+    featured: p.data.featured,
+  }));
 
-const allTestimonials = await getCollection('testimonials');
-const testimonials = allTestimonials.sort(
-  (a, b) => a.data.order - b.data.order,
-);
+// ── Testimonials ─────────────────────────────────────────────────
+const allTestimonials = await getCollection("testimonials");
+const testimonials = allTestimonials
+  .sort((a, b) => a.data.order - b.data.order)
+  .map((t) => ({
+    author: t.data.author,
+    role: t.data.role,
+    company: t.data.company,
+    quote: t.data.quote,
+    avatar: t.data.avatar,
+    link: t.data.link,
+  }));
+
+// ── Blog posts (3 most recent, no drafts) ────────────────────────
+const allBlog = await getCollection("blog");
+const recentPosts = allBlog
+  .filter((p) => !p.data.draft)
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+  .slice(0, 3)
+  .map((p) => ({
+    title: p.data.title,
+    description: p.data.description,
+    pubDate: p.data.pubDate,
+    tags: p.data.tags,
+    slug: p.slug,
+  }));
 ---
 
-<BaseLayout>
+<BaseLayout description={config.description}>
   <!-- ── Hero ─────────────────────────────────────────────────── -->
-  <section class="mx-auto max-w-5xl px-6 py-24 text-center">
-    <p
-      class="mb-4 animate-fade-up text-sm font-semibold uppercase tracking-widest"
-      style="color: var(--color-accent);"
-    >
-      Available for work
-    </p>
+  <Hero name={config.name} bio={config.bio} email={config.email} />
 
-    <h1
-      class="animate-fade-up animate-delay-1 mb-6 text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl"
-    >
-      Hi, I'm{' '}
-      <span class="gradient-text">{config.name}</span>
-    </h1>
-
-    <p
-      class="animate-fade-up animate-delay-2 mx-auto mb-10 max-w-2xl text-lg leading-relaxed"
-      style="color: #a1a1aa;"
-    >
-      {config.bio}
-    </p>
-
-    <div class="animate-fade-up animate-delay-3 flex flex-wrap justify-center gap-4">
-      <a
-        href="/projects"
-        class="rounded-lg px-6 py-3 text-sm font-semibold text-white no-underline transition-opacity hover:opacity-90"
-        style="background: var(--color-accent);"
-      >
-        View my work
-      </a>
-      <a
-        href="/about"
-        class="rounded-lg border px-6 py-3 text-sm font-semibold text-white no-underline transition-colors hover:border-white/30"
-        style="border-color: var(--border-subtle);"
-      >
-        About me
-      </a>
-    </div>
-  </section>
-
-  <!-- ── Featured Projects ─────────────────────────────────────── -->
+  <!-- ── Projects (filterable React island) ────────────────────── -->
   {
-    featuredProjects.length > 0 && (
+    projects.length > 0 && (
       <section class="mx-auto max-w-5xl px-6 py-16">
-        <div class="mb-10 flex items-center justify-between">
-          <h2 class="text-2xl font-bold text-white">Featured Projects</h2>
+        <div class="mb-8 flex items-center justify-between">
+          <h2 class="text-2xl font-bold text-white">Projects</h2>
           <a
             href="/projects"
             class="text-sm font-medium no-underline transition-colors"
@@ -78,72 +80,23 @@ const testimonials = allTestimonials.sort(
             All projects →
           </a>
         </div>
-
-        <div class="grid gap-6 sm:grid-cols-2">
-          {featuredProjects.map((project) => (
-            <ProjectCard
-              title={project.data.title}
-              description={project.data.description}
-              techStack={project.data.techStack}
-              slug={project.slug}
-              liveUrl={project.data.liveUrl}
-              repoUrl={project.data.repoUrl}
-              image={project.data.image}
-              imageAlt={project.data.imageAlt}
-              featured={project.data.featured}
-            />
-          ))}
-        </div>
+        <ProjectGrid client:load projects={projects} />
       </section>
     )
   }
 
   <!-- ── Testimonials ───────────────────────────────────────────── -->
-  {
-    testimonials.length > 0 && (
-      <section
-        class="py-16"
-        style="background: var(--color-surface-1);"
-      >
-        <div class="mx-auto max-w-5xl px-6">
-          <h2 class="mb-10 text-center text-2xl font-bold text-white">
-            What people say
-          </h2>
+  <Testimonials testimonials={testimonials} />
 
-          <div class="grid gap-6 sm:grid-cols-2">
-            {testimonials.map((t) => (
-              <TestimonialCard
-                author={t.data.author}
-                role={t.data.role}
-                company={t.data.company}
-                quote={t.data.quote}
-                avatar={t.data.avatar}
-                link={t.data.link}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
-    )
-  }
+  <!-- ── Recent blog posts ─────────────────────────────────────── -->
+  <BlogList posts={recentPosts} />
 
-  <!-- ── CTA ───────────────────────────────────────────────────── -->
-  <section class="mx-auto max-w-5xl px-6 py-24 text-center">
-    <h2 class="mb-4 text-3xl font-bold text-white">Let's build something</h2>
-    <p class="mx-auto mb-8 max-w-xl text-base" style="color: #a1a1aa;">
-      I'm open to freelance projects, consulting, and full-time opportunities.
-      If you have an idea or a problem worth solving, I'd love to hear about it.
-    </p>
-    {
-      config.email && (
-        <a
-          href={`mailto:${config.email}`}
-          class="rounded-lg px-6 py-3 text-sm font-semibold text-white no-underline transition-opacity hover:opacity-90"
-          style="background: var(--color-accent);"
-        >
-          Get in touch
-        </a>
-      )
-    }
-  </section>
+  <!-- ── Contact ───────────────────────────────────────────────── -->
+  <Contact
+    client:load
+    email={config.email}
+    github={config.social.github}
+    twitter={config.social.twitter}
+    linkedin={config.social.linkedin}
+  />
 </BaseLayout>
