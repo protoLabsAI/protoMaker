@@ -5,11 +5,10 @@ relevantTo: [performance]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 44
-  referenced: 13
-  successfulFeatures: 13
+  loaded: 45
+  referenced: 14
+  successfulFeatures: 14
 ---
-
 <!-- domain: Performance Optimization | Rendering, caching, latency reduction patterns -->
 
 # performance
@@ -387,3 +386,47 @@ usageStats:
 - **Rejected:** React components for cards/navigation — would require hydration, increase JS bundle, add runtime overhead for no interactivity benefit
 - **Trade-offs:** Easier: faster site, smaller bundle, zero hydration delay. Harder: adding future interactive features requires migrating to Astro Islands architecture.
 - **Breaking if changed:** Switching to React components for interactivity requires setting up Island hydration; adds build complexity and bundle size
+
+### Pure CSS @keyframes animation chosen over JavaScript animation library (Framer Motion, etc.) (2026-03-15)
+- **Context:** Needed smooth fade-in for streaming chunks with zero runtime overhead once streaming ends
+- **Why:** CSS animations compile to browser optimizations, have zero JS execution cost during playback, simpler to disable via prefers-reduced-motion media query, no external dependency
+- **Rejected:** Framer Motion or other JS animation library (introduces dependency, runtime cost even after streaming ends, overkill for simple opacity fade)
+- **Trade-offs:** Smaller, faster implementation; cannot dynamically adjust timing per chunk or based on actual text length — all chunks use fixed 750ms duration regardless of content
+- **Breaking if changed:** Animation duration is locked in CSS — cannot make per-chunk timing proportional to text length or implement dynamic playback speed without refactoring to JS animation
+
+#### [Pattern] Bounded agent loops using stopWhen: stepCountIs(maxSteps) prevent runaway inference. Default 5 steps with configurable override. (2026-03-15)
+- **Problem solved:** Building a multi-step agentic loop that can execute tools and re-plan
+- **Why this works:** Unbounded loops risk infinite recursion, cost overruns (API calls), and poor UX (slow response). Hard limit ensures predictable behavior.
+- **Trade-offs:** Limits agent capability (can't solve complex tasks in 5 steps) but ensures safety and cost predictability; client can override via request body
+
+#### [Pattern] Rate limiting coalesces by replacing pending event (latest state only), not queueing all messages (2026-03-15)
+- **Problem solved:** Progress updates arrive rapidly during tool execution; client doesn't need every intermediate state
+- **Why this works:** For progress tracking, only the _final_ state in a rate-limit window matters. Replacing pending (not queueing) means stale updates never reach client; semantic aligns with actual problem (show user current state, not history). Prevents message backlog.
+- **Trade-offs:** Simpler logic (one pending event, not a queue), smaller payloads, fresher data on client; cost is lost visibility into intermediate steps (acceptable for progress, not for audit logs)
+
+#### [Pattern] Graceful degradation: useToolProgress accepts undefined WebSocket connection and silently stops showing progress (2026-03-15)
+- **Problem solved:** Tool progress sideband (port 3002) is optional infrastructure. Dev environment might not have it running.
+- **Why this works:** Fail-soft approach improves DX - dev doesn't need progress server running to develop/test chat. Main chat functionality works without it.
+- **Trade-offs:** Gains: better developer experience, optional feature. Loses: silent degradation - user doesn't know progress labels aren't working, might think tool is hanging when actually it's just not showing live updates.
+
+#### [Gotcha] localStorage persistence provides no cross-tab sync, no server persistence, and no undo/redo without explicit implementation (2026-03-15)
+- **Situation:** The flow builder uses localStorage.setItem/getItem for MVP state persistence. It works for single-session workflows but has hard limits for multi-device or collaborative use.
+- **Root cause:** localStorage is the simplest, zero-backend persistence layer. Synchronous, no setup, works offline. Appropriate for a starter kit MVP.
+- **How to avoid:** Simplicity and fast prototyping vs. loss of changes if browser cache clears, no cross-device access, no automatic undo/redo, and no multi-tab sync if the same flow is edited simultaneously.
+
+#### [Pattern] Implement AbortController for streaming chat cancellation in test area; prevents orphaned connections (2026-03-15)
+- **Problem solved:** Users may cancel long-running streaming responses mid-completion
+- **Why this works:** Streaming connections hold resources (socket buffers, server threads). AbortController allows graceful cleanup without waiting for stream completion.
+- **Trade-offs:** Gained: resource efficiency, responsive cancellation. Cost: must wire AbortSignal through fetch chain
+
+#### [Pattern] parsePenFileFromPath uses dynamic import('node:fs/promises') instead of static import. Avoids bundling Node.js code into browser bundles while keeping the function available at runtime. (2026-03-15)
+- **Problem solved:** Parser needs fs access for file reading in Node.js, but package may run in browser context via bundler
+- **Why this works:** Static import of fs would force bundlers to either include shim or error. Dynamic import stays out of dependency graph until runtime when fs is guaranteed available.
+- **Trade-offs:** Slightly more complex code = tree-shaking friendly. Function only works in Node.js at runtime, not at build time (intended).
+
+### Component preview rendered in isolated canvas context (separate React root) to prevent playground UI side effects from leaking into previewed components (2026-03-15)
+- **Context:** Component library stories often have global CSS, context providers, or event listeners that could interfere with the playground UI (e.g., a story that sets body background color).
+- **Why:** Isolation ensures components are tested in a clean environment, and story side effects don't break the playground chrome (sidebar, toolbar, prop editor). Single responsibility per render tree.
+- **Rejected:** Share the same React root (simpler code, but stories can crash the UI); use iframe (complete isolation but loses React context from host, complicates prop passing)
+- **Trade-offs:** Easier: stories are truly independent, can't break playground. Harder: minor complexity to maintain dual React roots and prop/event syncing.
+- **Breaking if changed:** If code assumes all React components share a single root (e.g., for global theme context), it will silently fail—components in preview won't inherit provider context from host app.

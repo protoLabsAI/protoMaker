@@ -97,3 +97,10 @@ usageStats:
 - **Problem solved:** Avoid collisions with other localStorage keys in shared browser environment (esp. with iframes or multiple tabs)
 - **Why this works:** Prevents accidental overwrites from other scripts; makes feature keys searchable and auditable in DevTools
 - **Trade-offs:** Gained: namespace isolation and discoverability; lost: shorter keys
+
+### HITL (Human-in-the-Loop) tool approval wired via append() with semantic data metadata: `{ type: 'tool-approval', approvalId, approved }` (2026-03-15)
+- **Context:** When model requests approval for destructive tool calls, must send user's decision back to model in a way that server can parse and route correctly
+- **Why:** Reuses append() mechanism (single integration point), keeps approval messages in conversation stream (maintains ordering/context), metadata field is separate from visible text content so server can distinguish semantic intent.
+- **Rejected:** Separate API endpoint for approvals (breaks message ordering), embedding approval in regular text (ambiguous parsing), custom message type (requires AI SDK changes)
+- **Trade-offs:** Gains: leverages existing infrastructure, maintains message stream coherence. Loses: server must parse both content AND data field to understand message type, text content becomes somewhat redundant.
+- **Breaking if changed:** Server side must check both message.content and message.data to properly route approval messages. If server only looks at content, approvals are silently treated as regular text.

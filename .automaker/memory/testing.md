@@ -164,3 +164,48 @@ usageStats:
 - **Situation:** Multi-signal keyword matching test miscalculated expected score by omitting a matching signal that was actually present in the agent description.
 - **Root cause:** Keyword matching is cumulative across multiple signal sources (agent name, description, extends). Test assertion only counted primary signals and missed secondary keyword contributions.
 - **How to avoid:** Fixing test assertion requires understanding all signal sources. Cost is careful scoring audit; benefit is accurate confidence calibration.
+
+#### [Pattern] Use TypeScript compilation as verification gate instead of Playwright for scaffolding phases with no runnable app (2026-03-15)
+- **Problem solved:** Phase 1 creates static CSS/TSX template files. No app server, no DOM, no browser runtime available for end-to-end tests.
+- **Why this works:** Pragmatic verification matching project phase constraints. TypeScript catches structural errors (type safety, exports, imports). Playwright requires running application, which doesn't exist until later phases.
+- **Trade-offs:** Catches fewer bugs (no runtime logic) but appropriate for token scope. Full E2E testing happens when app shell exists in later phases.
+
+#### [Gotcha] Test imports required migration to kebab-case module paths (registry.js, define-tool.js, mcp-adapter.js, express-adapter.js) after tools package refactoring (2026-03-15)
+- **Situation:** Build output or export map changed module naming convention; tests had to be updated in lockstep
+- **Root cause:** Tools package build/export map likely changed to kebab-case (common convention for npm packages). Tests importing tools must match the actual export paths.
+- **How to avoid:** Consistent naming convention across package. Cost: all consumers must update imports; easy to miss and cause test failures.
+
+#### [Gotcha] TypeScript/tsx module resolution in template packages walks up to parent node_modules even though npm install can't run in template (2026-03-15)
+- **Situation:** Verification test ran via tsx from within package; package has @@PROJECT_NAME placeholders so npm install fails; but ws and @types/ws are needed
+- **Root cause:** Node.js module resolution doesn't just look in ./node_modules; it traverses up to parent/node_modules/… until found. In monorepo worktree, parent node_modules inherits from root. tsx leverages this same traversal. Breaks the assumption that template packages are isolated.
+- **How to avoid:** Test runs successfully using parent deps (realistic for actual usage), but surprising that package without node_modules can import; decouples test environment from package environment slightly
+
+#### [Pattern] Cannot directly run `npm install` or test templates containing @@PROJECT_NAME placeholders. Validate template correctness via file structure verification + verifying main server still builds, not by attempting template scaffolding. (2026-03-15)
+- **Problem solved:** Template contains placeholder that's substituted during actual user scaffolding, but template directory itself cannot be executed
+- **Why this works:** Placeholder replacement happens at scaffolding time via copy+sed, not within template directory. Attempting npm install in template with @@PROJECT_NAME in package.json fails. Structural validation (files exist, contain expected patterns) + dependency impact testing (main server build) catches issues without false failures.
+- **Trade-offs:** Requires more sophisticated validation scripts; cannot test full npm install flow in template directory; removes false blockers; higher confidence that scaffolded instances will work
+
+#### [Gotcha] Playwright E2E verification skipped because packages/app has no Vite entry point (no main.tsx, index.html). Library code (store, hook) is TypeScript-verified but not integration-tested. (2026-03-15)
+- **Situation:** Feature builds store + hook as library code, but app skeleton lacks entry point to launch and test persistence/API flow.
+- **Root cause:** Incremental feature development: store + hook delivered this phase, full app wiring (Vite entry, server routes) in next phase. Store/hook are library patterns, not standalone app code.
+- **How to avoid:** TS verification high confidence for library code; E2E verification deferred. Acceptance criteria 'sessions persist' and 'model flows through' validated next phase when full app boots.
+
+#### [Pattern] Verify template artifacts via structural inspection (file existence, export signatures, API patterns) instead of runtime tests when the template environment can't be directly executed in the build context (2026-03-15)
+- **Problem solved:** The ai-agent-app starter kit is a template in the monorepo. It depends on @xyflow/react which isn't installed during template generation. Direct Playwright testing is impossible without 'npm install' at template load time.
+- **Why this works:** Templates can't run in their source location due to uninstalled peer dependencies. A Node.js verification script inspects 25 export signatures and API patterns instead. This catches structural/contract violations without runtime overhead and works entirely in the build environment.
+- **Trade-offs:** Structural checks are fast and environment-agnostic but catch only API contract violations, not runtime logic bugs or integration issues.
+
+#### [Pattern] Verification via TypeScript compilation: create a temporary .ts file that imports and exercises all public APIs, compile with --noEmit to type-check the entire surface, then delete. No test runner needed. (2026-03-15)
+- **Problem solved:** First smoke test for a new library before committing, ensuring all exported types and functions are correctly typed and wired
+- **Why this works:** TypeScript's type checker catches real usage errors that documentation review misses; immediate feedback without test infrastructure overhead; forces functions to actually be called with correct signatures
+- **Trade-offs:** Requires cleanup (delete __verify__.ts) but guarantees zero compilation errors in real consumer code paths
+
+#### [Gotcha] WCAG contrast calculation must convert Oklch→linear sRGB→luminance per spec. Direct use of oklch.l value produces incorrect contrast ratios that pass tests but fail real-world WCAG validation. (2026-03-15)
+- **Situation:** Implementation of WCAG AA/AAA compliance checking requires computing relative luminance of foreground and background colors.
+- **Root cause:** WCAG 2.1 spec defines luminance in relative to D65 illuminant over linear sRGB, not in the oklch lightness dimension. oklch.l approximates perceived lightness but is not the same as relative luminance.
+- **How to avoid:** Correct implementation adds conversion overhead (3 matrix multiplications per color), but ensures compliance. Simplified approach would fail when ratios are close to threshold (14:1 vs 15:1).
+
+#### [Pattern] Story metadata (argTypes, variants) stored as JavaScript objects in CSF files, parsed and used to auto-generate prop controls UI at runtime (2026-03-15)
+- **Problem solved:** Prop editor needs to know what controls to render (text input, toggle, color picker, range, select) for each story without hardcoding a prop list.
+- **Why this works:** Declarative metadata (argTypes) is standard CSF pattern. Parsing it at runtime means prop controls are always in sync with story definition—no duplication. Reduces boilerplate for story authors.
+- **Trade-offs:** Easier: story author writes argTypes once, controls appear. Harder: story author must know argTypes schema and be disciplined; invalid argTypes config silently renders broken controls.

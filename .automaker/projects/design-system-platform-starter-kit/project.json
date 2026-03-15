@@ -1,0 +1,513 @@
+{
+  "slug": "design-system-platform-starter-kit",
+  "title": "Design System Platform Starter Kit",
+  "goal": "Build an AI-driven design system platform starter kit that uses .pen files as the single source of truth, converts designs to React/HTML components, includes component documentation, a TinaCMS site builder, and AI agents for design, implementation, accessibility, and color theory — all scaffoldable via create-protolab.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-foundation-pen-parser-code-generator",
+      "title": "Foundation — .pen Parser + Code Generator",
+      "description": "Extract and extend the .pen parser into the starter kit. Build the core pen-to-React and pen-to-HTML code generation pipeline. This is the foundation everything else builds on.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "extract-pen-parser-and-type-system",
+          "title": "Extract .pen parser and type system",
+          "description": "Create packages/pen/ in the starter kit. Extract PenDocument, PenNode (15 node types), and all .pen types from libs/types/src/pen.ts. Extract parsePenFile, traverseNodes, findNodeById, findNodes, findReusableComponents, resolveVariable, resolveRef, extractTheme, buildComponentMap from libs/pen-parser/. Create style-utils module extracting PenFill/PenStroke to CSS conversion from designs-view renderer. Strip all @protolabsai imports. Include the shadcn-kit.pen as an example design file.",
+          "filesToModify": [
+            "libs/templates/starters/design-system/packages/pen/src/types.ts",
+            "libs/templates/starters/design-system/packages/pen/src/parser.ts",
+            "libs/templates/starters/design-system/packages/pen/src/traversal.ts",
+            "libs/templates/starters/design-system/packages/pen/src/variables.ts",
+            "libs/templates/starters/design-system/packages/pen/src/style-utils.ts"
+          ],
+          "acceptanceCriteria": [
+            "All 15 PenNode types extracted",
+            "parsePenFile parses .pen JSON correctly",
+            "traverseNodes visits all nodes depth-first",
+            "findReusableComponents identifies reusable: true frames",
+            "resolveVariable resolves $--variable references",
+            "Style utils convert fills/strokes to CSS",
+            "Zero @protolabsai imports"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1773570576068-ldwrkrbou",
+          "executionStatus": "blocked"
+        },
+        {
+          "number": 2,
+          "name": "build-pen-to-react-code-generator",
+          "title": "Build pen-to-React code generator",
+          "description": "Create packages/codegen/ with a pen-to-React pipeline. Takes a PenDocument AST, identifies component boundaries (reusable: true frames), and generates React component source code. For each reusable component: extract layout tree, convert frames to JSX divs with CSS flexbox, convert text nodes to styled spans, convert icon-fonts to Lucide imports, extract variables as CSS custom properties, generate prop interfaces from variable references. Output: .tsx files with co-located CSS modules or Tailwind classes.",
+          "filesToModify": [
+            "libs/templates/starters/design-system/packages/codegen/src/react-generator.ts",
+            "libs/templates/starters/design-system/packages/codegen/src/jsx-serializer.ts",
+            "libs/templates/starters/design-system/packages/codegen/src/prop-extractor.ts",
+            "libs/templates/starters/design-system/packages/codegen/src/import-generator.ts",
+            "libs/templates/starters/design-system/packages/codegen/src/css-extractor.ts"
+          ],
+          "acceptanceCriteria": [
+            "Generates valid .tsx files from .pen components",
+            "Frames convert to divs with CSS flexbox",
+            "Text nodes convert to styled spans",
+            "Variables become CSS custom properties",
+            "Props extracted from variable references",
+            "Generated code compiles with tsc"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1773570576073-vntzanqmk",
+          "executionStatus": "in-progress"
+        },
+        {
+          "number": 3,
+          "name": "build-pen-to-html-code-generator",
+          "title": "Build pen-to-HTML code generator",
+          "description": "Add HTML/CSS output target to packages/codegen/. Generates semantic HTML with CSS custom properties. Simpler than React output — no props, no imports, just clean HTML + CSS. Useful for static sites, email templates, and framework-agnostic output.",
+          "filesToModify": [
+            "libs/templates/starters/design-system/packages/codegen/src/html-generator.ts",
+            "libs/templates/starters/design-system/packages/codegen/src/css-generator.ts"
+          ],
+          "acceptanceCriteria": [
+            "Generates valid HTML from .pen components",
+            "CSS uses custom properties for theming",
+            "Output renders correctly in a browser",
+            "Semantic HTML elements used where appropriate"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773570576074-escd5jrzx",
+          "executionStatus": "in-review"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773570576065-mmuyqlja4"
+    },
+    {
+      "number": 2,
+      "slug": "02-design-tokens-w3c-dtcg-color-science",
+      "title": "Design Tokens — W3C DTCG + Color Science",
+      "description": "Build the design token system using W3C DTCG standard format. Port the color science engine from proto2 for palette generation with WCAG compliance.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "build-w3c-dtcg-token-system",
+          "title": "Build W3C DTCG token system",
+          "description": "Create packages/tokens/ implementing the W3C Design Tokens Community Group specification (2025.10 stable). Extract design tokens from .pen file variables into DTCG JSON format. Export to CSS custom properties, Tailwind config, and Style Dictionary format. Support theming (light/dark modes) via DTCG groups. Include token validation against the spec.",
+          "filesToModify": [
+            "libs/templates/starters/design-system/packages/tokens/src/dtcg.ts",
+            "libs/templates/starters/design-system/packages/tokens/src/extractor.ts",
+            "libs/templates/starters/design-system/packages/tokens/src/exporters/css.ts",
+            "libs/templates/starters/design-system/packages/tokens/src/exporters/tailwind.ts"
+          ],
+          "acceptanceCriteria": [
+            "Tokens extracted from .pen variables in DTCG format",
+            "CSS custom property export works",
+            "Tailwind config export works",
+            "Light/dark theme support",
+            "Token validation against W3C spec"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1773570576078-mqttaz7yv",
+          "executionStatus": "in-progress"
+        },
+        {
+          "number": 2,
+          "name": "port-color-science-engine-from-proto2",
+          "title": "Port color science engine from proto2",
+          "description": "Create packages/color/ porting the LCH color science from proto2's @proto/utils. Include: 11-step color scale generation (50-950), color harmonies (complementary, triadic, analogous, split-complementary, tetradic), WCAG contrast checking and scoring, semantic color mapping (primary, secondary, destructive, muted, etc.), palette generation from a single accent color. All using LCH/Oklch for perceptual uniformity.",
+          "filesToModify": [
+            "libs/templates/starters/design-system/packages/color/src/scales.ts",
+            "libs/templates/starters/design-system/packages/color/src/harmonies.ts",
+            "libs/templates/starters/design-system/packages/color/src/contrast.ts",
+            "libs/templates/starters/design-system/packages/color/src/palette.ts",
+            "libs/templates/starters/design-system/packages/color/src/semantic.ts"
+          ],
+          "acceptanceCriteria": [
+            "11-step scales generated from any base color",
+            "All harmony types produce valid palettes",
+            "WCAG AA/AAA contrast ratios calculated correctly",
+            "Semantic color mapping works",
+            "Palette generation from single accent color"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773570576078-z4zse2dah",
+          "executionStatus": "in-progress"
+        }
+      ],
+      "status": "completed",
+      "epicId": "feature-1773570576077-s56afpj35"
+    },
+    {
+      "number": 3,
+      "slug": "03-component-playground-documentation",
+      "title": "Component Playground + Documentation",
+      "description": "Build a Ladle-inspired component playground for live preview and auto-generated documentation from .pen files and component source.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "build-component-playground",
+          "title": "Build component playground",
+          "description": "Create a Vite-native component playground in packages/app with a /playground route. Ladle-inspired: fast startup, hot reload, component isolation. Features: component list sidebar, live preview panel, props editor (auto-generated from component schemas), viewport resizer, theme switcher (light/dark). Load components from the generated React output. Support CSF (Component Story Format) for custom stories.",
+          "filesToModify": [
+            "libs/templates/starters/design-system/packages/app/src/routes/playground.tsx",
+            "libs/templates/starters/design-system/packages/app/src/components/playground/component-list.tsx",
+            "libs/templates/starters/design-system/packages/app/src/components/playground/preview-panel.tsx",
+            "libs/templates/starters/design-system/packages/app/src/components/playground/props-editor.tsx"
+          ],
+          "acceptanceCriteria": [
+            "Component list shows all generated components",
+            "Live preview renders selected component",
+            "Props editor allows interactive prop changes",
+            "Theme switcher toggles light/dark",
+            "Viewport resizer works",
+            "Fast startup (<2s)"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1773570576080-2vxwy330f",
+          "executionStatus": "in-progress"
+        },
+        {
+          "number": 2,
+          "name": "build-auto-generated-documentation",
+          "title": "Build auto-generated documentation",
+          "description": "Create a /docs route with auto-generated component documentation. For each component: props table (from TypeScript interface), usage examples (from .pen composition), design token references, accessibility notes, related components. Use the .pen file metadata and generated code as sources. Render docs with markdown + live component embeds.",
+          "filesToModify": [
+            "libs/templates/starters/design-system/packages/app/src/routes/docs.tsx",
+            "libs/templates/starters/design-system/packages/app/src/components/docs/props-table.tsx",
+            "libs/templates/starters/design-system/packages/app/src/components/docs/usage-example.tsx",
+            "libs/templates/starters/design-system/packages/codegen/src/docs-generator.ts"
+          ],
+          "acceptanceCriteria": [
+            "Props table auto-generated from TypeScript",
+            "Usage examples from .pen compositions",
+            "Design token references linked",
+            "Live component embeds work",
+            "Markdown rendering for custom docs"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773570576081-r4t9h6ngf",
+          "executionStatus": "blocked"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773570576079-vu74rxh6j"
+    },
+    {
+      "number": 4,
+      "slug": "04-tinacms-site-builder",
+      "title": "TinaCMS Site Builder",
+      "description": "Integrate TinaCMS for git-backed content management and visual editing of the documentation site.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "integrate-tinacms-with-vite-react",
+          "title": "Integrate TinaCMS with Vite+React",
+          "description": "Add TinaCMS to the starter kit. Configure for git-backed content (markdown + JSON in the repo). Set up content schema for: pages, component docs, design guidelines, changelog. Visual editing via useTina hook. Create a /site route for the public-facing documentation site with TinaCMS admin panel at /admin. Self-hosted mode (no TinaCloud dependency).",
+          "filesToModify": [
+            "libs/templates/starters/design-system/packages/app/tina/config.ts",
+            "libs/templates/starters/design-system/packages/app/tina/schema.ts",
+            "libs/templates/starters/design-system/packages/app/src/routes/site.tsx",
+            "libs/templates/starters/design-system/packages/app/src/routes/admin.tsx",
+            "libs/templates/starters/design-system/content/pages/index.md"
+          ],
+          "acceptanceCriteria": [
+            "TinaCMS admin panel accessible at /admin",
+            "Visual editing works with live preview",
+            "Content stored as markdown/JSON in git",
+            "Pages, component docs, guidelines content types",
+            "Self-hosted mode (no external dependency)"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1773570576082-5ol0gomw6"
+        },
+        {
+          "number": 2,
+          "name": "build-site-theme-and-layout-system",
+          "title": "Build site theme and layout system",
+          "description": "Create the documentation site theme and layout components. Navigation sidebar with component categories (atoms/molecules/organisms), search, breadcrumbs. Token-driven theming using the DTCG token system. Responsive layout. Print-friendly component sheets.",
+          "filesToModify": [
+            "libs/templates/starters/design-system/packages/app/src/components/site/layout.tsx",
+            "libs/templates/starters/design-system/packages/app/src/components/site/sidebar.tsx",
+            "libs/templates/starters/design-system/packages/app/src/components/site/search.tsx"
+          ],
+          "acceptanceCriteria": [
+            "Navigation sidebar with atomic design categories",
+            "Search across components and docs",
+            "Token-driven theming",
+            "Responsive layout",
+            "Breadcrumb navigation"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773570576083-v9l4pip2z"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773570576081-zpwsvwcgk"
+    },
+    {
+      "number": 5,
+      "slug": "05-ai-agents-design-implement",
+      "title": "AI Agents — Design + Implement",
+      "description": "Build the core AI agents for design decisions and code generation from .pen files.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "build-design-agent",
+          "title": "Build Design Agent",
+          "description": "Create an AI agent that makes design decisions: layout, spacing, typography, responsive breakpoints. Uses Pencil MCP tools (batch_design, set_variables, get_screenshot, snapshot_layout) to manipulate .pen files. Takes natural language design requests and translates them into .pen modifications. Includes system prompt with design principles (spacing scales, typography hierarchy, color theory basics).",
+          "filesToModify": [
+            "libs/templates/starters/design-system/packages/agents/src/design-agent.ts",
+            "libs/templates/starters/design-system/packages/agents/src/prompts/design.md",
+            "libs/templates/starters/design-system/packages/server/src/routes/agents.ts"
+          ],
+          "acceptanceCriteria": [
+            "Agent modifies .pen files via Pencil MCP",
+            "Natural language design requests work",
+            "Layout and spacing decisions follow design principles",
+            "Agent can create new components in .pen files",
+            "Screenshot verification after modifications"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1773570576084-87bj3kxwe"
+        },
+        {
+          "number": 2,
+          "name": "build-implement-agent",
+          "title": "Build Implement Agent",
+          "description": "Create an AI agent that converts .pen designs to production React code. Uses the pen-to-react pipeline from packages/codegen. Can generate individual components or entire component libraries. Understands the code generation output and can refine it based on feedback. Writes generated components to the output directory with proper file structure.",
+          "filesToModify": [
+            "libs/templates/starters/design-system/packages/agents/src/implement-agent.ts",
+            "libs/templates/starters/design-system/packages/agents/src/prompts/implement.md"
+          ],
+          "acceptanceCriteria": [
+            "Agent generates React from .pen via codegen pipeline",
+            "Can generate single component or full library",
+            "Writes files to correct output directory",
+            "Generated code passes TypeScript compilation",
+            "Agent can refine output based on feedback"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773570576085-8yet9utml"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773570576084-zx33jq3dj"
+    },
+    {
+      "number": 6,
+      "slug": "06-ai-agents-a11y-color",
+      "title": "AI Agents — A11y + Color",
+      "description": "Build accessibility auditing and color theory agents.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "build-a11y-agent",
+          "title": "Build A11y Agent",
+          "description": "Create an AI agent that audits components for accessibility. Wraps axe-core for automated WCAG checking. AI analysis layer on top for semantic a11y issues that axe-core misses (context-dependent alt text, logical tab order, meaningful link text). Generates remediation suggestions with code examples. Can audit individual components or full pages.",
+          "filesToModify": [
+            "libs/templates/starters/design-system/packages/agents/src/a11y-agent.ts",
+            "libs/templates/starters/design-system/packages/agents/src/prompts/a11y.md",
+            "libs/templates/starters/design-system/packages/a11y/src/audit.ts",
+            "libs/templates/starters/design-system/packages/a11y/src/axe-wrapper.ts"
+          ],
+          "acceptanceCriteria": [
+            "axe-core audit runs on rendered components",
+            "AI analysis identifies semantic a11y issues",
+            "Remediation suggestions include code examples",
+            "WCAG AA/AAA compliance reported",
+            "Can audit single component or full page"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773570576085-vgklpzblc"
+        },
+        {
+          "number": 2,
+          "name": "build-color-agent",
+          "title": "Build Color Agent",
+          "description": "Create an AI agent for color theory and palette management. Uses the color science engine (packages/color/) for palette generation. Can generate complete color systems from a single brand color. Ensures WCAG contrast compliance across all color pairs. Supports theme variant generation (light/dark/high-contrast). Integrates with the token system to update design tokens.",
+          "filesToModify": [
+            "libs/templates/starters/design-system/packages/agents/src/color-agent.ts",
+            "libs/templates/starters/design-system/packages/agents/src/prompts/color.md"
+          ],
+          "acceptanceCriteria": [
+            "Generates full palette from single brand color",
+            "WCAG contrast compliance for all pairs",
+            "Light/dark/high-contrast theme variants",
+            "Updates design tokens via token system",
+            "Color harmony suggestions"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773570576086-yaanyljkd"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773570576085-x15merkv5"
+    },
+    {
+      "number": 7,
+      "slug": "07-xcl-component-registry",
+      "title": "XCL + Component Registry",
+      "description": "Port the XCL converter and component registry pattern from proto2 for efficient AI-driven component work.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "port-xcl-converter-from-proto2",
+          "title": "Port XCL converter from proto2",
+          "description": "Create packages/xcl/ porting the XML Component Language converter from proto2. XCL provides 80-96% token reduction for LLM component operations. Include: component-to-XCL serializer, XCL-to-component deserializer, XCL-to-TSX direct converter, round-trip fidelity validation. Adapt for React 19 patterns (no forwardRef, function declarations).",
+          "filesToModify": [
+            "libs/templates/starters/design-system/packages/xcl/src/serializer.ts",
+            "libs/templates/starters/design-system/packages/xcl/src/deserializer.ts",
+            "libs/templates/starters/design-system/packages/xcl/src/xcl-to-tsx.ts",
+            "libs/templates/starters/design-system/packages/xcl/src/types.ts"
+          ],
+          "acceptanceCriteria": [
+            "Component to XCL serialization works",
+            "XCL to component deserialization works",
+            "XCL to TSX direct conversion generates valid code",
+            "Round-trip fidelity 100%",
+            "80%+ token reduction verified"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773570576087-eelauv9o2"
+        },
+        {
+          "number": 2,
+          "name": "build-component-registry",
+          "title": "Build component registry",
+          "description": "Create packages/registry/ with a type-safe component registry. Adapted from proto2's ComponentRegistry pattern. Maps component names to: schemas (JSON Schema from TypeScript), import paths, categories (atomic design), framework targets, .pen source references. Search by name, category, tags. Auto-populate from generated components.",
+          "filesToModify": [
+            "libs/templates/starters/design-system/packages/registry/src/registry.ts",
+            "libs/templates/starters/design-system/packages/registry/src/types.ts",
+            "libs/templates/starters/design-system/packages/registry/src/schema-generator.ts"
+          ],
+          "acceptanceCriteria": [
+            "Register components with schemas and metadata",
+            "Search by name, category, tags",
+            "Auto-populate from generated React components",
+            "JSON Schema auto-generated from TypeScript interfaces",
+            "Atomic design hierarchy supported"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773570576088-wmul4dxcx"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773570576087-iipdh8fyg"
+    },
+    {
+      "number": 8,
+      "slug": "08-mcp-server-monorepo-skeleton",
+      "title": "MCP Server + Monorepo Skeleton",
+      "description": "Build the MCP server exposing all platform capabilities and wire the monorepo scaffold.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "build-mcp-server-for-design-system",
+          "title": "Build MCP server for design system",
+          "description": "Create packages/mcp/ exposing design system capabilities as MCP tools. Tool categories: Design (read/write .pen files), Tokens (CRUD, export CSS/Tailwind), Components (generate React/HTML, list components), A11y (audit component, check contrast), Color (generate palette, check contrast). Uses the tools package pattern from ai-agent-app (defineSharedTool + toMCPTool adapter).",
+          "filesToModify": [
+            "libs/templates/starters/design-system/packages/mcp/src/index.ts",
+            "libs/templates/starters/design-system/packages/mcp/src/tools/design-tools.ts",
+            "libs/templates/starters/design-system/packages/mcp/src/tools/token-tools.ts",
+            "libs/templates/starters/design-system/packages/mcp/src/tools/component-tools.ts",
+            "libs/templates/starters/design-system/packages/mcp/src/tools/a11y-tools.ts"
+          ],
+          "acceptanceCriteria": [
+            "MCP server starts and lists all tools",
+            "Design tools read/write .pen files",
+            "Token tools export to CSS/Tailwind",
+            "Component tools trigger code generation",
+            "A11y tools run audits and return results"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1773570576089-v65cdm34g"
+        },
+        {
+          "number": 2,
+          "name": "create-monorepo-skeleton-and-scaffold-function",
+          "title": "Create monorepo skeleton and scaffold function",
+          "description": "Create the starter kit directory structure at libs/templates/starters/design-system/ with root package.json (npm workspaces). Packages: pen, codegen, tokens, color, a11y, xcl, registry, agents, mcp, app, server. Add scaffoldDesignSystemStarter() to scaffold.ts. Add design-system to StarterKitType. Wire all integration points.",
+          "filesToModify": [
+            "libs/templates/starters/design-system/package.json",
+            "libs/templates/src/types.ts",
+            "libs/templates/src/scaffold.ts",
+            "libs/templates/src/features.ts",
+            "libs/templates/src/index.ts",
+            "apps/server/src/routes/setup/routes/scaffold-starter.ts",
+            "apps/ui/src/lib/templates.ts"
+          ],
+          "acceptanceCriteria": [
+            "Starter directory with all packages",
+            "scaffoldDesignSystemStarter copies and substitutes names",
+            "StarterKitType includes design-system",
+            "Template appears in UI picker",
+            "npm run build:packages passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773570576090-1h03tunqr"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773570576089-vpjppwbec"
+    },
+    {
+      "number": 9,
+      "slug": "09-documentation-polish-ship",
+      "title": "Documentation + Polish + Ship",
+      "description": "Write comprehensive docs, create starter features for the board, and verify end-to-end.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "write-documentation-and-readme",
+          "title": "Write documentation and README",
+          "description": "Create docs/ at the starter kit root following Diataxis framework. Getting started quickstart, concept guides (design-to-code pipeline, token system, AI agents), how-to guides (adding components, customizing tokens, running agents, building the site), reference docs (API, MCP tools, .pen format). Create comprehensive README with architecture diagram.",
+          "filesToModify": [
+            "libs/templates/starters/design-system/README.md",
+            "libs/templates/starters/design-system/docs/getting-started/quickstart.md",
+            "libs/templates/starters/design-system/docs/concepts/design-to-code.md",
+            "libs/templates/starters/design-system/docs/guides/adding-components.md",
+            "libs/templates/starters/design-system/docs/reference/pen-format.md"
+          ],
+          "acceptanceCriteria": [
+            "Quickstart gets user running in 5 minutes",
+            "Design-to-code pipeline documented end-to-end",
+            "All MCP tools documented",
+            ".pen format reference complete",
+            "README with architecture diagram"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773570576091-erpijvoar"
+        },
+        {
+          "number": 2,
+          "name": "end-to-end-verification-and-build-test",
+          "title": "End-to-end verification and build test",
+          "description": "Scaffold to temp directory, run npm install and npm run build, verify no @@PROJECT_NAME tokens remain, verify no @protolabsai imports. Test the full pipeline: drop .pen file, run codegen, verify React output compiles, verify docs generate, verify playground renders. Run main repo tests.",
+          "filesToModify": [],
+          "acceptanceCriteria": [
+            "Scaffolded output builds clean",
+            "No @@PROJECT_NAME tokens remain",
+            "No @protolabsai imports in output",
+            ".pen to React pipeline produces valid components",
+            "Playground renders generated components",
+            "Main repo tests pass"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773570576091-b5y5xio8a"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773570576090-tkptqcl39"
+    }
+  ],
+  "prd": {
+    "situation": "protoLabs Studio has a mature .pen design file ecosystem: a parser (libs/pen-parser), a full React renderer (designs-view), a property inspector, component library panel, and Pencil MCP integration. Proto2 explored AI-driven design system tooling with XCL (80-96% token reduction), LCH color science (58/58 tests), and component registries. The scaffold system supports docs, portfolio, landing-page, extension, general, and ai-agent-app starter kits but has no design system kit. No open-source AI-native end-to-end design system platform exists in the market.",
+    "problem": "Frontend teams building design systems have no integrated open-source platform. Current tools are fragmented: Storybook for components (no design integration), zeroheight for docs (SaaS only), Knapsack for design-code sync (enterprise $$$), Locofy for Figma-to-code (Figma-locked). Teams must glue 4-5 tools together. AI-driven design-to-code generation exists only in closed platforms. The .pen file format and existing parser/renderer infrastructure are underutilized.",
+    "approach": "Extract and extend the .pen ecosystem into a monorepo starter kit. Build a pen-to-code generator layered on the existing parser and style-utils. Port XCL converter and color science from proto2. Add W3C DTCG design token management. Build a Ladle-inspired component playground. Integrate TinaCMS for git-backed site building. Create AI agents (Design, Implement, A11y, Color) using Claude Agent SDK with MCP tools. Ship as libs/templates/starters/design-system/.",
+    "results": "Users scaffold a complete design system platform. They drop .pen files in, AI agents generate React components with proper tokens and documentation. Component playground shows live previews. TinaCMS site builder lets non-developers manage the documentation site. A11y agent audits components automatically. Color agent generates WCAG-compliant palettes. Everything is git-backed, self-hosted, and extensible via MCP plugins.",
+    "constraints": "React 19 best practices only. Claude Agent SDK as primary AI driver. npm workspaces. Must integrate with existing scaffold system. All extracted code fully decoupled from @protolabsai packages. W3C DTCG token format for interop. Ladle-level startup speed for playground (not Storybook-heavy). TinaCMS lightweight mode (git-backed, no Redis/MongoDB). Port proto2 assets with tests from day one.",
+    "generatedAt": "2026-03-15T08:30:00.000Z"
+  },
+  "createdAt": "2026-03-15T08:33:36.469Z",
+  "updatedAt": "2026-03-15T12:53:41.870Z"
+}

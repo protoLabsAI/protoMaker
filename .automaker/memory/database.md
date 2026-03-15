@@ -241,3 +241,8 @@ usageStats:
 - **Rejected:** Per-file pattern would require directory enumeration on list(), separate file handles per automation, and directory-level transaction handling
 - **Trade-offs:** Gained: atomic guarantees, simple list implementation. Lost: file-level isolation, easier concurrent access patterns
 - **Breaking if changed:** Switching to per-file requires rewriting persistence layer: map-reduce across directory, handle file conflicts in concurrent scenarios, deal with orphaned files
+
+#### [Gotcha] WeatherCard handles both direct tool output and `{ success, data }` wrapped output shapes inconsistently (2026-03-15)
+- **Situation:** Tool result renderers receive output from defineSharedTool, which can return either the value directly or wrapped in success/data object
+- **Root cause:** Defensive programming - account for both possible shapes from tool definition. Ensures renderer works regardless of tool output shape.
+- **How to avoid:** Gains: renderer is resilient to API variations. Loses: suggests inconsistent API contract - unclear which shape a tool will use.
