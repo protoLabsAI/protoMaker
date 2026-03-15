@@ -64,6 +64,7 @@ export default defineConfig({
       { text: 'Guides', link: '/guides/' },
       { text: 'Concepts', link: '/concepts/' },
       { text: 'Reference', link: '/reference/' },
+      { text: 'Starter Kits', link: '/templates/' },
       {
         text: 'More',
         items: [
@@ -109,6 +110,12 @@ export default defineConfig({
         {
           text: 'Self-Hosting',
           items: generateSidebar('self-hosting', '/self-hosting'),
+        },
+      ],
+      '/templates/': [
+        {
+          text: 'Starter Kits',
+          items: generateSidebar('templates', '/templates'),
         },
       ],
     },
