@@ -5,7 +5,7 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 577
+  loaded: 578
   referenced: 170
   successfulFeatures: 170
 ---
@@ -419,3 +419,15 @@ usageStats:
 - **Situation:** search({ tags: ['interactive', 'navigation'] }) filters for components tagged with both, not either
 - **Root cause:** Enables precise multi-attribute filtering for specific component combinations (e.g., interactive widgets + navigation use only)
 - **How to avoid:** More expressive queries but counter-intuitive—most developers expect OR by default
+
+### Zod schema validation happens at tool definition time (defineSharedTool), not at execution time. Conversion to JSON Schema via toMCPTools creates single point of schema correctness (2026-03-15)
+- **Context:** MCP requires JSON Schema for tool definitions, but TypeScript+Zod is more developer-friendly
+- **Why:** Catches schema mismatches early (type safety), and toMCPTools conversion is more maintainable than manual JSON Schema. Tool execution handler can safely assume validated input
+- **Rejected:** Runtime validation (Zod parse in handler - more defensive but slower), manual JSON Schema (error-prone, hard to keep in sync with code)
+- **Trade-offs:** Schema errors become Zod→JSON conversion errors (opaque if toMCPTools has bugs); more upfront type safety vs less runtime overhead
+- **Breaking if changed:** If toMCPTools breaks or has schema conversion bugs, all tools become unusable to MCP clients even if handler code is correct
+
+#### [Pattern] ToolResult structured responses (always resolve, never throw): handler returns {success, data, error} instead of throwing (2026-03-15)
+- **Problem solved:** MCP CallToolRequestSchema expects error handling at transport layer, not exception throws
+- **Why this works:** MCP spec requirement for stdio transport: exceptions don't propagate cleanly, but structured responses are predictable and can be logged
+- **Trade-offs:** More verbose handler code but guaranteed to never crash MCP connection; client must check result.success (not automatic rejection)

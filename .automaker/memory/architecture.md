@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 549
-  referenced: 134
-  successfulFeatures: 134
+  loaded: 551
+  referenced: 135
+  successfulFeatures: 135
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -1732,3 +1732,18 @@ usageStats:
 - **Rejected:** Separate adapter layer or require codegen to emit registry-compatible format (decoupling overhead)
 - **Trade-offs:** Clean implementation vs tight coupling: if codegen GeneratedFile interface changes, registry breaks
 - **Breaking if changed:** Adding/removing fields from GeneratedComponentFile (e.g., adding designTokens) requires registry code update
+
+#### [Gotcha] Dynamic imports of sibling packages from dist/ paths creates hidden build dependency order: MCP server initialization requires all sibling packages (@automaker/pen, @automaker/color, etc.) to be built first (2026-03-15)
+- **Situation:** Tool handlers import design, token, component, a11y packages dynamically at runtime rather than import-time
+- **Root cause:** Avoids worktree npm hoisting issues and circular dependency problems, but shifts failure point from build to runtime
+- **How to avoid:** Runtime initialization becomes more flexible but debugging build ordering failures is harder; error messages are vague if a sibling package dist/ is missing
+
+#### [Pattern] Tool aggregation pattern: separate files per category (design-tools.ts, token-tools.ts, etc.) export arrays, then centralized index.ts collects via spread operator and converts with toMCPTools (2026-03-15)
+- **Problem solved:** Organizing 14 tools across 4 categories while maintaining single MCP registration point
+- **Why this works:** Scales better than single file and provides category-based code organization, but avoids registry pattern complexity that might be premature for 14 tools
+- **Trade-offs:** Adding a tool requires: (1) define in category file, (2) export from that file, (3) import and spread in index. Three touchpoints vs one file, but forces explicit tool ownership
+
+#### [Gotcha] defineSharedTool pattern implemented inline in src/lib/define-tool.ts with no external tools package dependency. This creates tight coupling between schema definition and MCP registration logic (2026-03-15)
+- **Situation:** Could have extracted to @automaker/tools package (like ai-agent-app starter kit), but chose inline implementation
+- **Root cause:** Faster to bootstrap, avoids package dependency, but trades reusability for velocity on this specific starter kit
+- **How to avoid:** Design system MCP is self-contained and doesn't need to share tool definition pattern with other projects; but if pattern improves in ai-agent-app, this won't benefit

@@ -256,8 +256,8 @@ usageStats:
 - **Trade-offs:** Easier: generated code guaranteed to be valid TypeScript before refinement. Harder: requires tsc as a build dependency and adds latency
 - **Breaking if changed:** If you remove this gate, generated code with type errors enters refinement loop, reducing reliability of output and increasing iteration costs
 
-
 ### Use TypeScript compilation (npx tsc --noEmit exit code 0) as verification gate for starter kit templates instead of Playwright/UI testing (2026-03-15)
+
 - **Context:** Starter kit templates are not running applications — no browser UI to test with Playwright
 - **Why:** TypeScript verification is the appropriate artifact-level verification for code templates; catches structural errors at definition time rather than runtime
 - **Rejected:** Playwright testing requires running application (starter kit templates don't); manual testing is not scalable
@@ -265,6 +265,7 @@ usageStats:
 - **Breaking if changed:** Removing TypeScript verification would allow type errors to ship in templates, deferring errors to when developers use the template
 
 #### [Pattern] Round-trip validation (ComponentDef → XCL → ComponentDef, verify equality) caught two asymmetric codec bugs before ship. 28 Playwright tests across 6 component types verified 100% fidelity. (2026-03-15)
+
 - **Problem solved:** Serializer and deserializer are separate codepaths. Each could silently lose data in one direction (e.g., serialize drops field, deserialize ignores it).
 - **Why this works:** Asymmetric bugs are hard to spot: one direction works, other direction seems to work but loses data. Round-trip testing forces both paths to be tested together. Catches lossy serialization.
 - **Trade-offs:** More test code required (need to compare deep object structures after round-trip). More coverage: catches codec asymmetries that separate tests miss.

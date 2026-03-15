@@ -5,10 +5,11 @@ relevantTo: [pattern]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 9
-  referenced: 8
-  successfulFeatures: 8
+  loaded: 10
+  referenced: 9
+  successfulFeatures: 9
 ---
+
 # pattern
 
 #### [Pattern] Role prompt injection uses multiple short-circuit returns: missing assignedRole → '', missing promptFile → '', file-not-found → warn + '', manifest error → warn + ''. Execution never fails due to incomplete role setup. (2026-03-13)

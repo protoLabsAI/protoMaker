@@ -24,8 +24,8 @@ usageStats:
 - **Root cause:** Modern JSX transform is more ergonomic and reduces boilerplate. Toolchain handles injection automatically.
 - **How to avoid:** Easier: cleaner imports, smaller compiled output. Harder: brittle—depends on hidden config that's easy to break and hard to debug (error is 'React is not defined', not 'JSX transform not configured')
 
-
 #### [Gotcha] NodeNext module resolution requires explicit .js extensions in all import paths, even within TypeScript packages (2026-03-15)
+
 - **Situation:** TypeScript source compiles to dist/.js files. Node.js ESM doesn't infer .ts→.js transformation.
 - **Root cause:** NodeNext resolution follows strict Node.js behavior: requires exact file extension. TypeScript compiler strips extensions during emit but doesn't rewrite source imports.
 - **How to avoid:** Verbose import statements (import X from './file.js') vs Node.js compatibility
