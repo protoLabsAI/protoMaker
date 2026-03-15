@@ -1,0 +1,37 @@
+{
+  "name": "@@PROJECT_NAME-xcl",
+  "version": "0.1.0",
+  "description": "XCL (XML Component Language) — 80-96% token reduction for LLM React component operations",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./serializer": {
+      "import": "./dist/serializer.js",
+      "types": "./dist/serializer.d.ts"
+    },
+    "./deserializer": {
+      "import": "./dist/deserializer.js",
+      "types": "./dist/deserializer.d.ts"
+    },
+    "./xcl-to-tsx": {
+      "import": "./dist/xcl-to-tsx.js",
+      "types": "./dist/xcl-to-tsx.d.ts"
+    },
+    "./validation": {
+      "import": "./dist/validation.js",
+      "types": "./dist/validation.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}
