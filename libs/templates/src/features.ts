@@ -94,6 +94,39 @@ const PORTFOLIO_FEATURES: StarterFeature[] = [
   },
 ];
 
+const AI_AGENT_APP_FEATURES: StarterFeature[] = [
+  {
+    title: 'Connect your first tool',
+    description:
+      'Define a custom tool using `defineSharedTool` in `packages/tools/src/`. Wire it into the server agentic loop and verify it appears in chat. Add a progress label so the UI shows live tool execution status.',
+    complexity: 'medium',
+  },
+  {
+    title: 'Add a LangGraph flow',
+    description:
+      'Create a multi-step LangGraph flow in `packages/flows/src/flows/`. Use `createLinearGraph` or `createBranchingGraph` from the flows package. Add a server route that invokes the flow and streams results back to the UI.',
+    complexity: 'large',
+  },
+  {
+    title: 'Add Langfuse tracing',
+    description:
+      'Configure Langfuse observability by setting `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, and `LANGFUSE_HOST` environment variables. Verify traces appear in the Langfuse dashboard after sending a chat message.',
+    complexity: 'small',
+  },
+  {
+    title: 'Customize the system prompt',
+    description:
+      'Edit `packages/prompts/src/` to add a role-specific system prompt. Register it in the prompt registry. Wire it to the chat route so the agent responds with the custom persona.',
+    complexity: 'medium',
+  },
+  {
+    title: 'Deploy to production',
+    description:
+      'Containerize the server with a Dockerfile. Set up environment variables for API keys and Langfuse. Deploy the UI as a static build (Vite `npm run build`) and the server as a Node.js container. Configure CORS for the production domain.',
+    complexity: 'large',
+  },
+];
+
 const EXTENSION_FEATURES: StarterFeature[] = [
   {
     title: 'Add options page settings',
@@ -144,7 +177,7 @@ export function getStarterFeatures(type: StarterKitType): StarterFeature[] {
     case 'general':
       return [...UNIVERSAL_FEATURES];
     case 'ai-agent-app':
-      return [...UNIVERSAL_FEATURES];
+      return [...UNIVERSAL_FEATURES, ...AI_AGENT_APP_FEATURES];
   }
 }
 

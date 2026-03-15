@@ -13,7 +13,7 @@ export interface StarterTemplate {
   /** How the template is provisioned */
   source: 'scaffold' | 'clone';
   /** Kit type for scaffold source — maps to scaffold endpoint */
-  kitType?: 'docs' | 'portfolio' | 'landing-page' | 'extension';
+  kitType?: 'docs' | 'portfolio' | 'landing-page' | 'extension' | 'ai-agent-app';
   /** GitHub URL for clone source */
   repoUrl?: string;
   techStack: string[];
@@ -79,6 +79,37 @@ export const starterTemplates: StarterTemplate[] = [
       'Geist font family (sans + mono)',
     ],
     category: 'frontend',
+    author: 'protoLabs',
+  },
+  {
+    id: 'ai-agent-app',
+    name: 'AI Agent App',
+    description:
+      'Full-stack agentic chat application with a streaming React UI, Express server running an Anthropic tool-use loop, shared tool definitions (MCP/LangGraph/Express adapters), LangGraph flows, prompt registry, and Langfuse tracing.',
+    source: 'scaffold',
+    kitType: 'ai-agent-app',
+    techStack: [
+      'React 19',
+      'Vite',
+      'TanStack Router',
+      'Express',
+      'Anthropic SDK',
+      'LangGraph',
+      'Vercel AI SDK',
+      'Langfuse',
+      'Tailwind CSS 4',
+    ],
+    features: [
+      'Streaming chat UI with tool invocation progress labels (WebSocket sideband)',
+      'Server-side Anthropic agentic loop with multi-turn tool use',
+      'defineSharedTool — define once, deploy to MCP, LangGraph, and Express',
+      'LangGraph flow builder with linear, loop, and branching topologies',
+      'Prompt registry with YAML frontmatter and {{variable}} interpolation',
+      'Langfuse observability with FileTracer fallback (zero-infra dev experience)',
+      'Session persistence with LRU eviction (localStorage)',
+      'Slash command system with system-prompt expansion',
+    ],
+    category: 'ai',
     author: 'protoLabs',
   },
   {
