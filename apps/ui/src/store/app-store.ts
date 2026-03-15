@@ -157,6 +157,7 @@ export interface AppState {
   // Hivemind / Cross-instance dashboard
   peers: HivemindPeer[];
   instanceFilter: 'all' | 'mine'; // 'all' = show features from all instances, 'mine' = local only
+  boardProjectFilter: string | null; // null = show all projects, slug = hide project badge for that project
   selfInstanceId: string | null; // The instanceId of this Automaker instance
 
   // Server URL runtime override
@@ -331,6 +332,7 @@ export interface AppActions {
   // Hivemind / Cross-instance dashboard actions
   setPeers: (peers: HivemindPeer[]) => void;
   setInstanceFilter: (filter: 'all' | 'mine') => void;
+  setBoardProjectFilter: (slug: string | null) => void;
   fetchPeers: () => Promise<void>;
   setSelfInstanceId: (id: string | null) => void;
   fetchSelfInstanceId: () => Promise<void>;
@@ -424,6 +426,7 @@ const initialState: AppState = {
   // Hivemind / Cross-instance dashboard
   peers: [],
   instanceFilter: 'all',
+  boardProjectFilter: null,
   selfInstanceId: null,
   // Server URL runtime override
   serverUrlOverride: (() => {
@@ -1301,6 +1304,7 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
   // Hivemind / Cross-instance dashboard actions
   setPeers: (peers) => set({ peers }),
   setInstanceFilter: (instanceFilter) => set({ instanceFilter }),
+  setBoardProjectFilter: (boardProjectFilter) => set({ boardProjectFilter }),
   fetchPeers: async () => {
     try {
       const api = getHttpApiClient();
