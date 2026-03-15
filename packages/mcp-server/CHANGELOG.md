@@ -1,5 +1,25 @@
 # @protolabsai/mcp-server
 
+## 0.58.0
+
+### Minor Changes
+
+- ### Features
+  - wire docs and portfolio starter kits into onboarding modal
+  - wire docs and portfolio starter kits into onboarding modal
+
+  ### Bug Fixes
+  - remove starter kit selection from projects-view new project dialog
+  - remove @astrojs/cloudflare adapter from docs starter
+  - remove starter kit selection from projects-view new project dialog
+  - remove @astrojs/cloudflare adapter from docs starter
+  - sync package-lock.json for staging Docker build
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/tools@0.58.0
+
 ## 0.57.0
 
 ### Minor Changes
