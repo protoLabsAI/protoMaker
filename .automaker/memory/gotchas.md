@@ -9,6 +9,7 @@ usageStats:
   referenced: 393
   successfulFeatures: 393
 ---
+
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
 # gotchas

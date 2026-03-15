@@ -53,12 +53,18 @@ import type { ComponentDef, PropDef, PropType, RenderNode, ClassCondition } from
 
 function propTypeToTS(type: PropType, optional: boolean): string {
   switch (type) {
-    case 'string': return 'string';
-    case 'number': return 'number';
-    case 'boolean': return 'boolean';
-    case 'ReactNode': return 'React.ReactNode';
-    case '() => void': return '() => void';
-    case 'React.ElementType': return 'React.ElementType';
+    case 'string':
+      return 'string';
+    case 'number':
+      return 'number';
+    case 'boolean':
+      return 'boolean';
+    case 'ReactNode':
+      return 'React.ReactNode';
+    case '() => void':
+      return '() => void';
+    case 'React.ElementType':
+      return 'React.ElementType';
     default:
       // Union literals like "'sm' | 'md' | 'lg'" pass through directly
       return type;
@@ -221,9 +227,7 @@ function generateJSX(node: RenderNode, depth: number, hasClassNames: boolean): s
 
   const children = node.children ?? [];
   const tagWithAttrs =
-    attrLines.length > 0
-      ? `<${node.tag}\n${attrLines.join('\n')}\n${indent}>`
-      : `<${node.tag}>`;
+    attrLines.length > 0 ? `<${node.tag}\n${attrLines.join('\n')}\n${indent}>` : `<${node.tag}>`;
 
   if (children.length === 0) {
     if (attrLines.length > 0) {
@@ -234,9 +238,7 @@ function generateJSX(node: RenderNode, depth: number, hasClassNames: boolean): s
     return `${indent}<${node.tag} />`;
   }
 
-  const childLines = children
-    .map((c) => generateJSX(c, depth + 1, hasClassNames))
-    .join('\n');
+  const childLines = children.map((c) => generateJSX(c, depth + 1, hasClassNames)).join('\n');
 
   return `${indent}${tagWithAttrs}\n${childLines}\n${indent}</${node.tag}>`;
 }
@@ -261,10 +263,13 @@ function nodeNeedsClassNames(node: RenderNode): boolean {
 
 function generateComponent(def: ComponentDef): string {
   const usesCn = nodeNeedsClassNames(def.render);
-  const hasConditions = (def.render.classConditions?.length ?? 0) > 0 ||
-    Boolean(def.render.children?.some(
-      (c) => typeof c === 'object' && (c as RenderNode).classConditions?.length
-    ));
+  const hasConditions =
+    (def.render.classConditions?.length ?? 0) > 0 ||
+    Boolean(
+      def.render.children?.some(
+        (c) => typeof c === 'object' && (c as RenderNode).classConditions?.length
+      )
+    );
 
   const lines: string[] = [];
 
@@ -301,9 +306,7 @@ function generateComponent(def: ComponentDef): string {
 
 function generateImports(defs: ComponentDef[]): string {
   const usesCn = defs.some((d) => nodeNeedsClassNames(d.render));
-  const usesReact = defs.some((d) =>
-    d.props.some((p) => p.type === 'ReactNode')
-  );
+  const usesReact = defs.some((d) => d.props.some((p) => p.type === 'ReactNode'));
 
   const imports: string[] = [];
 

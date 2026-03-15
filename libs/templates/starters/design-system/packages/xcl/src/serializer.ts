@@ -108,9 +108,7 @@ function serializeRenderNode(node: RenderNode, depth: number): string {
   if (node.tag === '$frag') {
     const children = node.children ?? [];
     if (children.length === 0) return `${indent}<$frag/>`;
-    const inner = children
-      .map((c) => serializeRenderNode(c, depth + 1))
-      .join('\n');
+    const inner = children.map((c) => serializeRenderNode(c, depth + 1)).join('\n');
     return `${indent}<$frag>\n${inner}\n${indent}</$frag>`;
   }
 
@@ -167,9 +165,7 @@ function serializeRenderNode(node: RenderNode, depth: number): string {
     return `${indent}<${node.tag}${attrStr}/>`;
   }
 
-  const childLines = children
-    .map((c) => serializeRenderNode(c, depth + 1))
-    .join('\n');
+  const childLines = children.map((c) => serializeRenderNode(c, depth + 1)).join('\n');
   return `${indent}<${node.tag}${attrStr}>\n${childLines}\n${indent}</${node.tag}>`;
 }
 
@@ -190,9 +186,7 @@ function serializeComponentDef(def: ComponentDef): string {
   lines.push('</R>');
 
   if (def.computedVars && def.computedVars.length > 0) {
-    const vAttrs = def.computedVars
-      .map((v) => `${v.name}="${escapeAttr(v.expression)}"`)
-      .join(' ');
+    const vAttrs = def.computedVars.map((v) => `${v.name}="${escapeAttr(v.expression)}"`).join(' ');
     lines.push(`<V ${vAttrs}/>`);
   }
 

@@ -37,11 +37,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
   return false;
 }
 
-function diffPath(
-  a: unknown,
-  b: unknown,
-  path: string
-): string[] {
+function diffPath(a: unknown, b: unknown, path: string): string[] {
   if (deepEqual(a, b)) return [];
 
   const diffs: string[] = [];
@@ -57,12 +53,7 @@ function diffPath(
     return diffs;
   }
 
-  if (
-    typeof a === 'object' &&
-    typeof b === 'object' &&
-    a !== null &&
-    b !== null
-  ) {
+  if (typeof a === 'object' && typeof b === 'object' && a !== null && b !== null) {
     const aObj = a as Record<string, unknown>;
     const bObj = b as Record<string, unknown>;
     const keys = new Set([...Object.keys(aObj), ...Object.keys(bObj)]);
@@ -141,16 +132,10 @@ export function validateRoundTrip(def: ComponentDef): RoundTripResult {
  * @param tsxSource   Original TSX source.
  * @param def         Pre-built ComponentDef (if available, more accurate).
  */
-export function estimateReduction(
-  tsxSource: string,
-  def: ComponentDef
-): XCLMetrics {
+export function estimateReduction(tsxSource: string, def: ComponentDef): XCLMetrics {
   const xcl = serialize(def);
   const tsxTokens = estimateTokens(tsxSource);
   const xclTokens = estimateTokens(xcl);
-  const reductionPercent = Math.max(
-    0,
-    Math.round((1 - xclTokens / Math.max(tsxTokens, 1)) * 100)
-  );
+  const reductionPercent = Math.max(0, Math.round((1 - xclTokens / Math.max(tsxTokens, 1)) * 100));
   return { tsxTokens, xclTokens, reductionPercent };
 }

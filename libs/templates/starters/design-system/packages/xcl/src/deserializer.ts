@@ -191,7 +191,11 @@ function attrsToMap(attrs: ParsedAttr[]): Record<string, string> {
 // Prop type decoding
 // ============================================================================
 
-function decodePropType(encoded: string): { type: PropType; optional: boolean; defaultValue?: string | number | boolean } {
+function decodePropType(encoded: string): {
+  type: PropType;
+  optional: boolean;
+  defaultValue?: string | number | boolean;
+} {
   let rest = encoded;
   let defaultValue: string | number | boolean | undefined;
   let optional = false;
@@ -217,16 +221,31 @@ function decodePropType(encoded: string): { type: PropType; optional: boolean; d
 
   let type: PropType;
   switch (rest) {
-    case 'str': type = 'string'; break;
-    case 'num': type = 'number'; break;
-    case 'bool': type = 'boolean'; break;
-    case 'node': type = 'ReactNode'; break;
-    case 'fn': type = '() => void'; break;
-    case 'elm': type = 'React.ElementType'; break;
+    case 'str':
+      type = 'string';
+      break;
+    case 'num':
+      type = 'number';
+      break;
+    case 'bool':
+      type = 'boolean';
+      break;
+    case 'node':
+      type = 'ReactNode';
+      break;
+    case 'fn':
+      type = '() => void';
+      break;
+    case 'elm':
+      type = 'React.ElementType';
+      break;
     default:
       // Union of string literals: "sm|md|lg" → "'sm' | 'md' | 'lg'"
       if (rest.includes('|')) {
-        type = rest.split('|').map((v) => `'${v}'`).join(' | ');
+        type = rest
+          .split('|')
+          .map((v) => `'${v}'`)
+          .join(' | ');
       } else {
         // Unknown or passthrough type
         type = rest;
@@ -381,9 +400,7 @@ function parseComponentElement(el: ParsedElement): ComponentDef {
  */
 export function deserialize(xcl: string): ComponentDef[] {
   const nodes = parseXML(xcl.trim());
-  const xclEl = nodes.find(
-    (n): n is ParsedElement => typeof n !== 'string' && n.tag === 'xcl'
-  );
+  const xclEl = nodes.find((n): n is ParsedElement => typeof n !== 'string' && n.tag === 'xcl');
   if (!xclEl) throw new Error('XCL parse error: missing <xcl> root element');
 
   const components: ComponentDef[] = [];
@@ -401,9 +418,7 @@ export function deserialize(xcl: string): ComponentDef[] {
  */
 export function deserializeDocument(xcl: string): XCLDocument {
   const nodes = parseXML(xcl.trim());
-  const xclEl = nodes.find(
-    (n): n is ParsedElement => typeof n !== 'string' && n.tag === 'xcl'
-  );
+  const xclEl = nodes.find((n): n is ParsedElement => typeof n !== 'string' && n.tag === 'xcl');
   if (!xclEl) throw new Error('XCL parse error: missing <xcl> root element');
 
   const vAttr = xclEl.attrs.find((a) => a.name === 'v');
