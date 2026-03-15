@@ -29,10 +29,10 @@ vi.mock('@protolabsai/utils', () => ({
   }),
 }));
 
-function createMockSettingsService(pipelineEnabled = true) {
+function createMockSettingsService(hitlEnabled = true) {
   return {
     getGlobalSettings: vi.fn().mockResolvedValue({
-      featureFlags: { pipeline: pipelineEnabled },
+      featureFlags: { hitlForms: hitlEnabled },
     }),
   };
 }
