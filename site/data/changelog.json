@@ -1,21 +1,501 @@
 {
   "summary": {
-    "totalEntries": 1498,
+    "totalEntries": 1558,
     "categories": {
-      "improvement": 240,
-      "feature": 779,
-      "docs": 67,
-      "fix": 310,
-      "infrastructure": 102
+      "docs": 73,
+      "fix": 320,
+      "improvement": 258,
+      "feature": 804,
+      "infrastructure": 103
     },
     "firstDate": "2026-02-04T21:35:59.000Z",
-    "latestDate": "2026-03-14T06:12:51.000Z"
+    "latestDate": "2026-03-15T04:53:48.000Z"
   },
   "months": [
     {
       "month": "2026-03",
       "label": "March 2026",
       "entries": [
+        {
+          "hash": "4fb40433",
+          "date": "2026-03-14T21:53:48-07:00",
+          "title": "Add starter kit template system documentation",
+          "prNumber": 2617,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2617",
+          "category": "docs"
+        },
+        {
+          "hash": "14b2d794",
+          "date": "2026-03-14T19:01:06-07:00",
+          "title": "Remove deleted PipelineService from lifecycle traceability test",
+          "prNumber": 2605,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2605",
+          "category": "fix"
+        },
+        {
+          "hash": "83a4bc84",
+          "date": "2026-03-14T18:30:21-07:00",
+          "title": "Add starter kit template selection to in-app project creation wizard",
+          "prNumber": 2598,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2598",
+          "category": "feature"
+        },
+        {
+          "hash": "329c8779",
+          "date": "2026-03-14T18:24:58-07:00",
+          "title": "Add project badge to kanban cards and list view rows",
+          "prNumber": 2600,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2600",
+          "category": "feature"
+        },
+        {
+          "hash": "79ac9b5a",
+          "date": "2026-03-14T18:23:03-07:00",
+          "title": "Add starter kit how-to guides to public documentation",
+          "prNumber": 2599,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2599",
+          "category": "docs"
+        },
+        {
+          "hash": "6a31d1cb",
+          "date": "2026-03-14T18:16:34-07:00",
+          "title": "Add starter kit selection to create-protolab CLI interactive prompt",
+          "prNumber": 2596,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2596",
+          "category": "improvement"
+        },
+        {
+          "hash": "cc52dc45",
+          "date": "2026-03-14T17:33:49-07:00",
+          "title": "Wire starter kits into create-protolab scaffold flow",
+          "prNumber": 2594,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2594",
+          "category": "feature"
+        },
+        {
+          "hash": "62e7ae71",
+          "date": "2026-03-14T17:21:27-07:00",
+          "title": "Add portfolio starter kit type",
+          "prNumber": 2592,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2592",
+          "category": "feature"
+        },
+        {
+          "hash": "b4836903",
+          "date": "2026-03-14T17:18:01-07:00",
+          "title": "Portfolio contact page, RSS feed, SEO completion",
+          "prNumber": 2591,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2591",
+          "category": "feature"
+        },
+        {
+          "hash": "8998facc",
+          "date": "2026-03-14T17:14:14-07:00",
+          "title": "Add documentation philosophy page to internal dev docs",
+          "prNumber": 2590,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2590",
+          "category": "docs"
+        },
+        {
+          "hash": "e6f116dd",
+          "date": "2026-03-14T17:12:06-07:00",
+          "title": "Portfolio page sections — Hero, ProjectGrid, Contact, About, Testimonials, BlogList",
+          "prNumber": 2589,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2589",
+          "category": "feature"
+        },
+        {
+          "hash": "49e969c2",
+          "date": "2026-03-14T17:09:21-07:00",
+          "title": "Add docs/ directory to docs and portfolio starter kits",
+          "prNumber": 2588,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2588",
+          "category": "feature"
+        },
+        {
+          "hash": "2449f65b",
+          "date": "2026-03-14T17:08:52-07:00",
+          "title": "Add CI workflow, agent context, and StarterKitType export for docs starter kit",
+          "prNumber": 2587,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2587",
+          "category": "feature"
+        },
+        {
+          "hash": "abf380fd",
+          "date": "2026-03-14T16:59:55-07:00",
+          "title": "Add Docs Starter Kit (Starlight)",
+          "prNumber": 2584,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2584",
+          "category": "feature"
+        },
+        {
+          "hash": "40f6b9e5",
+          "date": "2026-03-14T16:59:48-07:00",
+          "title": "Add portfolio starter kit with Astro 5, Tailwind v4, View Transitions",
+          "prNumber": 2585,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2585",
+          "category": "feature"
+        },
+        {
+          "hash": "67ddf144",
+          "date": "2026-03-14T16:45:53-07:00",
+          "title": "Add shared Astro design system components",
+          "prNumber": 2582,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2582",
+          "category": "feature"
+        },
+        {
+          "hash": "2305823e",
+          "date": "2026-03-14T16:31:55-07:00",
+          "title": "Add shared design system tokens",
+          "prNumber": 2579,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2579",
+          "category": "feature"
+        },
+        {
+          "hash": "737a692a",
+          "date": "2026-03-14T16:18:29-07:00",
+          "title": "Rebuild flow-graph constants to 2-lane topology",
+          "prNumber": 2578,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2578",
+          "category": "feature"
+        },
+        {
+          "hash": "d595ee7f",
+          "date": "2026-03-14T16:16:39-07:00",
+          "title": "PM Chat Panel UI",
+          "prNumber": 2576,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2576",
+          "category": "improvement"
+        },
+        {
+          "hash": "6a1fad1b",
+          "date": "2026-03-14T15:39:51-07:00",
+          "title": "Guard fire-and-forget stopFeature call against unhandled rejection",
+          "prNumber": 2571,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2571",
+          "category": "fix"
+        },
+        {
+          "hash": "87770ac7",
+          "date": "2026-03-14T15:34:51-07:00",
+          "title": "Add members tag-input and color picker to project sidebar",
+          "prNumber": 2569,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2569",
+          "category": "feature"
+        },
+        {
+          "hash": "e8798917",
+          "date": "2026-03-14T15:32:24-07:00",
+          "title": "Mkdir -p target dir before copyFile in AtomicWriter backup recovery",
+          "prNumber": 2568,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2568",
+          "category": "fix"
+        },
+        {
+          "hash": "4a8ff5b7",
+          "date": "2026-03-14T15:20:53-07:00",
+          "title": "Delete PipelineCheckpointService and remove featureFlags.pipeline",
+          "prNumber": 2565,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2565",
+          "category": "improvement"
+        },
+        {
+          "hash": "0f24d8f8",
+          "date": "2026-03-14T15:18:59-07:00",
+          "title": "Delete PipelineService and /api/pipeline/* routes",
+          "prNumber": 2559,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2559",
+          "category": "feature"
+        },
+        {
+          "hash": "ef37c778",
+          "date": "2026-03-14T15:16:19-07:00",
+          "title": "Delete flow-graph pipeline components and update registries",
+          "prNumber": 2563,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2563",
+          "category": "improvement"
+        },
+        {
+          "hash": "9c61e6e1",
+          "date": "2026-03-14T15:15:22-07:00",
+          "title": "Delete PipelineService and /api/pipeline/* routes",
+          "prNumber": 2564,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2564",
+          "category": "feature"
+        },
+        {
+          "hash": "22729d6a",
+          "date": "2026-03-14T15:10:06-07:00",
+          "title": "Delete dead coordinator, review, and interrupt-loop flows",
+          "prNumber": 2560,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2560",
+          "category": "feature"
+        },
+        {
+          "hash": "85fc4ddf",
+          "date": "2026-03-14T15:02:46-07:00",
+          "title": "Delete PipelineOrchestrator and remove all pipeline/* routes",
+          "prNumber": 2557,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2557",
+          "category": "feature"
+        },
+        {
+          "hash": "2d907d4f",
+          "date": "2026-03-14T15:01:28-07:00",
+          "title": "Delete PipelineOrchestrator and remove all pipeline/* routes",
+          "prNumber": 2556,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2556",
+          "category": "feature"
+        },
+        {
+          "hash": "77fc76fe",
+          "date": "2026-03-14T13:18:24-07:00",
+          "title": "Autonomous board management — zero-intervention pipeline bugs",
+          "prNumber": 2552,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2552",
+          "category": "fix"
+        },
+        {
+          "hash": "b1eb43e5",
+          "date": "2026-03-14T13:08:18-07:00",
+          "title": "Fix runningFeatures tracking gap in execution-service",
+          "prNumber": 2551,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2551",
+          "category": "improvement"
+        },
+        {
+          "hash": "d0b3e2a9",
+          "date": "2026-03-14T13:07:57-07:00",
+          "title": "Fix error classification breadth and merge retry logic",
+          "prNumber": 2550,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2550",
+          "category": "improvement"
+        },
+        {
+          "hash": "e41f2d4b",
+          "date": "2026-03-14T13:01:59-07:00",
+          "title": "Fix ExecuteProcessor waitForCompletion race and pre-flight shouldContinu",
+          "prNumber": 2547,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2547",
+          "category": "improvement"
+        },
+        {
+          "hash": "99eea14f",
+          "date": "2026-03-14T12:54:56-07:00",
+          "title": "Unify concurrency tracking and fix settings and ledger races",
+          "prNumber": 2546,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2546",
+          "category": "improvement"
+        },
+        {
+          "hash": "9eb1273e",
+          "date": "2026-03-14T12:45:38-07:00",
+          "title": "Diataxis documentation reorganization",
+          "prNumber": 2539,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2539",
+          "category": "docs"
+        },
+        {
+          "hash": "5df4005c",
+          "date": "2026-03-14T12:13:43-07:00",
+          "title": "Fix GraphQL injection in CodeRabbitResolver and git-workflow-service",
+          "prNumber": 2533,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2533",
+          "category": "improvement"
+        },
+        {
+          "hash": "d1333f15",
+          "date": "2026-03-14T12:11:22-07:00",
+          "title": "Replace exec() with execFile() to prevent shell injection in CompletionDetector",
+          "prNumber": 2532,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2532",
+          "category": "fix"
+        },
+        {
+          "hash": "6d690d0c",
+          "date": "2026-03-14T12:07:22-07:00",
+          "title": "Fix shell injection in CompletionDetector gh pr create",
+          "prNumber": 2531,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2531",
+          "category": "feature"
+        },
+        {
+          "hash": "3bdd9992",
+          "date": "2026-03-14T11:51:58-07:00",
+          "title": "Block rm/git rm/cd+destructive commands from bleeding worktree deletions to main tree",
+          "prNumber": 2530,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2530",
+          "category": "fix"
+        },
+        {
+          "hash": "df0c794b",
+          "date": "2026-03-14T10:47:17-07:00",
+          "title": "Deviation Rule Engine",
+          "prNumber": 2522,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2522",
+          "category": "improvement"
+        },
+        {
+          "hash": "99da39d0",
+          "date": "2026-03-14T10:36:19-07:00",
+          "title": "Context Metrics and Warning System",
+          "prNumber": 2521,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2521",
+          "category": "improvement"
+        },
+        {
+          "hash": "ed6928af",
+          "date": "2026-03-14T10:33:15-07:00",
+          "title": "Update docs after: GSD Pattern Adoption",
+          "prNumber": 2520,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2520",
+          "category": "improvement"
+        },
+        {
+          "hash": "c79c5efd",
+          "date": "2026-03-14T10:21:52-07:00",
+          "title": "Post-Execution Goal Verification",
+          "prNumber": 2518,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2518",
+          "category": "improvement"
+        },
+        {
+          "hash": "c3e9f14b",
+          "date": "2026-03-14T10:19:36-07:00",
+          "title": "Use mergedAt instead of merged field in ReviewProcessor external merge check",
+          "prNumber": 2517,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2517",
+          "category": "fix"
+        },
+        {
+          "hash": "960e443c",
+          "date": "2026-03-14T10:12:24-07:00",
+          "title": "Plan Consumer in ExecuteProcessor",
+          "prNumber": 2516,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2516",
+          "category": "feature"
+        },
+        {
+          "hash": "79e811a0",
+          "date": "2026-03-14T10:11:49-07:00",
+          "title": "Pre-Execution Plan Validation",
+          "prNumber": 2515,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2515",
+          "category": "feature"
+        },
+        {
+          "hash": "691829ca",
+          "date": "2026-03-14T10:05:39-07:00",
+          "title": "Auto-create epic branches when approve_project_prd creates epics",
+          "prNumber": 2514,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2514",
+          "category": "improvement"
+        },
+        {
+          "hash": "965c7a76",
+          "date": "2026-03-14T10:05:08-07:00",
+          "title": "Types + Structured Plan Generator",
+          "prNumber": 2513,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2513",
+          "category": "improvement"
+        },
+        {
+          "hash": "0325a9e1",
+          "date": "2026-03-14T01:34:59-07:00",
+          "title": "MergeProcessor respects prMergeStrategy and PR merge race guard",
+          "prNumber": 2505,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2505",
+          "category": "improvement"
+        },
+        {
+          "hash": "1cac6701",
+          "date": "2026-03-14T01:30:01-07:00",
+          "title": "Remove dead rollbackTriggered rule and gate-tuning action type",
+          "prNumber": 2504,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2504",
+          "category": "improvement"
+        },
+        {
+          "hash": "9ae8b931",
+          "date": "2026-03-14T01:26:38-07:00",
+          "title": "Include remainingMilestones and retroData in ceremony:fired events",
+          "prNumber": 2502,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2502",
+          "category": "fix"
+        },
+        {
+          "hash": "e06a43cc",
+          "date": "2026-03-14T01:21:46-07:00",
+          "title": "Emit specific lifecycle events from FeatureLoader on status changes",
+          "prNumber": 2501,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2501",
+          "category": "feature"
+        },
+        {
+          "hash": "81b9d0f7",
+          "date": "2026-03-14T01:13:45-07:00",
+          "title": "Emit direct auto-mode events from TypedEventBus alongside envelope",
+          "prNumber": 2500,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2500",
+          "category": "fix"
+        },
+        {
+          "hash": "2844bc23",
+          "date": "2026-03-14T01:09:24-07:00",
+          "title": "Bridge ErrorBudgetService events to shared app event bus",
+          "prNumber": 2499,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2499",
+          "category": "fix"
+        },
+        {
+          "hash": "a8639f7f",
+          "date": "2026-03-14T01:01:41-07:00",
+          "title": "Fix DeployProcessor DONE transition and clean up orphaned states",
+          "prNumber": 2498,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2498",
+          "category": "improvement"
+        },
+        {
+          "hash": "762111f4",
+          "date": "2026-03-13T23:53:16-07:00",
+          "title": "Regenerate site data [skip ci]",
+          "prNumber": 2491,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2491",
+          "category": "docs"
+        },
+        {
+          "hash": "de7017e1",
+          "date": "2026-03-13T23:51:22-07:00",
+          "title": "Update docs after CRDT/Automerge removal",
+          "prNumber": 2495,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2495",
+          "category": "docs"
+        },
+        {
+          "hash": "1459c198",
+          "date": "2026-03-13T23:44:06-07:00",
+          "title": "Remove CRDT types from shared types package",
+          "prNumber": 2494,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2494",
+          "category": "feature"
+        },
+        {
+          "hash": "203f9db0",
+          "date": "2026-03-13T23:35:05-07:00",
+          "title": "Remove libs/crdt package and automerge dependencies",
+          "prNumber": 2493,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2493",
+          "category": "feature"
+        },
+        {
+          "hash": "6483c185",
+          "date": "2026-03-13T23:25:23-07:00",
+          "title": "Rename CrdtSyncService to PeerMeshService + make conditional on config",
+          "prNumber": 2492,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2492",
+          "category": "infrastructure"
+        },
         {
           "hash": "a6fbde85",
           "date": "2026-03-13T23:12:51-07:00",
@@ -12009,5 +12489,5 @@
       ]
     }
   ],
-  "generatedAt": "2026-03-14T06:18:42.653Z"
+  "generatedAt": "2026-03-15T06:24:28.139Z"
 }
