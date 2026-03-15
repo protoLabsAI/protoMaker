@@ -111,7 +111,9 @@ function extractWcagLevels(violations: AxeViolation[]): WcagLevel[] {
 }
 
 function isWcagAAViolation(v: AxeViolation): boolean {
-  return v.tags.some((t) => t === 'wcag2a' || t === 'wcag2aa' || t === 'wcag21a' || t === 'wcag21aa');
+  return v.tags.some(
+    (t) => t === 'wcag2a' || t === 'wcag2aa' || t === 'wcag21a' || t === 'wcag21aa'
+  );
 }
 
 function isWcagAAAViolation(v: AxeViolation): boolean {

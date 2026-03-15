@@ -242,7 +242,9 @@ async function runInlineAxeAudit(
   }
 
   const isAAViolation = (v: InlineViolation) =>
-    v.wcagTags.some((t) => t === 'wcag2a' || t === 'wcag2aa' || t === 'wcag21a' || t === 'wcag21aa');
+    v.wcagTags.some(
+      (t) => t === 'wcag2a' || t === 'wcag2aa' || t === 'wcag21a' || t === 'wcag21aa'
+    );
   const wcagAAPassing = !violations.some(isAAViolation);
   const wcagAAAPassing = !violations.some((v) => v.wcagTags.some((t) => t === 'wcag2aaa'));
 
@@ -265,7 +267,9 @@ async function runInlineAxeAudit(
     incompleteRules: 1,
     affectedElements: violations.reduce((s, v) => s + v.nodeCount, 0),
     violations,
-    incompleteChecks: [{ id: 'color-contrast', description: 'Elements must have sufficient color contrast' }],
+    incompleteChecks: [
+      { id: 'color-contrast', description: 'Elements must have sufficient color contrast' },
+    ],
     usedRealAxe: false,
   };
 }
@@ -318,7 +322,7 @@ const A11Y_TOOLS: Anthropic.Tool[] = [
         context: {
           type: 'string',
           description:
-            'Optional description of the component\'s purpose or where it appears ' +
+            "Optional description of the component's purpose or where it appears " +
             '(e.g. "Primary navigation", "Checkout form", "Hero section")',
         },
         focusAreas: {
@@ -378,7 +382,9 @@ function loadSystemPrompt(): string {
 
 // ─── Tool executors ───────────────────────────────────────────────────────────
 
-async function executeRunAxeAudit(input: Record<string, unknown>): Promise<Record<string, unknown>> {
+async function executeRunAxeAudit(
+  input: Record<string, unknown>
+): Promise<Record<string, unknown>> {
   const html = input['html'] as string;
   const scope = (input['scope'] as AuditScope) ?? 'component';
   const wcagLevel = (input['wcagLevel'] as WcagLevel) ?? 'AA';
@@ -393,9 +399,7 @@ async function executeRunAxeAudit(input: Record<string, unknown>): Promise<Recor
   };
 }
 
-function executeAnalyzeHtmlSemantics(
-  input: Record<string, unknown>
-): Record<string, unknown> {
+function executeAnalyzeHtmlSemantics(input: Record<string, unknown>): Record<string, unknown> {
   const html = input['html'] as string;
   const context = (input['context'] as string | undefined) ?? '';
 
@@ -413,7 +417,9 @@ function executeAnalyzeHtmlSemantics(
     } else if (altMatch[1].trim() === '') {
       checks.push('IMAGE_DECORATIVE: Image has empty alt="" — verify it is truly decorative.');
     } else if (/^image\d*$|\.png|\.jpg|\.svg/i.test(altMatch[1])) {
-      checks.push(`IMAGE_BAD_ALT: Alt text "${altMatch[1]}" appears to be a filename or generic label.`);
+      checks.push(
+        `IMAGE_BAD_ALT: Alt text "${altMatch[1]}" appears to be a filename or generic label.`
+      );
     }
   }
 
@@ -436,7 +442,9 @@ function executeAnalyzeHtmlSemantics(
     checks.push('HEADING_NO_H1: No <h1> found — document should have exactly one h1.');
   }
   if (h1Count > 1) {
-    checks.push(`HEADING_MULTIPLE_H1: Found ${h1Count} <h1> elements — document should have only one.`);
+    checks.push(
+      `HEADING_MULTIPLE_H1: Found ${h1Count} <h1> elements — document should have only one.`
+    );
   }
   for (let i = 1; i < levels.length; i++) {
     if (levels[i] - levels[i - 1] > 1) {
@@ -467,9 +475,7 @@ function executeAnalyzeHtmlSemantics(
   };
 }
 
-function executeGenerateRemediation(
-  input: Record<string, unknown>
-): Record<string, unknown> {
+function executeGenerateRemediation(input: Record<string, unknown>): Record<string, unknown> {
   const violationId = input['violationId'] as string;
   const originalHtml = input['originalHtml'] as string;
   const context = (input['context'] as string | undefined) ?? '';
@@ -531,9 +537,11 @@ function extractAutomatedViolations(
   return [];
 }
 
-function extractGrade(
-  operations: Array<{ toolName: string; output: unknown }>
-): { grade: ComplianceGrade; wcagAAPassing: boolean; wcagAAAPassing: boolean } {
+function extractGrade(operations: Array<{ toolName: string; output: unknown }>): {
+  grade: ComplianceGrade;
+  wcagAAPassing: boolean;
+  wcagAAAPassing: boolean;
+} {
   for (const op of operations) {
     if (op.toolName === 'run_axe_audit') {
       const out = op.output as Record<string, unknown>;
@@ -600,9 +608,7 @@ export function createA11yAgent(config: A11yAgentConfig = {}) {
       'End with a structured report covering: compliance grade, automated findings, ' +
       'semantic issues, and all remediation code.';
 
-    const messages: Anthropic.MessageParam[] = [
-      { role: 'user', content: userMessage },
-    ];
+    const messages: Anthropic.MessageParam[] = [{ role: 'user', content: userMessage }];
 
     const toolOperations: Array<{ toolName: string; output: unknown }> = [];
     const semanticIssues: SemanticIssue[] = [];
