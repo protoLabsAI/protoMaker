@@ -269,7 +269,10 @@ function chunkString(str: string): string[] {
 function StreamingTextChunks({ text, citations }: { text: string; citations: Citation[] }) {
   const chunks = chunkString(text);
   return (
-    <div data-slot="chat-message-markdown" className="prose prose-sm dark:prose-invert max-w-none prose-p:mt-0 prose-p:mb-4 prose-p:leading-relaxed">
+    <div
+      data-slot="chat-message-markdown"
+      className="prose prose-sm dark:prose-invert max-w-none prose-p:mt-0 prose-p:mb-4 prose-p:leading-relaxed"
+    >
       <p>
         {chunks.map((chunk, i) => (
           <span key={i} className="animate-fade-in-word">
