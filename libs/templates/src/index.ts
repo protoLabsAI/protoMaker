@@ -47,6 +47,9 @@ export { getCodingRules } from './coding-rules.js';
 // CI templates
 export { getDocsCI, getExtensionCI } from './ci.js';
 
+// Starter kit context files (write to .automaker/CONTEXT.md in new projects)
+export { getDocsStarterContext } from './starters.js';
+
 // Design tokens
 export { getDesignTokensCss, getDesignTokensThemeBlock, designTokens } from './design-tokens.js';
 export type { DesignTokens } from './design-tokens.js';
