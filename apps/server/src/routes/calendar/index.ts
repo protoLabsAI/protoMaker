@@ -64,8 +64,20 @@ export function createCalendarRoutes(
    */
   router.post('/create', validatePathParams('projectPath'), async (req: Request, res: Response) => {
     try {
-      const { projectPath, title, date, endDate, type, description, color, url, time, jobAction } =
-        req.body;
+      const {
+        projectPath,
+        title,
+        date,
+        endDate,
+        type,
+        description,
+        color,
+        url,
+        time,
+        jobAction,
+        recurrence,
+        timezone,
+      } = req.body;
 
       if (!projectPath) {
         res.status(400).json({ success: false, error: 'projectPath is required' });
@@ -104,6 +116,8 @@ export function createCalendarRoutes(
         description,
         color,
         url,
+        recurrence,
+        timezone,
         ...(type === 'job' && {
           time,
           jobAction: jobAction as JobAction,

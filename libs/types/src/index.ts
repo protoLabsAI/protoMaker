@@ -197,6 +197,7 @@ export type {
   CalendarEvent,
   CalendarEventsFile,
   CalendarQueryOptions,
+  RecurrenceRule,
   JobStatus,
   JobAction,
   JobExecutionResult,

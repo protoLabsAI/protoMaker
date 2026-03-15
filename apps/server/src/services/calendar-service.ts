@@ -17,6 +17,7 @@ import type {
   CalendarEvent,
   CalendarEventType,
   CalendarQueryOptions,
+  RecurrenceRule,
 } from '@protolabsai/types';
 const logger = createLogger('CalendarService');
 
@@ -166,7 +167,126 @@ export class CalendarService {
   }
 
   /**
-   * List all calendar events (custom + aggregated from features and milestones)
+   * Advance a date by the recurrence rule's frequency and interval.
+   * Returns a new Date representing the next occurrence.
+   */
+  private advanceDateByFrequency(date: Date, rule: RecurrenceRule): Date {
+    const interval = rule.interval ?? 1;
+    const next = new Date(date);
+
+    switch (rule.frequency) {
+      case 'daily':
+        next.setDate(next.getDate() + interval);
+        break;
+      case 'weekly':
+        next.setDate(next.getDate() + 7 * interval);
+        break;
+      case 'monthly':
+        next.setMonth(next.getMonth() + interval);
+        break;
+      case 'yearly':
+        next.setFullYear(next.getFullYear() + interval);
+        break;
+    }
+
+    return next;
+  }
+
+  /**
+   * Format a Date as YYYY-MM-DD string.
+   */
+  private formatDate(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  /**
+   * Expand a recurring event into individual instances within a date range.
+   * Each instance gets an ID of `parentId:YYYY-MM-DD` format.
+   * Non-recurring events are returned as-is in a single-element array.
+   */
+  expandRecurringEvent(
+    event: CalendarEvent,
+    rangeStart: string,
+    rangeEnd: string
+  ): CalendarEvent[] {
+    if (!event.recurrence) {
+      return [event];
+    }
+
+    const rule = event.recurrence;
+    const instances: CalendarEvent[] = [];
+    const rangeStartDate = new Date(rangeStart);
+    const rangeEndDate = new Date(rangeEnd);
+    const ruleEndDate = rule.endDate ? new Date(rule.endDate) : null;
+    const maxCount = rule.count ?? Infinity;
+
+    // Safety cap to prevent runaway expansion
+    const MAX_INSTANCES = 366;
+
+    let current = new Date(event.date);
+    let count = 0;
+
+    while (count < maxCount && instances.length < MAX_INSTANCES) {
+      // Stop if we've exceeded the recurrence end date
+      if (ruleEndDate && current > ruleEndDate) break;
+
+      // Stop if we've passed the query range end
+      if (current > rangeEndDate) break;
+
+      const dateStr = this.formatDate(current);
+
+      // For weekly frequency with daysOfWeek, expand within the current week
+      if (rule.frequency === 'weekly' && rule.daysOfWeek && rule.daysOfWeek.length > 0) {
+        // Find the Monday of the current week (or Sunday, depending on perspective)
+        const weekStart = new Date(current);
+        const dayOfWeek = weekStart.getDay();
+        weekStart.setDate(weekStart.getDate() - dayOfWeek); // Go to Sunday
+
+        for (const dow of rule.daysOfWeek) {
+          const dayDate = new Date(weekStart);
+          dayDate.setDate(dayDate.getDate() + dow);
+
+          // Must be on or after the original event start
+          if (dayDate < new Date(event.date)) continue;
+          if (ruleEndDate && dayDate > ruleEndDate) continue;
+          if (dayDate > rangeEndDate) continue;
+          if (count >= maxCount) break;
+
+          count++;
+
+          if (dayDate >= rangeStartDate) {
+            const dayStr = this.formatDate(dayDate);
+            instances.push({
+              ...event,
+              id: `${event.id}:${dayStr}`,
+              date: dayStr,
+            });
+          }
+        }
+      } else {
+        count++;
+
+        if (current >= rangeStartDate) {
+          instances.push({
+            ...event,
+            id: `${event.id}:${dateStr}`,
+            date: dateStr,
+          });
+        }
+      }
+
+      current = this.advanceDateByFrequency(current, rule);
+    }
+
+    return instances;
+  }
+
+  /**
+   * List all calendar events (custom + aggregated from features and milestones).
+   * Recurring events are expanded into individual instances within the query range.
    */
   async listEvents(projectPath: string, opts: CalendarQueryOptions = {}): Promise<CalendarEvent[]> {
     const { startDate, endDate, types } = opts;
@@ -174,7 +294,15 @@ export class CalendarService {
 
     // 1. Read custom events from filesystem
     const customEvents = await this.readCustomEvents(projectPath);
-    allEvents.push(...customEvents);
+
+    // Expand recurring events if a date range is provided
+    for (const event of customEvents) {
+      if (event.recurrence && startDate && endDate) {
+        allEvents.push(...this.expandRecurringEvent(event, startDate, endDate));
+      } else {
+        allEvents.push(event);
+      }
+    }
 
     // 2. Aggregate from FeatureLoader (features with dueDate)
     if (this.featureLoader && (!types || types.includes('feature'))) {
