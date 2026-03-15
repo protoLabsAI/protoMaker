@@ -375,7 +375,7 @@
           ],
           "complexity": "medium",
           "featureId": "feature-1773570576087-eelauv9o2",
-          "executionStatus": "in-progress"
+          "executionStatus": "in-review"
         },
         {
           "number": 2,
@@ -396,10 +396,10 @@
           ],
           "complexity": "medium",
           "featureId": "feature-1773570576088-wmul4dxcx",
-          "executionStatus": "in-progress"
+          "executionStatus": "blocked"
         }
       ],
-      "status": "pending",
+      "status": "completed",
       "epicId": "feature-1773570576087-iipdh8fyg"
     },
     {
@@ -428,7 +428,8 @@
             "A11y tools run audits and return results"
           ],
           "complexity": "large",
-          "featureId": "feature-1773570576089-v65cdm34g"
+          "featureId": "feature-1773570576089-v65cdm34g",
+          "executionStatus": "in-progress"
         },
         {
           "number": 2,
@@ -452,7 +453,8 @@
             "npm run build:packages passes"
           ],
           "complexity": "medium",
-          "featureId": "feature-1773570576090-1h03tunqr"
+          "featureId": "feature-1773570576090-1h03tunqr",
+          "executionStatus": "in-progress"
         }
       ],
       "status": "pending",
@@ -517,5 +519,5 @@
     "generatedAt": "2026-03-15T08:30:00.000Z"
   },
   "createdAt": "2026-03-15T08:33:36.469Z",
-  "updatedAt": "2026-03-15T14:55:46.491Z"
+  "updatedAt": "2026-03-15T15:25:12.241Z"
 }
