@@ -49,7 +49,12 @@ describe('DataIntegrityCheck', () => {
   });
 
   it('passes projectPath to watchdog', async () => {
-    mockWatchdog.checkIntegrity.mockResolvedValue({ intact: true, currentCount: 5, lastKnownCount: 5, dropPercentage: 0 });
+    mockWatchdog.checkIntegrity.mockResolvedValue({
+      intact: true,
+      currentCount: 5,
+      lastKnownCount: 5,
+      dropPercentage: 0,
+    });
     await check.run('/my/project');
     expect(mockWatchdog.checkIntegrity).toHaveBeenCalledWith('/my/project');
   });
