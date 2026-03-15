@@ -66,7 +66,13 @@ export default {
 // ─── Stories ──────────────────────────────────────────────────────────────────
 
 export const Default: StoryExport = { name: 'Default', args: {} };
-export const Success: StoryExport = { name: 'Success', args: { label: 'Shipped', variant: 'success' } };
-export const Warning: StoryExport = { name: 'Warning', args: { label: 'Pending', variant: 'warning' } };
+export const Success: StoryExport = {
+  name: 'Success',
+  args: { label: 'Shipped', variant: 'success' },
+};
+export const Warning: StoryExport = {
+  name: 'Warning',
+  args: { label: 'Pending', variant: 'warning' },
+};
 export const Danger: StoryExport = { name: 'Danger', args: { label: 'Failed', variant: 'danger' } };
 export const Info: StoryExport = { name: 'Info', args: { label: 'Beta', variant: 'info' } };

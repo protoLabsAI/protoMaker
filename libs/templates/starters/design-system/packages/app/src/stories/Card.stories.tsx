@@ -29,17 +29,13 @@ function Card({
         borderRadius: 12,
         border: '1px solid #e2e8f0',
         overflow: 'hidden',
-        boxShadow: shadow
-          ? '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)'
-          : 'none',
+        boxShadow: shadow ? '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' : 'none',
         maxWidth: 360,
         backgroundColor: '#fff',
         fontFamily: 'inherit',
       }}
     >
-      {showAccentBar && (
-        <div style={{ height: 4, backgroundColor: accentColor }} />
-      )}
+      {showAccentBar && <div style={{ height: 4, backgroundColor: accentColor }} />}
       <div style={{ padding }}>
         <h3
           style={{

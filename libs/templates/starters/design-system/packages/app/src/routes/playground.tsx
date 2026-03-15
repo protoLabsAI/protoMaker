@@ -116,7 +116,7 @@ export function PlaygroundRoute() {
 
   const selected = useMemo(
     () => stories.find((s) => s.id === selectedId) ?? null,
-    [stories, selectedId],
+    [stories, selectedId]
   );
 
   const handleSelect = useCallback(
@@ -127,14 +127,16 @@ export function PlaygroundRoute() {
         setArgs(entry.defaultArgs);
       }
     },
-    [stories],
+    [stories]
   );
 
   const handleArgChange = useCallback((key: string, value: unknown) => {
     setArgs((prev) => ({ ...prev, [key]: value }));
   }, []);
 
-  const hasPropsPanel = Boolean(selected?.meta.argTypes && Object.keys(selected.meta.argTypes).length > 0);
+  const hasPropsPanel = Boolean(
+    selected?.meta.argTypes && Object.keys(selected.meta.argTypes).length > 0
+  );
 
   return (
     <div
@@ -194,11 +196,7 @@ export function PlaygroundRoute() {
             backgroundColor: 'var(--pg-sidebar, #fff)',
           }}
         >
-          <PropsEditor
-            argTypes={selected!.meta.argTypes!}
-            args={args}
-            onChange={handleArgChange}
-          />
+          <PropsEditor argTypes={selected!.meta.argTypes!} args={args} onChange={handleArgChange} />
         </aside>
       )}
     </div>

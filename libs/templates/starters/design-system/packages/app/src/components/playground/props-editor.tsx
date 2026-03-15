@@ -176,9 +176,16 @@ function ControlWidget({ propKey, argType, value, onChange }: ControlWidgetProps
             type="checkbox"
             checked={Boolean(value)}
             onChange={(e) => onChange(e.target.checked)}
-            style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--pg-accent, #3b82f6)' }}
+            style={{
+              width: 16,
+              height: 16,
+              cursor: 'pointer',
+              accentColor: 'var(--pg-accent, #3b82f6)',
+            }}
           />
-          <span style={{ fontSize: 12, color: 'var(--pg-muted, #64748b)', fontFamily: 'monospace' }}>
+          <span
+            style={{ fontSize: 12, color: 'var(--pg-muted, #64748b)', fontFamily: 'monospace' }}
+          >
             {String(Boolean(value))}
           </span>
         </label>

@@ -9,5 +9,5 @@ if (!root) throw new Error('No #root element found');
 createRoot(root).render(
   <React.StrictMode>
     <PlaygroundRoute />
-  </React.StrictMode>,
+  </React.StrictMode>
 );

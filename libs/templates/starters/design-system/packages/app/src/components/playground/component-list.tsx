@@ -22,7 +22,7 @@ export function ComponentList({ stories, selectedId, onSelect }: ComponentListPr
       (s) =>
         s.componentName.toLowerCase().includes(q) ||
         s.storyName.toLowerCase().includes(q) ||
-        s.category.toLowerCase().includes(q),
+        s.category.toLowerCase().includes(q)
     );
 
     const map = new Map<string, Map<string, StoryEntry[]>>();

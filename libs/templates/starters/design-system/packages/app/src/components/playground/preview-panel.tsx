@@ -248,7 +248,10 @@ function ViewportControls({ viewports, current, onSelect, customWidthRef }: View
               outline: 'none',
             }}
           />
-          <button onClick={handleCustomSubmit} style={{ ...btnBase, backgroundColor: 'transparent' }}>
+          <button
+            onClick={handleCustomSubmit}
+            style={{ ...btnBase, backgroundColor: 'transparent' }}
+          >
             ↵
           </button>
         </div>
@@ -279,9 +282,7 @@ function PreviewCanvas({ story, args, theme, viewport, isDark }: PreviewCanvasPr
         height: viewport.height ? `${viewport.height}px` : isFull ? '100%' : undefined,
         minHeight: isFull ? '100%' : undefined,
         backgroundColor: isDark ? '#1e293b' : '#ffffff',
-        boxShadow: isFull
-          ? 'none'
-          : '0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06)',
+        boxShadow: isFull ? 'none' : '0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06)',
         borderRadius: isFull ? 0 : 8,
         overflow: 'auto',
         color: isDark ? '#f8fafc' : '#0f172a',
@@ -402,8 +403,8 @@ function EmptyState() {
         >
           *.stories.tsx
         </code>{' '}
-        files anywhere under <code style={{ fontFamily: 'monospace' }}>src/</code> to register
-        your components.
+        files anywhere under <code style={{ fontFamily: 'monospace' }}>src/</code> to register your
+        components.
       </div>
     </div>
   );

@@ -14,13 +14,7 @@ export interface ViewportPreset {
 
 // ─── Story format (CSF-inspired) ─────────────────────────────────────────────
 
-export type ControlType =
-  | 'text'
-  | 'boolean'
-  | 'number'
-  | 'select'
-  | 'color'
-  | 'range';
+export type ControlType = 'text' | 'boolean' | 'number' | 'select' | 'color' | 'range';
 
 export interface ArgType {
   control: ControlType;
