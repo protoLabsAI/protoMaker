@@ -25,6 +25,14 @@
     "./jsx-serializer": {
       "import": "./dist/jsx-serializer.js",
       "types": "./dist/jsx-serializer.d.ts"
+    },
+    "./css-generator": {
+      "import": "./dist/css-generator.js",
+      "types": "./dist/css-generator.d.ts"
+    },
+    "./html-generator": {
+      "import": "./dist/html-generator.js",
+      "types": "./dist/html-generator.d.ts"
     }
   },
   "scripts": {
