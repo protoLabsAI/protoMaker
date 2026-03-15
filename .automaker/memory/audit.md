@@ -5,9 +5,9 @@ relevantTo: [audit]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 7
-  referenced: 2
-  successfulFeatures: 2
+  loaded: 8
+  referenced: 3
+  successfulFeatures: 3
 ---
 <!-- domain: Audit & Compliance | Audit trail patterns, decision logging, compliance tracking -->
 

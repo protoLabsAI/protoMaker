@@ -234,3 +234,10 @@ usageStats:
 - **Problem solved:** epicId creates parent-child links; data corruption/user error can create cycles (A→B→C→A). Without guard, infinite loop
 - **Why this works:** Defensive against circular data. Graceful degradation (mark as skipped) is safer than hanging or throwing. Typical for graph traversal in untrusted data
 - **Trade-offs:** Easier: robust to bad data. Harder: one Set allocation per feature, extra code
+
+### Persistence uses single `automations.json` file instead of per-file `.automaker/automations/{id}.json` pattern specified in requirements (2026-03-14)
+- **Context:** Feature spec called for per-file storage; implementation chose centralized file
+- **Why:** Simpler atomic writes (write-to-temp-then-move), easier list operations without directory scanning, reduces file system churn
+- **Rejected:** Per-file pattern would require directory enumeration on list(), separate file handles per automation, and directory-level transaction handling
+- **Trade-offs:** Gained: atomic guarantees, simple list implementation. Lost: file-level isolation, easier concurrent access patterns
+- **Breaking if changed:** Switching to per-file requires rewriting persistence layer: map-reduce across directory, handle file conflicts in concurrent scenarios, deal with orphaned files

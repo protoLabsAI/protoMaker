@@ -1,21 +1,5 @@
 {
   "enabledPlugins": {},
-  "mcpServers": {
-    "discord": {
-      "command": "npx",
-      "args": ["-y", "mcp-discord"],
-      "env": {
-        "DISCORD_BOT_TOKEN": "${DISCORD_BOT_TOKEN}"
-      }
-    },
-    "context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"],
-      "env": {
-        "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}"
-      }
-    }
-  },
   "hooks": {
     "PreToolUse": [
       {

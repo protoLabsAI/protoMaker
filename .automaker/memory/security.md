@@ -228,3 +228,10 @@ usageStats:
 - **Rejected:** Continue using JSON.stringify(body).slice(1, -1) escaping or regex-based sanitization - both fragile and prone to edge cases
 - **Trade-offs:** Requires knowing gh CLI's variable syntax (-f for strings, -F for typed values); slightly more verbose execFileAsync calls; but gains provable safety without custom escaping logic
 - **Breaking if changed:** If gh CLI changes or doesn't support -f/-F flags, all variable passing breaks; if omitted, reverts to injection-vulnerable string interpolation
+
+### Replace `void this.stopFeature(data.featureId)` with `this.stopFeature(data.featureId).catch(err => logger.error(...))`. Explicit .catch() provides error observability while remaining non-blocking. (2026-03-14)
+- **Context:** Fire-and-forget async call in event handler. TypeScript's void operator silently swallows promise rejections, hiding errors from logs/monitoring.
+- **Why:** void is semantically 'intentional fire-and-forget' but provides zero observability. Explicit .catch() logs errors without blocking execution, enabling detection of stopFeature failures in production logs.
+- **Rejected:** Keeping void: Hides errors entirely. Using await: Would block event handler. Using Promise.resolve().then(): Verbose and less idiomatic than .catch().
+- **Trade-offs:** 3 extra lines of code; gains observability into async failures without changing execution semantics (still non-blocking).
+- **Breaking if changed:** If .catch() is removed, unhandled rejections from stopFeature will silently fail and not be logged, making it hard to debug feature shutdown issues.
