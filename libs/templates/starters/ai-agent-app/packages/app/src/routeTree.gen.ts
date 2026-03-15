@@ -16,6 +16,12 @@ import { Route as rootRoute } from './routes/__root';
 import { Route as IndexRoute } from './routes/index';
 import { Route as SessionsRoute } from './routes/sessions';
 import { Route as SettingsRoute } from './routes/settings';
+import { Route as FlowsRoute } from './routes/flows';
 
 // Build the route tree
-export const routeTree = rootRoute.addChildren([IndexRoute, SessionsRoute, SettingsRoute]);
+export const routeTree = rootRoute.addChildren([
+  IndexRoute,
+  SessionsRoute,
+  SettingsRoute,
+  FlowsRoute,
+]);
