@@ -120,8 +120,6 @@ export class HealthMonitorService {
   private isRunning = false;
   private schedulerService: SchedulerService | null = null;
 
-  private static readonly INTERVAL_ID = 'health-monitor:check';
-
   constructor(featureLoader?: FeatureLoader, config?: HealthMonitorConfig) {
     this.featureLoader = featureLoader ?? new FeatureLoader();
     this.config = {
@@ -168,68 +166,15 @@ export class HealthMonitorService {
   }
 
   /**
-   * Start periodic health monitoring
-   */
-  startMonitoring(): void {
-    if (this.isRunning) {
-      logger.warn('Health monitoring is already running');
-      return;
-    }
-
-    this.isRunning = true;
-    logger.info(`Starting health monitoring with interval of ${this.config.checkIntervalMs}ms`);
-
-    // Run initial check
-    this.runHealthCheck().catch((error) => {
-      logger.error('Initial health check failed:', error);
-    });
-
-    // Set up periodic checks via schedulerService if available, else raw setInterval
-    if (this.schedulerService) {
-      this.schedulerService.registerInterval(
-        HealthMonitorService.INTERVAL_ID,
-        'Health Monitor',
-        this.config.checkIntervalMs,
-        () => {
-          this.runHealthCheck().catch((error) => {
-            logger.error('Periodic health check failed:', error);
-          });
-        }
-      );
-    } else {
-      this.intervalId = setInterval(() => {
-        this.runHealthCheck().catch((error) => {
-          logger.error('Periodic health check failed:', error);
-        });
-      }, this.config.checkIntervalMs);
-    }
-  }
-
-  /**
-   * Stop periodic health monitoring
+   * No-op: periodic monitoring is now handled by MaintenanceOrchestrator.
+   * Kept for shutdown.ts compatibility.
    */
   stopMonitoring(): void {
-    if (!this.isRunning) {
-      logger.warn('Health monitoring is not running');
-      return;
-    }
-
-    if (this.schedulerService) {
-      this.schedulerService.unregisterInterval(HealthMonitorService.INTERVAL_ID);
-    } else if (this.intervalId) {
+    if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
-
     this.isRunning = false;
-    logger.info('Stopped health monitoring');
-  }
-
-  /**
-   * Check if monitoring is currently active
-   */
-  isMonitoring(): boolean {
-    return this.isRunning;
   }
 
   /**

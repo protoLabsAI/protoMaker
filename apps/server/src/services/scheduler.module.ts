@@ -20,7 +20,6 @@ export function register(container: ServiceContainer): void {
     schedulerService,
     automationService,
     autoModeService,
-    featureHealthService,
     integrityWatchdogService,
     featureLoader,
     healthMonitorService,
@@ -45,7 +44,6 @@ export function register(container: ServiceContainer): void {
       await automationService.syncWithScheduler({
         events,
         autoModeService,
-        featureHealthService,
         integrityWatchdogService,
         featureLoader,
         settingsService,
