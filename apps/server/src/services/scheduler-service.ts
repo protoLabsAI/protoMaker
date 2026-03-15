@@ -109,6 +109,31 @@ export interface TaskExecutionResult {
 }
 
 /**
+ * A named interval registered via registerInterval()
+ */
+export interface RegisteredInterval {
+  /** Unique identifier */
+  id: string;
+  /** Human-readable name */
+  name: string;
+  /** Interval period in milliseconds */
+  intervalMs: number;
+}
+
+/**
+ * A unified entry returned by listAll() covering both cron tasks and named intervals
+ */
+export interface TimerRegistryEntry {
+  id: string;
+  name: string;
+  type: 'cron' | 'interval';
+  /** Present for 'interval' type */
+  intervalMs?: number;
+  /** Present for 'cron' type */
+  cronExpression?: string;
+}
+
+/**
  * Scheduler status for health monitoring
  */
 export interface SchedulerStatus {
@@ -333,6 +358,8 @@ export class SchedulerService {
   private tasks: Map<string, ScheduledTask> = new Map();
   private parsedCrons: Map<string, ParsedCron> = new Map();
   private persistedMetadata: Map<string, PersistedTaskData> = new Map();
+  private namedIntervals: Map<string, { config: RegisteredInterval; handle: NodeJS.Timeout }> =
+    new Map();
   private intervalId: NodeJS.Timeout | null = null;
   private running = false;
   private events: EventEmitter | null = null;
@@ -672,6 +699,68 @@ export class SchedulerService {
   }
 
   /**
+   * Register a named interval. Unlike cron tasks, intervals fire every N milliseconds
+   * regardless of wall-clock time. Useful for sub-minute or non-calendar-aligned polling.
+   *
+   * Calling registerInterval() with an id that is already registered replaces the
+   * existing interval (the old one is cleared first).
+   */
+  registerInterval(
+    id: string,
+    name: string,
+    intervalMs: number,
+    handler: () => void | Promise<void>
+  ): void {
+    if (this.namedIntervals.has(id)) {
+      clearInterval(this.namedIntervals.get(id)!.handle);
+      logger.debug(`Replacing interval "${name}" (${id})`);
+    }
+
+    const handle = setInterval(() => {
+      void Promise.resolve(handler()).catch((err) => {
+        logger.error(`Interval handler "${name}" (${id}) failed:`, err);
+      });
+    }, intervalMs);
+
+    this.namedIntervals.set(id, { config: { id, name, intervalMs }, handle });
+    logger.info(`Registered interval "${name}" (${id}): ${intervalMs}ms`);
+  }
+
+  /**
+   * Unregister a named interval, clearing its underlying timer.
+   */
+  unregisterInterval(id: string): void {
+    const entry = this.namedIntervals.get(id);
+    if (entry) {
+      clearInterval(entry.handle);
+      this.namedIntervals.delete(id);
+      logger.info(`Unregistered interval "${entry.config.name}" (${id})`);
+    }
+  }
+
+  /**
+   * Return all registered timers — both cron tasks and named intervals — as a
+   * unified list. Used by the timer registry to enumerate all active timers.
+   */
+  listAll(): TimerRegistryEntry[] {
+    const tasks: TimerRegistryEntry[] = Array.from(this.tasks.values()).map((t) => ({
+      id: t.id,
+      name: t.name,
+      type: 'cron',
+      cronExpression: t.cronExpression,
+    }));
+
+    const intervals: TimerRegistryEntry[] = Array.from(this.namedIntervals.values()).map((i) => ({
+      id: i.config.id,
+      name: i.config.name,
+      type: 'interval',
+      intervalMs: i.config.intervalMs,
+    }));
+
+    return [...tasks, ...intervals];
+  }
+
+  /**
    * Get scheduler status for health monitoring
    */
   getStatus(): SchedulerStatus {
@@ -945,6 +1034,10 @@ export class SchedulerService {
    */
   destroy(): void {
     this.stop();
+    for (const entry of this.namedIntervals.values()) {
+      clearInterval(entry.handle);
+    }
+    this.namedIntervals.clear();
     this.tasks.clear();
     this.parsedCrons.clear();
     this.persistedMetadata.clear();

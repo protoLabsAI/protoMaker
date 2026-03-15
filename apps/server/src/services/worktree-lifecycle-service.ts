@@ -20,15 +20,12 @@ import * as secureFs from '../lib/secure-fs.js';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import { isWorktreeLocked } from '../lib/worktree-lock.js';
-import { WORKTREE_CLEANUP_DELAY_MS, WORKTREE_DRIFT_CHECK_INTERVAL_MS } from '../config/timeouts.js';
+import { WORKTREE_CLEANUP_DELAY_MS } from '../config/timeouts.js';
 
 const logger = createLogger('WorktreeLifecycle');
 
 /** Delay after PR merge before cleanup (allow CI/webhooks to settle) */
 const CLEANUP_DELAY_MS = WORKTREE_CLEANUP_DELAY_MS;
-
-/** Periodic drift detection interval (6 hours) */
-const DRIFT_CHECK_INTERVAL_MS = WORKTREE_DRIFT_CHECK_INTERVAL_MS;
 
 /** Worktree drift detection results */
 export interface WorktreeDrift {
@@ -57,7 +54,6 @@ export class WorktreeLifecycleService {
   private readonly events: EventEmitter;
   private readonly featureLoader: FeatureLoader;
   private initialized = false;
-  private driftCheckIntervalId: NodeJS.Timeout | null = null;
   private projectsToMonitor: Set<string> = new Set();
   private getRunningFeatures?: () => Promise<Array<{ branchName?: string; projectPath: string }>>;
 
@@ -106,9 +102,6 @@ export class WorktreeLifecycleService {
       }
     });
 
-    // Start periodic drift detection for monitored projects
-    this.startPeriodicDriftDetection();
-
     logger.info('Worktree lifecycle service initialized');
   }
 
@@ -116,11 +109,7 @@ export class WorktreeLifecycleService {
    * Shutdown the service and stop periodic tasks
    */
   shutdown(): void {
-    if (this.driftCheckIntervalId) {
-      clearInterval(this.driftCheckIntervalId);
-      this.driftCheckIntervalId = null;
-      logger.info('Stopped periodic drift detection');
-    }
+    logger.info('Worktree lifecycle service shut down');
   }
 
   /**
@@ -132,26 +121,10 @@ export class WorktreeLifecycleService {
   }
 
   /**
-   * Start periodic drift detection for all monitored projects
+   * Run drift check on all monitored projects.
+   * Called periodically by the scheduler via registerInterval().
    */
-  private startPeriodicDriftDetection(): void {
-    if (this.driftCheckIntervalId) {
-      return; // Already running
-    }
-
-    this.driftCheckIntervalId = setInterval(() => {
-      void this.runPeriodicDriftCheck();
-    }, DRIFT_CHECK_INTERVAL_MS);
-
-    logger.info(
-      `Started periodic drift detection (interval: ${DRIFT_CHECK_INTERVAL_MS / 1000 / 60} minutes)`
-    );
-  }
-
-  /**
-   * Run drift check on all monitored projects
-   */
-  private async runPeriodicDriftCheck(): Promise<void> {
+  async runPeriodicDriftCheck(): Promise<void> {
     if (this.projectsToMonitor.size === 0) {
       return;
     }

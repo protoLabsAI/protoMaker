@@ -55,7 +55,10 @@ export interface MatchResult {
 
 export class AgentManifestService {
   private cache = new Map<string, AgentManifest>();
-  private watchers = new Map<string, ReturnType<typeof setInterval>>();
+  /** Project paths being watched for manifest file changes */
+  private watchedPaths = new Set<string>();
+  /** Per-project mtime snapshots used to detect file changes */
+  private watcherMtimes = new Map<string, Map<string, number>>();
 
   // ── Public API ─────────────────────────────────────────────────────────────
 
@@ -207,7 +210,7 @@ export class AgentManifestService {
 
   /**
    * Invalidates the cache for a specific project (or all projects).
-   * Also stops the file watcher for that project.
+   * Also removes the project from the watch set.
    */
   invalidateCache(projectPath?: string): void {
     if (projectPath) {
@@ -215,7 +218,9 @@ export class AgentManifestService {
       this._stopWatcher(projectPath);
     } else {
       this.cache.clear();
-      this.watchers.forEach((_w, key) => this._stopWatcher(key));
+      for (const path of this.watchedPaths) {
+        this._stopWatcher(path);
+      }
     }
   }
 
@@ -386,47 +391,17 @@ export class AgentManifestService {
     return score;
   }
 
-  private _watchForChanges(projectPath: string): void {
-    if (this.watchers.has(projectPath)) return;
+  /**
+   * Poll all watched project paths for manifest file changes.
+   * Called on the scheduler interval registered in scheduler.module.ts
+   * (every WATCH_POLL_INTERVAL_MS milliseconds).
+   */
+  tick(): void {
+    for (const projectPath of this.watchedPaths) {
+      const mtimes = this.watcherMtimes.get(projectPath);
+      if (!mtimes) continue;
 
-    const singleFile = path.join(projectPath, '.automaker', 'agents.yml');
-    const dirPath = path.join(projectPath, '.automaker', 'agents');
-
-    // Collect all files to track (single file OR all .yml files in directory).
-    // We record their mtime at watch-start and invalidate the cache if any of
-    // them change.  This mtime-polling approach is used instead of fs.watch
-    // because fs.watch({ recursive: true }) is a no-op on Linux prior to
-    // Node 22 and unreliable with certain native binding versions.
-    const getTrackedFiles = (): string[] => {
-      if (fs.existsSync(singleFile)) return [singleFile];
-      if (this._isDirectory(dirPath)) {
-        try {
-          return fs
-            .readdirSync(dirPath)
-            .filter((f) => f.endsWith('.yml') || f.endsWith('.yaml'))
-            .map((f) => path.join(dirPath, f));
-        } catch {
-          return [];
-        }
-      }
-      return [];
-    };
-
-    const initialFiles = getTrackedFiles();
-    if (initialFiles.length === 0) return;
-
-    // Snapshot mtime for each file at watch-start.
-    const mtimes = new Map<string, number>();
-    for (const f of initialFiles) {
-      try {
-        mtimes.set(f, fs.statSync(f).mtimeMs);
-      } catch {
-        mtimes.set(f, 0);
-      }
-    }
-
-    const timer = setInterval(() => {
-      const currentFiles = getTrackedFiles();
+      const currentFiles = this._getTrackedFiles(projectPath);
       let changed = currentFiles.length !== mtimes.size;
 
       if (!changed) {
@@ -449,7 +424,7 @@ export class AgentManifestService {
         logger.info(`Agent manifest cache invalidated for ${projectPath} (file changed)`);
         // Refresh the mtime snapshot so we only fire once per actual change.
         mtimes.clear();
-        for (const f of getTrackedFiles()) {
+        for (const f of this._getTrackedFiles(projectPath)) {
           try {
             mtimes.set(f, fs.statSync(f).mtimeMs);
           } catch {
@@ -457,21 +432,51 @@ export class AgentManifestService {
           }
         }
       }
-    }, WATCH_POLL_INTERVAL_MS);
+    }
+  }
 
-    // Don't hold the event loop open just for watching.
-    if (typeof timer.unref === 'function') timer.unref();
+  private _getTrackedFiles(projectPath: string): string[] {
+    const singleFile = path.join(projectPath, '.automaker', 'agents.yml');
+    const dirPath = path.join(projectPath, '.automaker', 'agents');
 
-    this.watchers.set(projectPath, timer);
-    logger.debug(`Polling agent manifest at ${initialFiles.join(', ')}`);
+    if (fs.existsSync(singleFile)) return [singleFile];
+    if (this._isDirectory(dirPath)) {
+      try {
+        return fs
+          .readdirSync(dirPath)
+          .filter((f) => f.endsWith('.yml') || f.endsWith('.yaml'))
+          .map((f) => path.join(dirPath, f));
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  }
+
+  private _watchForChanges(projectPath: string): void {
+    if (this.watchedPaths.has(projectPath)) return;
+
+    const initialFiles = this._getTrackedFiles(projectPath);
+    if (initialFiles.length === 0) return;
+
+    // Snapshot mtime for each file at watch-start.
+    const mtimes = new Map<string, number>();
+    for (const f of initialFiles) {
+      try {
+        mtimes.set(f, fs.statSync(f).mtimeMs);
+      } catch {
+        mtimes.set(f, 0);
+      }
+    }
+
+    this.watchedPaths.add(projectPath);
+    this.watcherMtimes.set(projectPath, mtimes);
+    logger.debug(`Watching agent manifest for ${projectPath} (${initialFiles.length} file(s))`);
   }
 
   private _stopWatcher(projectPath: string): void {
-    const timer = this.watchers.get(projectPath);
-    if (timer) {
-      clearInterval(timer);
-      this.watchers.delete(projectPath);
-    }
+    this.watchedPaths.delete(projectPath);
+    this.watcherMtimes.delete(projectPath);
   }
 
   private _isDirectory(p: string): boolean {

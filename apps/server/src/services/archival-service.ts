@@ -18,11 +18,7 @@ import type { FeatureLoader } from './feature-loader.js';
 import type { LedgerService } from './ledger-service.js';
 import type { SettingsService } from './settings-service.js';
 import type { EventEmitter } from '../lib/events.js';
-import { ARCHIVAL_CHECK_INTERVAL_MS } from '../config/timeouts.js';
-
 const logger = createLogger('ArchivalService');
-
-const CHECK_INTERVAL_MS = ARCHIVAL_CHECK_INTERVAL_MS;
 const DEFAULT_RETENTION_HOURS = 2;
 
 export class ArchivalService {
@@ -30,7 +26,6 @@ export class ArchivalService {
   private ledgerService: LedgerService;
   private settingsService: SettingsService;
   private events: EventEmitter;
-  private timer: ReturnType<typeof setInterval> | null = null;
   private aborted = false;
 
   constructor(
@@ -46,30 +41,20 @@ export class ArchivalService {
   }
 
   /**
-   * Start the archival check interval
+   * Mark the service as active. The interval is registered externally via
+   * schedulerService.registerInterval() in scheduler.module.ts.
    */
   start(): void {
-    if (this.timer) return;
     this.aborted = false;
-
-    this.timer = setInterval(() => {
-      this.runArchivalCycle().catch((err) => {
-        logger.error('Archival cycle failed:', err);
-      });
-    }, CHECK_INTERVAL_MS);
-
-    logger.info('ArchivalService started (10min interval)');
+    logger.info('ArchivalService started');
   }
 
   /**
-   * Stop the archival check interval
+   * Stop accepting archival work. The scheduler interval continues to fire but
+   * runArchivalCycle() returns early while aborted is true.
    */
   stop(): void {
     this.aborted = true;
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
     logger.info('ArchivalService stopped');
   }
 
@@ -195,7 +180,7 @@ export class ArchivalService {
     return {
       enabled: settings.archival?.enabled ?? true,
       retentionHours: settings.archival?.retentionHours ?? DEFAULT_RETENTION_HOURS,
-      running: this.timer !== null,
+      running: !this.aborted,
     };
   }
 }
