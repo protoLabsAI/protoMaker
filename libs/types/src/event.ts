@@ -79,6 +79,11 @@ export type EventType =
   | 'scheduler:task-failed'
   | 'scheduler:interval_registered'
   | 'scheduler:interval_unregistered'
+  // Timer registry events (pause/resume individual and bulk timers)
+  | 'timer:paused'
+  | 'timer:resumed'
+  | 'timer:all-paused'
+  | 'timer:all-resumed'
   | 'maintenance'
   | 'recovery_analysis'
   | 'recovery_started'
@@ -848,6 +853,28 @@ export interface EventPayloadMap {
     approvalId: string;
     approved: boolean;
     message?: string;
+  };
+
+  // Timer registry events (pause/resume individual and bulk timers)
+  'timer:paused': {
+    timerId: string;
+    timerName: string;
+    kind: 'cron' | 'interval';
+    timestamp: string;
+  };
+  'timer:resumed': {
+    timerId: string;
+    timerName: string;
+    kind: 'cron' | 'interval';
+    timestamp: string;
+  };
+  'timer:all-paused': {
+    count: number;
+    timestamp: string;
+  };
+  'timer:all-resumed': {
+    count: number;
+    timestamp: string;
   };
 
   // Ava Channel events (private multi-instance coordination channel)

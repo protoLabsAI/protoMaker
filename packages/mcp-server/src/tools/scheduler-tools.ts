@@ -8,7 +8,7 @@ export const schedulerTools: Tool[] = [
   {
     name: 'get_scheduler_status',
     description:
-      'Get the status of all scheduled maintenance tasks including their schedules, enable/disable state, execution counts, and next run times.',
+      'Get the status of all scheduled timers (cron tasks and managed intervals) including their schedules, enable/disable state, execution counts, and next run times.',
     inputSchema: {
       type: 'object',
       properties: {},
