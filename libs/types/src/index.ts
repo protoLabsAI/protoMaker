@@ -197,6 +197,7 @@ export type {
   CalendarEvent,
   CalendarEventsFile,
   CalendarQueryOptions,
+  RecurrenceRule,
   JobStatus,
   JobAction,
   JobExecutionResult,
@@ -988,6 +989,14 @@ export type {
 // Chat stream part types (SubagentProgress, SubagentStatus)
 export type { SubagentProgress, SubagentStatus } from './chat.js';
 
+// Timer Registry types (unified cron + interval timer tracking)
+export type {
+  TimerCategory,
+  TimerType,
+  TimerRegistryEntry,
+  TimerRegistryMetrics,
+} from './scheduler.js';
+
 // PenFile types (vector graphics format v2.8)
 export type {
   PenColor,
@@ -1023,3 +1032,11 @@ export type {
   PenNode,
   PenDocument,
 } from './pen.js';
+
+// Maintenance orchestrator types
+export type {
+  MaintenanceCheck,
+  MaintenanceCheckContext,
+  MaintenanceCheckResult,
+  MaintenanceSweepResult,
+} from './maintenance.js';

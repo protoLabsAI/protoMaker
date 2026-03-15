@@ -20,17 +20,18 @@ export function register(container: ServiceContainer): void {
     schedulerService,
     automationService,
     autoModeService,
-    featureHealthService,
     integrityWatchdogService,
     featureLoader,
     healthMonitorService,
     specGenerationMonitor,
+    leadEngineerService,
   } = container;
 
   // Wire schedulerService into interval-tracked services so their timers
   // appear in schedulerService.listAll() and can be inspected centrally.
   healthMonitorService.setSchedulerService(schedulerService);
   specGenerationMonitor.setSchedulerService(schedulerService);
+  leadEngineerService.setSchedulerService(schedulerService);
   const prWatcher = getPRWatcherService();
   if (prWatcher) {
     prWatcher.setSchedulerService(schedulerService);
@@ -45,7 +46,6 @@ export function register(container: ServiceContainer): void {
       await automationService.syncWithScheduler({
         events,
         autoModeService,
-        featureHealthService,
         integrityWatchdogService,
         featureLoader,
         settingsService,

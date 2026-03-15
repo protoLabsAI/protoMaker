@@ -82,6 +82,42 @@ export const calendarTools: Tool[] = [
           type: 'string',
           description: 'Optional URL associated with the event',
         },
+        recurrence: {
+          type: 'object',
+          description:
+            'Optional recurrence rule for repeating events. Defines frequency, interval, specific days, and termination conditions.',
+          properties: {
+            frequency: {
+              type: 'string',
+              enum: ['daily', 'weekly', 'monthly', 'yearly'],
+              description: 'How often the event repeats',
+            },
+            interval: {
+              type: 'number',
+              description: 'Number of frequency units between occurrences (default: 1)',
+            },
+            daysOfWeek: {
+              type: 'array',
+              items: { type: 'number' },
+              description:
+                'Days of the week (0 = Sunday, 6 = Saturday). Only meaningful for weekly frequency.',
+            },
+            endDate: {
+              type: 'string',
+              description: 'Date after which recurrence stops (YYYY-MM-DD format, inclusive)',
+            },
+            count: {
+              type: 'number',
+              description: 'Maximum number of occurrences',
+            },
+          },
+          required: ['frequency'],
+        },
+        timezone: {
+          type: 'string',
+          description:
+            'IANA timezone identifier (e.g., "America/New_York"). Used for time-aware scheduling.',
+        },
         time: {
           type: 'string',
           description: 'Time in HH:mm 24h format (required for job events, e.g., "14:30")',
@@ -143,6 +179,25 @@ export const calendarTools: Tool[] = [
         url: {
           type: 'string',
           description: 'New URL (optional)',
+        },
+        recurrence: {
+          type: 'object',
+          description: 'New recurrence rule (optional)',
+          properties: {
+            frequency: {
+              type: 'string',
+              enum: ['daily', 'weekly', 'monthly', 'yearly'],
+            },
+            interval: { type: 'number' },
+            daysOfWeek: { type: 'array', items: { type: 'number' } },
+            endDate: { type: 'string' },
+            count: { type: 'number' },
+          },
+          required: ['frequency'],
+        },
+        timezone: {
+          type: 'string',
+          description: 'New IANA timezone identifier (optional)',
         },
       },
       required: ['projectPath', 'id'],

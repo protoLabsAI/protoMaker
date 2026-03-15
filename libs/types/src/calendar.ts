@@ -71,6 +71,29 @@ export interface JobExecutionResult {
 }
 
 /**
+ * Recurrence rule for repeating calendar events.
+ *
+ * Defines how an event repeats over time: frequency, interval,
+ * specific days of the week, and termination conditions.
+ */
+export interface RecurrenceRule {
+  /** How often the event repeats */
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
+
+  /** Number of frequency units between occurrences (default: 1) */
+  interval?: number;
+
+  /** Days of the week (0 = Sunday, 6 = Saturday). Only meaningful for weekly frequency. */
+  daysOfWeek?: number[];
+
+  /** Date after which recurrence stops (YYYY-MM-DD format, inclusive) */
+  endDate?: string;
+
+  /** Maximum number of occurrences */
+  count?: number;
+}
+
+/**
  * Calendar event
  */
 export interface CalendarEvent {
@@ -118,6 +141,12 @@ export interface CalendarEvent {
 
   /** Whether this is an all-day event */
   allDay?: boolean;
+
+  /** Recurrence rule for repeating events */
+  recurrence?: RecurrenceRule;
+
+  /** IANA timezone identifier (e.g., "America/New_York"). Used for time-aware scheduling. */
+  timezone?: string;
 
   /** Creation timestamp */
   createdAt: string;

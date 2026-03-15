@@ -92,6 +92,7 @@ import { createBackfillLedgerProjectSlugHandler } from '../routes/ledger/routes/
 import { createHivemindRoutes } from '../routes/hivemind/index.js';
 import { createDoraRoutes } from '../routes/dora/index.js';
 import { createAgentRoutes } from '../routes/agents.js';
+import { createOpsRoutes } from '../routes/ops/index.js';
 
 const logger = createLogger('Server:Routes');
 
@@ -156,6 +157,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     projectPmService,
     crdtSyncService,
     todoService,
+    schedulerService,
   } = services;
 
   // Run stale validation cleanup every hour to prevent memory leaks from crashed validations
@@ -441,6 +443,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // Agent manifest routes (list, get, match)
   app.use('/api/agents', createAgentRoutes(featureLoader));
   logger.info('Agent routes mounted at /api/agents');
+
+  // Ops routes (timer registry, operational controls)
+  app.use('/api/ops', createOpsRoutes(schedulerService, events));
+  logger.info('Ops routes mounted at /api/ops');
 
   // Note: Sentry v8 automatically captures Express errors - no manual error handler needed
 }

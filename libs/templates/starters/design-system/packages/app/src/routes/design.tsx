@@ -136,41 +136,67 @@ export default function DesignRoute() {
     const cached = cacheRef.current.get(selectedFrame.id);
     if (cached) return cached;
 
-    try {
-      // Bridge pen parser's Record<string, PenVariable> to codegen's PenVariable[]
-      const varsArray = doc.variables
-        ? Object.entries(doc.variables).map(([name, v]) => {
-            const penVar = v as unknown as { type: string; value: unknown };
-            return {
-              id: name,
-              name,
-              type: penVar.type ?? 'string',
-              values: typeof penVar.value === 'object' && penVar.value !== null && !Array.isArray(penVar.value)
+    // Bridge pen parser's Record<string, PenVariable> to codegen's PenVariable[]
+    const varsArray = doc.variables
+      ? Object.entries(doc.variables).map(([name, v]) => {
+          const penVar = v as unknown as { type: string; value: unknown };
+          return {
+            id: name,
+            name,
+            type: penVar.type ?? 'string',
+            values:
+              typeof penVar.value === 'object' &&
+              penVar.value !== null &&
+              !Array.isArray(penVar.value)
                 ? (penVar.value as Record<string, unknown>)
                 : { default: penVar.value },
-            };
-          })
-        : [];
-      const cDoc = { ...doc, variables: varsArray } as unknown as CodegenDoc;
-      const cFrame = selectedFrame as unknown as CodegenFrame;
+          };
+        })
+      : [];
+    const cDoc = { ...doc, variables: varsArray, children: doc.children ?? [] } as unknown as CodegenDoc;
+    const cFrame = selectedFrame as unknown as CodegenFrame;
 
+    // Generate each output independently so one failure doesn't block others
+    const errMsg = (label: string, err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      const stack = err instanceof Error ? `\n${err.stack}` : '';
+      return `${label} error: ${msg}${stack}`;
+    };
+
+    let reactCode: string;
+    try {
       const reactFile: GeneratedFile = generateComponent(cFrame, cDoc);
-      const htmlFile = generateHTMLFromFrame(cFrame as Parameters<typeof generateHTMLFromFrame>[0], cDoc as Parameters<typeof generateHTMLFromFrame>[1]);
-      const cssFile = generateCSSFromFrame(cFrame as Parameters<typeof generateCSSFromFrame>[0], cDoc as Parameters<typeof generateCSSFromFrame>[1]);
+      reactCode = reactFile.content;
+    } catch (err) {
+      reactCode = `// ${errMsg('React codegen', err)}`;
+    }
 
-      const result: CodegenCache = {
-        react: reactFile.content,
-        html: htmlFile.content,
-        css: cssFile.content,
-      };
+    let htmlCode: string;
+    try {
+      const htmlFile = generateHTMLFromFrame(
+        cFrame as Parameters<typeof generateHTMLFromFrame>[0],
+        cDoc as Parameters<typeof generateHTMLFromFrame>[1],
+      );
+      htmlCode = htmlFile.content;
+    } catch (err) {
+      htmlCode = `<!-- ${errMsg('HTML codegen', err)} -->`;
+    }
+
+    let cssCode: string;
+    try {
+      const cssFile = generateCSSFromFrame(
+        cFrame as Parameters<typeof generateCSSFromFrame>[0],
+        cDoc as Parameters<typeof generateCSSFromFrame>[1],
+      );
+      cssCode = cssFile.content;
+    } catch (err) {
+      cssCode = `/* ${errMsg('CSS codegen', err)} */`;
+    }
+
+    {
+      const result: CodegenCache = { react: reactCode, html: htmlCode, css: cssCode };
       cacheRef.current.set(selectedFrame.id, result);
       return result;
-    } catch (err) {
-      return {
-        react: `// Error generating React code:\n// ${err instanceof Error ? err.message : String(err)}`,
-        html: `<!-- Error generating HTML: ${err instanceof Error ? err.message : String(err)} -->`,
-        css: `/* Error generating CSS: ${err instanceof Error ? err.message : String(err)} */`,
-      };
     }
   }, [selectedFrame, doc]);
 

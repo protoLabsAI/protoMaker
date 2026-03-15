@@ -8,7 +8,7 @@
 
 import { exec } from 'node:child_process';
 import { createLogger } from '@protolabsai/utils';
-import type { CalendarEvent } from '@protolabsai/types';
+import type { CalendarEvent, RecurrenceRule } from '@protolabsai/types';
 import type { CalendarService } from './calendar-service.js';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { AutomationService } from './automation-service.js';
@@ -161,6 +161,11 @@ export class JobExecutorService {
         durationMs,
       });
 
+      // Schedule next occurrence for recurring jobs
+      if (job.recurrence) {
+        await this.scheduleNextOccurrence(projectPath, job);
+      }
+
       logger.info(`Job ${job.id} completed in ${durationMs}ms`);
     } catch (error) {
       const completedAt = new Date().toISOString();
@@ -187,6 +192,67 @@ export class JobExecutorService {
 
       logger.error(`Job ${job.id} failed: ${errorMessage}`);
     }
+  }
+
+  /**
+   * Compute the next occurrence date for a recurring job and create a new
+   * pending job event. Respects the recurrence rule's endDate and count limits.
+   */
+  private async scheduleNextOccurrence(projectPath: string, job: CalendarEvent): Promise<void> {
+    const rule = job.recurrence!;
+    const interval = rule.interval ?? 1;
+    const current = new Date(job.date);
+    const next = new Date(current);
+
+    switch (rule.frequency) {
+      case 'daily':
+        next.setDate(next.getDate() + interval);
+        break;
+      case 'weekly':
+        next.setDate(next.getDate() + 7 * interval);
+        break;
+      case 'monthly':
+        next.setMonth(next.getMonth() + interval);
+        break;
+      case 'yearly':
+        next.setFullYear(next.getFullYear() + interval);
+        break;
+    }
+
+    // Check if the next occurrence exceeds the recurrence end date
+    if (rule.endDate && next > new Date(rule.endDate)) {
+      logger.info(`Recurring job ${job.id}: no more occurrences (past endDate ${rule.endDate})`);
+      return;
+    }
+
+    // Check count limit: count the existing completed/failed siblings with the same title and recurrence
+    if (rule.count !== undefined) {
+      const allEvents = await this.calendarService.listEvents(projectPath);
+      const siblingCount = allEvents.filter(
+        (e) => e.type === 'job' && e.title === job.title && e.jobStatus !== 'pending'
+      ).length;
+      if (siblingCount >= rule.count) {
+        logger.info(`Recurring job ${job.id}: count limit (${rule.count}) reached`);
+        return;
+      }
+    }
+
+    const nextDateStr = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
+
+    await this.calendarService.createEvent(projectPath, {
+      title: job.title,
+      date: nextDateStr,
+      type: 'job',
+      time: job.time,
+      jobAction: job.jobAction,
+      jobStatus: 'pending',
+      recurrence: job.recurrence,
+      timezone: job.timezone,
+      description: job.description,
+      color: job.color,
+    });
+
+    logger.info(`Scheduled next occurrence of recurring job ${job.id} for ${nextDateStr}`);
   }
 
   /**
