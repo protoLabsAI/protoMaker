@@ -222,8 +222,8 @@ usageStats:
 - **Why this works:** Allows gradual schema evolution without hard migrations. Old disk files are automatically uplifted to new format on read. No script-based data transformation needed.
 - **Trade-offs:** Easier evolution vs. schema divergence: old disk files may differ from current schema, hidden behind normalizer. Bugs in normalization logic silently corrupt data.
 
-
 ### Persist lastRunAt via SettingsService.updateGlobalSettings() deep-merge on ceremonies.dailyStandup.lastRunAt, rather than direct state mutation or separate DB write (2026-03-13)
+
 - **Context:** Need to record when standup last ran, but avoid losing concurrent updates to GlobalSettings; settings is already deep-merged elsewhere
 - **Why:** Maintains immutability of GlobalSettings; uses existing settings update mechanism; deep-merge prevents overwriting sibling config values
 - **Rejected:** Direct mutation of service state would be lost on restart; separate DB table fragments settings into multiple places; raw writes might overwrite concurrent updates
@@ -231,13 +231,27 @@ usageStats:
 - **Breaking if changed:** If SettingsService.updateGlobalSettings() behavior changes (no longer deep-merges), concurrent updates to other settings will be lost
 
 #### [Pattern] Cycle guard in epicId traversal uses Set(visited) to track seen IDs. If ID revisited, breaks loop and returns null (skipped) (2026-03-14)
+
 - **Problem solved:** epicId creates parent-child links; data corruption/user error can create cycles (A→B→C→A). Without guard, infinite loop
 - **Why this works:** Defensive against circular data. Graceful degradation (mark as skipped) is safer than hanging or throwing. Typical for graph traversal in untrusted data
 - **Trade-offs:** Easier: robust to bad data. Harder: one Set allocation per feature, extra code
 
 ### Persistence uses single `automations.json` file instead of per-file `.automaker/automations/{id}.json` pattern specified in requirements (2026-03-14)
+
 - **Context:** Feature spec called for per-file storage; implementation chose centralized file
 - **Why:** Simpler atomic writes (write-to-temp-then-move), easier list operations without directory scanning, reduces file system churn
 - **Rejected:** Per-file pattern would require directory enumeration on list(), separate file handles per automation, and directory-level transaction handling
 - **Trade-offs:** Gained: atomic guarantees, simple list implementation. Lost: file-level isolation, easier concurrent access patterns
 - **Breaking if changed:** Switching to per-file requires rewriting persistence layer: map-reduce across directory, handle file conflicts in concurrent scenarios, deal with orphaned files
+
+#### [Gotcha] WeatherCard handles both direct tool output and `{ success, data }` wrapped output shapes inconsistently (2026-03-15)
+
+- **Situation:** Tool result renderers receive output from defineSharedTool, which can return either the value directly or wrapped in success/data object
+- **Root cause:** Defensive programming - account for both possible shapes from tool definition. Ensures renderer works regardless of tool output shape.
+- **How to avoid:** Gains: renderer is resilient to API variations. Loses: suggests inconsistent API contract - unclear which shape a tool will use.
+
+#### [Pattern] Atomic design categories (Atoms → Molecules → Organisms → Templates → Pages → Other) derived from frontmatter.category field (2026-03-15)
+
+- **Problem solved:** Sidebar needs to organize navigation by design system hierarchy without hardcoded mappings
+- **Why this works:** Content becomes self-describing via frontmatter. Single source of truth. Scales without code changes. Follows established atomic design principles.
+- **Trade-offs:** Gains: self-describing content, scalable. Loses: requires consistent frontmatter discipline, category changes aren't validated at build time.

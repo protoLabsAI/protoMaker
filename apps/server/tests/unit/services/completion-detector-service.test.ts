@@ -196,6 +196,12 @@ describe('CompletionDetectorService', () => {
       // callback arg as the resolved value, so pass { stdout, stderr } as that arg.
       type ExecFileCb = (err: null, result: { stdout: string; stderr: string }) => void;
 
+      // git ls-remote → branch exists on remote
+      mockExecFile.mockImplementationOnce(
+        (_cmd: string, _args: string[], _opts: object, cb: ExecFileCb) => {
+          cb(null, { stdout: 'abc123\trefs/heads/epic/test-branch', stderr: '' });
+        }
+      );
       // gh pr list → no existing PR
       mockExecFile.mockImplementationOnce(
         (_cmd: string, _args: string[], _opts: object, cb: ExecFileCb) => {

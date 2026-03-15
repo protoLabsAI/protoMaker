@@ -21,7 +21,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * Resolve the path to a starter kit directory.
  * Works from both the compiled `dist/` and the `src/` directory during dev.
  */
-function resolveStarterDir(kitName: 'docs' | 'portfolio' | 'general' | 'landing-page'): string {
+function resolveStarterDir(
+  kitName: 'docs' | 'portfolio' | 'general' | 'landing-page' | 'ai-agent-app' | 'design-system'
+): string {
   // From dist/: ../starters/<kit>  (libs/templates/starters/<kit>)
   const fromDist = path.resolve(__dirname, '..', 'starters', kitName);
   return fromDist;
@@ -257,6 +259,171 @@ export async function scaffoldGeneralStarter(options: ScaffoldOptions): Promise<
       'utf-8'
     );
 
+    const entries = await fs.readdir(outputDir);
+    filesCreated.push(...entries.map((e) => path.join(outputDir, e)));
+
+    return { success: true, outputDir, filesCreated };
+  } catch (error) {
+    return {
+      success: false,
+      outputDir,
+      filesCreated,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+/** Text file extensions that should receive @@PROJECT_NAME substitution. */
+const TEXT_EXTENSIONS = new Set([
+  '.ts',
+  '.tsx',
+  '.js',
+  '.jsx',
+  '.mjs',
+  '.cjs',
+  '.json',
+  '.md',
+  '.txt',
+  '.html',
+  '.css',
+  '.env',
+  '.example',
+]);
+
+/**
+ * Walk a directory recursively, invoking `callback` for every file path.
+ * Skips `node_modules` and `.git` directories.
+ */
+async function walkFiles(
+  dir: string,
+  callback: (filePath: string) => Promise<void>
+): Promise<void> {
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.name === 'node_modules' || entry.name === '.git') continue;
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      await walkFiles(fullPath, callback);
+    } else {
+      await callback(fullPath);
+    }
+  }
+}
+
+/**
+ * Apply `@@PROJECT_NAME` substitutions across ALL text files in the output
+ * directory — TypeScript sources, JSON configs, Markdown docs, and more.
+ *
+ * Replaces every occurrence of the literal string `@@PROJECT_NAME` with
+ * the provided `projectName`, making the scaffolded project self-contained
+ * and ready to build without manual token replacement.
+ */
+async function applyMonorepoSubstitutions(outputDir: string, projectName: string): Promise<void> {
+  await walkFiles(outputDir, async (filePath) => {
+    const ext = path.extname(filePath).toLowerCase();
+    // Also match extensionless files like `.env`
+    const basename = path.basename(filePath);
+    const isTextFile =
+      TEXT_EXTENSIONS.has(ext) || basename === '.env' || basename.startsWith('.env.');
+
+    if (!isTextFile) return;
+
+    try {
+      const raw = await fs.readFile(filePath, 'utf-8');
+      if (!raw.includes('@@PROJECT_NAME')) return; // skip files without the token (fast path)
+      const replaced = raw.replace(/@@PROJECT_NAME/g, projectName);
+      await fs.writeFile(filePath, replaced, 'utf-8');
+    } catch {
+      // unreadable file — skip
+    }
+  });
+}
+
+/**
+ * Scaffold a new **AI agent app** monorepo at `options.outputDir`.
+ *
+ * Copies `starters/ai-agent-app/` to the output directory, then applies
+ * `@@PROJECT_NAME` substitutions across the root `package.json` and all
+ * sub-package `package.json` files under `packages/`.
+ *
+ * The monorepo includes three workspaces:
+ * - `packages/ui` — React frontend
+ * - `packages/server` — Node.js backend with the Anthropic SDK
+ * - `packages/app` — standalone agent entry point with the Anthropic SDK
+ *
+ * @example
+ * ```ts
+ * const result = await scaffoldAiAgentAppStarter({
+ *   projectName: 'my-agent',
+ *   outputDir: '/tmp/my-agent',
+ * });
+ * // → /tmp/my-agent/ contains a ready-to-run AI agent monorepo
+ * ```
+ */
+export async function scaffoldAiAgentAppStarter(options: ScaffoldOptions): Promise<ScaffoldResult> {
+  const { projectName, outputDir } = options;
+  const filesCreated: string[] = [];
+
+  try {
+    const starterDir = resolveStarterDir('ai-agent-app');
+    await copyDir(starterDir, outputDir);
+    await applyMonorepoSubstitutions(outputDir, projectName);
+
+    // List top-level created entries for reporting
+    const entries = await fs.readdir(outputDir);
+    filesCreated.push(...entries.map((e) => path.join(outputDir, e)));
+
+    return { success: true, outputDir, filesCreated };
+  } catch (error) {
+    return {
+      success: false,
+      outputDir,
+      filesCreated,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+/**
+ * Scaffold a new **design system** monorepo at `options.outputDir`.
+ *
+ * Copies `starters/design-system/` to the output directory, then applies
+ * `@@PROJECT_NAME` substitutions across all text files.
+ *
+ * The monorepo includes these workspaces:
+ * - `packages/pen` — .pen file parser
+ * - `packages/codegen` — code generation utilities
+ * - `packages/tokens` — design tokens (DTCG format)
+ * - `packages/color` — OKLCH color utilities
+ * - `packages/a11y` — accessibility helpers
+ * - `packages/xcl` — XCL codec (ComponentDef ↔ XML ↔ TSX)
+ * - `packages/registry` — component registry
+ * - `packages/agents` — AI agents for component generation
+ * - `packages/mcp` — MCP server for AI tool exposure
+ * - `packages/app` — design system playground (Vite)
+ * - `packages/server` — Express API server
+ *
+ * @example
+ * ```ts
+ * const result = await scaffoldDesignSystemStarter({
+ *   projectName: 'my-design-system',
+ *   outputDir: '/tmp/my-design-system',
+ * });
+ * // → /tmp/my-design-system/ contains a ready-to-run design system monorepo
+ * ```
+ */
+export async function scaffoldDesignSystemStarter(
+  options: ScaffoldOptions
+): Promise<ScaffoldResult> {
+  const { projectName, outputDir } = options;
+  const filesCreated: string[] = [];
+
+  try {
+    const starterDir = resolveStarterDir('design-system');
+    await copyDir(starterDir, outputDir);
+    await applyMonorepoSubstitutions(outputDir, projectName);
+
+    // List top-level created entries for reporting
     const entries = await fs.readdir(outputDir);
     filesCreated.push(...entries.map((e) => path.join(outputDir, e)));
 

@@ -9,6 +9,7 @@ usageStats:
   referenced: 28
   successfulFeatures: 28
 ---
+
 <!-- domain: Testing Patterns | Unit test patterns, integration test strategies, test isolation -->
 
 # testing
@@ -139,28 +140,138 @@ usageStats:
 - **Why this works:** Mock events.broadcast() to verify correct event signatures; real Express server to verify HTTP behavior and file I/O together without stubbing filesystem
 - **Trade-offs:** Gained confidence in integration between routes and events; test setup more complex than pure unit tests
 
-
 #### [Gotcha] Playwright tests can't run against worktree code because dev server serves main repo, not worktree branch. Test infrastructure doesn't support per-worktree dev servers. (2026-03-13)
+
 - **Situation:** Attempted to verify dialog functionality with Playwright. Tests reused main repo dev server instead of worktree code.
 - **Root cause:** Dev server configured with fixed paths (main repo). Worktrees are isolated git copies but share same dev server infrastructure.
 - **How to avoid:** Gain: single dev server reduces resource overhead. Loss: can't test worktree changes in isolation without running separate server or static analysis.
 
 #### [Gotcha] Turbo build cache was replaying old results. Direct tsc invocation (tsc --noEmit) was needed to verify type changes, bypassing the cached build. (2026-03-13)
+
 - **Situation:** After code edits, npm run build:server returned cached results without recompiling the changed file.
 - **Root cause:** Turbo aggressively caches task outputs. Incremental changes don't trigger cache invalidation if task hash hasn't changed fundamentally.
 - **How to avoid:** Using tsc directly is faster for validation but doesn't test the full build pipeline (bundling, optimization). Full build catches more issues but is slower.
 
 #### [Pattern] For setInterval-based logic, use vi.useFakeTimers() + vi.advanceTimersByTime() instead of real setTimeout waits. This eliminates timing flakiness and makes tests deterministic and fast. (2026-03-13)
+
 - **Problem solved:** Original test used 3-second real-time polling with timeout checks, which is flaky due to OS scheduling variance. New test uses fake timers to advance exact intervals.
 - **Why this works:** Fake timers decouple test execution from wall-clock time, making interval-based logic testable without false negatives from CPU contention or slow CI runners. Tests also run sub-millisecond.
 - **Trade-offs:** Fake timers require wrapping in try/finally to restore real timers, but guarantee determinism and speed. Trade manual timer management for robustness.
 
 #### [Gotcha] Pre-existing tests accessed result?.name on MatchResult type that actually returns { agent, confidence }. Type assertions were not validated — tests were accessing non-existent properties without type errors. (2026-03-13)
+
 - **Situation:** 6 tests in matchFeature suite failed because they checked result?.name instead of result?.agent.name. This indicates test code drifted from the actual API.
 - **Root cause:** Tests were likely written before the MatchResult type was formalized, or type checking was bypassed (possible loose tsconfig or missing type validation in test setup). Property access on union/object types wasn't caught at test time.
 - **How to avoid:** Fixing tests revealed the actual type contract. Cost is finding and fixing 6 test assertions; benefit is ensuring tests validate the real API.
 
 #### [Gotcha] Keyword matching scoring includes indirect matches. The test expected confidence ≈0.545 (18/33) but actual was 0.697 (23/33) because 'component' keyword in the agent description also contributed to the match signal. (2026-03-13)
+
 - **Situation:** Multi-signal keyword matching test miscalculated expected score by omitting a matching signal that was actually present in the agent description.
 - **Root cause:** Keyword matching is cumulative across multiple signal sources (agent name, description, extends). Test assertion only counted primary signals and missed secondary keyword contributions.
 - **How to avoid:** Fixing test assertion requires understanding all signal sources. Cost is careful scoring audit; benefit is accurate confidence calibration.
+
+#### [Pattern] Use TypeScript compilation as verification gate instead of Playwright for scaffolding phases with no runnable app (2026-03-15)
+
+- **Problem solved:** Phase 1 creates static CSS/TSX template files. No app server, no DOM, no browser runtime available for end-to-end tests.
+- **Why this works:** Pragmatic verification matching project phase constraints. TypeScript catches structural errors (type safety, exports, imports). Playwright requires running application, which doesn't exist until later phases.
+- **Trade-offs:** Catches fewer bugs (no runtime logic) but appropriate for token scope. Full E2E testing happens when app shell exists in later phases.
+
+#### [Gotcha] Test imports required migration to kebab-case module paths (registry.js, define-tool.js, mcp-adapter.js, express-adapter.js) after tools package refactoring (2026-03-15)
+
+- **Situation:** Build output or export map changed module naming convention; tests had to be updated in lockstep
+- **Root cause:** Tools package build/export map likely changed to kebab-case (common convention for npm packages). Tests importing tools must match the actual export paths.
+- **How to avoid:** Consistent naming convention across package. Cost: all consumers must update imports; easy to miss and cause test failures.
+
+#### [Gotcha] TypeScript/tsx module resolution in template packages walks up to parent node_modules even though npm install can't run in template (2026-03-15)
+
+- **Situation:** Verification test ran via tsx from within package; package has @@PROJECT_NAME placeholders so npm install fails; but ws and @types/ws are needed
+- **Root cause:** Node.js module resolution doesn't just look in ./node_modules; it traverses up to parent/node_modules/… until found. In monorepo worktree, parent node_modules inherits from root. tsx leverages this same traversal. Breaks the assumption that template packages are isolated.
+- **How to avoid:** Test runs successfully using parent deps (realistic for actual usage), but surprising that package without node_modules can import; decouples test environment from package environment slightly
+
+#### [Pattern] Cannot directly run `npm install` or test templates containing @@PROJECT_NAME placeholders. Validate template correctness via file structure verification + verifying main server still builds, not by attempting template scaffolding. (2026-03-15)
+
+- **Problem solved:** Template contains placeholder that's substituted during actual user scaffolding, but template directory itself cannot be executed
+- **Why this works:** Placeholder replacement happens at scaffolding time via copy+sed, not within template directory. Attempting npm install in template with @@PROJECT_NAME in package.json fails. Structural validation (files exist, contain expected patterns) + dependency impact testing (main server build) catches issues without false failures.
+- **Trade-offs:** Requires more sophisticated validation scripts; cannot test full npm install flow in template directory; removes false blockers; higher confidence that scaffolded instances will work
+
+#### [Gotcha] Playwright E2E verification skipped because packages/app has no Vite entry point (no main.tsx, index.html). Library code (store, hook) is TypeScript-verified but not integration-tested. (2026-03-15)
+
+- **Situation:** Feature builds store + hook as library code, but app skeleton lacks entry point to launch and test persistence/API flow.
+- **Root cause:** Incremental feature development: store + hook delivered this phase, full app wiring (Vite entry, server routes) in next phase. Store/hook are library patterns, not standalone app code.
+- **How to avoid:** TS verification high confidence for library code; E2E verification deferred. Acceptance criteria 'sessions persist' and 'model flows through' validated next phase when full app boots.
+
+#### [Pattern] Verify template artifacts via structural inspection (file existence, export signatures, API patterns) instead of runtime tests when the template environment can't be directly executed in the build context (2026-03-15)
+
+- **Problem solved:** The ai-agent-app starter kit is a template in the monorepo. It depends on @xyflow/react which isn't installed during template generation. Direct Playwright testing is impossible without 'npm install' at template load time.
+- **Why this works:** Templates can't run in their source location due to uninstalled peer dependencies. A Node.js verification script inspects 25 export signatures and API patterns instead. This catches structural/contract violations without runtime overhead and works entirely in the build environment.
+- **Trade-offs:** Structural checks are fast and environment-agnostic but catch only API contract violations, not runtime logic bugs or integration issues.
+
+#### [Pattern] Verification via TypeScript compilation: create a temporary .ts file that imports and exercises all public APIs, compile with --noEmit to type-check the entire surface, then delete. No test runner needed. (2026-03-15)
+
+- **Problem solved:** First smoke test for a new library before committing, ensuring all exported types and functions are correctly typed and wired
+- **Why this works:** TypeScript's type checker catches real usage errors that documentation review misses; immediate feedback without test infrastructure overhead; forces functions to actually be called with correct signatures
+- **Trade-offs:** Requires cleanup (delete **verify**.ts) but guarantees zero compilation errors in real consumer code paths
+
+#### [Gotcha] WCAG contrast calculation must convert Oklch→linear sRGB→luminance per spec. Direct use of oklch.l value produces incorrect contrast ratios that pass tests but fail real-world WCAG validation. (2026-03-15)
+
+- **Situation:** Implementation of WCAG AA/AAA compliance checking requires computing relative luminance of foreground and background colors.
+- **Root cause:** WCAG 2.1 spec defines luminance in relative to D65 illuminant over linear sRGB, not in the oklch lightness dimension. oklch.l approximates perceived lightness but is not the same as relative luminance.
+- **How to avoid:** Correct implementation adds conversion overhead (3 matrix multiplications per color), but ensures compliance. Simplified approach would fail when ratios are close to threshold (14:1 vs 15:1).
+
+#### [Pattern] Story metadata (argTypes, variants) stored as JavaScript objects in CSF files, parsed and used to auto-generate prop controls UI at runtime (2026-03-15)
+
+- **Problem solved:** Prop editor needs to know what controls to render (text input, toggle, color picker, range, select) for each story without hardcoding a prop list.
+- **Why this works:** Declarative metadata (argTypes) is standard CSF pattern. Parsing it at runtime means prop controls are always in sync with story definition—no duplication. Reduces boilerplate for story authors.
+- **Trade-offs:** Easier: story author writes argTypes once, controls appear. Harder: story author must know argTypes schema and be disciplined; invalid argTypes config silently renders broken controls.
+
+#### [Pattern] Temporary Playwright test file created, verified to pass (5/5 tests), then deleted after verification (2026-03-15)
+
+- **Problem solved:** Feature involved new DocsRoute component; needed verification before merging, but tests aren't meant to be permanent
+- **Why this works:** Playwright tests validate runtime behavior (route renders, sidebar visible, props table shows, navigation works) in real browser context. Deletion keeps repo clean - tests were for one-time verification, not regression prevention
+- **Trade-offs:** Easier: clean git history, no test maintenance. Harder: no ongoing regression protection; if someone refactors DocsRoute later, no test safety net
+
+#### [Pattern] Feature verified using Playwright tests run against actual Vite dev server (port 5190). Tests checked real rendered output: sidebar text, admin page content, route navigation. (2026-03-15)
+
+- **Problem solved:** Verifying TinaCMS integration before merge, ensuring all 5 routes work end-to-end
+- **Why this works:** Real integration test against actual running app catches rendering, routing, timing issues that unit tests miss. Confirms Vite bundling works.
+- **Trade-offs:** Slower than unit tests, requires server lifecycle management, harder to debug failures; but much higher confidence
+
+#### [Gotcha] Playwright test execution required NODE_PATH=/path/to/root/node_modules to resolve @playwright/test correctly (2026-03-15)
+
+- **Situation:** Temporary verification tests created in worktree subdirectory to validate components render
+- **Root cause:** Playwright module installed at monorepo root, not in design-system package. Default Node resolution doesn't traverse up to root node_modules.
+- **How to avoid:** Gains: discovered NODE_PATH workaround for monorepo testing. Loses: time debugging module resolution.
+
+#### [Pattern] Temporary Playwright tests created, executed against live Vite dev server, then deleted post-verification (2026-03-15)
+
+- **Problem solved:** Need lightweight component verification without adding persistent test infrastructure to starter template
+- **Why this works:** Avoids committing test files to template. Quick validation of component rendering. Leaves template clean for users. Tests run in real browser environment.
+- **Trade-offs:** Gains: quick validation, clean template. Loses: no persistent regression tests, verification is manual/one-time.
+
+### TypeScript type-check gate (tsc --noEmit) inserted immediately after code generation, before refinement loop begins (2026-03-15)
+
+- **Context:** Generated React components from .pen codegen need verification before being fed to Claude for refinement
+- **Why:** Catches structural/type errors in generated code early. Invalid TypeScript can confuse Claude's refinement loop or waste iterations. Fail-fast approach prevents garbage-in-garbage-out
+- **Rejected:** Skipping type check and letting refinement handle all errors would require Claude to diagnose and fix type issues, wasting tokens and iterations
+- **Trade-offs:** Easier: generated code guaranteed to be valid TypeScript before refinement. Harder: requires tsc as a build dependency and adds latency
+- **Breaking if changed:** If you remove this gate, generated code with type errors enters refinement loop, reducing reliability of output and increasing iteration costs
+
+### Use TypeScript compilation (npx tsc --noEmit exit code 0) as verification gate for starter kit templates instead of Playwright/UI testing (2026-03-15)
+
+- **Context:** Starter kit templates are not running applications — no browser UI to test with Playwright
+- **Why:** TypeScript verification is the appropriate artifact-level verification for code templates; catches structural errors at definition time rather than runtime
+- **Rejected:** Playwright testing requires running application (starter kit templates don't); manual testing is not scalable
+- **Trade-offs:** Catches type errors early but doesn't verify runtime behavior when template is instantiated and used in actual projects
+- **Breaking if changed:** Removing TypeScript verification would allow type errors to ship in templates, deferring errors to when developers use the template
+
+#### [Pattern] Round-trip validation (ComponentDef → XCL → ComponentDef, verify equality) caught two asymmetric codec bugs before ship. 28 Playwright tests across 6 component types verified 100% fidelity. (2026-03-15)
+
+- **Problem solved:** Serializer and deserializer are separate codepaths. Each could silently lose data in one direction (e.g., serialize drops field, deserialize ignores it).
+- **Why this works:** Asymmetric bugs are hard to spot: one direction works, other direction seems to work but loses data. Round-trip testing forces both paths to be tested together. Catches lossy serialization.
+- **Trade-offs:** More test code required (need to compare deep object structures after round-trip). More coverage: catches codec asymmetries that separate tests miss.
+
+
+#### [Pattern] Git pre-commit hooks enforce correct file paths (caught attempt to write docs to main repo instead of worktree) (2026-03-15)
+- **Problem solved:** Developer path selection error was automatically blocked by hook before being committed
+- **Why this works:** Filesystem path validation in hooks is layered safety mechanism - more reliable than guidelines or code review alone; prevents organizational/maintenance issues from wrong paths
+- **Trade-offs:** Automatic enforcement prevents mistakes but adds tooling complexity and can cause friction if overly strict or misconfigured

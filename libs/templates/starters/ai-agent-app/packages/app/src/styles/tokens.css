@@ -1,0 +1,91 @@
+@import 'tailwindcss';
+
+/*
+ * AI Agent App Design Tokens
+ *
+ * To rebrand: change the 6 values below.
+ * Everything else derives from these.
+ */
+:root {
+  /* Brand — 6 values control the entire theme */
+  --background: #09090b;
+  --surface: #111113;
+  --border: #27272a;
+  --primary: #a78bfa;
+  --primary-foreground: #09090b;
+  --foreground: #fafafa;
+
+  /* Derived surface tiers */
+  --surface-2: #18181b;
+  --surface-3: #222225;
+
+  /* Text tiers */
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+
+  /* Status */
+  --success: #4ade80;
+  --warning: #facc15;
+  --error: #f87171;
+  --info: #60a5fa;
+
+  /* Popover / overlay */
+  --popover: #111113;
+  --popover-foreground: #fafafa;
+}
+
+/* Tailwind CSS 4 @theme inline bridge — maps CSS vars to Tailwind color utilities */
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--text-muted);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --font-sans: 'Geist', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', monospace;
+}
+
+/* Base */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+/* Focus styles */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}

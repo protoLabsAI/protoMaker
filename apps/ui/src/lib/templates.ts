@@ -13,7 +13,7 @@ export interface StarterTemplate {
   /** How the template is provisioned */
   source: 'scaffold' | 'clone';
   /** Kit type for scaffold source — maps to scaffold endpoint */
-  kitType?: 'docs' | 'portfolio' | 'landing-page' | 'extension';
+  kitType?: 'docs' | 'portfolio' | 'landing-page' | 'extension' | 'ai-agent-app' | 'design-system';
   /** GitHub URL for clone source */
   repoUrl?: string;
   techStack: string[];
@@ -79,6 +79,65 @@ export const starterTemplates: StarterTemplate[] = [
       'Geist font family (sans + mono)',
     ],
     category: 'frontend',
+    author: 'protoLabs',
+  },
+  {
+    id: 'ai-agent-app',
+    name: 'AI Agent App',
+    description:
+      'Full-stack agentic chat application with a streaming React UI, Express server running an Anthropic tool-use loop, shared tool definitions (MCP/LangGraph/Express adapters), LangGraph flows, prompt registry, and Langfuse tracing.',
+    source: 'scaffold',
+    kitType: 'ai-agent-app',
+    techStack: [
+      'React 19',
+      'Vite',
+      'TanStack Router',
+      'Express',
+      'Anthropic SDK',
+      'LangGraph',
+      'Vercel AI SDK',
+      'Langfuse',
+      'Tailwind CSS 4',
+    ],
+    features: [
+      'Streaming chat UI with tool invocation progress labels (WebSocket sideband)',
+      'Server-side Anthropic agentic loop with multi-turn tool use',
+      'defineSharedTool — define once, deploy to MCP, LangGraph, and Express',
+      'LangGraph flow builder with linear, loop, and branching topologies',
+      'Prompt registry with YAML frontmatter and {{variable}} interpolation',
+      'Langfuse observability with FileTracer fallback (zero-infra dev experience)',
+      'Session persistence with LRU eviction (localStorage)',
+      'Slash command system with system-prompt expansion',
+    ],
+    category: 'ai',
+    author: 'protoLabs',
+  },
+  {
+    id: 'design-system',
+    name: 'Design System',
+    description:
+      'Full-stack design system monorepo with AI-powered component generation, XCL codec, MCP server, and component registry.',
+    source: 'scaffold',
+    kitType: 'design-system',
+    techStack: [
+      'React 19',
+      'TypeScript',
+      'Vite',
+      'Express',
+      'Anthropic SDK',
+      'MCP SDK',
+      'axe-core',
+    ],
+    features: [
+      'DTCG-format design tokens with build-time CSS variable generation',
+      'XCL codec: bidirectional ComponentDef ↔ XCL XML ↔ TSX pipeline',
+      'In-memory component registry with CRUD operations',
+      'AI agents for component generation from .pen design files',
+      'MCP server exposing design system tools to AI coding assistants',
+      'Vite-powered component playground',
+      'Automated a11y checks with axe-core',
+    ],
+    category: 'ai',
     author: 'protoLabs',
   },
   {

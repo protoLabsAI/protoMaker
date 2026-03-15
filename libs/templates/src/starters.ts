@@ -86,6 +86,63 @@ Design tokens live in \`src/styles/global.css\` as CSS custom properties and a T
 }
 
 /**
+ * Get the agent context file content for the AI Agent App starter kit.
+ * Write this to `.automaker/CONTEXT.md` in the new project.
+ */
+export function getAiAgentAppStarterContext(): string {
+  return `# AI Agent App Starter Kit — Agent Context
+
+This project is an **AI agentic chat application** with a multi-package monorepo structure.
+
+## Project Structure
+
+\`\`\`
+packages/
+  server/    ← Express server with Anthropic agentic loop (POST /chat)
+  ui/        ← Vite + React + TanStack Router chat UI with streaming
+  tools/     ← Shared tool definitions (MCP, LangGraph, Express adapters)
+  flows/     ← LangGraph workflow definitions
+  prompts/   ← Prompt registry with YAML frontmatter + {{variable}} templates
+  tracing/   ← Langfuse + FileTracer observability (zero-dependency fallback)
+  app/       ← Cross-package app entrypoint
+\`\`\`
+
+## Key Patterns
+
+### Tools
+Tools are defined once with \`defineSharedTool\` and deployed to MCP, LangGraph, and Express via adapters. Register tools via \`registerTool()\` in the ToolRegistry. Use \`toolProgress.emit()\` to broadcast live progress to the UI over WebSocket sideband (port 3002).
+
+### Chat Server
+The agentic loop lives in \`packages/server/src/routes/chat.ts\`. It calls Anthropic, detects \`tool_use\` blocks, executes via ToolRegistry, feeds results back, and repeats until \`end_turn\`. Streaming uses the Vercel AI SDK (\`streamText\` → \`pipeUIMessageStreamToResponse\`).
+
+### Flows
+LangGraph flows live in \`packages/flows/src/flows/\`. Use \`createLinearGraph\`, \`createLoopGraph\`, or \`createBranchingGraph\` factory functions. State reducers (\`appendReducer\`, \`counterReducer\`, etc.) handle state merging.
+
+### Prompts
+Prompts are Markdown files in \`packages/prompts/src/prompts/\` with YAML frontmatter. Load via \`PromptLoader\` and register in \`PromptRegistry\`. Slash commands expand via system-prompt prepending.
+
+### Tracing
+Pass \`LANGFUSE_PUBLIC_KEY\` + \`LANGFUSE_SECRET_KEY\` to enable Langfuse. Fallback: \`FileTracer\` writes JSON traces to \`packages/tracing/traces/\`.
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| \`npm run dev\` | Start server (port 3001) + UI dev server (port 5173) |
+| \`npm run build\` | Build all packages |
+| \`npm run typecheck\` | TypeScript check across all packages |
+| \`npm run test\` | Run Vitest test suite |
+
+## Key Constraints
+
+- Server port: 3001. UI dev server: 5173. WebSocket sideband: 3002.
+- Zero \`@protolabsai/*\` internal imports — this package is standalone.
+- CSS theming uses \`bg-[var(--primary)]\` Tailwind arbitrary syntax (no design system dependency).
+- \`@@PROJECT_NAME\` placeholders in package names should be replaced with your project name.
+`;
+}
+
+/**
  * Get the agent context file content for the Starlight docs starter kit.
  * Write this to `.automaker/CONTEXT.md` in the new project.
  */

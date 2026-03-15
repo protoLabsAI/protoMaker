@@ -1,0 +1,41 @@
+{
+  "name": "@@PROJECT_NAME-flows",
+  "version": "0.1.0",
+  "description": "LangGraph state graphs and flow utilities — GraphBuilder, routers, reducers, state utils, and XML parsing",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@langchain/langgraph": "^0.2.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0"
+  },
+  "peerDependencies": {
+    "@langchain/langgraph": "^0.2.0"
+  },
+  "peerDependenciesMeta": {
+    "@langchain/langgraph": {
+      "optional": true
+    }
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./examples": {
+      "import": "./dist/examples/index.js",
+      "types": "./dist/examples/index.d.ts"
+    }
+  }
+}
