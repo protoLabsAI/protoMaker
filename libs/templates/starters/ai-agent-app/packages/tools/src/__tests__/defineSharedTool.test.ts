@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
-import { defineSharedTool } from '../core/defineSharedTool.js';
+import { defineSharedTool } from '../define-tool.js';
 
 // Helper: build a simple echo tool for reuse across tests
 const makeTool = (name = 'echo') =>

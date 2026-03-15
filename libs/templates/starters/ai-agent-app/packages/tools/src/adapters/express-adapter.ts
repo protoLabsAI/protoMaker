@@ -63,7 +63,11 @@ export interface ExpressAdapterOptions {
  * );
  * ```
  */
-export function toExpressRouter(tools: SharedTool[], options: ExpressAdapterOptions = {}): Router {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function toExpressRouter(
+  tools: SharedTool<any, any>[],
+  options: ExpressAdapterOptions = {}
+): Router {
   const {
     basePath = '/tools',
     contextFactory,

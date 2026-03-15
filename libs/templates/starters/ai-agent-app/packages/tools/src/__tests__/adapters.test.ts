@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
-import { defineSharedTool } from '../core/defineSharedTool.js';
-import { toMCPTool, toMCPTools } from '../adapters/toMCPTool.js';
-import { toExpressRouter } from '../adapters/toExpressRouter.js';
+import { defineSharedTool } from '../define-tool.js';
+import { toMCPTool, toMCPTools } from '../adapters/mcp-adapter.js';
+import { toExpressRouter } from '../adapters/express-adapter.js';
 
 // Shared sample tool for all adapter tests
 const sampleTool = defineSharedTool({

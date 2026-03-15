@@ -34,7 +34,8 @@ export class ToolRegistry {
   /**
    * Register multiple tools at once.
    */
-  registerMany(tools: SharedTool<unknown, unknown>[]): void {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  registerMany(tools: SharedTool<any, any>[]): void {
     for (const tool of tools) {
       this.register(tool);
     }

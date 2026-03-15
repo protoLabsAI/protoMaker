@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { z } from 'zod';
-import { ToolRegistry } from '../core/ToolRegistry.js';
-import { defineSharedTool } from '../core/defineSharedTool.js';
+import { ToolRegistry } from '../registry.js';
+import { defineSharedTool } from '../define-tool.js';
 
 // Factory: create a simple echo tool
 const makeTool = (name: string, category?: string) =>

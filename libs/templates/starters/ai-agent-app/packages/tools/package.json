@@ -1,34 +1,25 @@
 {
   "name": "@@PROJECT_NAME-tools",
   "version": "0.1.0",
+  "description": "Standalone tools package — define once, deploy everywhere across MCP, LangGraph, and Express",
   "private": true,
   "type": "module",
-  "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    },
-    "./adapters/mcp": "./dist/adapters/mcp-adapter.js",
-    "./adapters/langgraph": "./dist/adapters/langgraph-adapter.js",
-    "./adapters/express": "./dist/adapters/express-adapter.js",
-    "./examples": "./dist/examples/index.js"
-  },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
-    "express": "^5.0.0",
     "zod": "^3.23.8",
     "zod-to-json-schema": "^3.24.1"
   },
   "devDependencies": {
     "@langchain/core": "^0.3.33",
-    "@types/express": "^5.0.0",
+    "@types/express": "^4.17.21",
     "@types/node": "^22.0.0",
-    "typescript": "^5.9.3",
+    "express": "^4.21.0",
+    "typescript": "^5.7.0",
     "vitest": "^2.0.0"
   },
   "peerDependencies": {
@@ -38,5 +29,15 @@
     "@langchain/core": {
       "optional": true
     }
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./adapters/mcp": "./dist/adapters/mcp-adapter.js",
+    "./adapters/langgraph": "./dist/adapters/langgraph-adapter.js",
+    "./adapters/express": "./dist/adapters/express-adapter.js",
+    "./examples": "./dist/examples/index.js"
   }
 }

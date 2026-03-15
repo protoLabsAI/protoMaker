@@ -119,6 +119,7 @@ export function toMCPTool<TInput = unknown, TOutput = unknown>(
 /**
  * Convert multiple SharedTools to MCP-compatible tool entries.
  */
-export function toMCPTools(tools: SharedTool[]): MCPToolEntry[] {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function toMCPTools(tools: SharedTool<any, any>[]): MCPToolEntry[] {
   return tools.map((tool) => toMCPTool(tool));
 }
