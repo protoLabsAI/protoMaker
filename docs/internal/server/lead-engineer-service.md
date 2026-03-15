@@ -20,20 +20,42 @@ The Lead Engineer pipeline processes features through discrete state phases, eac
 ## Architecture
 
 ```text
-LeadEngineerService
-  ├── IntakeProcessor       — entry point for every feature
-  ├── PlanProcessor         — plan generation + quality gate
-  ├── ExecuteProcessor      — agent invocation + monitoring
-  ├── ReviewProcessor       — PR monitoring and feedback cycles
-  ├── MergeProcessor        — CI verification and PR merge
-  ├── DeployProcessor       — post-merge verification → DONE
-  └── EscalateProcessor     — blocked/failed feature handling
+LeadEngineerService (orchestrator)
+  ├── FeatureStateMachine       — per-feature state transitions (lead-engineer-state-machine.ts)
+  │     ├── IntakeProcessor       — entry point for every feature
+  │     ├── PlanProcessor         — plan generation + quality gate
+  │     ├── ExecuteProcessor      — agent invocation + monitoring
+  │     ├── ReviewProcessor       — PR monitoring and feedback cycles
+  │     ├── MergeProcessor        — CI verification and PR merge
+  │     ├── DeployProcessor       — post-merge verification → DONE
+  │     └── EscalateProcessor     — blocked/failed feature handling
+  ├── WorldStateBuilder         — board snapshot + incremental updates
+  ├── ActionExecutor            — fast-path rule execution + supervisor
+  ├── CeremonyOrchestrator      — project completion ceremonies
+  └── LeadEngineerSessionStore  — session persistence (DATA_DIR/lead-engineer-sessions.json)
 
 Each processor implements StateProcessor:
   enter(ctx)   → side effects on state entry
   process(ctx) → returns StateTransitionResult { nextState, shouldContinue, reason }
   exit(ctx)    → cleanup on state exit
 ```
+
+### Goal Gates
+
+`FeatureStateMachine` validates pre- and post-conditions on each state transition via goal gates:
+
+| Gate ID         | When evaluated          | What it checks                                            |
+| --------------- | ----------------------- | --------------------------------------------------------- |
+| `execute-entry` | Before entering EXECUTE | Feature has a description or title                        |
+| `execute-exit`  | After leaving EXECUTE   | PR was created (`prNumber` exists); retry target: EXECUTE |
+| `review-exit`   | After leaving REVIEW    | Delegated to processor (always passes at gate level)      |
+| `merge-exit`    | After leaving MERGE     | Merge confirmed by processor; retry target: MERGE         |
+
+Goal gates can be disabled project-wide via `pipeline.goalGatesEnabled: false` in workflow settings.
+
+### Session Persistence
+
+`LeadEngineerSessionStore` persists active sessions to `DATA_DIR/lead-engineer-sessions.json` (a single multi-project file keyed by `projectPath`). On server restart, `restore()` replays all persisted sessions so auto-mode resumes automatically.
 
 ## INTAKE Phase
 
@@ -100,15 +122,16 @@ interface StateContext {
 
 ## Key Files
 
-| File                                                          | Role                                                                 |
-| ------------------------------------------------------------- | -------------------------------------------------------------------- |
-| `apps/server/src/services/lead-engineer-processors.ts`        | `IntakeProcessor` and `PlanProcessor`                                |
-| `apps/server/src/services/lead-engineer-execute-processor.ts` | `ExecuteProcessor`                                                   |
-| `apps/server/src/services/lead-engineer-review-processor.ts`  | `ReviewProcessor`                                                    |
-| `apps/server/src/services/lead-engineer-merge-processor.ts`   | `MergeProcessor`                                                     |
-| `apps/server/src/services/lead-engineer-deploy-processor.ts`  | `DeployProcessor`                                                    |
-| `apps/server/src/services/lead-engineer-types.ts`             | `StateProcessor`, `StateContext`, `StateTransitionResult` interfaces |
-| `apps/server/src/services/lead-engineer-service.ts`           | Main service wiring processors into state machine                    |
+| File                                                                | Role                                                                       |
+| ------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `apps/server/src/services/lead-engineer-service.ts`                 | Orchestrator: wires `FeatureStateMachine`, `ActionExecutor`, session store |
+| `apps/server/src/services/lead-engineer-state-machine.ts`           | `FeatureStateMachine` class + default goal gate definitions                |
+| `apps/server/src/services/lead-engineer-processors.ts`              | `IntakeProcessor` and `PlanProcessor`                                      |
+| `apps/server/src/services/lead-engineer-execute-processor.ts`       | `ExecuteProcessor`                                                         |
+| `apps/server/src/services/lead-engineer-review-merge-processors.ts` | `ReviewProcessor` and `MergeProcessor`                                     |
+| `apps/server/src/services/lead-engineer-deploy-processor.ts`        | `DeployProcessor`                                                          |
+| `apps/server/src/services/lead-engineer-session-store.ts`           | Session persistence to `DATA_DIR/lead-engineer-sessions.json`              |
+| `apps/server/src/services/lead-engineer-types.ts`                   | `StateProcessor`, `StateContext`, `ProcessorServiceContext`, timing consts |
 
 ## See Also
 
