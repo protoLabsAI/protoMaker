@@ -73,8 +73,10 @@ import { getCurrentTimeTool, getWeatherTool } from './example.js';
  * registerTool(sensitiveOp); // confirmation flag is preserved in the set
  * ```
  */
-export interface ToolDefinition<TInput = unknown, TOutput = unknown>
-  extends SharedTool<TInput, TOutput> {
+export interface ToolDefinition<TInput = unknown, TOutput = unknown> extends SharedTool<
+  TInput,
+  TOutput
+> {
   /**
    * When `true`, callers should request explicit user confirmation before
    * executing this tool.  Useful for tools with irreversible side effects
@@ -99,7 +101,9 @@ const confirmationRequired = new Set<string>();
  * silently dropped.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function registerTool(tool: SharedTool<any, any> & { requiresConfirmation?: boolean }): void {
+export function registerTool(
+  tool: SharedTool<any, any> & { requiresConfirmation?: boolean }
+): void {
   registry.register(tool);
   if (tool.requiresConfirmation) {
     confirmationRequired.add(tool.name);

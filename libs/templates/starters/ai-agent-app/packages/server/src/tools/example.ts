@@ -95,7 +95,7 @@ export const getWeatherTool = Object.assign(
   // Flag this tool as requiring user confirmation before execution.
   // registry.ts tracks this in its `confirmationRequired` set and exposes
   // `toolRequiresConfirmation(name)` for callers to check.
-  { requiresConfirmation: true as const },
+  { requiresConfirmation: true as const }
 );
 
 // ---------------------------------------------------------------------------
