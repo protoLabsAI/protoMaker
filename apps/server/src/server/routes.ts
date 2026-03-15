@@ -49,7 +49,6 @@ import { createCalendarRoutes } from '../routes/calendar/index.js';
 import { createGoogleOAuthRoutes } from '../routes/google-calendar/oauth.js';
 import { createMCPRoutes } from '../routes/mcp/index.js';
 import { createEscalationRoutes } from '../routes/escalation.js';
-import { createPipelineRoutes } from '../routes/pipeline/index.js';
 import { createMetricsRoutes } from '../routes/metrics/index.js';
 import { createNotificationsRoutes } from '../routes/notifications/index.js';
 import { createHITLFormRoutes } from '../routes/hitl-forms/index.js';
@@ -120,7 +119,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     projmAgent,
     emAgent,
     auditService,
-    pipelineService,
     metricsService,
     ledgerService,
     notificationService,
@@ -145,12 +143,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     integrityWatchdogService,
     featureHealthService,
     userIdentityService,
-    pipelineOrchestrator,
     prFeedbackService,
     signalIntakeService,
     gitWorkflowService,
     eventStreamBuffer,
-    pipelineCheckpointService,
     gtmAgent,
     completionDetectorService,
     antagonisticReviewService,
@@ -323,7 +319,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
       settingsService
     )
   );
-  app.use('/api/pipeline', createPipelineRoutes(pipelineService));
   app.use(
     '/api/metrics',
     createMetricsRoutes(
@@ -387,10 +382,8 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
       projectService,
       contentFlowService,
       featureLoader,
-      pipelineCheckpointService,
       events,
       gtmAgent,
-      pipelineOrchestrator,
       ceremonyService,
       completionDetectorService,
       settingsService

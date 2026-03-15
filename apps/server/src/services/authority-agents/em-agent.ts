@@ -542,9 +542,7 @@ export class EMAuthorityAgent {
     });
 
     if (!form) {
-      logger.debug(
-        'HITL approval form creation blocked (featureFlags.pipeline=false), auto-denying'
-      );
+      logger.debug('HITL approval form creation failed, auto-denying');
       return false;
     }
 

@@ -1,0 +1,174 @@
+---
+/**
+ * Button — Primary, secondary, and ghost variants with brand tokens.
+ *
+ * Renders an <a> when `href` is supplied, otherwise a <button>.
+ * Zero client-side JavaScript.
+ *
+ * Usage:
+ *   import Button from '@protolabsai/templates/components/Button.astro';
+ *   <Button variant="primary" href="/get-started">Get started</Button>
+ *   <Button variant="ghost" type="submit">Submit</Button>
+ */
+
+interface Props {
+  /** Visual style of the button */
+  variant?: 'primary' | 'secondary' | 'ghost';
+  /** Size preset */
+  size?: 'sm' | 'md' | 'lg';
+  /** When set, renders as an <a> tag */
+  href?: string;
+  /** HTML button type (ignored when href is set) */
+  type?: 'button' | 'submit' | 'reset';
+  /** Disabled state (only meaningful for <button>) */
+  disabled?: boolean;
+  /** Extra CSS class names */
+  class?: string;
+  /** Open link in new tab */
+  target?: '_blank' | '_self' | '_parent' | '_top';
+  /** rel attribute (e.g. "noopener noreferrer") */
+  rel?: string;
+  /** aria-label override */
+  'aria-label'?: string;
+}
+
+const {
+  variant = 'primary',
+  size = 'md',
+  href,
+  type = 'button',
+  disabled = false,
+  class: className = '',
+  target,
+  rel,
+  'aria-label': ariaLabel,
+} = Astro.props;
+
+const classes = ['btn', `btn--${variant}`, `btn--${size}`, className]
+  .filter(Boolean)
+  .join(' ');
+
+// Infer safe rel for external links
+const resolvedRel = rel ?? (target === '_blank' ? 'noopener noreferrer' : undefined);
+---
+
+{
+  href ? (
+    <a
+      href={href}
+      class={classes}
+      target={target}
+      rel={resolvedRel}
+      aria-label={ariaLabel}
+    >
+      <slot />
+    </a>
+  ) : (
+    <button
+      type={type}
+      disabled={disabled}
+      class={classes}
+      aria-label={ariaLabel}
+    >
+      <slot />
+    </button>
+  )
+}
+
+<style>
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-family: var(--font-family-sans, 'Geist', system-ui, sans-serif);
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+    line-height: 1;
+    transition:
+      opacity 0.15s ease,
+      transform 0.15s ease,
+      background 0.15s ease,
+      box-shadow 0.15s ease;
+    /* Prevent text selection on double-click */
+    user-select: none;
+  }
+
+  .btn:focus-visible {
+    outline: 2px solid var(--color-accent, #a78bfa);
+    outline-offset: 2px;
+  }
+
+  .btn:not(:disabled):hover {
+    transform: translateY(-1px);
+  }
+
+  .btn:not(:disabled):active {
+    transform: translateY(0);
+  }
+
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  /* ── Sizes ─────────────────────────────── */
+
+  .btn--sm {
+    padding: 6px 14px;
+    font-size: 13px;
+    border-radius: 6px;
+  }
+
+  .btn--md {
+    padding: 10px 20px;
+    font-size: 15px;
+  }
+
+  .btn--lg {
+    padding: 14px 28px;
+    font-size: 16px;
+    border-radius: 10px;
+  }
+
+  /* ── Variants ───────────────────────────── */
+
+  .btn--primary {
+    background: var(--color-accent, #a78bfa);
+    color: #09090b;
+    box-shadow: 0 0 20px rgba(167, 139, 250, 0.25);
+  }
+
+  .btn--primary:not(:disabled):hover {
+    opacity: 0.9;
+    box-shadow: 0 0 32px rgba(167, 139, 250, 0.4);
+  }
+
+  .btn--secondary {
+    background: rgba(255, 255, 255, 0.06);
+    color: #e4e4e7;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .btn--secondary:not(:disabled):hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+
+  .btn--ghost {
+    background: transparent;
+    color: #a1a1aa;
+    border: 1px solid transparent;
+  }
+
+  .btn--ghost:not(:disabled):hover {
+    color: #fafafa;
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+</style>

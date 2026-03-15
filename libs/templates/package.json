@@ -1,0 +1,67 @@
+{
+  "name": "@protolabsai/templates",
+  "version": "0.56.0",
+  "type": "module",
+  "description": "Shared template content for protoLabs starter kits and project scaffolding",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./components/*": "./src/components/*"
+  },
+  "files": [
+    "dist",
+    "src/components"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "build:check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "watch": "tsup --watch"
+  },
+  "keywords": [
+    "protolabs",
+    "templates",
+    "starter-kit",
+    "astro",
+    "design-system"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": "AutoMaker Team",
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "node": ">=22.0.0 <23.0.0"
+  },
+  "dependencies": {
+    "@protolabsai/types": "*"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.3",
+    "@types/react": "^18.3.0",
+    "tsup": "^8.5.1",
+    "typescript": "5.9.3",
+    "vitest": "^4.0.0"
+  },
+  "peerDependencies": {
+    "astro": ">=4.0.0",
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "peerDependenciesMeta": {
+    "astro": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  }
+}

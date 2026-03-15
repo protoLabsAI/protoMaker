@@ -1,0 +1,143 @@
+---
+/**
+ * Hero section — gradient text headline, terminal mockup, availability badge, CTAs.
+ *
+ * Usage:
+ *   <Hero name={config.name} bio={config.bio} email={config.email} />
+ */
+interface Props {
+  name: string;
+  bio: string;
+  email?: string;
+  /** Show the "Available for work" availability badge */
+  available?: boolean;
+}
+
+const { name, bio, email, available = true } = Astro.props;
+---
+
+<section class="mx-auto max-w-5xl px-6 py-24">
+  <div class="grid items-center gap-12 lg:grid-cols-2">
+    <!-- ── Left: text content ─────────────────────────────────── -->
+    <div>
+      {
+        available && (
+          <p
+            class="mb-4 animate-fade-up flex items-center gap-2 text-sm font-semibold uppercase tracking-widest"
+            style="color: var(--color-accent);"
+          >
+            <span
+              class="inline-block h-2 w-2 rounded-full"
+              style="background: #4ade80; box-shadow: 0 0 6px #4ade80;"
+              aria-hidden="true"
+            />
+            Available for work
+          </p>
+        )
+      }
+
+      <h1
+        class="animate-fade-up animate-delay-1 mb-6 text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl"
+      >
+        Hi, I'm{" "}
+        <span class="gradient-text">{name}</span>
+      </h1>
+
+      <p
+        class="animate-fade-up animate-delay-2 mb-10 max-w-xl text-lg leading-relaxed"
+        style="color: #a1a1aa;"
+      >
+        {bio}
+      </p>
+
+      <div class="animate-fade-up animate-delay-3 flex flex-wrap gap-4">
+        <a
+          href="/projects"
+          class="rounded-lg px-6 py-3 text-sm font-semibold text-white no-underline transition-opacity hover:opacity-90"
+          style="background: var(--color-accent);"
+        >
+          View my work
+        </a>
+        <a
+          href="/about"
+          class="rounded-lg border px-6 py-3 text-sm font-semibold text-white no-underline transition-colors hover:border-white/30"
+          style="border-color: var(--border-subtle);"
+        >
+          About me
+        </a>
+        {
+          email && (
+            <a
+              href={`mailto:${email}`}
+              class="rounded-lg border px-6 py-3 text-sm font-semibold no-underline transition-colors hover:border-white/30"
+              style="border-color: var(--border-subtle); color: var(--color-muted);"
+            >
+              Get in touch
+            </a>
+          )
+        }
+      </div>
+    </div>
+
+    <!-- ── Right: terminal mockup ─────────────────────────────── -->
+    <div class="animate-fade-up animate-delay-4 hidden lg:block">
+      <div
+        class="overflow-hidden rounded-xl border font-mono text-sm"
+        style="background: var(--color-surface-2); border-color: var(--border-subtle);"
+        role="img"
+        aria-label="Terminal showing recent git commits and a successful build"
+      >
+        <!-- Terminal window chrome -->
+        <div
+          class="flex items-center gap-2 border-b px-4 py-3"
+          style="background: var(--color-surface-3); border-color: var(--border-subtle);"
+          aria-hidden="true"
+        >
+          <span class="h-3 w-3 rounded-full" style="background: #f87171;"
+          ></span>
+          <span class="h-3 w-3 rounded-full" style="background: #facc15;"
+          ></span>
+          <span class="h-3 w-3 rounded-full" style="background: #4ade80;"
+          ></span>
+          <span class="ml-2 text-xs" style="color: var(--color-muted);"
+            >~/projects</span
+          >
+        </div>
+
+        <!-- Terminal body -->
+        <div class="space-y-1.5 p-6" aria-hidden="true">
+          <p style="color: #4ade80;">$ git log --oneline -5</p>
+          <p style="color: #d4d4d8;">
+            <span style="color: var(--color-accent);">a3f9c2b</span>
+            {" "}feat: ship new dashboard layout
+          </p>
+          <p style="color: #d4d4d8;">
+            <span style="color: var(--color-accent);">7be412e</span>
+            {" "}fix: resolve hydration mismatch
+          </p>
+          <p style="color: #d4d4d8;">
+            <span style="color: var(--color-accent);">c08d3f1</span>
+            {" "}chore: update dependencies
+          </p>
+          <p style="color: #d4d4d8;">
+            <span style="color: var(--color-accent);">91fa820</span>
+            {" "}docs: add API reference
+          </p>
+          <p style="color: #d4d4d8;">
+            <span style="color: var(--color-accent);">3de591c</span>
+            {" "}feat: add dark mode support
+          </p>
+
+          <p class="mt-3" style="color: #4ade80;">$ npm run build</p>
+          <p style="color: #a1a1aa;">▲ building for production...</p>
+          <p style="color: #a1a1aa;">&nbsp;&nbsp;✓ 42 pages built in 1.8s</p>
+          <p style="color: #4ade80;">
+            $ <span
+              class="inline-block h-4 w-2 align-middle"
+              style="background: var(--color-accent);"></span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

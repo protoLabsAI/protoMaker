@@ -37,9 +37,7 @@ import type {
   IntegrationNodeData,
   FeatureNodeData,
   AgentNodeData,
-  PipelineStageNodeData,
 } from '../types';
-import { PipelineMonitor } from './pipeline-monitor';
 import { TimelineVisualization } from './timeline-visualization';
 import type { PipelineState, PipelinePhase } from '@protolabsai/types';
 
@@ -83,13 +81,6 @@ function useProjectEngineStatus() {
   const projectPath = useAppStore((s) => s.currentProject?.path);
   return useEngineStatus(projectPath);
 }
-
-const COMPLEXITY_COLORS: Record<string, string> = {
-  small: 'text-emerald-400',
-  medium: 'text-amber-400',
-  large: 'text-orange-400',
-  architectural: 'text-red-400',
-};
 
 // ============================================
 // Orchestrator Section
@@ -1170,90 +1161,6 @@ export function AgentSection({ data, onStop, onViewLogs, isStopping }: AgentSect
           )}
         </div>
       )}
-    </div>
-  );
-}
-
-// ============================================
-// Pipeline Stage Section
-// ============================================
-
-export function PipelineStageSection({ data }: { data: PipelineStageNodeData }) {
-  const hasRealItems = data.workItems.some((item) => !item.metadata?.isInitial);
-
-  return (
-    <div className="space-y-3">
-      <div className="space-y-1">
-        <SectionRow label="Stage">
-          <Badge variant="outline">{data.stageId}</Badge>
-        </SectionRow>
-        <SectionRow label="Status">
-          <Badge
-            variant={
-              data.status === 'active'
-                ? 'default'
-                : data.status === 'blocked'
-                  ? 'destructive'
-                  : 'secondary'
-            }
-          >
-            {data.status}
-          </Badge>
-        </SectionRow>
-        <SectionRow label="Features">{data.workItems.length}</SectionRow>
-      </div>
-
-      {/* Feature cards */}
-      {data.workItems.length > 0 && (
-        <div className="border-t border-border/30 pt-2 space-y-1.5">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-            {hasRealItems ? 'Features' : 'Items'}
-          </p>
-          <div className="max-h-64 overflow-y-auto space-y-1.5 pr-0.5">
-            {data.workItems.map((item) => (
-              <div key={item.id} className="text-xs space-y-1 p-2 rounded-lg bg-muted/30">
-                <p className="font-medium truncate" title={item.title}>
-                  {item.title}
-                </p>
-                <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
-                  {item.metadata?.complexity && (
-                    <span
-                      className={`text-[10px] font-medium ${COMPLEXITY_COLORS[item.metadata.complexity] || ''}`}
-                    >
-                      {item.metadata.complexity}
-                    </span>
-                  )}
-                  {item.metadata?.branchName && (
-                    <code className="text-[10px] bg-muted px-1 py-0.5 rounded truncate max-w-[140px]">
-                      {item.metadata.branchName}
-                    </code>
-                  )}
-                  {typeof item.metadata?.costUsd === 'number' && item.metadata.costUsd > 0 && (
-                    <span className="text-emerald-400 text-[10px]">
-                      {formatCostUsd(item.metadata.costUsd)}
-                    </span>
-                  )}
-                  {item.metadata?.createdAt && (
-                    <span className="text-[10px]">
-                      <Clock className="w-2.5 h-2.5 inline mr-0.5" />
-                      {formatTimeAgo(item.metadata.createdAt)}
-                    </span>
-                  )}
-                </div>
-                {item.metadata?.lastTraceId && <TraceLink traceId={item.metadata.lastTraceId} />}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Pipeline monitor for each active work item */}
-      {data.workItems
-        .filter((item) => item.status === 'in_progress')
-        .slice(0, 3)
-        .map((item) => (
-          <PipelineMonitor key={item.id} featureId={item.id} />
-        ))}
     </div>
   );
 }

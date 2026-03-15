@@ -1,0 +1,42 @@
+---
+/**
+ * Projects listing page — full filterable grid via the ProjectGrid React island.
+ */
+import { getCollection } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import ProjectGrid from '@/components/sections/ProjectGrid';
+
+const allProjects = await getCollection('projects');
+const projects = allProjects
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+  .map((p) => ({
+    title: p.data.title,
+    description: p.data.description,
+    techStack: p.data.techStack,
+    slug: p.slug,
+    tags: p.data.tags,
+    liveUrl: p.data.liveUrl,
+    repoUrl: p.data.repoUrl,
+    image: p.data.image,
+    imageAlt: p.data.imageAlt,
+    featured: p.data.featured,
+  }));
+---
+
+<BaseLayout
+  title="Projects"
+  description="A selection of products and tools I've designed and shipped."
+>
+  <div class="mx-auto max-w-5xl px-6 py-16">
+    <!-- Header -->
+    <header class="mb-12">
+      <h1 class="mb-3 text-4xl font-extrabold text-white">Projects</h1>
+      <p class="text-base" style="color: #a1a1aa;">
+        A selection of products and tools I've designed and shipped.
+      </p>
+    </header>
+
+    <!-- Filterable project grid (React island) -->
+    <ProjectGrid client:load projects={projects} />
+  </div>
+</BaseLayout>

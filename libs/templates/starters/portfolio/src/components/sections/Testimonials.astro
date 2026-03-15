@@ -1,0 +1,55 @@
+---
+/**
+ * Testimonials section — a tinted full-bleed row of TestimonialCard components.
+ *
+ * Accepts plain data objects (not Astro collection entries) so the parent page
+ * controls data loading and this component stays a pure presentational section.
+ *
+ * Usage:
+ *   <Testimonials testimonials={testimonials} />
+ *   <Testimonials testimonials={testimonials} heading="Kind words" />
+ */
+import TestimonialCard from "@/components/TestimonialCard.astro";
+
+export interface TestimonialData {
+  author: string;
+  role: string;
+  company: string;
+  quote: string;
+  avatar?: string;
+  link?: string;
+}
+
+interface Props {
+  testimonials: TestimonialData[];
+  /** Section heading — defaults to "What people say" */
+  heading?: string;
+}
+
+const { testimonials, heading = "What people say" } = Astro.props;
+---
+
+{
+  testimonials.length > 0 && (
+    <section class="py-16" style="background: var(--color-surface-1);">
+      <div class="mx-auto max-w-5xl px-6">
+        <h2 class="mb-10 text-center text-2xl font-bold text-white">
+          {heading}
+        </h2>
+
+        <div class="grid gap-6 sm:grid-cols-2">
+          {testimonials.map((t) => (
+            <TestimonialCard
+              author={t.author}
+              role={t.role}
+              company={t.company}
+              quote={t.quote}
+              avatar={t.avatar}
+              link={t.link}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}

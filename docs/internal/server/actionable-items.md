@@ -35,6 +35,16 @@ hitl:form-responded     ──► (auto-resolve authority approvals)
 
 HITL forms are persisted to disk at `{projectPath}/.automaker/hitl-forms.json` using atomic writes (temp file then rename). The in-memory `Map` serves as a fast cache; disk is the source of truth on server restart.
 
+### Feature flag requirement
+
+HITL forms require the `hitlForms` feature flag to be enabled in global settings:
+
+```json
+{ "featureFlags": { "hitlForms": true } }
+```
+
+When the flag is disabled, `HITLFormService.create()` returns `null` and no form is stored or emitted. The flag is checked at creation time only — existing persisted forms are not affected.
+
 ### Lifecycle
 
 ```
@@ -46,6 +56,19 @@ create() ──► pending ──► submit() ──► submitted
 - **Default TTL**: 1 hour (configurable per form, max 24 hours)
 - **Disk sync**: Every mutation (create, submit, cancel, expire) writes to disk
 - **Startup recovery**: On service init, forms are loaded from disk for all known projects
+
+### Channel routing
+
+Forms with a `replyChannel` field are routed through the `ChannelRouter` to the appropriate handler instead of emitting `hitl:form-requested` to the UI. The channel router selects between two handlers:
+
+| Channel     | Handler                | Used when                                         |
+| ----------- | ---------------------- | ------------------------------------------------- |
+| `github`    | `GitHubChannelHandler` | Feature has a `githubIssueNumber` (issue-sourced) |
+| _(default)_ | `UIChannelHandler`     | No GitHub issue; form goes to the in-app inbox    |
+
+`GitHubChannelHandler` posts a comment on the originating GitHub issue and waits for `/approve` or `/reject` in subsequent `issue_comment` events. `UIChannelHandler` is a no-op that lets the HITL dialog render in the UI as normal.
+
+See [Channel Handlers](./channel-handlers.md) for the full reference.
 
 ### Dialog behavior
 

@@ -404,6 +404,7 @@ export async function readJsonWithRecovery<T>(
           // Optionally restore main file from backup
           if (autoRestore) {
             try {
+              await mkdirSafe(path.dirname(resolvedPath));
               await secureFs.copyFile(backupPath, resolvedPath);
               logger.info(`Restored main file from backup: ${backupPath}`);
             } catch (restoreError) {

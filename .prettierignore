@@ -41,6 +41,9 @@ packages/mcp-server/plugins/automaker/.claude-plugin/plugin.json
 # Template files (contain placeholders)
 packages/create-protolab/src/templates/
 
+# Starter kit templates (standalone projects with their own prettier configs)
+libs/templates/starters/
+
 # Environment files (can't be parsed by prettier)
 .env
 .env.example
@@ -60,3 +63,6 @@ blob-report/
 # Electron
 dist-electron/
 server-bundle/
+
+# Astro components — no prettier-plugin-astro installed in this monorepo
+*.astro

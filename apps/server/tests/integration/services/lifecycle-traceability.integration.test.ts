@@ -19,7 +19,6 @@ import { FeatureLoader } from '@/services/feature-loader.js';
 import { EventLedgerService } from '@/services/event-ledger-service.js';
 import { LedgerService } from '@/services/ledger-service.js';
 import { ArchiveQueryService } from '@/services/archive-query-service.js';
-import { PipelineService } from '@/services/pipeline-service.js';
 import { ProjectService } from '@/services/project-service.js';
 import { createEventEmitter } from '@/lib/events.js';
 import type { Project } from '@protolabsai/types';
