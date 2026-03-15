@@ -1,0 +1,38 @@
+{
+  "name": "@@PROJECT_NAME-agents",
+  "version": "0.1.0",
+  "description": "AI design agent for .pen file manipulation via Pencil MCP",
+  "type": "module",
+  "main": "./dist/design-agent.js",
+  "types": "./dist/design-agent.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/design-agent.js",
+      "types": "./dist/design-agent.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src/prompts"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "design",
+    "agent",
+    "ai",
+    "pen",
+    "pencil",
+    "mcp"
+  ],
+  "license": "MIT"
+}
