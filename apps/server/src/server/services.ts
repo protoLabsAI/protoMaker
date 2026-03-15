@@ -88,6 +88,10 @@ import {
   ReactiveSpawnerService,
 } from '../services/reactive-spawner-service.js';
 import { registerAvaCronTasks } from '../services/ava-cron-tasks.js';
+import {
+  MaintenanceOrchestrator,
+  getMaintenanceOrchestrator,
+} from '../services/maintenance-orchestrator.js';
 
 // Services originally loaded via top-level dynamic imports — now static for proper typing
 import { ProjectLifecycleService } from '../services/project-lifecycle-service.js';
@@ -166,6 +170,7 @@ export interface ServiceContainer {
   // Feature health
   featureHealthService: FeatureHealthService;
   healthMonitorService: ReturnType<typeof getHealthMonitorService>;
+  maintenanceOrchestrator: MaintenanceOrchestrator;
 
   // Discord
   discordService: ReturnType<typeof getDiscordService>;
@@ -388,6 +393,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     checkIntervalMs: 5 * 60 * 1000,
     stuckThresholdMs: 30 * 60 * 1000,
   });
+
+  // Maintenance Orchestrator — started in maintenance.module.ts
+  const maintenanceOrchestrator = getMaintenanceOrchestrator();
 
   const avaGatewayService = getAvaGatewayService(
     featureLoader,
@@ -848,6 +856,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     contextAggregator,
     featureHealthService,
     healthMonitorService,
+    maintenanceOrchestrator,
     discordService,
     discordBotService,
     knowledgeStoreService,

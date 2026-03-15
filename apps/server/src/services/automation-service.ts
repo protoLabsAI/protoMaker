@@ -19,7 +19,6 @@ import type { Automation, AutomationRunRecord, AutomationRunStatus } from '@prot
 import type { SchedulerService } from './scheduler-service.js';
 import type { EventEmitter } from '../lib/events.js';
 import type { AutoModeService } from './auto-mode-service.js';
-import type { FeatureHealthService } from './feature-health-service.js';
 import type { DataIntegrityWatchdogService } from './data-integrity-watchdog-service.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { SettingsService } from './settings-service.js';
@@ -42,7 +41,6 @@ const AUTOMATION_TASK_PREFIX = 'automation:';
 export interface SyncWithSchedulerDeps {
   events: EventEmitter;
   autoModeService: AutoModeService;
-  featureHealthService: FeatureHealthService;
   integrityWatchdogService: DataIntegrityWatchdogService;
   featureLoader: FeatureLoader;
   settingsService: SettingsService;
@@ -582,17 +580,6 @@ export class AutomationService {
         description: 'Monitors feature directory count and data consistency.',
         trigger: { type: 'cron', expression: '*/5 * * * *' },
         flowId: 'built-in:data-integrity',
-        enabled: true,
-      });
-    }
-
-    if (deps.featureHealthService) {
-      await this.upsertBuiltIn({
-        id: 'maintenance:board-health',
-        name: 'Board Health Reconciliation',
-        description: 'Audits and auto-fixes board state inconsistencies every 6 hours.',
-        trigger: { type: 'cron', expression: '0 */6 * * *' },
-        flowId: 'built-in:board-health',
         enabled: true,
       });
     }

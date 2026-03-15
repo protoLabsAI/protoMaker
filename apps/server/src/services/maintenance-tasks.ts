@@ -24,7 +24,6 @@ import type { FlowFactory } from '@protolabsai/types';
 import { DEFAULT_GIT_WORKFLOW_SETTINGS } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { AutoModeService } from './auto-mode-service.js';
-import type { FeatureHealthService } from './feature-health-service.js';
 import type { DataIntegrityWatchdogService } from './data-integrity-watchdog-service.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { SettingsService } from './settings-service.js';
@@ -140,7 +139,6 @@ export function registerMaintenanceFlows(
   deps: {
     events: EventEmitter;
     autoModeService: AutoModeService;
-    featureHealthService?: FeatureHealthService;
     integrityWatchdogService?: DataIntegrityWatchdogService;
     featureLoader?: FeatureLoader;
     settingsService?: SettingsService;
@@ -168,14 +166,6 @@ export function registerMaintenanceFlows(
     const watchdog = deps.integrityWatchdogService;
     registry.register('built-in:data-integrity', async () => {
       await checkDataIntegrity(watchdog, events, autoModeService);
-    });
-  }
-
-  if (deps.featureHealthService) {
-    const fhs = deps.featureHealthService;
-    registry.register('built-in:board-health', async () => {
-      const projectPaths = getKnownProjectPaths(autoModeService);
-      await runBoardHealthAudit(fhs, events, projectPaths);
     });
   }
 
@@ -667,55 +657,6 @@ async function checkMergedBranches(
     });
   } catch (error) {
     logger.error('Merged branch check failed:', error);
-    throw error;
-  }
-}
-
-/**
- * Run board health audit with auto-fix enabled.
- * Finds and fixes: orphaned epic refs, dangling deps, completed epics, stale running, stale gates.
- * Runs against all known project paths rather than relying on process.cwd().
- */
-async function runBoardHealthAudit(
-  featureHealthService: FeatureHealthService,
-  events: EventEmitter,
-  projectPaths: string[]
-): Promise<void> {
-  logger.info('Running board health reconciliation...');
-
-  if (projectPaths.length === 0) {
-    logger.info('No known project paths, skipping board health audit');
-    return;
-  }
-
-  try {
-    let totalIssues = 0;
-    let totalFixed = 0;
-    const allIssueMessages: string[] = [];
-
-    for (const projectPath of projectPaths) {
-      const report = await featureHealthService.audit(projectPath, true);
-      totalIssues += report.issues.length;
-      totalFixed += report.fixed.length;
-      allIssueMessages.push(
-        ...report.issues.map((i) => `[${i.type}] ${i.featureTitle}: ${i.message}`)
-      );
-    }
-
-    if (totalIssues > 0) {
-      logger.info(`Board health: ${totalIssues} issues found, ${totalFixed} auto-fixed`);
-      events.emit('scheduler:task_completed' as Parameters<typeof events.emit>[0], {
-        taskId: 'maintenance:board-health',
-        message: `Board health: ${totalIssues} issue(s) found, ${totalFixed} auto-fixed`,
-        totalIssues,
-        fixedCount: totalFixed,
-        issues: allIssueMessages,
-      });
-    } else {
-      logger.info('Board health check: no issues found');
-    }
-  } catch (error) {
-    logger.error('Board health reconciliation failed:', error);
     throw error;
   }
 }

@@ -68,6 +68,8 @@ export type EventType =
   | 'health:check-completed'
   | 'health:issue-detected'
   | 'health:issue-remediated'
+  | 'maintenance:sweep:started'
+  | 'maintenance:sweep:completed'
   | 'scheduler:started'
   | 'scheduler:stopped'
   | 'scheduler:task_registered'
@@ -620,6 +622,17 @@ export interface EventPayloadMap {
   // Health events
   'health:issue-detected': { message?: string; severity?: string };
   'health:issue-remediated': { message?: string };
+
+  // Maintenance sweep events
+  'maintenance:sweep:started': { sweepId: string; tier: 'critical' | 'full'; startedAt: string };
+  'maintenance:sweep:completed': {
+    sweepId: string;
+    tier: 'critical' | 'full';
+    startedAt: string;
+    completedAt: string;
+    passed: number;
+    failed: number;
+  };
 
   // Milestone/project lifecycle
   'milestone:completed': { milestone?: string; projectPath?: string };
