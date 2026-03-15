@@ -1,6 +1,6 @@
 # Phase 1: Extract Langfuse wrapper and built-in tracing
 
-*AI Agent App Starter Kit > Observability — Langfuse + Built-in Tracing*
+_AI Agent App Starter Kit > Observability — Langfuse + Built-in Tracing_
 
 Create packages/tracing/ in the starter kit. Extract LangfuseClient wrapper, wrapProviderWithTracing, calculateCost with pricing table, and all tracing types from libs/observability/. Replace createLogger calls with a logger parameter (default to console). Add built-in file-based trace logger that writes JSON traces to .traces/ directory for local debugging without Langfuse. Add trace viewer data endpoint to the server (GET /api/traces). Langfuse is opt-in via env vars — when not configured, built-in file tracing is the default.
 

@@ -16,10 +16,12 @@ Create an AI agent for color theory and palette management. Uses the color scien
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/design-system/packages/agents/src/color-agent.ts`
 - [ ] `libs/templates/starters/design-system/packages/agents/src/prompts/color.md`
 
 ### Verification
+
 - [ ] Generates full palette from single brand color
 - [ ] WCAG contrast compliance for all pairs
 - [ ] Light/dark/high-contrast theme variants

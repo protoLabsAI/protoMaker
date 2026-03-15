@@ -1,6 +1,6 @@
 # Phase 1: Extract LangGraph graph primitives
 
-*AI Agent App Starter Kit > Flows — LangGraph State Graphs + Visual Builder*
+_AI Agent App Starter Kit > Flows — LangGraph State Graphs + Visual Builder_
 
 Create packages/flows/ in the starter kit. Extract from libs/flows/src/graphs/: GraphBuilder class with OTel tracing, createLinearGraph/createLoopGraph/createBranchingGraph factories, state-utils (createStateAnnotation from Zod, validateState, mergeState), all routers (createBinaryRouter, createValueRouter, createSequentialRouter, createParallelRouter, etc.), all reducers (appendReducer, replaceReducer, counterReducer, etc.), state-transforms (createSubgraphBridge, createFieldMapper). Also extract xml-parser (extractTag, extractAllTags, etc.) as a zero-dep utility. Include example flows: basic-chat-agent.ts, tool-calling-agent.ts, hitl-approval-flow.ts.
 

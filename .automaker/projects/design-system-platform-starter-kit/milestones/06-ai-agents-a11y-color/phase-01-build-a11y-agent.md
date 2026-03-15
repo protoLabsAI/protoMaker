@@ -16,12 +16,14 @@ Create an AI agent that audits components for accessibility. Wraps axe-core for 
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/design-system/packages/agents/src/a11y-agent.ts`
 - [ ] `libs/templates/starters/design-system/packages/agents/src/prompts/a11y.md`
 - [ ] `libs/templates/starters/design-system/packages/a11y/src/audit.ts`
 - [ ] `libs/templates/starters/design-system/packages/a11y/src/axe-wrapper.ts`
 
 ### Verification
+
 - [ ] axe-core audit runs on rendered components
 - [ ] AI analysis identifies semantic a11y issues
 - [ ] Remediation suggestions include code examples

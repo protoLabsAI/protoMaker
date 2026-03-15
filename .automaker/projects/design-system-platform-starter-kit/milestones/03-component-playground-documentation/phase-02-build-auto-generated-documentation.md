@@ -16,12 +16,14 @@ Create a /docs route with auto-generated component documentation. For each compo
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/design-system/packages/app/src/routes/docs.tsx`
 - [ ] `libs/templates/starters/design-system/packages/app/src/components/docs/props-table.tsx`
 - [ ] `libs/templates/starters/design-system/packages/app/src/components/docs/usage-example.tsx`
 - [ ] `libs/templates/starters/design-system/packages/codegen/src/docs-generator.ts`
 
 ### Verification
+
 - [ ] Props table auto-generated from TypeScript
 - [ ] Usage examples from .pen compositions
 - [ ] Design token references linked

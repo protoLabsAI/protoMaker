@@ -16,11 +16,13 @@ Create an AI agent that makes design decisions: layout, spacing, typography, res
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/design-system/packages/agents/src/design-agent.ts`
 - [ ] `libs/templates/starters/design-system/packages/agents/src/prompts/design.md`
 - [ ] `libs/templates/starters/design-system/packages/server/src/routes/agents.ts`
 
 ### Verification
+
 - [ ] Agent modifies .pen files via Pencil MCP
 - [ ] Natural language design requests work
 - [ ] Layout and spacing decisions follow design principles

@@ -16,9 +16,11 @@ Create comprehensive README.md covering: prerequisites, quick start, env vars ta
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/ai-agent-app/README.md`
 
 ### Verification
+
 - [ ] Quick start gets user to streaming chat in 5 minutes
 - [ ] Custom tool tutorial is complete
 - [ ] Provider switching documented

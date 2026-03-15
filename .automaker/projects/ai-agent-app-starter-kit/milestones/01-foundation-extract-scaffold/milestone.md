@@ -14,11 +14,11 @@ Extract chat UI components from libs/ui/src/ai/, create the monorepo skeleton at
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-create-monorepo-skeleton-and-scaffold-function.md](./phase-01-create-monorepo-skeleton-and-scaffold-function.md) | 1 week | None | TBD |
-| 2 | [phase-02-extract-chat-ui-components-to-packages-ui.md](./phase-02-extract-chat-ui-components-to-packages-ui.md) | 2 weeks | None | TBD |
-| 3 | [phase-03-create-css-theming-system-and-shared-atoms.md](./phase-03-create-css-theming-system-and-shared-atoms.md) | 1 week | None | TBD |
+| Phase | File                                                                                                                       | Duration | Dependencies | Owner |
+| ----- | -------------------------------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-create-monorepo-skeleton-and-scaffold-function.md](./phase-01-create-monorepo-skeleton-and-scaffold-function.md) | 1 week   | None         | TBD   |
+| 2     | [phase-02-extract-chat-ui-components-to-packages-ui.md](./phase-02-extract-chat-ui-components-to-packages-ui.md)           | 2 weeks  | None         | TBD   |
+| 3     | [phase-03-create-css-theming-system-and-shared-atoms.md](./phase-03-create-css-theming-system-and-shared-atoms.md)         | 1 week   | None         | TBD   |
 
 ---
 
@@ -36,6 +36,7 @@ M1 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

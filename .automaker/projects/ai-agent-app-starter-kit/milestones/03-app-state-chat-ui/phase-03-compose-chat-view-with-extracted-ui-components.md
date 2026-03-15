@@ -16,11 +16,13 @@ Build the main chat view composing ChatMessageList, ChatMessage, ChatInput, Prom
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/ai-agent-app/packages/app/src/routes/index.tsx`
 - [ ] `libs/templates/starters/ai-agent-app/packages/app/src/hooks/use-tool-progress.ts`
 - [ ] `libs/templates/starters/ai-agent-app/packages/ui/src/tool-results/weather-card.tsx`
 
 ### Verification
+
 - [ ] Chat view renders with all components
 - [ ] Streaming messages display in real time
 - [ ] Tool invocations render with state badges

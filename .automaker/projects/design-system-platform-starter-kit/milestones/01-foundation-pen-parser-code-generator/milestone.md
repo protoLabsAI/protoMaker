@@ -14,11 +14,11 @@ Extract and extend the .pen parser into the starter kit. Build the core pen-to-R
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-extract-pen-parser-and-type-system.md](./phase-01-extract-pen-parser-and-type-system.md) | 2 weeks | None | TBD |
-| 2 | [phase-02-build-pen-to-react-code-generator.md](./phase-02-build-pen-to-react-code-generator.md) | 2 weeks | None | TBD |
-| 3 | [phase-03-build-pen-to-html-code-generator.md](./phase-03-build-pen-to-html-code-generator.md) | 1 week | None | TBD |
+| Phase | File                                                                                               | Duration | Dependencies | Owner |
+| ----- | -------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-extract-pen-parser-and-type-system.md](./phase-01-extract-pen-parser-and-type-system.md) | 2 weeks  | None         | TBD   |
+| 2     | [phase-02-build-pen-to-react-code-generator.md](./phase-02-build-pen-to-react-code-generator.md)   | 2 weeks  | None         | TBD   |
+| 3     | [phase-03-build-pen-to-html-code-generator.md](./phase-03-build-pen-to-html-code-generator.md)     | 1 week   | None         | TBD   |
 
 ---
 
@@ -36,6 +36,7 @@ M1 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

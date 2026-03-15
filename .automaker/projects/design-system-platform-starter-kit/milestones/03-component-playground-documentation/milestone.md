@@ -14,10 +14,10 @@ Build a Ladle-inspired component playground for live preview and auto-generated 
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-build-component-playground.md](./phase-01-build-component-playground.md) | 2 weeks | None | TBD |
-| 2 | [phase-02-build-auto-generated-documentation.md](./phase-02-build-auto-generated-documentation.md) | 1 week | None | TBD |
+| Phase | File                                                                                               | Duration | Dependencies | Owner |
+| ----- | -------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-build-component-playground.md](./phase-01-build-component-playground.md)                 | 2 weeks  | None         | TBD   |
+| 2     | [phase-02-build-auto-generated-documentation.md](./phase-02-build-auto-generated-documentation.md) | 1 week   | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M3 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

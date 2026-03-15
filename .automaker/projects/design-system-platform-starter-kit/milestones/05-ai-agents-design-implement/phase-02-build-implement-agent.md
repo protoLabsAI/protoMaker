@@ -16,10 +16,12 @@ Create an AI agent that converts .pen designs to production React code. Uses the
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/design-system/packages/agents/src/implement-agent.ts`
 - [ ] `libs/templates/starters/design-system/packages/agents/src/prompts/implement.md`
 
 ### Verification
+
 - [ ] Agent generates React from .pen via codegen pipeline
 - [ ] Can generate single component or full library
 - [ ] Writes files to correct output directory

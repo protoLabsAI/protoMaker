@@ -14,10 +14,10 @@ Port the XCL converter and component registry pattern from proto2 for efficient 
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-port-xcl-converter-from-proto2.md](./phase-01-port-xcl-converter-from-proto2.md) | 1 week | None | TBD |
-| 2 | [phase-02-build-component-registry.md](./phase-02-build-component-registry.md) | 1 week | None | TBD |
+| Phase | File                                                                                       | Duration | Dependencies | Owner |
+| ----- | ------------------------------------------------------------------------------------------ | -------- | ------------ | ----- |
+| 1     | [phase-01-port-xcl-converter-from-proto2.md](./phase-01-port-xcl-converter-from-proto2.md) | 1 week   | None         | TBD   |
+| 2     | [phase-02-build-component-registry.md](./phase-02-build-component-registry.md)             | 1 week   | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M7 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

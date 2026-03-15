@@ -16,11 +16,13 @@ Create packages/registry/ with a type-safe component registry. Adapted from prot
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/design-system/packages/registry/src/registry.ts`
 - [ ] `libs/templates/starters/design-system/packages/registry/src/types.ts`
 - [ ] `libs/templates/starters/design-system/packages/registry/src/schema-generator.ts`
 
 ### Verification
+
 - [ ] Register components with schemas and metadata
 - [ ] Search by name, category, tags
 - [ ] Auto-populate from generated React components

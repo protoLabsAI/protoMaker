@@ -14,12 +14,12 @@ Build the Express backend with Claude Agent SDK as primary driver, multi-provide
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-build-model-resolver-and-express-server-skeleton.md](./phase-01-build-model-resolver-and-express-server-skeleton.md) | 1 week | None | TBD |
-| 2 | [phase-02-build-streaming-chat-route-with-claude-agent-sdk.md](./phase-02-build-streaming-chat-route-with-claude-agent-sdk.md) | 2 weeks | None | TBD |
-| 3 | [phase-03-build-tool-registry-and-example-tool.md](./phase-03-build-tool-registry-and-example-tool.md) | 1 week | None | TBD |
-| 4 | [phase-04-build-websocket-sideband-for-tool-progress.md](./phase-04-build-websocket-sideband-for-tool-progress.md) | 1 week | None | TBD |
+| Phase | File                                                                                                                           | Duration | Dependencies | Owner |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------ | -------- | ------------ | ----- |
+| 1     | [phase-01-build-model-resolver-and-express-server-skeleton.md](./phase-01-build-model-resolver-and-express-server-skeleton.md) | 1 week   | None         | TBD   |
+| 2     | [phase-02-build-streaming-chat-route-with-claude-agent-sdk.md](./phase-02-build-streaming-chat-route-with-claude-agent-sdk.md) | 2 weeks  | None         | TBD   |
+| 3     | [phase-03-build-tool-registry-and-example-tool.md](./phase-03-build-tool-registry-and-example-tool.md)                         | 1 week   | None         | TBD   |
+| 4     | [phase-04-build-websocket-sideband-for-tool-progress.md](./phase-04-build-websocket-sideband-for-tool-progress.md)             | 1 week   | None         | TBD   |
 
 ---
 
@@ -37,6 +37,7 @@ M2 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

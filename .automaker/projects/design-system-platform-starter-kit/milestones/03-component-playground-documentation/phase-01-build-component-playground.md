@@ -16,12 +16,14 @@ Create a Vite-native component playground in packages/app with a /playground rou
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/design-system/packages/app/src/routes/playground.tsx`
 - [ ] `libs/templates/starters/design-system/packages/app/src/components/playground/component-list.tsx`
 - [ ] `libs/templates/starters/design-system/packages/app/src/components/playground/preview-panel.tsx`
 - [ ] `libs/templates/starters/design-system/packages/app/src/components/playground/props-editor.tsx`
 
 ### Verification
+
 - [ ] Component list shows all generated components
 - [ ] Live preview renders selected component
 - [ ] Props editor allows interactive prop changes

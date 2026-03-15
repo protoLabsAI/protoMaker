@@ -16,12 +16,14 @@ Create packages/xcl/ porting the XML Component Language converter from proto2. X
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/design-system/packages/xcl/src/serializer.ts`
 - [ ] `libs/templates/starters/design-system/packages/xcl/src/deserializer.ts`
 - [ ] `libs/templates/starters/design-system/packages/xcl/src/xcl-to-tsx.ts`
 - [ ] `libs/templates/starters/design-system/packages/xcl/src/types.ts`
 
 ### Verification
+
 - [ ] Component to XCL serialization works
 - [ ] XCL to component deserialization works
 - [ ] XCL to TSX direct conversion generates valid code

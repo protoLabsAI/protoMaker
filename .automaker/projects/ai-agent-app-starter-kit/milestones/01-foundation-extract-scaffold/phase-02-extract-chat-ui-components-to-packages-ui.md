@@ -16,12 +16,14 @@ Copy 23 components from libs/ui/src/ai/ to the starter packages/ui/src/component
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/ai-agent-app/packages/ui/src/components/chat-message.tsx`
 - [ ] `libs/templates/starters/ai-agent-app/packages/ui/src/components/tool-invocation-part.tsx`
 - [ ] `libs/templates/starters/ai-agent-app/packages/ui/src/components/chain-of-thought.tsx`
 - [ ] `libs/templates/starters/ai-agent-app/packages/ui/src/index.ts`
 
 ### Verification
+
 - [ ] 23 components extracted with zero @protolabsai imports
 - [ ] tool-invocation-part.tsx has zero tool registrations
 - [ ] chain-of-thought.tsx uses inline formatDuration

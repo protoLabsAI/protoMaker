@@ -1,6 +1,6 @@
 # Phase 1: Extract prompt builder and registry
 
-*AI Agent App Starter Kit > Prompts — Git-Versioned Templates + Playground*
+_AI Agent App Starter Kit > Prompts — Git-Versioned Templates + Playground_
 
 Create packages/prompts/ in the starter kit. Extract PromptBuilder class with section-based composition (SectionName enum, priority ordering, phase filtering, conditional sections). Extract prompt registry pattern (registerPrompt, getPromptForRole, createPromptFromTemplate with {{variable}} interpolation) — ship the registry empty. Create a prompts/ directory at the project root for git-versioned prompt files (markdown with YAML frontmatter: name, role, version, variables). Add a prompt loader that reads from the filesystem and auto-registers.
 

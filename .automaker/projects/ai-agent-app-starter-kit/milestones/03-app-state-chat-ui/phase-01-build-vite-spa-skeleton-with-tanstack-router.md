@@ -9,21 +9,23 @@
 
 ## Overview
 
-Create packages/app with Vite 7 config, React 19, TanStack Router with file-based routing. Routes: / (chat), /sessions (session list), /settings (model + theme config). Create root layout with sidebar navigation. Set up Vite proxy to forward /api/* and /ws to the Express server.
+Create packages/app with Vite 7 config, React 19, TanStack Router with file-based routing. Routes: / (chat), /sessions (session list), /settings (model + theme config). Create root layout with sidebar navigation. Set up Vite proxy to forward /api/\* and /ws to the Express server.
 
 ---
 
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/ai-agent-app/packages/app/vite.config.ts`
 - [ ] `libs/templates/starters/ai-agent-app/packages/app/src/main.tsx`
 - [ ] `libs/templates/starters/ai-agent-app/packages/app/src/routes/__root.tsx`
 
 ### Verification
+
 - [ ] Vite dev server starts
 - [ ] TanStack Router renders 3 routes
-- [ ] Proxy forwards /api/* to Express server
+- [ ] Proxy forwards /api/\* to Express server
 - [ ] Root layout with sidebar renders
 
 ---

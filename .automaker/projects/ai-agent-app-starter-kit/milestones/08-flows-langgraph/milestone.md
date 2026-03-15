@@ -1,6 +1,6 @@
 # Flows — LangGraph State Graphs + Visual Builder
 
-*Part of: AI Agent App Starter Kit*
+_Part of: AI Agent App Starter Kit_
 
 Extract LangGraph graph primitives from libs/flows/ and build a visual flow builder using React Flow for designing agent workflows on a canvas.
 
@@ -15,6 +15,7 @@ Create packages/flows/ in the starter kit. Extract from libs/flows/src/graphs/: 
 **Complexity:** large
 
 **Files:**
+
 - libs/templates/starters/ai-agent-app/packages/flows/src/builder.ts
 - libs/templates/starters/ai-agent-app/packages/flows/src/routers.ts
 - libs/templates/starters/ai-agent-app/packages/flows/src/reducers.ts
@@ -22,6 +23,7 @@ Create packages/flows/ in the starter kit. Extract from libs/flows/src/graphs/: 
 - libs/templates/starters/ai-agent-app/packages/flows/src/xml-parser.ts
 
 **Acceptance Criteria:**
+
 - [ ] GraphBuilder wraps StateGraph with OTel spans
 - [ ] Factory functions create common graph patterns
 - [ ] Zod-to-LangGraph state annotations work
@@ -36,6 +38,7 @@ Create /flows route in packages/app with a visual canvas using @xyflow/react (Re
 **Complexity:** large
 
 **Files:**
+
 - libs/templates/starters/ai-agent-app/packages/app/src/routes/flows.tsx
 - libs/templates/starters/ai-agent-app/packages/app/src/components/flow-builder/canvas.tsx
 - libs/templates/starters/ai-agent-app/packages/app/src/components/flow-builder/nodes.tsx
@@ -43,6 +46,7 @@ Create /flows route in packages/app with a visual canvas using @xyflow/react (Re
 - libs/templates/starters/ai-agent-app/packages/app/src/components/flow-builder/codegen.ts
 
 **Acceptance Criteria:**
+
 - [ ] React Flow canvas renders with custom node types
 - [ ] Drag-and-drop node creation works
 - [ ] Edge connections between nodes work

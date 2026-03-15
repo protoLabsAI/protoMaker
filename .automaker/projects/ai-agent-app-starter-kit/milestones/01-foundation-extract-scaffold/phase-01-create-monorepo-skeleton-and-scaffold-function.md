@@ -16,12 +16,14 @@ Create the starter kit directory structure at libs/templates/starters/ai-agent-a
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/ai-agent-app/package.json`
 - [ ] `libs/templates/src/types.ts`
 - [ ] `libs/templates/src/scaffold.ts`
 - [ ] `libs/templates/src/index.ts`
 
 ### Verification
+
 - [ ] Starter directory exists with correct structure
 - [ ] scaffoldAiAgentAppStarter copies files and substitutes @@PROJECT_NAME
 - [ ] StarterKitType includes ai-agent-app

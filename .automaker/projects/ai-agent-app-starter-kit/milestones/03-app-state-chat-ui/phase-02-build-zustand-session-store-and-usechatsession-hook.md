@@ -16,10 +16,12 @@ Create session-store.ts with Zustand persist middleware (localStorage). ChatSess
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/ai-agent-app/packages/app/src/store/session-store.ts`
 - [ ] `libs/templates/starters/ai-agent-app/packages/app/src/hooks/use-chat-session.ts`
 
 ### Verification
+
 - [ ] Sessions persist across page reload
 - [ ] Max 50 sessions with LRU eviction
 - [ ] useChat coordinates with Zustand store

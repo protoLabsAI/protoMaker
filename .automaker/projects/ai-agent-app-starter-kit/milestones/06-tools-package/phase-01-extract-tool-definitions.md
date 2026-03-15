@@ -1,6 +1,6 @@
 # Phase 1: Extract tool definitions, registry, and adapters
 
-*AI Agent App Starter Kit > Tools Package — Define Once, Deploy Everywhere*
+_AI Agent App Starter Kit > Tools Package — Define Once, Deploy Everywhere_
 
 Create packages/tools/ in the starter kit. Extract defineSharedTool factory, ToolRegistry class, and SharedTool/ToolResult/ToolContext interfaces from libs/tools/src/. Strip automaker-specific types (Feature, FeatureStatus, ListFeaturesInput, CompactFeature) from ToolContext — make it generic Record<string, unknown>. Extract all 3 adapters: toMCPTool (MCP adapter), toLangGraphTool (LangGraph adapter), toExpressRouter (Express adapter). Include zod and zod-to-json-schema as dependencies. Create example tools (get_weather, search_web) showing the define-once pattern.
 

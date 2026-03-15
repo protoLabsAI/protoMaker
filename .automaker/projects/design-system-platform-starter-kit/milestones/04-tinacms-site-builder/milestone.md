@@ -14,10 +14,10 @@ Integrate TinaCMS for git-backed content management and visual editing of the do
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-integrate-tinacms-with-vite-react.md](./phase-01-integrate-tinacms-with-vite-react.md) | 2 weeks | None | TBD |
-| 2 | [phase-02-build-site-theme-and-layout-system.md](./phase-02-build-site-theme-and-layout-system.md) | 1 week | None | TBD |
+| Phase | File                                                                                               | Duration | Dependencies | Owner |
+| ----- | -------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-integrate-tinacms-with-vite-react.md](./phase-01-integrate-tinacms-with-vite-react.md)   | 2 weeks  | None         | TBD   |
+| 2     | [phase-02-build-site-theme-and-layout-system.md](./phase-02-build-site-theme-and-layout-system.md) | 1 week   | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M4 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

@@ -1,4 +1,5 @@
 # Changelog: Design System Platform Starter Kit - Design Tokens — W3C DTCG + Color Science
+
 **Generated:** 2026-03-15
 
 ## 📦 Other Changes

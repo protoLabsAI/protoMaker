@@ -16,6 +16,7 @@ Create packages/pen/ in the starter kit. Extract PenDocument, PenNode (15 node t
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/design-system/packages/pen/src/types.ts`
 - [ ] `libs/templates/starters/design-system/packages/pen/src/parser.ts`
 - [ ] `libs/templates/starters/design-system/packages/pen/src/traversal.ts`
@@ -23,6 +24,7 @@ Create packages/pen/ in the starter kit. Extract PenDocument, PenNode (15 node t
 - [ ] `libs/templates/starters/design-system/packages/pen/src/style-utils.ts`
 
 ### Verification
+
 - [ ] All 15 PenNode types extracted
 - [ ] parsePenFile parses .pen JSON correctly
 - [ ] traverseNodes visits all nodes depth-first

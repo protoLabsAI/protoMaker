@@ -16,12 +16,14 @@ Create packages/tokens/ implementing the W3C Design Tokens Community Group speci
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/design-system/packages/tokens/src/dtcg.ts`
 - [ ] `libs/templates/starters/design-system/packages/tokens/src/extractor.ts`
 - [ ] `libs/templates/starters/design-system/packages/tokens/src/exporters/css.ts`
 - [ ] `libs/templates/starters/design-system/packages/tokens/src/exporters/tailwind.ts`
 
 ### Verification
+
 - [ ] Tokens extracted from .pen variables in DTCG format
 - [ ] CSS custom property export works
 - [ ] Tailwind config export works
