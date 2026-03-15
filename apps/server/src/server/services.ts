@@ -16,6 +16,10 @@ import { SettingsService } from '../services/settings-service.js';
 import { ClaudeUsageService } from '../services/claude-usage-service.js';
 import { contentFlowService } from '../services/content-flow-service.js';
 import { calendarService } from '../services/calendar-service.js';
+import {
+  CalendarIntegrationService,
+  calendarIntegrationService,
+} from '../services/calendar-integration-service.js';
 import { GoogleCalendarSyncService } from '../services/google-calendar-sync-service.js';
 import { MCPTestService } from '../services/mcp-test-service.js';
 import { getEscalationRouter } from '../services/escalation-router.js';
@@ -154,6 +158,7 @@ export interface ServiceContainer {
   // Calendar & scheduling
   googleCalendarSyncService: GoogleCalendarSyncService;
   calendarService: typeof calendarService;
+  calendarIntegrationService: CalendarIntegrationService;
   schedulerService: ReturnType<typeof getSchedulerService>;
   automationService: AutomationService;
   jobExecutorService: JobExecutorService;
@@ -844,6 +849,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     archivalService,
     googleCalendarSyncService,
     calendarService,
+    calendarIntegrationService,
     schedulerService,
     automationService,
     jobExecutorService,

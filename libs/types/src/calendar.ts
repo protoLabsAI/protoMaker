@@ -8,7 +8,14 @@
 /**
  * Type of calendar event
  */
-export type CalendarEventType = 'feature' | 'milestone' | 'custom' | 'google' | 'job' | 'ceremony';
+export type CalendarEventType =
+  | 'feature'
+  | 'milestone'
+  | 'custom'
+  | 'google'
+  | 'job'
+  | 'ceremony'
+  | 'ops';
 
 /**
  * Job execution status
@@ -118,6 +125,9 @@ export interface CalendarEvent {
 
   /** Whether this is an all-day event */
   allDay?: boolean;
+
+  /** Whether this event recurs (e.g. weekly standup, milestone retro) */
+  recurring?: boolean;
 
   /** Creation timestamp */
   createdAt: string;
