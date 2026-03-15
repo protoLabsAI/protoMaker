@@ -3,9 +3,8 @@
  *
  * Builds React Flow nodes and edges from:
  * 1. Engine service status (via /api/engine/status)
- * 2. Pipeline tracker (WebSocket events mapped to stages)
- * 3. Integration status
- * 4. Running agents & active features from app store
+ * 2. Integration status
+ * 3. Running agents & active features from app store
  */
 
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
@@ -18,8 +17,6 @@ import {
   ENGINE_SERVICES,
   INTEGRATION_POSITIONS,
   STATIC_EDGES,
-  PIPELINE_STAGES,
-  BRIDGE_EDGES,
   DYNAMIC_ZONE_START_Y,
   DYNAMIC_ZONE_CENTER_X,
 } from '../constants';
@@ -547,17 +544,13 @@ export function useFlowGraphData(
   // Build edges: static service flow + dynamic
   const edges = useMemo(() => {
     // Filter out the GTM edge when content pipeline is disabled
-    // Also filter out edges referencing deleted pipeline stage nodes
-    const pipelineNodeIds = new Set(PIPELINE_STAGES.map((s) => s.nodeId));
+    // Also filter out edges referencing pipeline stage nodes (not rendered in this view)
     const staticEdges = STATIC_EDGES.filter((e) => {
       if (!gtmEnabled && e.id === 'e-triage-content') return false;
-      if (pipelineNodeIds.has(e.source) || pipelineNodeIds.has(e.target)) return false;
+      if (e.source.startsWith('pipeline-') || e.target.startsWith('pipeline-')) return false;
       return true;
     });
-    const bridgeEdges = BRIDGE_EDGES.filter(
-      (e) => !pipelineNodeIds.has(e.source) && !pipelineNodeIds.has(e.target)
-    );
-    const result: Edge[] = [...staticEdges, ...bridgeEdges];
+    const result: Edge[] = [...staticEdges];
 
     // Auto-mode -> active features (workflow edges)
     for (const feature of activeFeatures) {
