@@ -63,7 +63,8 @@ git clone <repo-url> my-design-system
 cd my-design-system
 
 # Replace @@PROJECT_NAME with your project name everywhere
-grep -rl '@@PROJECT_NAME' . --include='*.json' --include='*.ts' --include='*.md' \
+grep -rl '@@PROJECT_NAME' . \
+  --include='*.json' --include='*.ts' --include='*.tsx' --include='*.md' --include='*.html' \
   | xargs sed -i 's/@@PROJECT_NAME/my-design-system/g'
 ```
 

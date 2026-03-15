@@ -414,12 +414,15 @@ function executeAnalyzeHtmlSemantics(input: Record<string, unknown>): Record<str
     const altMatch = tag.match(/alt="([^"]*)"/i);
     if (!altMatch) {
       checks.push('IMAGE_NO_ALT: Image element missing alt attribute entirely.');
-    } else if (altMatch[1].trim() === '') {
-      checks.push('IMAGE_DECORATIVE: Image has empty alt="" — verify it is truly decorative.');
-    } else if (/^image\d*$|\.png|\.jpg|\.svg/i.test(altMatch[1])) {
-      checks.push(
-        `IMAGE_BAD_ALT: Alt text "${altMatch[1]}" appears to be a filename or generic label.`
-      );
+    } else {
+      const altText = altMatch[1] ?? '';
+      if (altText.trim() === '') {
+        checks.push('IMAGE_DECORATIVE: Image has empty alt="" — verify it is truly decorative.');
+      } else if (/^image\d*$|\.png|\.jpg|\.svg/i.test(altText)) {
+        checks.push(
+          `IMAGE_BAD_ALT: Alt text "${altText}" appears to be a filename or generic label.`
+        );
+      }
     }
   }
 
@@ -447,9 +450,11 @@ function executeAnalyzeHtmlSemantics(input: Record<string, unknown>): Record<str
     );
   }
   for (let i = 1; i < levels.length; i++) {
-    if (levels[i] - levels[i - 1] > 1) {
+    const curr = levels[i] ?? 0;
+    const prev = levels[i - 1] ?? 0;
+    if (curr - prev > 1) {
       checks.push(
-        `HEADING_SKIPPED: Heading jumps from h${levels[i - 1]} to h${levels[i]} — skipped levels confuse screen reader navigation.`
+        `HEADING_SKIPPED: Heading jumps from h${prev} to h${curr} — skipped levels confuse screen reader navigation.`
       );
     }
   }

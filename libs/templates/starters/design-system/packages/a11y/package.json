@@ -37,6 +37,7 @@
   },
   "devDependencies": {
     "@types/jsdom": "^21.0.0",
+    "axe-core": "^4.0.0",
     "typescript": "^5.0.0"
   },
   "keywords": [

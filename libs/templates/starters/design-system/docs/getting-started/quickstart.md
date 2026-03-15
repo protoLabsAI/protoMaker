@@ -18,7 +18,7 @@ Replace `@@PROJECT_NAME` with your project name across all files:
 
 ```bash
 grep -rl '@@PROJECT_NAME' . \
-  --include='*.json' --include='*.ts' --include='*.md' --include='*.tsx' \
+  --include='*.json' --include='*.ts' --include='*.tsx' --include='*.md' --include='*.html' \
   | xargs sed -i 's/@@PROJECT_NAME/my-design-system/g'
 ```
 
