@@ -287,10 +287,7 @@ export function TraceViewer({ trace }: TraceViewerProps) {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
           {trace.steps.map((step) => (
-            <div
-              key={step.index}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}
-            >
+            <div key={step.index} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               {/* Step label */}
               <div
                 style={{
@@ -320,8 +317,7 @@ export function TraceViewer({ trace }: TraceViewerProps) {
                     width: `${(step.durationMs / maxStepMs) * 100}%`,
                     height: '100%',
                     /* Purple for steps with tool calls, blue for text-only steps */
-                    background:
-                      step.toolCalls.length > 0 ? 'var(--primary)' : 'var(--info)',
+                    background: step.toolCalls.length > 0 ? 'var(--primary)' : 'var(--info)',
                     opacity: 0.8,
                     minWidth: '2px',
                     transition: 'width 0.2s ease',
@@ -380,15 +376,11 @@ export function TraceViewer({ trace }: TraceViewerProps) {
                   padding: '0.625rem 0.875rem',
                   background: 'var(--surface-2)',
                   borderBottom:
-                    step.toolCalls.length > 0 || step.text
-                      ? '1px solid var(--border)'
-                      : 'none',
+                    step.toolCalls.length > 0 || step.text ? '1px solid var(--border)' : 'none',
                 }}
               >
                 {/* Left: index + type */}
-                <div
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}
-                >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
                   <span
                     style={{
                       display: 'inline-flex',
@@ -449,16 +441,17 @@ export function TraceViewer({ trace }: TraceViewerProps) {
                   {/* Text preview (up to 3 lines) */}
                   {step.text && (
                     <p
-                      style={{
-                        margin:
-                          step.toolCalls.length > 0 ? '0 0 0.625rem' : '0',
-                        fontSize: '0.8125rem',
-                        color: 'var(--text-secondary)',
-                        overflow: 'hidden',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: 'vertical',
-                      } as React.CSSProperties}
+                      style={
+                        {
+                          margin: step.toolCalls.length > 0 ? '0 0 0.625rem' : '0',
+                          fontSize: '0.8125rem',
+                          color: 'var(--text-secondary)',
+                          overflow: 'hidden',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: 'vertical',
+                        } as React.CSSProperties
+                      }
                     >
                       {step.text}
                     </p>

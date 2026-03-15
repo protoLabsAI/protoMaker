@@ -68,7 +68,7 @@ export function buildTrace(
   model: string,
   startedAt: Date,
   endedAt: Date,
-  steps: StepData[],
+  steps: StepData[]
 ): Trace {
   const totalDurationMs = endedAt.getTime() - startedAt.getTime();
 

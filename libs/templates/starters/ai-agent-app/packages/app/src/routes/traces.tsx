@@ -101,9 +101,7 @@ export function TracesPage() {
           justifyContent: 'center',
         }}
       >
-        <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-          Loading traces…
-        </span>
+        <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Loading traces…</span>
       </div>
     );
   }
@@ -214,8 +212,7 @@ export function TracesPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem 1rem',
-                  background:
-                    selected?.id === trace.id ? 'var(--surface-2)' : 'transparent',
+                  background: selected?.id === trace.id ? 'var(--surface-2)' : 'transparent',
                   border: 'none',
                   borderBottom: '1px solid var(--border)',
                   borderLeft:
@@ -305,7 +302,9 @@ export function TracesPage() {
                     {selected.id}
                   </code>
                 </h2>
-                <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                <p
+                  style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}
+                >
                   {fmtDate(selected.startedAt)} → {fmtDate(selected.endedAt)}
                   &nbsp;·&nbsp;{selected.model}
                 </p>

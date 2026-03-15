@@ -137,7 +137,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
               resolvedModelId,
               traceStartedAt,
               traceEndedAt,
-              stepData,
+              stepData
             );
             traceStore.add(trace);
           },
