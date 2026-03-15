@@ -36,6 +36,14 @@
 | [Deployment Modes](./guides/deployment-modes.md) | Run in web, desktop, or headless mode    |
 | [Gotchas](./guides/gotchas.md)                   | Known pitfalls and workarounds           |
 
+## Starter Kits
+
+| Document                                              | Description                                          |
+| ----------------------------------------------------- | ---------------------------------------------------- |
+| [Overview](./templates/index.md)                      | Available starter kits and how to scaffold them      |
+| [Docs Starter](./templates/docs-starter.md)           | Create a documentation site with Starlight           |
+| [Portfolio Starter](./templates/portfolio-starter.md) | Create a portfolio/marketing site with Astro + React |
+
 ## Reference
 
 | Document                                              | Description                                  |

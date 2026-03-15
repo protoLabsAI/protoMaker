@@ -9,7 +9,9 @@ import {
   ExternalLink,
   Clock,
   Cpu,
+  ArrowUpRight,
 } from 'lucide-react';
+import { useNavigate } from '@tanstack/react-router';
 import { cn } from '@/lib/utils';
 import { useProjectFeatures } from '../hooks/use-project-features';
 import { getFeatureStatusVariant } from '../lib/status-variants';
@@ -50,6 +52,19 @@ export function FeaturesTab({ projectSlug }: { projectSlug: string }) {
     );
   }
 
+  const allFeatures = [...features, ...epics];
+  const totalFeatures = allFeatures.length;
+  const doneFeatures = allFeatures.filter((f) => f.status === 'done').length;
+  const completionPct = totalFeatures > 0 ? Math.round((doneFeatures / totalFeatures) * 100) : 0;
+
+  // Group non-epic features by milestone for progress bars
+  const milestoneMap = features.reduce<Record<string, Feature[]>>((acc, f) => {
+    const slug = f.milestoneSlug ?? '__none__';
+    (acc[slug] ??= []).push(f);
+    return acc;
+  }, {});
+  const milestones = Object.entries(milestoneMap).filter(([slug]) => slug !== '__none__');
+
   const childrenByEpicId = features.reduce<Record<string, Feature[]>>((acc, f) => {
     if (f.epicId) {
       (acc[f.epicId] ??= []).push(f);
@@ -61,6 +76,52 @@ export function FeaturesTab({ projectSlug }: { projectSlug: string }) {
 
   return (
     <div className="space-y-4 py-4">
+      {/* Overall completion + milestone progress */}
+      <Card className="px-4 py-3 space-y-3">
+        {/* Overall completion */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-medium text-foreground">Overall progress</span>
+            <span className="text-muted-foreground">
+              {doneFeatures}/{totalFeatures} done &mdash; {completionPct}%
+            </span>
+          </div>
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all"
+              style={{ width: `${completionPct}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Per-milestone progress bars */}
+        {milestones.length > 1 && (
+          <div className="space-y-2 pt-1 border-t border-border/20">
+            {milestones.map(([slug, mFeatures]) => {
+              const mDone = mFeatures.filter((f) => f.status === 'done').length;
+              const mTotal = mFeatures.length;
+              const mPct = mTotal > 0 ? Math.round((mDone / mTotal) * 100) : 0;
+              return (
+                <div key={slug} className="space-y-0.5">
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="text-muted-foreground truncate max-w-[70%]">{slug}</span>
+                    <span className="text-muted-foreground shrink-0">
+                      {mDone}/{mTotal}
+                    </span>
+                  </div>
+                  <div className="h-1 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary/70 rounded-full transition-all"
+                      style={{ width: `${mPct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
       {epics.length > 0 && (
         <div className="space-y-2">
           {epics.map((epic) => (
@@ -177,6 +238,12 @@ function EpicAccordion({ epic, children }: { epic: Feature; children: Feature[] 
 
 function FeatureRow({ feature, indented = false }: { feature: Feature; indented?: boolean }) {
   const [expanded, setExpanded] = useState(false);
+  const navigate = useNavigate();
+
+  function handleJumpToBoard(e: React.MouseEvent) {
+    e.stopPropagation();
+    void navigate({ to: '/board', search: { featureId: feature.id } });
+  }
 
   return (
     <div className={cn(indented && 'pl-5')}>
@@ -198,6 +265,14 @@ function FeatureRow({ feature, indented = false }: { feature: Feature; indented?
         {feature.complexity && (
           <span className="text-[10px] text-muted-foreground shrink-0">{feature.complexity}</span>
         )}
+        <button
+          type="button"
+          aria-label="Jump to board"
+          className="text-muted-foreground hover:text-primary transition-colors shrink-0"
+          onClick={handleJumpToBoard}
+        >
+          <ArrowUpRight className="w-3.5 h-3.5" />
+        </button>
         <Badge
           variant={getFeatureStatusVariant(feature.status ?? '')}
           size="sm"

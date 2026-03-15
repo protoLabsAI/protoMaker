@@ -9,18 +9,22 @@ import { setupCI } from './phases/ci.js';
 import { generateCodeRabbitConfig } from './phases/coderabbit.js';
 import { createBranchProtectionRuleset } from './phases/branch-protection.js';
 import { executeDiscordPhase } from './phases/discord.js';
+import { scaffoldStarter } from './phases/scaffold.js';
+import type { StarterKitType } from './phases/scaffold.js';
 
 /**
  * CLI for ProtoLabs setup and initialization
  *
  * Interactive flow:
  * 1. Intro banner with project name and path
- * 2. Spinner for research phase
- * 3. Display gap analysis results (score, compliant items, gaps by severity)
- * 4. Multi-select prompt for which phases to run (pre-select all recommended)
- * 5. Spinner for each phase with status updates
- * 6. Summary with created files and next steps
- * 7. Outro
+ * 2. Starter kit type selection (docs, portfolio, extension, general)
+ * 3. If docs or portfolio: scaffold Astro project into outputDir
+ * 4. Spinner for research phase
+ * 5. Display gap analysis results (score, compliant items, gaps by severity)
+ * 6. Multi-select prompt for which phases to run (pre-select all recommended)
+ * 7. Spinner for each phase with status updates
+ * 8. Summary with created files and next steps
+ * 9. Outro
  */
 
 // Types (simplified for CLI - would normally import from @protolabsai/types)
@@ -257,12 +261,96 @@ async function main() {
   clack.log.info(`Project: ${pc.cyan(projectPath)}\n`);
 
   try {
-    // Phase 1: Research
+    // Step 1: Starter kit type selection
+    let selectedKit: StarterKitType = 'general';
+
+    if (options.yes) {
+      clack.log.info(pc.dim('Starter kit: general (--yes mode)'));
+    } else {
+      const kitSelection = await clack.select({
+        message: 'What type of project are you creating?',
+        options: [
+          {
+            value: 'docs' as StarterKitType,
+            label: 'Documentation site',
+            hint: 'Starlight + Astro — great for product docs',
+          },
+          {
+            value: 'portfolio' as StarterKitType,
+            label: 'Portfolio site',
+            hint: 'Astro + React + Tailwind — personal or agency portfolio',
+          },
+          {
+            value: 'extension' as StarterKitType,
+            label: 'Browser extension',
+            hint: 'Manifest v3, React popup + content script',
+          },
+          {
+            value: 'general' as StarterKitType,
+            label: 'General project',
+            hint: 'Any other project type',
+          },
+        ],
+      });
+
+      if (clack.isCancel(kitSelection)) {
+        clack.cancel('Setup cancelled');
+        process.exit(0);
+      }
+
+      selectedKit = kitSelection as StarterKitType;
+    }
+
+    // Step 2: Scaffold the Astro starter kit (docs and portfolio only)
+    const scaffoldCreatedFiles: string[] = [];
+    let scaffoldFeatureCount = 0;
+
+    if (selectedKit === 'docs' || selectedKit === 'portfolio') {
+      let projectName = '';
+
+      if (options.yes) {
+        // Derive a name from the project path
+        projectName = projectPath.split('/').pop() ?? 'my-project';
+      } else {
+        const nameInput = await clack.text({
+          message: 'Project name',
+          placeholder: projectPath.split('/').pop() ?? 'my-project',
+          validate(value) {
+            if (!value || !value.trim()) return 'Project name is required';
+            if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(value.trim())) {
+              return 'Use lowercase letters, numbers, and hyphens only';
+            }
+          },
+        });
+
+        if (clack.isCancel(nameInput)) {
+          clack.cancel('Setup cancelled');
+          process.exit(0);
+        }
+
+        projectName = (nameInput as string).trim();
+      }
+
+      const scaffoldResult = await runPhase(`Scaffolding ${selectedKit} starter kit...`, () =>
+        scaffoldStarter({
+          kitType: selectedKit,
+          projectName,
+          outputDir: projectPath,
+        })
+      );
+
+      if (scaffoldResult.filesCreated) {
+        scaffoldCreatedFiles.push(...scaffoldResult.filesCreated);
+      }
+      scaffoldFeatureCount = scaffoldResult.starterFeatures?.length ?? 0;
+    }
+
+    // Phase 3: Research
     const researchResult = await runPhase('Analyzing repository structure...', () =>
       researchRepo(projectPath)
     );
 
-    // Phase 2: Gap Analysis
+    // Phase 4: Gap Analysis
     const gapAnalysis = await runPhase('Running gap analysis...', () =>
       Promise.resolve(analyzeGaps(researchResult))
     );
@@ -316,15 +404,15 @@ async function main() {
       selectedPhases = phaseSelection as string[];
     }
 
-    if (selectedPhases.length === 0) {
+    if (selectedPhases.length === 0 && scaffoldCreatedFiles.length === 0) {
       clack.log.warn(pc.yellow('No phases selected'));
       clack.outro(pc.dim('Setup completed without changes'));
       process.exit(0);
     }
 
     // Execute selected phases
-    const createdFiles: string[] = [];
-    let featuresCreated = 0;
+    const createdFiles: string[] = [...scaffoldCreatedFiles];
+    let featuresCreated = scaffoldFeatureCount;
 
     if (selectedPhases.includes('automaker')) {
       const result = await runPhase('Initializing .automaker/ directory...', () =>
@@ -347,8 +435,8 @@ async function main() {
 
     if (selectedPhases.includes('features')) {
       // Features are created via Automaker API - this would require server access
-      // For now, just count the gaps
-      featuresCreated = gapAnalysis.gaps.length;
+      // For now, just count the gaps plus starter features
+      featuresCreated += gapAnalysis.gaps.length;
     }
 
     // Display summary
