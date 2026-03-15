@@ -37,11 +37,51 @@
  * ```
  */
 
-import { ToolRegistry, getWeatherTool, searchWebTool } from '@@PROJECT_NAME-tools';
+import { ToolRegistry, searchWebTool } from '@@PROJECT_NAME-tools';
 import type { SharedTool } from '@@PROJECT_NAME-tools';
 import { zodToJsonSchema as zodToJsonSchemaLib } from 'zod-to-json-schema';
 import type Anthropic from '@anthropic-ai/sdk';
-import { getCurrentTimeTool } from './example.js';
+import { getCurrentTimeTool, getWeatherTool } from './example.js';
+
+// ---------------------------------------------------------------------------
+// Server-local ToolDefinition — extends SharedTool with confirmation flag
+// ---------------------------------------------------------------------------
+
+/**
+ * Extended tool definition for server-side tools.
+ *
+ * Adds a `requiresConfirmation` flag to the base `SharedTool` interface so
+ * the chat route (or any caller) can gate tool execution behind a
+ * user-approval step before proceeding.
+ *
+ * The flag lives here rather than in the shared package because the shared
+ * package is intentionally framework-agnostic and has no concept of
+ * human-in-the-loop confirmation.
+ *
+ * Use `registerTool()` instead of `registry.register()` to preserve the flag.
+ *
+ * @example
+ * ```typescript
+ * import { defineSharedTool } from '@@PROJECT_NAME-tools';
+ * import { registerTool } from './registry.js';
+ *
+ * const sensitiveOp = Object.assign(
+ *   defineSharedTool({ name: 'send_email', ... }),
+ *   { requiresConfirmation: true },
+ * );
+ *
+ * registerTool(sensitiveOp); // confirmation flag is preserved in the set
+ * ```
+ */
+export interface ToolDefinition<TInput = unknown, TOutput = unknown>
+  extends SharedTool<TInput, TOutput> {
+  /**
+   * When `true`, callers should request explicit user confirmation before
+   * executing this tool.  Useful for tools with irreversible side effects
+   * such as sending messages, modifying external records, or making payments.
+   */
+  requiresConfirmation?: boolean;
+}
 
 // ---------------------------------------------------------------------------
 // Registry — register all application tools here
@@ -49,9 +89,52 @@ import { getCurrentTimeTool } from './example.js';
 
 export const registry = new ToolRegistry();
 
-registry.register(getWeatherTool);
-registry.register(searchWebTool);
-registry.register(getCurrentTimeTool);
+/** Set of tool names that require user confirmation before execution. */
+const confirmationRequired = new Set<string>();
+
+/**
+ * Register a tool with the registry, tracking its `requiresConfirmation` flag.
+ *
+ * Prefer this over `registry.register()` so the confirmation flag is not
+ * silently dropped.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function registerTool(tool: SharedTool<any, any> & { requiresConfirmation?: boolean }): void {
+  registry.register(tool);
+  if (tool.requiresConfirmation) {
+    confirmationRequired.add(tool.name);
+  }
+}
+
+/**
+ * Check whether a registered tool requires user confirmation before execution.
+ *
+ * @example
+ * ```typescript
+ * if (toolRequiresConfirmation('get_weather')) {
+ *   const ok = await promptUser('Allow weather lookup?');
+ *   if (!ok) return;
+ * }
+ * await registry.execute('get_weather', input);
+ * ```
+ */
+export function toolRequiresConfirmation(name: string): boolean {
+  return confirmationRequired.has(name);
+}
+
+/**
+ * Return the names of all registered tools that require user confirmation.
+ * Useful for surfacing a gated-tool list to client UIs.
+ */
+export function getConfirmationRequiredTools(): string[] {
+  return Array.from(confirmationRequired);
+}
+
+// Register tools — use registerTool() to preserve requiresConfirmation flags.
+// get_weather is defined server-locally in example.ts with requiresConfirmation: true.
+registerTool(getWeatherTool);
+registerTool(searchWebTool);
+registerTool(getCurrentTimeTool);
 
 // ---------------------------------------------------------------------------
 // Anthropic format conversion
