@@ -8,13 +8,14 @@ import {
   scaffoldLandingPageStarter,
   scaffoldGeneralStarter,
   scaffoldAiAgentAppStarter,
+  scaffoldDesignSystemStarter,
 } from '@protolabsai/templates';
 
 const logger = createLogger('setup:scaffold-starter');
 
 interface ScaffoldStarterRequest {
   projectPath: string;
-  kitType: 'docs' | 'portfolio' | 'landing-page' | 'general' | 'ai-agent-app';
+  kitType: 'docs' | 'portfolio' | 'landing-page' | 'general' | 'ai-agent-app' | 'design-system';
   projectName?: string;
 }
 
@@ -50,14 +51,16 @@ export function createScaffoldStarterHandler(): RequestHandler<
 
       if (
         !kitType ||
-        !['docs', 'portfolio', 'landing-page', 'general', 'ai-agent-app'].includes(kitType)
+        !['docs', 'portfolio', 'landing-page', 'general', 'ai-agent-app', 'design-system'].includes(
+          kitType
+        )
       ) {
         res.status(400).json({
           success: false,
           outputDir: '',
           filesCreated: [],
           error:
-            'kitType must be "docs", "portfolio", "landing-page", "general", or "ai-agent-app"',
+            'kitType must be "docs", "portfolio", "landing-page", "general", "ai-agent-app", or "design-system"',
         });
         return;
       }
@@ -114,6 +117,7 @@ export function createScaffoldStarterHandler(): RequestHandler<
         'landing-page': scaffoldLandingPageStarter,
         general: scaffoldGeneralStarter,
         'ai-agent-app': scaffoldAiAgentAppStarter,
+        'design-system': scaffoldDesignSystemStarter,
       };
       const result = await scaffolders[kitType](options);
 

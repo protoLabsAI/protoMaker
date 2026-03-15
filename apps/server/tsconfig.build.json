@@ -11,6 +11,7 @@
       "@protolabsai/observability": ["../../libs/observability/dist/index.d.ts"],
       "@protolabsai/platform": ["../../libs/platform/dist/index.d.ts"],
       "@protolabsai/prompts": ["../../libs/prompts/dist/index.d.ts"],
+      "@protolabsai/templates": ["../../libs/templates/src/index.ts"],
       "@protolabsai/tools": ["../../libs/tools/dist/index.d.ts"],
       "@protolabsai/types": ["../../libs/types/dist/index.d.ts"],
       "@protolabsai/utils": ["../../libs/utils/dist/index.d.ts"]

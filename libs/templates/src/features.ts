@@ -160,6 +160,45 @@ const EXTENSION_FEATURES: StarterFeature[] = [
   },
 ];
 
+const DESIGN_SYSTEM_FEATURES: StarterFeature[] = [
+  {
+    title: 'Design Token Pipeline',
+    description: 'DTCG-format design tokens with build-time CSS variable generation.',
+    complexity: 'small',
+  },
+  {
+    title: 'XCL Codec',
+    description: 'Bidirectional ComponentDef ↔ XCL XML ↔ TSX code generation pipeline.',
+    complexity: 'medium',
+  },
+  {
+    title: 'Component Registry',
+    description: 'In-memory component registry for storing and querying design system components.',
+    complexity: 'small',
+  },
+  {
+    title: 'AI Component Generation',
+    description: 'AI agents that generate and refine React components from .pen design files.',
+    complexity: 'large',
+  },
+  {
+    title: 'MCP Server',
+    description:
+      'Model Context Protocol server exposing design system tools to AI coding assistants.',
+    complexity: 'medium',
+  },
+  {
+    title: 'Component Playground',
+    description: 'Vite-powered playground app for previewing and testing components.',
+    complexity: 'medium',
+  },
+  {
+    title: 'Accessibility Checking',
+    description: 'Automated a11y checks using axe-core integrated into the component pipeline.',
+    complexity: 'small',
+  },
+];
+
 /**
  * Get starter features for a given kit type.
  * Returns universal features plus type-specific features.
@@ -178,6 +217,8 @@ export function getStarterFeatures(type: StarterKitType): StarterFeature[] {
       return [...UNIVERSAL_FEATURES];
     case 'ai-agent-app':
       return [...UNIVERSAL_FEATURES, ...AI_AGENT_APP_FEATURES];
+    case 'design-system':
+      return [...UNIVERSAL_FEATURES, ...DESIGN_SYSTEM_FEATURES];
   }
 }
 

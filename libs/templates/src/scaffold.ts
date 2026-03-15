@@ -22,7 +22,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * Works from both the compiled `dist/` and the `src/` directory during dev.
  */
 function resolveStarterDir(
-  kitName: 'docs' | 'portfolio' | 'general' | 'landing-page' | 'ai-agent-app'
+  kitName: 'docs' | 'portfolio' | 'general' | 'landing-page' | 'ai-agent-app' | 'design-system'
 ): string {
   // From dist/: ../starters/<kit>  (libs/templates/starters/<kit>)
   const fromDist = path.resolve(__dirname, '..', 'starters', kitName);
@@ -366,6 +366,60 @@ export async function scaffoldAiAgentAppStarter(options: ScaffoldOptions): Promi
 
   try {
     const starterDir = resolveStarterDir('ai-agent-app');
+    await copyDir(starterDir, outputDir);
+    await applyMonorepoSubstitutions(outputDir, projectName);
+
+    // List top-level created entries for reporting
+    const entries = await fs.readdir(outputDir);
+    filesCreated.push(...entries.map((e) => path.join(outputDir, e)));
+
+    return { success: true, outputDir, filesCreated };
+  } catch (error) {
+    return {
+      success: false,
+      outputDir,
+      filesCreated,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+/**
+ * Scaffold a new **design system** monorepo at `options.outputDir`.
+ *
+ * Copies `starters/design-system/` to the output directory, then applies
+ * `@@PROJECT_NAME` substitutions across all text files.
+ *
+ * The monorepo includes these workspaces:
+ * - `packages/pen` — .pen file parser
+ * - `packages/codegen` — code generation utilities
+ * - `packages/tokens` — design tokens (DTCG format)
+ * - `packages/color` — OKLCH color utilities
+ * - `packages/a11y` — accessibility helpers
+ * - `packages/xcl` — XCL codec (ComponentDef ↔ XML ↔ TSX)
+ * - `packages/registry` — component registry
+ * - `packages/agents` — AI agents for component generation
+ * - `packages/mcp` — MCP server for AI tool exposure
+ * - `packages/app` — design system playground (Vite)
+ * - `packages/server` — Express API server
+ *
+ * @example
+ * ```ts
+ * const result = await scaffoldDesignSystemStarter({
+ *   projectName: 'my-design-system',
+ *   outputDir: '/tmp/my-design-system',
+ * });
+ * // → /tmp/my-design-system/ contains a ready-to-run design system monorepo
+ * ```
+ */
+export async function scaffoldDesignSystemStarter(
+  options: ScaffoldOptions
+): Promise<ScaffoldResult> {
+  const { projectName, outputDir } = options;
+  const filesCreated: string[] = [];
+
+  try {
+    const starterDir = resolveStarterDir('design-system');
     await copyDir(starterDir, outputDir);
     await applyMonorepoSubstitutions(outputDir, projectName);
 

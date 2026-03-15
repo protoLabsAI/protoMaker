@@ -62,6 +62,7 @@ export {
   scaffoldLandingPageStarter,
   scaffoldGeneralStarter,
   scaffoldAiAgentAppStarter,
+  scaffoldDesignSystemStarter,
 } from './scaffold.js';
 export type { ScaffoldResult } from './scaffold.js';
 
