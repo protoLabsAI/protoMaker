@@ -922,6 +922,26 @@ input[type='datetime-local'] {
   font-style: italic;
 }
 
+/* Word fade-in animation — perplexity-style chunk fade for streaming responses */
+@keyframes fade-in-word {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in-word {
+  animation: fade-in-word 750ms ease forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-word {
+    animation: none;
+  }
+}
+
 /* Streaming cursor — blinking block appended to last prose element */
 @keyframes ava-cursor-blink {
   0%,
