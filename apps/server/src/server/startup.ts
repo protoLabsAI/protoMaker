@@ -244,20 +244,6 @@ export async function runStartup(
         logger.warn(`[STARTUP] Failed to reconcile features for ${projectPath}:`, err);
       }
     }
-
-    // Reconcile orphaned checkpoints (runs after feature state reconciliation)
-    for (const projectPath of uniquePaths) {
-      try {
-        const result = await leadEngineerService.reconcileCheckpoints(projectPath);
-        if (result.deleted.length > 0) {
-          logger.info(
-            `[STARTUP] Deleted ${result.deleted.length} orphaned checkpoint(s) for ${projectPath}`
-          );
-        }
-      } catch (err) {
-        logger.warn(`[STARTUP] Failed to reconcile checkpoints for ${projectPath}:`, err);
-      }
-    }
   } catch (err) {
     logger.warn('[STARTUP] Failed to run feature reconciliation:', err);
   }
