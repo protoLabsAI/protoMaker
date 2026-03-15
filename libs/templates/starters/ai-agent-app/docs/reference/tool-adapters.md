@@ -14,18 +14,18 @@ const tool = defineSharedTool(config);
 
 ### Config
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | `string` | Yes | Snake-case tool identifier. Must be unique in the registry. |
-| `description` | `string` | Yes | Shown to the model. Describe what the tool does, when to use it, and what the inputs mean. |
-| `inputSchema` | `z.ZodType` | Yes | Zod schema for the tool's input. Fields should have `.describe()` annotations. |
-| `outputSchema` | `z.ZodType` | Yes | Zod schema for the tool's output data (the `data` field in a successful result). |
-| `execute` | `function` | Yes | Async function that performs the tool's work. |
+| Field          | Type        | Required | Description                                                                                |
+| -------------- | ----------- | -------- | ------------------------------------------------------------------------------------------ |
+| `name`         | `string`    | Yes      | Snake-case tool identifier. Must be unique in the registry.                                |
+| `description`  | `string`    | Yes      | Shown to the model. Describe what the tool does, when to use it, and what the inputs mean. |
+| `inputSchema`  | `z.ZodType` | Yes      | Zod schema for the tool's input. Fields should have `.describe()` annotations.             |
+| `outputSchema` | `z.ZodType` | Yes      | Zod schema for the tool's output data (the `data` field in a successful result).           |
+| `execute`      | `function`  | Yes      | Async function that performs the tool's work.                                              |
 
 ### execute signature
 
 ```typescript
-execute: (input: TInput, context: ToolContext) => Promise<ToolResult<TOutput>>
+execute: (input: TInput, context: ToolContext) => Promise<ToolResult<TOutput>>;
 ```
 
 **`input`** — The validated input object, typed from `inputSchema`.
@@ -36,10 +36,16 @@ execute: (input: TInput, context: ToolContext) => Promise<ToolResult<TOutput>>
 
 ```typescript
 // Successful result
-{ success: true; data: TOutput }
+{
+  success: true;
+  data: TOutput;
+}
 
 // Error result
-{ success: false; error: string }
+{
+  success: false;
+  error: string;
+}
 ```
 
 Always return a `ToolResult`, never throw. Thrown errors are caught by the adapter's error boundary and converted to error results automatically, but returning explicitly gives you control over the error message the model sees.
@@ -112,8 +118,8 @@ Returns names of all tools that require confirmation.
 
 ### RegisterOptions
 
-| Field | Type | Description |
-|-------|------|-------------|
+| Field      | Type       | Description                         |
+| ---------- | ---------- | ----------------------------------- |
 | `profiles` | `string[]` | Profile names this tool belongs to. |
 
 ---
@@ -123,10 +129,9 @@ Returns names of all tools that require confirmation.
 Mark a tool as requiring user approval before it executes:
 
 ```typescript
-const dangerousTool = Object.assign(
-  defineSharedTool({ name: 'delete_all', /* ... */ }),
-  { requiresConfirmation: true }
-);
+const dangerousTool = Object.assign(defineSharedTool({ name: 'delete_all' /* ... */ }), {
+  requiresConfirmation: true,
+});
 
 registry.register(dangerousTool);
 ```
@@ -155,10 +160,10 @@ Returns tools formatted for the MCP SDK's `ListToolsResult.tools` field.
 
 Each MCP tool has:
 
-| Field | Source |
-|-------|--------|
-| `name` | `tool.name` |
-| `description` | `tool.description` |
+| Field         | Source                                                                 |
+| ------------- | ---------------------------------------------------------------------- |
+| `name`        | `tool.name`                                                            |
+| `description` | `tool.description`                                                     |
 | `inputSchema` | JSON Schema converted from `tool.inputSchema` via `zod-to-json-schema` |
 
 ### Handling MCP tool calls
@@ -167,7 +172,10 @@ Each MCP tool has:
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const tool = registry.listTools().find((t) => t.name === request.params.name);
   if (!tool) {
-    return { content: [{ type: 'text', text: `Unknown tool: ${request.params.name}` }], isError: true };
+    return {
+      content: [{ type: 'text', text: `Unknown tool: ${request.params.name}` }],
+      isError: true,
+    };
   }
 
   const result = await tool.execute(request.params.arguments ?? {}, {});
@@ -210,12 +218,12 @@ npm install @langchain/core
 
 Each returned `DynamicStructuredTool` has:
 
-| Field | Source |
-|-------|--------|
-| `name` | `tool.name` |
-| `description` | `tool.description` |
-| `schema` | `tool.inputSchema` (Zod schema, used directly) |
-| `func` | Wrapper around `tool.execute` |
+| Field         | Source                                         |
+| ------------- | ---------------------------------------------- |
+| `name`        | `tool.name`                                    |
+| `description` | `tool.description`                             |
+| `schema`      | `tool.inputSchema` (Zod schema, used directly) |
+| `func`        | Wrapper around `tool.execute`                  |
 
 ### Use in a LangGraph node
 
@@ -267,12 +275,12 @@ POST /api/tools/:toolName
 
 **Status codes**:
 
-| Code | Meaning |
-|------|---------|
-| 200 | Tool executed (check `success` field for result) |
-| 400 | Request body failed schema validation |
-| 404 | Tool not found |
-| 500 | Unexpected server error |
+| Code | Meaning                                          |
+| ---- | ------------------------------------------------ |
+| 200  | Tool executed (check `success` field for result) |
+| 400  | Request body failed schema validation            |
+| 404  | Tool not found                                   |
+| 500  | Unexpected server error                          |
 
 ### Example call
 
@@ -292,10 +300,10 @@ The package ships example tools in `@@PROJECT_NAME-tools/examples`:
 import { getWeatherTool, searchWebTool } from '@@PROJECT_NAME-tools/examples';
 ```
 
-| Tool | Name | Description |
-|------|------|-------------|
+| Tool             | Name          | Description                          |
+| ---------------- | ------------- | ------------------------------------ |
 | `getWeatherTool` | `get_weather` | Returns mock weather data for a city |
-| `searchWebTool` | `search_web` | Returns mock web search results |
+| `searchWebTool`  | `search_web`  | Returns mock web search results      |
 
 Use these as copy-paste starting points for your own tools.
 

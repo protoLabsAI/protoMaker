@@ -92,7 +92,7 @@ import { searchDocsTool } from '../../server/src/tools/my-tools.js';
 const registry = new ToolRegistry();
 registry.register(getWeatherTool);
 registry.register(searchWebTool);
-registry.register(searchDocsTool);  // Add your tool here
+registry.register(searchDocsTool); // Add your tool here
 
 const tools = toMCPTools(registry.listTools());
 ```

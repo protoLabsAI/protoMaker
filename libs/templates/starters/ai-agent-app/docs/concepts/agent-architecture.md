@@ -71,7 +71,7 @@ const result = streamText({
   model: resolvedModel,
   messages,
   tools: getAnthropicToolsForProfile('chat'),
-  maxSteps: 5,  // agentic loop iterations
+  maxSteps: 5, // agentic loop iterations
   system,
 });
 ```
@@ -135,16 +135,16 @@ The model resolver detects which provider to use from the model ID prefix. If a 
 
 `packages/ui` exports a set of React components for building chat UIs:
 
-| Component | Purpose |
-|-----------|---------|
-| `ChatMessage` | Renders a single message with role, content, and actions |
-| `ChatMessageList` | Full conversation thread with branching support |
-| `ChatInput` | Text input with slash command autocomplete |
-| `ChainOfThought` | Expandable extended thinking panel |
-| `ToolInvocationPart` | Tool call + result display |
-| `ReasoningPart` | Model reasoning display |
-| `TaskBlock` | Multi-step task progress visualization |
-| `ConfirmationCard` | User approval gate for dangerous tools |
+| Component            | Purpose                                                  |
+| -------------------- | -------------------------------------------------------- |
+| `ChatMessage`        | Renders a single message with role, content, and actions |
+| `ChatMessageList`    | Full conversation thread with branching support          |
+| `ChatInput`          | Text input with slash command autocomplete               |
+| `ChainOfThought`     | Expandable extended thinking panel                       |
+| `ToolInvocationPart` | Tool call + result display                               |
+| `ReasoningPart`      | Model reasoning display                                  |
+| `TaskBlock`          | Multi-step task progress visualization                   |
+| `ConfirmationCard`   | User approval gate for dangerous tools                   |
 
 All components use CSS custom properties for theming. Change 6 variables in `packages/app/src/styles/tokens.css` to rebrand the entire UI.
 

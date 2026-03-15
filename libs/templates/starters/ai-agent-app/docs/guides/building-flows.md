@@ -77,9 +77,9 @@ import { createBranchingGraph, createBinaryRouter } from '@@PROJECT_NAME-flows';
 
 // Router decides the next node based on current state
 const qualityRouter = createBinaryRouter<{ score: number }>(
-  (state) => state.score >= 0.8,  // condition
-  'publish',                        // true branch
-  'revise'                          // false branch
+  (state) => state.score >= 0.8, // condition
+  'publish', // true branch
+  'revise' // false branch
 );
 
 const graph = createBranchingGraph({
@@ -141,16 +141,16 @@ const AgentState = createStateAnnotation({
 
 Available reducers:
 
-| Reducer | Behavior |
-|---------|---------|
-| `appendReducer` | Concatenates arrays |
-| `replaceReducer` | Overwrites with latest value (default) |
-| `counterReducer` | Adds numeric increments |
-| `maxReducer` | Keeps the maximum value |
-| `minReducer` | Keeps the minimum value |
-| `mapMergeReducer` | Deep-merges objects |
-| `setUnionReducer` | Merges sets, removes duplicates |
-| `idDedupAppendReducer` | Appends items, deduplicates by `.id` |
+| Reducer                | Behavior                               |
+| ---------------------- | -------------------------------------- |
+| `appendReducer`        | Concatenates arrays                    |
+| `replaceReducer`       | Overwrites with latest value (default) |
+| `counterReducer`       | Adds numeric increments                |
+| `maxReducer`           | Keeps the maximum value                |
+| `minReducer`           | Keeps the minimum value                |
+| `mapMergeReducer`      | Deep-merges objects                    |
+| `setUnionReducer`      | Merges sets, removes duplicates        |
+| `idDedupAppendReducer` | Appends items, deduplicates by `.id`   |
 
 ## Routers
 
@@ -165,11 +165,7 @@ import {
 } from '@@PROJECT_NAME-flows';
 
 // Route on a boolean condition
-const binaryRouter = createBinaryRouter(
-  (state) => state.isValid,
-  'success-node',
-  'error-node'
-);
+const binaryRouter = createBinaryRouter((state) => state.isValid, 'success-node', 'error-node');
 
 // Route based on an enum value in state
 const valueRouter = createValueRouter<{ decision: 'approve' | 'reject' | 'revise' }>(
@@ -198,7 +194,7 @@ const llmOutput = `
 <metadata>{"reason": "meets all criteria", "score": 95}</metadata>
 `;
 
-const decision = extractTag(llmOutput, 'decision');   // 'approve'
+const decision = extractTag(llmOutput, 'decision'); // 'approve'
 const confidence = extractTag(llmOutput, 'confidence'); // '0.92'
 const metadata = extractTaggedJSON(llmOutput, 'metadata'); // { reason: '...', score: 95 }
 ```

@@ -65,11 +65,11 @@ Open [http://localhost:5173](http://localhost:5173) in your browser. Type a mess
 
 After `npm run dev`, your project has:
 
-| Component | URL | Purpose |
-|-----------|-----|---------|
-| Chat UI | http://localhost:5173 | React frontend |
-| API server | http://localhost:3001 | Streaming chat, tools, traces |
-| WebSocket (optional) | ws://localhost:3002 | Live tool progress updates |
+| Component            | URL                   | Purpose                       |
+| -------------------- | --------------------- | ----------------------------- |
+| Chat UI              | http://localhost:5173 | React frontend                |
+| API server           | http://localhost:3001 | Streaming chat, tools, traces |
+| WebSocket (optional) | ws://localhost:3002   | Live tool progress updates    |
 
 The API server automatically picks up the first configured provider.
 

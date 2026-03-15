@@ -27,14 +27,14 @@ Navigate to [http://localhost:5173/traces](http://localhost:5173/traces) in the 
 
 The trace viewer shows:
 
-| Column | Description |
-|--------|-------------|
-| Time | When the conversation started |
-| Model | Which model handled the request |
-| Steps | How many agentic loop iterations ran |
-| Tokens | Input + output token count |
-| Cost | Estimated cost based on model pricing |
-| Latency | End-to-end response time |
+| Column  | Description                           |
+| ------- | ------------------------------------- |
+| Time    | When the conversation started         |
+| Model   | Which model handled the request       |
+| Steps   | How many agentic loop iterations ran  |
+| Tokens  | Input + output token count            |
+| Cost    | Estimated cost based on model pricing |
+| Latency | End-to-end response time              |
 
 Click any row to expand the full conversation including tool calls and intermediate steps.
 
@@ -117,7 +117,9 @@ const tracedClient = wrapProviderWithTracing(client, {
 });
 
 // Use tracedClient exactly like the original
-const response = await tracedClient.messages.create({ /* ... */ });
+const response = await tracedClient.messages.create({
+  /* ... */
+});
 ```
 
 ## Debug tool calls
@@ -173,10 +175,10 @@ If the agent calls the wrong tools or gets stuck in a loop:
 
 ## Environment variable reference
 
-| Variable | Purpose |
-|----------|---------|
-| `TRACES_DIR` | Override the `.traces/` directory path |
-| `LANGFUSE_PUBLIC_KEY` | Enable Langfuse tracing |
-| `LANGFUSE_SECRET_KEY` | Enable Langfuse tracing |
-| `LANGFUSE_HOST` | Langfuse endpoint (default: `https://cloud.langfuse.com`) |
-| `LOG_LEVEL` | Server log verbosity (`debug`, `info`, `warn`, `error`) |
+| Variable              | Purpose                                                   |
+| --------------------- | --------------------------------------------------------- |
+| `TRACES_DIR`          | Override the `.traces/` directory path                    |
+| `LANGFUSE_PUBLIC_KEY` | Enable Langfuse tracing                                   |
+| `LANGFUSE_SECRET_KEY` | Enable Langfuse tracing                                   |
+| `LANGFUSE_HOST`       | Langfuse endpoint (default: `https://cloud.langfuse.com`) |
+| `LOG_LEVEL`           | Server log verbosity (`debug`, `info`, `warn`, `error`)   |

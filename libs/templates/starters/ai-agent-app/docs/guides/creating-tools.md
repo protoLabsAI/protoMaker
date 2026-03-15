@@ -51,7 +51,12 @@ The `execute` function returns a `ToolResult`:
 
 ```typescript
 // Successful result
-return { success: true, data: { /* your output matching outputSchema */ } };
+return {
+  success: true,
+  data: {
+    /* your output matching outputSchema */
+  },
+};
 
 // Error result
 return { success: false, error: 'Could not reach search index' };
@@ -69,13 +74,15 @@ inputSchema: z.object({
   date: z.string().describe('ISO 8601 date string, e.g. "2024-01-15"'),
 
   // Good: explains when to use each option
-  format: z.enum(['json', 'markdown', 'plain']).describe(
-    'Output format. Use "json" for programmatic use, "markdown" for display, "plain" for simple text'
-  ),
+  format: z
+    .enum(['json', 'markdown', 'plain'])
+    .describe(
+      'Output format. Use "json" for programmatic use, "markdown" for display, "plain" for simple text'
+    ),
 
   // Avoid: vague description
   query: z.string().describe('The query'),
-})
+});
 ```
 
 ## Register the tool with the chat agent
@@ -189,11 +196,11 @@ app.use('/api/tools', toolRouter);
 
 Tool profiles control which tools are available in which context. The server defines three profiles:
 
-| Profile | Tools | Used for |
-|---------|-------|---------|
-| `chat` | Read-only tools | Interactive conversations |
-| `execution` | Read + write tools | Automated agent tasks |
-| `review` | Metadata tools only | Code review workflows |
+| Profile     | Tools               | Used for                  |
+| ----------- | ------------------- | ------------------------- |
+| `chat`      | Read-only tools     | Interactive conversations |
+| `execution` | Read + write tools  | Automated agent tasks     |
+| `review`    | Metadata tools only | Code review workflows     |
 
 Register your tool with a profile:
 

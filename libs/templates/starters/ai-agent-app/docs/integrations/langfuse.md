@@ -4,14 +4,14 @@ This page covers connecting the starter kit to Langfuse for production-grade obs
 
 ## What Langfuse provides
 
-| Feature | File tracer (default) | Langfuse |
-|---------|----------------------|---------|
-| Trace storage | Local `.traces/` directory | Remote cloud or self-hosted |
-| History | Last 100 traces in memory | Unlimited |
-| Search and filter | None | Full-text + metadata filters |
-| Team access | Single machine | Shared dashboard |
-| Prompt management | Git files | Versioned in Langfuse UI |
-| Alerts | None | Configurable |
+| Feature           | File tracer (default)      | Langfuse                     |
+| ----------------- | -------------------------- | ---------------------------- |
+| Trace storage     | Local `.traces/` directory | Remote cloud or self-hosted  |
+| History           | Last 100 traces in memory  | Unlimited                    |
+| Search and filter | None                       | Full-text + metadata filters |
+| Team access       | Single machine             | Shared dashboard             |
+| Prompt management | Git files                  | Versioned in Langfuse UI     |
+| Alerts            | None                       | Configurable                 |
 
 ## Set up Langfuse
 
@@ -158,7 +158,7 @@ Langfuse lets you attach quality scores to traces for systematic evaluation:
 await tracer.score({
   traceId,
   name: 'user-rating',
-  value: 4,  // 1-5 star rating
+  value: 4, // 1-5 star rating
   comment: 'Helpful but a bit verbose',
 });
 ```

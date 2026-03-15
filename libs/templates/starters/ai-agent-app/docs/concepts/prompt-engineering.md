@@ -96,11 +96,11 @@ The server detects the slash prefix, calls `expand()`, and prepends the result t
 
 ### Built-in commands
 
-| Command | What it does |
-|---------|-------------|
-| `/summarize` | Asks the model to summarize the following text |
-| `/eli5 [topic]` | Explain like I'm 5 — simple, no jargon |
-| `/bullets` | Respond with a concise bullet-point list |
+| Command         | What it does                                   |
+| --------------- | ---------------------------------------------- |
+| `/summarize`    | Asks the model to summarize the following text |
+| `/eli5 [topic]` | Explain like I'm 5 — simple, no jargon         |
+| `/bullets`      | Respond with a concise bullet-point list       |
 
 ## Prompt templates
 
@@ -125,6 +125,7 @@ You are a research assistant specializing in {{topic}}.
 Depth of analysis: {{depth}}
 
 Structure your responses with:
+
 1. Key facts (with sources)
 2. Open questions
 3. Recommended next steps
