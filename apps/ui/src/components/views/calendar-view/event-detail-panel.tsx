@@ -19,10 +19,24 @@ import { Input } from '@protolabsai/ui/atoms';
 import { Label } from '@protolabsai/ui/atoms';
 import { Textarea } from '@protolabsai/ui/atoms';
 import { HotkeyButton } from '@protolabsai/ui/molecules';
-import { CalendarDays, Clock, ExternalLink, Pencil, Play, Trash2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  CalendarDays,
+  Clock,
+  ExternalLink,
+  Pencil,
+  Play,
+  RefreshCw,
+  Trash2,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DeleteConfirmDialog } from '@/components/shared/delete-confirm-dialog';
-import type { CalendarEvent, CalendarEventType, JobStatus } from '@protolabsai/types';
+import type {
+  CalendarEvent,
+  CalendarEventType,
+  JobStatus,
+  RecurrenceFrequency,
+} from '@protolabsai/types';
 import type { UpdateEventInput } from './use-calendar-events';
 
 // ============================================================================
@@ -81,6 +95,32 @@ function formatDate(dateStr: string): string {
   });
 }
 
+/** Human-readable recurrence frequency labels */
+const RECURRENCE_LABELS: Record<RecurrenceFrequency, string> = {
+  daily: 'Daily',
+  weekly: 'Weekly',
+  monthly: 'Monthly',
+  yearly: 'Yearly',
+};
+
+/** Format a recurrence rule to a human-readable string */
+function formatRecurrence(rule: {
+  frequency: RecurrenceFrequency;
+  interval?: number;
+  endDate?: string;
+}): string {
+  const interval = rule.interval ?? 1;
+  const freq = RECURRENCE_LABELS[rule.frequency];
+  const base =
+    interval === 1
+      ? freq
+      : `Every ${interval} ${rule.frequency === 'daily' ? 'days' : rule.frequency === 'weekly' ? 'weeks' : rule.frequency === 'monthly' ? 'months' : 'years'}`;
+  if (rule.endDate) {
+    return `${base}, until ${formatDate(rule.endDate)}`;
+  }
+  return base;
+}
+
 // ============================================================================
 // Props
 // ============================================================================
@@ -128,6 +168,25 @@ function ReadOnlyEventDetail({ event }: { event: CalendarEvent }) {
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">Description</Label>
           <p className="text-sm whitespace-pre-wrap">{event.description}</p>
+        </div>
+      )}
+
+      {/* Recurrence */}
+      {event.recurrence && (
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Recurrence</Label>
+          <p className="text-sm flex items-center gap-1.5">
+            <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
+            {formatRecurrence(event.recurrence)}
+          </p>
+        </div>
+      )}
+
+      {/* Timezone */}
+      {event.timezone && (
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Timezone</Label>
+          <p className="text-sm text-muted-foreground">{event.timezone}</p>
         </div>
       )}
 
@@ -218,6 +277,25 @@ function JobEventDetail({
                 </>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Conflict warning */}
+        {(event.conflictsWith?.length ?? 0) > 0 && (
+          <div className="flex items-start gap-2 rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2">
+            <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+            <p className="text-sm text-destructive">
+              This job conflicts with {event.conflictsWith!.length} other job
+              {event.conflictsWith!.length !== 1 ? 's' : ''} scheduled at the same time.
+            </p>
+          </div>
+        )}
+
+        {/* Timezone */}
+        {event.timezone && (
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Timezone</Label>
+            <p className="text-sm text-muted-foreground">{event.timezone}</p>
           </div>
         )}
 

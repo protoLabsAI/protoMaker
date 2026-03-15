@@ -11,6 +11,23 @@
 export type CalendarEventType = 'feature' | 'milestone' | 'custom' | 'google' | 'job' | 'ceremony';
 
 /**
+ * Recurrence frequency unit
+ */
+export type RecurrenceFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly';
+
+/**
+ * Recurrence rule for repeating events
+ */
+export interface RecurrenceRule {
+  /** How often the event repeats */
+  frequency: RecurrenceFrequency;
+  /** Repeat every N units (defaults to 1) */
+  interval?: number;
+  /** Stop recurring after this date (YYYY-MM-DD) */
+  endDate?: string;
+}
+
+/**
  * Job execution status
  */
 export type JobStatus = 'pending' | 'running' | 'completed' | 'failed';
@@ -118,6 +135,18 @@ export interface CalendarEvent {
 
   /** Whether this is an all-day event */
   allDay?: boolean;
+
+  /** Recurrence rule for repeating events */
+  recurrence?: RecurrenceRule;
+
+  /** IANA timezone name for the event (e.g., 'America/New_York') */
+  timezone?: string;
+
+  /**
+   * IDs of conflicting job events at the same date+time.
+   * Computed by the server on list responses; not persisted.
+   */
+  conflictsWith?: string[];
 
   /** Creation timestamp */
   createdAt: string;

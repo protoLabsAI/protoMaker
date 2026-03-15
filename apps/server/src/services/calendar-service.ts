@@ -212,6 +212,18 @@ export class CalendarService {
       return dateA.getTime() - dateB.getTime();
     });
 
+    // Annotate conflicting job events (same date + time)
+    const jobConflicts = this.detectJobConflicts(filteredEvents);
+    if (jobConflicts.size > 0) {
+      filteredEvents = filteredEvents.map((event) => {
+        const conflicts = jobConflicts.get(event.id);
+        if (conflicts) {
+          return { ...event, conflictsWith: conflicts };
+        }
+        return event;
+      });
+    }
+
     return filteredEvents;
   }
 
@@ -341,6 +353,34 @@ export class CalendarService {
     await this.writeCalendarFile(projectPath, events);
     logger.info(`Created synced calendar event ${id} (sourceId: ${sourceId})`);
     return { event: newEvent, created: true };
+  }
+
+  /**
+   * Detect conflicting job events — jobs on the same date at the same time.
+   * Returns a map from event ID to array of conflicting event IDs.
+   */
+  private detectJobConflicts(events: CalendarEvent[]): Map<string, string[]> {
+    const conflicts = new Map<string, string[]>();
+    const jobEvents = events.filter((e) => e.type === 'job' && e.time);
+
+    for (let i = 0; i < jobEvents.length; i++) {
+      for (let j = i + 1; j < jobEvents.length; j++) {
+        const a = jobEvents[i];
+        const b = jobEvents[j];
+
+        if (a.date === b.date && a.time === b.time) {
+          const aConflicts = conflicts.get(a.id) ?? [];
+          aConflicts.push(b.id);
+          conflicts.set(a.id, aConflicts);
+
+          const bConflicts = conflicts.get(b.id) ?? [];
+          bConflicts.push(a.id);
+          conflicts.set(b.id, bConflicts);
+        }
+      }
+    }
+
+    return conflicts;
   }
 
   /**

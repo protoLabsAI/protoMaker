@@ -13,7 +13,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiPost } from '@/lib/api-fetch';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import type { CalendarEvent, CalendarEventType, JobAction } from '@protolabsai/types';
+import type {
+  CalendarEvent,
+  CalendarEventType,
+  JobAction,
+  RecurrenceRule,
+} from '@protolabsai/types';
 import type { EventType } from '@protolabsai/types';
 
 interface CalendarListResponse {
@@ -43,6 +48,8 @@ export interface CreateEventInput {
   type?: CalendarEventType;
   time?: string;
   jobAction?: JobAction;
+  recurrence?: RecurrenceRule;
+  timezone?: string;
 }
 
 /** Fields for updating an existing calendar event */
@@ -53,6 +60,8 @@ export interface UpdateEventInput {
   description?: string;
   color?: string;
   time?: string;
+  recurrence?: RecurrenceRule;
+  timezone?: string;
 }
 
 interface UseCalendarEventsOptions {
@@ -209,6 +218,8 @@ export function useCalendarEvents({
           color: input.color,
           ...(input.time && { time: input.time }),
           ...(input.jobAction && { jobAction: input.jobAction }),
+          ...(input.recurrence && { recurrence: input.recurrence }),
+          ...(input.timezone && { timezone: input.timezone }),
         });
 
         if (result.success && result.event) {
