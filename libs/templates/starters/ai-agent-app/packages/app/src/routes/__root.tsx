@@ -1,5 +1,5 @@
 import { createRootRoute, Link, Outlet } from '@tanstack/react-router';
-import { MessageSquare, History, Settings, Workflow } from 'lucide-react';
+import { MessageSquare, History, Settings, Workflow, FileText } from 'lucide-react';
 
 // ─── Root route ───────────────────────────────────────────────────────────────
 
@@ -34,6 +34,7 @@ const navItems = [
   { to: '/' as const, label: 'Chat', icon: MessageSquare, exact: true },
   { to: '/sessions' as const, label: 'Sessions', icon: History, exact: false },
   { to: '/flows' as const, label: 'Flows', icon: Workflow, exact: false },
+  { to: '/prompts' as const, label: 'Prompts', icon: FileText, exact: false },
   { to: '/settings' as const, label: 'Settings', icon: Settings, exact: false },
 ];
 

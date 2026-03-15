@@ -17,6 +17,7 @@ import { Route as IndexRoute } from './routes/index';
 import { Route as SessionsRoute } from './routes/sessions';
 import { Route as SettingsRoute } from './routes/settings';
 import { Route as FlowsRoute } from './routes/flows';
+import { Route as PromptsRoute } from './routes/prompts';
 
 // Build the route tree
 export const routeTree = rootRoute.addChildren([
@@ -24,4 +25,5 @@ export const routeTree = rootRoute.addChildren([
   SessionsRoute,
   SettingsRoute,
   FlowsRoute,
+  PromptsRoute,
 ]);
