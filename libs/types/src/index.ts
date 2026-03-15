@@ -1023,3 +1023,11 @@ export type {
   PenNode,
   PenDocument,
 } from './pen.js';
+
+// Maintenance orchestrator types
+export type {
+  MaintenanceCheck,
+  MaintenanceCheckContext,
+  MaintenanceCheckResult,
+  MaintenanceSweepResult,
+} from './maintenance.js';
