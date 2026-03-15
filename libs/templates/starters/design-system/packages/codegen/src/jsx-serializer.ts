@@ -173,11 +173,7 @@ function serializeFrame(node: FrameNode, ctx: SerializeContext): string {
     return `${ind}<div style={${styleAttr}}${label} />`;
   }
 
-  return [
-    `${ind}<div style={${styleAttr}}${label}>`,
-    children,
-    `${ind}</div>`,
-  ].join('\n');
+  return [`${ind}<div style={${styleAttr}}${label}>`, children, `${ind}</div>`].join('\n');
 }
 
 function serializeGroup(node: GroupNode, ctx: SerializeContext): string {

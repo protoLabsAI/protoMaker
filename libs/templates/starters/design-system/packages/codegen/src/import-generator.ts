@@ -91,7 +91,7 @@ export function collectRequiredImports(
   rootNode: LocalNode,
   _doc: unknown,
   cssStrategy: 'inline' | 'css-modules' | 'tailwind' = 'inline',
-  componentName = 'Component',
+  componentName = 'Component'
 ): ImportSpec {
   // Collect icon-font nodes
   const iconNodes: LocalNode[] = [];

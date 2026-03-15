@@ -143,7 +143,7 @@ export function extractProps(node: LocalNode, _doc: LocalDocument): PropDefiniti
 export function generatePropInterface(
   componentName: string,
   props: PropDefinition[],
-  extraCssVars: string[] = [],
+  extraCssVars: string[] = []
 ): string {
   const interfaceName = `${componentName}Props`;
   const lines: string[] = [`export interface ${interfaceName} {`];
@@ -188,9 +188,7 @@ export function generatePropInterface(
 export function generatePropStyleExpression(props: PropDefinition[]): string {
   if (props.length === 0) return '{}';
 
-  const entries = props
-    .map((p) => `    '${p.cssVariable}': props.${p.propName}`)
-    .join(',\n');
+  const entries = props.map((p) => `    '${p.cssVariable}': props.${p.propName}`).join(',\n');
 
   return `{\n${entries},\n  }`;
 }

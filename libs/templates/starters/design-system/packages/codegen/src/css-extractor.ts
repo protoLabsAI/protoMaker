@@ -122,7 +122,7 @@ export function strokeToCSS(stroke: LocalStroke): Record<string, string> {
  */
 export function layoutToFlexCSS(
   layoutMode: 'none' | 'horizontal' | 'vertical' | undefined,
-  itemSpacing?: number,
+  itemSpacing?: number
 ): Record<string, string> {
   if (!layoutMode || layoutMode === 'none') return {};
 
@@ -141,12 +141,7 @@ export function layoutToFlexCSS(
 /**
  * Convert individual padding values to a CSS padding shorthand.
  */
-export function paddingToCSS(
-  top?: number,
-  right?: number,
-  bottom?: number,
-  left?: number,
-): string {
+export function paddingToCSS(top?: number, right?: number, bottom?: number, left?: number): string {
   const t = top ?? 0;
   const r = right ?? 0;
   const b = bottom ?? 0;
@@ -200,17 +195,13 @@ export function extractNodeStyles(node: StyledNode): Record<string, string> {
   Object.assign(styles, flexStyles);
 
   // Padding
-  const hasPadding =
-    node.paddingTop ||
-    node.paddingRight ||
-    node.paddingBottom ||
-    node.paddingLeft;
+  const hasPadding = node.paddingTop || node.paddingRight || node.paddingBottom || node.paddingLeft;
   if (hasPadding) {
     styles['padding'] = paddingToCSS(
       node.paddingTop,
       node.paddingRight,
       node.paddingBottom,
-      node.paddingLeft,
+      node.paddingLeft
     );
   }
 

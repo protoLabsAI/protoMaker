@@ -18,13 +18,13 @@
  */
 
 import { extractNodeStyles, extractCSSVariables, stylesToReactObject } from './css-extractor.js';
-import { extractProps, generatePropInterface, generatePropStyleExpression } from './prop-extractor.js';
-import { collectRequiredImports, generateImportBlock } from './import-generator.js';
 import {
-  serializeNode,
-  type PenNodeLocal,
-  type SerializeContext,
-} from './jsx-serializer.js';
+  extractProps,
+  generatePropInterface,
+  generatePropStyleExpression,
+} from './prop-extractor.js';
+import { collectRequiredImports, generateImportBlock } from './import-generator.js';
+import { serializeNode, type PenNodeLocal, type SerializeContext } from './jsx-serializer.js';
 
 // ============================================================================
 // Core PenDocument Types (exported for consumers of this package)
@@ -249,7 +249,7 @@ function buildComponentSource(
   propStyleExpr: string,
   jsxBody: string,
   frameStyles: Record<string, string>,
-  options: GeneratorOptions,
+  options: GeneratorOptions
 ): string {
   const hasInlineStyle =
     options.cssStrategy !== 'css-modules' && Object.keys(frameStyles).length > 0;
@@ -315,7 +315,7 @@ function buildComponentSource(
 export function generateComponent(
   frame: PenFrame,
   doc: PenDocument,
-  options: GeneratorOptions = {},
+  options: GeneratorOptions = {}
 ): GeneratedFile {
   const componentName = toComponentName(frame.name ?? frame.id);
   const filename = `${componentName}.tsx`;
@@ -327,7 +327,7 @@ export function generateComponent(
   // --- Props ---
   const props = extractProps(
     frame as Parameters<typeof extractProps>[0],
-    doc as Parameters<typeof extractProps>[1],
+    doc as Parameters<typeof extractProps>[1]
   );
   const propInterface = generatePropInterface(componentName, props, cssVars);
   const propStyleExpr = generatePropStyleExpression(props);
@@ -338,7 +338,7 @@ export function generateComponent(
     frame as Parameters<typeof collectRequiredImports>[0],
     doc,
     options.cssStrategy ?? 'inline',
-    componentName,
+    componentName
   );
   const importBlock = generateImportBlock(importSpec);
 
@@ -362,7 +362,7 @@ export function generateComponent(
     propStyleExpr,
     childrenJSX,
     frameStyles,
-    options,
+    options
   );
 
   return { filename, componentName, content };
@@ -394,7 +394,7 @@ export function generateComponent(
  */
 export function generateFromDocument(
   doc: PenDocument,
-  options: GeneratorOptions = {},
+  options: GeneratorOptions = {}
 ): GeneratedFile[] {
   const components = findReusableComponents(doc);
   return components.map((frame) => generateComponent(frame, doc, options));
