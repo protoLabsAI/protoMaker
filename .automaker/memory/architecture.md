@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 546
-  referenced: 131
-  successfulFeatures: 131
+  loaded: 549
+  referenced: 133
+  successfulFeatures: 133
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -1687,3 +1687,29 @@ usageStats:
 - **Problem solved:** Agent must know the workflow (generate → check contrast → suggest harmonies → update tokens), which token mappings apply to which theme, and which contrast pairs must always be validated.
 - **Why this works:** Rather than hard-code business logic in the agent factory, encode it in the prompt. Makes behavior inspectable, updatable without code changes, and testable (prompt can be versioned/compared). Educates the agent about domain constraints (WCAG AA 4.5:1, AAA 7:1, etc.).
 - **Trade-offs:** Gains: behavior as data, prompt versioning, agent can adapt within encoded constraints. Loses: some overhead (larger prompt token count), business logic less obviously tied to code.
+
+#### [Pattern] Use absolute path imports via resolve(__agentDir, '../../color/dist/index.js') for cross-package dependencies in starter kit templates (2026-03-15)
+- **Problem solved:** Starter kit packages have restrictive TypeScript rootDir constraints that prevent relative imports across package boundaries
+- **Why this works:** Relative imports violate rootDir constraints; absolute paths to dist directories work because they reference already-compiled output outside the template's rootDir scope
+- **Trade-offs:** Path is more explicit and verbose but avoids configuration complexity and works reliably with template's TypeScript setup
+
+### Implement update_tokens tool as intentional stub that accumulates in result.tokenUpdates but defers .pen file mutations to integration phase (2026-03-15)
+- **Context:** Tool needs to be present for agentic reasoning but actual file-system side effects belong to different phase with different context/constraints
+- **Why:** Phased architecture separates pure token generation (this phase) from stateful file mutations (integration phase) to maintain phase boundaries and enable testing without side effects
+- **Rejected:** Full implementation in this phase would couple token generation to file-system concerns; pure accumulation allows reasoning decoupling
+- **Trade-offs:** Tool appears 'incomplete' from user perspective but respects architectural phase boundaries; pure accumulation enables unit testing without file I/O
+- **Breaking if changed:** Implementing write-back in this phase would violate established architectural decision to defer file mutations to integration phase
+
+### Implemented zero-dependency custom XML parser instead of using xml2js or similar library. Parser is ~200 LOC, validates XCL-specific grammar only. (2026-03-15)
+- **Context:** XCL codec needs bidirectional XML serialization/deserialization. Options: (1) add xml library dep, (2) use DOMParser (browser-only), (3) write custom parser for XCL subset.
+- **Why:** XCL grammar is simple (nested elements, attributes, text nodes only). Custom parser = zero transitive deps, smaller bundle, faster on XCL-specific format. No external version churn.
+- **Rejected:** xml2js (adds 2+ transitive deps, larger bundle, overkill features). DOMParser (requires jsdom in Node, browser-native only).
+- **Trade-offs:** Easier: zero deps, smaller bundle, tailored performance. Harder: custom parser maintenance, no battle-tested XML edge cases, limited to XCL grammar.
+- **Breaking if changed:** Switching to xml2js → bundle grows 50-100KB, introduces transitive dependency security surface. Switching to DOM → requires runtime environment shim.
+
+### Three-stage codec: ComponentDef (TypeScript types) → XCL (XML format) → TSX (React 19 code). Each stage has its own module, separate from adjacent stages. (2026-03-15)
+- **Context:** Converting between 3 representations: semantic types, compact wire format, runnable code. Each stage has different concerns (validation, optimization, codegen).
+- **Why:** Separation of concerns: types module is pure data, serializer focuses on optimization, deserializer focuses on parsing correctness, xcl-to-tsx focuses on code generation. Each can be tested independently. Bidirectional: ComponentDef ↔ XCL is lossless; XCL → TSX is codegen (not lossless, but intentional).
+- **Rejected:** Monolithic codec (harder to test, bug in one stage couples to others). Two-stage (ComponentDef ↔ TSX directly, loses intermediate representation for debugging).
+- **Trade-offs:** More files, more boilerplate (3 modules instead of 1). Better testability: can validate each stage independently. Can use XCL as intermediate for debugging, inspection, caching.
+- **Breaking if changed:** Merging stages → lose ability to test serialization/deserialization independently from codegen. Bugs in one stage pollute test signal in others.

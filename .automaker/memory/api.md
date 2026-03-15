@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 575
-  referenced: 168
-  successfulFeatures: 168
+  loaded: 577
+  referenced: 170
+  successfulFeatures: 170
 ---
 <!-- domain: API Design & Integration | GitHub GraphQL, REST endpoints, HTTP client patterns -->
 
@@ -397,3 +397,8 @@ usageStats:
 - **Rejected:** Keep bridge file abstraction — cleaner separation but unnecessary indirection if mock only used by agent
 - **Trade-offs:** Less modular but more maintainable. Agent is now single read-through unit.
 - **Breaking if changed:** If mock audit needs reuse in other packages, would require extracting back to bridge file or new package
+
+#### [Pattern] Include CSS variable resolution in contrast checking tools — resolve variable references against generated token map before calculating contrast ratios (2026-03-15)
+- **Problem solved:** Agent tools must reason about actual visual properties; unresolved CSS variables are opaque to contrast calculation
+- **Why this works:** WCAG contrast is calculated on resolved colors; agent must verify that variable-based color pairs meet standards when resolved at runtime
+- **Trade-offs:** Requires maintaining token map in tool memory but enables agent to catch contrast failures that only appear in resolved theme contexts

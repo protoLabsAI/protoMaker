@@ -5,9 +5,9 @@ relevantTo: [design]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 0
-  referenced: 0
-  successfulFeatures: 0
+  loaded: 3
+  referenced: 2
+  successfulFeatures: 2
 ---
 # design
 
