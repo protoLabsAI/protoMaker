@@ -51,6 +51,7 @@ interface CrdtSyncWireMessage {
   projectName?: string;
 }
 import type { EventEmitter } from '../lib/events.js';
+import type { SchedulerService } from './scheduler-service.js';
 import {
   CRDT_HEARTBEAT_MS,
   CRDT_TTL_MS,
@@ -160,6 +161,10 @@ export class PeerMeshService {
   private _registryProvider: (() => Record<string, string>) | null = null;
   /** Called when a worker receives a registry from the primary. */
   private _registryReceivedCallback: ((registry: Record<string, string>) => void) | null = null;
+  private _schedulerService: SchedulerService | null = null;
+
+  /** Interval ID used when the heartbeat is managed by SchedulerService. */
+  private static readonly HEARTBEAT_INTERVAL_ID = 'crdt:heartbeat';
 
   constructor() {
     this.instanceId = os.hostname();
@@ -222,6 +227,15 @@ export class PeerMeshService {
    */
   onRegistryReceived(callback: (registry: Record<string, string>) => void): void {
     this._registryReceivedCallback = callback;
+  }
+
+  /**
+   * Wire in a SchedulerService so the heartbeat interval is tracked centrally.
+   * Call this before start(). When set, the heartbeat is registered via
+   * schedulerService.registerInterval() instead of a raw setInterval().
+   */
+  setSchedulerService(schedulerService: SchedulerService): void {
+    this._schedulerService = schedulerService;
   }
 
   /**
@@ -851,28 +865,41 @@ export class PeerMeshService {
 
   // ─── Private: Heartbeat ───────────────────────────────────────────────────
 
+  private _sendHeartbeatNow(): void {
+    if (!this.started) return;
+    const beat: SyncMessage = {
+      type: 'heartbeat',
+      ...this._peerFields(),
+      url: this.instanceUrl ?? undefined,
+      timestamp: new Date().toISOString(),
+      capacity: this._capacityProvider ? this._capacityProvider() : undefined,
+    };
+    const msg = JSON.stringify(beat);
+
+    if (this.role === 'primary') {
+      this._broadcastToServer(msg);
+    } else if (this.wsClient?.readyState === WebSocket.OPEN) {
+      try {
+        this.wsClient.send(msg);
+      } catch {
+        // Ignore send errors
+      }
+    }
+  }
+
   private _startHeartbeat(): void {
     const intervalMs = this.config?.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_MS;
-    this.heartbeatTimer = setInterval(() => {
-      const beat: SyncMessage = {
-        type: 'heartbeat',
-        ...this._peerFields(),
-        url: this.instanceUrl ?? undefined,
-        timestamp: new Date().toISOString(),
-        capacity: this._capacityProvider ? this._capacityProvider() : undefined,
-      };
-      const msg = JSON.stringify(beat);
-
-      if (this.role === 'primary') {
-        this._broadcastToServer(msg);
-      } else if (this.wsClient?.readyState === WebSocket.OPEN) {
-        try {
-          this.wsClient.send(msg);
-        } catch {
-          // Ignore send errors
-        }
-      }
-    }, intervalMs);
+    if (this._schedulerService) {
+      this._schedulerService.registerInterval(
+        PeerMeshService.HEARTBEAT_INTERVAL_ID,
+        'CRDT Peer Heartbeat',
+        intervalMs,
+        () => this._sendHeartbeatNow(),
+        { category: 'system' }
+      );
+    } else {
+      this.heartbeatTimer = setInterval(() => this._sendHeartbeatNow(), intervalMs);
+    }
   }
 
   private _broadcastToServer(msg: string): void {
@@ -1089,7 +1116,9 @@ export class PeerMeshService {
   // ─── Private: Timer Cleanup ───────────────────────────────────────────────
 
   private _clearTimers(): void {
-    if (this.heartbeatTimer) {
+    if (this._schedulerService) {
+      this._schedulerService.unregisterInterval(PeerMeshService.HEARTBEAT_INTERVAL_ID);
+    } else if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
     }

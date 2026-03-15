@@ -288,7 +288,7 @@ function serializePath(node: PathNode, ctx: SerializeContext): string {
 
   return [
     `${ind}<svg aria-hidden="true">`,
-    `${indent(ctx.depth + 1)}<path d="${node.pathData}" fill="${fillAttr}" />`,
+    `${indent(ctx.depth + 1)}<path d="${node.pathData ?? (node as unknown as { path?: string }).path ?? ''}" fill="${fillAttr}" />`,
     `${ind}</svg>`,
   ].join('\n');
 }

@@ -1024,8 +1024,8 @@ export class SchedulerService {
   }
 
   /**
-   * Clear a managed interval registered via registerInterval().
-   * Returns true if the interval existed and was removed, false otherwise.
+   * Remove a managed interval task by id.
+   * Returns true if the task existed and was removed, false otherwise.
    */
   unregisterInterval(id: string): boolean {
     const task = this.intervalTasks.get(id);
@@ -1037,6 +1037,7 @@ export class SchedulerService {
       clearInterval(task.handle);
       task.handle = null;
     }
+
     this.intervalTasks.delete(id);
     logger.info(`Unregistered interval task "${task.name}" (${id})`);
 
@@ -1213,11 +1214,6 @@ export class SchedulerService {
     this.intervalTasks.clear();
 
     this.stop();
-    // Clear all managed intervals
-    for (const { timerId } of this.intervals.values()) {
-      clearInterval(timerId);
-    }
-    this.intervals.clear();
     this.tasks.clear();
     this.parsedCrons.clear();
     this.persistedMetadata.clear();
