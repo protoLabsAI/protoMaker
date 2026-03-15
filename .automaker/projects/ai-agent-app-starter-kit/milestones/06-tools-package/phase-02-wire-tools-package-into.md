@@ -1,6 +1,6 @@
 # Phase 2: Wire tools package into server chat route
 
-*AI Agent App Starter Kit > Tools Package — Define Once, Deploy Everywhere*
+_AI Agent App Starter Kit > Tools Package — Define Once, Deploy Everywhere_
 
 Update packages/server to use the tools package instead of inline tool definitions. Import defineSharedTool and ToolRegistry. Register example tools. Update chat route to pull tools from registry and convert to AI SDK format. Add tool profiles (execution, orchestration, review) as an optional pattern.
 

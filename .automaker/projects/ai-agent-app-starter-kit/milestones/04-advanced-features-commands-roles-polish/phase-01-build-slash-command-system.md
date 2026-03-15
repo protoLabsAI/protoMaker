@@ -16,11 +16,13 @@ Create packages/server/src/commands/registry.ts with SlashCommand interface. Cre
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/ai-agent-app/packages/server/src/commands/registry.ts`
 - [ ] `libs/templates/starters/ai-agent-app/packages/server/src/commands/example.ts`
 - [ ] `libs/templates/starters/ai-agent-app/packages/server/src/routes/commands.ts`
 
 ### Verification
+
 - [ ] SlashCommand interface with expand function
 - [ ] GET /api/commands returns registered commands
 - [ ] /summarize expands into system prompt modification

@@ -16,10 +16,12 @@ Add WebSocket server (ws package) to the Express server for tool progress events
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/ai-agent-app/packages/server/src/ws.ts`
 - [ ] `libs/templates/starters/ai-agent-app/packages/server/src/tools/progress.ts`
 
 ### Verification
+
 - [ ] WebSocket server runs alongside Express
 - [ ] tool:progress events emitted during tool execution
 - [ ] Rate limiting at 150ms works

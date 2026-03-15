@@ -16,6 +16,7 @@ Scaffold to temp directory, run npm install and npm run build, verify no @@PROJE
 ## Tasks
 
 ### Verification
+
 - [ ] Scaffolded output builds clean
 - [ ] No @@PROJECT_NAME tokens remain
 - [ ] No @protolabsai imports in output

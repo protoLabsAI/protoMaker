@@ -14,10 +14,10 @@ Build the core AI agents for design decisions and code generation from .pen file
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-build-design-agent.md](./phase-01-build-design-agent.md) | 2 weeks | None | TBD |
-| 2 | [phase-02-build-implement-agent.md](./phase-02-build-implement-agent.md) | 1 week | None | TBD |
+| Phase | File                                                                     | Duration | Dependencies | Owner |
+| ----- | ------------------------------------------------------------------------ | -------- | ------------ | ----- |
+| 1     | [phase-01-build-design-agent.md](./phase-01-build-design-agent.md)       | 2 weeks  | None         | TBD   |
+| 2     | [phase-02-build-implement-agent.md](./phase-02-build-implement-agent.md) | 1 week   | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M5 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

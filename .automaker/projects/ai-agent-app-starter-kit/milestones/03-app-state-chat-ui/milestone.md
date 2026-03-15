@@ -14,11 +14,11 @@ Build the Vite + React 19 SPA with Zustand persistent sessions, TanStack Router,
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-build-vite-spa-skeleton-with-tanstack-router.md](./phase-01-build-vite-spa-skeleton-with-tanstack-router.md) | 1 week | None | TBD |
-| 2 | [phase-02-build-zustand-session-store-and-usechatsession-hook.md](./phase-02-build-zustand-session-store-and-usechatsession-hook.md) | 1 week | None | TBD |
-| 3 | [phase-03-compose-chat-view-with-extracted-ui-components.md](./phase-03-compose-chat-view-with-extracted-ui-components.md) | 2 weeks | None | TBD |
+| Phase | File                                                                                                                                 | Duration | Dependencies | Owner |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------ | -------- | ------------ | ----- |
+| 1     | [phase-01-build-vite-spa-skeleton-with-tanstack-router.md](./phase-01-build-vite-spa-skeleton-with-tanstack-router.md)               | 1 week   | None         | TBD   |
+| 2     | [phase-02-build-zustand-session-store-and-usechatsession-hook.md](./phase-02-build-zustand-session-store-and-usechatsession-hook.md) | 1 week   | None         | TBD   |
+| 3     | [phase-03-compose-chat-view-with-extracted-ui-components.md](./phase-03-compose-chat-view-with-extracted-ui-components.md)           | 2 weeks  | None         | TBD   |
 
 ---
 
@@ -36,6 +36,7 @@ M3 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

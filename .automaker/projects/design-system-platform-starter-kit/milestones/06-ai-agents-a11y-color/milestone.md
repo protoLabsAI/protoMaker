@@ -14,10 +14,10 @@ Build accessibility auditing and color theory agents.
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-build-a11y-agent.md](./phase-01-build-a11y-agent.md) | 1 week | None | TBD |
-| 2 | [phase-02-build-color-agent.md](./phase-02-build-color-agent.md) | 1 week | None | TBD |
+| Phase | File                                                             | Duration | Dependencies | Owner |
+| ----- | ---------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-build-a11y-agent.md](./phase-01-build-a11y-agent.md)   | 1 week   | None         | TBD   |
+| 2     | [phase-02-build-color-agent.md](./phase-02-build-color-agent.md) | 1 week   | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M6 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

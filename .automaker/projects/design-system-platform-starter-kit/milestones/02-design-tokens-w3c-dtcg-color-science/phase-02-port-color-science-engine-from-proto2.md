@@ -16,6 +16,7 @@ Create packages/color/ porting the LCH color science from proto2's @proto/utils.
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/design-system/packages/color/src/scales.ts`
 - [ ] `libs/templates/starters/design-system/packages/color/src/harmonies.ts`
 - [ ] `libs/templates/starters/design-system/packages/color/src/contrast.ts`
@@ -23,6 +24,7 @@ Create packages/color/ porting the LCH color science from proto2's @proto/utils.
 - [ ] `libs/templates/starters/design-system/packages/color/src/semantic.ts`
 
 ### Verification
+
 - [ ] 11-step scales generated from any base color
 - [ ] All harmony types produce valid palettes
 - [ ] WCAG AA/AAA contrast ratios calculated correctly

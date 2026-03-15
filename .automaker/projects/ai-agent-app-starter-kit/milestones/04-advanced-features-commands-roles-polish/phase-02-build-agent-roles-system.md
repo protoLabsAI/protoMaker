@@ -16,11 +16,13 @@ Create packages/server/src/roles/index.ts with AgentRole interface (id, name, sy
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/ai-agent-app/packages/server/src/roles/index.ts`
 - [ ] `libs/templates/starters/ai-agent-app/packages/server/src/roles/assistant.ts`
 - [ ] `libs/templates/starters/ai-agent-app/packages/server/src/routes/roles.ts`
 
 ### Verification
+
 - [ ] AgentRole interface with systemPrompt
 - [ ] GET /api/roles returns available roles
 - [ ] Role selection modifies system prompt

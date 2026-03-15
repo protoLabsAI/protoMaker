@@ -16,6 +16,7 @@ Add TinaCMS to the starter kit. Configure for git-backed content (markdown + JSO
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/design-system/packages/app/tina/config.ts`
 - [ ] `libs/templates/starters/design-system/packages/app/tina/schema.ts`
 - [ ] `libs/templates/starters/design-system/packages/app/src/routes/site.tsx`
@@ -23,6 +24,7 @@ Add TinaCMS to the starter kit. Configure for git-backed content (markdown + JSO
 - [ ] `libs/templates/starters/design-system/content/pages/index.md`
 
 ### Verification
+
 - [ ] TinaCMS admin panel accessible at /admin
 - [ ] Visual editing works with live preview
 - [ ] Content stored as markdown/JSON in git

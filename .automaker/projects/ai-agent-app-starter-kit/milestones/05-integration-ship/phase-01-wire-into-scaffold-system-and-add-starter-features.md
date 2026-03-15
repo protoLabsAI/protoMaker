@@ -16,6 +16,7 @@ Update all integration points: features.ts (5 starter features), scaffold-starte
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/src/features.ts`
 - [ ] `libs/templates/src/starters.ts`
 - [ ] `apps/server/src/routes/setup/routes/scaffold-starter.ts`
@@ -24,6 +25,7 @@ Update all integration points: features.ts (5 starter features), scaffold-starte
 - [ ] `packages/create-protolab/src/phases/scaffold.ts`
 
 ### Verification
+
 - [ ] Scaffold route accepts ai-agent-app
 - [ ] Template appears in UI picker
 - [ ] 5 starter features populate the board

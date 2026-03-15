@@ -16,6 +16,7 @@ Create packages/codegen/ with a pen-to-React pipeline. Takes a PenDocument AST, 
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/design-system/packages/codegen/src/react-generator.ts`
 - [ ] `libs/templates/starters/design-system/packages/codegen/src/jsx-serializer.ts`
 - [ ] `libs/templates/starters/design-system/packages/codegen/src/prop-extractor.ts`
@@ -23,6 +24,7 @@ Create packages/codegen/ with a pen-to-React pipeline. Takes a PenDocument AST, 
 - [ ] `libs/templates/starters/design-system/packages/codegen/src/css-extractor.ts`
 
 ### Verification
+
 - [ ] Generates valid .tsx files from .pen components
 - [ ] Frames convert to divs with CSS flexbox
 - [ ] Text nodes convert to styled spans

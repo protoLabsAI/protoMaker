@@ -16,10 +16,12 @@ Create packages/server/src/model-resolver.ts with multi-provider support (Anthro
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/ai-agent-app/packages/server/src/model-resolver.ts`
 - [ ] `libs/templates/starters/ai-agent-app/packages/server/src/index.ts`
 
 ### Verification
+
 - [ ] Model resolver maps aliases to provider instances
 - [ ] Express server starts on configured port
 - [ ] GET /api/health returns status ok

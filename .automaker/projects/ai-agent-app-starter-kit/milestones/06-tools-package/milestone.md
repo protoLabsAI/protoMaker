@@ -1,6 +1,6 @@
 # Tools Package — Define Once, Deploy Everywhere
 
-*Part of: AI Agent App Starter Kit*
+_Part of: AI Agent App Starter Kit_
 
 Extract the defineSharedTool, ToolRegistry, and adapter system (MCP, LangGraph, Express) from libs/tools/ into the starter kit. This is the foundation that all other packages build on.
 
@@ -15,6 +15,7 @@ Create packages/tools/ in the starter kit. Extract defineSharedTool factory, Too
 **Complexity:** large
 
 **Files:**
+
 - libs/templates/starters/ai-agent-app/packages/tools/src/define-tool.ts
 - libs/templates/starters/ai-agent-app/packages/tools/src/registry.ts
 - libs/templates/starters/ai-agent-app/packages/tools/src/types.ts
@@ -23,6 +24,7 @@ Create packages/tools/ in the starter kit. Extract defineSharedTool factory, Too
 - libs/templates/starters/ai-agent-app/packages/tools/src/adapters/express-adapter.ts
 
 **Acceptance Criteria:**
+
 - [ ] defineSharedTool creates tools with Zod validation
 - [ ] ToolRegistry register/execute/getByCategory works
 - [ ] toMCPTool converts to JSON Schema format
@@ -38,11 +40,13 @@ Update packages/server to use the tools package instead of inline tool definitio
 **Complexity:** medium
 
 **Files:**
+
 - libs/templates/starters/ai-agent-app/packages/server/src/routes/chat.ts
 - libs/templates/starters/ai-agent-app/packages/server/src/tools/registry.ts
 - libs/templates/starters/ai-agent-app/packages/server/src/tools/example.ts
 
 **Acceptance Criteria:**
+
 - [ ] Chat route uses ToolRegistry for tool resolution
 - [ ] Tools defined with defineSharedTool work in chat
 - [ ] Tool profiles documented as optional pattern

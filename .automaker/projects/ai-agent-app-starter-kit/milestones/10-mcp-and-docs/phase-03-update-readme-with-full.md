@@ -1,8 +1,8 @@
 # Phase 3: Update README with full platform documentation
 
-*AI Agent App Starter Kit > MCP Server + Documentation*
+_AI Agent App Starter Kit > MCP Server + Documentation_
 
-Update the root README.md to reflect the expanded platform: all packages (ui, server, app, tools, tracing, flows, prompts, mcp), all routes (/chat, /flows, /prompts, /traces, /sessions, /settings), all features. Add architecture diagram showing how packages connect. Add 'What can I build?' section with examples. Update env vars table with all new configuration (LANGFUSE_*, OPENAI_API_KEY, GOOGLE_API_KEY). Add quick links to docs/ for each topic.
+Update the root README.md to reflect the expanded platform: all packages (ui, server, app, tools, tracing, flows, prompts, mcp), all routes (/chat, /flows, /prompts, /traces, /sessions, /settings), all features. Add architecture diagram showing how packages connect. Add 'What can I build?' section with examples. Update env vars table with all new configuration (LANGFUSE\_\*, OPENAI_API_KEY, GOOGLE_API_KEY). Add quick links to docs/ for each topic.
 
 **Complexity:** medium
 

@@ -16,10 +16,12 @@ Create packages/server/src/tools/registry.ts with ToolDefinition interface (name
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/ai-agent-app/packages/server/src/tools/registry.ts`
 - [ ] `libs/templates/starters/ai-agent-app/packages/server/src/tools/example.ts`
 
 ### Verification
+
 - [ ] ToolDefinition interface with zod parameters
 - [ ] register/list/get functions work
 - [ ] get_weather example with requiresConfirmation

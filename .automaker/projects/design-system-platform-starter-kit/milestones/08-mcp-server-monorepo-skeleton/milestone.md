@@ -14,10 +14,10 @@ Build the MCP server exposing all platform capabilities and wire the monorepo sc
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-build-mcp-server-for-design-system.md](./phase-01-build-mcp-server-for-design-system.md) | 2 weeks | None | TBD |
-| 2 | [phase-02-create-monorepo-skeleton-and-scaffold-function.md](./phase-02-create-monorepo-skeleton-and-scaffold-function.md) | 1 week | None | TBD |
+| Phase | File                                                                                                                       | Duration | Dependencies | Owner |
+| ----- | -------------------------------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-build-mcp-server-for-design-system.md](./phase-01-build-mcp-server-for-design-system.md)                         | 2 weeks  | None         | TBD   |
+| 2     | [phase-02-create-monorepo-skeleton-and-scaffold-function.md](./phase-02-create-monorepo-skeleton-and-scaffold-function.md) | 1 week   | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M8 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

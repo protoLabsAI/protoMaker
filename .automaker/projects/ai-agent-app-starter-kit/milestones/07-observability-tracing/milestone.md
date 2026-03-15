@@ -1,6 +1,6 @@
 # Observability — Langfuse + Built-in Tracing
 
-*Part of: AI Agent App Starter Kit*
+_Part of: AI Agent App Starter Kit_
 
 Extract the Langfuse tracing wrapper from libs/observability/ and add built-in debug tracing for easy agent debugging without requiring external services.
 
@@ -15,6 +15,7 @@ Create packages/tracing/ in the starter kit. Extract LangfuseClient wrapper, wra
 **Complexity:** large
 
 **Files:**
+
 - libs/templates/starters/ai-agent-app/packages/tracing/src/langfuse-client.ts
 - libs/templates/starters/ai-agent-app/packages/tracing/src/middleware.ts
 - libs/templates/starters/ai-agent-app/packages/tracing/src/file-tracer.ts
@@ -22,6 +23,7 @@ Create packages/tracing/ in the starter kit. Extract LangfuseClient wrapper, wra
 - libs/templates/starters/ai-agent-app/packages/server/src/routes/traces.ts
 
 **Acceptance Criteria:**
+
 - [ ] LangfuseClient works when configured, returns null when not
 - [ ] Built-in file tracer writes JSON to .traces/
 - [ ] calculateCost works for Claude/GPT/Gemini models
@@ -35,10 +37,12 @@ Create /traces route in packages/app with a trace viewer showing: trace timeline
 **Complexity:** medium
 
 **Files:**
+
 - libs/templates/starters/ai-agent-app/packages/app/src/routes/traces.tsx
 - libs/templates/starters/ai-agent-app/packages/app/src/components/trace-viewer.tsx
 
 **Acceptance Criteria:**
+
 - [ ] Trace list shows recent conversations
 - [ ] Trace detail shows turns with token counts
 - [ ] Tool calls shown with input/output and timing

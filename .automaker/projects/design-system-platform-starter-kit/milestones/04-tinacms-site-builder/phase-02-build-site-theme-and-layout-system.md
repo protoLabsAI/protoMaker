@@ -16,11 +16,13 @@ Create the documentation site theme and layout components. Navigation sidebar wi
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/design-system/packages/app/src/components/site/layout.tsx`
 - [ ] `libs/templates/starters/design-system/packages/app/src/components/site/sidebar.tsx`
 - [ ] `libs/templates/starters/design-system/packages/app/src/components/site/search.tsx`
 
 ### Verification
+
 - [ ] Navigation sidebar with atomic design categories
 - [ ] Search across components and docs
 - [ ] Token-driven theming

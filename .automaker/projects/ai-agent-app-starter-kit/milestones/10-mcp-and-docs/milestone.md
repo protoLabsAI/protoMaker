@@ -1,6 +1,6 @@
 # MCP Server + Documentation
 
-*Part of: AI Agent App Starter Kit*
+_Part of: AI Agent App Starter Kit_
 
 Add an example MCP server using the tools package adapters, and ship comprehensive docs extracted from automaker plus new content.
 
@@ -15,10 +15,12 @@ Create packages/mcp/ in the starter kit with a minimal MCP server (~50-80 lines)
 **Complexity:** medium
 
 **Files:**
+
 - libs/templates/starters/ai-agent-app/packages/mcp/src/index.ts
 - libs/templates/starters/ai-agent-app/packages/mcp/package.json
 
 **Acceptance Criteria:**
+
 - [ ] MCP server starts via CLI
 - [ ] Lists tools from registry
 - [ ] Executes tools via MCP protocol
@@ -32,6 +34,7 @@ Create docs/ at the starter kit root. Extract and genericize docs from automaker
 **Complexity:** large
 
 **Files:**
+
 - libs/templates/starters/ai-agent-app/docs/getting-started/quickstart.md
 - libs/templates/starters/ai-agent-app/docs/concepts/agent-architecture.md
 - libs/templates/starters/ai-agent-app/docs/concepts/prompt-engineering.md
@@ -44,6 +47,7 @@ Create docs/ at the starter kit root. Extract and genericize docs from automaker
 - libs/templates/starters/ai-agent-app/docs/integrations/mcp.md
 
 **Acceptance Criteria:**
+
 - [ ] Diataxis structure with 4 content types
 - [ ] Extracted docs genericized (no automaker references)
 - [ ] New docs cover flow builder, traces, prompts, MCP
@@ -52,14 +56,16 @@ Create docs/ at the starter kit root. Extract and genericize docs from automaker
 
 ### 3. Update README with full platform documentation
 
-Update the root README.md to reflect the expanded platform: all packages (ui, server, app, tools, tracing, flows, prompts, mcp), all routes (/chat, /flows, /prompts, /traces, /sessions, /settings), all features. Add architecture diagram showing how packages connect. Add 'What can I build?' section with examples. Update env vars table with all new configuration (LANGFUSE_*, OPENAI_API_KEY, GOOGLE_API_KEY). Add quick links to docs/ for each topic.
+Update the root README.md to reflect the expanded platform: all packages (ui, server, app, tools, tracing, flows, prompts, mcp), all routes (/chat, /flows, /prompts, /traces, /sessions, /settings), all features. Add architecture diagram showing how packages connect. Add 'What can I build?' section with examples. Update env vars table with all new configuration (LANGFUSE\_\*, OPENAI_API_KEY, GOOGLE_API_KEY). Add quick links to docs/ for each topic.
 
 **Complexity:** medium
 
 **Files:**
+
 - libs/templates/starters/ai-agent-app/README.md
 
 **Acceptance Criteria:**
+
 - [ ] All 8 packages documented
 - [ ] All 6 routes described
 - [ ] Architecture diagram included

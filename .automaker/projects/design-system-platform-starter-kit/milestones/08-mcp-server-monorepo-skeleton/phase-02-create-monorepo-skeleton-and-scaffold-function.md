@@ -16,6 +16,7 @@ Create the starter kit directory structure at libs/templates/starters/design-sys
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/design-system/package.json`
 - [ ] `libs/templates/src/types.ts`
 - [ ] `libs/templates/src/scaffold.ts`
@@ -25,6 +26,7 @@ Create the starter kit directory structure at libs/templates/starters/design-sys
 - [ ] `apps/ui/src/lib/templates.ts`
 
 ### Verification
+
 - [ ] Starter directory with all packages
 - [ ] scaffoldDesignSystemStarter copies and substitutes names
 - [ ] StarterKitType includes design-system

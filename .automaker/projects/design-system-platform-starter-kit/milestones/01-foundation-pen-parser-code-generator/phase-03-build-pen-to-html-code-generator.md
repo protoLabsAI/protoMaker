@@ -16,10 +16,12 @@ Add HTML/CSS output target to packages/codegen/. Generates semantic HTML with CS
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/design-system/packages/codegen/src/html-generator.ts`
 - [ ] `libs/templates/starters/design-system/packages/codegen/src/css-generator.ts`
 
 ### Verification
+
 - [ ] Generates valid HTML from .pen components
 - [ ] CSS uses custom properties for theming
 - [ ] Output renders correctly in a browser

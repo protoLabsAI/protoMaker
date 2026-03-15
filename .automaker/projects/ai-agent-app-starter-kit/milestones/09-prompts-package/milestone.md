@@ -1,6 +1,6 @@
 # Prompts — Git-Versioned Templates + Playground
 
-*Part of: AI Agent App Starter Kit*
+_Part of: AI Agent App Starter Kit_
 
 Extract the PromptBuilder and prompt registry from libs/prompts/ and build a prompt playground for testing and iterating on prompts.
 
@@ -15,6 +15,7 @@ Create packages/prompts/ in the starter kit. Extract PromptBuilder class with se
 **Complexity:** medium
 
 **Files:**
+
 - libs/templates/starters/ai-agent-app/packages/prompts/src/builder.ts
 - libs/templates/starters/ai-agent-app/packages/prompts/src/registry.ts
 - libs/templates/starters/ai-agent-app/packages/prompts/src/loader.ts
@@ -23,6 +24,7 @@ Create packages/prompts/ in the starter kit. Extract PromptBuilder class with se
 - libs/templates/starters/ai-agent-app/prompts/code-reviewer.md
 
 **Acceptance Criteria:**
+
 - [ ] PromptBuilder composes sections with priority ordering
 - [ ] Registry registers and resolves prompts by role
 - [ ] Template interpolation replaces {{variables}}
@@ -36,11 +38,13 @@ Create /prompts route in packages/app with a prompt playground. Split view: left
 **Complexity:** medium
 
 **Files:**
+
 - libs/templates/starters/ai-agent-app/packages/app/src/routes/prompts.tsx
 - libs/templates/starters/ai-agent-app/packages/app/src/components/prompt-editor.tsx
 - libs/templates/starters/ai-agent-app/packages/server/src/routes/prompts.ts
 
 **Acceptance Criteria:**
+
 - [ ] Prompt editor with syntax highlighting
 - [ ] Live chat test area with streaming
 - [ ] Load prompts from filesystem via API

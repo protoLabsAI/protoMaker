@@ -16,6 +16,7 @@ Scaffold the starter to a temp directory, run npm install and npm run build in t
 ## Tasks
 
 ### Verification
+
 - [ ] Scaffolded output builds clean
 - [ ] No @@PROJECT_NAME tokens remain
 - [ ] No @protolabsai imports in output

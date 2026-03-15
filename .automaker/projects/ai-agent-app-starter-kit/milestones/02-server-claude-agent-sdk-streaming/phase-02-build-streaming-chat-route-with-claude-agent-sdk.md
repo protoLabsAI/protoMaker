@@ -16,9 +16,11 @@ Create packages/server/src/routes/chat.ts implementing POST /api/chat. Use Claud
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/ai-agent-app/packages/server/src/routes/chat.ts`
 
 ### Verification
+
 - [ ] POST /api/chat returns text/event-stream
 - [ ] Streaming responses work with useChat on client
 - [ ] Multi-step agent loops work with stepCountIs limit

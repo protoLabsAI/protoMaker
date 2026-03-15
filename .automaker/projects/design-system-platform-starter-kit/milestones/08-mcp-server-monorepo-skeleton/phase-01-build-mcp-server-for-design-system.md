@@ -16,6 +16,7 @@ Create packages/mcp/ exposing design system capabilities as MCP tools. Tool cate
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/design-system/packages/mcp/src/index.ts`
 - [ ] `libs/templates/starters/design-system/packages/mcp/src/tools/design-tools.ts`
 - [ ] `libs/templates/starters/design-system/packages/mcp/src/tools/token-tools.ts`
@@ -23,6 +24,7 @@ Create packages/mcp/ exposing design system capabilities as MCP tools. Tool cate
 - [ ] `libs/templates/starters/design-system/packages/mcp/src/tools/a11y-tools.ts`
 
 ### Verification
+
 - [ ] MCP server starts and lists all tools
 - [ ] Design tools read/write .pen files
 - [ ] Token tools export to CSS/Tailwind

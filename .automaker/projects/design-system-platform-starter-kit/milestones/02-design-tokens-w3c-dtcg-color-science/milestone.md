@@ -14,10 +14,10 @@ Build the design token system using W3C DTCG standard format. Port the color sci
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-build-w3c-dtcg-token-system.md](./phase-01-build-w3c-dtcg-token-system.md) | 2 weeks | None | TBD |
-| 2 | [phase-02-port-color-science-engine-from-proto2.md](./phase-02-port-color-science-engine-from-proto2.md) | 1 week | None | TBD |
+| Phase | File                                                                                                     | Duration | Dependencies | Owner |
+| ----- | -------------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-build-w3c-dtcg-token-system.md](./phase-01-build-w3c-dtcg-token-system.md)                     | 2 weeks  | None         | TBD   |
+| 2     | [phase-02-port-color-science-engine-from-proto2.md](./phase-02-port-color-science-engine-from-proto2.md) | 1 week   | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M2 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

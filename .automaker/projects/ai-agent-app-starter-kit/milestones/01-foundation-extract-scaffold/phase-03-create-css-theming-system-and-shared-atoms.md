@@ -16,10 +16,12 @@ Create packages/app/src/styles/tokens.css with the 6-value CSS custom property t
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/ai-agent-app/packages/app/src/styles/tokens.css`
 - [ ] `libs/templates/starters/ai-agent-app/packages/ui/src/atoms/button.tsx`
 
 ### Verification
+
 - [ ] 6 CSS custom properties control entire brand
 - [ ] Tailwind @theme inline bridge works
 - [ ] Button and Popover atoms compile

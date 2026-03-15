@@ -1,6 +1,6 @@
 # Phase 2: Build trace viewer UI route
 
-*AI Agent App Starter Kit > Observability — Langfuse + Built-in Tracing*
+_AI Agent App Starter Kit > Observability — Langfuse + Built-in Tracing_
 
 Create /traces route in packages/app with a trace viewer showing: trace timeline, token usage per turn, cost breakdown, tool call details, latency waterfall. Read from GET /api/traces. Simple table + detail view — not a full Langfuse clone, just enough for local debugging.
 

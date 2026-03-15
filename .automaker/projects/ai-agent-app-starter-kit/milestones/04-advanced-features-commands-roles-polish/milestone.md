@@ -14,11 +14,11 @@ Add slash command system, agent roles/skills, and documentation.
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-build-slash-command-system.md](./phase-01-build-slash-command-system.md) | 1 week | None | TBD |
-| 2 | [phase-02-build-agent-roles-system.md](./phase-02-build-agent-roles-system.md) | 1 week | None | TBD |
-| 3 | [phase-03-write-readme-and-starter-documentation.md](./phase-03-write-readme-and-starter-documentation.md) | 1 week | None | TBD |
+| Phase | File                                                                                                       | Duration | Dependencies | Owner |
+| ----- | ---------------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-build-slash-command-system.md](./phase-01-build-slash-command-system.md)                         | 1 week   | None         | TBD   |
+| 2     | [phase-02-build-agent-roles-system.md](./phase-02-build-agent-roles-system.md)                             | 1 week   | None         | TBD   |
+| 3     | [phase-03-write-readme-and-starter-documentation.md](./phase-03-write-readme-and-starter-documentation.md) | 1 week   | None         | TBD   |
 
 ---
 
@@ -36,6 +36,7 @@ M4 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

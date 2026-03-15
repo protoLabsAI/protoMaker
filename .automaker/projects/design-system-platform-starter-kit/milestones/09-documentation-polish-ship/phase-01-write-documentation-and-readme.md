@@ -16,6 +16,7 @@ Create docs/ at the starter kit root following Diataxis framework. Getting start
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/design-system/README.md`
 - [ ] `libs/templates/starters/design-system/docs/getting-started/quickstart.md`
 - [ ] `libs/templates/starters/design-system/docs/concepts/design-to-code.md`
@@ -23,6 +24,7 @@ Create docs/ at the starter kit root following Diataxis framework. Getting start
 - [ ] `libs/templates/starters/design-system/docs/reference/pen-format.md`
 
 ### Verification
+
 - [ ] Quickstart gets user running in 5 minutes
 - [ ] Design-to-code pipeline documented end-to-end
 - [ ] All MCP tools documented

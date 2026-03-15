@@ -14,10 +14,10 @@ Write comprehensive docs, create starter features for the board, and verify end-
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-write-documentation-and-readme.md](./phase-01-write-documentation-and-readme.md) | 1 week | None | TBD |
-| 2 | [phase-02-end-to-end-verification-and-build-test.md](./phase-02-end-to-end-verification-and-build-test.md) | 1 week | None | TBD |
+| Phase | File                                                                                                       | Duration | Dependencies | Owner |
+| ----- | ---------------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-write-documentation-and-readme.md](./phase-01-write-documentation-and-readme.md)                 | 1 week   | None         | TBD   |
+| 2     | [phase-02-end-to-end-verification-and-build-test.md](./phase-02-end-to-end-verification-and-build-test.md) | 1 week   | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M9 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

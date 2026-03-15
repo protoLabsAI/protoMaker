@@ -1,6 +1,6 @@
 # Phase 2: Create docs directory with extracted and new content
 
-*AI Agent App Starter Kit > MCP Server + Documentation*
+_AI Agent App Starter Kit > MCP Server + Documentation_
 
 Create docs/ at the starter kit root. Extract and genericize docs from automaker: agent-architecture.md, agent-philosophy.md, prompt-engineering.md, reliability.md (from concepts/), writing-prompts.md, flow-control.md, gotchas.md (from guides/), langfuse.md, mcp-integration.md, sdk-integration.md (from integrations/internal). Write new docs: visual-flow-builder.md, trace-viewer.md, prompt-playground.md, creating-mcp-tools.md, tool-adapters.md. Follow Diataxis framework: tutorials in getting-started/, how-tos in guides/, reference in reference/, explanations in concepts/.
 
