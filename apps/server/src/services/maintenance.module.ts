@@ -7,7 +7,11 @@
  */
 
 import { createLogger } from '@protolabsai/utils';
-import type { MaintenanceCheck, MaintenanceCheckContext, MaintenanceCheckResult } from '@protolabsai/types';
+import type {
+  MaintenanceCheck,
+  MaintenanceCheckContext,
+  MaintenanceCheckResult,
+} from '@protolabsai/types';
 import type { ServiceContainer } from '../server/services.js';
 
 const logger = createLogger('Server:Wiring');
@@ -91,18 +95,13 @@ export function register(container: ServiceContainer): void {
   maintenanceOrchestrator.register(boardHealthCheck);
   maintenanceOrchestrator.register(resourceUsageCheck);
 
-  maintenanceOrchestrator.start(
-    schedulerService,
-    events,
-    eventHistoryService,
-    () => {
-      const paths = new Set<string>();
-      for (const p of autoModeService.getActiveAutoLoopProjects()) {
-        paths.add(p);
-      }
-      return Array.from(paths);
+  maintenanceOrchestrator.start(schedulerService, events, eventHistoryService, () => {
+    const paths = new Set<string>();
+    for (const p of autoModeService.getActiveAutoLoopProjects()) {
+      paths.add(p);
     }
-  );
+    return Array.from(paths);
+  });
 
   logger.info('MaintenanceOrchestrator started with board-health and resource-usage checks');
 }

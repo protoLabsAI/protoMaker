@@ -77,18 +77,28 @@ export class MaintenanceOrchestrator {
     );
 
     // Critical tier: every 5 minutes — critical checks only
-    schedulerService.registerInterval(INTERVAL_ID_CRITICAL, 'Maintenance Critical Sweep', CRITICAL_INTERVAL_MS, () => {
-      this.runSweep('critical', criticalChecks).catch((err) =>
-        logger.error('Critical maintenance sweep failed:', err)
-      );
-    });
+    schedulerService.registerInterval(
+      INTERVAL_ID_CRITICAL,
+      'Maintenance Critical Sweep',
+      CRITICAL_INTERVAL_MS,
+      () => {
+        this.runSweep('critical', criticalChecks).catch((err) =>
+          logger.error('Critical maintenance sweep failed:', err)
+        );
+      }
+    );
 
     // Full tier: every 6 hours — all checks
-    schedulerService.registerInterval(INTERVAL_ID_FULL, 'Maintenance Full Sweep', FULL_INTERVAL_MS, () => {
-      this.runSweep('full', allChecks).catch((err) =>
-        logger.error('Full maintenance sweep failed:', err)
-      );
-    });
+    schedulerService.registerInterval(
+      INTERVAL_ID_FULL,
+      'Maintenance Full Sweep',
+      FULL_INTERVAL_MS,
+      () => {
+        this.runSweep('full', allChecks).catch((err) =>
+          logger.error('Full maintenance sweep failed:', err)
+        );
+      }
+    );
 
     // Run a full sweep immediately at startup
     this.runSweep('full', allChecks).catch((err) =>
@@ -117,15 +127,17 @@ export class MaintenanceOrchestrator {
     tier: 'critical' | 'full',
     checksToRun?: MaintenanceCheck[]
   ): Promise<MaintenanceSweepResult> {
-    const checks = checksToRun ?? (tier === 'critical'
-      ? this.checks.filter((c) => c.tier === 'critical')
-      : this.checks);
+    const checks =
+      checksToRun ??
+      (tier === 'critical' ? this.checks.filter((c) => c.tier === 'critical') : this.checks);
 
     const sweepId = `sweep-${Date.now()}-${randomUUID().slice(0, 8)}`;
     const startedAt = new Date().toISOString();
     const projectPaths = this.getProjectPaths?.() ?? [];
 
-    logger.info(`Maintenance sweep started: sweepId=${sweepId} tier=${tier} checks=${checks.length} projects=${projectPaths.length}`);
+    logger.info(
+      `Maintenance sweep started: sweepId=${sweepId} tier=${tier} checks=${checks.length} projects=${projectPaths.length}`
+    );
 
     if (this.events) {
       this.events.emit('maintenance:sweep:started', { sweepId, tier, startedAt });
@@ -165,7 +177,9 @@ export class MaintenanceOrchestrator {
       failed,
     };
 
-    logger.info(`Maintenance sweep completed: sweepId=${sweepId} passed=${passed} failed=${failed}`);
+    logger.info(
+      `Maintenance sweep completed: sweepId=${sweepId} passed=${passed} failed=${failed}`
+    );
 
     if (this.events) {
       this.events.emit('maintenance:sweep:completed', sweepResult);
@@ -192,7 +206,9 @@ export class MaintenanceOrchestrator {
               })),
             },
           })
-          .catch((err) => logger.warn(`Failed to store sweep result to event history for ${projectPath}:`, err));
+          .catch((err) =>
+            logger.warn(`Failed to store sweep result to event history for ${projectPath}:`, err)
+          );
       }
     }
 
