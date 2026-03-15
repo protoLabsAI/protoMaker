@@ -70,7 +70,7 @@ describe('Timer Registry API routes', () => {
       const payload = (res.json as ReturnType<typeof vi.fn>).mock.calls[0][0];
       expect(payload.timers).toHaveLength(2);
       expect(payload.count).toBe(2);
-      expect(payload.timers[0].kind).toBe('cron');
+      expect(payload.timers[0].type).toBe('cron');
       expect(payload.timers[0].id).toBe('task-a');
     });
 
@@ -85,7 +85,7 @@ describe('Timer Registry API routes', () => {
       const payload = (res.json as ReturnType<typeof vi.fn>).mock.calls[0][0];
       expect(payload.count).toBe(3);
 
-      const intervalEntry = payload.timers.find((t: any) => t.kind === 'interval');
+      const intervalEntry = payload.timers.find((t: any) => t.type === 'interval');
       expect(intervalEntry).toBeDefined();
       expect(intervalEntry.id).toBe('int-1');
       expect(intervalEntry.intervalMs).toBe(5000);
