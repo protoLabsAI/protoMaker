@@ -454,6 +454,17 @@ export const withSetupClient = <TBase extends Constructor<BaseHttpClient>>(Base:
       onAuthProgress: (callback: (progress: unknown) => void) => {
         return this.subscribeToEvent('agent:stream', callback);
       },
+
+      scaffoldStarterKit: (
+        projectPath: string,
+        kitType: 'docs' | 'portfolio',
+        projectName?: string
+      ): Promise<{
+        success: boolean;
+        outputDir: string;
+        filesCreated: string[];
+        error?: string;
+      }> => this.post('/api/setup/scaffold-starter', { projectPath, kitType, projectName }),
     };
 
     // SetupLab Pipeline API (repo research, gap analysis, report generation)

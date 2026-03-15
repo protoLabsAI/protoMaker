@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from '@protolabsai/ui/atoms';
 import { Button, Input, Textarea, Label, Switch } from '@protolabsai/ui/atoms';
-import { Loader2, Plus, Palette } from 'lucide-react';
+import { Loader2, Plus, Palette, BookOpen, LayoutTemplate, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCreateProject } from '../hooks/use-project';
 
@@ -39,6 +39,21 @@ const PRIORITIES = [
   { value: 'none', label: 'None', className: 'bg-muted text-muted-foreground border-border' },
 ] as const;
 
+const STARTER_KITS = [
+  {
+    id: 'docs' as const,
+    name: 'Docs',
+    description: 'Starlight documentation site — structured docs with sidebar navigation.',
+    icon: BookOpen,
+  },
+  {
+    id: 'portfolio' as const,
+    name: 'Portfolio',
+    description: 'Astro portfolio / marketing site — project showcase and landing page.',
+    icon: LayoutTemplate,
+  },
+];
+
 interface NewProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -51,6 +66,7 @@ export function NewProjectDialog({ open, onOpenChange }: NewProjectDialogProps) 
   const [color, setColor] = useState('');
   const [priority, setPriority] = useState('medium');
   const [researchOnCreate, setResearchOnCreate] = useState(false);
+  const [starterKit, setStarterKit] = useState<'docs' | 'portfolio' | null>(null);
   const colorInputRef = useRef<HTMLInputElement>(null);
 
   const createMutation = useCreateProject();
@@ -66,6 +82,7 @@ export function NewProjectDialog({ open, onOpenChange }: NewProjectDialogProps) 
         color: color || undefined,
         priority,
         researchOnCreate,
+        starterKit: starterKit ?? undefined,
       },
       {
         onSuccess: () => {
@@ -83,6 +100,7 @@ export function NewProjectDialog({ open, onOpenChange }: NewProjectDialogProps) 
       setColor('');
       setPriority('medium');
       setResearchOnCreate(false);
+      setStarterKit(null);
     }
     onOpenChange(next);
   };
@@ -196,6 +214,43 @@ export function NewProjectDialog({ open, onOpenChange }: NewProjectDialogProps) 
                 className="sr-only"
                 aria-label="Custom color picker"
               />
+            </div>
+          </div>
+
+          {/* Starter Kit Selection */}
+          <div className="space-y-2">
+            <Label>Starter Kit</Label>
+            <p className="text-xs text-muted-foreground">
+              Optionally scaffold an Astro starter into the project directory.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {STARTER_KITS.map((kit) => {
+                const Icon = kit.icon;
+                const isSelected = starterKit === kit.id;
+                return (
+                  <button
+                    key={kit.id}
+                    type="button"
+                    data-testid={`starter-kit-${kit.id}`}
+                    onClick={() => setStarterKit(isSelected ? null : kit.id)}
+                    className={cn(
+                      'relative flex flex-col items-start gap-1.5 rounded-lg border p-3 text-left transition-all',
+                      isSelected
+                        ? 'border-ring bg-accent'
+                        : 'border-border bg-card hover:border-ring/50 hover:bg-accent/50'
+                    )}
+                  >
+                    {isSelected && (
+                      <Check className="absolute top-2 right-2 w-3.5 h-3.5 text-foreground" />
+                    )}
+                    <Icon className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-foreground">{kit.name}</span>
+                    <span className="text-xs text-muted-foreground leading-tight">
+                      {kit.description}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
