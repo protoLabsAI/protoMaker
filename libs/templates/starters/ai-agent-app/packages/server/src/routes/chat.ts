@@ -36,6 +36,10 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { z } from 'zod';
 import { traceStore } from '../tracing/trace-store.js';
 import { buildTrace, type StepData } from '../tracing/build-trace.js';
+import { getCommand, parseSlashCommand } from '../commands/registry.js';
+
+// Side-effect import: registers all built-in commands into the registry
+import '../commands/example.js';
 
 const router = Router();
 
@@ -86,6 +90,31 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
     apiKey: process.env['ANTHROPIC_API_KEY'],
   });
 
+  // ── Slash-command expansion ─────────────────────────────────────────────────
+  // If the last user message starts with `/commandname [args]`, expand it into
+  // a system-prompt prefix so the model receives the command's instruction
+  // before the conversation messages.
+  let resolvedSystem = system;
+  const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user');
+  const lastUserText =
+    lastUserMessage && typeof lastUserMessage.content === 'string'
+      ? lastUserMessage.content
+      : lastUserMessage && Array.isArray(lastUserMessage.content)
+        ? lastUserMessage.content
+            .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+            .map((p) => p.text)
+            .join('')
+        : '';
+
+  const parsed = lastUserText ? parseSlashCommand(lastUserText) : null;
+  if (parsed) {
+    const cmd = getCommand(parsed.name);
+    if (cmd) {
+      const expansion = cmd.expand(parsed.args);
+      resolvedSystem = expansion + (resolvedSystem ? '\n\n' + resolvedSystem : '');
+    }
+  }
+
   // Trace bookkeeping — assign a unique ID and record the start time
   const traceId = crypto.randomUUID();
   const traceStartedAt = new Date();
@@ -99,7 +128,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
       execute: async ({ writer }) => {
         const result = streamText({
           model: provider(resolvedModelId),
-          system,
+          system: resolvedSystem,
           messages,
 
           // ── Tools available to the model ─────────────────────────────────

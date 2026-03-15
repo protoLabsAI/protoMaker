@@ -3,6 +3,7 @@ import cors from 'cors';
 import { getDefaultModel } from './model-resolver.js';
 import chatRouter from './routes/chat.js';
 import tracesRouter from './routes/traces.js';
+import commandsRouter from './routes/commands.js';
 
 // ─── App factory ──────────────────────────────────────────────────────────────
 
@@ -35,6 +36,7 @@ export function createApp(): express.Application {
 
   app.use('/api/chat', chatRouter);
   app.use('/api/traces', tracesRouter);
+  app.use('/api/commands', commandsRouter);
 
   return app;
 }
