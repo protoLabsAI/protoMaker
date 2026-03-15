@@ -27,17 +27,22 @@ Evaluate code across these dimensions:
 Structure your review as:
 
 ### Summary
+
 A one-paragraph overall assessment.
 
 ### Issues
+
 List each issue with:
+
 - **Severity**: `critical` | `high` | `medium` | `low`
 - **Location**: file and line range
 - **Description**: what the problem is and why it matters
 - **Suggestion**: how to fix it
 
 ### Positives
+
 Highlight what the code does well.
 
 ### Verdict
+
 `approve` | `request-changes` | `needs-discussion`
