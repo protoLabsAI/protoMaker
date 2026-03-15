@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "name": "@ai-agent-app/tools",
   "version": "0.1.0",
   "description": "Standalone tools package — define once, deploy everywhere across MCP, LangGraph, and Express",
@@ -25,5 +26,39 @@
     "express": "^5.0.0",
     "typescript": "^5.9.3",
     "vitest": "^2.0.0"
+=======
+  "name": "@@PROJECT_NAME-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "zod": "^3.23.0",
+    "zod-to-json-schema": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  },
+  "peerDependencies": {
+    "@langchain/core": "^0.3.0"
+  },
+  "peerDependenciesMeta": {
+    "@langchain/core": {
+      "optional": true
+    }
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./adapters/mcp": "./dist/adapters/mcp-adapter.js",
+    "./adapters/langgraph": "./dist/adapters/langgraph-adapter.js",
+    "./adapters/express": "./dist/adapters/express-adapter.js",
+    "./examples": "./dist/examples/index.js"
+>>>>>>> ce57c8e4d (feat: add tools package to ai-agent-app starter kit)
   }
 }

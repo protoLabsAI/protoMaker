@@ -1,53 +1,44 @@
 /**
- * @ai-agent-app/tools
+ * @@@PROJECT_NAME-tools — Define-once, deploy-everywhere tool package
  *
- * Standalone tools package — define once, deploy everywhere.
+ * A single SharedTool definition works across three runtimes:
+ * - MCP (Model Context Protocol) via `toMCPTool` / `toMCPTools`
+ * - LangGraph agents via `toLangGraphTool` / `toLangGraphTools`
+ * - Express HTTP routes via `toExpressRouter`
  *
- * Define a tool with Zod schemas and a typed execute function, then
- * deploy it to any runtime without changing the tool definition:
- *
- * @example
+ * Quick start:
  * ```typescript
  * import { z } from 'zod';
- * import { defineSharedTool, ToolRegistry, toMCPTool, toLangGraphTool, toExpressRouter } from '@ai-agent-app/tools';
+ * import { defineSharedTool, ToolRegistry } from '@@PROJECT_NAME-tools';
  *
  * const myTool = defineSharedTool({
- *   name: 'my-tool',
+ *   name: 'my_tool',
  *   description: 'Does something useful',
- *   inputSchema: z.object({ query: z.string() }),
+ *   inputSchema: z.object({ value: z.string() }),
  *   outputSchema: z.object({ result: z.string() }),
- *   execute: async (input) => ({ success: true, data: { result: input.query } }),
+ *   execute: async (input) => ({ success: true, data: { result: input.value.toUpperCase() } }),
  * });
  *
- * // MCP
- * const mcpEntry = toMCPTool(myTool);
- *
- * // LangGraph
- * const langchainTool = toLangGraphTool(myTool, { config: {} });
- *
- * // Express
- * const router = toExpressRouter([myTool]);
+ * const registry = new ToolRegistry();
+ * registry.register(myTool);
  * ```
  */
 
-// ─── Core ────────────────────────────────────────────────────────────────────
+// Core
+export { defineSharedTool } from './define-tool.js';
+export { ToolRegistry } from './registry.js';
 
-export { defineSharedTool } from './core/defineSharedTool.js';
-export { ToolRegistry } from './core/ToolRegistry.js';
-export type { ToolContext, ToolResult, SharedTool, ToolDefinition } from './core/types.js';
+// Types
+export type { ToolContext, ToolResult, SharedTool, ToolDefinition } from './types.js';
 
-// ─── Adapters ─────────────────────────────────────────────────────────────────
+// Adapters
+export { toMCPTool, toMCPTools } from './adapters/mcp-adapter.js';
+export type { MCPToolEntry } from './adapters/mcp-adapter.js';
 
-export { toMCPTool, toMCPTools } from './adapters/toMCPTool.js';
-export type { MCPToolEntry } from './adapters/toMCPTool.js';
+export { toLangGraphTool, toLangGraphTools } from './adapters/langgraph-adapter.js';
 
-export { toLangGraphTool, toLangGraphTools } from './adapters/toLangGraphTool.js';
-export type { DynamicStructuredTool } from './adapters/toLangGraphTool.js';
+export { toExpressRouter } from './adapters/express-adapter.js';
+export type { ExpressAdapterOptions } from './adapters/express-adapter.js';
 
-export { toExpressRouter } from './adapters/toExpressRouter.js';
-export type { ExpressAdapterOptions } from './adapters/toExpressRouter.js';
-
-// ─── Examples ────────────────────────────────────────────────────────────────
-
-export { get_weather } from './examples/get_weather.js';
-export { search_web } from './examples/search_web.js';
+// Examples
+export { getWeatherTool, searchWebTool } from './examples/index.js';
