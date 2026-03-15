@@ -91,9 +91,7 @@ export function xclToTsx(component: ComponentDef): string {
 
   let classesBlock: string;
   if (classEntries.length > 0) {
-    const entries = classEntries
-      .map((e, i) => (i === 0 ? `    ${e},` : `${e},`))
-      .join('\n');
+    const entries = classEntries.map((e, i) => (i === 0 ? `    ${e},` : `${e},`)).join('\n');
     classesBlock = `  const classes = [\n${entries}\n  ].filter(Boolean).join(' ');`;
   } else {
     classesBlock = `  const classes = '${baseClasses}';`;

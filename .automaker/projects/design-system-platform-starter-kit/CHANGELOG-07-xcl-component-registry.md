@@ -1,4 +1,5 @@
 # Changelog: Design System Platform Starter Kit - XCL + Component Registry
+
 **Generated:** 2026-03-15
 
 ## 📦 Other Changes
