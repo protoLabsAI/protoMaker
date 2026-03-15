@@ -301,7 +301,7 @@ async function applyMonorepoSubstitutions(outputDir: string, projectName: string
     try {
       let raw = await fs.readFile(pkgPath, 'utf-8');
       // Replace all occurrences of @@PROJECT_NAME
-      raw = raw.replaceAll('@@PROJECT_NAME', projectName);
+      raw = raw.replace(/@@PROJECT_NAME/g, projectName);
       await fs.writeFile(pkgPath, raw, 'utf-8');
     } catch {
       // package.json missing or unreadable — skip

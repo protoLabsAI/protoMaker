@@ -143,6 +143,8 @@ export function getStarterFeatures(type: StarterKitType): StarterFeature[] {
       return [...UNIVERSAL_FEATURES];
     case 'general':
       return [...UNIVERSAL_FEATURES];
+    case 'ai-agent-app':
+      return [...UNIVERSAL_FEATURES];
   }
 }
 
