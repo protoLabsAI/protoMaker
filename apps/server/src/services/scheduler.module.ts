@@ -1,7 +1,15 @@
 import { createLogger } from '@protolabsai/utils';
 
 import type { ServiceContainer } from '../server/services.js';
+import { getAgentManifestService, WATCH_POLL_INTERVAL_MS } from './agent-manifest-service.js';
+import {
+  ARCHIVAL_CHECK_INTERVAL_MS,
+  WORKTREE_DRIFT_CHECK_INTERVAL_MS,
+} from '../config/timeouts.js';
 import { getPRWatcherService } from './pr-watcher-service.js';
+
+/** Polling interval for the builtin:electron-idle sensor (30 seconds) */
+const ELECTRON_IDLE_POLL_MS = 30_000;
 
 const logger = createLogger('Server:Wiring');
 
@@ -23,14 +31,21 @@ export function register(container: ServiceContainer): void {
     featureHealthService,
     integrityWatchdogService,
     featureLoader,
+    archivalService,
+    sensorRegistryService,
+    worktreeLifecycleService,
     healthMonitorService,
     specGenerationMonitor,
+    leadEngineerService,
+    crdtSyncService,
   } = container;
 
   // Wire schedulerService into interval-tracked services so their timers
   // appear in schedulerService.listAll() and can be inspected centrally.
   healthMonitorService.setSchedulerService(schedulerService);
   specGenerationMonitor.setSchedulerService(schedulerService);
+  leadEngineerService.setSchedulerService(schedulerService);
+  crdtSyncService.setSchedulerService(schedulerService);
   const prWatcher = getPRWatcherService();
   if (prWatcher) {
     prWatcher.setSchedulerService(schedulerService);
@@ -106,6 +121,42 @@ export function register(container: ServiceContainer): void {
 
       // Apply taskOverrides from global settings after all tasks are registered
       await schedulerService.applySettingsOverrides();
+
+      // ── Timer Registry: named interval registrations ──────────────────────
+      // These replace the per-service setInterval() calls that previously lived
+      // inside each service's start() / initialize() method.
+
+      // WorktreeLifecycleService — 6-hour phantom/orphan drift detection
+      schedulerService.registerInterval(
+        'worktree-lifecycle:drift-check',
+        'Worktree Drift Check',
+        WORKTREE_DRIFT_CHECK_INTERVAL_MS,
+        () => worktreeLifecycleService.runPeriodicDriftCheck()
+      );
+
+      // ArchivalService — 10-minute done-feature archival sweep
+      schedulerService.registerInterval(
+        'archival:check',
+        'Feature Archival Check',
+        ARCHIVAL_CHECK_INTERVAL_MS,
+        () => archivalService.runArchivalCycle()
+      );
+
+      // SensorRegistryService — 30-second Electron idle time poll
+      schedulerService.registerInterval(
+        'sensor:electron-idle',
+        'Electron Idle Sensor Poll',
+        ELECTRON_IDLE_POLL_MS,
+        () => sensorRegistryService.pollElectronIdle()
+      );
+
+      // AgentManifestService — 2-second manifest file change detection
+      schedulerService.registerInterval(
+        'agent-manifest:poll',
+        'Agent Manifest Poll',
+        WATCH_POLL_INTERVAL_MS,
+        () => getAgentManifestService().tick()
+      );
     })
     .catch((err) => {
       logger.error('Scheduler startup or automation sync failed:', err);

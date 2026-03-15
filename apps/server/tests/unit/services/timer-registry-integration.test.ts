@@ -46,7 +46,7 @@ describe('Timer Registry: interval registration', () => {
     const entries = scheduler.listAll();
     const found = entries.find((e) => e.id === 'health-monitor:check');
     expect(found).toBeDefined();
-    expect(found?.kind).toBe('interval');
+    expect(found?.type).toBe('interval');
 
     svc.stopMonitoring();
     expect(scheduler.listAll().find((e) => e.id === 'health-monitor:check')).toBeUndefined();
@@ -65,7 +65,7 @@ describe('Timer Registry: interval registration', () => {
     const entries = scheduler.listAll();
     const found = entries.find((e) => e.id === 'spec-generation-monitor:check');
     expect(found).toBeDefined();
-    expect(found?.kind).toBe('interval');
+    expect(found?.type).toBe('interval');
 
     svc.stopMonitoring();
     expect(
@@ -84,7 +84,7 @@ describe('Timer Registry: interval registration', () => {
     const entries = scheduler.listAll();
     const found = entries.find((e) => e.id === 'pr-watcher:poll');
     expect(found).toBeDefined();
-    expect(found?.kind).toBe('interval');
+    expect(found?.type).toBe('interval');
 
     svc.stopPolling();
     expect(scheduler.listAll().find((e) => e.id === 'pr-watcher:poll')).toBeUndefined();
@@ -106,7 +106,7 @@ describe('Timer Registry: interval registration', () => {
     prSvc.setSchedulerService(scheduler);
     prSvc.addWatch(99, '/project', 'session-x');
 
-    const intervalEntries = scheduler.listAll().filter((e) => e.kind === 'interval');
+    const intervalEntries = scheduler.listAll().filter((e) => e.type === 'interval');
     const ids = intervalEntries.map((e) => e.id);
 
     expect(ids).toContain('health-monitor:check');

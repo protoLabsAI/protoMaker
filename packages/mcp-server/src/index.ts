@@ -1524,7 +1524,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
 
     // Scheduler Management
     case 'get_scheduler_status':
-      return apiCall('/scheduler/status', {}, 'GET');
+      return apiCall('/ops/timers', {}, 'GET');
 
     case 'update_maintenance_task': {
       const taskId = args.taskId as string;
@@ -1541,10 +1541,10 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         }
       }
 
-      // Enable/disable if provided
+      // Enable/disable if provided (maps to resume/pause on the timer registry)
       if (args.enabled !== undefined) {
-        const endpoint = args.enabled ? 'enable' : 'disable';
-        const toggleResult = (await apiCall(`/scheduler/tasks/${taskId}/${endpoint}`, {})) as {
+        const endpoint = args.enabled ? 'resume' : 'pause';
+        const toggleResult = (await apiCall(`/ops/timers/${taskId}/${endpoint}`, {})) as {
           success?: boolean;
         };
         results.enabledUpdated = toggleResult.success;

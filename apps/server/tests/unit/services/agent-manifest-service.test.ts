@@ -287,22 +287,17 @@ agents:
       // This test verifies that the polling watcher correctly triggers cache
       // invalidation when the file changes — the behavior that was broken by
       // fs.watch({ recursive: true }) being a no-op on Linux.
-      //
-      // Strategy: use vi.useFakeTimers to advance the poll interval without
-      // waiting for real wall-clock time, making the test fast and deterministic.
-      vi.useFakeTimers();
-      try {
-        writeYaml(tmpDir, '.automaker/agents.yml', FRONTEND_AGENT_YAML);
+      writeYaml(tmpDir, '.automaker/agents.yml', FRONTEND_AGENT_YAML);
 
-        // Warm the cache and start the polling watcher
-        const first = await service.getAgentsForProject(tmpDir);
-        expect(first!.agents).toHaveLength(1);
+      // Warm the cache and start the polling watcher
+      const first = await service.getAgentsForProject(tmpDir);
+      expect(first!.agents).toHaveLength(1);
 
-        // Overwrite the manifest with a second agent
-        writeYaml(
-          tmpDir,
-          '.automaker/agents.yml',
-          `
+      // Overwrite the manifest with a second agent
+      writeYaml(
+        tmpDir,
+        '.automaker/agents.yml',
+        `
 version: "1"
 agents:
   - name: react-specialist
@@ -312,18 +307,14 @@ agents:
     extends: frontend-engineer
     description: Second
 `
-        );
+      );
 
-        // Advance time past the poll interval so the setInterval fires
-        vi.advanceTimersByTime(WATCH_POLL_INTERVAL_MS + 100);
+      // Tick the poll loop (replaces the old vi.advanceTimersByTime approach)
+      service.tick();
 
-        // Cache should now be invalidated; next load reads updated file
-        vi.useRealTimers();
-        const second = await service.getAgentsForProject(tmpDir);
-        expect(second!.agents).toHaveLength(2);
-      } finally {
-        vi.useRealTimers();
-      }
+      // Cache should now be invalidated; next load reads updated file
+      const second = await service.getAgentsForProject(tmpDir);
+      expect(second!.agents).toHaveLength(2);
     });
   });
 

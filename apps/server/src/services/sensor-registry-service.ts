@@ -20,9 +20,6 @@ import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('SensorRegistry');
 
-/** Polling interval for builtin:electron-idle (30 seconds) */
-const ELECTRON_IDLE_POLL_MS = 30_000;
-
 /** How long after the last reading a sensor is considered "stale" (5 minutes) */
 const STALE_TTL_MS = 5 * 60 * 1000;
 
@@ -36,9 +33,6 @@ export class SensorRegistryService {
 
   /** Current tracked WebSocket client count for the builtin:websocket-clients sensor */
   private _wsClientCount = 0;
-
-  /** Interval handle for the Electron idle time poller */
-  private _electronIdleInterval?: ReturnType<typeof setInterval>;
 
   constructor(events?: EventEmitter) {
     this.events = events;
@@ -89,49 +83,50 @@ export class SensorRegistryService {
   }
 
   /**
-   * Start a polling interval that reads system idle time from Electron's powerMonitor.
-   * If not running inside Electron the dynamic import fails silently and no readings
-   * are produced (the sensor stays offline / stale).
+   * Poll system idle time from Electron's powerMonitor once.
+   * Called immediately on startup and then on the scheduler interval
+   * registered by scheduler.module.ts via registerInterval().
+   *
+   * If not running inside Electron the dynamic import fails silently and no
+   * reading is produced (the sensor stays offline / stale).
    */
-  private _startElectronIdlePoller(): void {
-    if (this._electronIdleInterval) return; // already started
-
-    const poll = async () => {
-      try {
-        // Dynamic import: only works inside Electron renderer / main processes
-        // eslint-disable-next-line n/no-extraneous-import
-        const electron = await import('electron');
-        const powerMonitor =
-          electron.powerMonitor ?? (electron as unknown as Record<string, unknown>).default;
-        if (
-          powerMonitor &&
-          typeof (powerMonitor as { getSystemIdleTime?: () => number }).getSystemIdleTime ===
-            'function'
-        ) {
-          const idleSeconds = (
-            powerMonitor as { getSystemIdleTime: () => number }
-          ).getSystemIdleTime();
-          this.report({
-            sensorId: 'builtin:electron-idle',
-            data: { idleSeconds },
-          });
-        }
-      } catch {
-        // Electron not available — no-op (sensor remains offline / stale)
+  async pollElectronIdle(): Promise<void> {
+    try {
+      // Dynamic import: only works inside Electron renderer / main processes
+      // eslint-disable-next-line n/no-extraneous-import
+      const electron = await import('electron');
+      const powerMonitor =
+        electron.powerMonitor ?? (electron as unknown as Record<string, unknown>).default;
+      if (
+        powerMonitor &&
+        typeof (powerMonitor as { getSystemIdleTime?: () => number }).getSystemIdleTime ===
+          'function'
+      ) {
+        const idleSeconds = (
+          powerMonitor as { getSystemIdleTime: () => number }
+        ).getSystemIdleTime();
+        this.report({
+          sensorId: 'builtin:electron-idle',
+          data: { idleSeconds },
+        });
       }
-    };
-
-    // Run once immediately, then on the interval
-    void poll();
-    this._electronIdleInterval = setInterval(() => void poll(), ELECTRON_IDLE_POLL_MS);
+    } catch {
+      // Electron not available — no-op (sensor remains offline / stale)
+    }
   }
 
-  /** Stop built-in sensor polling loops (for clean shutdown). */
+  /**
+   * Start the built-in Electron idle poller.
+   * Fires immediately once; subsequent polls are driven by the scheduler interval
+   * registered in scheduler.module.ts.
+   */
+  private _startElectronIdlePoller(): void {
+    void this.pollElectronIdle();
+  }
+
+  /** No-op — the scheduler interval is managed externally via registerInterval(). */
   stopBuiltinSensors(): void {
-    if (this._electronIdleInterval) {
-      clearInterval(this._electronIdleInterval);
-      this._electronIdleInterval = undefined;
-    }
+    // Interval is owned by schedulerService; nothing to clear here.
   }
 
   /**
