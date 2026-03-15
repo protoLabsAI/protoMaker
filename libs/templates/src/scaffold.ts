@@ -273,40 +273,70 @@ export async function scaffoldGeneralStarter(options: ScaffoldOptions): Promise<
   }
 }
 
+/** Text file extensions that should receive @@PROJECT_NAME substitution. */
+const TEXT_EXTENSIONS = new Set([
+  '.ts',
+  '.tsx',
+  '.js',
+  '.jsx',
+  '.mjs',
+  '.cjs',
+  '.json',
+  '.md',
+  '.txt',
+  '.html',
+  '.css',
+  '.env',
+  '.example',
+]);
+
 /**
- * Apply `@@PROJECT_NAME` substitutions across all `package.json` files
- * in a monorepo starter kit (root + all `packages/*` sub-packages).
+ * Walk a directory recursively, invoking `callback` for every file path.
+ * Skips `node_modules` and `.git` directories.
+ */
+async function walkFiles(
+  dir: string,
+  callback: (filePath: string) => Promise<void>
+): Promise<void> {
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.name === 'node_modules' || entry.name === '.git') continue;
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      await walkFiles(fullPath, callback);
+    } else {
+      await callback(fullPath);
+    }
+  }
+}
+
+/**
+ * Apply `@@PROJECT_NAME` substitutions across ALL text files in the output
+ * directory — TypeScript sources, JSON configs, Markdown docs, and more.
  *
  * Replaces every occurrence of the literal string `@@PROJECT_NAME` with
- * the provided `projectName` — in the root `package.json` and all
- * sub-package `package.json` files under `packages/`.
+ * the provided `projectName`, making the scaffolded project self-contained
+ * and ready to build without manual token replacement.
  */
 async function applyMonorepoSubstitutions(outputDir: string, projectName: string): Promise<void> {
-  // Collect all package.json paths: root + packages/*/
-  const pkgPaths: string[] = [path.join(outputDir, 'package.json')];
+  await walkFiles(outputDir, async (filePath) => {
+    const ext = path.extname(filePath).toLowerCase();
+    // Also match extensionless files like `.env`
+    const basename = path.basename(filePath);
+    const isTextFile =
+      TEXT_EXTENSIONS.has(ext) || basename === '.env' || basename.startsWith('.env.');
 
-  try {
-    const pkgsDir = path.join(outputDir, 'packages');
-    const pkgDirs = await fs.readdir(pkgsDir, { withFileTypes: true });
-    for (const entry of pkgDirs) {
-      if (entry.isDirectory()) {
-        pkgPaths.push(path.join(pkgsDir, entry.name, 'package.json'));
-      }
-    }
-  } catch {
-    // packages/ directory missing — skip sub-packages
-  }
+    if (!isTextFile) return;
 
-  for (const pkgPath of pkgPaths) {
     try {
-      let raw = await fs.readFile(pkgPath, 'utf-8');
-      // Replace all occurrences of @@PROJECT_NAME
-      raw = raw.replace(/@@PROJECT_NAME/g, projectName);
-      await fs.writeFile(pkgPath, raw, 'utf-8');
+      const raw = await fs.readFile(filePath, 'utf-8');
+      if (!raw.includes('@@PROJECT_NAME')) return; // skip files without the token (fast path)
+      const replaced = raw.replace(/@@PROJECT_NAME/g, projectName);
+      await fs.writeFile(filePath, replaced, 'utf-8');
     } catch {
-      // package.json missing or unreadable — skip
+      // unreadable file — skip
     }
-  }
+  });
 }
 
 /**
