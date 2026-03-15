@@ -3,11 +3,14 @@
  *
  * Routes:
  *   #/           → Component Playground (default)
+ *   #/docs       → Component documentation
+ *   #/tokens     → Design token viewer
+ *   #/design     → Design workbench (pen → code)
  *   #/site       → Documentation site (git-backed content via TinaCMS)
  *   #/admin      → TinaCMS admin panel launcher
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles/tokens.css';
 import { PlaygroundRoute } from './routes/playground';
@@ -15,11 +18,16 @@ import { SiteRoute } from './routes/site';
 import { AdminRoute } from './routes/admin';
 import { DocsRoute } from './routes/docs';
 
-type Route = '/' | '/docs' | '/site' | '/admin';
+const TokensRoute = lazy(() => import('./routes/tokens'));
+const DesignRoute = lazy(() => import('./routes/design'));
+
+type Route = '/' | '/docs' | '/tokens' | '/design' | '/site' | '/admin';
 
 function getRoute(): Route {
   const hash = window.location.hash.replace('#', '') || '/';
   if (hash === '/docs') return '/docs';
+  if (hash === '/tokens') return '/tokens';
+  if (hash === '/design') return '/design';
   if (hash === '/site') return '/site';
   if (hash === '/admin') return '/admin';
   return '/';
@@ -28,6 +36,8 @@ function getRoute(): Route {
 const NAV_ITEMS: { route: Route; label: string }[] = [
   { route: '/', label: 'Playground' },
   { route: '/docs', label: 'Docs' },
+  { route: '/tokens', label: 'Tokens' },
+  { route: '/design', label: 'Design' },
   { route: '/site', label: 'Site' },
   { route: '/admin', label: 'Admin' },
 ];
@@ -66,6 +76,22 @@ function Nav({ current }: { current: Route }) {
   );
 }
 
+const LazyFallback = (
+  <div
+    style={{
+      flex: 1,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: 'var(--pg-muted)',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: 14,
+    }}
+  >
+    Loading...
+  </div>
+);
+
 function App() {
   const [route, setRoute] = useState<Route>(getRoute);
 
@@ -82,6 +108,16 @@ function App() {
         {route === '/docs' && <DocsRoute />}
         {route === '/site' && <SiteRoute />}
         {route === '/admin' && <AdminRoute />}
+        {route === '/tokens' && (
+          <Suspense fallback={LazyFallback}>
+            <TokensRoute />
+          </Suspense>
+        )}
+        {route === '/design' && (
+          <Suspense fallback={LazyFallback}>
+            <DesignRoute />
+          </Suspense>
+        )}
         {route === '/' && <PlaygroundRoute />}
       </div>
     </div>

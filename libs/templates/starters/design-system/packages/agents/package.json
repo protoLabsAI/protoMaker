@@ -9,6 +9,18 @@
     ".": {
       "import": "./dist/implement-agent.js",
       "types": "./dist/implement-agent.d.ts"
+    },
+    "./implement": {
+      "import": "./dist/implement-agent.js",
+      "types": "./dist/implement-agent.d.ts"
+    },
+    "./a11y": {
+      "import": "./dist/a11y-agent.js",
+      "types": "./dist/a11y-agent.d.ts"
+    },
+    "./design": {
+      "import": "./dist/design-agent.js",
+      "types": "./dist/design-agent.d.ts"
     }
   },
   "scripts": {

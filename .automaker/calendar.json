@@ -20,5 +20,16 @@
     "sourceId": "ceremony:pipeline-cleanup-system-view-simplification",
     "createdAt": "2026-03-14T21:55:51.040Z",
     "updatedAt": "2026-03-14T21:55:51.040Z"
+  },
+  {
+    "title": "Ceremonies: unified-operations-control-plane",
+    "date": "2026-03-15",
+    "type": "ceremony",
+    "description": "Recurring standup and retro ceremonies for project unified-operations-control-plane",
+    "id": "event-1773612410605-ugmub9gdf",
+    "projectPath": "/home/josh/dev/ava",
+    "sourceId": "ceremony:unified-operations-control-plane",
+    "createdAt": "2026-03-15T22:06:50.605Z",
+    "updatedAt": "2026-03-15T22:06:50.605Z"
   }
 ]
