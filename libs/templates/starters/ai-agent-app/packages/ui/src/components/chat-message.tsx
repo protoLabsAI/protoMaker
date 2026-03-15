@@ -28,7 +28,7 @@ import { MessageSources } from './message-sources.js';
 import type { Citation } from './inline-citation.js';
 import { MessageActions } from './message-actions.js';
 import { MessageBranches } from './message-branches.js';
-import { PlanPart, extractPlanData, type PlanData } from './plan-part.js';
+import { PlanPart, extractPlanData } from './plan-part.js';
 
 const messageVariants = cva('flex gap-3 px-4 py-2', {
   variants: {
@@ -190,16 +190,6 @@ function extractCitations(parts: Array<Record<string, unknown>>): Citation[] {
     }
   }
   return [];
-}
-
-function extractPlan(parts: Array<Record<string, unknown>>): PlanData | null {
-  for (const part of parts) {
-    if (part.type === 'data-plan') {
-      const plan = extractPlanData(part.data);
-      if (plan) return plan;
-    }
-  }
-  return null;
 }
 
 function extractGroupText(group: PartSegment[]): string {

@@ -28,12 +28,13 @@
  * When the model requests approval for a destructive tool call, the streaming
  * response includes an `approval-requested` state. `ToolInvocationPart`
  * renders a `ConfirmationCard` with Approve/Reject buttons.  The handlers
- * below send the decision back via `append()`.
+ * below send the decision back via `sendMessage()`.
  */
 
 import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useMemo } from 'react';
 import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
 import type { UIMessage } from 'ai';
 
 // Import UI components via relative path.
@@ -55,8 +56,8 @@ export const Route = createFileRoute('/')({
 
 function ChatPage() {
   // ── Streaming chat state ──────────────────────────────────────────────────
-  const { messages, append, stop, status } = useChat({
-    api: '/api/chat',
+  const { messages, sendMessage, stop, status } = useChat({
+    transport: new DefaultChatTransport({ api: '/api/chat' }),
   });
 
   const isStreaming = status === 'streaming' || status === 'submitted';
@@ -93,9 +94,9 @@ function ChatPage() {
   // ── Input submission ──────────────────────────────────────────────────────
   const handleSubmit = useCallback(
     (text: string) => {
-      void append({ role: 'user', content: text });
+      void sendMessage({ text });
     },
-    [append]
+    [sendMessage]
   );
 
   // ── HITL tool approval ────────────────────────────────────────────────────
@@ -103,35 +104,20 @@ function ChatPage() {
   // tool call, the user's decision is sent back as a data message.
   const handleToolApprove = useCallback(
     (approvalId: string) => {
-      void append({
-        role: 'user',
-        content: [
-          {
-            type: 'text',
-            text: `Approved tool call ${approvalId}`,
-          },
-        ],
-        // Include the approval metadata for server-side processing
-        data: { type: 'tool-approval', approvalId, approved: true },
+      void sendMessage({
+        text: `Approved tool call ${approvalId}`,
       });
     },
-    [append]
+    [sendMessage]
   );
 
   const handleToolReject = useCallback(
     (approvalId: string) => {
-      void append({
-        role: 'user',
-        content: [
-          {
-            type: 'text',
-            text: `Rejected tool call ${approvalId}`,
-          },
-        ],
-        data: { type: 'tool-approval', approvalId, approved: false },
+      void sendMessage({
+        text: `Rejected tool call ${approvalId}`,
       });
     },
-    [append]
+    [sendMessage]
   );
 
   // ─────────────────────────────────────────────────────────────────────────

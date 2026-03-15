@@ -13,7 +13,14 @@
     "rootDir": "src",
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "paths": {
+      "@@PROJECT_NAME-tools": ["../tools/dist/index.d.ts"],
+      "@@PROJECT_NAME-tools/adapters/mcp": ["../tools/dist/adapters/mcp-adapter.d.ts"],
+      "@@PROJECT_NAME-tools/adapters/express": ["../tools/dist/adapters/express-adapter.d.ts"],
+      "@@PROJECT_NAME-tools/adapters/langchain": ["../tools/dist/adapters/langchain-adapter.d.ts"]
+    }
   },
-  "include": ["src"]
+  "include": ["src"],
+  "references": [{ "path": "../tools" }]
 }
