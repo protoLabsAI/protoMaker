@@ -1,15 +1,26 @@
 ---
 /**
- * Projects listing page
+ * Projects listing page — full filterable grid via the ProjectGrid React island.
  */
 import { getCollection } from 'astro:content';
 import BaseLayout from '@/layouts/BaseLayout.astro';
-import ProjectCard from '@/components/ProjectCard.astro';
+import ProjectGrid from '@/components/sections/ProjectGrid';
 
 const allProjects = await getCollection('projects');
-const projects = allProjects.sort(
-  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
-);
+const projects = allProjects
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+  .map((p) => ({
+    title: p.data.title,
+    description: p.data.description,
+    techStack: p.data.techStack,
+    slug: p.slug,
+    tags: p.data.tags,
+    liveUrl: p.data.liveUrl,
+    repoUrl: p.data.repoUrl,
+    image: p.data.image,
+    imageAlt: p.data.imageAlt,
+    featured: p.data.featured,
+  }));
 ---
 
 <BaseLayout
@@ -25,23 +36,7 @@ const projects = allProjects.sort(
       </p>
     </header>
 
-    <!-- Grid -->
-    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-2">
-      {
-        projects.map((project) => (
-          <ProjectCard
-            title={project.data.title}
-            description={project.data.description}
-            techStack={project.data.techStack}
-            slug={project.slug}
-            liveUrl={project.data.liveUrl}
-            repoUrl={project.data.repoUrl}
-            image={project.data.image}
-            imageAlt={project.data.imageAlt}
-            featured={project.data.featured}
-          />
-        ))
-      }
-    </div>
+    <!-- Filterable project grid (React island) -->
+    <ProjectGrid client:load projects={projects} />
   </div>
 </BaseLayout>
