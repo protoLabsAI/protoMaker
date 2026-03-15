@@ -8,22 +8,49 @@
  * Auto-fix: remove the worktree via 'git worktree remove --force'.
  */
 
-import { createLogger } from '@protolabsai/utils';
-import * as secureFs from '../../../lib/secure-fs.js';
-import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import path from 'path';
+import { createLogger } from '@protolabsai/utils';
+import * as secureFs from '../../../lib/secure-fs.js';
 import type { Dirent } from 'fs';
 import type { FeatureLoader } from '../../feature-loader.js';
 import type { MaintenanceCheck, MaintenanceIssue } from '../types.js';
 
-const execAsync = promisify(exec);
 const logger = createLogger('OrphanedWorktreeCheck');
+
+type ExecAsync = (
+  command: string,
+  options?: { cwd?: string }
+) => Promise<{ stdout: string; stderr: string }>;
+
+type ReaddirFn = (dir: string, options: { withFileTypes: true }) => Promise<Dirent[]>;
+
+type RmFn = (dirPath: string, options: { recursive: boolean; force: boolean }) => Promise<void>;
+
+const defaultExecAsync = promisify(exec) as ExecAsync;
+
+export interface OrphanedWorktreeCheckDeps {
+  execAsync?: ExecAsync;
+  readdirFn?: ReaddirFn;
+  rmFn?: RmFn;
+}
 
 export class OrphanedWorktreeCheck implements MaintenanceCheck {
   readonly id = 'orphaned-worktree';
 
-  constructor(private readonly featureLoader: FeatureLoader) {}
+  private readonly execAsync: ExecAsync;
+  private readonly readdirFn: ReaddirFn;
+  private readonly rmFn: RmFn;
+
+  constructor(
+    private readonly featureLoader: FeatureLoader,
+    deps: OrphanedWorktreeCheckDeps = {}
+  ) {
+    this.execAsync = deps.execAsync ?? defaultExecAsync;
+    this.readdirFn = deps.readdirFn ?? (secureFs.readdir as unknown as ReaddirFn);
+    this.rmFn = deps.rmFn ?? (secureFs.rm as unknown as RmFn);
+  }
 
   async run(projectPath: string): Promise<MaintenanceIssue[]> {
     const issues: MaintenanceIssue[] = [];
@@ -33,10 +60,8 @@ export class OrphanedWorktreeCheck implements MaintenanceCheck {
       let worktreeDirs: string[] = [];
 
       try {
-        const entries = await secureFs.readdir(worktreesDir, { withFileTypes: true });
-        worktreeDirs = (entries as Dirent[])
-          .filter((entry) => entry.isDirectory())
-          .map((entry) => entry.name);
+        const entries = await this.readdirFn(worktreesDir, { withFileTypes: true });
+        worktreeDirs = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
       } catch {
         // No .worktrees directory — nothing to check
         return issues;
@@ -84,14 +109,14 @@ export class OrphanedWorktreeCheck implements MaintenanceCheck {
     logger.info(`Removing orphaned worktree: ${worktreePath}`);
 
     try {
-      await execAsync(`git worktree remove "${worktreePath}" --force`, { cwd: projectPath });
+      await this.execAsync(`git worktree remove "${worktreePath}" --force`, { cwd: projectPath });
       logger.info(`Removed orphaned worktree: ${worktreePath}`);
     } catch (error) {
       logger.warn(`git worktree remove failed, trying manual cleanup: ${error}`);
 
       try {
-        await secureFs.rm(worktreePath, { recursive: true, force: true });
-        await execAsync('git worktree prune', { cwd: projectPath });
+        await this.rmFn(worktreePath, { recursive: true, force: true });
+        await this.execAsync('git worktree prune', { cwd: projectPath });
         logger.info(`Manually cleaned up orphaned worktree: ${worktreePath}`);
       } catch (cleanupError) {
         logger.error(`Failed to clean up orphaned worktree: ${cleanupError}`);
@@ -102,10 +127,10 @@ export class OrphanedWorktreeCheck implements MaintenanceCheck {
 
   private async isWorktreeOrphaned(worktreePath: string): Promise<boolean> {
     try {
-      const { stdout } = await execAsync('git status --porcelain', { cwd: worktreePath });
+      const { stdout } = await this.execAsync('git status --porcelain', { cwd: worktreePath });
       if (stdout.trim()) return false;
 
-      const { stdout: branchStdout } = await execAsync('git branch --show-current', {
+      const { stdout: branchStdout } = await this.execAsync('git branch --show-current', {
         cwd: worktreePath,
       });
       const branch = branchStdout.trim();
@@ -113,11 +138,15 @@ export class OrphanedWorktreeCheck implements MaintenanceCheck {
       if (!branch) return true; // Detached HEAD
 
       try {
-        await execAsync(`git merge-base --is-ancestor ${branch} main`, { cwd: worktreePath });
+        await this.execAsync(`git merge-base --is-ancestor ${branch} main`, {
+          cwd: worktreePath,
+        });
         return true;
       } catch {
         try {
-          await execAsync(`git merge-base --is-ancestor ${branch} master`, { cwd: worktreePath });
+          await this.execAsync(`git merge-base --is-ancestor ${branch} master`, {
+            cwd: worktreePath,
+          });
           return true;
         } catch {
           return false;

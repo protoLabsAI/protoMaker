@@ -2,22 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OrphanedWorktreeCheck } from '@/services/maintenance/checks/orphaned-worktree-check.js';
 import type { Feature } from '@protolabsai/types';
 
-// Mock secure-fs and child_process to avoid real filesystem/git calls
-vi.mock('@/lib/secure-fs.js', () => ({
-  readdir: vi.fn(),
-  rm: vi.fn(),
-}));
-
-vi.mock('child_process', () => ({
-  exec: vi.fn(),
-}));
-
-import * as secureFs from '@/lib/secure-fs.js';
-import { exec } from 'child_process';
-
-const mockedReaddir = vi.mocked(secureFs.readdir);
-const mockedExec = vi.mocked(exec);
-
 function makeFeature(overrides: Partial<Feature> = {}): Feature {
   return {
     id: 'feat-1',
@@ -31,15 +15,26 @@ function makeFeature(overrides: Partial<Feature> = {}): Feature {
 describe('OrphanedWorktreeCheck', () => {
   let check: OrphanedWorktreeCheck;
   let mockFeatureLoader: { getAll: ReturnType<typeof vi.fn> };
+  let mockExecAsync: ReturnType<typeof vi.fn>;
+  let mockReaddir: ReturnType<typeof vi.fn>;
+  let mockRm: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockFeatureLoader = { getAll: vi.fn() };
-    check = new OrphanedWorktreeCheck(mockFeatureLoader as any);
+    mockExecAsync = vi.fn();
+    mockReaddir = vi.fn();
+    mockRm = vi.fn().mockResolvedValue(undefined);
+
+    check = new OrphanedWorktreeCheck(mockFeatureLoader as any, {
+      execAsync: mockExecAsync,
+      readdirFn: mockReaddir,
+      rmFn: mockRm,
+    });
   });
 
   it('returns no issues when .worktrees directory does not exist', async () => {
-    mockedReaddir.mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+    mockReaddir.mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
     mockFeatureLoader.getAll.mockResolvedValue([]);
 
     const issues = await check.run('/project');
@@ -47,9 +42,7 @@ describe('OrphanedWorktreeCheck', () => {
   });
 
   it('returns no issues when all worktrees have matching features', async () => {
-    mockedReaddir.mockResolvedValue([
-      { name: 'my-feature', isDirectory: () => true } as any,
-    ]);
+    mockReaddir.mockResolvedValue([{ name: 'my-feature', isDirectory: () => true }]);
     mockFeatureLoader.getAll.mockResolvedValue([makeFeature({ branchName: 'feature/my-feature' })]);
 
     const issues = await check.run('/project');
@@ -57,9 +50,9 @@ describe('OrphanedWorktreeCheck', () => {
   });
 
   it('skips main and master worktree directories', async () => {
-    mockedReaddir.mockResolvedValue([
-      { name: 'main', isDirectory: () => true } as any,
-      { name: 'master', isDirectory: () => true } as any,
+    mockReaddir.mockResolvedValue([
+      { name: 'main', isDirectory: () => true },
+      { name: 'master', isDirectory: () => true },
     ]);
     mockFeatureLoader.getAll.mockResolvedValue([]);
 
@@ -68,25 +61,68 @@ describe('OrphanedWorktreeCheck', () => {
   });
 
   it('detects orphaned worktree with no uncommitted changes and merged branch', async () => {
-    mockedReaddir.mockResolvedValue([
-      { name: 'orphaned-branch', isDirectory: () => true } as any,
-    ]);
+    mockReaddir.mockResolvedValue([{ name: 'orphaned-branch', isDirectory: () => true }]);
     mockFeatureLoader.getAll.mockResolvedValue([makeFeature({ branchName: 'feature/other' })]);
 
-    // Mock exec: git status returns clean, git branch returns branch, merge-base succeeds
-    mockedExec
-      .mockImplementationOnce((_cmd, _opts, cb: any) => cb(null, { stdout: '' }, ''))
-      .mockImplementationOnce((_cmd, _opts, cb: any) => cb(null, { stdout: 'orphaned-branch\n' }, ''))
-      .mockImplementationOnce((_cmd, _opts, cb: any) => cb(null, { stdout: '' }, '')); // merge-base succeeds = merged
+    mockExecAsync
+      .mockResolvedValueOnce({ stdout: '', stderr: '' }) // git status clean
+      .mockResolvedValueOnce({ stdout: 'orphaned-branch\n', stderr: '' }) // git branch --show-current
+      .mockResolvedValueOnce({ stdout: '', stderr: '' }); // merge-base --is-ancestor succeeds
 
     const issues = await check.run('/project');
     expect(issues).toHaveLength(1);
     expect(issues[0].checkId).toBe('orphaned-worktree');
     expect(issues[0].autoFixable).toBe(true);
+    expect(issues[0].severity).toBe('info');
+  });
+
+  it('does not flag worktree with uncommitted changes', async () => {
+    mockReaddir.mockResolvedValue([{ name: 'dirty-branch', isDirectory: () => true }]);
+    mockFeatureLoader.getAll.mockResolvedValue([]);
+
+    mockExecAsync.mockResolvedValueOnce({ stdout: ' M somefile.ts\n', stderr: '' });
+
+    const issues = await check.run('/project');
+    expect(issues).toHaveLength(0);
+  });
+
+  it('does not flag worktree that is not merged', async () => {
+    mockReaddir.mockResolvedValue([{ name: 'active-branch', isDirectory: () => true }]);
+    mockFeatureLoader.getAll.mockResolvedValue([]);
+
+    mockExecAsync
+      .mockResolvedValueOnce({ stdout: '', stderr: '' }) // git status clean
+      .mockResolvedValueOnce({ stdout: 'active-branch\n', stderr: '' }) // git branch
+      .mockRejectedValueOnce(new Error('not merged')) // merge-base main fails
+      .mockRejectedValueOnce(new Error('not merged')); // merge-base master fails
+
+    const issues = await check.run('/project');
+    expect(issues).toHaveLength(0);
+  });
+
+  it('fix removes orphaned worktree', async () => {
+    mockReaddir.mockResolvedValue([{ name: 'orphaned', isDirectory: () => true }]);
+    mockFeatureLoader.getAll.mockResolvedValue([]);
+
+    mockExecAsync
+      .mockResolvedValueOnce({ stdout: '', stderr: '' }) // git status
+      .mockResolvedValueOnce({ stdout: 'orphaned\n', stderr: '' }) // git branch
+      .mockResolvedValueOnce({ stdout: '', stderr: '' }); // merge-base
+
+    const issues = await check.run('/project');
+    expect(issues).toHaveLength(1);
+
+    mockExecAsync.mockResolvedValueOnce({ stdout: '', stderr: '' }); // git worktree remove
+    await check.fix!('/project', issues[0]);
+
+    expect(mockExecAsync).toHaveBeenCalledWith(
+      expect.stringContaining('git worktree remove'),
+      expect.objectContaining({ cwd: '/project' })
+    );
   });
 
   it('returns empty array when featureLoader throws', async () => {
-    mockedReaddir.mockResolvedValue([{ name: 'some-branch', isDirectory: () => true } as any]);
+    mockReaddir.mockResolvedValue([{ name: 'some-branch', isDirectory: () => true }]);
     mockFeatureLoader.getAll.mockRejectedValue(new Error('error'));
 
     const issues = await check.run('/project');
