@@ -1,0 +1,9 @@
+{
+  "author": "Alice Chen",
+  "role": "Engineering Manager",
+  "company": "Acme Corp",
+  "quote": "Working with this team completely changed how we think about developer tooling. The Automaker system they built reduced our time-to-merge by 60% in the first quarter alone.",
+  "avatar": "/images/testimonials/alice.jpg",
+  "link": "https://linkedin.com/in/example",
+  "order": 1
+}

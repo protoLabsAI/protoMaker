@@ -1,0 +1,72 @@
+---
+/**
+ * BlogCard — compact post summary card for the blog index.
+ */
+interface Props {
+  title: string;
+  description: string;
+  pubDate: Date;
+  slug: string;
+  tags?: string[];
+}
+
+const { title, description, pubDate, slug, tags = [] } = Astro.props;
+
+const formattedDate = pubDate.toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
+---
+
+<article
+  class="group rounded-xl border p-6 transition-all duration-200"
+  style="background: var(--color-surface-2); border-color: var(--border-subtle);"
+>
+  <!-- Date + tags -->
+  <div class="mb-3 flex flex-wrap items-center gap-3">
+    <time
+      datetime={pubDate.toISOString()}
+      class="text-xs"
+      style="color: var(--color-muted);"
+    >
+      {formattedDate}
+    </time>
+    {
+      tags.slice(0, 3).map((tag) => (
+        <span
+          class="rounded px-2 py-0.5 text-xs"
+          style="background: var(--color-surface-3); color: #a1a1aa;"
+        >
+          {tag}
+        </span>
+      ))
+    }
+  </div>
+
+  <!-- Title -->
+  <h3 class="mb-2 text-base font-bold text-white leading-snug">
+    <a
+      href={`/blog/${slug}`}
+      class="no-underline transition-colors group-hover:text-accent"
+      style="color: inherit;"
+    >
+      {title}
+    </a>
+  </h3>
+
+  <!-- Description -->
+  <p class="text-sm leading-relaxed" style="color: var(--color-muted);">
+    {description}
+  </p>
+
+  <div class="mt-4">
+    <a
+      href={`/blog/${slug}`}
+      class="text-sm font-medium no-underline transition-colors"
+      style="color: var(--color-accent);"
+    >
+      Read more →
+    </a>
+  </div>
+</article>

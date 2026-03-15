@@ -1,0 +1,147 @@
+---
+/**
+ * About page — bio, skills, and contact details.
+ */
+import { getCollection } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+
+const [configEntry] = await getCollection('siteConfig');
+const config = configEntry.data;
+---
+
+<BaseLayout
+  title="About"
+  description={`Learn more about ${config.name} — ${config.bio}`}
+>
+  <div class="mx-auto max-w-3xl px-6 py-16">
+    <!-- Header -->
+    <header class="mb-12">
+      <h1 class="mb-4 text-4xl font-extrabold text-white">About me</h1>
+      <p class="text-lg leading-relaxed" style="color: #a1a1aa;">
+        {config.bio}
+      </p>
+    </header>
+
+    <!-- What I do -->
+    <section class="mb-12">
+      <h2 class="mb-4 text-xl font-bold text-white">What I build</h2>
+      <p class="text-base leading-relaxed" style="color: #a1a1aa;">
+        I focus on the intersection of developer experience and AI. Most of my work lives in the space
+        where automation meets craft — building systems that help teams ship faster without sacrificing
+        quality or visibility.
+      </p>
+      <p class="mt-4 text-base leading-relaxed" style="color: #a1a1aa;">
+        When I'm not writing code, I'm writing about it. I share what I learn through this blog,
+        and I try to keep the writing honest about trade-offs and failure as much as wins.
+      </p>
+    </section>
+
+    <!-- Skills -->
+    <section class="mb-12">
+      <h2 class="mb-6 text-xl font-bold text-white">Skills and tools</h2>
+      <div class="grid gap-4 sm:grid-cols-2">
+        {
+          [
+            {
+              category: 'Languages',
+              items: ['TypeScript', 'JavaScript', 'Python', 'SQL'],
+            },
+            {
+              category: 'Frontend',
+              items: ['React', 'Astro', 'Tailwind CSS', 'Figma'],
+            },
+            {
+              category: 'Backend',
+              items: ['Node.js', 'Express', 'PostgreSQL', 'Redis'],
+            },
+            {
+              category: 'AI / ML',
+              items: ['Claude API', 'LangChain', 'LangGraph', 'Langfuse'],
+            },
+          ].map(({ category, items }) => (
+            <div
+              class="rounded-xl border p-5"
+              style="background: var(--color-surface-2); border-color: var(--border-subtle);"
+            >
+              <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide" style="color: var(--color-accent);">
+                {category}
+              </h3>
+              <ul class="flex flex-wrap gap-2 list-none p-0 m-0">
+                {items.map((item) => (
+                  <li
+                    class="rounded px-2.5 py-1 text-sm"
+                    style="background: var(--color-surface-3); color: #d4d4d8;"
+                  >
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    <!-- Contact -->
+    <section>
+      <h2 class="mb-4 text-xl font-bold text-white">Get in touch</h2>
+      <p class="mb-6 text-base leading-relaxed" style="color: #a1a1aa;">
+        I'm always happy to talk about interesting problems, potential collaborations, or
+        just to connect with other builders.
+      </p>
+
+      <div class="flex flex-wrap gap-3">
+        {
+          config.email && (
+            <a
+              href={`mailto:${config.email}`}
+              class="rounded-lg px-5 py-2.5 text-sm font-semibold text-white no-underline transition-opacity hover:opacity-90"
+              style="background: var(--color-accent);"
+            >
+              Email me
+            </a>
+          )
+        }
+        {
+          config.social.github && (
+            <a
+              href={config.social.github}
+              target="_blank"
+              rel="noopener"
+              class="rounded-lg border px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:border-white/30"
+              style="border-color: var(--border-subtle);"
+            >
+              GitHub
+            </a>
+          )
+        }
+        {
+          config.social.linkedin && (
+            <a
+              href={config.social.linkedin}
+              target="_blank"
+              rel="noopener"
+              class="rounded-lg border px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:border-white/30"
+              style="border-color: var(--border-subtle);"
+            >
+              LinkedIn
+            </a>
+          )
+        }
+        {
+          config.social.twitter && (
+            <a
+              href={config.social.twitter}
+              target="_blank"
+              rel="noopener"
+              class="rounded-lg border px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:border-white/30"
+              style="border-color: var(--border-subtle);"
+            >
+              Twitter / X
+            </a>
+          )
+        }
+      </div>
+    </section>
+  </div>
+</BaseLayout>
