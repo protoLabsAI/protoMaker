@@ -7,7 +7,13 @@
 /**
  * Starter kit type determines which features and coding rules to include.
  */
-export type StarterKitType = 'docs' | 'portfolio' | 'landing-page' | 'extension' | 'general';
+export type StarterKitType =
+  | 'docs'
+  | 'portfolio'
+  | 'landing-page'
+  | 'extension'
+  | 'general'
+  | 'ai-agent-app';
 
 /**
  * Options for scaffolding a new starter kit project.

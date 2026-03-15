@@ -21,7 +21,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * Resolve the path to a starter kit directory.
  * Works from both the compiled `dist/` and the `src/` directory during dev.
  */
-function resolveStarterDir(kitName: 'docs' | 'portfolio' | 'general' | 'landing-page'): string {
+function resolveStarterDir(
+  kitName: 'docs' | 'portfolio' | 'general' | 'landing-page' | 'ai-agent-app'
+): string {
   // From dist/: ../starters/<kit>  (libs/templates/starters/<kit>)
   const fromDist = path.resolve(__dirname, '..', 'starters', kitName);
   return fromDist;
@@ -257,6 +259,87 @@ export async function scaffoldGeneralStarter(options: ScaffoldOptions): Promise<
       'utf-8'
     );
 
+    const entries = await fs.readdir(outputDir);
+    filesCreated.push(...entries.map((e) => path.join(outputDir, e)));
+
+    return { success: true, outputDir, filesCreated };
+  } catch (error) {
+    return {
+      success: false,
+      outputDir,
+      filesCreated,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+/**
+ * Apply `@@PROJECT_NAME` substitutions across all `package.json` files
+ * in a monorepo starter kit (root + all `packages/*` sub-packages).
+ *
+ * Replaces every occurrence of the literal string `@@PROJECT_NAME` with
+ * the provided `projectName` — in the root `package.json` and all
+ * sub-package `package.json` files under `packages/`.
+ */
+async function applyMonorepoSubstitutions(outputDir: string, projectName: string): Promise<void> {
+  // Collect all package.json paths: root + packages/*/
+  const pkgPaths: string[] = [path.join(outputDir, 'package.json')];
+
+  try {
+    const pkgsDir = path.join(outputDir, 'packages');
+    const pkgDirs = await fs.readdir(pkgsDir, { withFileTypes: true });
+    for (const entry of pkgDirs) {
+      if (entry.isDirectory()) {
+        pkgPaths.push(path.join(pkgsDir, entry.name, 'package.json'));
+      }
+    }
+  } catch {
+    // packages/ directory missing — skip sub-packages
+  }
+
+  for (const pkgPath of pkgPaths) {
+    try {
+      let raw = await fs.readFile(pkgPath, 'utf-8');
+      // Replace all occurrences of @@PROJECT_NAME
+      raw = raw.replaceAll('@@PROJECT_NAME', projectName);
+      await fs.writeFile(pkgPath, raw, 'utf-8');
+    } catch {
+      // package.json missing or unreadable — skip
+    }
+  }
+}
+
+/**
+ * Scaffold a new **AI agent app** monorepo at `options.outputDir`.
+ *
+ * Copies `starters/ai-agent-app/` to the output directory, then applies
+ * `@@PROJECT_NAME` substitutions across the root `package.json` and all
+ * sub-package `package.json` files under `packages/`.
+ *
+ * The monorepo includes three workspaces:
+ * - `packages/ui` — React frontend
+ * - `packages/server` — Node.js backend with the Anthropic SDK
+ * - `packages/app` — standalone agent entry point with the Anthropic SDK
+ *
+ * @example
+ * ```ts
+ * const result = await scaffoldAiAgentAppStarter({
+ *   projectName: 'my-agent',
+ *   outputDir: '/tmp/my-agent',
+ * });
+ * // → /tmp/my-agent/ contains a ready-to-run AI agent monorepo
+ * ```
+ */
+export async function scaffoldAiAgentAppStarter(options: ScaffoldOptions): Promise<ScaffoldResult> {
+  const { projectName, outputDir } = options;
+  const filesCreated: string[] = [];
+
+  try {
+    const starterDir = resolveStarterDir('ai-agent-app');
+    await copyDir(starterDir, outputDir);
+    await applyMonorepoSubstitutions(outputDir, projectName);
+
+    // List top-level created entries for reporting
     const entries = await fs.readdir(outputDir);
     filesCreated.push(...entries.map((e) => path.join(outputDir, e)));
 
