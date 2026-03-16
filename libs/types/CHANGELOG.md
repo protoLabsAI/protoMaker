@@ -1,5 +1,13 @@
 # @protolabsai/types
 
+## 0.63.0
+
+### Minor Changes
+
+- ### Features
+  - wire real CI/CD deployment events into DORA metrics
+  - wire real CI/CD deployment events into DORA metrics
+
 ## 0.62.0
 
 ### Minor Changes

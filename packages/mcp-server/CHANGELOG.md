@@ -1,5 +1,18 @@
 # @protolabsai/mcp-server
 
+## 0.63.0
+
+### Minor Changes
+
+- ### Features
+  - wire real CI/CD deployment events into DORA metrics
+  - wire real CI/CD deployment events into DORA metrics
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/tools@0.63.0
+
 ## 0.62.0
 
 ### Minor Changes
