@@ -148,7 +148,9 @@ export class ContextFtsIndex {
     });
     tx();
 
-    logger.debug(`ContextFtsIndex: indexed ${rows.length} parts for conversation=${conversationId}`);
+    logger.debug(
+      `ContextFtsIndex: indexed ${rows.length} parts for conversation=${conversationId}`
+    );
     return rows.length;
   }
 
@@ -156,9 +158,7 @@ export class ContextFtsIndex {
    * Remove all FTS5 entries for a conversation (e.g. when a conversation is deleted).
    */
   removeConversation(conversationId: string): void {
-    this.db
-      .prepare("DELETE FROM messages_fts WHERE conversation_id = ?")
-      .run(conversationId);
+    this.db.prepare('DELETE FROM messages_fts WHERE conversation_id = ?').run(conversationId);
   }
 
   /**
@@ -166,7 +166,7 @@ export class ContextFtsIndex {
    * Useful after bulk imports or schema repairs.
    */
   rebuild(): number {
-    this.db.prepare("DELETE FROM messages_fts").run();
+    this.db.prepare('DELETE FROM messages_fts').run();
 
     const rows = this.db
       .prepare(
@@ -240,9 +240,7 @@ export class ContextGrep {
       matches.push(...this.searchLargeFiles(query, conversationId, limit, queryFirstWord));
     }
 
-    logger.debug(
-      `lcm_grep: query="${query}" fts=${ftsUsed} → ${matches.length} matches`
-    );
+    logger.debug(`lcm_grep: query="${query}" fts=${ftsUsed} → ${matches.length} matches`);
 
     return { matches, query, totalMatches: matches.length, ftsUsed };
   }
@@ -263,9 +261,9 @@ export class ContextGrep {
   ): GrepMatch[] | null {
     try {
       // Check if FTS table has any rows before using it
-      const count = this.db
-        .prepare('SELECT COUNT(*) AS n FROM messages_fts')
-        .get() as { n: number };
+      const count = this.db.prepare('SELECT COUNT(*) AS n FROM messages_fts').get() as {
+        n: number;
+      };
 
       if (count.n === 0) return null;
 

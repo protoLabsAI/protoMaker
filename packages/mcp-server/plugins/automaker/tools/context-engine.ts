@@ -190,8 +190,4 @@ export const LCM_EXPAND_TOOL = {
 // ---------------------------------------------------------------------------
 
 /** All three context-engine retrieval tools for bulk registration. */
-export const CONTEXT_ENGINE_TOOLS = [
-  LCM_GREP_TOOL,
-  LCM_DESCRIBE_TOOL,
-  LCM_EXPAND_TOOL,
-] as const;
+export const CONTEXT_ENGINE_TOOLS = [LCM_GREP_TOOL, LCM_DESCRIBE_TOOL, LCM_EXPAND_TOOL] as const;

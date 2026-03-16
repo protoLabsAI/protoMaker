@@ -129,9 +129,9 @@ export class ContextDescriber {
     const maxParentDepth = options.maxParentDepth ?? 3;
 
     // Try context_nodes
-    const nodeRow = this.db
-      .prepare('SELECT * FROM context_nodes WHERE id = ?')
-      .get(nodeId) as DbContextNode | undefined;
+    const nodeRow = this.db.prepare('SELECT * FROM context_nodes WHERE id = ?').get(nodeId) as
+      | DbContextNode
+      | undefined;
 
     if (nodeRow) {
       const desc = this.mapContextNode(nodeRow);
@@ -143,9 +143,9 @@ export class ContextDescriber {
     }
 
     // Try large_files
-    const fileRow = this.db
-      .prepare('SELECT * FROM large_files WHERE id = ?')
-      .get(nodeId) as DbLargeFile | undefined;
+    const fileRow = this.db.prepare('SELECT * FROM large_files WHERE id = ?').get(nodeId) as
+      | DbLargeFile
+      | undefined;
 
     if (fileRow) {
       logger.debug(`lcm_describe: found large_file id=${nodeId}`);

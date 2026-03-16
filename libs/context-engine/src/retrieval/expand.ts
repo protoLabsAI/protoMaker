@@ -150,9 +150,9 @@ export class ContextNodeStore {
    * Retrieve a node by ID, or null if not found.
    */
   getNode(id: string): StorableNode | null {
-    const row = this.db
-      .prepare('SELECT * FROM context_nodes WHERE id = ?')
-      .get(id) as DbContextNode | undefined;
+    const row = this.db.prepare('SELECT * FROM context_nodes WHERE id = ?').get(id) as
+      | DbContextNode
+      | undefined;
 
     return row ? this.mapRow(row) : null;
   }
@@ -289,11 +289,7 @@ export class ContextExpander {
       .get(options.nodeId) as DbContextNode | undefined;
 
     if (nodeRow) {
-      const { content, truncated, sourceCount } = this.walkNode(
-        nodeRow,
-        tokenCap,
-        deadline
-      );
+      const { content, truncated, sourceCount } = this.walkNode(nodeRow, tokenCap, deadline);
 
       logger.debug(
         `lcm_expand: context_node id=${options.nodeId} depth=${nodeRow.depth} ` +
@@ -402,9 +398,7 @@ export class ContextExpander {
 
         if (tokensSoFar + chunkTokens > tokenCap) {
           const remaining = sourceIds.length - i;
-          lines.push(
-            `\n[Truncated: token cap reached — ${remaining} sub-node(s) not expanded.]`
-          );
+          lines.push(`\n[Truncated: token cap reached — ${remaining} sub-node(s) not expanded.]`);
           truncated = true;
           break;
         }
@@ -429,9 +423,7 @@ export class ContextExpander {
    */
   private expandMessage(messageId: string): string | null {
     const rows = this.db
-      .prepare(
-        'SELECT content FROM message_parts WHERE message_id = ? ORDER BY position ASC'
-      )
+      .prepare('SELECT content FROM message_parts WHERE message_id = ? ORDER BY position ASC')
       .all(messageId) as Array<{ content: string }>;
 
     if (rows.length === 0) return null;
@@ -442,11 +434,7 @@ export class ContextExpander {
    * Wrap the expanded content with optional focus-question header and
    * truncation footer.
    */
-  private wrapContent(
-    content: string,
-    question: string | undefined,
-    truncated: boolean
-  ): string {
+  private wrapContent(content: string, question: string | undefined, truncated: boolean): string {
     const parts: string[] = [];
 
     if (question) {
