@@ -7,6 +7,7 @@ import {
   Network,
   Inbox,
   Settings,
+  Settings2,
   NotebookPen,
   Palette,
   CalendarDays,
@@ -82,6 +83,8 @@ interface UseNavigationProps {
   unreadCeremonyCount?: number;
   /** Whether spec generation is currently running for the current project */
   isSpecGenerating?: boolean;
+  /** System health level for the Operations nav item indicator */
+  healthLevel?: 'healthy' | 'warning' | 'critical';
 }
 
 export function useNavigation({
@@ -205,7 +208,7 @@ export function useNavigation({
       },
     ];
 
-    // Add Inbox and Project Settings as a standalone section (no label for visual separation)
+    // Add Inbox, Operations, and Project Settings as a standalone section (no label for visual separation)
     const inboxCount = (unreadNotificationsCount ?? 0) + (unreadCeremonyCount ?? 0);
     sections.push({
       label: '',
@@ -216,6 +219,11 @@ export function useNavigation({
           icon: Inbox,
           shortcut: shortcuts.inbox,
           count: inboxCount || undefined,
+        },
+        {
+          id: 'ops',
+          label: 'Operations',
+          icon: Settings2,
         },
         {
           id: 'project-settings',
