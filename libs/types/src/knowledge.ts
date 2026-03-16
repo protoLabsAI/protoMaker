@@ -97,6 +97,9 @@ export interface KnowledgeStoreStats {
 
   /** Whether hybrid retrieval is enabled */
   enabledHybridRetrieval: boolean;
+
+  /** Timestamp of last stale chunk prune */
+  lastPruneAt?: string;
 }
 
 /**
