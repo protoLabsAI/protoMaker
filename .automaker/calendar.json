@@ -319,7 +319,7 @@
     "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773689186215-1q5hm2ott",
     "createdAt": "2026-03-16T21:01:51.572Z",
-    "updatedAt": "2026-03-16T21:05:39.975Z"
+    "updatedAt": "2026-03-16T21:08:49.323Z"
   },
   {
     "title": "Started: System Improvement: recurring merge_conflict failures",
@@ -331,5 +331,82 @@
     "sourceId": "ops:feature:started:feature-1773695049401-q699unnqb",
     "createdAt": "2026-03-16T21:04:40.453Z",
     "updatedAt": "2026-03-16T21:04:40.453Z"
+  },
+  {
+    "title": "Merged: feature-1773689186215-1q5hm2ott",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773695734410-wnfb4lxe9",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773689186215-1q5hm2ott",
+    "createdAt": "2026-03-16T21:15:34.406Z",
+    "updatedAt": "2026-03-16T21:17:07.299Z"
+  },
+  {
+    "title": "Completed: Leaf Summarization",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation completed",
+    "id": "event-1773695734419-ffsjve8j7",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:completed:feature-1773689186215-1q5hm2ott",
+    "createdAt": "2026-03-16T21:15:34.419Z",
+    "updatedAt": "2026-03-16T21:15:34.419Z"
+  },
+  {
+    "title": "Started: Cascading Condensation",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773695831032-bc199m65w",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773689186216-ig1sclg11",
+    "createdAt": "2026-03-16T21:17:11.030Z",
+    "updatedAt": "2026-03-16T21:17:11.030Z"
+  },
+  {
+    "title": "Completed: Cascading Condensation",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation completed",
+    "id": "event-1773696194610-dzq92z3ko",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:completed:feature-1773689186216-ig1sclg11",
+    "createdAt": "2026-03-16T21:23:14.607Z",
+    "updatedAt": "2026-03-16T21:23:14.607Z"
+  },
+  {
+    "title": "Started: Context Assembler",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773696197241-56qstajm4",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773689186216-sdwdztkbj",
+    "createdAt": "2026-03-16T21:23:17.238Z",
+    "updatedAt": "2026-03-16T21:23:17.238Z"
+  },
+  {
+    "title": "Merged: feature-1773689186216-ig1sclg11",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773696377824-xlpxr5a60",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773689186216-ig1sclg11",
+    "createdAt": "2026-03-16T21:26:17.805Z",
+    "updatedAt": "2026-03-16T21:26:17.805Z"
+  },
+  {
+    "title": "Merged: feature-1773689186216-sdwdztkbj",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773696432741-f4xfkfack",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773689186216-sdwdztkbj",
+    "createdAt": "2026-03-16T21:27:12.739Z",
+    "updatedAt": "2026-03-16T21:27:12.739Z"
   }
 ]

@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 613
-  referenced: 189
-  successfulFeatures: 189
+  loaded: 616
+  referenced: 191
+  successfulFeatures: 191
 ---
 <!-- domain: API Design & Integration | GitHub GraphQL, REST endpoints, HTTP client patterns -->
 
@@ -546,3 +546,10 @@ usageStats:
 - **Problem solved:** The bug existed because Feature.assignee was never explicitly defined in the type—it was silently undefined everywhere, so callers had no way to know it should exist or what it means.
 - **Why this works:** Explicit typing forces future code to consciously acknowledge the field exists and what it does. Prevents similar silent-miss bugs. Type contract is stronger than documentation-only.
 - **Trade-offs:** Requires discipline to keep type definitions in sync with data model. Gains: anyone reading the type immediately sees the field and can navigate to its JSDoc semantics.
+
+### Non-text message parts (tool_use, tool_result, image, document) are converted to inline text placeholders like `[tool_use: ...]` rather than preserved as structured content (2026-03-16)
+- **Context:** Message extraction must produce string content for AssembledMessage while preserving signal about non-text parts
+- **Why:** Simplified API contract (string content), model can still recognize non-text occurred. Avoids complex content union types in assembly layer.
+- **Rejected:** Preserving structured content (union types); complicates assembler API. Dropping non-text entirely; loses signal to model.
+- **Trade-offs:** Simpler API but rich content (images/documents) reduced to text labels. Model loses visual/document content but gains full context awareness.
+- **Breaking if changed:** If non-text parts must be preserved as structured content, entire AssembledMessage type and formatter require overhaul to support content unions.

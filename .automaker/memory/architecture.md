@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 589
-  referenced: 155
-  successfulFeatures: 155
+  loaded: 592
+  referenced: 157
+  successfulFeatures: 157
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -2100,3 +2100,61 @@ usageStats:
 - **Problem solved:** Workflow must pause execution while awaiting external event (PR review approval, merge completion) without blocking the state machine thread
 - **Why this works:** Self-loop + event emission decouples waiting from blocking. Allows caller to disconnect, recover checkpoints, handle other work. Crash recovery can replay events and resume from checkpoint
 - **Trade-offs:** Requires event coordination logic outside state machine (listeners must handle emitted events) but enables clean multi-step recovery and better debuggability
+
+### Three-level escalation fallback: normal (full LLM) → aggressive (artefact-only LLM) → deterministic (pure regex). Each level invoked only if previous mode exceeds token budget. (2026-03-16)
+- **Context:** LLM-based summarization can fail (rate limits, timeouts, cost), and regex-only extraction loses semantic value. Need resilience without abandoning quality.
+- **Why:** Deterministic fallback ensures the system always produces _something meaningful_ rather than failing gracefully into nothing. Regex extracts high-signal artefacts (files, commands, errors) without external dependencies. Escalation preserves quality when possible, degrades gracefully under load.
+- **Rejected:** Pure LLM-only: simpler code, fails entirely on LLM errors. Pure regex-only: avoids LLM cost but loses semantic context. No escalation: picks one mode statically, can't adapt to message content.
+- **Trade-offs:** Escalation adds complexity (3 code paths) but buys resilience and cost adaptability. Deterministic mode is highly specific to CLI/error contexts; wouldn't work for prose-heavy transcripts.
+- **Breaking if changed:** Removing deterministic fallback makes system fail-hard on LLM unavailability. Removing escalation removes cost/latency adaptability.
+
+#### [Pattern] lcm_expand footer attached to every CompactedNode: unique ID, extracted topics, compression metrics. Footer is part of the summary text itself (affects token count), making expansion a first-class agent-driven feature. (2026-03-16)
+- **Problem solved:** Compacted nodes lose detail; agents need a hook to request re-expansion. Must signal what's expandable without requiring separate metadata channels.
+- **Why this works:** By embedding footer in summary text, it's visible in any context where the summary appears. The unique ID gives agents a stable reference for expansion requests. Topics hint at what was lost, guiding when to expand.
+- **Trade-offs:** Footer adds 50–100 tokens per node; this overhead is acceptable for the expansion contract it enables. Tightly couples summary format to expansion API.
+
+#### [Pattern] Topic extraction uses priority order: bullet points → artefact prefixes (File:, Cmd:, Error:) → sentence fragments. Structured output (lists) is trusted as already-summarized; prose requires interpretation. (2026-03-16)
+- **Problem solved:** Footer topics hint at what was compacted. Different message structures (deterministic output vs. prose) have different signal-to-noise ratios.
+- **Why this works:** Bullet points and artefact prefixes are machine-generated or explicitly structured; they're condensed by design. Sentence fragments require NLP to identify boundaries. Prefer high-confidence signals first.
+- **Trade-offs:** Prioritizes deterministic/artefact output; prose-heavy transcripts get generic topics. Works well for code/debug sessions, less ideal for meeting notes.
+
+### Fresh-tail protection: last N messages (configurable `freshTailSize`) are never compacted, even if total token budget is exceeded. (2026-03-16)
+- **Context:** Compaction is lossy; preserving recent context matters more than distant context because agents use recency bias.
+- **Why:** Recent messages have higher epistemic weight (more relevant to current task). Protecting them ensures agent context window isn't polluted by stale compacted summaries.
+- **Rejected:** Compress everything uniformly: simpler logic, but loses recent context which is most useful. Soft threshold: still risks compacting fresh messages under load.
+- **Trade-offs:** Reduces compactible window (less efficiency), but maintains availability of immediate context. Requires tuning `freshTailSize` per use case.
+- **Breaking if changed:** Removing fresh-tail protection causes recent context to age too quickly in memory-constrained scenarios, reducing agent effectiveness.
+
+### Deterministic regex extraction targets high-signal artefacts only: file paths (with extension validation), shell commands from code blocks + common CLI prefixes, error messages (first 120 chars). Ignores unstructured prose. (2026-03-16)
+- **Context:** Regex fallback must work without LLM, but can't parse arbitrary semantics. Need to extract what matters from dev/debug/CI output.
+- **Why:** File paths, commands, and errors are machine-parseable entities with high information density. They're actionable by agents without semantic interpretation. Ignoring prose keeps compaction deterministic and predictable.
+- **Rejected:** Extract prose (first/last N sentences): loses structure, requires downstream parsing. Extract everything (all text chunks): produces noise, compaction output becomes useless.
+- **Trade-offs:** Excellent for CLI/debug/CI logs, fails for prose-heavy contexts (emails, meeting notes). Produces very compact summaries at cost of semantic loss.
+- **Breaking if changed:** If you broaden extraction to prose, deterministic mode becomes non-deterministic (depends on LLM-like heuristics). If you narrow to only errors, lose file path context.
+
+### Fresh tail messages are reserved in budget and never dropped; oldest summaries are dropped first when budget exceeded (2026-03-16)
+- **Context:** Token budget must be respected while preserving critical recent context and compacted history
+- **Why:** Recent messages provide immediate conversation context; summaries represent historical knowledge. Dropping old summaries (already compacted) before recent messages preserves relevance while respecting budget constraints. Fresh tail isolation prevents budget fragmentation from blocking recent context.
+- **Rejected:** Treating all messages equally with priority weighting; would lose guaranteed recent context. Random drop strategy; would create unpredictable context loss.
+- **Trade-offs:** Simpler implementation (two tiers instead of weighted priority), guaranteed recent context, but may keep verbose old messages while dropping useful older summaries. Wastes budget if tail is very large.
+- **Breaking if changed:** Removing fresh-tail distinction means losing ability to guarantee recent context preservation. Regular messages would be subject to same budget pressure as summaries, degrading conversation continuity.
+
+#### [Pattern] Three-tier message assembly: [recall_guidance] → [surviving summaries] → [regular messages] → [fresh tail], preserving chronological order within categories (2026-03-16)
+- **Problem solved:** Model needs to understand how to retrieve expanded summaries (recall_guidance) before encountering compact summary references
+- **Why this works:** Guidance must precede summaries so model learns the expansion mechanism before needing it. Chronological ordering within summaries/messages preserves conversation flow. Fresh tail at end preserves recency bias.
+- **Trade-offs:** More structured ordering helps model parsing but breaks pure chronology. Improves model understanding at cost of context reordering.
+
+#### [Gotcha] Recall guidance tokens estimated twice (once to reserve budget, once to build message), creating potential budget overflow if estimates diverge (2026-03-16)
+- **Situation:** Budget accounting reserves recallGuidanceTokens upfront before building actual guidance message
+- **Root cause:** Guidance content isn't known until surviving summaries are determined, but budget must be reserved upfront. Two-pass approach required.
+- **How to avoid:** Clean separation of budget vs. message building, but token estimate inconsistency risk. Runtime budget validation needed.
+
+#### [Gotcha] Array index-based pairing between summaryItems and formattedSummaries; divergence causes silent mismatches (2026-03-16)
+- **Situation:** Loop uses parallel indices: `summaryItems[idx]` and `formattedSummaries[idx]`
+- **Root cause:** Implicit pairing via sort order avoids explicit map; assumes stable order throughout assembly
+- **How to avoid:** Compact code vs. fragile index coupling. Any future sort or filter change could silently pair wrong summary with formatted content.
+
+#### [Pattern] Nested lookup map (summaryByNodeId) is created but never used in final assembly; formatted summaries iterated directly (2026-03-16)
+- **Problem solved:** Code builds `summaryByNodeId` map early but relies on index-based iteration for survivors
+- **Why this works:** Early map construction suggests intent to use node IDs, but implementation reverts to indices. Likely defensive coding (map prepared but not needed) or refactoring artifact.
+- **Trade-offs:** Extra memory for unused map, but signposts intent for future refactoring. Unused map suggests API could improve.
