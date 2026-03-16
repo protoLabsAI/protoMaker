@@ -194,6 +194,8 @@ export type {
 // Calendar types
 export type {
   CalendarEventType,
+  RecurrenceFrequency,
+  RecurrenceRule,
   CalendarEvent,
   CalendarEventsFile,
   CalendarQueryOptions,
