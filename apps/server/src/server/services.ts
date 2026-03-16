@@ -106,6 +106,7 @@ import { ProjectLifecycleService } from '../services/project-lifecycle-service.j
 import { CeremonyAuditLogService } from '../services/ceremony-audit-service.js';
 import { CeremonyService, ceremonyService } from '../services/ceremony-service.js';
 import { LeadEngineerService } from '../services/lead-engineer-service.js';
+import { PipelineCheckpointService } from '../services/pipeline-checkpoint-service.js';
 import { ContextFidelityService } from '../services/context-fidelity-service.js';
 import {
   DataIntegrityWatchdogService,
@@ -242,6 +243,7 @@ export interface ServiceContainer {
 
   // Lead Engineer
   leadEngineerService: LeadEngineerService;
+  pipelineCheckpointService: PipelineCheckpointService;
   factStoreService: FactStoreService;
   trajectoryStoreService: TrajectoryStoreService;
   leadHandoffService: LeadHandoffService;
@@ -568,6 +570,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Lead Handoff Service — stores phase transition snapshots for LE continuity
   const leadHandoffService = new LeadHandoffService();
 
+  // Pipeline Checkpoint Service — persists and recovers feature state machine checkpoints
+  const pipelineCheckpointService = new PipelineCheckpointService();
+
   // Lead Engineer Service — production-phase nerve center
   const leadEngineerService = new LeadEngineerService(
     events,
@@ -812,6 +817,8 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   leadEngineerService.setContextFidelityService(contextFidelityService);
   leadEngineerService.setKnowledgeStoreService(knowledgeStoreService);
   leadEngineerService.setHITLFormService(hitlFormService);
+  // Wire pipeline checkpoint service into lead engineer for durable workflow
+  leadEngineerService.setCheckpointService(pipelineCheckpointService);
   await leadEngineerService.initialize();
 
   // Wire project-affinity filtering into auto-mode when projectPreferences are configured.
@@ -935,6 +942,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     ceremonyService,
     dailyStandupService,
     leadEngineerService,
+    pipelineCheckpointService,
     factStoreService,
     trajectoryStoreService,
     leadHandoffService,
