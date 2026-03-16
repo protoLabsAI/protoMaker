@@ -187,6 +187,14 @@ export class KnowledgeStoreService {
       END
     `);
 
+    // Metadata table for tracking operational timestamps (e.g. last_prune_at)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS db_metadata (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    `);
+
     logger.debug('Database schema created successfully');
   }
 
@@ -248,6 +256,12 @@ export class KnowledgeStoreService {
       .get() as { last_updated: string | null };
     const lastUpdated = lastUpdatedRow?.last_updated || undefined;
 
+    // Last prune timestamp from metadata table
+    const lastPruneRow = this.db
+      .prepare("SELECT value FROM db_metadata WHERE key = 'last_prune_at'")
+      .get() as { value: string } | undefined;
+    const lastPruneAt = lastPruneRow?.value;
+
     return {
       totalChunks,
       totalSizeBytes,
@@ -260,6 +274,7 @@ export class KnowledgeStoreService {
       dbPath,
       enabledHybridRetrieval:
         this.settings.hybridRetrieval && this.embeddingOrchestrator.getEmbeddingService().isReady(),
+      lastPruneAt,
     };
   }
 
@@ -375,6 +390,13 @@ export class KnowledgeStoreService {
 
     const result = this.db!.prepare(sql).run();
     const deletedCount = result.changes;
+
+    // Record the prune timestamp
+    const now = new Date().toISOString();
+    this.db!.prepare(
+      `INSERT INTO db_metadata (key, value) VALUES ('last_prune_at', ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+    ).run(now);
 
     logger.info(`Pruned ${deletedCount} stale chunks from knowledge store`);
     return deletedCount;
