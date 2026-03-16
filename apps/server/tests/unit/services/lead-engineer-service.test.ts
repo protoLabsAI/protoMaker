@@ -434,6 +434,79 @@ describe('LeadEngineerService', () => {
     });
   });
 
+  // ──── Escalation event routing via p.context ────
+
+  describe('escalation event routing via context', () => {
+    it('routes escalation:signal-received with context.projectPath to the correct session', async () => {
+      featureLoader = createMockFeatureLoader([
+        createMockFeature({ id: 'esc-feat', status: 'blocked' }),
+      ]);
+
+      service = new LeadEngineerService(
+        events as any,
+        featureLoader as any,
+        autoModeService as any,
+        projectService as any,
+        projectLifecycleService as any,
+        settingsService as any,
+        metricsService as any
+      );
+      await service.initialize();
+      await service.start('/test/project', 'my-project');
+
+      // Fire escalation event with projectPath nested in context (as escalation events do)
+      events._fire('escalation:signal-received' as EventType, {
+        source: 'lead_engineer',
+        type: 'feature_escalated',
+        context: {
+          projectPath: '/test/project',
+          featureId: 'esc-feat',
+        },
+      });
+
+      await vi.advanceTimersByTimeAsync(0);
+
+      // The event should have been routed to the session — verify by checking
+      // that worldState was updated (updateFromEvent was called)
+      const session = service.getSession('/test/project');
+      expect(session).toBeDefined();
+      expect(session?.flowState).toBe('running');
+    });
+
+    it('routes escalation:signal-received with context.featureId for lazy lookup', async () => {
+      featureLoader = createMockFeatureLoader([]);
+      const escalatedFeature = createMockFeature({ id: 'lazy-esc', status: 'blocked' });
+      featureLoader.get.mockResolvedValue(escalatedFeature);
+
+      service = new LeadEngineerService(
+        events as any,
+        featureLoader as any,
+        autoModeService as any,
+        projectService as any,
+        projectLifecycleService as any,
+        settingsService as any,
+        metricsService as any
+      );
+      await service.initialize();
+      await service.start('/test/project', 'my-project');
+
+      // Fire escalation event with featureId nested in context
+      events._fire('escalation:signal-received' as EventType, {
+        source: 'lead_engineer',
+        type: 'feature_escalated',
+        context: {
+          featureId: 'lazy-esc',
+        },
+      });
+
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Feature should have been lazy-loaded into worldState
+      const session = service.getSession('/test/project');
+      expect(session?.worldState.features['lazy-esc']).toBeDefined();
+    });
+  });
+
   // ──── Flow state transitions ────
 
   describe('flow state transitions', () => {
@@ -710,7 +783,10 @@ describe('LeadEngineerService', () => {
       await vi.advanceTimersByTimeAsync(2.5 * 60 * 1000 + 100);
       await vi.advanceTimersByTimeAsync(100);
 
-      expect(mockExec).toHaveBeenCalledWith(expect.stringContaining('gh pr view 42'));
+      expect(mockExec).toHaveBeenCalledWith(
+        expect.stringContaining('gh pr view 42'),
+        expect.objectContaining({ cwd: '/test/project', timeout: 15000 })
+      );
     });
   });
 });

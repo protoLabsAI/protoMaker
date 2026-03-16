@@ -12,6 +12,7 @@
 import { createLogger } from '@protolabsai/utils';
 import type { EventEmitter } from '../lib/events.js';
 import { getSpecRegenerationStatus, setRunningState } from '../routes/app-spec/common.js';
+import type { SchedulerService } from './scheduler-service.js';
 
 const logger = createLogger('SpecGenerationMonitor');
 
@@ -44,6 +45,9 @@ export class SpecGenerationMonitor {
   private config: Required<SpecGenerationMonitorConfig>;
   private isRunning = false;
   private lastActivityTimestamps = new Map<string, number>();
+  private schedulerService: SchedulerService | null = null;
+
+  private static readonly INTERVAL_ID = 'spec-generation-monitor:check';
 
   constructor(events: EventEmitter, config?: SpecGenerationMonitorConfig) {
     this.events = events;
@@ -54,7 +58,7 @@ export class SpecGenerationMonitor {
     };
 
     // Subscribe to spec regeneration events to track activity
-    this.events.subscribe((type, payload) => {
+    this.events.subscribe((type, payload: unknown) => {
       if (type === 'spec-regeneration:event') {
         const eventPayload = payload as { projectPath?: string } | null;
         if (eventPayload?.projectPath) {
@@ -63,6 +67,13 @@ export class SpecGenerationMonitor {
         }
       }
     });
+  }
+
+  /**
+   * Set the scheduler service for managed interval tracking
+   */
+  setSchedulerService(schedulerService: SchedulerService): void {
+    this.schedulerService = schedulerService;
   }
 
   /**
@@ -82,12 +93,21 @@ export class SpecGenerationMonitor {
     this.isRunning = true;
     logger.info(`Starting SpecGenerationMonitor with interval of ${this.config.checkIntervalMs}ms`);
 
-    // Set up periodic checks
-    this.intervalId = setInterval(() => {
-      this.tick().catch((error) => {
-        logger.error('Periodic check failed:', error);
-      });
-    }, this.config.checkIntervalMs);
+    // Set up periodic checks via schedulerService if available, else raw setInterval
+    if (this.schedulerService) {
+      this.schedulerService.registerInterval(
+        SpecGenerationMonitor.INTERVAL_ID,
+        'Spec Generation Monitor',
+        this.config.checkIntervalMs,
+        () => this.tick()
+      );
+    } else {
+      this.intervalId = setInterval(() => {
+        this.tick().catch((error) => {
+          logger.error('Periodic check failed:', error);
+        });
+      }, this.config.checkIntervalMs);
+    }
 
     // Run initial check
     this.tick().catch((error) => {
@@ -104,7 +124,9 @@ export class SpecGenerationMonitor {
       return;
     }
 
-    if (this.intervalId) {
+    if (this.schedulerService) {
+      this.schedulerService.unregisterInterval(SpecGenerationMonitor.INTERVAL_ID);
+    } else if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }

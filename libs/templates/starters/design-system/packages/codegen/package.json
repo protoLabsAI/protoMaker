@@ -1,0 +1,54 @@
+{
+  "name": "@@PROJECT_NAME-codegen",
+  "version": "0.1.0",
+  "description": "Pen-to-React code generator for the design system starter kit",
+  "type": "module",
+  "main": "./dist/react-generator.js",
+  "types": "./dist/react-generator.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/react-generator.js",
+      "types": "./dist/react-generator.d.ts"
+    },
+    "./css-extractor": {
+      "import": "./dist/css-extractor.js",
+      "types": "./dist/css-extractor.d.ts"
+    },
+    "./prop-extractor": {
+      "import": "./dist/prop-extractor.js",
+      "types": "./dist/prop-extractor.d.ts"
+    },
+    "./import-generator": {
+      "import": "./dist/import-generator.js",
+      "types": "./dist/import-generator.d.ts"
+    },
+    "./jsx-serializer": {
+      "import": "./dist/jsx-serializer.js",
+      "types": "./dist/jsx-serializer.d.ts"
+    },
+    "./css-generator": {
+      "import": "./dist/css-generator.js",
+      "types": "./dist/css-generator.d.ts"
+    },
+    "./html-generator": {
+      "import": "./dist/html-generator.js",
+      "types": "./dist/html-generator.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  },
+  "peerDependencies": {
+    "lucide-react": ">=0.300.0",
+    "react": ">=18.0.0"
+  },
+  "peerDependenciesMeta": {
+    "lucide-react": {
+      "optional": true
+    }
+  }
+}

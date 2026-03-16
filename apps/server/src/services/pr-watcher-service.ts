@@ -13,6 +13,7 @@ import { createLogger } from '@protolabsai/utils';
 import { githubMergeService } from './github-merge-service.js';
 import type { EventEmitter } from '../lib/events.js';
 import { PR_WATCHER_POLL_INTERVAL_MS, PR_WATCHER_TIMEOUT_MS } from '../config/timeouts.js';
+import type { SchedulerService } from './scheduler-service.js';
 
 const logger = createLogger('PRWatcherService');
 
@@ -38,6 +39,9 @@ export class PRWatcherService {
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
   private readonly pollIntervalMs: number;
   private readonly timeoutMs: number;
+  private schedulerService: SchedulerService | null = null;
+
+  private static readonly INTERVAL_ID = 'pr-watcher:poll';
 
   constructor(
     private readonly events: EventEmitter,
@@ -46,6 +50,13 @@ export class PRWatcherService {
   ) {
     this.pollIntervalMs = pollIntervalMs;
     this.timeoutMs = timeoutMs;
+  }
+
+  /**
+   * Set the scheduler service for managed interval tracking
+   */
+  setSchedulerService(schedulerService: SchedulerService): void {
+    this.schedulerService = schedulerService;
   }
 
   // ── Public API ────────────────────────────────────────────────────────────
@@ -103,21 +114,38 @@ export class PRWatcherService {
 
   /** Stop the background polling loop (e.g. for graceful shutdown). */
   stopPolling(): void {
-    if (this.pollingTimer) {
+    if (this.schedulerService) {
+      this.schedulerService.unregisterInterval(PRWatcherService.INTERVAL_ID);
+    } else if (this.pollingTimer) {
       clearInterval(this.pollingTimer);
       this.pollingTimer = null;
-      logger.debug('Polling loop stopped');
     }
+    logger.debug('Polling loop stopped');
   }
 
   // ── Private helpers ───────────────────────────────────────────────────────
 
   private ensurePolling(): void {
-    if (this.pollingTimer) return;
-    logger.debug(`Starting polling loop (interval: ${this.pollIntervalMs}ms)`);
-    this.pollingTimer = setInterval(() => {
-      void this.pollAll();
-    }, this.pollIntervalMs);
+    if (this.schedulerService) {
+      // Only register if not already registered
+      const existing = this.schedulerService
+        .listAll()
+        .find((e) => e.id === PRWatcherService.INTERVAL_ID);
+      if (existing) return;
+      logger.debug(`Starting polling loop via scheduler (interval: ${this.pollIntervalMs}ms)`);
+      this.schedulerService.registerInterval(
+        PRWatcherService.INTERVAL_ID,
+        'PR Watcher Poll',
+        this.pollIntervalMs,
+        () => this.pollAll()
+      );
+    } else {
+      if (this.pollingTimer) return;
+      logger.debug(`Starting polling loop (interval: ${this.pollIntervalMs}ms)`);
+      this.pollingTimer = setInterval(() => {
+        void this.pollAll();
+      }, this.pollIntervalMs);
+    }
   }
 
   private async pollAll(): Promise<void> {

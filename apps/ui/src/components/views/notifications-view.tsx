@@ -114,7 +114,7 @@ export function NotificationsView() {
       // Navigate to the relevant view based on notification type
       if (notification.featureId) {
         // Navigate to board view - feature will be selected
-        navigate({ to: '/projects' });
+        navigate({ to: '/project-management' });
       }
     },
     [handleMarkAsRead, navigate]

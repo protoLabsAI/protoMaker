@@ -1,5 +1,101 @@
 # @protolabsai/error-tracking
 
+## 0.53.15
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.68.0
+  - @protolabsai/utils@0.68.0
+
+## 0.53.14
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.67.0
+  - @protolabsai/utils@0.67.0
+
+## 0.53.13
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.66.0
+  - @protolabsai/utils@0.66.0
+
+## 0.53.12
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.65.0
+  - @protolabsai/utils@0.65.0
+
+## 0.53.11
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.64.0
+  - @protolabsai/utils@0.64.0
+
+## 0.53.10
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.63.0
+  - @protolabsai/utils@0.63.0
+
+## 0.53.9
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.62.0
+  - @protolabsai/utils@0.62.0
+
+## 0.53.8
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.61.0
+  - @protolabsai/utils@0.61.0
+
+## 0.53.7
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.60.0
+  - @protolabsai/utils@0.60.0
+
+## 0.53.6
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.59.0
+  - @protolabsai/utils@0.59.0
+
+## 0.53.5
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.58.0
+  - @protolabsai/utils@0.58.0
+
+## 0.53.4
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.57.0
+  - @protolabsai/utils@0.57.0
+
 ## 0.53.3
 
 ### Patch Changes

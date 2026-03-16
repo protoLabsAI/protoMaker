@@ -12,6 +12,7 @@ import type {
   WorkItem,
 } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
+import type { SchedulerService } from './scheduler-service.js';
 
 const logger = createLogger('DiscordMonitor');
 
@@ -62,11 +63,14 @@ export class DiscordMonitor {
   /** Last message ID seen per channel (to avoid processing duplicates) */
   private lastMessageIds = new Map<string, string>();
 
-  /** Active polling intervals */
+  /** Active polling intervals (only used when schedulerService is not available) */
   private intervals = new Map<string, NodeJS.Timeout>();
 
   /** Discord bot service for reading messages */
   private discordBotService: DiscordBotServiceLike | null = null;
+
+  /** Scheduler service for centralized timer tracking */
+  private schedulerService?: SchedulerService;
 
   constructor(private events: EventEmitter) {}
 
@@ -75,6 +79,14 @@ export class DiscordMonitor {
    */
   setDiscordBotService(service: DiscordBotServiceLike): void {
     this.discordBotService = service;
+  }
+
+  setSchedulerService(schedulerService: SchedulerService): void {
+    this.schedulerService = schedulerService;
+  }
+
+  private channelIntervalId(channelId: string): string {
+    return `discord-monitor:channel:${channelId}`;
   }
 
   /**
@@ -94,16 +106,24 @@ export class DiscordMonitor {
         logger.error(`Failed to fetch initial messages for channel ${channelId}:`, error);
       }
 
-      // Start polling loop
-      const interval = setInterval(async () => {
-        try {
-          await this.pollChannel(channelId, keywords);
-        } catch (error) {
-          logger.error(`Error polling Discord channel ${channelId}:`, error);
-        }
-      }, pollInterval);
-
-      this.intervals.set(channelId, interval);
+      // Start polling loop via schedulerService if available, else raw setInterval
+      if (this.schedulerService) {
+        this.schedulerService.registerInterval(
+          this.channelIntervalId(channelId),
+          `Discord Monitor: channel ${channelId}`,
+          pollInterval,
+          () => this.pollChannel(channelId, keywords)
+        );
+      } else {
+        const interval = setInterval(async () => {
+          try {
+            await this.pollChannel(channelId, keywords);
+          } catch (error) {
+            logger.error(`Error polling Discord channel ${channelId}:`, error);
+          }
+        }, pollInterval);
+        this.intervals.set(channelId, interval);
+      }
       logger.info(`Started monitoring Discord channel ${channelId}`);
     }
   }
@@ -112,12 +132,20 @@ export class DiscordMonitor {
    * Stop monitoring a Discord channel
    */
   stopMonitoring(channelId: string): void {
-    const interval = this.intervals.get(channelId);
-    if (interval) {
-      clearInterval(interval);
-      this.intervals.delete(channelId);
-      this.lastMessageIds.delete(channelId);
-      logger.info(`Stopped monitoring Discord channel ${channelId}`);
+    if (this.schedulerService) {
+      const removed = this.schedulerService.unregisterInterval(this.channelIntervalId(channelId));
+      if (removed) {
+        this.lastMessageIds.delete(channelId);
+        logger.info(`Stopped monitoring Discord channel ${channelId}`);
+      }
+    } else {
+      const interval = this.intervals.get(channelId);
+      if (interval) {
+        clearInterval(interval);
+        this.intervals.delete(channelId);
+        this.lastMessageIds.delete(channelId);
+        logger.info(`Stopped monitoring Discord channel ${channelId}`);
+      }
     }
   }
 
@@ -125,11 +153,18 @@ export class DiscordMonitor {
    * Stop all monitoring
    */
   stopAll(): void {
-    for (const [channelId, interval] of this.intervals.entries()) {
-      clearInterval(interval);
-      logger.info(`Stopped monitoring Discord channel ${channelId}`);
+    if (this.schedulerService) {
+      for (const channelId of this.lastMessageIds.keys()) {
+        this.schedulerService.unregisterInterval(this.channelIntervalId(channelId));
+        logger.info(`Stopped monitoring Discord channel ${channelId}`);
+      }
+    } else {
+      for (const [channelId, interval] of this.intervals.entries()) {
+        clearInterval(interval);
+        logger.info(`Stopped monitoring Discord channel ${channelId}`);
+      }
+      this.intervals.clear();
     }
-    this.intervals.clear();
     this.lastMessageIds.clear();
   }
 
@@ -165,16 +200,24 @@ export class DiscordMonitor {
         logger.error(`Failed to fetch initial messages for channel ${channelId}:`, error);
       }
 
-      // Start polling loop
-      const interval = setInterval(async () => {
-        try {
-          await this.pollChannelForSignals(config);
-        } catch (error) {
-          logger.error(`Error polling Discord channel ${channelId} for signals:`, error);
-        }
-      }, pollInterval);
-
-      this.intervals.set(channelId, interval);
+      // Start polling loop via schedulerService if available, else raw setInterval
+      if (this.schedulerService) {
+        this.schedulerService.registerInterval(
+          this.channelIntervalId(channelId),
+          `Discord Monitor: channel ${channelId} (${config.channelName})`,
+          pollInterval,
+          () => this.pollChannelForSignals(config)
+        );
+      } else {
+        const interval = setInterval(async () => {
+          try {
+            await this.pollChannelForSignals(config);
+          } catch (error) {
+            logger.error(`Error polling Discord channel ${channelId} for signals:`, error);
+          }
+        }, pollInterval);
+        this.intervals.set(channelId, interval);
+      }
       logger.info(
         `Started signal monitoring for Discord channel ${channelId} (${config.channelName})`
       );
@@ -311,13 +354,18 @@ export class DiscordMonitor {
    * Get all monitored channel IDs
    */
   getMonitoredChannels(): string[] {
-    return Array.from(this.intervals.keys());
+    return Array.from(this.lastMessageIds.keys());
   }
 
   /**
    * Check if a channel is being monitored
    */
   isMonitoring(channelId: string): boolean {
+    if (this.schedulerService) {
+      return this.schedulerService
+        .listAll()
+        .some((t) => t.id === this.channelIntervalId(channelId));
+    }
     return this.intervals.has(channelId);
   }
 }

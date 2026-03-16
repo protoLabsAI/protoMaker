@@ -96,18 +96,20 @@ function TemplateCard({
           </div>
         </div>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="shrink-0"
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenRepo(template.repoUrl);
-          }}
-        >
-          <ExternalLink className="w-4 h-4 mr-1" />
-          View
-        </Button>
+        {template.repoUrl && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenRepo(template.repoUrl!);
+            }}
+          >
+            <ExternalLink className="w-4 h-4 mr-1" />
+            View
+          </Button>
+        )}
       </div>
     </div>
   );

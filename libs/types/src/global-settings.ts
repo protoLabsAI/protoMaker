@@ -147,6 +147,10 @@ export interface Credentials {
   webhookSecrets?: {
     /** GitHub webhook secret for HMAC-SHA256 signature verification */
     github?: string;
+    /** Previous GitHub webhook secret, used during secret rotation for zero-downtime */
+    previousGithub?: string;
+    /** ISO 8601 expiry timestamp for the previous secret (ignored after expiry) */
+    previousGithubExpiresAt?: string;
   };
   /** Discord bot tokens for MCP integration */
   discordTokens?: {
@@ -191,12 +195,6 @@ const DEFAULT_CODEX_ADDITIONAL_DIRS: string[] = [];
 export interface FeatureFlags {
   /** Designs/pen file viewer in project sidebar */
   designs: boolean;
-  /**
-   * Authority pipeline (TRIAGE → RESEARCH → SPEC → SPEC_REVIEW → … → PUBLISH).
-   * When false, PipelineOrchestrator ignores all events — no gate cycling, no HITL
-   * interruptions. Off by default until the pipeline overhaul is complete.
-   */
-  pipeline: boolean;
   /** Spec editor in sidebar Tools section */
   specEditor: boolean;
   /** System View — network/dependency graph view in the project sidebar */
@@ -213,16 +211,22 @@ export interface FeatureFlags {
    * Requires hivemind to be enabled in proto.config.yaml. Off by default.
    */
   reactorEnabled: boolean;
+  /**
+   * HITL Forms — enables human-in-the-loop interrupt forms from PM Agent,
+   * Signal Intake, and Lead Engineer. When disabled, HITL-gated actions
+   * are auto-approved or escalated to Ava instead. Off by default.
+   */
+  hitlForms: boolean;
 }
 
 /** Default feature flags — all off by default, opt-in per environment */
 export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   designs: false,
-  pipeline: false,
   specEditor: false,
   systemView: false,
   userPresenceDetection: false,
   reactorEnabled: false,
+  hitlForms: false,
 };
 
 // ============================================================================

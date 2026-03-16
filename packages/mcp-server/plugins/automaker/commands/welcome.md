@@ -212,17 +212,16 @@ Always runs. Print a compact command reference with doc links.
 
 ### Key Concepts
 
-- **Features live on a board.** Backlog, in-progress, review, done. Agents pick them up and implement them. [Board & features docs](https://docs.protolabs.studio/agents/architecture)
-- **Agents work in worktrees.** Each feature gets an isolated git branch. Your main branch stays clean. [Agent architecture](https://docs.protolabs.studio/agents/architecture)
-- **Context files shape agent behavior.** Rules in `.automaker/context/` are injected into every agent prompt. [MCP & context system](https://docs.protolabs.studio/agents/mcp-integration)
+- **Features live on a board.** Backlog, in-progress, review, done. Agents pick them up and implement them. [Board & features docs](https://docs.protolabs.studio/concepts/agent-architecture)
+- **Agents work in worktrees.** Each feature gets an isolated git branch. Your main branch stays clean. [Agent architecture](https://docs.protolabs.studio/concepts/agent-architecture)
+- **Context files shape agent behavior.** Rules in `.automaker/context/` are injected into every agent prompt. [Context system](https://docs.protolabs.studio/guides/context-files)
 
 ### Learn More
 
 - [Getting started](https://docs.protolabs.studio/getting-started/installation) — Installation and first run
 - [Plugin commands](https://docs.protolabs.studio/integrations/claude-plugin) — Full command reference and configuration
-- [Agent teams](https://docs.protolabs.studio/agents/creating-agent-teams) — Building multi-agent workflows
-- [Prompt authoring](https://docs.protolabs.studio/agents/authoring-prompts) — Writing effective agent prompts
-- [Self-hosting](https://docs.protolabs.studio/infra/deployment) — Deploy your own instance
+- [Writing prompts](https://docs.protolabs.studio/guides/writing-prompts) — Writing effective agent prompts
+- [Self-hosting](https://docs.protolabs.studio/self-hosting/deployment) — Deploy your own instance
 ```
 
 ## Error Handling

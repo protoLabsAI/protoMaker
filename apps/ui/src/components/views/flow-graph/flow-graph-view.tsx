@@ -9,13 +9,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
 import { useQuery } from '@tanstack/react-query';
-import { useFlowGraphData, usePipelineProgress } from './hooks';
+import { useFlowGraphData } from './hooks';
 import { FlowGraphCanvas } from './flow-graph-canvas';
 import { FlowGraphLegend } from './flow-graph-legend';
-import { PipelineProgressBar } from './pipeline-progress-bar';
-import { PipelinePillSelector } from './pipeline-pill-selector';
-import { PipelineEventLog } from './pipeline-event-log';
-import { PipelineAnalytics } from './pipeline-analytics';
 import { AgentAnalyticsPanel } from './agent-analytics-panel';
 import { AutoModeSummaryPanel } from './panels/auto-mode-summary-panel';
 import { NodeDetailDialog, type SelectedNode } from './dialogs/node-detail-dialog';
@@ -23,7 +19,6 @@ import { SignalInputDialog } from './dialogs/signal-input-dialog';
 import { PrdReviewDialog } from './dialogs/prd-review-dialog';
 import { ContentReviewDialog } from './dialogs/content-review-dialog';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import { useHITLFormStore } from '@/store/hitl-form-store';
 
 export interface FlowGraphViewProps {
   projectPath?: string;
@@ -32,7 +27,6 @@ export interface FlowGraphViewProps {
 
 export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
   const { nodes, edges, gtmEnabled } = useFlowGraphData();
-  const pipeline = usePipelineProgress();
 
   // Legend visibility
   const [showLegend, setShowLegend] = useState(false);
@@ -130,17 +124,6 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
     return () => unsub();
   }, []);
 
-  /** Open pending HITL form for the active pipeline feature (if any) */
-  const handleGateClick = useCallback(() => {
-    const fid = pipeline.selected?.featureId;
-    if (!fid) return;
-    const { pendingForms, openForm } = useHITLFormStore.getState();
-    const form = pendingForms.find((f) => f.featureId === fid);
-    if (form) {
-      openForm(form);
-    }
-  }, [pipeline.selected?.featureId]);
-
   const handleNodeClick = useCallback(
     (nodeId: string, nodeType: string, nodeData: Record<string, unknown>) => {
       // Intercept clicks on specific engine-service nodes
@@ -148,20 +131,6 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
         const serviceId = nodeData.serviceId as string;
         if (serviceId === 'signal-sources') {
           setSignalDialogOpen(true);
-          return;
-        }
-      }
-
-      // Intercept clicks on gated pipeline-stage nodes — open HITL form if one exists
-      if (
-        nodeType === 'pipeline-stage' &&
-        nodeData.status === 'blocked' &&
-        pipeline.selected?.featureId
-      ) {
-        const { pendingForms, openForm } = useHITLFormStore.getState();
-        const form = pendingForms.find((f) => f.featureId === pipeline.selected!.featureId);
-        if (form) {
-          openForm(form);
           return;
         }
       }
@@ -175,7 +144,7 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
         onFeatureClick(featureId);
       }
     },
-    [onFeatureClick, pipeline.selected?.featureId]
+    [onFeatureClick]
   );
 
   return (
@@ -183,25 +152,6 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
       className="relative w-full h-full overflow-hidden bg-background"
       data-testid="flow-graph-view"
     >
-      {/* Pipeline progress overlay (top bar) */}
-      {pipeline.selected && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1.5">
-          <PipelinePillSelector
-            pipelines={pipeline.pipelines}
-            selectedFeatureId={pipeline.selectedFeatureId}
-            onSelect={pipeline.setSelectedFeatureId}
-          />
-          <PipelineProgressBar
-            pipelineState={pipeline.selected.pipelineState}
-            branch={pipeline.selected.branch}
-            onResolveGate={pipeline.resolveGate}
-            onGateClick={handleGateClick}
-          />
-          <PipelineEventLog events={pipeline.recentEvents} />
-          <PipelineAnalytics />
-        </div>
-      )}
-
       <ReactFlowProvider>
         <FlowGraphCanvas
           nodes={nodes}

@@ -2,7 +2,7 @@
   "slug": "agent-manifest-hardening",
   "title": "Agent Manifest Hardening",
   "goal": "Address remaining gaps from the agent manifest audit: type safety, API correctness, lifecycle management, Linux compatibility, testing, and documentation accuracy.",
-  "status": "active",
+  "status": "completed",
   "milestones": [
     {
       "number": 1,
@@ -208,5 +208,5 @@
     ]
   },
   "createdAt": "2026-03-13T22:43:34.040Z",
-  "updatedAt": "2026-03-14T00:16:19.234Z"
+  "updatedAt": "2026-03-15T05:06:19.395Z"
 }

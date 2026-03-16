@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "workflow": {
+    "agentConfig": {
+      "rolePromptOverrides": {
+        "product-manager": {
+          "value": "",
+          "enabled": false
+        }
+      }
+    }
+  }
+}

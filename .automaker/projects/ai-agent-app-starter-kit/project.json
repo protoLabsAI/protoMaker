@@ -1,0 +1,315 @@
+{
+  "slug": "ai-agent-app-starter-kit",
+  "title": "AI Agent App Starter Kit",
+  "goal": "Build a monorepo starter kit template that distills protoLabs Studio's AI chat system into a reusable Vite+React 19 SPA + Express backend, shipping streaming chat, tool invocations, HITL confirmation, extended reasoning, slash commands, multi-provider model support, and agent roles — all scaffoldable via create-protolab.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 6,
+      "slug": "06-tools-package",
+      "title": "Tools Package — Define Once, Deploy Everywhere",
+      "description": "Extract the defineSharedTool, ToolRegistry, and adapter system (MCP, LangGraph, Express) from libs/tools/ into the starter kit. This is the foundation that all other packages build on.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "extract-tool-definitions-and-registry",
+          "title": "Extract tool definitions, registry, and adapters",
+          "description": "Create packages/tools/ in the starter kit. Extract defineSharedTool factory, ToolRegistry class, and SharedTool/ToolResult/ToolContext interfaces from libs/tools/src/. Strip automaker-specific types (Feature, FeatureStatus, ListFeaturesInput, CompactFeature) from ToolContext — make it generic Record<string, unknown>. Extract all 3 adapters: toMCPTool (MCP adapter), toLangGraphTool (LangGraph adapter), toExpressRouter (Express adapter). Include zod and zod-to-json-schema as dependencies. Create example tools (get_weather, search_web) showing the define-once pattern.",
+          "filesToModify": [
+            "libs/templates/starters/ai-agent-app/packages/tools/src/define-tool.ts",
+            "libs/templates/starters/ai-agent-app/packages/tools/src/registry.ts",
+            "libs/templates/starters/ai-agent-app/packages/tools/src/types.ts",
+            "libs/templates/starters/ai-agent-app/packages/tools/src/adapters/mcp-adapter.ts",
+            "libs/templates/starters/ai-agent-app/packages/tools/src/adapters/langgraph-adapter.ts",
+            "libs/templates/starters/ai-agent-app/packages/tools/src/adapters/express-adapter.ts"
+          ],
+          "acceptanceCriteria": [
+            "defineSharedTool creates tools with Zod validation",
+            "ToolRegistry register/execute/getByCategory works",
+            "toMCPTool converts to JSON Schema format",
+            "toLangGraphTool converts to DynamicStructuredTool",
+            "toExpressRouter creates Express routes with validation",
+            "Zero @protolabsai imports",
+            "Example tools demonstrate the pattern"
+          ],
+          "complexity": "large",
+          "claimedBy": "mac-dev",
+          "claimedAt": "2026-03-15T07:00:41.695Z",
+          "executionStatus": "in-review",
+          "featureId": "feature-1773558050617-ky5muusx7"
+        },
+        {
+          "number": 2,
+          "name": "wire-tools-into-server-chat-route",
+          "title": "Wire tools package into server chat route",
+          "description": "Update packages/server to use the tools package instead of inline tool definitions. Import defineSharedTool and ToolRegistry. Register example tools. Update chat route to pull tools from registry and convert to AI SDK format. Add tool profiles (execution, orchestration, review) as an optional pattern.",
+          "filesToModify": [
+            "libs/templates/starters/ai-agent-app/packages/server/src/routes/chat.ts",
+            "libs/templates/starters/ai-agent-app/packages/server/src/tools/registry.ts",
+            "libs/templates/starters/ai-agent-app/packages/server/src/tools/example.ts"
+          ],
+          "acceptanceCriteria": [
+            "Chat route uses ToolRegistry for tool resolution",
+            "Tools defined with defineSharedTool work in chat",
+            "Tool profiles documented as optional pattern"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773558050618-k0qahz6cz",
+          "executionStatus": "in-progress"
+        }
+      ],
+      "epicId": "feature-1773558050616-yiu0eb408",
+      "status": "completed"
+    },
+    {
+      "number": 7,
+      "slug": "07-observability-tracing",
+      "title": "Observability — Langfuse + Built-in Tracing",
+      "description": "Extract the Langfuse tracing wrapper from libs/observability/ and add built-in debug tracing for easy agent debugging without requiring external services.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "extract-langfuse-wrapper-and-tracing",
+          "title": "Extract Langfuse wrapper and built-in tracing",
+          "description": "Create packages/tracing/ in the starter kit. Extract LangfuseClient wrapper, wrapProviderWithTracing, calculateCost with pricing table, and all tracing types from libs/observability/. Replace createLogger calls with a logger parameter (default to console). Add built-in file-based trace logger that writes JSON traces to .traces/ directory for local debugging without Langfuse. Add trace viewer data endpoint to the server (GET /api/traces). Langfuse is opt-in via env vars — when not configured, built-in file tracing is the default.",
+          "filesToModify": [
+            "libs/templates/starters/ai-agent-app/packages/tracing/src/langfuse-client.ts",
+            "libs/templates/starters/ai-agent-app/packages/tracing/src/middleware.ts",
+            "libs/templates/starters/ai-agent-app/packages/tracing/src/file-tracer.ts",
+            "libs/templates/starters/ai-agent-app/packages/tracing/src/types.ts",
+            "libs/templates/starters/ai-agent-app/packages/server/src/routes/traces.ts"
+          ],
+          "acceptanceCriteria": [
+            "LangfuseClient works when configured, returns null when not",
+            "Built-in file tracer writes JSON to .traces/",
+            "calculateCost works for Claude/GPT/Gemini models",
+            "GET /api/traces returns trace data for viewer",
+            "Zero @protolabsai imports"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1773558050620-4vqne6uad",
+          "executionStatus": "in-progress"
+        },
+        {
+          "number": 2,
+          "name": "build-trace-viewer-ui",
+          "title": "Build trace viewer UI route",
+          "description": "Create /traces route in packages/app with a trace viewer showing: trace timeline, token usage per turn, cost breakdown, tool call details, latency waterfall. Read from GET /api/traces. Simple table + detail view — not a full Langfuse clone, just enough for local debugging.",
+          "filesToModify": [
+            "libs/templates/starters/ai-agent-app/packages/app/src/routes/traces.tsx",
+            "libs/templates/starters/ai-agent-app/packages/app/src/components/trace-viewer.tsx"
+          ],
+          "acceptanceCriteria": [
+            "Trace list shows recent conversations",
+            "Trace detail shows turns with token counts",
+            "Tool calls shown with input/output and timing",
+            "Cost displayed per trace and per turn"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773558050621-m6s2iuvnm",
+          "executionStatus": "in-progress"
+        }
+      ],
+      "epicId": "feature-1773558050619-4lp71xigw",
+      "status": "completed"
+    },
+    {
+      "number": 8,
+      "slug": "08-flows-langgraph",
+      "title": "Flows — LangGraph State Graphs + Visual Builder",
+      "description": "Extract LangGraph graph primitives from libs/flows/ and build a visual flow builder using React Flow for designing agent workflows on a canvas.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "extract-langgraph-primitives",
+          "title": "Extract LangGraph graph primitives",
+          "description": "Create packages/flows/ in the starter kit. Extract from libs/flows/src/graphs/: GraphBuilder class with OTel tracing, createLinearGraph/createLoopGraph/createBranchingGraph factories, state-utils (createStateAnnotation from Zod, validateState, mergeState), all routers (createBinaryRouter, createValueRouter, createSequentialRouter, createParallelRouter, etc.), all reducers (appendReducer, replaceReducer, counterReducer, etc.), state-transforms (createSubgraphBridge, createFieldMapper). Also extract xml-parser (extractTag, extractAllTags, etc.) as a zero-dep utility. Include example flows: basic-chat-agent.ts, tool-calling-agent.ts, hitl-approval-flow.ts.",
+          "filesToModify": [
+            "libs/templates/starters/ai-agent-app/packages/flows/src/builder.ts",
+            "libs/templates/starters/ai-agent-app/packages/flows/src/routers.ts",
+            "libs/templates/starters/ai-agent-app/packages/flows/src/reducers.ts",
+            "libs/templates/starters/ai-agent-app/packages/flows/src/state-utils.ts",
+            "libs/templates/starters/ai-agent-app/packages/flows/src/xml-parser.ts"
+          ],
+          "acceptanceCriteria": [
+            "GraphBuilder wraps StateGraph with OTel spans",
+            "Factory functions create common graph patterns",
+            "Zod-to-LangGraph state annotations work",
+            "All routers and reducers function correctly",
+            "XML parser extracts tags from LLM output",
+            "Example flows compile and run"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1773558050622-q3bl2rtof",
+          "executionStatus": "in-progress"
+        },
+        {
+          "number": 2,
+          "name": "build-visual-flow-builder",
+          "title": "Build visual flow builder with React Flow",
+          "description": "Create /flows route in packages/app with a visual canvas using @xyflow/react (React Flow v12). Define node types: AgentNode (LLM call), ToolNode (tool invocation), ConditionNode (branching router), StateNode (state transform), HITLNode (human approval gate). Users drag-and-drop nodes, connect edges, configure properties in a side panel. The canvas outputs a LangGraph state graph definition (JSON) that can be compiled to executable code. Include save/load to localStorage and export to TypeScript.",
+          "filesToModify": [
+            "libs/templates/starters/ai-agent-app/packages/app/src/routes/flows.tsx",
+            "libs/templates/starters/ai-agent-app/packages/app/src/components/flow-builder/canvas.tsx",
+            "libs/templates/starters/ai-agent-app/packages/app/src/components/flow-builder/nodes.tsx",
+            "libs/templates/starters/ai-agent-app/packages/app/src/components/flow-builder/sidebar.tsx",
+            "libs/templates/starters/ai-agent-app/packages/app/src/components/flow-builder/codegen.ts"
+          ],
+          "acceptanceCriteria": [
+            "React Flow canvas renders with custom node types",
+            "Drag-and-drop node creation works",
+            "Edge connections between nodes work",
+            "Side panel configures node properties",
+            "Export generates valid LangGraph TypeScript code",
+            "Save/load to localStorage works"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1773558050623-pxo16kyz9",
+          "executionStatus": "in-progress"
+        }
+      ],
+      "epicId": "feature-1773558050622-2r9yg7suy"
+    },
+    {
+      "number": 9,
+      "slug": "09-prompts-package",
+      "title": "Prompts — Git-Versioned Templates + Playground",
+      "description": "Extract the PromptBuilder and prompt registry from libs/prompts/ and build a prompt playground for testing and iterating on prompts.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "extract-prompt-builder-and-registry",
+          "title": "Extract prompt builder and registry",
+          "description": "Create packages/prompts/ in the starter kit. Extract PromptBuilder class with section-based composition (SectionName enum, priority ordering, phase filtering, conditional sections). Extract prompt registry pattern (registerPrompt, getPromptForRole, createPromptFromTemplate with {{variable}} interpolation) — ship the registry empty. Create a prompts/ directory at the project root for git-versioned prompt files (markdown with YAML frontmatter: name, role, version, variables). Add a prompt loader that reads from the filesystem and auto-registers.",
+          "filesToModify": [
+            "libs/templates/starters/ai-agent-app/packages/prompts/src/builder.ts",
+            "libs/templates/starters/ai-agent-app/packages/prompts/src/registry.ts",
+            "libs/templates/starters/ai-agent-app/packages/prompts/src/loader.ts",
+            "libs/templates/starters/ai-agent-app/packages/prompts/src/types.ts",
+            "libs/templates/starters/ai-agent-app/prompts/assistant.md",
+            "libs/templates/starters/ai-agent-app/prompts/code-reviewer.md"
+          ],
+          "acceptanceCriteria": [
+            "PromptBuilder composes sections with priority ordering",
+            "Registry registers and resolves prompts by role",
+            "Template interpolation replaces {{variables}}",
+            "Prompt files loaded from prompts/ directory",
+            "Git versioning works (prompts are plain markdown)"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773558050624-tcdtvgx0q",
+          "executionStatus": "in-progress"
+        },
+        {
+          "number": 2,
+          "name": "build-prompt-playground",
+          "title": "Build prompt playground UI",
+          "description": "Create /prompts route in packages/app with a prompt playground. Split view: left panel is a prompt editor (CodeMirror or textarea with syntax highlighting), right panel is a live chat test area. Users can edit prompts, set variables, select a model, and test the prompt with live streaming responses. Load available prompts from GET /api/prompts. Save edits back to the filesystem. Show token count estimate for the prompt.",
+          "filesToModify": [
+            "libs/templates/starters/ai-agent-app/packages/app/src/routes/prompts.tsx",
+            "libs/templates/starters/ai-agent-app/packages/app/src/components/prompt-editor.tsx",
+            "libs/templates/starters/ai-agent-app/packages/server/src/routes/prompts.ts"
+          ],
+          "acceptanceCriteria": [
+            "Prompt editor with syntax highlighting",
+            "Live chat test area with streaming",
+            "Load prompts from filesystem via API",
+            "Variable substitution preview",
+            "Token count estimate displayed",
+            "Save edits back to prompt files"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773558050625-a539j12mj",
+          "executionStatus": "in-progress"
+        }
+      ],
+      "epicId": "feature-1773558050623-snzn1p1j7",
+      "status": "completed"
+    },
+    {
+      "number": 10,
+      "slug": "10-mcp-and-docs",
+      "title": "MCP Server + Documentation",
+      "description": "Add an example MCP server using the tools package adapters, and ship comprehensive docs extracted from automaker plus new content.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "create-mcp-server-example",
+          "title": "Create MCP server example",
+          "description": "Create packages/mcp/ in the starter kit with a minimal MCP server (~50-80 lines) that: imports Server and StdioServerTransport from @modelcontextprotocol/sdk, loads tools from the tools package registry, converts them using toMCPTool adapter, registers ListToolsRequestSchema and CallToolRequestSchema handlers. Include the example tools (get_weather, search_web) auto-registered. Add a bin entry so users can run it as a CLI. Document how to connect it to Claude Code or other MCP clients.",
+          "filesToModify": [
+            "libs/templates/starters/ai-agent-app/packages/mcp/src/index.ts",
+            "libs/templates/starters/ai-agent-app/packages/mcp/package.json"
+          ],
+          "acceptanceCriteria": [
+            "MCP server starts via CLI",
+            "Lists tools from registry",
+            "Executes tools via MCP protocol",
+            "Works with Claude Code as client",
+            "Under 80 lines of code"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773558050626-y1qfyjwfg",
+          "executionStatus": "in-progress"
+        },
+        {
+          "number": 2,
+          "name": "create-docs-directory-with-extracted-content",
+          "title": "Create docs directory with extracted and new content",
+          "description": "Create docs/ at the starter kit root. Extract and genericize docs from automaker: agent-architecture.md, agent-philosophy.md, prompt-engineering.md, reliability.md (from concepts/), writing-prompts.md, flow-control.md, gotchas.md (from guides/), langfuse.md, mcp-integration.md, sdk-integration.md (from integrations/internal). Write new docs: visual-flow-builder.md, trace-viewer.md, prompt-playground.md, creating-mcp-tools.md, tool-adapters.md. Follow Diataxis framework: tutorials in getting-started/, how-tos in guides/, reference in reference/, explanations in concepts/.",
+          "filesToModify": [
+            "libs/templates/starters/ai-agent-app/docs/getting-started/quickstart.md",
+            "libs/templates/starters/ai-agent-app/docs/concepts/agent-architecture.md",
+            "libs/templates/starters/ai-agent-app/docs/concepts/prompt-engineering.md",
+            "libs/templates/starters/ai-agent-app/docs/guides/creating-tools.md",
+            "libs/templates/starters/ai-agent-app/docs/guides/building-flows.md",
+            "libs/templates/starters/ai-agent-app/docs/guides/tracing-debugging.md",
+            "libs/templates/starters/ai-agent-app/docs/guides/prompt-playground.md",
+            "libs/templates/starters/ai-agent-app/docs/reference/tool-adapters.md",
+            "libs/templates/starters/ai-agent-app/docs/integrations/langfuse.md",
+            "libs/templates/starters/ai-agent-app/docs/integrations/mcp.md"
+          ],
+          "acceptanceCriteria": [
+            "Diataxis structure with 4 content types",
+            "Extracted docs genericized (no automaker references)",
+            "New docs cover flow builder, traces, prompts, MCP",
+            "Quickstart gets user running in 5 minutes",
+            "All docs follow outcome-focused headings, code-first"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1773558050627-v623i6mc0",
+          "executionStatus": "in-progress"
+        },
+        {
+          "number": 3,
+          "name": "update-readme-with-full-platform-docs",
+          "title": "Update README with full platform documentation",
+          "description": "Update the root README.md to reflect the expanded platform: all packages (ui, server, app, tools, tracing, flows, prompts, mcp), all routes (/chat, /flows, /prompts, /traces, /sessions, /settings), all features. Add architecture diagram showing how packages connect. Add 'What can I build?' section with examples. Update env vars table with all new configuration (LANGFUSE_*, OPENAI_API_KEY, GOOGLE_API_KEY). Add quick links to docs/ for each topic.",
+          "filesToModify": ["libs/templates/starters/ai-agent-app/README.md"],
+          "acceptanceCriteria": [
+            "All 8 packages documented",
+            "All 6 routes described",
+            "Architecture diagram included",
+            "Env vars table complete",
+            "Quick links to docs/ for deep dives"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773558050627-ekt9sgiq3",
+          "executionStatus": "completed"
+        }
+      ],
+      "epicId": "feature-1773558050626-vsj5ho0iu",
+      "status": "completed"
+    }
+  ],
+  "prd": {
+    "situation": "protoLabs Studio has a production-quality AI chat system across libs/ui/src/ai/ (25 components), server chat routes (AI SDK streaming), model resolver (multi-provider), slash commands, and session state. The scaffold system supports docs, portfolio, landing-page, extension, and general starter kits but has no AI/agent kit.",
+    "problem": "Developers building AI-native apps have no clean starting point. They must wire up Vercel AI SDK streaming from scratch or copy-paste from automaker and manually strip internal code. The Claude Agent SDK is the primary driver but there is no reference implementation showing how to build a complete agent UX.",
+    "approach": "Extract and componentize existing chat UI into a standalone packages/ui library. Build packages/server with Express + Claude Agent SDK streaming, tool registry, slash commands, agent roles, and multi-provider model resolver. Build packages/app as a Vite + React 19 SPA with Zustand persistent sessions and TanStack Router. Ship as libs/templates/starters/ai-agent-app/ integrated into the scaffold system.",
+    "results": "Users run npx create-protolab my-app --kit ai-agent-app and get a working monorepo with streaming chat connected to Claude within 5 minutes. Custom tools render with rich UI cards. HITL works inline. Extended reasoning displays. Sessions persist. Slash commands and agent roles are user-configurable.",
+    "constraints": "React 19 best practices ONLY. Claude Agent SDK is primary driver. npm workspaces only. Inline HITL not dialog. No auth/DB/SaaS. Multi-provider via AI SDK. Must integrate with scaffold system (7 files). All components fully decoupled from @protolabsai packages.",
+    "generatedAt": "2026-03-15T06:40:00.000Z"
+  },
+  "createdAt": "2026-03-15T06:39:49.665Z",
+  "updatedAt": "2026-03-15T11:58:11.489Z"
+}

@@ -1,0 +1,32 @@
+---
+import { getEntry } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/sections/Hero.astro';
+import StatsBar from '../components/sections/StatsBar.astro';
+import FeatureGrid from '../components/sections/FeatureGrid.astro';
+import Steps from '../components/sections/Steps.astro';
+import Testimonials from '../components/sections/Testimonials.astro';
+import Pricing from '../components/sections/Pricing.astro';
+import Faq from '../components/sections/Faq.astro';
+import CtaCenter from '../components/sections/CtaCenter.astro';
+
+const config = await getEntry('siteConfig', 'main');
+const { brand } = config.data;
+---
+
+<BaseLayout title={`${brand.name} — ${brand.tagline}`} description={brand.description}>
+  <Hero />
+  <StatsBar />
+  <FeatureGrid />
+  <Steps />
+  <Testimonials />
+  <Pricing />
+  <Faq />
+  <CtaCenter
+    heading="Ready to get started?"
+    description="Join thousands of teams shipping faster. No credit card required."
+    ctaLabel="Start for Free"
+    ctaHref="#get-started"
+    footnote="Free tier available. No credit card required."
+  />
+</BaseLayout>

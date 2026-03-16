@@ -22,6 +22,7 @@ import {
   FileText,
   XCircle,
   Server,
+  FolderOpen,
 } from 'lucide-react';
 import { getBlockingDependencies } from '@protolabsai/dependency-resolver';
 import { useShallow } from 'zustand/react/shallow';
@@ -148,6 +149,34 @@ function isHumanInterventionRequired(reason: string): boolean {
   );
 }
 
+/** Palette for deterministic project badge colors */
+const PROJECT_BADGE_COLORS = [
+  '#6366f1',
+  '#8b5cf6',
+  '#ec4899',
+  '#14b8a6',
+  '#f97316',
+  '#06b6d4',
+  '#84cc16',
+  '#f43f5e',
+];
+
+/** Deterministic color from project slug */
+function getProjectColor(slug: string): string {
+  let hash = 0;
+  for (let i = 0; i < slug.length; i++) {
+    hash = ((hash * 31 + slug.charCodeAt(i)) >>> 0) & 0xffffffff;
+  }
+  return PROJECT_BADGE_COLORS[hash % PROJECT_BADGE_COLORS.length];
+}
+
+/** Abbreviate a slug to at most 2 dash-segments, max 14 chars */
+function abbreviateSlug(slug: string): string {
+  const parts = slug.split('-');
+  const short = parts.length <= 2 ? slug : parts.slice(0, 2).join('-');
+  return short.length > 14 ? short.slice(0, 14) : short;
+}
+
 interface CardBadgesProps {
   feature: Feature;
   onPRDClick?: () => void;
@@ -158,6 +187,7 @@ interface CardBadgesProps {
  * Note: Blocked/Lock badges are now shown in PriorityBadges for visual consistency
  */
 export const CardBadges = memo(function CardBadges({ feature, onPRDClick }: CardBadgesProps) {
+  const boardProjectFilter = useAppStore(useShallow((state) => state.boardProjectFilter));
   const hasEpic = !!feature.epicId;
   const hasError = !!feature.error;
   const hasDueDate = !!feature.dueDate;
@@ -168,6 +198,7 @@ export const CardBadges = memo(function CardBadges({ feature, onPRDClick }: Card
   const isNeedsAction =
     feature.status === 'blocked' && isHumanInterventionRequired(feature.statusChangeReason ?? '');
   const hasAssignedInstance = !!feature.assignedInstance;
+  const hasProject = !!feature.projectSlug && feature.projectSlug !== boardProjectFilter;
 
   if (
     !hasError &&
@@ -176,7 +207,8 @@ export const CardBadges = memo(function CardBadges({ feature, onPRDClick }: Card
     !hasCost &&
     !hasWorkItemState &&
     !isNeedsAction &&
-    !hasAssignedInstance
+    !hasAssignedInstance &&
+    !hasProject
   ) {
     return null;
   }
@@ -189,10 +221,38 @@ export const CardBadges = memo(function CardBadges({ feature, onPRDClick }: Card
     ? getWorkItemStateBadge(feature.workItemState!)
     : null;
 
+  // Project badge color
+  const projectColor = hasProject ? getProjectColor(feature.projectSlug!) : undefined;
+
   return (
     <div className="flex flex-wrap items-center gap-1.5 px-3 pt-1.5 min-h-[24px]">
       {/* Epic badge - shows parent epic for child features */}
       {hasEpic && <EpicBadge feature={feature} />}
+
+      {/* Project badge - shows which project plan this feature belongs to */}
+      {hasProject && (
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className="inline-flex items-center gap-1 px-1.5 h-5 rounded text-[10px] font-medium border"
+                style={{
+                  backgroundColor: `${projectColor}1a`,
+                  color: projectColor,
+                  borderColor: `${projectColor}40`,
+                }}
+                data-testid={`project-badge-${feature.id}`}
+              >
+                <FolderOpen className="w-2.5 h-2.5" />
+                {abbreviateSlug(feature.projectSlug!)}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs">
+              <p>Project: {feature.projectSlug}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
 
       {/* Instance badge - shows which instance owns this feature (cross-instance dashboard) */}
       {hasAssignedInstance && (

@@ -178,6 +178,9 @@ labs/
 # Local project plans (not repo content)
 /projects/
 
+# Ava local workspace
+.ava/
+
 # Gource visualization (render locally, don't commit)
 gource.mp4
 .gource/

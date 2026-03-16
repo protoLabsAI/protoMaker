@@ -1,0 +1,36 @@
+{
+  "name": "@@PROJECT_NAME-color",
+  "version": "0.1.0",
+  "description": "LCH/OKLCH color science for design systems — scales, harmonies, WCAG contrast, semantic tokens. Zero dependencies.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "color",
+    "oklch",
+    "lch",
+    "design-system",
+    "design-tokens",
+    "wcag",
+    "contrast",
+    "palette"
+  ],
+  "license": "MIT"
+}

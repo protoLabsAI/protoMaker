@@ -146,7 +146,7 @@ export function ProjectsList() {
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
       <PanelHeader
         icon={FolderKanban}
-        title="Projects"
+        title="Project Management"
         badge={
           <span className="text-xs text-muted-foreground">
             {projects.length} project{projects.length !== 1 ? 's' : ''}
@@ -232,13 +232,16 @@ export function ProjectsList() {
                           role="button"
                           tabIndex={0}
                           onClick={() =>
-                            navigate({ to: '/projects/$slug', params: { slug: project.slug } })
+                            navigate({
+                              to: '/project-management/$slug',
+                              params: { slug: project.slug },
+                            })
                           }
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
                               e.preventDefault();
                               navigate({
-                                to: '/projects/$slug',
+                                to: '/project-management/$slug',
                                 params: { slug: project.slug },
                               });
                             }

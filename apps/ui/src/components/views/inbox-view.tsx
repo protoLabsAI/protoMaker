@@ -52,7 +52,7 @@ import { getEffectivePriority } from '@protolabsai/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
-type CategoryFilter = 'all' | 'decisions' | 'escalation' | 'ceremony';
+type CategoryFilter = 'all' | 'exceptions' | 'decisions' | 'escalation' | 'ceremony';
 type StatusFilter = 'pending' | 'snoozed' | 'acted' | 'dismissed' | 'all';
 
 /**
@@ -64,6 +64,11 @@ type StatusFilter = 'pending' | 'snoozed' | 'acted' | 'dismissed' | 'all';
  */
 const CATEGORY_TABS: { value: CategoryFilter; label: string; icon: React.ReactNode }[] = [
   { value: 'all', label: 'All', icon: <Inbox className="h-3.5 w-3.5" /> },
+  {
+    value: 'exceptions',
+    label: 'Exceptions',
+    icon: <AlertTriangle className="h-3.5 w-3.5 text-red-500" />,
+  },
   { value: 'decisions', label: 'Decisions', icon: <ShieldCheck className="h-3.5 w-3.5" /> },
   { value: 'escalation', label: 'Escalations', icon: <AlertTriangle className="h-3.5 w-3.5" /> },
   { value: 'ceremony', label: 'Ceremonies', icon: <PartyPopper className="h-3.5 w-3.5" /> },
@@ -137,6 +142,8 @@ function getActionIcon(type: ActionableItemActionType) {
       return <AlertTriangle className="h-4 w-4 text-red-500" />;
     case 'gate':
       return <CircleDot className="h-4 w-4 text-purple-500" />;
+    case 'signal':
+      return <AlertTriangle className="h-4 w-4 text-orange-500" />;
     case 'notification':
       return <Bell className="h-4 w-4 text-muted-foreground" />;
     default:
@@ -227,10 +234,16 @@ export function InboxView() {
     }
 
     // Category filter
-    if (categoryFilter === 'decisions') {
-      filtered = filtered.filter((i) => DECISION_ACTION_TYPES.has(i.actionType));
+    if (categoryFilter === 'exceptions') {
+      filtered = filtered.filter((i) => i.category === 'exception');
+    } else if (categoryFilter === 'decisions') {
+      filtered = filtered.filter(
+        (i) => DECISION_ACTION_TYPES.has(i.actionType) || i.category === 'decision'
+      );
     } else if (categoryFilter === 'escalation') {
-      filtered = filtered.filter((i) => i.actionType === 'escalation');
+      filtered = filtered.filter(
+        (i) => i.actionType === 'escalation' && i.category !== 'exception'
+      );
     } else if (categoryFilter === 'ceremony') {
       // Hide all actionable items when ceremony tab is active
       return [];
@@ -254,29 +267,6 @@ export function InboxView() {
         (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       ),
     [ceremonyEntries]
-  );
-
-  const handleGateAction = useCallback(
-    async (e: React.MouseEvent, item: ActionableItem, action: 'advance' | 'reject') => {
-      e.stopPropagation();
-      if (!projectPath) return;
-      const featureId = item.actionPayload?.featureId as string | undefined;
-      if (!featureId) return;
-      try {
-        const api = getHttpApiClient();
-        await api.engine.pipelineGateResolve(projectPath, featureId, action);
-        useActionableItemsStore.getState().dismissItem(item.id);
-        await api.actionableItems.dismiss(projectPath, item.id);
-        toast.success(
-          action === 'advance'
-            ? 'Gate advanced — pipeline continues'
-            : 'Gate rejected — feature blocked'
-        );
-      } catch {
-        toast.error('Failed to resolve gate');
-      }
-    },
-    [projectPath]
   );
 
   const handleItemClick = useCallback(
@@ -366,11 +356,19 @@ export function InboxView() {
   // Unread counts per consolidated category for tab badges
   // Uses unread (pending + not yet read) so badges clear when items are read
   const unreadCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: 0, decisions: 0, escalation: 0, ceremony: 0 };
+    const counts: Record<string, number> = {
+      all: 0,
+      exceptions: 0,
+      decisions: 0,
+      escalation: 0,
+      ceremony: 0,
+    };
     for (const item of items) {
       if (item.status !== 'pending' || item.read) continue;
       counts.all++;
-      if (DECISION_ACTION_TYPES.has(item.actionType)) {
+      if (item.category === 'exception') {
+        counts.exceptions++;
+      } else if (DECISION_ACTION_TYPES.has(item.actionType) || item.category === 'decision') {
         counts.decisions++;
       } else if (item.actionType === 'escalation') {
         counts.escalation++;
@@ -597,30 +595,6 @@ export function InboxView() {
                       </div>
 
                       <div className="flex items-center gap-1 flex-shrink-0">
-                        {/* Gate actions */}
-                        {item.actionType === 'gate' && item.status === 'pending' && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs px-2 text-green-600 border-green-600/30 hover:bg-green-600/10"
-                              onClick={(e) => handleGateAction(e, item, 'advance')}
-                              title="Advance gate"
-                            >
-                              Advance
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs px-2 text-red-500 border-red-500/30 hover:bg-red-500/10"
-                              onClick={(e) => handleGateAction(e, item, 'reject')}
-                              title="Reject gate"
-                            >
-                              Reject
-                            </Button>
-                          </>
-                        )}
-
                         {/* Snooze */}
                         {item.status === 'pending' && (
                           <div className="relative">

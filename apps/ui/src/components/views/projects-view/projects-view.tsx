@@ -50,7 +50,7 @@ export function ProjectsView() {
         <div
           className="inline-flex h-8 items-center rounded-md bg-muted p-[3px] border border-border"
           role="tablist"
-          aria-label="Projects view"
+          aria-label="Project management view"
         >
           <button
             role="tab"

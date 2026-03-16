@@ -333,7 +333,8 @@ For features in `in_progress` or `review` with no activity > 24h:
 ### 5.2 Board Consistency Checks
 
 - **Done without PR**: Feature marked done but no merged PR -> verify manually or flag
-- **Review with merged PR**: PR already merged but feature still in review -> move to done
+- **Review with merged PR**: PR already merged but feature still in review -> this is a **system bug** in merged PR reconciliation. File a bug ticket. Do NOT manually `update_feature` to done.
+- **Backlog with merged PR**: Feature in backlog but its branch has a merged PR -> this is a **system bug**. The reconciliation sweep should catch backlog features too. File a bug ticket.
 - **In progress with no agent**: No running agent and no recent activity -> restart or reset
 - **Orphaned worktrees**: Worktrees for features that are already done -> note for cleanup
 

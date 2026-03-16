@@ -1,6 +1,6 @@
 # Claude Code Plugin for protoLabs
 
-Setup guide for the Claude Code plugin and MCP server. For commands and examples, see [Plugin Commands](./plugin-commands.md). For the full MCP tool catalog, see [MCP Tools Reference](./mcp-tools-reference.md).
+Setup guide for the Claude Code plugin and MCP server. For commands and examples, see [Plugin Commands](./plugin-commands.md). For the full MCP tool catalog, see [MCP Tools Reference](../reference/mcp-tools.md).
 
 ## Quick Start
 
@@ -446,6 +446,6 @@ docker build --platform linux/amd64 -t discord-mcp:amd64 .
 - [Plugin Quickstart](./plugin-quickstart.md) — 5-minute setup guide
 - [Plugin Deep Dive](./plugin-deep-dive.md) — Architecture, hooks, tools, and extension points
 - [Plugin Commands](./plugin-commands.md) — Commands reference, subagents, examples
-- [MCP Tools Reference](./mcp-tools-reference.md) — Full MCP tool catalog
-- [Context System](/agents/context-system) — Best practices for context files
-- [protoLabs README](../README.md) — Main project documentation
+- [MCP Tools Reference](../reference/mcp-tools.md) — Full MCP tool catalog
+- [Context System](/guides/context-files) — Best practices for context files
+- [Getting Started](../getting-started/index.md) — Main project documentation

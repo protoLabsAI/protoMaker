@@ -153,7 +153,7 @@ export function DashboardView() {
           description: `Opened ${name}`,
         });
 
-        navigate({ to: '/projects' });
+        navigate({ to: '/project-management' });
       } catch (error) {
         logger.error('[Dashboard] Failed to open project:', error);
         toast.error('Failed to open project', {
@@ -248,64 +248,30 @@ export function DashboardView() {
   const handleCreateBlankProject = async (projectName: string, parentDir: string) => {
     setIsCreating(true);
     try {
-      const api = getElectronAPI();
+      const httpClient = getHttpApiClient();
       const projectPath = `${parentDir}/${projectName}`;
 
-      const parentExists = await api.exists(parentDir);
-      if (!parentExists) {
-        toast.error('Parent directory does not exist', {
-          description: `Cannot create project in non-existent directory: ${parentDir}`,
-        });
-        return;
-      }
-
-      const parentStat = await api.stat(parentDir);
-      if (parentStat && !parentStat.stats?.isDirectory) {
-        toast.error('Parent path is not a directory', {
-          description: `${parentDir} is not a directory`,
-        });
-        return;
-      }
-
-      const mkdirResult = await api.mkdir(projectPath);
-      if (!mkdirResult.success) {
-        toast.error('Failed to create project directory', {
-          description: mkdirResult.error || 'Unknown error occurred',
-        });
-        return;
-      }
-
-      const initResult = await initializeProject(projectPath);
-      if (!initResult.success) {
-        toast.error('Failed to initialize project', {
-          description: initResult.error || 'Unknown error occurred',
-        });
-        return;
-      }
-
-      await api.writeFile(
-        `${projectPath}/.automaker/app_spec.txt`,
-        `<project_specification>
-  <project_name>${projectName}</project_name>
-
-  <overview>
-    Describe your project here. This file will be analyzed by an AI agent
-    to understand your project structure and tech stack.
-  </overview>
-
-  <technology_stack>
-    <!-- The AI agent will fill this in after analyzing your project -->
-  </technology_stack>
-
-  <core_capabilities>
-    <!-- List core features and capabilities -->
-  </core_capabilities>
-
-  <implemented_features>
-    <!-- The AI agent will populate this based on code analysis -->
-  </implemented_features>
-</project_specification>`
+      // Scaffold blank project via server endpoint
+      const scaffoldResult = await httpClient.setup.scaffoldStarterKit(
+        projectPath,
+        'general',
+        projectName
       );
+
+      if (!scaffoldResult.success) {
+        toast.error('Failed to create project', {
+          description: scaffoldResult.error || 'Unknown error occurred',
+        });
+        return;
+      }
+
+      // Initialize git repo
+      const api = getElectronAPI();
+      try {
+        await api.worktree?.initGit(projectPath);
+      } catch {
+        // Don't fail if git init fails
+      }
 
       const project = {
         id: `project-${Date.now()}`,
@@ -322,7 +288,7 @@ export function DashboardView() {
         description: `Created ${projectName}`,
       });
 
-      navigate({ to: '/projects' });
+      navigate({ to: '/project-management' });
     } catch (error) {
       logger.error('Failed to create project:', error);
       toast.error('Failed to create project', {
@@ -343,19 +309,40 @@ export function DashboardView() {
       const httpClient = getHttpApiClient();
       const api = getElectronAPI();
 
-      const cloneResult = await httpClient.templates.clone(
-        template.repoUrl,
-        projectName,
-        parentDir
-      );
-      if (!cloneResult.success || !cloneResult.projectPath) {
-        toast.error('Failed to clone template', {
-          description: cloneResult.error || 'Unknown error occurred',
-        });
-        return;
-      }
+      let projectPath: string;
 
-      const projectPath = cloneResult.projectPath;
+      if (template.source === 'scaffold' && template.kitType) {
+        const targetDir = `${parentDir}/${projectName}`;
+
+        const scaffoldResult = await httpClient.setup.scaffoldStarterKit(
+          targetDir,
+          template.kitType as 'docs' | 'portfolio',
+          projectName
+        );
+
+        if (!scaffoldResult.success) {
+          toast.error('Failed to scaffold starter kit', {
+            description: scaffoldResult.error || 'Unknown error occurred',
+          });
+          return;
+        }
+
+        projectPath = targetDir;
+      } else {
+        const cloneResult = await httpClient.templates.clone(
+          template.repoUrl!,
+          projectName,
+          parentDir
+        );
+        if (!cloneResult.success || !cloneResult.projectPath) {
+          toast.error('Failed to clone template', {
+            description: cloneResult.error || 'Unknown error occurred',
+          });
+          return;
+        }
+
+        projectPath = cloneResult.projectPath;
+      }
       const initResult = await initializeProject(projectPath);
       if (!initResult.success) {
         toast.error('Failed to initialize project', {
@@ -403,7 +390,7 @@ export function DashboardView() {
         description: `Created ${projectName} from ${template.name}`,
       });
 
-      navigate({ to: '/projects' });
+      navigate({ to: '/project-management' });
     } catch (error) {
       logger.error('Failed to create project from template:', error);
       toast.error('Failed to create project', {
@@ -480,7 +467,7 @@ export function DashboardView() {
         description: `Created ${projectName}`,
       });
 
-      navigate({ to: '/projects' });
+      navigate({ to: '/project-management' });
     } catch (error) {
       logger.error('Failed to create project from custom URL:', error);
       toast.error('Failed to create project', {

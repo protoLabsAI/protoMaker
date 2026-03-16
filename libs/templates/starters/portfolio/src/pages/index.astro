@@ -1,0 +1,102 @@
+---
+/**
+ * Home page — composes section components into a single landing page.
+ *
+ * All heavy sections live in src/components/sections/ so you can reorder,
+ * remove, or swap them without editing multiple files.
+ */
+import { getCollection } from "astro:content";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Hero from "@/components/sections/Hero.astro";
+import ProjectGrid from "@/components/sections/ProjectGrid";
+import Testimonials from "@/components/sections/Testimonials.astro";
+import BlogList from "@/components/sections/BlogList.astro";
+import Contact from "@/components/sections/Contact";
+
+// ── Site config ─────────────────────────────────────────────────
+const [configEntry] = await getCollection("siteConfig");
+const config = configEntry.data;
+
+// ── Projects ────────────────────────────────────────────────────
+const allProjects = await getCollection("projects");
+const projects = allProjects
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+  .map((p) => ({
+    title: p.data.title,
+    description: p.data.description,
+    techStack: p.data.techStack,
+    slug: p.slug,
+    tags: p.data.tags,
+    liveUrl: p.data.liveUrl,
+    repoUrl: p.data.repoUrl,
+    image: p.data.image,
+    imageAlt: p.data.imageAlt,
+    featured: p.data.featured,
+  }));
+
+// ── Testimonials ─────────────────────────────────────────────────
+const allTestimonials = await getCollection("testimonials");
+const testimonials = allTestimonials
+  .sort((a, b) => a.data.order - b.data.order)
+  .map((t) => ({
+    author: t.data.author,
+    role: t.data.role,
+    company: t.data.company,
+    quote: t.data.quote,
+    avatar: t.data.avatar,
+    link: t.data.link,
+  }));
+
+// ── Blog posts (3 most recent, no drafts) ────────────────────────
+const allBlog = await getCollection("blog");
+const recentPosts = allBlog
+  .filter((p) => !p.data.draft)
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+  .slice(0, 3)
+  .map((p) => ({
+    title: p.data.title,
+    description: p.data.description,
+    pubDate: p.data.pubDate,
+    tags: p.data.tags,
+    slug: p.slug,
+  }));
+---
+
+<BaseLayout description={config.description}>
+  <!-- ── Hero ─────────────────────────────────────────────────── -->
+  <Hero name={config.name} bio={config.bio} email={config.email} />
+
+  <!-- ── Projects (filterable React island) ────────────────────── -->
+  {
+    projects.length > 0 && (
+      <section class="mx-auto max-w-5xl px-6 py-16">
+        <div class="mb-8 flex items-center justify-between">
+          <h2 class="text-2xl font-bold text-white">Projects</h2>
+          <a
+            href="/projects"
+            class="text-sm font-medium no-underline transition-colors"
+            style="color: var(--color-accent);"
+          >
+            All projects →
+          </a>
+        </div>
+        <ProjectGrid client:load projects={projects} />
+      </section>
+    )
+  }
+
+  <!-- ── Testimonials ───────────────────────────────────────────── -->
+  <Testimonials testimonials={testimonials} />
+
+  <!-- ── Recent blog posts ─────────────────────────────────────── -->
+  <BlogList posts={recentPosts} />
+
+  <!-- ── Contact ───────────────────────────────────────────────── -->
+  <Contact
+    client:load
+    email={config.email}
+    github={config.social.github}
+    twitter={config.social.twitter}
+    linkedin={config.social.linkedin}
+  />
+</BaseLayout>

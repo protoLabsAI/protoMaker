@@ -1,0 +1,216 @@
+---
+/**
+ * BaseLayout — root HTML document wrapper for every page.
+ *
+ * Includes:
+ * - <head> with SEO meta tags and Open Graph
+ * - Geist font loading via Fontsource CDN
+ * - <ViewTransitions /> for smooth page-to-page animations
+ * - Accessible skip-to-content link
+ * - Sticky Nav and Footer
+ */
+import { ViewTransitions } from 'astro:transitions';
+import { getCollection } from 'astro:content';
+import '@/styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  /** Override <body> class */
+  bodyClass?: string;
+}
+
+// Load site config once — used for default meta values
+const [configEntry] = await getCollection('siteConfig');
+const config = configEntry.data;
+
+const {
+  title,
+  description = config.description,
+  image = config.ogImage,
+  bodyClass = '',
+} = Astro.props;
+
+const pageTitle = title ? `${title} — ${config.name}` : config.name;
+const canonicalUrl = new URL(Astro.url.pathname, config.siteUrl);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="generator" content={Astro.generator} />
+
+    <!-- Primary meta -->
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl} />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    {image && <meta property="og:image" content={new URL(image, config.siteUrl)} />}
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    {image && <meta name="twitter:image" content={new URL(image, config.siteUrl)} />}
+    {config.social.twitter && (
+      <meta
+        name="twitter:creator"
+        content={`@${config.social.twitter.split('/').pop()}`}
+      />
+    )}
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Geist fonts via CDN -->
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400;500;600&display=swap"
+    />
+
+    <!-- Smooth page transitions (View Transitions API) -->
+    <ViewTransitions />
+  </head>
+
+  <body class={bodyClass}>
+    <!-- Skip-to-content for keyboard / screen reader users -->
+    <a class="skip-link" href="#main-content">Skip to content</a>
+
+    <!-- ── Navigation ─────────────────────────────────────────── -->
+    <header
+      class="sticky top-0 z-50 border-b"
+      style="background: rgba(9,9,11,0.85); backdrop-filter: blur(12px); border-color: var(--border-subtle);"
+    >
+      <nav
+        class="mx-auto flex max-w-5xl items-center justify-between px-6 py-4"
+        aria-label="Main navigation"
+      >
+        <a
+          href="/"
+          class="gradient-text text-lg font-bold tracking-tight no-underline"
+          aria-label={`${config.name} — home`}
+        >
+          {config.name}
+        </a>
+
+        <ul class="flex list-none gap-6 p-0 m-0">
+          <li>
+            <a
+              href="/projects"
+              class="text-sm font-medium text-zinc-400 no-underline transition-colors hover:text-white"
+            >
+              Projects
+            </a>
+          </li>
+          <li>
+            <a
+              href="/blog"
+              class="text-sm font-medium text-zinc-400 no-underline transition-colors hover:text-white"
+            >
+              Blog
+            </a>
+          </li>
+          <li>
+            <a
+              href="/about"
+              class="text-sm font-medium text-zinc-400 no-underline transition-colors hover:text-white"
+            >
+              About
+            </a>
+          </li>
+          {config.email && (
+            <li>
+              <a
+                href={`mailto:${config.email}`}
+                class="rounded-md bg-accent px-4 py-1.5 text-sm font-semibold text-white no-underline transition-opacity hover:opacity-90"
+                style="background-color: var(--color-accent);"
+              >
+                Contact
+              </a>
+            </li>
+          )}
+        </ul>
+      </nav>
+    </header>
+
+    <!-- ── Main content ───────────────────────────────────────── -->
+    <main id="main-content">
+      <slot />
+    </main>
+
+    <!-- ── Footer ─────────────────────────────────────────────── -->
+    <footer
+      class="mt-24 border-t py-12"
+      style="border-color: var(--border-subtle);"
+    >
+      <div class="mx-auto max-w-5xl px-6">
+        <div class="flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
+          <!-- Brand -->
+          <p class="text-sm text-zinc-500">
+            &copy; {new Date().getFullYear()}
+            {config.name}. Built with
+            <a
+              href="https://astro.build"
+              class="text-zinc-400 no-underline hover:text-white"
+              target="_blank"
+              rel="noopener"
+            >
+              Astro
+            </a>.
+          </p>
+
+          <!-- Social links -->
+          <ul class="flex list-none gap-4 p-0 m-0">
+            {config.social.github && (
+              <li>
+                <a
+                  href={config.social.github}
+                  class="text-sm text-zinc-500 no-underline hover:text-white"
+                  target="_blank"
+                  rel="noopener"
+                  aria-label="GitHub"
+                >
+                  GitHub
+                </a>
+              </li>
+            )}
+            {config.social.twitter && (
+              <li>
+                <a
+                  href={config.social.twitter}
+                  class="text-sm text-zinc-500 no-underline hover:text-white"
+                  target="_blank"
+                  rel="noopener"
+                  aria-label="Twitter / X"
+                >
+                  Twitter
+                </a>
+              </li>
+            )}
+            {config.social.linkedin && (
+              <li>
+                <a
+                  href={config.social.linkedin}
+                  class="text-sm text-zinc-500 no-underline hover:text-white"
+                  target="_blank"
+                  rel="noopener"
+                  aria-label="LinkedIn"
+                >
+                  LinkedIn
+                </a>
+              </li>
+            )}
+          </ul>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

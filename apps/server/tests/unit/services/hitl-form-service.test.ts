@@ -29,10 +29,10 @@ vi.mock('@protolabsai/utils', () => ({
   }),
 }));
 
-function createMockSettingsService(pipelineEnabled = true) {
+function createMockSettingsService(hitlEnabled = true) {
   return {
     getGlobalSettings: vi.fn().mockResolvedValue({
-      featureFlags: { pipeline: pipelineEnabled },
+      featureFlags: { hitlForms: hitlEnabled },
     }),
   };
 }
@@ -82,29 +82,6 @@ describe('HITLFormService', () => {
   afterEach(() => {
     service.shutdown();
     vi.useRealTimers();
-  });
-
-  // ---------- create() — feature flag gate ----------
-
-  describe('create() — feature flag gate', () => {
-    it('should return null when pipeline flag is false', async () => {
-      service.setSettingsService(createMockSettingsService(false) as any);
-      const result = await service.create(createValidInput());
-      expect(result).toBeNull();
-    });
-
-    it('should return null when settingsService is not wired', async () => {
-      const ungatedService = new HITLFormService(createMockDeps());
-      const result = await ungatedService.create(createValidInput());
-      expect(result).toBeNull();
-      ungatedService.shutdown();
-    });
-
-    it('should create a form when pipeline flag is true', async () => {
-      const form = await service.create(createValidInput());
-      expect(form).not.toBeNull();
-      expect(form!.id).toMatch(/^hitl-/);
-    });
   });
 
   // ---------- create() ----------

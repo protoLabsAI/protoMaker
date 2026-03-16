@@ -136,21 +136,21 @@ export class CompletionDetectorService {
     })();
   }
 
-  initialize(
+  async initialize(
     emitter: EventEmitter,
     featureLoader: FeatureLoader,
     projectService: ProjectService,
     dataDir?: string,
     settingsService?: SettingsService
-  ): void {
+  ): Promise<void> {
     this.emitter = emitter;
     this.featureLoader = featureLoader;
     this.projectService = projectService;
     this.settingsService = settingsService ?? null;
     this.dataDir = dataDir ?? null;
 
-    // Load ledger asynchronously to pre-populate dedup Sets from disk
-    void this.loadLedger();
+    // Await ledger load so dedup Sets are populated before any events are processed
+    await this.loadLedger();
 
     this.unsubscribe = emitter.subscribe((type, payload) => {
       // Auto-mode completion (agent finished successfully)
@@ -230,12 +230,38 @@ export class CompletionDetectorService {
   }
 
   /**
+   * Returns true if the given branch exists on the remote (origin).
+   * Uses `git ls-remote --heads origin <branch>` — a ref is only printed
+   * when the branch exists on the remote, so an empty result means absent.
+   */
+  private async epicBranchExistsOnRemote(
+    projectPath: string,
+    branchName: string
+  ): Promise<boolean> {
+    try {
+      const { stdout } = await execFileAsync(
+        'git',
+        ['ls-remote', '--heads', 'origin', branchName],
+        { cwd: projectPath, timeout: 15000 }
+      );
+      return stdout.trim().length > 0;
+    } catch {
+      // If the git command fails (no remote, no network), assume branch absent
+      return false;
+    }
+  }
+
+  /**
    * Check if all children of an epic are done. If the epic has a branch,
    * create a PR from the epic branch to dev (or the configured base branch)
    * and move the epic to "review". The epic only reaches "done" when the
    * GitHub webhook detects that the epic-to-dev PR has merged.
    *
    * If the epic has no branch (manual or non-git epic), mark done directly.
+   *
+   * Special case: when children merged directly to the base branch
+   * (prBaseBranch = 'dev') the epic branch is never created on the remote.
+   * In that scenario we skip the PR step and mark the epic done immediately.
    */
   private async checkEpicCompletion(projectPath: string, epicId: string): Promise<void> {
     const dedupeKey = `${projectPath}:${epicId}`;
@@ -252,16 +278,44 @@ export class CompletionDetectorService {
     const epic = allFeatures.find((f) => f.id === epicId);
     if (!epic || epic.status === 'done' || epic.status === 'review') return;
 
-    // Claim dedup slot before async work to prevent race conditions
-    this.emittedEpics.add(dedupeKey);
-    this.appendLedgerEntry('epic', dedupeKey);
-    this.completionCounts.epics++;
-
-    // If the epic has a branch, create the epic-to-dev PR instead of marking done
+    // If the epic has a branch, check whether it actually exists on the remote
+    // before attempting to create a PR. When prBaseBranch is 'dev', child PRs
+    // merge directly to dev and the epic branch is never pushed, so the branch
+    // won't exist. In that case skip the PR step and mark the epic done directly.
     if (epic.branchName) {
+      const branchExists = await this.epicBranchExistsOnRemote(projectPath, epic.branchName);
+
+      if (!branchExists) {
+        // Children merged directly to the base branch — no epic branch to PR from.
+        // Skip the PR step and mark the epic done immediately.
+        this.emittedEpics.add(dedupeKey);
+        this.appendLedgerEntry('epic', dedupeKey);
+        this.completionCounts.epics++;
+        await this.featureLoader!.update(projectPath, epicId, { status: 'done' });
+        logger.info(
+          `Epic "${epic.title}" completed — children merged directly to dev, skipping epic PR (branch ${epic.branchName} not found on remote)`
+        );
+        this.emitter!.emit('feature:completed', {
+          projectPath,
+          featureId: epicId,
+          featureTitle: epic.title,
+          projectSlug: epic.projectSlug,
+          isEpic: true,
+        });
+        if (epic.projectSlug && epic.milestoneSlug) {
+          await this.checkMilestoneCompletion(projectPath, epic.projectSlug, epic.milestoneSlug);
+        }
+        return;
+      }
+
+      // Branch exists on remote — create the epic-to-dev PR as normal.
+      // Dedup is claimed only after a successful PR creation so that failures are retryable.
       const result = await this.createEpicToDevPR(projectPath, epicId, epic);
       if (result) {
-        // PR created successfully — move epic to review
+        // PR created successfully — claim dedup and move epic to review
+        this.emittedEpics.add(dedupeKey);
+        this.appendLedgerEntry('epic', dedupeKey);
+        this.completionCounts.epics++;
         await this.featureLoader!.update(projectPath, epicId, {
           status: 'review',
           prNumber: result.prNumber,
@@ -280,7 +334,8 @@ export class CompletionDetectorService {
         );
         return;
       }
-      // PR creation failed — fall through to block the epic
+      // PR creation failed — block the epic but do NOT claim dedup so the next
+      // feature:done event can retry the PR creation
       await this.featureLoader!.update(projectPath, epicId, {
         status: 'blocked',
         statusChangeReason: `All child features done but epic-to-dev PR creation failed for branch ${epic.branchName}. Manual intervention required — create PR from ${epic.branchName} to dev.`,
@@ -290,6 +345,11 @@ export class CompletionDetectorService {
       );
       return;
     }
+
+    // No branch — claim dedup then mark done directly (manual or non-git epic)
+    this.emittedEpics.add(dedupeKey);
+    this.appendLedgerEntry('epic', dedupeKey);
+    this.completionCounts.epics++;
 
     // No branch — mark done directly (manual or non-git epic)
     logger.info(`All children of epic "${epic.title}" are done — marking epic done (no branch)`);

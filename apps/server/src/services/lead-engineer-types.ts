@@ -161,6 +161,8 @@ export interface StateContext {
   structuredPlan?: StructuredPlan;
   /** Context window utilization metrics from the most recent execution attempt */
   contextMetrics?: ContextMetrics;
+  /** Number of consecutive times the execution gate has rejected this feature. Escalates after 3. */
+  gateRejectionCount?: number;
 }
 
 /**

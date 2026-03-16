@@ -2,10 +2,37 @@
 import { memo, useCallback, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabsai/ui/atoms';
-import { AlertCircle, Lock, Hand, Sparkles, FileText } from 'lucide-react';
+import { AlertCircle, Lock, Hand, Sparkles, FileText, FolderOpen } from 'lucide-react';
+import { useAppStore } from '@/store/app-store';
+import { useShallow } from 'zustand/react/shallow';
 import type { Feature } from '@/store/types';
 import { RowActions, type RowActionHandlers } from './row-actions';
 import { getColumnWidth, getColumnAlign } from './list-header';
+
+const PROJECT_BADGE_COLORS = [
+  '#6366f1',
+  '#8b5cf6',
+  '#ec4899',
+  '#14b8a6',
+  '#f97316',
+  '#06b6d4',
+  '#84cc16',
+  '#f43f5e',
+];
+
+function getProjectColor(slug: string): string {
+  let hash = 0;
+  for (let i = 0; i < slug.length; i++) {
+    hash = ((hash * 31 + slug.charCodeAt(i)) >>> 0) & 0xffffffff;
+  }
+  return PROJECT_BADGE_COLORS[hash % PROJECT_BADGE_COLORS.length];
+}
+
+function abbreviateSlug(slug: string): string {
+  const parts = slug.split('-');
+  const short = parts.length <= 2 ? slug : parts.slice(0, 2).join('-');
+  return short.length > 14 ? short.slice(0, 14) : short;
+}
 
 export interface ListRowProps {
   /** The feature to display */
@@ -211,6 +238,7 @@ export const ListRow = memo(function ListRow({
   blockingDependencies = [],
   className,
 }: ListRowProps) {
+  const boardProjectFilter = useAppStore(useShallow((state) => state.boardProjectFilter));
   const handleRowClick = useCallback(
     (e: React.MouseEvent) => {
       // Don't trigger row click if clicking on checkbox or actions
@@ -310,6 +338,35 @@ export const ListRow = memo(function ListRow({
               {feature.description}
             </p>
           )}
+          {/* Project badge - shown when feature belongs to a project plan and board isn't filtered to it */}
+          {feature.projectSlug &&
+            feature.projectSlug !== boardProjectFilter &&
+            (() => {
+              const color = getProjectColor(feature.projectSlug);
+              return (
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span
+                        className="inline-flex items-center gap-1 px-1.5 h-4 rounded text-[10px] font-medium border mt-1"
+                        style={{
+                          backgroundColor: `${color}1a`,
+                          color,
+                          borderColor: `${color}40`,
+                        }}
+                        data-testid={`list-row-project-badge-${feature.id}`}
+                      >
+                        <FolderOpen className="w-2.5 h-2.5" />
+                        {abbreviateSlug(feature.projectSlug)}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">
+                      <p>Project: {feature.projectSlug}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              );
+            })()}
         </div>
       </div>
 

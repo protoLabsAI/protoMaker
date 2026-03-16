@@ -130,6 +130,15 @@ export async function orchestrateProjectFeatures(
   // Track created features for dependency resolution
   const createdFeatures: Map<string, Feature> = new Map();
 
+  // ── Idempotency: build lookup of existing features by branchName ──
+  const existingFeatures = await featureLoader.getAll(projectPath);
+  const existingByBranch = new Map<string, Feature>();
+  for (const f of existingFeatures) {
+    if (f.branchName && f.projectSlug === projectSlug) {
+      existingByBranch.set(f.branchName, f);
+    }
+  }
+
   // Phase 1: Create epics and features
   events?.emit('project:features:progress', {
     step: 'creating-features',
@@ -142,69 +151,96 @@ export async function orchestrateProjectFeatures(
 
     // Create epic feature for milestone if requested
     if (createEpics) {
-      try {
-        const epicFeature = await featureLoader.create(projectPath, {
-          title: `[Epic] ${milestone.title}`,
-          description: `# ${milestone.title}\n\n${milestone.description}\n\n## Phases\n${milestone.phases.map((p, i) => `${i + 1}. ${p.title}`).join('\n')}`,
-          category: 'Epic',
-          status: initialStatus,
-          isEpic: true,
-          epicColor: EPIC_COLORS[mi % EPIC_COLORS.length],
-          branchName: `epic/${slugify(milestone.title, 40)}`,
-          projectSlug,
-          milestoneSlug: milestone.slug,
-        });
-        epicId = epicFeature.id;
+      const epicBranch = `epic/${slugify(milestone.title, 40)}`;
+      const existingEpic = existingByBranch.get(epicBranch);
+      if (existingEpic) {
+        // Reuse existing epic — idempotent on re-run
+        epicId = existingEpic.id;
         result.milestoneEpicMap[milestone.slug] = epicId;
-        result.featuresCreated++;
-        createdFeatures.set(`epic:${milestone.slug}`, epicFeature);
-
+        createdFeatures.set(`epic:${milestone.slug}`, existingEpic);
         events?.emit('project:features:progress', {
           step: 'epic-created',
           milestoneSlug: milestone.slug,
           epicId,
         });
-      } catch (err) {
-        const errorMsg = `Failed to create epic for milestone ${milestone.slug}: ${getErrorMessage(err)}`;
-        result.errors?.push(errorMsg);
-        events?.emit('project:features:error', { error: errorMsg });
+      } else {
+        try {
+          const epicFeature = await featureLoader.create(projectPath, {
+            title: `[Epic] ${milestone.title}`,
+            description: `# ${milestone.title}\n\n${milestone.description}\n\n## Phases\n${milestone.phases.map((p, i) => `${i + 1}. ${p.title}`).join('\n')}`,
+            category: 'Epic',
+            status: initialStatus,
+            isEpic: true,
+            epicColor: EPIC_COLORS[mi % EPIC_COLORS.length],
+            branchName: epicBranch,
+            projectSlug,
+            milestoneSlug: milestone.slug,
+          });
+          epicId = epicFeature.id;
+          result.milestoneEpicMap[milestone.slug] = epicId;
+          result.featuresCreated++;
+          createdFeatures.set(`epic:${milestone.slug}`, epicFeature);
+
+          events?.emit('project:features:progress', {
+            step: 'epic-created',
+            milestoneSlug: milestone.slug,
+            epicId,
+          });
+        } catch (err) {
+          const errorMsg = `Failed to create epic for milestone ${milestone.slug}: ${getErrorMessage(err)}`;
+          result.errors?.push(errorMsg);
+          events?.emit('project:features:error', { error: errorMsg });
+        }
       }
     }
 
     // Process phases within milestone
     for (const phase of milestone.phases) {
       try {
-        // Build feature description from phase
-        const description = phaseToFeatureDescription(phase, milestone);
-
         // Generate unique key for this phase
         const phaseKey = `${milestone.slug}:${phase.name}`;
+        const phaseBranch = `feature/${slugify(milestone.title, 20)}-${slugify(phase.title, 20)}`;
+        const existingPhaseFeature = existingByBranch.get(phaseBranch);
 
-        // Create feature — Phase 1 of each milestone is marked as foundation
-        // so downstream phases wait for its PR to merge before starting
-        const feature = await featureLoader.create(projectPath, {
-          title: phase.title,
-          description,
-          category: milestone.title,
-          status: initialStatus,
-          isEpic: false,
-          epicId,
-          branchName: `feature/${slugify(milestone.title, 20)}-${slugify(phase.title, 20)}`,
-          isFoundation: phase.number === 1,
-          projectSlug,
-          milestoneSlug: milestone.slug,
-          phaseSlug: phase.name,
-        });
+        if (existingPhaseFeature) {
+          // Reuse existing feature — idempotent on re-run
+          result.phaseFeatureMap[phaseKey] = existingPhaseFeature.id;
+          createdFeatures.set(phaseKey, existingPhaseFeature);
+          events?.emit('project:features:progress', {
+            step: 'feature-created',
+            phaseKey,
+            featureId: existingPhaseFeature.id,
+          });
+        } else {
+          // Build feature description from phase
+          const description = phaseToFeatureDescription(phase, milestone);
 
-        result.phaseFeatureMap[phaseKey] = feature.id;
-        result.featuresCreated++;
-        createdFeatures.set(phaseKey, feature);
+          // Create feature — Phase 1 of each milestone is marked as foundation
+          // so downstream phases wait for its PR to merge before starting
+          const feature = await featureLoader.create(projectPath, {
+            title: phase.title,
+            description,
+            category: milestone.title,
+            status: initialStatus,
+            isEpic: false,
+            epicId,
+            branchName: phaseBranch,
+            isFoundation: phase.number === 1,
+            projectSlug,
+            milestoneSlug: milestone.slug,
+            phaseSlug: phase.name,
+          });
 
-        events?.emit('project:features:progress', {
-          step: 'feature-created',
-          phaseKey,
-          featureId: feature.id,
-        });
+          result.phaseFeatureMap[phaseKey] = feature.id;
+          result.featuresCreated++;
+          createdFeatures.set(phaseKey, feature);
+
+          events?.emit('project:features:progress', {
+            step: 'feature-created',
+            phaseKey,
+            featureId: feature.id,
+          });
+        }
       } catch (err) {
         const errorMsg = `Failed to create feature for phase ${phase.name}: ${getErrorMessage(err)}`;
         result.errors?.push(errorMsg);

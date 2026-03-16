@@ -1,0 +1,23 @@
+{
+  "type": "features",
+  "label": "Features",
+  "heading": "Everything you need to ship with confidence.",
+  "items": [
+    {
+      "title": "Blazing Fast",
+      "description": "Optimized for speed at every layer. Your users get sub-second load times, every time."
+    },
+    {
+      "title": "Developer First",
+      "description": "Built by developers, for developers. Clean APIs, great docs, and zero magic."
+    },
+    {
+      "title": "Scales With You",
+      "description": "From prototype to production. No architecture changes needed as you grow."
+    },
+    {
+      "title": "Secure by Default",
+      "description": "Enterprise-grade security out of the box. SOC 2, GDPR, and HIPAA compliant."
+    }
+  ]
+}

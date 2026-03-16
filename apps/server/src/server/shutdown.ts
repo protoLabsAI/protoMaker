@@ -25,9 +25,9 @@ async function gracefulShutdown(server: http.Server, services: ServiceContainer)
     events,
     driftCheckInterval,
     leadEngineerService,
-    pipelineOrchestrator,
     autoModeService,
     healthMonitorService,
+    maintenanceOrchestrator,
     schedulerService,
     worktreeLifecycleService,
     issueCreationService,
@@ -60,8 +60,8 @@ async function gracefulShutdown(server: http.Server, services: ServiceContainer)
     clearInterval(driftCheckInterval);
   }
   leadEngineerService.destroy();
-  pipelineOrchestrator.destroy();
   await autoModeService.shutdown();
+  maintenanceOrchestrator.stop();
   healthMonitorService.stopMonitoring();
   schedulerService.stop();
   terminalService.cleanup();

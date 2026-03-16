@@ -107,7 +107,8 @@ export function BottomPanel() {
     if (!hasFetchedRef.current) {
       hasFetchedRef.current = true;
       fetchSelfInstanceId().catch(() => {});
-      fetchPeers().catch(() => {});
+      // TODO: Re-enable when mesh system is revisited
+      // fetchPeers().catch(() => {});
     }
   }, [fetchSelfInstanceId, fetchPeers]);
 
@@ -342,7 +343,7 @@ export function BottomPanel() {
                 </div>
               )}
 
-              {/* Peer count */}
+              {/* TODO: Re-enable when mesh system is revisited
               <div className="flex items-center justify-between mt-1 mb-2">
                 <span className="text-muted-foreground">Peers</span>
                 <span>
@@ -351,7 +352,6 @@ export function BottomPanel() {
                 </span>
               </div>
 
-              {/* Compact peer list */}
               {peers.length > 0 && (
                 <div className="space-y-1.5 border-t border-border pt-2">
                   <p className="text-[10px] text-muted-foreground/70 mb-1">Peers</p>
@@ -378,7 +378,6 @@ export function BottomPanel() {
                             {identity.role}
                           </span>
                         )}
-                        {/* Capacity bar: running agents / max agents */}
                         <div className="w-14 h-1 rounded-full bg-muted overflow-hidden shrink-0">
                           <div
                             className={cn(
@@ -400,6 +399,7 @@ export function BottomPanel() {
                   })}
                 </div>
               )}
+              */}
             </PopoverContent>
           </Popover>
         </div>

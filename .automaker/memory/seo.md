@@ -5,9 +5,9 @@ relevantTo: [seo]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 4
-  referenced: 1
-  successfulFeatures: 1
+  loaded: 10
+  referenced: 3
+  successfulFeatures: 3
 ---
 <!-- domain: SEO & Meta Tags | Open Graph, meta tag patterns, social sharing -->
 

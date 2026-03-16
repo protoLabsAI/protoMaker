@@ -1,0 +1,102 @@
+---
+/**
+ * Card — Surface-2 content container with hover glow.
+ *
+ * Zero client-side JavaScript.
+ *
+ * Usage:
+ *   import Card from '@protolabsai/templates/components/Card.astro';
+ *   <Card>
+ *     <h3>Title</h3>
+ *     <p>Body text</p>
+ *   </Card>
+ *
+ *   <!-- With href, renders as a clickable anchor -->
+ *   <Card href="/features/automerge">...</Card>
+ */
+
+interface Props {
+  /** When set, wraps content in an <a> for a clickable card */
+  href?: string;
+  /** Controls the glow intensity on hover */
+  glow?: 'none' | 'subtle' | 'strong';
+  /** Extra CSS class names */
+  class?: string;
+  /** aria-label for linked cards */
+  'aria-label'?: string;
+}
+
+const {
+  href,
+  glow = 'subtle',
+  class: className = '',
+  'aria-label': ariaLabel,
+} = Astro.props;
+
+const classes = ['card', `card--glow-${glow}`, href ? 'card--link' : '', className]
+  .filter(Boolean)
+  .join(' ');
+---
+
+{
+  href ? (
+    <a href={href} class={classes} aria-label={ariaLabel}>
+      <slot />
+    </a>
+  ) : (
+    <div class={classes} aria-label={ariaLabel}>
+      <slot />
+    </div>
+  )
+}
+
+<style>
+  .card {
+    background: var(--color-surface-2, #18181b);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 24px;
+    color: inherit;
+    text-decoration: none;
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease,
+      transform 0.2s ease;
+  }
+
+  /* ── Hover glow variants ────────────────── */
+
+  .card--glow-none:hover {
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .card--glow-subtle:hover {
+    border-color: rgba(167, 139, 250, 0.25);
+    box-shadow: 0 0 30px rgba(167, 139, 250, 0.08);
+  }
+
+  .card--glow-strong:hover {
+    border-color: rgba(167, 139, 250, 0.4);
+    box-shadow: 0 0 60px rgba(167, 139, 250, 0.15);
+  }
+
+  /* ── Linked card ────────────────────────── */
+
+  .card--link {
+    cursor: pointer;
+    display: block;
+  }
+
+  .card--link:hover {
+    transform: translateY(-2px);
+  }
+
+  .card--link:focus-visible {
+    outline: 2px solid var(--color-accent, #a78bfa);
+    outline-offset: 2px;
+  }
+
+  .card--link:active {
+    transform: translateY(0);
+  }
+</style>

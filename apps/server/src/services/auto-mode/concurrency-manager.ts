@@ -83,7 +83,7 @@ export class ConcurrencyManager {
     const lease = this.leases.get(featureId);
     if (!lease) return false;
 
-    lease.leaseCount--;
+    lease.leaseCount = Math.max(0, lease.leaseCount - 1);
     if (lease.leaseCount <= 0) {
       this.leases.delete(featureId);
       return true;

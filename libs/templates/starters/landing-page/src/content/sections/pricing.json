@@ -1,0 +1,49 @@
+{
+  "type": "pricing",
+  "label": "Pricing",
+  "heading": "Simple, transparent pricing.",
+  "tiers": [
+    {
+      "name": "Starter",
+      "price": "Free",
+      "description": "For side projects and experiments.",
+      "features": [
+        "Up to 3 projects",
+        "Community support",
+        "Basic analytics",
+        "1 team member"
+      ],
+      "cta": { "label": "Get Started", "href": "#get-started" }
+    },
+    {
+      "name": "Pro",
+      "price": "$29",
+      "period": "/mo",
+      "description": "For teams that ship daily.",
+      "features": [
+        "Unlimited projects",
+        "Priority support",
+        "Advanced analytics",
+        "Up to 10 team members",
+        "Custom integrations",
+        "API access"
+      ],
+      "cta": { "label": "Start Free Trial", "href": "#get-started" },
+      "highlighted": true
+    },
+    {
+      "name": "Enterprise",
+      "price": "Custom",
+      "description": "For organizations with specific needs.",
+      "features": [
+        "Everything in Pro",
+        "Unlimited team members",
+        "SSO / SAML",
+        "Dedicated support",
+        "SLA guarantee",
+        "Custom contracts"
+      ],
+      "cta": { "label": "Contact Sales", "href": "mailto:sales@example.com" }
+    }
+  ]
+}

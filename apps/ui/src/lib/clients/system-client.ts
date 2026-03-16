@@ -1,9 +1,8 @@
 /**
- * System, metrics, integrations, lifecycle, pipeline, and MCP client mixin.
+ * System, metrics, integrations, lifecycle, and MCP client mixin.
  *
  * Extracted from the monolithic http-api-client.ts — contains:
  *   - mcp           (test server, list tools)
- *   - pipeline      (workflow pipeline step config)
  *   - metrics       (summary, capacity, forecast, ledger analytics)
  *   - integrations  (status)
  *   - system        (health dashboard)
@@ -27,6 +26,9 @@ import type {
   DiscordChannelSignalConfig,
   DoraMetrics,
   DoraRegulationAlert,
+  DeploymentEvent,
+  DeploymentStats,
+  DeployEnvironment,
   Project,
   ProjectHealth,
   HivemindPeer,
@@ -72,102 +74,6 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
       }> => this.post('/api/mcp/tools', { serverId }),
     };
 
-    // Pipeline API - custom workflow pipeline steps
-    pipeline = {
-      getConfig: (
-        projectPath: string
-      ): Promise<{
-        success: boolean;
-        config?: {
-          version: 1;
-          steps: Array<{
-            id: string;
-            name: string;
-            order: number;
-            instructions: string;
-            colorClass: string;
-            createdAt: string;
-            updatedAt: string;
-          }>;
-        };
-        error?: string;
-      }> => this.post('/api/pipeline/config', { projectPath }),
-
-      saveConfig: (
-        projectPath: string,
-        config: {
-          version: 1;
-          steps: Array<{
-            id: string;
-            name: string;
-            order: number;
-            instructions: string;
-            colorClass: string;
-            createdAt: string;
-            updatedAt: string;
-          }>;
-        }
-      ): Promise<{ success: boolean; error?: string }> =>
-        this.post('/api/pipeline/config/save', { projectPath, config }),
-
-      addStep: (
-        projectPath: string,
-        step: {
-          name: string;
-          order: number;
-          instructions: string;
-          colorClass: string;
-        }
-      ): Promise<{
-        success: boolean;
-        step?: {
-          id: string;
-          name: string;
-          order: number;
-          instructions: string;
-          colorClass: string;
-          createdAt: string;
-          updatedAt: string;
-        };
-        error?: string;
-      }> => this.post('/api/pipeline/steps/add', { projectPath, step }),
-
-      updateStep: (
-        projectPath: string,
-        stepId: string,
-        updates: Partial<{
-          name: string;
-          order: number;
-          instructions: string;
-          colorClass: string;
-        }>
-      ): Promise<{
-        success: boolean;
-        step?: {
-          id: string;
-          name: string;
-          order: number;
-          instructions: string;
-          colorClass: string;
-          createdAt: string;
-          updatedAt: string;
-        };
-        error?: string;
-      }> => this.post('/api/pipeline/steps/update', { projectPath, stepId, updates }),
-
-      deleteStep: (
-        projectPath: string,
-        stepId: string
-      ): Promise<{ success: boolean; error?: string }> =>
-        this.post('/api/pipeline/steps/delete', { projectPath, stepId }),
-
-      reorderSteps: (
-        projectPath: string,
-        stepIds: string[]
-      ): Promise<{ success: boolean; error?: string }> =>
-        this.post('/api/pipeline/steps/reorder', { projectPath, stepIds }),
-    };
-
     // DORA Metrics API
     dora = {
       metrics: (projectPath: string, timeWindowDays?: number) =>
@@ -187,6 +93,26 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
           window: string;
         }>(
           `/api/dora/history?projectPath=${encodeURIComponent(projectPath)}${window ? `&window=${window}` : ''}`
+        ),
+    };
+
+    // Deployments API (real CI/CD deployment tracking)
+    deployments = {
+      list: (opts?: { environment?: DeployEnvironment; since?: string; limit?: number }) =>
+        this.get<{
+          success: boolean;
+          deployments: DeploymentEvent[];
+          stats: DeploymentStats;
+        }>(
+          `/api/deploy/deployments${
+            opts
+              ? `?${new URLSearchParams(
+                  Object.entries(opts)
+                    .filter(([, v]) => v != null)
+                    .map(([k, v]) => [k, String(v)])
+                ).toString()}`
+              : ''
+          }`
         ),
     };
 
@@ -325,6 +251,60 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
           projectPath,
           channels,
         }),
+    };
+
+    // QA Check API
+    qa = {
+      check: (projectPath: string) =>
+        this.get<{
+          success: boolean;
+          report: {
+            timestamp: string;
+            projectPath: string;
+            health: { status: string; version: string; uptimeMs: number; memoryUsageMb: number };
+            wiring: {
+              totalServices: number;
+              services: Array<{ name: string; wired: boolean }>;
+            };
+            timers: {
+              total: number;
+              running: number;
+              paused: number;
+              signalTimers: string[];
+              healthTimers: string[];
+            };
+            deployments: {
+              total: number;
+              recentCount: number;
+              successRate: number;
+              lastDeploy: {
+                environment: string;
+                status: string;
+                timestamp: string;
+              } | null;
+            };
+            dora: {
+              deploymentFrequency: number;
+              changeFailureRate: number;
+              leadTime: number;
+              recoveryTime: number;
+            } | null;
+            board: {
+              total: number;
+              backlog: number;
+              inProgress: number;
+              review: number;
+              blocked: number;
+              done: number;
+            };
+            signals: {
+              totalPending: number;
+              exceptions: number;
+              decisions: number;
+              signalItems: number;
+            };
+          };
+        }>(`/api/qa/check?projectPath=${encodeURIComponent(projectPath)}`),
     };
 
     // System API

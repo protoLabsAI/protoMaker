@@ -19,7 +19,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 COMPOSE_FILE="$PROJECT_ROOT/docker-compose.staging.yml"
-DOCS_COMPOSE_FILE="$PROJECT_ROOT/docker-compose.docs.yml"
 ENV_FILE="$PROJECT_ROOT/.env"
 
 # Colors
@@ -185,18 +184,14 @@ build_images() {
   info "Building images (server, ui)..."
   docker compose -f "$COMPOSE_FILE" build
 
-  info "Building docs image..."
-  docker compose -f "$DOCS_COMPOSE_FILE" build || warn "Docs build failed (non-fatal)"
-
-  ok "App images built successfully"
+  ok "Images built successfully"
 }
 
 # ─── Stop existing ───────────────────────────────────────────────────────────
 
 stop_existing() {
-  info "Stopping existing Automaker app containers (docs runs independently)..."
+  info "Stopping existing containers..."
 
-  # Stop app services only — docs has its own compose and lifecycle.
   docker compose -f "$COMPOSE_FILE" down 2>/dev/null || true
 
   # Force-remove if compose down didn't clean up (e.g. containers from a different project)
@@ -206,7 +201,7 @@ stop_existing() {
     fi
   done
 
-  ok "App containers stopped (docs untouched)"
+  ok "Containers stopped"
 }
 
 # ─── Start ───────────────────────────────────────────────────────────────────
@@ -236,14 +231,8 @@ start_services() {
   # Docker Compose stops each old container and starts its replacement in quick
   # succession (~2-3s gap per service) rather than stopping everything first.
   # --remove-orphans cleans up containers from renamed/removed services.
-  info "Recreating app services (minimal downtime)..."
+  info "Recreating services (minimal downtime)..."
   docker compose -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans server ui
-
-  # Start docs independently (won't be affected by app restarts)
-  # Remove old container first — it may belong to a different compose project
-  # (automaker-staging vs automaker-docs), causing name conflicts on recreate.
-  docker rm -f automaker-docs 2>/dev/null || true
-  docker compose -f "$DOCS_COMPOSE_FILE" up -d 2>/dev/null || warn "Docs failed to start"
 
   info "Waiting for health check..."
   local retries=0
@@ -275,7 +264,6 @@ stop_services() {
   info "Stopping services..."
   cd "$PROJECT_ROOT"
   docker compose -f "$COMPOSE_FILE" down
-  docker compose -f "$DOCS_COMPOSE_FILE" down 2>/dev/null || true
   ok "Services stopped"
 }
 
@@ -291,7 +279,6 @@ teardown() {
 
   cd "$PROJECT_ROOT"
   docker compose -f "$COMPOSE_FILE" down -v
-  docker compose -f "$DOCS_COMPOSE_FILE" down -v 2>/dev/null || true
 
   # External volumes are not removed by compose down -v, so remove them explicitly
   for vol in automaker-data automaker-claude-config automaker-cursor-config \
@@ -311,15 +298,11 @@ show_status() {
 
   cd "$PROJECT_ROOT"
 
-  # Container status (app + docs)
   local ps_output
   ps_output=$(docker compose -f "$COMPOSE_FILE" ps 2>/dev/null) || true
-  local docs_output
-  docs_output=$(docker compose -f "$DOCS_COMPOSE_FILE" ps 2>/dev/null) || true
 
-  if echo "$ps_output$docs_output" | grep -q automaker; then
+  if echo "$ps_output" | grep -q automaker; then
     echo "$ps_output"
-    echo "$docs_output" | grep -v "^NAME" | grep -v "^$" || true
   else
     warn "No containers running"
     return
@@ -335,10 +318,9 @@ show_status() {
   # Endpoints
   local api_port="${API_PORT:-3008}"
   local ui_port="${UI_PORT:-3007}"
-  local docs_port="${DOCS_PORT:-3009}"
   echo -e "  UI:     ${GREEN}http://localhost:${ui_port}${NC}"
   echo -e "  API:    ${GREEN}http://localhost:${api_port}${NC}"
-  echo -e "  Docs:   ${GREEN}http://localhost:${docs_port}${NC}"
+  echo -e "  Docs:   ${GREEN}https://docs.protolabs.studio${NC} (Cloudflare Pages)"
   echo -e "  Health: ${GREEN}http://localhost:${api_port}/api/health${NC}"
 
   # Show Tailscale HTTPS endpoints if active

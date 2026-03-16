@@ -194,6 +194,8 @@ export type {
 // Calendar types
 export type {
   CalendarEventType,
+  RecurrenceFrequency,
+  RecurrenceRule,
   CalendarEvent,
   CalendarEventsFile,
   CalendarQueryOptions,
@@ -886,6 +888,19 @@ export type {
 export type { SignalChannel, SignalMetadata } from './signal-channel.js';
 export type { SignalIntent, RecentSignal, RecentSignalStatus } from './signal-intent.js';
 
+// Signal Dictionary types (portfolio attention engine — threshold-based escalation)
+export type {
+  SignalCategory,
+  SignalName,
+  SignalThreshold,
+  SignalDefinition,
+  SignalThresholdOverride,
+  SignalDictionaryConfig,
+  SignalContext,
+  SignalEvaluation,
+} from './signal-dictionary.js';
+export { DEFAULT_SIGNAL_DEFINITIONS } from './signal-dictionary.js';
+
 // Channel Router types (HITL routing interface)
 export type { ChannelHandler } from './channel-router.js';
 
@@ -974,6 +989,15 @@ export type {
 // DORA metrics types (lead time, deployment frequency, change failure rate, recovery time, rework rate)
 export type { DoraMetrics, MetricValue, DoraRegulationAlert } from './dora-metrics.js';
 
+// Deployment tracking types (real CI/CD pipeline event capture)
+export type {
+  DeployEnvironment,
+  DeploymentStatus,
+  DeploymentEvent,
+  DeploymentDocument,
+  DeploymentStats,
+} from './deployment.js';
+
 // Friction tracker types (self-improvement loop — recurring failure pattern detection)
 export type { FrictionReport } from './friction-report.js';
 
@@ -987,6 +1011,14 @@ export type {
 
 // Chat stream part types (SubagentProgress, SubagentStatus)
 export type { SubagentProgress, SubagentStatus } from './chat.js';
+
+// Timer Registry types (unified cron + interval timer tracking)
+export type {
+  TimerCategory,
+  TimerType,
+  TimerRegistryEntry,
+  TimerRegistryMetrics,
+} from './scheduler.js';
 
 // PenFile types (vector graphics format v2.8)
 export type {
@@ -1023,3 +1055,18 @@ export type {
   PenNode,
   PenDocument,
 } from './pen.js';
+
+// Maintenance orchestrator types
+export type {
+  MaintenanceCheck,
+  MaintenanceCheckContext,
+  MaintenanceCheckResult,
+  MaintenanceSweepResult,
+} from './maintenance.js';
+
+// Webhook delivery tracking types (transient in-memory operational data)
+export type {
+  WebhookDeliveryStatus,
+  WebhookDeliverySource,
+  WebhookDelivery,
+} from './webhook-delivery.js';

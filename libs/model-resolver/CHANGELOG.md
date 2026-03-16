@@ -1,5 +1,543 @@
 # @protolabsai/model-resolver
 
+## 0.68.0
+
+### Minor Changes
+
+- ### Features
+  - add Wiring tab to Ops Dashboard with service instantiation status (#2735)
+  - add Wiring tab to Ops Dashboard with service instantiation status (#2735)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.68.0
+
+## 0.67.0
+
+### Minor Changes
+
+- ### Features
+  - switch ai-agent-app template to git clone from protoAgent-starter repo
+  - switch ai-agent-app template to git clone from protoAgent-starter repo
+  - production chat patterns, CLI auth, proper theming
+  - production chat patterns, CLI auth, proper theming
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.67.0
+
+## 0.66.0
+
+### Minor Changes
+
+- ### Features
+  - production chat patterns, CLI auth, proper theming
+  - production chat patterns, CLI auth, proper theming
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.66.0
+
+## 0.65.0
+
+### Minor Changes
+
+- ### Features
+  - add Quinn QA engineer with browser automation and QA check endpoint
+  - add Quinn QA engineer with browser automation and QA check endpoint
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.65.0
+
+## 0.64.0
+
+### Minor Changes
+
+- ### Features
+  - add portfolio attention engine with signal dictionary and auto-computed project health
+  - add portfolio attention engine with signal dictionary and auto-computed project health
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.64.0
+
+## 0.63.0
+
+### Minor Changes
+
+- ### Features
+  - wire real CI/CD deployment events into DORA metrics
+  - wire real CI/CD deployment events into DORA metrics
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.63.0
+
+## 0.62.0
+
+### Minor Changes
+
+- ### Features
+  - wire disconnected features and fix template bugs
+  - wire disconnected features and fix template bugs
+  - enhanced ops dashboard with health dot sidebar integration (M5)
+  - observability integration and ops documentation (M6)
+  - ops dashboard UI and webhook delivery service (M4-P1 + M5)
+  - rate limiting middleware and webhook secret rotation (M4-P2)
+  - event router service with delivery tracking API (M4-P3)
+  - job conflict detection and calendar UI updates (M3-P3 cherry-pick)
+  - enhanced ops dashboard with health dot sidebar integration (M5)
+  - observability integration and ops documentation (M6)
+  - ops dashboard UI and webhook delivery service (M4-P1 + M5)
+  - rate limiting middleware and webhook secret rotation (M4-P2)
+  - event router service with delivery tracking API (M4-P3)
+  - job conflict detection and calendar UI updates (M3-P3 cherry-pick)
+  - add Timer Registry API routes with pause/resume controls
+  - add Timer Registry API routes with pause/resume controls
+  - add tokens viewer, design workbench, and AI chat routes
+  - add tokens viewer, design workbench, and AI chat routes
+  - add Timer Registry API routes with pause/resume controls
+  - add Timer Registry API routes with pause/resume controls
+  - add nav bar, dark-mode-first tokens, wire docs route
+  - Design System starter kit — MCP server + monorepo skeleton (#2683)
+  - add MCP server package to design-system starter kit (#2682)
+  - AI a11y agent + axe-core audit package for design-system starter (#2674)
+  - AI design agent for design-system starter kit (#2670)
+  - add TinaCMS site builder to design-system starter kit (#2667)
+  - Vite-native component playground for design-system starter (#2664)
+  - add color science package (OKLCH scales, harmonies, WCAG contrast, semantic tokens) (#2662)
+  - add HTML/CSS output target to design-system starter kit (#2659)
+  - add W3C DTCG design token package to design-system starter (#2661)
+  - pen-to-React pipeline for design system starter kit (#2658)
+  - add MCP server package to ai-agent-app starter kit (#2652)
+  - wire ai-agent-app into scaffold route, UI picker, and starter features (#2651)
+  - add agent role system with GET /api/roles endpoint (#2648)
+  - add slash command system to ai-agent-app starter kit (#2646)
+  - add visual LangGraph flow builder to ai-agent-app starter kit (#2645)
+  - compose chat view with streaming, tool progress, and weather card (#2644)
+  - add session store and chat session hook to ai-agent-app starter kit (#2641)
+  - extract LangGraph state graphs package for ai-agent-app starter kit (#2643)
+  - add trace viewer UI and in-memory tracing (#2639)
+  - add App + State + Chat UI scaffold for ai-agent-app starter kit (#2640)
+  - add WebSocket sideband + ToolProgressEmitter to ai-agent-app starter (#2638)
+  - ToolDefinition + requiresConfirmation registry pattern (#2637)
+  - add observability package with Langfuse + file tracing (#2636)
+  - add POST /api/chat streaming endpoint (#2634)
+  - wire tools package into server with Anthropic agentic loop (#2633)
+  - add model-resolver and Express server to ai-agent-app starter kit (#2631)
+  - add CSS theming system and UI atoms for ai-agent-app (#2627)
+  - add perplexity-style word fade-in animation for streaming responses (#2630)
+  - tools package — define once, deploy everywhere (starter kit) (#2629)
+  - add packages/tools to AI Agent App Starter Kit (#2628)
+  - add ai-agent-app monorepo starter kit (#2624)
+  - add landing page starter kit template
+  - add nav bar, dark-mode-first tokens, wire docs route
+  - add nav bar, dark-mode-first tokens, wire docs route
+
+  ### Bug Fixes
+  - export RecurrenceFrequency and RecurrenceRule from @protolabsai/types
+  - resolve CI failures for staging promotion
+  - export RecurrenceFrequency and RecurrenceRule from @protolabsai/types
+  - resolve CI failures for staging promotion
+  - remove HealthMonitorService from timer-registry integration test
+  - timer registry tests use 'type' not 'kind' for TimerRegistryEntry
+  - handle pen parser path node shape in codegen
+  - isolate codegen errors per generator with stack traces
+  - resolve type divergence between Feature 1 canonical types and Feature 2/3/5 implementations
+  - bridge pen parser variables to codegen array format
+  - remove HealthMonitorService from timer-registry integration test
+  - timer registry tests use 'type' not 'kind' for TimerRegistryEntry
+  - handle pen parser path node shape in codegen
+  - isolate codegen errors per generator with stack traces
+  - resolve type divergence between Feature 1 canonical types and Feature 2/3/5 implementations
+  - resolve type divergence between Feature 1 canonical types and Feature 2/3/5 implementations
+  - bridge pen parser variables to codegen array format
+  - default preview theme to system preference
+  - resolve build issues for end-to-end verification (#2686)
+  - add missing git ls-remote mock in completion-detector shell safety test
+  - skip epic PR when children merged directly to dev (no epic branch on remote) (#2632)
+  - default preview theme to system preference
+  - default preview theme to system preference
+
+  ### Refactors
+  - Job conflict detection and calendar UI updates
+  - Job conflict detection and calendar UI updates
+  - Update docs after: Unified Operations Control Plane (#2706)
+  - migrate GitHubMonitor, DiscordMonitor, and LeadEngineerService to TimerRegistry
+  - Update docs after: Unified Operations Control Plane (#2706)
+  - migrate GitHubMonitor, DiscordMonitor, and LeadEngineerService to TimerRegistry
+  - Migrate health and monitoring services to TimerRegistry (#2695)
+  - migrate GitHubMonitor, DiscordMonitor, and LeadEngineerService to TimerRegistry
+  - migrate GitHubMonitor, DiscordMonitor, and LeadEngineerService to TimerRegistry
+  - Migrate health and monitoring services to TimerRegistry (#2695)
+  - End-to-end verification and build test (#2656)
+  - Migrate health and monitoring services to TimerRegistry (#2695)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.62.0
+
+## 0.61.0
+
+### Minor Changes
+
+- ### Features
+  - Design System starter kit — MCP server + monorepo skeleton (#2683)
+  - add MCP server package to design-system starter kit (#2682)
+  - AI a11y agent + axe-core audit package for design-system starter (#2674)
+  - AI design agent for design-system starter kit (#2670)
+  - add TinaCMS site builder to design-system starter kit (#2667)
+  - Vite-native component playground for design-system starter (#2664)
+  - add color science package (OKLCH scales, harmonies, WCAG contrast, semantic tokens) (#2662)
+  - add HTML/CSS output target to design-system starter kit (#2659)
+  - add W3C DTCG design token package to design-system starter (#2661)
+  - pen-to-React pipeline for design system starter kit (#2658)
+  - add MCP server package to ai-agent-app starter kit (#2652)
+  - wire ai-agent-app into scaffold route, UI picker, and starter features (#2651)
+  - add agent role system with GET /api/roles endpoint (#2648)
+  - add slash command system to ai-agent-app starter kit (#2646)
+  - add visual LangGraph flow builder to ai-agent-app starter kit (#2645)
+  - compose chat view with streaming, tool progress, and weather card (#2644)
+  - add session store and chat session hook to ai-agent-app starter kit (#2641)
+  - extract LangGraph state graphs package for ai-agent-app starter kit (#2643)
+  - add trace viewer UI and in-memory tracing (#2639)
+  - add App + State + Chat UI scaffold for ai-agent-app starter kit (#2640)
+  - add WebSocket sideband + ToolProgressEmitter to ai-agent-app starter (#2638)
+  - ToolDefinition + requiresConfirmation registry pattern (#2637)
+  - add observability package with Langfuse + file tracing (#2636)
+  - add POST /api/chat streaming endpoint (#2634)
+  - wire tools package into server with Anthropic agentic loop (#2633)
+  - add model-resolver and Express server to ai-agent-app starter kit (#2631)
+  - add CSS theming system and UI atoms for ai-agent-app (#2627)
+  - add perplexity-style word fade-in animation for streaming responses (#2630)
+  - tools package — define once, deploy everywhere (starter kit) (#2629)
+  - add packages/tools to AI Agent App Starter Kit (#2628)
+  - add ai-agent-app monorepo starter kit (#2624)
+  - Design System starter kit — MCP server + monorepo skeleton (#2683)
+  - add MCP server package to design-system starter kit (#2682)
+  - AI a11y agent + axe-core audit package for design-system starter (#2674)
+  - AI design agent for design-system starter kit (#2670)
+  - add TinaCMS site builder to design-system starter kit (#2667)
+  - Vite-native component playground for design-system starter (#2664)
+  - add color science package (OKLCH scales, harmonies, WCAG contrast, semantic tokens) (#2662)
+  - add HTML/CSS output target to design-system starter kit (#2659)
+  - add W3C DTCG design token package to design-system starter (#2661)
+  - pen-to-React pipeline for design system starter kit (#2658)
+  - AI design agent for design-system starter kit (#2670)
+  - add TinaCMS site builder to design-system starter kit (#2667)
+  - Vite-native component playground for design-system starter (#2664)
+  - add color science package (OKLCH scales, harmonies, WCAG contrast, semantic tokens) (#2662)
+  - add HTML/CSS output target to design-system starter kit (#2659)
+  - add W3C DTCG design token package to design-system starter (#2661)
+  - pen-to-React pipeline for design system starter kit (#2658)
+  - add MCP server package to ai-agent-app starter kit (#2652)
+  - wire ai-agent-app into scaffold route, UI picker, and starter features (#2651)
+  - add agent role system with GET /api/roles endpoint (#2648)
+  - add slash command system to ai-agent-app starter kit (#2646)
+  - add visual LangGraph flow builder to ai-agent-app starter kit (#2645)
+  - compose chat view with streaming, tool progress, and weather card (#2644)
+  - add session store and chat session hook to ai-agent-app starter kit (#2641)
+  - extract LangGraph state graphs package for ai-agent-app starter kit (#2643)
+  - add trace viewer UI and in-memory tracing (#2639)
+  - add App + State + Chat UI scaffold for ai-agent-app starter kit (#2640)
+  - add WebSocket sideband + ToolProgressEmitter to ai-agent-app starter (#2638)
+  - ToolDefinition + requiresConfirmation registry pattern (#2637)
+  - add observability package with Langfuse + file tracing (#2636)
+  - add POST /api/chat streaming endpoint (#2634)
+  - wire tools package into server with Anthropic agentic loop (#2633)
+  - add model-resolver and Express server to ai-agent-app starter kit (#2631)
+  - add CSS theming system and UI atoms for ai-agent-app (#2627)
+  - add perplexity-style word fade-in animation for streaming responses (#2630)
+  - tools package — define once, deploy everywhere (starter kit) (#2629)
+  - add packages/tools to AI Agent App Starter Kit (#2628)
+  - add ai-agent-app monorepo starter kit (#2624)
+
+  ### Bug Fixes
+  - resolve build issues for end-to-end verification (#2686)
+  - add missing git ls-remote mock in completion-detector shell safety test
+  - skip epic PR when children merged directly to dev (no epic branch on remote) (#2632)
+  - resolve build issues for end-to-end verification (#2686)
+  - add missing git ls-remote mock in completion-detector shell safety test
+  - add missing git ls-remote mock in completion-detector shell safety test
+  - skip epic PR when children merged directly to dev (no epic branch on remote) (#2632)
+
+  ### Refactors
+  - End-to-end verification and build test (#2656)
+  - End-to-end verification and build test (#2656)
+  - End-to-end verification and build test (#2656)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.61.0
+
+## 0.60.0
+
+### Minor Changes
+
+- ### Features
+  - add landing page starter kit template
+  - add landing page starter kit template
+
+  ### Refactors
+  - rename Projects to Project Management in sidebar and routes
+  - rename Projects to Project Management in sidebar and routes
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.60.0
+
+## 0.59.0
+
+### Minor Changes
+
+- ### Features
+  - wire docs and portfolio starter kits into onboarding modal
+  - wire docs and portfolio starter kits into onboarding modal
+
+  ### Bug Fixes
+  - remove starter kit selection from projects-view new project dialog
+  - remove @astrojs/cloudflare adapter from docs starter
+  - remove starter kit selection from projects-view new project dialog
+  - remove @astrojs/cloudflare adapter from docs starter
+  - sync package-lock.json for staging Docker build
+
+  ### Refactors
+  - consolidate blank project creation into general starter scaffold
+  - consolidate blank project creation into general starter scaffold
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.59.0
+
+## 0.58.0
+
+### Minor Changes
+
+- ### Features
+  - wire docs and portfolio starter kits into onboarding modal
+  - wire docs and portfolio starter kits into onboarding modal
+
+  ### Bug Fixes
+  - remove starter kit selection from projects-view new project dialog
+  - remove @astrojs/cloudflare adapter from docs starter
+  - remove starter kit selection from projects-view new project dialog
+  - remove @astrojs/cloudflare adapter from docs starter
+  - sync package-lock.json for staging Docker build
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.58.0
+
+## 0.57.0
+
+### Minor Changes
+
+- ### Features
+  - add milestone progress bars, completion %, and board links to features tab
+  - add starter kit template selection to in-app project creation wizard (#2598)
+  - add project badge to kanban cards and list view rows (#2600)
+  - add project filter dropdown to board header
+  - add portfolio starter kit type (#2592)
+  - portfolio contact page, RSS feed, SEO completion (#2591)
+  - portfolio page sections — Hero, ProjectGrid, Contact, About, Testimonials, BlogList (#2589)
+  - add docs/ directory to docs and portfolio starter kits (#2588)
+  - add CI workflow, agent context, and StarterKitType export for docs starter kit (#2587)
+  - add Docs Starter Kit (Starlight) (#2584)
+  - add portfolio starter kit with Astro 5, Tailwind v4, View Transitions (#2585)
+  - delete pipeline UI components and client methods
+  - add shared Astro design system components (#2582)
+  - add shared design system tokens (#2579)
+  - delete PipelineOrchestrator and remove all pipeline/\* routes (#2557)
+  - delete PipelineOrchestrator and remove all pipeline/\* routes (#2556)
+  - add milestone progress bars, completion %, and board links to features tab
+  - add project badge to kanban cards and list view rows (#2600)
+  - add project filter dropdown to board header
+  - add milestone progress bars, completion %, and board links to features tab
+  - add milestone progress bars, completion %, and board links to features tab
+  - add starter kit template selection to in-app project creation wizard (#2598)
+  - add project badge to kanban cards and list view rows (#2600)
+  - add project filter dropdown to board header
+  - add portfolio starter kit type (#2592)
+  - portfolio contact page, RSS feed, SEO completion (#2591)
+  - portfolio page sections — Hero, ProjectGrid, Contact, About, Testimonials, BlogList (#2589)
+  - add docs/ directory to docs and portfolio starter kits (#2588)
+  - add CI workflow, agent context, and StarterKitType export for docs starter kit (#2587)
+  - add Docs Starter Kit (Starlight) (#2584)
+  - add portfolio starter kit with Astro 5, Tailwind v4, View Transitions (#2585)
+  - delete pipeline UI components and client methods
+  - add shared Astro design system components (#2582)
+  - add shared design system tokens (#2579)
+  - add @protolabsai/templates package and consolidate template generation
+  - add members tag-input and color picker to project sidebar (#2569)
+  - remove defunct graph registry entries (unified-pipeline, lead-engineer-reflection, interrupt-loop) (#2561)
+  - delete dead coordinator, review, and interrupt-loop flows (#2560)
+  - delete PipelineOrchestrator and remove all pipeline/\* routes (#2557)
+  - delete PipelineOrchestrator and remove all pipeline/\* routes (#2556)
+  - add project filter dropdown to board header
+  - delete pipeline UI components and client methods
+  - add portfolio starter kit type (#2592)
+  - portfolio contact page, RSS feed, SEO completion (#2591)
+  - portfolio page sections — Hero, ProjectGrid, Contact, About, Testimonials, BlogList (#2589)
+  - add docs/ directory to docs and portfolio starter kits (#2588)
+  - add CI workflow, agent context, and StarterKitType export for docs starter kit (#2587)
+  - add Docs Starter Kit (Starlight) (#2584)
+  - add portfolio starter kit with Astro 5, Tailwind v4, View Transitions (#2585)
+  - delete pipeline UI components and client methods
+  - add shared Astro design system components (#2582)
+  - add shared design system tokens (#2579)
+  - delete PipelineOrchestrator and remove all pipeline/\* routes (#2557)
+  - delete PipelineOrchestrator and remove all pipeline/\* routes (#2556)
+  - add @protolabsai/templates package and consolidate template generation
+  - add members tag-input and color picker to project sidebar (#2569)
+  - add @protolabsai/templates package and consolidate template generation
+  - add members tag-input and color picker to project sidebar (#2569)
+  - remove defunct graph registry entries (unified-pipeline, lead-engineer-reflection, interrupt-loop) (#2561)
+  - delete dead coordinator, review, and interrupt-loop flows (#2560)
+  - add @protolabsai/templates package and consolidate template generation
+  - add members tag-input and color picker to project sidebar (#2569)
+  - remove defunct graph registry entries (unified-pipeline, lead-engineer-reflection, interrupt-loop) (#2561)
+  - delete dead coordinator, review, and interrupt-loop flows (#2560)
+  - remove defunct graph registry entries (unified-pipeline, lead-engineer-reflection, interrupt-loop) (#2561)
+  - delete dead coordinator, review, and interrupt-loop flows (#2560)
+  - remove defunct graph registry entries (unified-pipeline, lead-engineer-reflection, interrupt-loop) (#2561)
+  - delete dead coordinator, review, and interrupt-loop flows (#2560)
+  - delete PipelineOrchestrator and remove all pipeline/\* routes (#2557)
+  - delete PipelineOrchestrator and remove all pipeline/\* routes (#2556)
+
+  ### Bug Fixes
+  - sync package-lock.json for staging Docker build
+  - remove deleted PipelineService from lifecycle traceability test (#2605)
+  - update HITL test mock to use hitlForms flag instead of pipeline (#2604)
+  - add @protolabsai/templates dependency to server package.json
+  - comment out peer mesh UI from bottom panel ticker
+  - sync Dockerfile from dev (adds templates COPY)
+  - sync routes, shutdown, channel-handlers from dev
+  - sync all server files from dev — remove remaining pipeline references
+  - sync FeatureFlags and HITL service from dev (remove pipeline flag)
+  - restore libs/templates from dev (incorrectly deleted during rebase)
+  - resolve remaining pipeline type errors — ColumnId type and pipeline flag label
+  - remove broken pipeline imports from flow-graph and inbox views
+  - exclude libs/templates/starters/ from monorepo prettier check
+  - gate HITL forms behind hitlForms feature flag (default: off) (#2583)
+  - remove dead PipelineCheckpointService imports from LE files
+  - remove deleted PipelineService from lifecycle traceability test (#2605)
+  - update HITL test mock to use hitlForms flag instead of pipeline (#2604)
+  - add @protolabsai/templates dependency to server package.json
+  - comment out peer mesh UI from bottom panel ticker
+  - sync Dockerfile from dev (adds templates COPY)
+  - sync routes, shutdown, channel-handlers from dev
+  - sync all server files from dev — remove remaining pipeline references
+  - sync FeatureFlags and HITL service from dev (remove pipeline flag)
+  - restore libs/templates from dev (incorrectly deleted during rebase)
+  - resolve remaining pipeline type errors — ColumnId type and pipeline flag label
+  - remove broken pipeline imports from flow-graph and inbox views
+  - exclude libs/templates/starters/ from monorepo prettier check
+  - gate HITL forms behind hitlForms feature flag (default: off) (#2583)
+  - remove dead PipelineCheckpointService imports from LE files
+  - add libs/templates to Dockerfile base COPY entries
+  - remove deleted PipelineService references from lifecycle-traceability test
+  - guard fire-and-forget stopFeature call against unhandled rejection (#2571)
+  - mkdir -p target dir before copyFile in AtomicWriter backup recovery (#2568)
+  - comment out peer mesh UI from bottom panel ticker
+  - sync Dockerfile from dev (adds templates COPY)
+  - sync routes, shutdown, channel-handlers from dev
+  - sync all server files from dev — remove remaining pipeline references
+  - sync FeatureFlags and HITL service from dev (remove pipeline flag)
+  - restore libs/templates from dev (incorrectly deleted during rebase)
+  - resolve remaining pipeline type errors — ColumnId type and pipeline flag label
+  - remove broken pipeline imports from flow-graph and inbox views
+  - sync Dockerfile from dev (adds templates COPY)
+  - sync routes, shutdown, channel-handlers from dev
+  - sync all server files from dev — remove remaining pipeline references
+  - sync FeatureFlags and HITL service from dev (remove pipeline flag)
+  - restore libs/templates from dev (incorrectly deleted during rebase)
+  - resolve remaining pipeline type errors — ColumnId type and pipeline flag label
+  - remove broken pipeline imports from flow-graph and inbox views
+  - exclude libs/templates/starters/ from monorepo prettier check
+  - gate HITL forms behind hitlForms feature flag (default: off) (#2583)
+  - remove dead PipelineCheckpointService imports from LE files
+  - remove dead PipelineCheckpointService imports from LE files
+  - add libs/templates to Dockerfile base COPY entries
+  - remove deleted PipelineService references from lifecycle-traceability test
+  - guard fire-and-forget stopFeature call against unhandled rejection (#2571)
+  - mkdir -p target dir before copyFile in AtomicWriter backup recovery (#2568)
+  - add libs/templates to Dockerfile base COPY entries
+  - remove deleted PipelineService references from lifecycle-traceability test
+  - guard fire-and-forget stopFeature call against unhandled rejection (#2571)
+  - mkdir -p target dir before copyFile in AtomicWriter backup recovery (#2568)
+  - add libs/templates to Dockerfile base COPY entries
+  - remove deleted PipelineService references from lifecycle-traceability test
+  - guard fire-and-forget stopFeature call against unhandled rejection (#2571)
+  - mkdir -p target dir before copyFile in AtomicWriter backup recovery (#2568)
+  - lead engineer autonomy round 2 — DAG-safe merges, event routing, retry guards (#2554)
+  - repair broken internal links found during audit
+  - install vitepress before build in docs workflow
+  - lead engineer autonomy round 2 — DAG-safe merges, event routing, retry guards (#2554)
+  - repair broken internal links found during audit
+  - install vitepress before build in docs workflow
+  - autonomous board management — zero-intervention pipeline bugs (#2552)
+  - autonomous board management — zero-intervention pipeline bugs (#2552)
+  - make all MCP tools API-first, remove broken Twitch tools
+  - make all MCP tools API-first, remove broken Twitch tools
+  - server logs MCP tool broken in Docker — add API-first log reader
+  - replace exec() with execFile() to prevent shell injection in CompletionDetector (#2532)
+  - server logs MCP tool broken in Docker — add API-first log reader
+  - replace exec() with execFile() to prevent shell injection in CompletionDetector (#2532)
+  - block rm/git rm/cd+destructive commands from bleeding worktree deletions to main tree (#2530)
+  - block rm/git rm/cd+destructive commands from bleeding worktree deletions to main tree (#2530)
+
+  ### Refactors
+  - Add starter kit selection to create-protolab CLI interactive prompt (#2596)
+  - Add starter kit selection to create-protolab CLI interactive prompt (#2596)
+  - Delete flow-graph pipeline components and update registries (#2563)
+  - Fix HITL form service test — remove pipeline flag gate tests (#2580)
+  - PM Chat Panel UI (#2576)
+  - Delete PipelineCheckpointService and remove featureFlags.pipeline (#2565)
+  - Add starter kit selection to create-protolab CLI interactive prompt (#2596)
+  - Add starter kit selection to create-protolab CLI interactive prompt (#2596)
+  - Add starter kit selection to create-protolab CLI interactive prompt (#2596)
+  - Add starter kit selection to create-protolab CLI interactive prompt (#2596)
+  - Delete flow-graph pipeline components and update registries (#2563)
+  - Fix HITL form service test — remove pipeline flag gate tests (#2580)
+  - PM Chat Panel UI (#2576)
+  - Delete PipelineCheckpointService and remove featureFlags.pipeline (#2565)
+  - Delete flow-graph pipeline components and update registries (#2563)
+  - Delete flow-graph pipeline components and update registries (#2563)
+  - Fix HITL form service test — remove pipeline flag gate tests (#2580)
+  - Delete PipelineCheckpointService and remove featureFlags.pipeline (#2565)
+  - PM Chat Panel UI (#2576)
+  - PM Chat Panel UI (#2576)
+  - Delete PipelineCheckpointService and remove featureFlags.pipeline (#2565)
+  - Fix runningFeatures tracking gap in execution-service (#2551)
+  - Fix error classification breadth and merge retry logic (#2550)
+  - Fix ExecuteProcessor waitForCompletion race and pre-flight shouldContinu (#2547)
+  - Unify concurrency tracking and fix settings and ledger races (#2546)
+  - Fix runningFeatures tracking gap in execution-service (#2551)
+  - Fix error classification breadth and merge retry logic (#2550)
+  - Fix ExecuteProcessor waitForCompletion race and pre-flight shouldContinu (#2547)
+  - Unify concurrency tracking and fix settings and ledger races (#2546)
+  - remove Discord and Langfuse tools from MCP plugin
+  - remove Discord and Langfuse tools from MCP plugin
+  - Fix GraphQL injection in CodeRabbitResolver and git-workflow-service (#2533)
+  - Fix GraphQL injection in CodeRabbitResolver and git-workflow-service (#2533)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.57.0
+
 ## 0.56.0
 
 ### Minor Changes

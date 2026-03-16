@@ -186,6 +186,7 @@ import { worktreeGitTools } from './tools/worktree-git-tools.js';
 import { promotionTools } from './tools/promotion-tools.js';
 import { leadEngineerTools } from './tools/lead-engineer-tools.js';
 import { knowledgeTools } from './tools/knowledge-tools.js';
+import { qaTools } from './tools/qa-tools.js';
 
 // Aggregate all tools
 const tools: Tool[] = [
@@ -211,6 +212,7 @@ const tools: Tool[] = [
   ...promotionTools,
   ...leadEngineerTools,
   ...knowledgeTools,
+  ...qaTools,
 ];
 
 // Tool implementations
@@ -725,6 +727,10 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectPath: args.projectPath,
         projectSlug: args.projectSlug,
       });
+
+    // QA Tools
+    case 'run_qa_check':
+      return apiCall('/qa/check', { projectPath: String(args.projectPath ?? '') }, 'GET');
 
     case 'get_board_summary': {
       const result = (await apiCall('/features/summary', {
@@ -1524,7 +1530,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
 
     // Scheduler Management
     case 'get_scheduler_status':
-      return apiCall('/scheduler/status', {}, 'GET');
+      return apiCall('/ops/timers', {}, 'GET');
 
     case 'update_maintenance_task': {
       const taskId = args.taskId as string;
@@ -1541,10 +1547,10 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         }
       }
 
-      // Enable/disable if provided
+      // Enable/disable if provided (maps to resume/pause on the timer registry)
       if (args.enabled !== undefined) {
-        const endpoint = args.enabled ? 'enable' : 'disable';
-        const toggleResult = (await apiCall(`/scheduler/tasks/${taskId}/${endpoint}`, {})) as {
+        const endpoint = args.enabled ? 'resume' : 'pause';
+        const toggleResult = (await apiCall(`/ops/timers/${taskId}/${endpoint}`, {})) as {
           success?: boolean;
         };
         results.enabledUpdated = toggleResult.success;

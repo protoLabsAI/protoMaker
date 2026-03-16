@@ -12,6 +12,10 @@ import {
   prApproved,
   threadsBlocking,
   remediationStalled,
+  classifiedRecovery,
+  hitlFormResponse,
+  missingCIChecks,
+  reviewQueueSaturated,
   errorBudgetExhausted,
   evaluateRules,
   DEFAULT_RULES,
@@ -634,5 +638,385 @@ describe('evaluateRules', () => {
     // 'feature:stopped' triggers orphanedInProgress only, but agent is running so no action
     const actions = evaluateRules(DEFAULT_RULES, ws, 'feature:stopped', { featureId: 'f1' });
     expect(actions).toHaveLength(0);
+  });
+});
+
+// ────────────────────────── staleDeps failure guards ──────────────────────────
+
+describe('staleDeps — failure guards', () => {
+  it('does NOT unblock features with failureCount >= 3', () => {
+    const dep = createFeature({ id: 'dep-1', status: 'done' });
+    const blocked = createFeature({
+      id: 'blocked-1',
+      status: 'blocked',
+      dependencies: ['dep-1'],
+      failureCount: 3,
+    });
+    const ws = createMockWorldState({ features: { 'dep-1': dep, 'blocked-1': blocked } });
+    const actions = staleDeps.evaluate(ws, 'feature:status-changed', { featureId: 'dep-1' });
+    expect(actions).toHaveLength(0);
+  });
+
+  it('does NOT unblock features blocked due to git workflow failure', () => {
+    const dep = createFeature({ id: 'dep-1', status: 'done' });
+    const blocked = createFeature({
+      id: 'blocked-1',
+      status: 'blocked',
+      dependencies: ['dep-1'],
+      failureCount: 1,
+      statusChangeReason: 'git workflow failed — uncommitted work in worktree',
+    });
+    const ws = createMockWorldState({ features: { 'dep-1': dep, 'blocked-1': blocked } });
+    const actions = staleDeps.evaluate(ws, 'feature:status-changed', { featureId: 'dep-1' });
+    expect(actions).toHaveLength(0);
+  });
+
+  it('does NOT unblock features blocked due to git commit failure', () => {
+    const dep = createFeature({ id: 'dep-1', status: 'done' });
+    const blocked = createFeature({
+      id: 'blocked-1',
+      status: 'blocked',
+      dependencies: ['dep-1'],
+      failureCount: 1,
+      statusChangeReason: 'git commit hook failed in worktree',
+    });
+    const ws = createMockWorldState({ features: { 'dep-1': dep, 'blocked-1': blocked } });
+    const actions = staleDeps.evaluate(ws, 'feature:status-changed', { featureId: 'dep-1' });
+    expect(actions).toHaveLength(0);
+  });
+
+  it('DOES unblock features with failureCount < 3 and no git failure', () => {
+    const dep = createFeature({ id: 'dep-1', status: 'done' });
+    const blocked = createFeature({
+      id: 'blocked-1',
+      status: 'blocked',
+      dependencies: ['dep-1'],
+      failureCount: 2,
+    });
+    const ws = createMockWorldState({ features: { 'dep-1': dep, 'blocked-1': blocked } });
+    const actions = staleDeps.evaluate(ws, 'feature:status-changed', { featureId: 'dep-1' });
+    expect(actions).toHaveLength(1);
+    expect(actions[0]).toEqual({ type: 'unblock_feature', featureId: 'blocked-1' });
+  });
+});
+
+// ────────────────────────── autoModeHealth/capacityRestart debounce ──────────────────────────
+
+describe('autoModeHealth — debounce', () => {
+  it('skips restart when lastAutoModeRestartAt is within 5 minutes', () => {
+    const ws = createMockWorldState({
+      autoModeRunning: false,
+      boardCounts: { backlog: 3, in_progress: 0, review: 0, done: 0, blocked: 0 },
+      lastAutoModeRestartAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(), // 2 min ago
+    });
+    const actions = autoModeHealth.evaluate(ws, 'auto-mode:idle', {});
+    expect(actions).toHaveLength(0);
+  });
+
+  it('restarts when lastAutoModeRestartAt is older than 5 minutes', () => {
+    const ws = createMockWorldState({
+      autoModeRunning: false,
+      boardCounts: { backlog: 3, in_progress: 0, review: 0, done: 0, blocked: 0 },
+      lastAutoModeRestartAt: new Date(Date.now() - 6 * 60 * 1000).toISOString(), // 6 min ago
+    });
+    const actions = autoModeHealth.evaluate(ws, 'auto-mode:idle', {});
+    expect(actions).toHaveLength(1);
+    expect(actions[0].type).toBe('restart_auto_mode');
+  });
+
+  it('restarts when lastAutoModeRestartAt is not set', () => {
+    const ws = createMockWorldState({
+      autoModeRunning: false,
+      boardCounts: { backlog: 3, in_progress: 0, review: 0, done: 0, blocked: 0 },
+    });
+    const actions = autoModeHealth.evaluate(ws, 'auto-mode:stopped', {});
+    expect(actions).toHaveLength(1);
+    expect(actions[0].type).toBe('restart_auto_mode');
+  });
+});
+
+describe('capacityRestart — debounce', () => {
+  it('skips restart when lastAutoModeRestartAt is within 5 minutes', () => {
+    const ws = createMockWorldState({
+      autoModeRunning: false,
+      boardCounts: { backlog: 3, in_progress: 0, review: 0, done: 0, blocked: 0 },
+      agents: [],
+      maxConcurrency: 3,
+      lastAutoModeRestartAt: new Date(Date.now() - 1 * 60 * 1000).toISOString(), // 1 min ago
+    });
+    const actions = capacityRestart.evaluate(ws, 'feature:completed', {});
+    expect(actions).toHaveLength(0);
+  });
+
+  it('restarts when lastAutoModeRestartAt is older than 5 minutes', () => {
+    const ws = createMockWorldState({
+      autoModeRunning: false,
+      boardCounts: { backlog: 3, in_progress: 0, review: 0, done: 0, blocked: 0 },
+      agents: [],
+      maxConcurrency: 3,
+      lastAutoModeRestartAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(), // 10 min ago
+    });
+    const actions = capacityRestart.evaluate(ws, 'feature:completed', {});
+    expect(actions).toHaveLength(1);
+    expect(actions[0].type).toBe('restart_auto_mode');
+  });
+});
+
+// ────────────────────────── classifiedRecovery ──────────────────────────
+
+describe('classifiedRecovery', () => {
+  it('auto-retries retryable escalated feature', () => {
+    const f = createFeature({ id: 'esc-1', status: 'blocked' });
+    const ws = createMockWorldState({ features: { 'esc-1': f } });
+    const payload = {
+      type: 'feature_escalated',
+      context: {
+        featureId: 'esc-1',
+        retryCount: 0,
+        failureAnalysis: {
+          category: 'transient',
+          isRetryable: true,
+          suggestedDelay: 1000,
+          maxRetries: 3,
+          explanation: 'Temporary API failure',
+          confidence: 0.9,
+        },
+      },
+    };
+    const actions = classifiedRecovery.evaluate(ws, 'escalation:signal-received', payload);
+    expect(actions).toHaveLength(1);
+    expect(actions[0].type).toBe('reset_feature');
+  });
+
+  it('does not retry when not retryable', () => {
+    const f = createFeature({ id: 'esc-1', status: 'blocked' });
+    const ws = createMockWorldState({ features: { 'esc-1': f } });
+    const payload = {
+      type: 'feature_escalated',
+      context: {
+        featureId: 'esc-1',
+        retryCount: 0,
+        failureAnalysis: {
+          category: 'config',
+          isRetryable: false,
+          suggestedDelay: 0,
+          maxRetries: 0,
+          explanation: 'Invalid API key',
+          confidence: 0.95,
+        },
+      },
+    };
+    const actions = classifiedRecovery.evaluate(ws, 'escalation:signal-received', payload);
+    expect(actions).toHaveLength(0);
+  });
+
+  it('does not retry when max retries exceeded', () => {
+    const f = createFeature({ id: 'esc-1', status: 'blocked' });
+    const ws = createMockWorldState({ features: { 'esc-1': f } });
+    const payload = {
+      type: 'feature_escalated',
+      context: {
+        featureId: 'esc-1',
+        retryCount: 3,
+        failureAnalysis: {
+          category: 'transient',
+          isRetryable: true,
+          suggestedDelay: 1000,
+          maxRetries: 3,
+          explanation: 'Temporary API failure',
+          confidence: 0.9,
+        },
+      },
+    };
+    const actions = classifiedRecovery.evaluate(ws, 'escalation:signal-received', payload);
+    expect(actions).toHaveLength(0);
+  });
+
+  it('does not retry when confidence is low', () => {
+    const f = createFeature({ id: 'esc-1', status: 'blocked' });
+    const ws = createMockWorldState({ features: { 'esc-1': f } });
+    const payload = {
+      type: 'feature_escalated',
+      context: {
+        featureId: 'esc-1',
+        retryCount: 0,
+        failureAnalysis: {
+          category: 'transient',
+          isRetryable: true,
+          suggestedDelay: 1000,
+          maxRetries: 3,
+          explanation: 'Maybe transient',
+          confidence: 0.5,
+        },
+      },
+    };
+    const actions = classifiedRecovery.evaluate(ws, 'escalation:signal-received', payload);
+    expect(actions).toHaveLength(0);
+  });
+
+  it('no-ops for non feature_escalated event types', () => {
+    const ws = createMockWorldState();
+    const payload = { type: 'feature_reset', context: { featureId: 'f1' } };
+    const actions = classifiedRecovery.evaluate(ws, 'escalation:signal-received', payload);
+    expect(actions).toHaveLength(0);
+  });
+});
+
+// ────────────────────────── hitlFormResponse ──────────────────────────
+
+describe('hitlFormResponse', () => {
+  it('handles retry response — resets failure count and moves to backlog', () => {
+    const f = createFeature({ id: 'hitl-1', status: 'blocked', failureCount: 3 });
+    const ws = createMockWorldState({ features: { 'hitl-1': f } });
+    const payload = {
+      featureId: 'hitl-1',
+      response: [{ resolution: 'retry' }],
+    };
+    const actions = hitlFormResponse.evaluate(ws, 'lead-engineer:hitl-response', payload);
+    expect(actions).toHaveLength(2);
+    expect(actions[0].type).toBe('update_feature');
+    expect(actions[1]).toEqual({ type: 'move_feature', featureId: 'hitl-1', toStatus: 'backlog' });
+  });
+
+  it('handles provide_context response — stores context in statusChangeReason', () => {
+    const f = createFeature({ id: 'hitl-1', status: 'blocked' });
+    const ws = createMockWorldState({ features: { 'hitl-1': f } });
+    const payload = {
+      featureId: 'hitl-1',
+      response: [{ resolution: 'provide_context' }, { context: 'Try using the v2 API instead' }],
+    };
+    const actions = hitlFormResponse.evaluate(ws, 'lead-engineer:hitl-response', payload);
+    expect(actions).toHaveLength(2);
+    const updateAction = actions[0] as { type: 'update_feature'; updates: Record<string, unknown> };
+    expect(updateAction.updates.statusChangeReason).toContain('Try using the v2 API instead');
+    expect(actions[1]).toEqual({ type: 'move_feature', featureId: 'hitl-1', toStatus: 'backlog' });
+  });
+
+  it('handles skip response — moves to done', () => {
+    const f = createFeature({ id: 'hitl-1', status: 'blocked' });
+    const ws = createMockWorldState({ features: { 'hitl-1': f } });
+    const payload = {
+      featureId: 'hitl-1',
+      response: [{ resolution: 'skip' }],
+    };
+    const actions = hitlFormResponse.evaluate(ws, 'lead-engineer:hitl-response', payload);
+    expect(actions).toHaveLength(2);
+    expect(actions[1]).toEqual({ type: 'move_feature', featureId: 'hitl-1', toStatus: 'done' });
+  });
+
+  it('no-ops for unknown feature', () => {
+    const ws = createMockWorldState();
+    const payload = { featureId: 'unknown', response: [{ resolution: 'retry' }] };
+    const actions = hitlFormResponse.evaluate(ws, 'lead-engineer:hitl-response', payload);
+    expect(actions).toHaveLength(0);
+  });
+
+  it('no-ops for empty response', () => {
+    const f = createFeature({ id: 'hitl-1', status: 'blocked' });
+    const ws = createMockWorldState({ features: { 'hitl-1': f } });
+    const payload = { featureId: 'hitl-1', response: [] };
+    const actions = hitlFormResponse.evaluate(ws, 'lead-engineer:hitl-response', payload);
+    expect(actions).toHaveLength(0);
+  });
+});
+
+// ────────────────────────── missingCIChecks ──────────────────────────
+
+describe('missingCIChecks', () => {
+  it('logs diagnostic warning when CI checks are missing', () => {
+    const ws = createMockWorldState();
+    const payload = {
+      featureId: 'f1',
+      prNumber: 42,
+      baseBranch: 'dev',
+      missingChecks: ['build', 'test'],
+      waitingMinutes: 35,
+      possibleCause: 'CI workflow may target a different branch',
+    };
+    const actions = missingCIChecks.evaluate(ws, 'pr:missing-ci-checks', payload);
+    expect(actions).toHaveLength(1);
+    expect(actions[0].type).toBe('log');
+    const logAction = actions[0] as { type: 'log'; message: string };
+    expect(logAction.message).toContain('build');
+    expect(logAction.message).toContain('test');
+    expect(logAction.message).toContain('PR #42');
+  });
+
+  it('no-ops when required fields are missing', () => {
+    const ws = createMockWorldState();
+    const actions = missingCIChecks.evaluate(ws, 'pr:missing-ci-checks', {
+      featureId: 'f1',
+      prNumber: 42,
+    });
+    expect(actions).toHaveLength(0);
+  });
+});
+
+// ────────────────────────── reviewQueueSaturated ──────────────────────────
+
+describe('reviewQueueSaturated', () => {
+  it('logs saturation when review count exceeds threshold', () => {
+    const features: Record<string, LeadFeatureSnapshot> = {};
+    for (let i = 0; i < 6; i++) {
+      features[`r${i}`] = createFeature({ id: `r${i}`, status: 'review', prNumber: 100 + i });
+    }
+    const ws = createMockWorldState({ features });
+    const actions = reviewQueueSaturated.evaluate(ws, 'feature:status-changed', {});
+    expect(actions).toHaveLength(1);
+    expect(actions[0].type).toBe('log');
+    const logAction = actions[0] as { type: 'log'; message: string };
+    expect(logAction.message).toContain('6/5');
+  });
+
+  it('no-ops when review count is below threshold', () => {
+    const features: Record<string, LeadFeatureSnapshot> = {};
+    for (let i = 0; i < 3; i++) {
+      features[`r${i}`] = createFeature({ id: `r${i}`, status: 'review', prNumber: 100 + i });
+    }
+    const ws = createMockWorldState({ features });
+    const actions = reviewQueueSaturated.evaluate(ws, 'feature:status-changed', {});
+    expect(actions).toHaveLength(0);
+  });
+});
+
+// ────────────────────────── staleDeps — isFoundation semantics ──────────────────────────
+
+describe('staleDeps — foundation deps require done', () => {
+  it('does NOT unblock when foundation dep is in review', () => {
+    const dep = createFeature({ id: 'dep-f', status: 'review', isFoundation: true });
+    const blocked = createFeature({
+      id: 'blocked-f',
+      status: 'blocked',
+      dependencies: ['dep-f'],
+    });
+    const ws = createMockWorldState({ features: { 'dep-f': dep, 'blocked-f': blocked } });
+    const actions = staleDeps.evaluate(ws, 'feature:status-changed', { featureId: 'dep-f' });
+    expect(actions).toHaveLength(0);
+  });
+
+  it('DOES unblock when foundation dep is done', () => {
+    const dep = createFeature({ id: 'dep-f', status: 'done', isFoundation: true });
+    const blocked = createFeature({
+      id: 'blocked-f',
+      status: 'blocked',
+      dependencies: ['dep-f'],
+    });
+    const ws = createMockWorldState({ features: { 'dep-f': dep, 'blocked-f': blocked } });
+    const actions = staleDeps.evaluate(ws, 'feature:status-changed', { featureId: 'dep-f' });
+    expect(actions).toHaveLength(1);
+    expect(actions[0]).toEqual({ type: 'unblock_feature', featureId: 'blocked-f' });
+  });
+
+  it('DOES unblock when non-foundation dep is in review', () => {
+    const dep = createFeature({ id: 'dep-nf', status: 'review', isFoundation: false });
+    const blocked = createFeature({
+      id: 'blocked-nf',
+      status: 'blocked',
+      dependencies: ['dep-nf'],
+    });
+    const ws = createMockWorldState({ features: { 'dep-nf': dep, 'blocked-nf': blocked } });
+    const actions = staleDeps.evaluate(ws, 'feature:status-changed', { featureId: 'dep-nf' });
+    expect(actions).toHaveLength(1);
+    expect(actions[0]).toEqual({ type: 'unblock_feature', featureId: 'blocked-nf' });
   });
 });

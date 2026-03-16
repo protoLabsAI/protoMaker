@@ -228,6 +228,8 @@ export class WorldStateBuilder {
             state.boardCounts[oldStatus] = Math.max(0, (state.boardCounts[oldStatus] || 0) - 1);
           }
           state.boardCounts['in_progress'] = (state.boardCounts['in_progress'] || 0) + 1;
+          // Dedup: remove existing agent entry before adding (prevents duplicates on retry)
+          state.agents = state.agents.filter((a) => a.featureId !== featureId);
           state.agents.push({ featureId, startTime: now });
         }
         break;
@@ -238,6 +240,16 @@ export class WorldStateBuilder {
       case 'feature:error': {
         if (featureId) {
           state.agents = state.agents.filter((a) => a.featureId !== featureId);
+          // Update board counts: agent is no longer in_progress
+          if (state.features[featureId]) {
+            const currentStatus = state.features[featureId].status;
+            if (currentStatus === 'in_progress') {
+              state.boardCounts['in_progress'] = Math.max(
+                0,
+                (state.boardCounts['in_progress'] || 0) - 1
+              );
+            }
+          }
         }
         break;
       }
@@ -363,9 +375,12 @@ export class WorldStateBuilder {
       dependencies: f.dependencies,
       epicId: f.epicId,
       isEpic: f.isEpic,
+      isFoundation: f.isFoundation,
       complexity: f.complexity,
       startedAt: f.startedAt,
       completedAt: f.completedAt,
+      statusChangeReason: f.statusChangeReason,
+      reviewStartedAt: f.reviewStartedAt,
     };
   }
 }

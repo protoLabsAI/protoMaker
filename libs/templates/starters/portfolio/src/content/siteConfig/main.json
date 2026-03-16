@@ -1,0 +1,12 @@
+{
+  "name": "Your Name",
+  "bio": "Full-stack engineer and open-source builder. I ship products at the intersection of AI and developer tooling.",
+  "description": "Full-stack engineer building AI-native developer tools and open-source design systems.",
+  "email": "hello@yourname.dev",
+  "social": {
+    "github": "https://github.com/yourname",
+    "twitter": "https://x.com/yourname",
+    "linkedin": "https://linkedin.com/in/yourname"
+  },
+  "siteUrl": "https://yourname.dev"
+}

@@ -147,8 +147,13 @@ describe('ReviewProcessor — external merge detection', () => {
     // Should NOT have called gh CLI
     expect(mockExecAsync).not.toHaveBeenCalled();
 
-    // Should NOT have updated feature or emitted events
-    expect(serviceCtx.featureLoader.update).not.toHaveBeenCalled();
+    // enter() persists reviewStartedAt — that's expected.
+    // process() should NOT have updated feature status or emitted merge/status events.
+    const updateCalls = (serviceCtx.featureLoader.update as ReturnType<typeof vi.fn>).mock.calls;
+    const nonReviewStartCalls = updateCalls.filter(
+      (call: unknown[]) => !(call[2] as Record<string, unknown>)?.reviewStartedAt
+    );
+    expect(nonReviewStartCalls).toHaveLength(0);
     expect(serviceCtx.events.emit).not.toHaveBeenCalled();
   });
 });

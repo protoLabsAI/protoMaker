@@ -19,7 +19,6 @@ import { FeatureLoader } from '@/services/feature-loader.js';
 import { EventLedgerService } from '@/services/event-ledger-service.js';
 import { LedgerService } from '@/services/ledger-service.js';
 import { ArchiveQueryService } from '@/services/archive-query-service.js';
-import { PipelineService } from '@/services/pipeline-service.js';
 import { ProjectService } from '@/services/project-service.js';
 import { createEventEmitter } from '@/lib/events.js';
 import type { Project } from '@protolabsai/types';
@@ -45,7 +44,6 @@ describe('lifecycle-traceability (integration)', () => {
   let eventLedger: EventLedgerService;
   let ledgerService: LedgerService;
   let archiveQuery: ArchiveQueryService;
-  let pipelineService: PipelineService;
   let projectService: ProjectService;
   let emitter: ReturnType<typeof createEventEmitter>;
 
@@ -57,7 +55,6 @@ describe('lifecycle-traceability (integration)', () => {
     eventLedger = new EventLedgerService(projectPath);
     ledgerService = new LedgerService(featureLoader, emitter);
     archiveQuery = new ArchiveQueryService();
-    pipelineService = new PipelineService();
     projectService = new ProjectService(featureLoader);
 
     // Create base directory structure
@@ -262,22 +259,6 @@ describe('lifecycle-traceability (integration)', () => {
     expect(featureObj, 'feature.json should be loadable before archival').toBeTruthy();
     await ledgerService.recordFeatureCompletion(projectPath, featureObj!);
 
-    // ─── SETUP: Pipeline steps for the project ────────────────────────────
-
-    await pipelineService.addStep(projectPath, {
-      name: 'Code Review',
-      instructions: 'Manual code review step before merge',
-      colorClass: 'bg-blue-500',
-      order: 0,
-    });
-
-    await pipelineService.addStep(projectPath, {
-      name: 'QA Validation',
-      instructions: 'QA team sign-off validation',
-      colorClass: 'bg-green-500',
-      order: 1,
-    });
-
     // ─── SETUP: Archive the feature ───────────────────────────────────────
 
     const archiveDirPath = await featureLoader.archiveFeature(projectPath, FEATURE_ID);
@@ -363,14 +344,7 @@ describe('lifecycle-traceability (integration)', () => {
     const featureIdsInProjectEvents = new Set(projectEvents.map((e) => e.correlationIds.featureId));
     expect(featureIdsInProjectEvents.has(FEATURE_ID)).toBe(true);
 
-    // 4. Pipeline config is recoverable from the project path
-    const pipelineConfig = await pipelineService.getPipelineConfig(projectPath);
-    expect(pipelineConfig.steps).toHaveLength(2);
-    const stepNames = pipelineConfig.steps.map((s) => s.name);
-    expect(stepNames).toContain('Code Review');
-    expect(stepNames).toContain('QA Validation');
-
-    // 5. Reverse-navigate: archived project slug → project → milestone → phase → featureId
+    // 4. Reverse-navigate: archived project slug → project → milestone → phase → featureId
     const reverseProject = await projectService.getProject(projectPath, recoveredProjectSlug!);
     expect(reverseProject, 'project should be loadable from recovered slug').toBeTruthy();
 

@@ -49,7 +49,6 @@ import { createCalendarRoutes } from '../routes/calendar/index.js';
 import { createGoogleOAuthRoutes } from '../routes/google-calendar/oauth.js';
 import { createMCPRoutes } from '../routes/mcp/index.js';
 import { createEscalationRoutes } from '../routes/escalation.js';
-import { createPipelineRoutes } from '../routes/pipeline/index.js';
 import { createMetricsRoutes } from '../routes/metrics/index.js';
 import { createNotificationsRoutes } from '../routes/notifications/index.js';
 import { createHITLFormRoutes } from '../routes/hitl-forms/index.js';
@@ -93,6 +92,8 @@ import { createBackfillLedgerProjectSlugHandler } from '../routes/ledger/routes/
 import { createHivemindRoutes } from '../routes/hivemind/index.js';
 import { createDoraRoutes } from '../routes/dora/index.js';
 import { createAgentRoutes } from '../routes/agents.js';
+import { createOpsRoutes } from '../routes/ops/index.js';
+import { createQaRoutes } from '../routes/qa/index.js';
 
 const logger = createLogger('Server:Routes');
 
@@ -120,7 +121,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     projmAgent,
     emAgent,
     auditService,
-    pipelineService,
     metricsService,
     ledgerService,
     notificationService,
@@ -145,12 +145,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     integrityWatchdogService,
     featureHealthService,
     userIdentityService,
-    pipelineOrchestrator,
     prFeedbackService,
     signalIntakeService,
     gitWorkflowService,
     eventStreamBuffer,
-    pipelineCheckpointService,
     gtmAgent,
     completionDetectorService,
     antagonisticReviewService,
@@ -160,6 +158,8 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     projectPmService,
     crdtSyncService,
     todoService,
+    schedulerService,
+    eventRouterService,
   } = services;
 
   // Run stale validation cleanup every hour to prevent memory leaks from crashed validations
@@ -323,7 +323,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
       settingsService
     )
   );
-  app.use('/api/pipeline', createPipelineRoutes(pipelineService));
   app.use(
     '/api/metrics',
     createMetricsRoutes(
@@ -366,7 +365,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     createCeremoniesRoutes(events, featureLoader, projectService, ceremonyService, ceremonyAuditLog)
   );
   app.use('/api/issues', createIssuesRoutes(events));
-  app.use('/api/deploy', createDeployRoutes(autoModeService));
+  app.use('/api/deploy', createDeployRoutes(autoModeService, services.deploymentTrackerService));
   app.use('/api/docs', createDocsRoutes(settingsService));
   app.use('/api/integrity', createIntegrityRoutes(integrityWatchdogService));
   app.use('/api/escalation', createEscalationRoutes(escalationRouter));
@@ -387,10 +386,8 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
       projectService,
       contentFlowService,
       featureLoader,
-      pipelineCheckpointService,
       events,
       gtmAgent,
-      pipelineOrchestrator,
       ceremonyService,
       completionDetectorService,
       settingsService
@@ -448,6 +445,14 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // Agent manifest routes (list, get, match)
   app.use('/api/agents', createAgentRoutes(featureLoader));
   logger.info('Agent routes mounted at /api/agents');
+
+  // Ops routes (timer registry, operational controls)
+  app.use('/api/ops', createOpsRoutes(schedulerService, events, eventRouterService));
+  logger.info('Ops routes mounted at /api/ops');
+
+  // QA check aggregation (consolidated report for Quinn QA agent)
+  app.use('/api/qa', createQaRoutes(services));
+  logger.info('QA routes mounted at /api/qa');
 
   // Note: Sentry v8 automatically captures Express errors - no manual error handler needed
 }

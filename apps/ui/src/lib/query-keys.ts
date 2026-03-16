@@ -195,14 +195,6 @@ export const queryKeys = {
   },
 
   // ============================================
-  // Pipeline
-  // ============================================
-  pipeline: {
-    /** Pipeline config for a project */
-    config: (projectPath: string) => ['pipeline', projectPath] as const,
-  },
-
-  // ============================================
   // Suggestions
   // ============================================
   suggestions: {
@@ -268,6 +260,8 @@ export const queryKeys = {
     /** DORA history buckets for trend charts */
     history: (projectPath: string, window: '7d' | '30d' | '90d') =>
       ['dora', 'history', projectPath, window] as const,
+    /** Deployment history for CI/CD tracking */
+    deployments: (environment?: string) => ['dora', 'deployments', environment] as const,
   },
 
   // ============================================
@@ -336,9 +330,6 @@ export const queryKeys = {
       ['engine', 'events', 'history', filter] as const,
     /** LangGraph flow definitions */
     flows: (graphId?: string) => ['engine', 'flows', graphId] as const,
-    /** Pipeline checkpoint state */
-    pipelineCheckpoints: (projectPath: string) =>
-      ['engine', 'pipeline-checkpoints', projectPath] as const,
   },
 
   // ============================================
@@ -391,6 +382,14 @@ export const queryKeys = {
     /** Recent activity feed events */
     feed: (projectPath?: string, limit?: number) =>
       ['activity', 'feed', projectPath, limit] as const,
+  },
+
+  // ============================================
+  // QA Check
+  // ============================================
+  qa: {
+    /** Consolidated QA check report (wiring, timers, board, signals) */
+    check: (projectPath: string) => ['qa', 'check', projectPath] as const,
   },
 } as const;
 

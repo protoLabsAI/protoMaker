@@ -1,0 +1,27 @@
+{
+  "type": "faq",
+  "label": "FAQ",
+  "heading": "Frequently asked questions.",
+  "items": [
+    {
+      "question": "How long does setup take?",
+      "answer": "Most teams are up and running in under 15 minutes. Connect your repo, configure your pipeline, and start shipping."
+    },
+    {
+      "question": "Can I use this with my existing tools?",
+      "answer": "Yes. We integrate with GitHub, GitLab, Bitbucket, and most CI/CD platforms. Your existing workflow stays intact."
+    },
+    {
+      "question": "Is there a free tier?",
+      "answer": "The Starter plan is free forever. No credit card required. Upgrade when you need more capacity."
+    },
+    {
+      "question": "What happens to my data?",
+      "answer": "Your code never leaves your infrastructure. We analyze metadata only. Full SOC 2 compliance and regular security audits."
+    },
+    {
+      "question": "Can I cancel anytime?",
+      "answer": "Yes. No long-term contracts. Cancel anytime and export all your data with one click."
+    }
+  ]
+}

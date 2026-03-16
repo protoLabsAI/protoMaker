@@ -197,29 +197,30 @@ describe('ExecuteProcessor — waitForCompletion resolves on status-changed to r
     expect(result.nextState).toBe('REVIEW');
   });
 
-  it('does NOT resolve on status-changed to non-terminal status (e.g. blocked)', async () => {
+  it('resolves immediately on status-changed to blocked (fail-fast)', async () => {
     const { events, fire } = makeControllableEvents();
     const ctx = makeServiceContext({ events, fire });
 
     const processor = new ExecuteProcessor(ctx);
     const stateCtx = makeCtx();
 
-    // Fire blocked status, then feature:completed after a short delay
+    // After the blocked event fires, featureLoader.get should reflect blocked status
+    // (in production, the feature IS already blocked when the event fires)
+    (ctx.featureLoader as unknown as { get: ReturnType<typeof vi.fn> }).get.mockResolvedValue(
+      makeFeature({ status: 'blocked', statusChangeReason: 'git workflow failed' })
+    );
+
+    // Fire blocked status — should resolve immediately as failure instead of
+    // waiting for the 30-minute timeout (C4 fix: blocked = immediate resolution)
     (
       ctx.autoModeService as unknown as { executeFeature: ReturnType<typeof vi.fn> }
     ).executeFeature.mockImplementation(() => {
       setImmediate(() => {
-        // First fire a non-terminal status change — should NOT resolve
         fire('feature:status-changed', {
           featureId: 'feat-001',
           projectPath: '/test/project',
           newStatus: 'blocked',
           oldStatus: 'in_progress',
-        });
-        // Then fire completed — this should resolve
-        fire('feature:completed', {
-          featureId: 'feat-001',
-          projectPath: '/test/project',
         });
       });
       return Promise.resolve();
@@ -227,8 +228,8 @@ describe('ExecuteProcessor — waitForCompletion resolves on status-changed to r
 
     const result = await processor.process(stateCtx);
 
-    // Should still eventually resolve via feature:completed
-    expect(result.nextState).toBe('REVIEW');
+    // Should resolve as ESCALATE (blocked during execution = failure)
+    expect(result.nextState).toBe('ESCALATE');
   });
 
   it('still resolves via feature:completed (backward compat)', async () => {

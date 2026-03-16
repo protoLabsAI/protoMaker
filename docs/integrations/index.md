@@ -14,10 +14,10 @@ Use protoLabs directly from Chrome without switching windows.
 
 Configure and control the AI agents that power your development studio.
 
-| Integration                            | Description                                                                                                                          | Status   |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | -------- |
-| [Claude Code Plugin](./claude-plugin)  | Control protoLabs from the Claude Code CLI via MCP tools. Create features, start agents, manage the board, and orchestrate projects. | Required |
-| [API Key Profiles](./api-key-profiles) | Manage multiple AI providers, switch between API keys, and configure model preferences per project.                                  | Required |
+| Integration                                       | Description                                                                                                                          | Status   |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | -------- |
+| [Claude Code Plugin](./claude-plugin)             | Control protoLabs from the Claude Code CLI via MCP tools. Create features, start agents, manage the board, and orchestrate projects. | Required |
+| [API Key Profiles](../reference/api-key-profiles) | Manage multiple AI providers, switch between API keys, and configure model preferences per project.                                  | Required |
 
 ## Observability
 

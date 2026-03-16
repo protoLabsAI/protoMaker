@@ -189,7 +189,7 @@ The agent then decides whether to accept each feedback item. Accepted items trig
 
 ## Available MCP tools
 
-Four MCP tools cover GitHub and CodeRabbit operations. See [MCP Tools Reference](./mcp-tools-reference.md#github-operations-4-tools) for full details.
+Seven MCP tools cover GitHub and CodeRabbit operations. See [MCP Tools Reference](../reference/mcp-tools.md#github-operations-7-tools) for full details.
 
 | Tool                 | Description                                       |
 | -------------------- | ------------------------------------------------- |
@@ -263,7 +263,5 @@ Four MCP tools cover GitHub and CodeRabbit operations. See [MCP Tools Reference]
 
 ## Related Documentation
 
-- [MCP Tools Reference](./mcp-tools-reference.md) — Full tool catalog including GitHub Operations
-- [PR Remediation Loop](/dev/pr-remediation-loop) — Architecture of the automated feedback cycle
-- [Branch Strategy](/dev/branch-strategy) — How protoLabs manages branches and worktrees
-- [CI/CD](/infra/ci-cd) — GitHub Actions pipeline configuration
+- [MCP Tools Reference](../reference/mcp-tools.md) — Full tool catalog including GitHub Operations
+- [CI/CD](/self-hosting/ci-cd) — GitHub Actions pipeline configuration

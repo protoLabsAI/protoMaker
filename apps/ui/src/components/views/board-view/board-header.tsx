@@ -1,7 +1,16 @@
 import { useCallback, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Switch } from '@protolabsai/ui/atoms';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@protolabsai/ui/atoms';
 import { Label, Kbd, KbdGroup } from '@protolabsai/ui/atoms';
-import { GitBranch, DollarSign, Sparkles } from 'lucide-react';
+import { GitBranch, DollarSign, Sparkles, FolderKanban } from 'lucide-react';
+import { queryKeys } from '@/lib/query-keys';
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabsai/ui/atoms';
 import { PanelHeader } from '@/components/shared/panel-header';
@@ -40,6 +49,9 @@ interface BoardHeaderProps {
   // View toggle props
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
+  // Project filter props
+  selectedProjectSlug: string | null;
+  onProjectFilterChange: (slug: string | null) => void;
 }
 
 // Shared styles for header control containers
@@ -61,6 +73,8 @@ export function BoardHeader({
   onShowBoardBackground,
   viewMode,
   onViewModeChange,
+  selectedProjectSlug,
+  onProjectFilterChange,
 }: BoardHeaderProps) {
   const claudeAuthStatus = useSetupStore((state) => state.claudeAuthStatus);
   const skipVerificationInAutoMode = useAppStore((state) => state.skipVerificationInAutoMode);
@@ -123,6 +137,37 @@ export function BoardHeader({
 
   const isBoardMode = viewMode === 'kanban' || viewMode === 'list';
 
+  // Fetch project slugs for the filter dropdown
+  const { data: projectsData } = useQuery({
+    queryKey: queryKeys.projects.list(projectPath),
+    queryFn: async () => {
+      const api = getHttpApiClient();
+      return api.lifecycle.listProjects(projectPath);
+    },
+    enabled: !!projectPath,
+  });
+
+  // Fetch project details (title) for each slug
+  const projectSlugs = projectsData?.projects ?? [];
+  const { data: projectDetails } = useQuery({
+    queryKey: ['projects-details-for-filter', projectPath, projectSlugs],
+    queryFn: async () => {
+      const api = getHttpApiClient();
+      const results: Array<{ slug: string; title: string }> = [];
+      for (const slug of projectSlugs) {
+        const res = await api.lifecycle.getProject(projectPath, slug);
+        if (res.success && res.project) {
+          results.push({ slug, title: (res.project as { title?: string }).title ?? slug });
+        }
+      }
+      return results;
+    },
+    enabled: projectSlugs.length > 0,
+  });
+
+  const projectOptions = projectDetails ?? [];
+  const hasProjects = projectOptions.length > 0;
+
   return (
     <PanelHeader
       extra={
@@ -138,6 +183,32 @@ export function BoardHeader({
                 creatingSpecProjectPath={creatingSpecProjectPath}
                 currentProjectPath={projectPath}
               />
+            )}
+            {isBoardMode && hasProjects && (
+              <div className="flex items-center gap-1.5">
+                <FolderKanban className="w-3.5 h-3.5 text-muted-foreground" />
+                <Select
+                  value={selectedProjectSlug ?? '__all__'}
+                  onValueChange={(value) =>
+                    onProjectFilterChange(value === '__all__' ? null : value)
+                  }
+                >
+                  <SelectTrigger
+                    className="h-8 w-[160px] text-xs border-border bg-secondary"
+                    data-testid="project-filter"
+                  >
+                    <SelectValue placeholder="All Projects" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">All Projects</SelectItem>
+                    {projectOptions.map((project) => (
+                      <SelectItem key={project.slug} value={project.slug}>
+                        {project.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
             {isBoardMode && (
               <BoardControls isMounted={isMounted} onShowBoardBackground={onShowBoardBackground} />

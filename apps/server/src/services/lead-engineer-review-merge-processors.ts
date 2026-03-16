@@ -9,6 +9,7 @@ import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createLogger } from '@protolabsai/utils';
 import type { EventType, PRMergeStrategy } from '@protolabsai/types';
+import { resolveMergeStrategy } from '../lib/merge-strategy.js';
 import type {
   ProcessorServiceContext,
   StateContext,
@@ -61,7 +62,19 @@ export class ReviewProcessor implements StateProcessor {
     });
     // Stamp entry time only once — prevent reset if REVIEW re-enters due to re-checks
     if (!this.reviewStartedAt.has(ctx.feature.id)) {
-      this.reviewStartedAt.set(ctx.feature.id, Date.now());
+      // Restore from persisted feature data if available (survives server restart)
+      const persisted = ctx.feature.reviewStartedAt
+        ? new Date(ctx.feature.reviewStartedAt).getTime()
+        : Date.now();
+      this.reviewStartedAt.set(ctx.feature.id, persisted);
+    }
+    // Persist to feature JSON if not already set
+    if (!ctx.feature.reviewStartedAt) {
+      const now = new Date().toISOString();
+      await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+        reviewStartedAt: now,
+      });
+      ctx.feature.reviewStartedAt = now;
     }
   }
 
@@ -234,7 +247,9 @@ export class ReviewProcessor implements StateProcessor {
     }
 
     // Status is 'pending' or 'commented' — enforce timeout before waiting
-    const reviewStartMs = this.reviewStartedAt.get(ctx.feature.id) ?? Date.now();
+    const reviewStartMs =
+      this.reviewStartedAt.get(ctx.feature.id) ??
+      (ctx.feature.reviewStartedAt ? new Date(ctx.feature.reviewStartedAt).getTime() : Date.now());
     const reviewElapsedMs = Date.now() - reviewStartMs;
 
     if (reviewElapsedMs > REVIEW_PENDING_TIMEOUT_MS) {
@@ -505,7 +520,12 @@ export class MergeProcessor implements StateProcessor {
       const errMsg = err instanceof Error ? err.message : String(err);
 
       // If checks are still pending, wait and retry
-      if (errMsg.includes('check') || errMsg.includes('pending') || errMsg.includes('required')) {
+      if (
+        errMsg.includes('required status check') ||
+        errMsg.includes('waiting for status') ||
+        errMsg.includes('pull request is not mergeable') ||
+        errMsg.includes('not yet mergeable')
+      ) {
         ctx.mergeRetryCount++;
         logger.info(
           `[MERGE] Checks pending on PR #${ctx.prNumber}, waiting ${MERGE_RETRY_DELAY_MS / 1000}s`
@@ -536,25 +556,14 @@ export class MergeProcessor implements StateProcessor {
    * Promotion PRs (base is staging or main) always use --merge regardless of setting.
    */
   private async resolveMergeFlag(ctx: StateContext): Promise<string> {
-    // Check if this is a promotion PR — those must always use --merge
+    // Check if this is a promotion/epic PR — those must always use --merge
     if (ctx.prNumber) {
-      try {
-        const { stdout } = await execAsync(
-          `gh pr view ${ctx.prNumber} --json baseRefName --jq '.baseRefName'`,
-          { cwd: ctx.projectPath, timeout: 15000 }
+      const baseBranchFlag = await resolveMergeStrategy(ctx.prNumber, ctx.projectPath);
+      if (baseBranchFlag === '--merge') {
+        logger.info(
+          `[MERGE] PR #${ctx.prNumber} targets a protected branch — forcing --merge strategy`
         );
-        const baseBranch = stdout.trim();
-        if (baseBranch === 'staging' || baseBranch === 'main' || baseBranch.startsWith('epic/')) {
-          logger.info(
-            `[MERGE] PR #${ctx.prNumber} targets ${baseBranch} — forcing --merge strategy`
-          );
-          return '--merge';
-        }
-      } catch (err) {
-        logger.warn(
-          '[MERGE] Failed to detect PR base branch, falling back to configured strategy:',
-          err
-        );
+        return '--merge';
       }
     }
 

@@ -1,0 +1,66 @@
+# Redirects from Diataxis documentation reorganization (2026-03-14)
+# Old paths → new paths. Only public pages (internal/** excluded from build).
+
+# /agents/ → /concepts/ and /guides/
+/agents/ /concepts/ 301
+/agents/index /concepts/ 301
+/agents/architecture /concepts/agent-architecture 301
+/agents/philosophy /concepts/agent-philosophy 301
+/agents/escalation-routing /concepts/escalation-routing 301
+/agents/agent-flows /concepts/how-it-works 301
+/agents/prompt-engineering /concepts/prompt-engineering 301
+/agents/reliability /concepts/reliability 301
+/agents/authoring-prompts /guides/writing-prompts 301
+/agents/agent-manifests /guides/agent-manifests 301
+/agents/memory-system /guides/agent-memory 301
+/agents/authoring-skills /guides/authoring-skills 301
+/agents/context-system /guides/context-files 301
+
+# /dev/ → /concepts/, /guides/, /reference/
+/dev/feature-status-system /concepts/feature-lifecycle 301
+/dev/project-lifecycle /concepts/project-lifecycle 301
+/dev/idea-to-production /concepts/pipeline 301
+/dev/flow-control /guides/flow-control 301
+/dev/deployment-modes /guides/deployment-modes 301
+/dev/feature-flags /guides/feature-flags 301
+/dev/gotchas /guides/gotchas 301
+
+# /infra/ → /self-hosting/
+/infra/ /self-hosting/ 301
+/infra/index /self-hosting/ 301
+/infra/staging-deployment /self-hosting/ 301
+/infra/orchestration /self-hosting/orchestration 301
+/infra/ci-cd /self-hosting/ci-cd 301
+/infra/multi-instance-deployment /self-hosting/multi-instance-deployment 301
+/infra/architecture /self-hosting/architecture 301
+/infra/backup-recovery /self-hosting/backup-recovery 301
+/infra/deployment /self-hosting/deployment 301
+/infra/docker-compose /self-hosting/docker-compose 301
+/infra/docker /self-hosting/docker 301
+/infra/monitoring /self-hosting/monitoring 301
+/infra/networking /self-hosting/networking 301
+/infra/observability /self-hosting/observability 301
+/infra/runners /self-hosting/runners 301
+/infra/secrets /self-hosting/secrets 301
+/infra/security /self-hosting/security 301
+/infra/systemd /self-hosting/systemd 301
+/infra/troubleshooting /self-hosting/troubleshooting 301
+
+# /server/ → /reference/ (public pages only)
+/server/workflow-settings /reference/workflow-settings 301
+/server/auto-mode-service /reference/auto-mode 301
+/server/model-resolver /reference/model-resolver 301
+/server/knowledge-hive /reference/knowledge-hive 301
+/server/knowledge-store /reference/knowledge-store 301
+
+# /integrations/ moved pages → /reference/
+/integrations/api-key-profiles /reference/api-key-profiles 301
+/integrations/mcp-tools-reference /reference/mcp-tools 301
+
+# .html extension handling (search engines may have indexed with .html)
+/agents/architecture.html /concepts/agent-architecture 301
+/agents/philosophy.html /concepts/agent-philosophy 301
+/agents/escalation-routing.html /concepts/escalation-routing 301
+/infra/docker.html /self-hosting/docker 301
+/infra/architecture.html /self-hosting/architecture 301
+/dev/feature-status-system.html /concepts/feature-lifecycle 301

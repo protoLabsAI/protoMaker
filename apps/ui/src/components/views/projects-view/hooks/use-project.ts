@@ -135,7 +135,9 @@ export function useCreateProject() {
       const api = getHttpApiClient();
       // Use description as ideaDescription; fall back to goal if not provided
       const ideaDescription = data.description?.trim() || data.goal.trim();
-      return api.lifecycle.initiate(projectPath, data.title, ideaDescription);
+      const result = await api.lifecycle.initiate(projectPath, data.title, ideaDescription);
+
+      return result;
     },
     onSuccess: (result, variables) => {
       toast.success('Project created', {
@@ -146,7 +148,7 @@ export function useCreateProject() {
       }
       queryClient.invalidateQueries({ queryKey: ['projects-list', projectPath] });
       if (result.localSlug) {
-        void navigate({ to: '/projects/$slug', params: { slug: result.localSlug } });
+        void navigate({ to: '/project-management/$slug', params: { slug: result.localSlug } });
       }
     },
     onError: (error: Error) => {

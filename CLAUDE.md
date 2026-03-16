@@ -383,6 +383,33 @@ When adding a new feature flag, follow these 5 steps in order:
 
 All server operations emit events that stream to the frontend via WebSocket. Events are created using `createEventEmitter()` from `lib/events.ts`.
 
+### Scheduler & Timer Registry
+
+All recurring background operations MUST register through `SchedulerService` — never use raw `setInterval`. The Timer Registry provides visibility, pause/resume control, and metrics tracking for all timers.
+
+```typescript
+// Cron tasks (fixed schedule)
+await schedulerService.registerTask('my-task', 'Task Name', '*/5 * * * *', handler, true);
+
+// Interval tasks (fixed delay)
+schedulerService.registerInterval('my-interval', 'Interval Name', 30_000, handler, {
+  category: 'health',
+});
+```
+
+Categories: `maintenance`, `health`, `monitor`, `sync`, `system`. All timers appear in the Ops Dashboard (`/ops` → Timers tab) and via `GET /api/ops/timers`.
+
+**Timer vs. Maintenance Check**: Use a timer for simple recurring operations (polling, syncing). Use a `MaintenanceCheck` module for board health inspections that detect issues and apply auto-fixes. See `docs/internal/server/timer-registry.md` and `docs/internal/server/maintenance-checks.md`.
+
+### Webhook Reliability
+
+Webhook endpoints (`/api/github/webhook`, `/api/webhooks/github`) are wrapped with:
+
+- **Rate limiting** — Token bucket, 100 req/min per IP (middleware in `apps/server/src/middleware/rate-limiter.ts`)
+- **Delivery tracking** — `WebhookDeliveryService` records every delivery with status, timing, and retry history
+- **Secret rotation** — `POST /api/github/rotate-secret` generates a new secret, keeps the old one valid for 24h (dual-secret verification)
+- **Event routing** — `EventRouterService` wraps `SignalIntakeService` with delivery tracking, accessible via `GET /api/ops/deliveries`
+
 ### Git Worktree Isolation
 
 Each feature executes in an isolated git worktree, protecting the main branch during AI agent execution. Worktrees are **auto-created** when an agent starts if one doesn't exist for the feature's branch. Worktrees are stored in `{projectPath}/.worktrees/{branch-name}`.

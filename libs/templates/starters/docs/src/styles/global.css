@@ -1,0 +1,154 @@
+/* =============================================================
+ * protoLabs Brand Design System — Starlight Theme
+ * Dark-first, violet accent, Geist typography
+ * ============================================================= */
+
+/* ------------------------------------------------------------------
+ * Geist font faces (loaded from Google Fonts CDN)
+ * ------------------------------------------------------------------ */
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap");
+
+/* ------------------------------------------------------------------
+ * Tailwind v4 design tokens
+ * ------------------------------------------------------------------ */
+@theme {
+  /* Surface colors — dark zinc palette */
+  --color-surface-0: #09090b;
+  --color-surface-1: #111113;
+  --color-surface-2: #18181b;
+  --color-surface-3: #222225;
+
+  /* Accent violet */
+  --color-accent: #a78bfa;
+  --color-accent-dim: #7c5cbf;
+
+  /* Semantic / muted */
+  --color-muted: #71717a;
+
+  /* Typography — Geist */
+  --font-family-sans: "Geist", system-ui, sans-serif;
+  --font-family-mono: "Geist Mono", monospace;
+
+  /* Border opacity tokens */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-faint: rgba(255, 255, 255, 0.04);
+  --border-accent-muted: rgba(167, 139, 250, 0.3);
+}
+
+/* ------------------------------------------------------------------
+ * Starlight CSS variable overrides — dark mode (default)
+ * Docs: https://starlight.astro.build/guides/css-and-tailwind/#theme-css-variables
+ * ------------------------------------------------------------------ */
+:root,
+[data-theme="dark"] {
+  /* Starlight accent color → violet */
+  --sl-color-accent-low: #2d1e5c;
+  --sl-color-accent: #a78bfa;
+  --sl-color-accent-high: #d8b4fe;
+
+  /* Background layers */
+  --sl-color-bg: #09090b;
+  --sl-color-bg-nav: #111113;
+  --sl-color-bg-sidebar: #111113;
+  --sl-color-bg-inline-code: #18181b;
+  --sl-color-bg-accent: rgba(167, 139, 250, 0.12);
+
+  /* Text */
+  --sl-color-text: #f4f4f5;
+  --sl-color-text-invert: #09090b;
+  --sl-color-text-accent: #a78bfa;
+
+  /* Hairline borders */
+  --sl-color-hairline: rgba(255, 255, 255, 0.06);
+  --sl-color-hairline-light: rgba(255, 255, 255, 0.04);
+  --sl-color-hairline-shade: rgba(255, 255, 255, 0.08);
+
+  /* Headings & code */
+  --sl-color-white: #fafafa;
+  --sl-color-gray-1: #e4e4e7;
+  --sl-color-gray-2: #a1a1aa;
+  --sl-color-gray-3: #71717a;
+  --sl-color-gray-4: #3f3f46;
+  --sl-color-gray-5: #27272a;
+  --sl-color-gray-6: #18181b;
+  --sl-color-black: #09090b;
+
+  /* Typography */
+  --sl-font: "Geist", system-ui, sans-serif;
+  --sl-font-mono: "Geist Mono", monospace;
+}
+
+/* Light mode overrides */
+[data-theme="light"] {
+  --sl-color-accent-low: #ede9fe;
+  --sl-color-accent: #7c3aed;
+  --sl-color-accent-high: #4c1d95;
+
+  --sl-color-bg: #ffffff;
+  --sl-color-bg-nav: #fafafa;
+  --sl-color-bg-sidebar: #f4f4f5;
+  --sl-color-bg-inline-code: #f4f4f5;
+
+  --sl-color-text: #18181b;
+  --sl-color-text-accent: #7c3aed;
+
+  --sl-color-hairline: rgba(0, 0, 0, 0.08);
+  --sl-color-hairline-light: rgba(0, 0, 0, 0.04);
+
+  --sl-color-gray-1: #27272a;
+  --sl-color-gray-2: #3f3f46;
+  --sl-color-gray-3: #71717a;
+  --sl-color-gray-4: #a1a1aa;
+  --sl-color-gray-5: #d4d4d8;
+  --sl-color-gray-6: #f4f4f5;
+  --sl-color-black: #ffffff;
+  --sl-color-white: #09090b;
+}
+
+/* ------------------------------------------------------------------
+ * Gradient logo / title
+ * ------------------------------------------------------------------ */
+.site-title {
+  background: linear-gradient(135deg, #a78bfa 0%, #818cf8 50%, #6366f1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------------
+ * Gradient text utility (use in MDX: <span class="gradient-text">)
+ * ------------------------------------------------------------------ */
+.gradient-text {
+  background: linear-gradient(135deg, #a78bfa 0%, #818cf8 50%, #6366f1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ------------------------------------------------------------------
+ * Sidebar — violet active indicator
+ * ------------------------------------------------------------------ */
+:root [data-theme="dark"] .sidebar a[aria-current="page"],
+:root [data-theme="dark"] .sidebar a[aria-current="true"] {
+  background-color: rgba(167, 139, 250, 0.12);
+  color: var(--sl-color-accent-high);
+  border-left: 2px solid var(--sl-color-accent);
+}
+
+/* ------------------------------------------------------------------
+ * Inline code — subtle violet tint in dark mode
+ * ------------------------------------------------------------------ */
+:root [data-theme="dark"] code:not(pre code) {
+  border: 1px solid rgba(167, 139, 250, 0.2);
+}
+
+/* ------------------------------------------------------------------
+ * Focus ring — violet
+ * ------------------------------------------------------------------ */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--sl-color-accent);
+  outline-offset: 2px;
+}

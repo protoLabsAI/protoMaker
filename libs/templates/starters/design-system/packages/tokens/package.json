@@ -1,0 +1,37 @@
+{
+  "name": "@@PROJECT_NAME-tokens",
+  "version": "0.1.0",
+  "description": "W3C DTCG design token extraction and export for the design system starter kit",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./dtcg": {
+      "import": "./dist/dtcg.js",
+      "types": "./dist/dtcg.d.ts"
+    },
+    "./extractor": {
+      "import": "./dist/extractor.js",
+      "types": "./dist/extractor.d.ts"
+    },
+    "./exporters/css": {
+      "import": "./dist/exporters/css.js",
+      "types": "./dist/exporters/css.d.ts"
+    },
+    "./exporters/tailwind": {
+      "import": "./dist/exporters/tailwind.js",
+      "types": "./dist/exporters/tailwind.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

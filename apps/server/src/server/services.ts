@@ -16,10 +16,13 @@ import { SettingsService } from '../services/settings-service.js';
 import { ClaudeUsageService } from '../services/claude-usage-service.js';
 import { contentFlowService } from '../services/content-flow-service.js';
 import { calendarService } from '../services/calendar-service.js';
+import {
+  CalendarIntegrationService,
+  calendarIntegrationService,
+} from '../services/calendar-integration-service.js';
 import { GoogleCalendarSyncService } from '../services/google-calendar-sync-service.js';
 import { MCPTestService } from '../services/mcp-test-service.js';
 import { getEscalationRouter } from '../services/escalation-router.js';
-import { pipelineService } from '../services/pipeline-service.js';
 import { MetricsService } from '../services/metrics-service.js';
 import { getDevServerService } from '../services/dev-server-service.js';
 import { getNotificationService } from '../services/notification-service.js';
@@ -33,6 +36,7 @@ import { AutomationService } from '../services/automation-service.js';
 import { getHealthMonitorService } from '../services/health-monitor-service.js';
 import { integrationService } from '../services/integration-service.js';
 import { SignalIntakeService } from '../services/signal-intake-service.js';
+import { EventRouterService } from '../services/event-router-service.js';
 import { AuthorityService } from '../services/authority-service.js';
 import { CompletionDetectorService } from '../services/completion-detector-service.js';
 import { PMAuthorityAgent } from '../services/authority-agents/pm-agent.js';
@@ -52,7 +56,6 @@ import {
 } from '../services/built-in-integrations.js';
 import { ReconciliationService } from '../services/reconciliation-service.js';
 import { GitHubStateChecker } from '../services/github-state-checker.js';
-import { PipelineCheckpointService } from '../services/pipeline-checkpoint-service.js';
 import { ProjectService } from '../services/project-service.js';
 import { getSpecGenerationMonitor } from '../services/spec-generation-monitor.js';
 import { FeatureHealthService } from '../services/feature-health-service.js';
@@ -64,7 +67,6 @@ import { EventStreamBuffer } from '../lib/event-stream-buffer.js';
 import { AntagonisticReviewService } from '../services/antagonistic-review-service.js';
 import { AgentScoringService } from '../services/agent-scoring-service.js';
 import { gitWorkflowService } from '../services/git-workflow-service.js';
-import { PipelineOrchestrator } from '../services/pipeline-orchestrator.js';
 import { TrustTierService } from '../services/trust-tier-service.js';
 import { LedgerService } from '../services/ledger-service.js';
 import { ArchivalService } from '../services/archival-service.js';
@@ -79,6 +81,9 @@ import { ChannelRouter } from '../services/channel-router.js';
 import { NotificationRouter } from '../services/notification-router.js';
 import { JobExecutorService } from '../services/job-executor-service.js';
 import { DoraMetricsService } from '../services/dora-metrics-service.js';
+import { DeploymentTrackerService } from '../services/deployment-tracker-service.js';
+import { SignalDictionaryService } from '../services/signal-dictionary-service.js';
+import { ProjectHealthService } from '../services/project-health-service.js';
 import { MetricsCollectionService } from '../services/metrics-collection-service.js';
 import { ErrorBudgetService } from '../services/error-budget-service.js';
 import {
@@ -91,6 +96,10 @@ import {
   ReactiveSpawnerService,
 } from '../services/reactive-spawner-service.js';
 import { registerAvaCronTasks } from '../services/ava-cron-tasks.js';
+import {
+  MaintenanceOrchestrator,
+  getMaintenanceOrchestrator,
+} from '../services/maintenance-orchestrator.js';
 
 // Services originally loaded via top-level dynamic imports — now static for proper typing
 import { ProjectLifecycleService } from '../services/project-lifecycle-service.js';
@@ -153,6 +162,7 @@ export interface ServiceContainer {
   // Calendar & scheduling
   googleCalendarSyncService: GoogleCalendarSyncService;
   calendarService: typeof calendarService;
+  calendarIntegrationService: CalendarIntegrationService;
   schedulerService: ReturnType<typeof getSchedulerService>;
   automationService: AutomationService;
   jobExecutorService: JobExecutorService;
@@ -169,6 +179,7 @@ export interface ServiceContainer {
   // Feature health
   featureHealthService: FeatureHealthService;
   healthMonitorService: ReturnType<typeof getHealthMonitorService>;
+  maintenanceOrchestrator: MaintenanceOrchestrator;
 
   // Discord
   discordService: ReturnType<typeof getDiscordService>;
@@ -204,8 +215,7 @@ export interface ServiceContainer {
 
   // Signal & pipeline
   signalIntakeService: SignalIntakeService;
-  pipelineOrchestrator: PipelineOrchestrator;
-  pipelineService: typeof pipelineService;
+  eventRouterService: EventRouterService;
   channelRouter: ChannelRouter;
 
   // Docs detection
@@ -232,7 +242,6 @@ export interface ServiceContainer {
 
   // Lead Engineer
   leadEngineerService: LeadEngineerService;
-  pipelineCheckpointService: PipelineCheckpointService;
   factStoreService: FactStoreService;
   trajectoryStoreService: TrajectoryStoreService;
   leadHandoffService: LeadHandoffService;
@@ -270,6 +279,15 @@ export interface ServiceContainer {
 
   // DORA metrics (lead time, deployment frequency, change failure rate, recovery time, rework rate)
   doraMetricsService: DoraMetricsService;
+
+  // Deployment tracking (real CI/CD pipeline event capture for DORA metrics)
+  deploymentTrackerService: DeploymentTrackerService;
+
+  // Signal Dictionary (portfolio attention engine — threshold-based escalation)
+  signalDictionaryService: SignalDictionaryService;
+
+  // Project Health (auto-computed from signals, milestones, WIP, blocked features)
+  projectHealthService: ProjectHealthService;
 
   // DORA metrics collection (event-driven time-series collector, persists to .automaker/metrics/dora.json)
   metricsCollectionService: MetricsCollectionService;
@@ -320,7 +338,13 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   const trustTierService = new TrustTierService(dataDir);
   const agentService = new AgentService(dataDir, events, settingsService, featureLoader);
   const metricsService = new MetricsService(featureLoader);
-  const doraMetricsService = new DoraMetricsService(featureLoader);
+  // Deployment Tracker Service — records real CI/CD deployment events (global, not per-project)
+  const deploymentTrackerService = new DeploymentTrackerService(dataDir, events);
+  const doraMetricsService = new DoraMetricsService(
+    featureLoader,
+    undefined,
+    deploymentTrackerService
+  );
 
   // DORA Metrics Collection Service — event-driven time-series persistence
   const metricsCollectionService = new MetricsCollectionService(
@@ -395,6 +419,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     stuckThresholdMs: 30 * 60 * 1000,
   });
 
+  // Maintenance Orchestrator — started in maintenance.module.ts
+  const maintenanceOrchestrator = getMaintenanceOrchestrator();
+
   const avaGatewayService = getAvaGatewayService(
     featureLoader,
     settingsService,
@@ -434,6 +461,13 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Actionable Items Service with event emitter
   const actionableItemService = getActionableItemService();
 
+  // Signal Dictionary Service — portfolio attention engine (threshold-based escalation)
+  const signalDictionaryService = new SignalDictionaryService(
+    actionableItemService,
+    events,
+    settingsService
+  );
+
   // Actionable Item Bridge — auto-creates items from HITL forms, notifications, escalations, pipeline gates
   const actionableItemBridge = new ActionableItemBridgeService({
     actionableItemService,
@@ -460,13 +494,8 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     settingsService
   );
 
-  // Pipeline Orchestrator — unified phase tracking across ops + gtm branches
-  const pipelineOrchestrator = new PipelineOrchestrator(events, featureLoader, settingsService);
-  // Hydrate the pipeline feature flag from settings (async, non-blocking).
-  // Defaults to disabled (false) until the HITL pipeline overhaul ships.
-  void settingsService.getGlobalSettings().then((s) => {
-    pipelineOrchestrator.setEnabled(s.featureFlags?.pipeline ?? false);
-  });
+  // Event Router Service — unified entry point wrapping signal classification with delivery tracking
+  const eventRouterService = new EventRouterService(signalIntakeService, events);
 
   // Channel Router — routes HITL interactions to the originating channel
   const channelRouter = new ChannelRouter();
@@ -505,6 +534,14 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   const projectService = new ProjectService(featureLoader, events);
   projectService.setCalendarService(calendarService);
 
+  // Project Health Service — auto-computes on-track/at-risk/off-track from signals
+  const projectHealthService = new ProjectHealthService(
+    projectService,
+    featureLoader,
+    settingsService,
+    events
+  );
+
   // Project Lifecycle Service
   const projectLifecycleService = new ProjectLifecycleService(
     settingsService,
@@ -542,8 +579,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     metricsService,
     dataDir
   );
-  const pipelineCheckpointService = new PipelineCheckpointService();
-
   // ContextFidelityService for shaping prior context on retries
   const contextFidelityService = new ContextFidelityService();
 
@@ -774,8 +809,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   leadEngineerService.setAuthorityService(authorityService);
 
   // Wire contextFidelityService into leadEngineerService
-  leadEngineerService.setCheckpointService(pipelineCheckpointService);
-  autoModeService.setPipelineCheckpointService(pipelineCheckpointService);
   leadEngineerService.setContextFidelityService(contextFidelityService);
   leadEngineerService.setKnowledgeStoreService(knowledgeStoreService);
   leadEngineerService.setHITLFormService(hitlFormService);
@@ -807,9 +840,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     logger.warn('[Affinity] Failed to load project preferences — affinity filtering skipped:', err);
   }
 
-  // Wire pipelineOrchestrator processors
-  pipelineOrchestrator.setProcessors({ ops: pmAgent, gtm: gtmAgent, projm: projmAgent });
-
   // Initialize Ceremony Service
   ceremonyService.initialize(
     events,
@@ -825,7 +855,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   const dailyStandupService = new DailyStandupService();
 
   // Initialize Completion Detector Service
-  completionDetectorService.initialize(
+  await completionDetectorService.initialize(
     events,
     featureLoader,
     projectService,
@@ -857,6 +887,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     archivalService,
     googleCalendarSyncService,
     calendarService,
+    calendarIntegrationService,
     schedulerService,
     automationService,
     jobExecutorService,
@@ -869,6 +900,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     contextAggregator,
     featureHealthService,
     healthMonitorService,
+    maintenanceOrchestrator,
     discordService,
     discordBotService,
     knowledgeStoreService,
@@ -886,8 +918,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     eventStreamBuffer,
     briefingCursorService,
     signalIntakeService,
-    pipelineOrchestrator,
-    pipelineService,
+    eventRouterService,
     channelRouter,
     docsUpdateDetector,
     authorityService,
@@ -904,7 +935,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     ceremonyService,
     dailyStandupService,
     leadEngineerService,
-    pipelineCheckpointService,
     factStoreService,
     trajectoryStoreService,
     leadHandoffService,
@@ -922,6 +952,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     crdtSyncService,
     todoService,
     doraMetricsService,
+    deploymentTrackerService,
+    signalDictionaryService,
+    projectHealthService,
     metricsCollectionService,
     errorBudgetService,
     frictionTrackerService,

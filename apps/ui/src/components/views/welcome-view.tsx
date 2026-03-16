@@ -127,7 +127,7 @@ export function WelcomeView() {
         }
 
         // Navigate to the board view
-        navigate({ to: '/projects' });
+        navigate({ to: '/project-management' });
       } catch (error) {
         logger.error('[Welcome] Failed to open project:', error);
         toast.error('Failed to open project', {
@@ -210,71 +210,30 @@ export function WelcomeView() {
   const handleCreateBlankProject = async (projectName: string, parentDir: string) => {
     setIsCreating(true);
     try {
-      const api = getElectronAPI();
+      const httpClient = getHttpApiClient();
       const projectPath = `${parentDir}/${projectName}`;
 
-      // Validate that parent directory exists
-      const parentExists = await api.exists(parentDir);
-      if (!parentExists) {
-        toast.error('Parent directory does not exist', {
-          description: `Cannot create project in non-existent directory: ${parentDir}`,
-        });
-        return;
-      }
-
-      // Verify parent is actually a directory
-      const parentStat = await api.stat(parentDir);
-      if (parentStat && !parentStat.stats?.isDirectory) {
-        toast.error('Parent path is not a directory', {
-          description: `${parentDir} is not a directory`,
-        });
-        return;
-      }
-
-      // Create project directory
-      const mkdirResult = await api.mkdir(projectPath);
-      if (!mkdirResult.success) {
-        toast.error('Failed to create project directory', {
-          description: mkdirResult.error || 'Unknown error occurred',
-        });
-        return;
-      }
-
-      // Initialize .automaker directory with all necessary files
-      const initResult = await initializeProject(projectPath);
-
-      if (!initResult.success) {
-        toast.error('Failed to initialize project', {
-          description: initResult.error || 'Unknown error occurred',
-        });
-        return;
-      }
-
-      // Update the app_spec.txt with the project name
-      // Note: Must follow XML format as defined in apps/server/src/lib/app-spec-format.ts
-      await api.writeFile(
-        `${projectPath}/.automaker/app_spec.txt`,
-        `<project_specification>
-  <project_name>${projectName}</project_name>
-
-  <overview>
-    Describe your project here. This file will be analyzed by an AI agent
-    to understand your project structure and tech stack.
-  </overview>
-
-  <technology_stack>
-    <!-- The AI agent will fill this in after analyzing your project -->
-  </technology_stack>
-
-  <core_capabilities>
-    <!-- List core features and capabilities -->
-  </core_capabilities>
-
-  <implemented_features>
-    <!-- The AI agent will populate this based on code analysis -->
-  </implemented_features>
-</project_specification>`
+      // Scaffold blank project via server endpoint (creates dir + .automaker structure)
+      const scaffoldResult = await httpClient.setup.scaffoldStarterKit(
+        projectPath,
+        'general',
+        projectName
       );
+
+      if (!scaffoldResult.success) {
+        toast.error('Failed to create project', {
+          description: scaffoldResult.error || 'Unknown error occurred',
+        });
+        return;
+      }
+
+      // Initialize git repo via Electron API
+      const api = getElectronAPI();
+      try {
+        await api.worktree?.initGit(projectPath);
+      } catch {
+        // Don't fail if git init fails
+      }
 
       const project = {
         id: `project-${Date.now()}`,
@@ -294,14 +253,14 @@ export function WelcomeView() {
       // Set init status to show the dialog
       setInitStatus({
         isNewProject: true,
-        createdFiles: initResult.createdFiles || [],
+        createdFiles: scaffoldResult.filesCreated || [],
         projectName: projectName,
         projectPath: projectPath,
       });
       setShowInitDialog(true);
 
       // Navigate to the board view (dialog shows as overlay)
-      navigate({ to: '/projects' });
+      navigate({ to: '/project-management' });
     } catch (error) {
       logger.error('Failed to create project:', error);
       toast.error('Failed to create project', {
@@ -313,7 +272,7 @@ export function WelcomeView() {
   };
 
   /**
-   * Create a project from a GitHub starter template
+   * Create a project from a starter template (scaffold or clone)
    */
   const handleCreateFromTemplate = async (
     template: StarterTemplate,
@@ -325,21 +284,43 @@ export function WelcomeView() {
       const httpClient = getHttpApiClient();
       const api = getElectronAPI();
 
-      // Clone the template repository
-      const cloneResult = await httpClient.templates.clone(
-        template.repoUrl,
-        projectName,
-        parentDir
-      );
+      let projectPath: string;
 
-      if (!cloneResult.success || !cloneResult.projectPath) {
-        toast.error('Failed to clone template', {
-          description: cloneResult.error || 'Unknown error occurred',
-        });
-        return;
+      if (template.source === 'scaffold' && template.kitType) {
+        // Local scaffold — copy starter kit into new directory
+        const targetDir = `${parentDir}/${projectName}`;
+
+        const scaffoldResult = await httpClient.setup.scaffoldStarterKit(
+          targetDir,
+          template.kitType as 'docs' | 'portfolio',
+          projectName
+        );
+
+        if (!scaffoldResult.success) {
+          toast.error('Failed to scaffold starter kit', {
+            description: scaffoldResult.error || 'Unknown error occurred',
+          });
+          return;
+        }
+
+        projectPath = targetDir;
+      } else {
+        // GitHub clone
+        const cloneResult = await httpClient.templates.clone(
+          template.repoUrl!,
+          projectName,
+          parentDir
+        );
+
+        if (!cloneResult.success || !cloneResult.projectPath) {
+          toast.error('Failed to clone template', {
+            description: cloneResult.error || 'Unknown error occurred',
+          });
+          return;
+        }
+
+        projectPath = cloneResult.projectPath;
       }
-
-      const projectPath = cloneResult.projectPath;
 
       // Initialize .automaker directory with all necessary files
       const initResult = await initializeProject(projectPath);
@@ -402,7 +383,7 @@ export function WelcomeView() {
       setShowInitDialog(true);
 
       // Navigate to the board view (dialog shows as overlay)
-      navigate({ to: '/projects' });
+      navigate({ to: '/project-management' });
 
       // Kick off project analysis
       analyzeProject(projectPath);
@@ -502,7 +483,7 @@ export function WelcomeView() {
       setShowInitDialog(true);
 
       // Navigate to the board view (dialog shows as overlay)
-      navigate({ to: '/projects' });
+      navigate({ to: '/project-management' });
 
       // Kick off project analysis
       analyzeProject(projectPath);

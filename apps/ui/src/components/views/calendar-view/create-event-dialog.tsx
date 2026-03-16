@@ -19,9 +19,9 @@ import { Input } from '@protolabsai/ui/atoms';
 import { Label } from '@protolabsai/ui/atoms';
 import { Textarea } from '@protolabsai/ui/atoms';
 import { HotkeyButton } from '@protolabsai/ui/molecules';
-import { CalendarPlus, Clock, Play } from 'lucide-react';
+import { CalendarPlus, Clock, Play, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { JobAction } from '@protolabsai/types';
+import type { JobAction, RecurrenceFrequency } from '@protolabsai/types';
 import type { CreateEventInput } from './use-calendar-events';
 
 // ============================================================================
@@ -34,6 +34,14 @@ const JOB_ACTION_TYPES = [
   { value: 'run-automation', label: 'Run Automation' },
   { value: 'run-command', label: 'Run Command' },
 ] as const;
+
+/** Recurrence frequency options */
+const RECURRENCE_FREQUENCY_OPTIONS: { value: RecurrenceFrequency; label: string }[] = [
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'yearly', label: 'Yearly' },
+];
 
 type EventMode = 'event' | 'job';
 
@@ -91,6 +99,13 @@ export function CreateEventDialog({
   const [command, setCommand] = useState('');
   const [commandCwd, setCommandCwd] = useState('');
 
+  // Recurrence state
+  const [enableRecurrence, setEnableRecurrence] = useState(false);
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState<RecurrenceFrequency>('weekly');
+  const [recurrenceInterval, setRecurrenceInterval] = useState('1');
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
+  const [timezone, setTimezone] = useState('');
+
   const wasOpenRef = useRef(false);
 
   // Reset form when dialog opens
@@ -114,6 +129,11 @@ export function CreateEventDialog({
       setAutomationId('');
       setCommand('');
       setCommandCwd('');
+      setEnableRecurrence(false);
+      setRecurrenceFrequency('weekly');
+      setRecurrenceInterval('1');
+      setRecurrenceEndDate('');
+      setTimezone('');
     }
   }, [open, defaultDate]);
 
@@ -149,12 +169,23 @@ export function CreateEventDialog({
 
     if (hasError) return;
 
+    const intervalNum = parseInt(recurrenceInterval, 10);
+    const recurrence = enableRecurrence
+      ? {
+          frequency: recurrenceFrequency,
+          ...(intervalNum > 1 && { interval: intervalNum }),
+          ...(recurrenceEndDate && { endDate: recurrenceEndDate }),
+        }
+      : undefined;
+
     await onSubmit({
       title: title.trim(),
       date,
       ...(mode === 'event' && { endDate: endDate || undefined }),
       description: description.trim() || undefined,
       color: color || undefined,
+      ...(recurrence && { recurrence }),
+      ...(timezone && { timezone }),
       ...(mode === 'job' && {
         type: 'job' as const,
         time,
@@ -385,6 +416,92 @@ export function CreateEventDialog({
               placeholder="Add a description..."
               rows={3}
               data-testid="event-description-input"
+            />
+          </div>
+
+          {/* Recurrence */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setEnableRecurrence(!enableRecurrence)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md border transition-colors',
+                  enableRecurrence
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-background text-muted-foreground border-border hover:bg-accent'
+                )}
+                data-testid="toggle-recurrence"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Repeat
+              </button>
+            </div>
+
+            {enableRecurrence && (
+              <div className="space-y-3 pl-1">
+                {/* Frequency selector */}
+                <div className="space-y-2">
+                  <Label>Frequency</Label>
+                  <div className="flex rounded-md border border-border overflow-hidden">
+                    {RECURRENCE_FREQUENCY_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setRecurrenceFrequency(opt.value)}
+                        className={cn(
+                          'flex-1 px-2 py-1.5 text-xs font-medium transition-colors',
+                          recurrenceFrequency === opt.value
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-background text-muted-foreground hover:bg-accent'
+                        )}
+                        data-testid={`recurrence-freq-${opt.value}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Interval + End date */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="recurrence-interval">Every N intervals</Label>
+                    <Input
+                      id="recurrence-interval"
+                      type="number"
+                      min={1}
+                      max={365}
+                      value={recurrenceInterval}
+                      onChange={(e) => setRecurrenceInterval(e.target.value)}
+                      data-testid="recurrence-interval-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="recurrence-end-date">Until (optional)</Label>
+                    <Input
+                      id="recurrence-end-date"
+                      type="date"
+                      value={recurrenceEndDate}
+                      onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                      min={date || undefined}
+                      data-testid="recurrence-end-date-input"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Timezone */}
+          <div className="space-y-2">
+            <Label htmlFor="event-timezone">Timezone (optional)</Label>
+            <Input
+              id="event-timezone"
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+              placeholder="e.g. America/New_York"
+              data-testid="event-timezone-input"
             />
           </div>
 

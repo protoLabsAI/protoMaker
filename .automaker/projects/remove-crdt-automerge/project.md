@@ -2,9 +2,9 @@
 
 Replace the over-engineered Automerge/CRDT layer with simple disk-backed storage. Eliminate ~1100 lines of hand-rolled peer mesh and Automerge binary sync that adds complexity, zero debuggability, and solves a multi-instance problem we don't have yet.
 
-**Status:** active
+**Status:** completed
 **Created:** 2026-03-14T04:56:20.838Z
-**Updated:** 2026-03-14T06:42:11.628Z
+**Updated:** 2026-03-15T05:06:35.726Z
 
 ## PRD
 

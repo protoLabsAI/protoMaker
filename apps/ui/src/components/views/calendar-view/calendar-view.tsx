@@ -11,7 +11,16 @@ import { useCalendarEvents } from './use-calendar-events';
 import { CreateEventDialog } from './create-event-dialog';
 import { EventDetailPanel } from './event-detail-panel';
 import { SkeletonPulse, Spinner } from '@protolabsai/ui/atoms';
-import { Calendar, CalendarDays, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
+import {
+  AlertTriangle,
+  Calendar,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  RefreshCw,
+  X,
+} from 'lucide-react';
 import { PanelHeader } from '@/components/shared/panel-header';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -37,6 +46,7 @@ const EVENT_TYPE_COLORS: Record<CalendarEventType, string> = {
   google: 'bg-chart-4',
   job: 'bg-amber-500',
   ceremony: 'bg-violet-500',
+  ops: 'bg-sky-500',
 };
 
 /** Status badge colors for job events */
@@ -139,6 +149,8 @@ interface EventRowProps {
 
 function EventRow({ event, onClick }: EventRowProps) {
   const isJob = event.type === 'job';
+  const isCeremony = event.type === 'ceremony';
+  const hasConflict = (event.conflictsWith?.length ?? 0) > 0;
 
   return (
     <button
@@ -147,16 +159,32 @@ function EventRow({ event, onClick }: EventRowProps) {
         e.stopPropagation();
         onClick(event);
       }}
-      className="flex items-center gap-1 w-full rounded px-1 py-0.5 text-left hover:bg-accent/60 transition-colors cursor-pointer group"
+      className={cn(
+        'flex items-center gap-1 w-full rounded px-1 py-0.5 text-left hover:bg-accent/60 transition-colors cursor-pointer group',
+        isCeremony && 'border-l-2 border-violet-500 pl-1',
+        hasConflict && 'border-l-2 border-destructive pl-1'
+      )}
     >
       <span
         className={cn('inline-block h-1.5 w-1.5 rounded-full shrink-0', getEventDotClass(event))}
         style={getEventDotStyle(event)}
       />
-      {isJob && event.time && (
+      {(isJob || isCeremony) && event.time && (
         <span className="text-[10px] text-muted-foreground shrink-0">{event.time}</span>
       )}
       <span className="text-[11px] leading-tight truncate">{event.title}</span>
+      {event.recurrence && (
+        <RefreshCw
+          className="h-2.5 w-2.5 text-muted-foreground shrink-0"
+          aria-label="Recurring event"
+        />
+      )}
+      {hasConflict && (
+        <AlertTriangle
+          className="h-2.5 w-2.5 text-destructive shrink-0"
+          aria-label="Scheduling conflict"
+        />
+      )}
       {isJob && event.jobStatus && (
         <span
           className={cn(
@@ -190,6 +218,7 @@ function DayCell({
 }: DayCellProps) {
   const visibleEvents = events.slice(0, MAX_EVENTS_PER_DAY);
   const overflowCount = events.length - MAX_EVENTS_PER_DAY;
+  const hasConflicts = events.some((e) => (e.conflictsWith?.length ?? 0) > 0);
 
   return (
     <div
@@ -210,6 +239,13 @@ function DayCell({
         >
           {date.getDate()}
         </span>
+        {hasConflicts && (
+          <AlertTriangle
+            className="h-3 w-3 text-destructive shrink-0 mt-0.5"
+            aria-label="Job conflict on this day"
+            data-testid="day-conflict-indicator"
+          />
+        )}
       </div>
       {visibleEvents.length > 0 && (
         <div className="mt-0.5 space-y-px">

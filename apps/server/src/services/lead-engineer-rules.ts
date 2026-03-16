@@ -131,6 +131,17 @@ export const staleDeps: LeadFastPathRule = {
       // If we know which feature changed, only check features that depend on it
       if (changedId && !feature.dependencies!.includes(changedId)) continue;
 
+      // Don't unblock features with repeated failures — they need manual intervention
+      if (feature.failureCount && feature.failureCount >= 3) continue;
+
+      // Don't unblock features blocked due to infrastructure failures
+      if (
+        feature.statusChangeReason &&
+        (feature.statusChangeReason.includes('git workflow failed') ||
+          feature.statusChangeReason.includes('git commit'))
+      )
+        continue;
+
       const allDepsDone = feature.dependencies!.every((depId) => {
         const dep = worldState.features[depId];
         if (!dep) return false;
@@ -165,6 +176,12 @@ export const autoModeHealth: LeadFastPathRule = {
   triggers: ['auto-mode:stopped', 'auto-mode:idle'],
 
   evaluate(worldState): LeadRuleAction[] {
+    // Debounce: don't restart if recently restarted (5-minute window)
+    if (worldState.lastAutoModeRestartAt) {
+      const elapsed = Date.now() - new Date(worldState.lastAutoModeRestartAt).getTime();
+      if (elapsed < 5 * 60 * 1000) return [];
+    }
+
     const backlogCount = worldState.boardCounts['backlog'] || 0;
     if (backlogCount > 0 && !worldState.autoModeRunning) {
       return [
@@ -257,6 +274,12 @@ export const capacityRestart: LeadFastPathRule = {
   triggers: ['feature:completed', 'feature:pr-merged'],
 
   evaluate(worldState): LeadRuleAction[] {
+    // Debounce: don't restart if recently restarted (5-minute window)
+    if (worldState.lastAutoModeRestartAt) {
+      const elapsed = Date.now() - new Date(worldState.lastAutoModeRestartAt).getTime();
+      if (elapsed < 5 * 60 * 1000) return [];
+    }
+
     const backlogCount = worldState.boardCounts['backlog'] || 0;
     if (
       backlogCount > 0 &&

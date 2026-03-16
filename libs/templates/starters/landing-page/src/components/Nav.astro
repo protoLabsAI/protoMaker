@@ -1,0 +1,37 @@
+---
+import { getEntry } from 'astro:content';
+
+const config = await getEntry('siteConfig', 'main');
+const { brand, nav } = config.data;
+---
+
+<nav class="fixed top-0 w-full z-50 border-b border-white/5 bg-surface-0/80 backdrop-blur-xl">
+  <div class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+    <a href="/" class="flex items-center gap-2 text-white font-semibold tracking-tight">
+      <span>{brand.name}</span>
+    </a>
+    <div class="flex items-center gap-6 text-sm text-muted">
+      {
+        nav.links.map((link) => (
+          <a
+            href={link.href}
+            class="hidden sm:inline hover:text-white transition-colors"
+            {...(link.external ? { target: '_blank', rel: 'noopener' } : {})}
+          >
+            {link.label}
+          </a>
+        ))
+      }
+      {
+        nav.cta && (
+          <a
+            href={nav.cta.href}
+            class="text-accent hover:text-white transition-colors font-medium"
+          >
+            {nav.cta.label}
+          </a>
+        )
+      }
+    </div>
+  </div>
+</nav>

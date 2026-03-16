@@ -18,6 +18,7 @@ import type {
   ActionProposal,
 } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
+import { resolveMergeStrategy } from '../lib/merge-strategy.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { CodeRabbitResolverService } from './coderabbit-resolver-service.js';
@@ -135,13 +136,14 @@ export class ActionExecutor {
 
       case 'enable_auto_merge': {
         try {
-          await execAsync(`gh pr merge ${action.prNumber} --auto --squash`, {
+          const mergeFlag = await resolveMergeStrategy(action.prNumber, session.projectPath);
+          await execAsync(`gh pr merge ${action.prNumber} --auto ${mergeFlag}`, {
             cwd: session.projectPath,
             timeout: 30000,
           });
           const pr = session.worldState.openPRs.find((p) => p.featureId === action.featureId);
           if (pr) pr.autoMergeEnabled = true;
-          logger.info(`Enabled auto-merge on PR #${action.prNumber}`);
+          logger.info(`Enabled auto-merge on PR #${action.prNumber} (${mergeFlag})`);
         } catch (err) {
           logger.warn(`Failed to enable auto-merge on PR #${action.prNumber}:`, err);
         }
@@ -191,6 +193,7 @@ export class ActionExecutor {
             action.maxConcurrency || session.worldState.maxConcurrency
           );
           session.worldState.autoModeRunning = true;
+          session.worldState.lastAutoModeRestartAt = new Date().toISOString();
           logger.info(`Restarted auto-mode for ${action.projectPath}`);
         } catch (err) {
           logger.warn(`Failed to restart auto-mode:`, err);
@@ -312,6 +315,31 @@ export class ActionExecutor {
         }
         break;
       }
+
+      case 'rollback_feature': {
+        try {
+          await this.deps.featureLoader.update(session.projectPath, action.featureId, {
+            status: 'blocked',
+            statusChangeReason: `Rollback: ${action.reason}`,
+          });
+          logger.warn(`Rolled back feature ${action.featureId}: ${action.reason}`);
+          this.deps.events.emit('escalation:signal-received', {
+            source: 'lead_engineer',
+            severity: 'high',
+            type: 'feature_rollback',
+            context: {
+              featureId: action.featureId,
+              projectPath: action.projectPath,
+              reason: action.reason,
+            },
+            deduplicationKey: `rollback_${action.featureId}`,
+            timestamp: new Date().toISOString(),
+          });
+        } catch (err) {
+          logger.error(`Failed to rollback feature ${action.featureId}:`, err);
+        }
+        break;
+      }
     }
   }
 
@@ -417,7 +445,17 @@ export class ActionExecutor {
       session.ruleLog = session.ruleLog.slice(-maxRuleLogEntries);
     }
 
-    for (const action of allActions) {
+    // Deduplicate restart_auto_mode — multiple rules may emit it for the same event
+    const seen = new Set<string>();
+    const dedupedActions = allActions.filter((a) => {
+      if (a.type === 'restart_auto_mode') {
+        if (seen.has('restart_auto_mode')) return false;
+        seen.add('restart_auto_mode');
+      }
+      return true;
+    });
+
+    for (const action of dedupedActions) {
       this.executeAction(session, action).catch((err) => {
         logger.error(`Action execution failed (${action.type}):`, err);
       });
@@ -517,6 +555,16 @@ function buildProposalForAction(
         target: action.featureId,
         justification: 'Lead engineer rule: update feature',
         risk: 'low',
+      };
+
+    case 'rollback_feature':
+      return {
+        who,
+        what: 'update_status',
+        target: action.featureId,
+        justification: `Lead engineer rule: rollback feature — ${action.reason}`,
+        risk: 'high',
+        statusTransition: { from: 'unknown', to: 'blocked' },
       };
 
     // Informational / side-effect-free actions — no authority check needed

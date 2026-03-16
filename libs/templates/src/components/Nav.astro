@@ -1,0 +1,229 @@
+---
+/**
+ * Nav — Sticky header with gradient logo text and a React mobile menu island.
+ *
+ * The desktop nav and CTA are pure HTML (zero JS).
+ * The mobile hamburger toggle uses a React island (`client:load`) so it
+ * stays lightweight on initial page load while fully interactive.
+ *
+ * Usage:
+ *   import Nav from '@protolabsai/templates/components/Nav.astro';
+ *   <Nav
+ *     logoText="protoLabs"
+ *     links={[{ label: 'Docs', href: '/docs' }, { label: 'Blog', href: '/blog' }]}
+ *     ctaLabel="Get started"
+ *     ctaHref="/get-started"
+ *   />
+ *
+ * Requires @astrojs/react integration for the MobileMenu island.
+ */
+
+import MobileMenu from './MobileMenu.tsx';
+
+interface NavLink {
+  label: string;
+  href: string;
+}
+
+interface Props {
+  /** Brand name shown as gradient text */
+  logoText?: string;
+  /** Route the logo links to */
+  logoHref?: string;
+  /** Navigation links shown in the desktop header */
+  links?: NavLink[];
+  /** CTA button label — hidden on mobile */
+  ctaLabel?: string;
+  /** CTA button href */
+  ctaHref?: string;
+  /** Extra CSS class names on the <header> */
+  class?: string;
+}
+
+const {
+  logoText = 'protoLabs',
+  logoHref = '/',
+  links = [],
+  ctaLabel,
+  ctaHref,
+  class: className = '',
+} = Astro.props;
+---
+
+<!-- Skip-to-content link for keyboard / screen reader users -->
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<header class={`nav-wrapper ${className}`} id="site-nav">
+  <nav class="nav-inner" aria-label="Main navigation">
+    <!-- Logo -->
+    <a href={logoHref} class="nav-logo" aria-label={`${logoText} — home`}>
+      <span class="gradient-text">{logoText}</span>
+    </a>
+
+    <!-- Desktop link list -->
+    {
+      links.length > 0 && (
+        <ul class="nav-links" role="list" aria-label="Site pages">
+          {links.map((link) => (
+            <li>
+              <a href={link.href} class="nav-link">
+                {link.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+
+    <!-- Desktop CTA — hidden below md breakpoint -->
+    {
+      ctaLabel && ctaHref && (
+        <a href={ctaHref} class="nav-cta" aria-label={ctaLabel}>
+          {ctaLabel}
+        </a>
+      )
+    }
+
+    <!-- Mobile menu React island (hamburger + drawer) -->
+    <MobileMenu links={links} ctaLabel={ctaLabel} ctaHref={ctaHref} client:load />
+  </nav>
+</header>
+
+<style>
+  /* ── Skip link (accessibility) ─────────── */
+  .skip-link {
+    position: absolute;
+    top: -100%;
+    left: 16px;
+    z-index: 100;
+    padding: 8px 16px;
+    background: var(--color-accent, #a78bfa);
+    color: #fff;
+    border-radius: 0 0 8px 8px;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: top 0.2s;
+  }
+
+  .skip-link:focus {
+    top: 0;
+  }
+
+  /* ── Header wrapper ─────────────────────── */
+  .nav-wrapper {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    width: 100%;
+    background: rgba(9, 9, 11, 0.82);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  /* ── Inner flex row ─────────────────────── */
+  .nav-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* ── Logo ───────────────────────────────── */
+  .nav-logo {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    text-decoration: none;
+    flex-shrink: 0;
+    margin-right: 24px;
+  }
+
+  /* gradient-text: fallback if design-tokens CSS not loaded */
+  .gradient-text {
+    background: linear-gradient(135deg, #a78bfa 0%, #818cf8 50%, #6366f1 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ── Desktop nav links ──────────────────── */
+  .nav-links {
+    display: none;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    gap: 2px;
+    flex: 1;
+  }
+
+  @media (min-width: 768px) {
+    .nav-links {
+      display: flex;
+    }
+  }
+
+  .nav-link {
+    display: inline-flex;
+    align-items: center;
+    color: #a1a1aa;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition:
+      color 0.15s,
+      background 0.15s;
+    font-family: var(--font-family-sans, 'Geist', system-ui, sans-serif);
+  }
+
+  .nav-link:hover {
+    color: #fafafa;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .nav-link:focus-visible {
+    outline: 2px solid var(--color-accent, #a78bfa);
+    outline-offset: 2px;
+  }
+
+  /* ── Desktop CTA ────────────────────────── */
+  .nav-cta {
+    display: none;
+    align-items: center;
+    padding: 8px 18px;
+    background: var(--color-accent, #a78bfa);
+    color: #09090b;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    margin-left: auto;
+    transition:
+      opacity 0.15s,
+      transform 0.15s;
+    font-family: var(--font-family-sans, 'Geist', system-ui, sans-serif);
+  }
+
+  @media (min-width: 768px) {
+    .nav-cta {
+      display: inline-flex;
+    }
+  }
+
+  .nav-cta:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+
+  .nav-cta:focus-visible {
+    outline: 2px solid var(--color-accent, #a78bfa);
+    outline-offset: 2px;
+  }
+</style>

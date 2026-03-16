@@ -49,14 +49,6 @@ export function createCreateHandler(hitlFormService: HITLFormService) {
         ttlSeconds,
       });
 
-      if (!form) {
-        res.status(403).json({
-          success: false,
-          error: 'HITL forms are disabled (featureFlags.pipeline is false)',
-        });
-        return;
-      }
-
       res.json({ success: true, form });
     } catch (error) {
       logError(error, 'Create HITL form failed');

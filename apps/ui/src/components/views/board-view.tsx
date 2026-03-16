@@ -30,7 +30,6 @@ class DialogAwarePointerSensor extends PointerSensor {
 }
 import { useAppStore, Feature } from '@/store/app-store';
 import { useWorktreeStore } from '@/store/worktree-store';
-import { usePipelineStore } from '@/store/pipeline-store';
 import { useTerminalStore } from '@/store/terminal-store';
 import { getElectronAPI } from '@/lib/electron';
 import { getHttpApiClient } from '@/lib/http-api-client';
@@ -60,7 +59,6 @@ import {
   PullResolveConflictsDialog,
 } from './board-view/dialogs';
 import type { DependencyLinkType } from './board-view/dialogs';
-import { PipelineSettingsDialog } from './board-view/dialogs/pipeline-settings-dialog';
 import { CreateWorktreeDialog } from './board-view/dialogs/create-worktree-dialog';
 import { DeleteWorktreeDialog } from './board-view/dialogs/delete-worktree-dialog';
 import { CommitWorktreeDialog } from './board-view/dialogs/commit-worktree-dialog';
@@ -69,7 +67,7 @@ import { CreateBranchDialog } from './board-view/dialogs/create-branch-dialog';
 import { PRDReviewModal } from './prd-review-modal';
 import { WorktreePanel } from './board-view/worktree-panel';
 import type { PRInfo, WorktreeInfo, MergeConflictInfo } from './board-view/worktree-panel/types';
-import { COLUMNS, getColumnsWithPipeline, type ColumnId } from './board-view/constants';
+import { COLUMNS, type ColumnId } from './board-view/constants';
 import {
   useBoardFeatures,
   useBoardDragDrop,
@@ -87,9 +85,6 @@ import { SelectionActionBar, ListView } from './board-view/components';
 import { MassEditDialog } from './board-view/dialogs';
 import { InitScriptIndicator } from './board-view/init-script-indicator';
 import { useInitScriptEvents } from '@/hooks/use-init-script-events';
-import { usePipelineConfig } from '@/hooks/queries';
-import { useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/query-keys';
 import { useAutoModeQueryInvalidation } from '@/hooks/use-query-invalidation';
 import { useUpdateGlobalSettings } from '@/hooks/mutations/use-settings-mutations';
 import { DEFAULT_MAX_CONCURRENCY } from '@protolabsai/types';
@@ -143,11 +138,6 @@ export function BoardView() {
   const setWorktrees = useWorktreeStore((s) => s.setWorktrees);
   const isPrimaryWorktreeBranch = useWorktreeStore((s) => s.isPrimaryWorktreeBranch);
   const getPrimaryWorktreeBranch = useWorktreeStore((s) => s.getPrimaryWorktreeBranch);
-  // Fetch pipeline config via React Query
-  const { data: pipelineConfig } = usePipelineConfig(currentProject?.path);
-  const setPipelineConfig = usePipelineStore((s) => s.setPipelineConfig);
-  const queryClient = useQueryClient();
-
   // Subscribe to auto mode events for React Query cache invalidation
   useAutoModeQueryInvalidation(currentProject?.path);
   // Subscribe to worktreePanelVisibleByProject to trigger re-renders when it changes
@@ -208,9 +198,6 @@ export function BoardView() {
   const [pendingBacklogPlan, setPendingBacklogPlan] = useState<BacklogPlanResult | null>(null);
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
 
-  // Pipeline settings dialog state
-  const [showPipelineSettings, setShowPipelineSettings] = useState(false);
-
   // Follow-up state hook
   const {
     showFollowUpDialog,
@@ -247,6 +234,8 @@ export function BoardView() {
 
   // Search filter for Kanban cards
   const [searchQuery, setSearchQuery] = useState('');
+  // Project filter for board features
+  const [selectedProjectSlug, setSelectedProjectSlug] = useState<string | null>(null);
   // Plan approval loading state
   const [isPlanApprovalLoading, setIsPlanApprovalLoading] = useState(false);
   // Derive spec creation state from store - check if current project is the one being created
@@ -285,25 +274,6 @@ export function BoardView() {
     featuresWithContext,
     setFeaturesWithContext,
   });
-
-  // Load pipeline config when project changes
-  useEffect(() => {
-    if (!currentProject?.path) return;
-
-    const loadPipelineConfig = async () => {
-      try {
-        const api = getHttpApiClient();
-        const result = await api.pipeline.getConfig(currentProject.path);
-        if (result.success && result.config) {
-          setPipelineConfig(currentProject.path, result.config);
-        }
-      } catch (error) {
-        logger.error('Failed to load pipeline config:', error);
-      }
-    };
-
-    loadPipelineConfig();
-  }, [currentProject?.path, setPipelineConfig]);
 
   // Subscribe to ideation → PM flow events
   useEffect(() => {
@@ -1173,18 +1143,17 @@ export function BoardView() {
     currentWorktreePath,
     currentWorktreeBranch,
     projectPath: currentProject?.path || null,
+    selectedProjectSlug,
   });
 
   // Build columnFeaturesMap for ListView
-  // pipelineConfig is now from usePipelineConfig React Query hook at the top
   const columnFeaturesMap = useMemo(() => {
-    const columns = getColumnsWithPipeline(pipelineConfig ?? null);
     const map: Record<string, typeof hookFeatures> = {};
-    for (const column of columns) {
+    for (const column of COLUMNS) {
       map[column.id] = getColumnFeatures(column.id as ColumnId);
     }
     return map;
-  }, [pipelineConfig, getColumnFeatures]);
+  }, [getColumnFeatures]);
 
   // Use background hook
   const { backgroundSettings, backgroundImageStyle } = useBoardBackground({
@@ -1408,6 +1377,8 @@ export function BoardView() {
         onShowBoardBackground={() => setShowBoardBackgroundModal(true)}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
+        selectedProjectSlug={selectedProjectSlug}
+        onProjectFilterChange={setSelectedProjectSlug}
       />
 
       {/* DndContext wraps both WorktreePanel and main content area to enable drag-to-worktree */}
@@ -1524,7 +1495,6 @@ export function BoardView() {
                 },
               }}
               runningAutoTasks={runningAutoTasks}
-              pipelineConfig={pipelineConfig ?? null}
               onAddFeature={() => setShowAddDialog(true)}
               isSelectionMode={isSelectionMode}
               selectedFeatureIds={selectedFeatureIds}
@@ -1571,8 +1541,6 @@ export function BoardView() {
               onAddFeature={() => setShowAddDialog(true)}
               onShowCompletedModal={() => setShowCompletedModal(true)}
               completedCount={completedFeatures.length}
-              pipelineConfig={pipelineConfig ?? null}
-              onOpenPipelineSettings={() => setShowPipelineSettings(true)}
               isSelectionMode={isSelectionMode}
               selectionTarget={selectionTarget}
               selectedFeatureIds={selectedFeatureIds}
@@ -1720,27 +1688,6 @@ export function BoardView() {
         onConfirm={async () => {
           await handleArchiveAllVerified();
           setShowArchiveAllVerifiedDialog(false);
-        }}
-      />
-
-      {/* Pipeline Settings Dialog */}
-      <PipelineSettingsDialog
-        open={showPipelineSettings}
-        onClose={() => setShowPipelineSettings(false)}
-        projectPath={currentProject.path}
-        pipelineConfig={pipelineConfig ?? null}
-        onSave={async (config) => {
-          const api = getHttpApiClient();
-          const result = await api.pipeline.saveConfig(currentProject.path, config);
-          if (!result.success) {
-            throw new Error(result.error || 'Failed to save pipeline config');
-          }
-          // Invalidate React Query cache to refetch updated config
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.pipeline.config(currentProject.path),
-          });
-          // Also update Zustand for backward compatibility
-          setPipelineConfig(currentProject.path, config);
         }}
       />
 

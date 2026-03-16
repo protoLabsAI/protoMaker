@@ -1,0 +1,63 @@
+---
+/**
+ * BlogList section — renders a column of BlogCard components with an optional
+ * "All posts" link.
+ *
+ * Accepts plain data objects (not Astro collection entries) so the parent page
+ * controls data loading and this component stays a pure presentational section.
+ *
+ * Usage:
+ *   <BlogList posts={recentPosts} />
+ *   <BlogList posts={allPosts} heading="All posts" showAll />
+ */
+import BlogCard from "@/components/BlogCard.astro";
+
+export interface BlogPostData {
+  title: string;
+  description: string;
+  pubDate: Date;
+  slug: string;
+  tags?: string[];
+}
+
+interface Props {
+  posts: BlogPostData[];
+  /** Section heading — defaults to "Recent posts" */
+  heading?: string;
+  /** When true the "All posts →" link is hidden (use on the blog index page) */
+  showAll?: boolean;
+}
+
+const { posts, heading = "Recent posts", showAll = false } = Astro.props;
+---
+
+{
+  posts.length > 0 && (
+    <section class="mx-auto max-w-5xl px-6 py-16">
+      <div class="mb-8 flex items-center justify-between">
+        <h2 class="text-2xl font-bold text-white">{heading}</h2>
+        {!showAll && (
+          <a
+            href="/blog"
+            class="text-sm font-medium no-underline transition-colors"
+            style="color: var(--color-accent);"
+          >
+            All posts →
+          </a>
+        )}
+      </div>
+
+      <div class="flex flex-col gap-4">
+        {posts.map((post) => (
+          <BlogCard
+            title={post.title}
+            description={post.description}
+            pubDate={post.pubDate}
+            tags={post.tags}
+            slug={post.slug}
+          />
+        ))}
+      </div>
+    </section>
+  )
+}

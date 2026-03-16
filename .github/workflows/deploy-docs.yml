@@ -1,100 +1,94 @@
-# SECURITY: This workflow is hardened against fork PR attacks. See docs/security/ci-hardening.md
-# Deploy docs site to staging from the dev branch.
+# Deploy docs site to Cloudflare Pages via Wrangler CLI.
 #
-# Triggers whenever docs/** changes are pushed to dev. Surgically updates only
-# the docs/ directory in the persistent staging deploy dir, then rebuilds the
-# nginx docs container — without touching the running staging app.
+# Triggers on docs/** changes pushed to dev, staging, or main.
+# PR pushes get a preview deployment with URL posted as a comment.
+# Production branch = staging (matches current user-facing surface).
 #
-# The docs container runs independently at port 3009 via docker-compose.docs.yml.
+# Required secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
 
 name: Deploy Docs
 
 on:
   push:
-    branches:
-      - dev
+    branches: [dev, staging, main]
     paths:
       - 'docs/**'
       - 'package.json'
       - 'package-lock.json'
+  pull_request:
+    paths:
+      - 'docs/**'
   workflow_dispatch:
 
-permissions: read-all
+permissions:
+  contents: read
+  deployments: write
+  pull-requests: write
 
 jobs:
   deploy:
-    runs-on: [self-hosted, staging]
+    runs-on: ubuntu-latest
     if: github.repository == 'protoLabsAI/protoMaker'
-    timeout-minutes: 15
+    timeout-minutes: 10
     concurrency:
-      group: docs-deploy
-      cancel-in-progress: false
+      group: docs-deploy-${{ github.ref }}
+      cancel-in-progress: true
 
     steps:
-      - name: Setup deploy directory
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build docs
+        run: |
+          npm install vitepress@1.6.4
+          npx vitepress build docs
+
+      - name: Deploy to Cloudflare Pages
+        id: deploy
         env:
-          GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          export DEPLOY_DIR="$HOME/staging-deploy/automaker"
-          echo "DEPLOY_DIR=$DEPLOY_DIR" >> "$GITHUB_ENV"
+          BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          npx wrangler pages deploy docs/.vitepress/dist \
+            --project-name=protolabs-docs \
+            --branch="$BRANCH" \
+            --commit-hash="${GITHUB_SHA}" \
+            --commit-message="${{ github.event.head_commit.message || 'Deploy' }}"
 
-          REPO_URL="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
-
-          if [ ! -d "$DEPLOY_DIR/.git" ]; then
-            mkdir -p "$(dirname "$DEPLOY_DIR")"
-            git clone "$REPO_URL" "$DEPLOY_DIR"
-          fi
-
-          cd "$DEPLOY_DIR"
-          git remote set-url origin "$REPO_URL"
-
-          # Only update the docs/ directory to the dev branch version.
-          # The rest of the deploy dir stays on whatever branch the staging app is using.
-          git fetch origin dev
-          git checkout origin/dev -- docs/ package.json package-lock.json
-          echo "Docs updated to: $(git rev-parse origin/dev | head -c 8)"
-
-      - name: Rebuild docs container
-        working-directory: ${{ env.DEPLOY_DIR }}
-        env:
-          GIT_COMMIT_SHA: ${{ github.sha }}
-        run: |
-          docker compose -f docker-compose.docs.yml up -d --build
-          echo "Docs container rebuilt"
-
-      - name: Verify docs
-        run: |
-          DOCS_PORT=$(grep -oP 'DOCS_PORT=\K\d+' "$DEPLOY_DIR/.env" 2>/dev/null || echo "3009")
-          retries=0
-          while [ $retries -lt 10 ]; do
-            if curl -sf "http://localhost:${DOCS_PORT}/" > /dev/null 2>&1; then
-              echo "Docs site healthy on port ${DOCS_PORT}"
-              break
-            fi
-            retries=$((retries + 1))
-            sleep 2
-          done
-          if [ $retries -eq 10 ]; then
-            echo "Docs health check failed after 20s"
-            docker compose -f docker-compose.docs.yml logs --tail=30 docs
-            exit 1
-          fi
+      - name: Comment PR preview URL
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = context.payload.pull_request.head.ref;
+            const slug = branch.replace(/[^a-z0-9-]/gi, '-').substring(0, 28);
+            const url = `https://${slug}.protolabs-docs.pages.dev`;
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `Docs preview: ${url}`
+            });
 
       - name: Notify Discord
-        if: always()
+        if: always() && github.event_name == 'push'
         run: |
-          COMMIT="${{ github.sha }}"
           STATUS="${{ job.status }}"
+          COMMIT="${GITHUB_SHA:0:8}"
+          BRANCH="${GITHUB_REF_NAME}"
           if [ "$STATUS" = "success" ]; then
-            MSG="Docs deployed from dev: \`${COMMIT:0:8}\` — https://staging.protolabs.studio:3009"
+            MSG="Docs deployed (${BRANCH}): \`${COMMIT}\` — https://docs.protolabs.studio"
           else
-            MSG="Docs deploy FAILED from dev: \`${COMMIT:0:8}\` — Check Actions: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            MSG="Docs deploy FAILED (${BRANCH}): \`${COMMIT}\` — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           fi
           if [ -n "${DISCORD_DEPLOY_WEBHOOK:-}" ]; then
             curl -sf -H "Content-Type: application/json" \
               -d "{\"content\": \"${MSG}\"}" \
               "$DISCORD_DEPLOY_WEBHOOK" || true
           fi
-          echo "$MSG"
         env:
           DISCORD_DEPLOY_WEBHOOK: ${{ secrets.DISCORD_DEPLOY_WEBHOOK }}

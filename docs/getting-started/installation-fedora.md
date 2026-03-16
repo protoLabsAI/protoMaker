@@ -19,7 +19,7 @@ You'll need one of the following:
 - **Claude CLI** (recommended) - `claude login`
 - **API key** - Set `ANTHROPIC_API_KEY` environment variable
 
-See main [README.md authentication section](../README.md#authentication) for details.
+See the [installation guide authentication section](./installation.md#authentication) for details.
 
 ## Installation
 
@@ -368,7 +368,7 @@ npm run build:electron:linux
 ls apps/ui/release/*.rpm
 ```
 
-See main [README.md](../README.md) for detailed build instructions.
+See the [installation guide](./installation.md#building) for detailed build instructions.
 
 ## Updating protoLabs
 
@@ -397,7 +397,7 @@ sudo dnf remove automaker
 
 ### Resources
 
-- [Main README](../README.md) - Project overview
+- [Installation Guide](./installation.md) - Project overview and setup
 - [CONTRIBUTING.md](https://github.com/protoLabsAI/protomaker/blob/main/CONTRIBUTING.md) - Contributing guide
 - [GitHub Issues](https://github.com/protoLabsAI/protomaker/issues) - Bug reports & feature requests
 - [Discussions](https://github.com/protoLabsAI/protomaker/discussions) - Questions & community

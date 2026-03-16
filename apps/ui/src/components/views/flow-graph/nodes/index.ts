@@ -11,7 +11,6 @@ import { EngineServiceNode } from './engine-service-node';
 import { IntegrationNode } from './integration-node';
 import { FeatureNode } from './feature-node';
 import { AgentNode } from './agent-node';
-import { PipelineStageNode } from './pipeline-stage-node';
 import { FlowProcessNode } from './flow-process-node';
 import { FlowDecisionNode } from './flow-decision-node';
 import { FlowHitlNode } from './flow-hitl-node';
@@ -23,7 +22,6 @@ export { EngineServiceNode } from './engine-service-node';
 export { IntegrationNode } from './integration-node';
 export { FeatureNode } from './feature-node';
 export { AgentNode } from './agent-node';
-export { PipelineStageNode } from './pipeline-stage-node';
 export { FlowProcessNode } from './flow-process-node';
 export { FlowDecisionNode } from './flow-decision-node';
 export { FlowHitlNode } from './flow-hitl-node';
@@ -36,7 +34,6 @@ export const nodeTypes: NodeTypes = {
   integration: IntegrationNode,
   feature: FeatureNode,
   agent: AgentNode,
-  'pipeline-stage': PipelineStageNode,
   'flow-process': FlowProcessNode,
   'flow-decision': FlowDecisionNode,
   'flow-hitl': FlowHitlNode,

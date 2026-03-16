@@ -1,0 +1,19 @@
+{
+  "type": "steps",
+  "label": "How It Works",
+  "heading": "Up and running in three steps.",
+  "items": [
+    {
+      "title": "Connect",
+      "description": "Point us at your project. We analyze your codebase, dependencies, and workflow to build a tailored setup."
+    },
+    {
+      "title": "Configure",
+      "description": "Customize the pipeline to match your team's standards. Set quality gates, review rules, and deployment targets."
+    },
+    {
+      "title": "Ship",
+      "description": "Start shipping. Your team focuses on what matters while the system handles the rest."
+    }
+  ]
+}

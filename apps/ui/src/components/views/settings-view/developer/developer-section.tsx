@@ -21,11 +21,6 @@ const FEATURE_FLAG_LABELS: Record<keyof FeatureFlags, { label: string; descripti
     label: 'Designs',
     description: 'Show the Designs (pen file) viewer in the project sidebar.',
   },
-  pipeline: {
-    label: 'Authority Pipeline + HITL',
-    description:
-      'Enables HITL interrupt forms and pipeline gate cycling (TRIAGE, SPEC, PUBLISH). Off by default.',
-  },
   specEditor: {
     label: 'Spec Editor',
     description: 'Show the Spec Editor in the sidebar Tools section.',
@@ -43,6 +38,11 @@ const FEATURE_FLAG_LABELS: Record<keyof FeatureFlags, { label: string; descripti
     label: 'Ava Channel Reactor',
     description:
       'Enable the reactive orchestrator that monitors the Ava Channel and auto-responds to incoming messages. Requires hivemind mode.',
+  },
+  hitlForms: {
+    label: 'HITL Forms',
+    description:
+      'Enable human-in-the-loop interrupt forms from PM Agent, Signal Intake, and Lead Engineer. When off, gated actions are auto-approved or escalated to Ava.',
   },
 };
 
