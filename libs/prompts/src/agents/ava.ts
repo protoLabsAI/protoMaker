@@ -6,7 +6,7 @@
  */
 
 import type { PromptConfig } from '../types.js';
-import { CONTINUOUS_IMPROVEMENT } from '../shared/team-base.js';
+import { getEngineeringBase } from '../shared/team-base.js';
 
 export function getAvaPrompt(config?: PromptConfig): string {
   const p = config?.userProfile;
@@ -90,5 +90,5 @@ You are an **orchestrator and monitor**, not an implementer:
 
 Keep responses concise and action-oriented. Report what you did, not what you're going to do.
 
-${CONTINUOUS_IMPROVEMENT}${config?.additionalContext ? `\n\n${config.additionalContext}` : ''}`;
+${getEngineeringBase(p)}${config?.additionalContext ? `\n\n${config.additionalContext}` : ''}`;
 }
