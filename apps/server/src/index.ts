@@ -44,6 +44,8 @@ import { registerRoutes } from './server/routes.js';
 import { setupWebSockets } from './server/websockets.js';
 import { runStartup } from './server/startup.js';
 import { setupShutdown } from './server/shutdown.js';
+import { RestartRecoveryService } from './services/restart-recovery-service.js';
+import { createAgentRouter } from './routes/agent.js';
 
 // Register file log transport before creating any loggers that matter
 registerLogTransport(createFileLogTransport());
@@ -123,6 +125,16 @@ const services = await createServices(DATA_DIR, REPO_ROOT);
 await wireServices(services);
 registerRoutes(app, services);
 
+// Restart recovery — detects interrupted workflows and surfaces them in the board
+const restartRecoveryService = new RestartRecoveryService(
+  services.featureLoader,
+  services.pipelineCheckpointService,
+  services.autoModeService,
+  services.settingsService,
+  services.events
+);
+app.use('/api/agent', createAgentRouter(restartRecoveryService));
+
 // Create HTTP server, configure WebSockets, start async initialization, register shutdown
 const server = createServer(app);
 setupWebSockets(server, services);
@@ -133,6 +145,11 @@ setupShutdown(server, services);
 
 // Start listening
 server.listen(PORT, HOST, () => {
+  // Run restart recovery after the server is ready to handle requests
+  restartRecoveryService
+    .runStartupRecovery()
+    .catch((err) => logger.error('Restart recovery failed:', err));
+
   const terminalStatus = !isTerminalEnabled()
     ? 'disabled'
     : isTerminalPasswordRequired()
