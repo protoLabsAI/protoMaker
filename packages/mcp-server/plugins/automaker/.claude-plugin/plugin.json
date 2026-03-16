@@ -1,7 +1,7 @@
 {
   "name": "protolabs",
   "description": "protoLabs Studio - AI Development Studio. Manage Kanban boards, AI agents, and feature orchestration.",
-  "version": "0.64.0",
+  "version": "0.65.0",
   "author": {
     "name": "Proto Labs AI"
   },
