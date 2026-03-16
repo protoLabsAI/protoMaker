@@ -9,7 +9,7 @@
  */
 
 import { useState } from 'react';
-import { Settings2, Timer, Webhook, Server, Activity, Rocket } from 'lucide-react';
+import { Settings2, Timer, Webhook, Server, Activity, Rocket, Unplug } from 'lucide-react';
 import { PanelHeader } from '@/components/shared/panel-header';
 import { cn } from '@/lib/utils';
 import { TimerPanel } from './timer-panel';
@@ -17,12 +17,13 @@ import { EventFlowPanel } from './event-flow-panel';
 import { MaintenancePanel } from './maintenance-panel';
 import { SystemHealthPanel } from './system-health-panel';
 import { DeploymentPanel } from './deployment-panel';
+import { WiringPanel } from './wiring-panel';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-type OpsTab = 'timers' | 'events' | 'maintenance' | 'system' | 'deployments';
+type OpsTab = 'timers' | 'events' | 'maintenance' | 'system' | 'deployments' | 'wiring';
 
 interface TabDefinition {
   id: OpsTab;
@@ -40,6 +41,7 @@ const TABS: TabDefinition[] = [
   { id: 'maintenance', label: 'Maintenance', icon: Server },
   { id: 'system', label: 'System', icon: Activity },
   { id: 'deployments', label: 'Deploys', icon: Rocket },
+  { id: 'wiring', label: 'Wiring', icon: Unplug },
 ];
 
 // ============================================================================
@@ -102,6 +104,7 @@ export function OpsView() {
         {activeTab === 'maintenance' && <MaintenancePanel />}
         {activeTab === 'system' && <SystemHealthPanel />}
         {activeTab === 'deployments' && <DeploymentPanel />}
+        {activeTab === 'wiring' && <WiringPanel />}
       </div>
     </div>
   );

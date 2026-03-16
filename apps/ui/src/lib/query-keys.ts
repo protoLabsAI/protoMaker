@@ -383,6 +383,14 @@ export const queryKeys = {
     feed: (projectPath?: string, limit?: number) =>
       ['activity', 'feed', projectPath, limit] as const,
   },
+
+  // ============================================
+  // QA Check
+  // ============================================
+  qa: {
+    /** Consolidated QA check report (wiring, timers, board, signals) */
+    check: (projectPath: string) => ['qa', 'check', projectPath] as const,
+  },
 } as const;
 
 /**
