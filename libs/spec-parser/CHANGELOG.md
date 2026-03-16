@@ -1,18 +1,5 @@
 # @protolabsai/spec-parser
 
-## 0.68.0
-
-### Minor Changes
-
-- ### Features
-  - add Wiring tab to Ops Dashboard with service instantiation status (#2735)
-  - add Wiring tab to Ops Dashboard with service instantiation status (#2735)
-
-### Patch Changes
-
-- Updated dependencies
-  - @protolabsai/types@0.68.0
-
 ## 0.67.0
 
 ### Minor Changes
