@@ -1,5 +1,18 @@
 # @protolabsai/mcp-server
 
+## 0.65.0
+
+### Minor Changes
+
+- ### Features
+  - add Quinn QA engineer with browser automation and QA check endpoint
+  - add Quinn QA engineer with browser automation and QA check endpoint
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/tools@0.65.0
+
 ## 0.64.0
 
 ### Minor Changes
