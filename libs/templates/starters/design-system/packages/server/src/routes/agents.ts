@@ -1,38 +1,19 @@
 /**
- * POST /api/agents/design — Design agent endpoint.
+ * Agent API routes.
  *
- * Accepts a natural-language design request and runs the design agent
- * against the specified .pen file. The agent uses Pencil MCP tools
- * (batch_design, set_variables, get_screenshot, snapshot_layout) to
- * apply principled design changes and verify them visually.
- *
- * Request body:
- *   {
- *     request:      string   — natural-language design instruction (required)
- *     filePath?:    string   — path to .pen file (default: "designs/components.pen")
- *     model?:       string   — model alias or full ID (default: "claude-opus-4-6")
- *     maxIterations?: number — max agentic loop iterations (default: 10)
- *   }
- *
- * Response 200:
- *   {
- *     response:         string                — agent's summary text
- *     operations:       AppliedOperation[]    — audit trail of MCP tool calls
- *     variableChanges:  Record<string,string> — design variables updated
- *     screenshots:      string[]              — base64 PNGs captured during session
- *     iterations:       number                — loop iterations used
- *   }
- *
- * Response 400: { error: "..." } — missing or invalid request body
- * Response 500: { error: "..." } — agent execution failure
+ * POST /api/agents/design     — run the design agent
+ * POST /api/agents/implement  — run the implement agent
+ * POST /api/agents/a11y       — run the a11y agent
  */
 
 import { Router, type Request, type Response } from 'express';
 import { createDesignAgent, type DesignAgentConfig } from '@@PROJECT_NAME-agents';
+import { ImplementAgent } from '@@PROJECT_NAME-agents/implement';
+import { createA11yAgent } from '@@PROJECT_NAME-agents/a11y';
 
 const router = Router();
 
-// ─── Request schema ───────────────────────────────────────────────────────────
+// ─── Request schemas ────────────────────────────────────────────────────────
 
 interface DesignAgentRequestBody {
   request: string;
@@ -41,12 +22,29 @@ interface DesignAgentRequestBody {
   maxIterations?: number;
 }
 
-// ─── POST / ───────────────────────────────────────────────────────────────────
+interface ImplementAgentRequestBody {
+  penFilePath: string;
+  outputDir: string;
+  mode: 'library' | 'single';
+  componentName?: string;
+  instructions?: string;
+  cssStrategy?: 'inline' | 'css-modules' | 'tailwind';
+}
 
-router.post('/', async (req: Request, res: Response): Promise<void> => {
+interface A11yAgentRequestBody {
+  html: string;
+  scope?: 'component' | 'page';
+  context?: string;
+  wcagLevel?: 'A' | 'AA' | 'AAA';
+  model?: string;
+  maxIterations?: number;
+}
+
+// ─── POST /design (existing) ────────────────────────────────────────────────
+
+router.post('/design', async (req: Request, res: Response): Promise<void> => {
   const { request, filePath, model, maxIterations } = req.body as DesignAgentRequestBody;
 
-  // Validate required fields
   if (!request || typeof request !== 'string' || request.trim().length === 0) {
     res.status(400).json({ error: 'Missing required field: request (non-empty string)' });
     return;
@@ -67,6 +65,62 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
     const message = err instanceof Error ? err.message : String(err);
     console.error('[agents/design] Agent execution failed:', message);
     res.status(500).json({ error: `Design agent failed: ${message}` });
+  }
+});
+
+// ─── POST /implement ────────────────────────────────────────────────────────
+
+router.post('/implement', async (req: Request, res: Response): Promise<void> => {
+  const { penFilePath, outputDir, mode, componentName, instructions, cssStrategy } =
+    req.body as ImplementAgentRequestBody;
+
+  if (!penFilePath || !outputDir || !mode) {
+    res.status(400).json({ error: 'Missing required fields: penFilePath, outputDir, mode' });
+    return;
+  }
+
+  try {
+    const agent = new ImplementAgent();
+    const result = await agent.generate({
+      penFilePath,
+      outputDir,
+      mode,
+      ...(componentName && { componentName }),
+      ...(instructions && { instructions }),
+      ...(cssStrategy && { cssStrategy }),
+    });
+
+    res.json(result);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[agents/implement] Agent execution failed:', message);
+    res.status(500).json({ error: `Implement agent failed: ${message}` });
+  }
+});
+
+// ─── POST /a11y ─────────────────────────────────────────────────────────────
+
+router.post('/a11y', async (req: Request, res: Response): Promise<void> => {
+  const { html, scope, wcagLevel, model, maxIterations } = req.body as A11yAgentRequestBody;
+
+  if (!html || typeof html !== 'string' || html.trim().length === 0) {
+    res.status(400).json({ error: 'Missing required field: html (non-empty string)' });
+    return;
+  }
+
+  try {
+    const agent = createA11yAgent({
+      ...(wcagLevel && { wcagLevel }),
+      ...(model && { model }),
+      ...(maxIterations !== undefined && { maxIterations }),
+    });
+    const result = await agent.run(html.trim(), { scope });
+
+    res.json(result);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[agents/a11y] Agent execution failed:', message);
+    res.status(500).json({ error: `A11y agent failed: ${message}` });
   }
 });
 

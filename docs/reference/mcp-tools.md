@@ -283,10 +283,10 @@ Manages calendar events across custom, feature, milestone, and Google sources. T
 
 ## Scheduler (2 tools)
 
-| Tool                      | Description                           |
-| ------------------------- | ------------------------------------- |
-| `get_scheduler_status`    | Get scheduler status and active tasks |
-| `update_maintenance_task` | Update a scheduled maintenance task   |
+| Tool                      | Description                                                                                                                                           |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `get_scheduler_status`    | Get status of all scheduled timers (cron tasks and managed intervals) including schedules, enable/disable state, execution counts, and next run times |
+| `update_maintenance_task` | Update a scheduled maintenance task                                                                                                                   |
 
 ## Reports (2 tools)
 

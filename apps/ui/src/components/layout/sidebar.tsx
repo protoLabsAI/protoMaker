@@ -17,6 +17,8 @@ import { DeleteProjectDialog } from '@/components/views/settings-view/components
 import { NewProjectModal } from '@/components/dialogs/new-project-modal';
 import { CreateSpecDialog } from '@/components/views/spec-view/dialogs';
 
+import { useSystemHealth } from '@/components/views/ops-view';
+
 // Local imports from subfolder
 import {
   AutomakerLogo,
@@ -109,6 +111,9 @@ export function Sidebar() {
 
   // Get unread ceremony event count
   const unreadCeremonyCount = useCeremonyStore((s) => s.unreadCount);
+
+  // Get system health level for the Operations nav item indicator
+  const { overallStatus: healthLevel } = useSystemHealth(projectPath ?? undefined);
 
   // State for delete project confirmation dialog
   const [showDeleteProjectDialog, setShowDeleteProjectDialog] = useState(false);
@@ -272,6 +277,7 @@ export function Sidebar() {
     unreadNotificationsCount,
     unreadCeremonyCount,
     isSpecGenerating: isCurrentProjectGeneratingSpec,
+    healthLevel,
   });
 
   // Register keyboard shortcuts

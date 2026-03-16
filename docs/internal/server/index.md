@@ -19,6 +19,10 @@ The server is an Express 5 application with WebSocket streaming, organized into 
 - **[Peer Mesh Service](./peer-mesh-service)** — WebSocket-based multi-instance sync: heartbeat protocol, feature event replication, settings broadcast, and network partition recovery
 - **[Project Service](./project-service)** — Project, milestone, and phase CRUD with Markdown generation
 - **[Work Intake Service](./work-intake-service)** — Pull-based distributed work claiming: instances independently claim phases from shared project docs and create local features
+- **[Ops Control Plane](./ops-control-plane)** — Architecture of the unified operational infrastructure: scheduler, maintenance, events, calendar, and tracing
+- **[Timer Registry](./timer-registry)** — How to add and manage recurring timers via the SchedulerService
+- **[Maintenance Checks](./maintenance-checks)** — How to create composable maintenance check modules
+- **[Ops Dashboard](./ops-dashboard)** — Reference for the Ops Dashboard tabs, API endpoints, and WebSocket events
 
 ## Key Technologies
 

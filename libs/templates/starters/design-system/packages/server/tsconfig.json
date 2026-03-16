@@ -12,7 +12,9 @@
     "outDir": "dist",
     "rootDir": "src",
     "paths": {
-      "@@PROJECT_NAME-agents": ["../agents/dist/design-agent.d.ts"]
+      "@@PROJECT_NAME-agents": ["../agents/dist/design-agent.d.ts"],
+      "@@PROJECT_NAME-agents/implement": ["../agents/dist/implement-agent.d.ts"],
+      "@@PROJECT_NAME-agents/a11y": ["../agents/dist/a11y-agent.d.ts"]
     }
   },
   "include": ["src"],

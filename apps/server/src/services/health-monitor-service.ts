@@ -26,6 +26,7 @@ import { promisify } from 'util';
 import v8 from 'v8';
 import { getReactiveSpawnerService } from './reactive-spawner-service.js';
 import { HEALTH_CHECK_INTERVAL_MS, STUCK_FEATURE_THRESHOLD_MS } from '../config/timeouts.js';
+import type { SchedulerService } from './scheduler-service.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('HealthMonitor');
@@ -117,6 +118,7 @@ export class HealthMonitorService {
   private config: Required<HealthMonitorConfig>;
   private lastCheckResult: HealthCheckResult | null = null;
   private isRunning = false;
+  private schedulerService: SchedulerService | null = null;
 
   constructor(featureLoader?: FeatureLoader, config?: HealthMonitorConfig) {
     this.featureLoader = featureLoader ?? new FeatureLoader();
@@ -133,6 +135,13 @@ export class HealthMonitorService {
    */
   setEventEmitter(events: EventEmitter): void {
     this.events = events;
+  }
+
+  /**
+   * Set the scheduler service for managed interval tracking
+   */
+  setSchedulerService(schedulerService: SchedulerService): void {
+    this.schedulerService = schedulerService;
   }
 
   /**
@@ -157,53 +166,15 @@ export class HealthMonitorService {
   }
 
   /**
-   * Start periodic health monitoring
-   */
-  startMonitoring(): void {
-    if (this.isRunning) {
-      logger.warn('Health monitoring is already running');
-      return;
-    }
-
-    this.isRunning = true;
-    logger.info(`Starting health monitoring with interval of ${this.config.checkIntervalMs}ms`);
-
-    // Run initial check
-    this.runHealthCheck().catch((error) => {
-      logger.error('Initial health check failed:', error);
-    });
-
-    // Set up periodic checks
-    this.intervalId = setInterval(() => {
-      this.runHealthCheck().catch((error) => {
-        logger.error('Periodic health check failed:', error);
-      });
-    }, this.config.checkIntervalMs);
-  }
-
-  /**
-   * Stop periodic health monitoring
+   * No-op: periodic monitoring is now handled by MaintenanceOrchestrator.
+   * Kept for shutdown.ts compatibility.
    */
   stopMonitoring(): void {
-    if (!this.isRunning) {
-      logger.warn('Health monitoring is not running');
-      return;
-    }
-
     if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
-
     this.isRunning = false;
-    logger.info('Stopped health monitoring');
-  }
-
-  /**
-   * Check if monitoring is currently active
-   */
-  isMonitoring(): boolean {
-    return this.isRunning;
   }
 
   /**

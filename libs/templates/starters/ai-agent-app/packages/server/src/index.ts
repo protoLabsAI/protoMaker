@@ -5,6 +5,7 @@ import chatRouter from './routes/chat.js';
 import tracesRouter from './routes/traces.js';
 import commandsRouter from './routes/commands.js';
 import promptsRouter from './routes/prompts.js';
+import rolesRouter from './routes/roles.js';
 
 // ─── App factory ──────────────────────────────────────────────────────────────
 
@@ -39,6 +40,7 @@ export function createApp(): express.Application {
   app.use('/api/traces', tracesRouter);
   app.use('/api/commands', commandsRouter);
   app.use('/api/prompts', promptsRouter);
+  app.use('/api/roles', rolesRouter);
 
   return app;
 }

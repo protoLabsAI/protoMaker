@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 581
-  referenced: 172
-  successfulFeatures: 172
+  loaded: 599
+  referenced: 180
+  successfulFeatures: 180
 ---
 <!-- domain: API Design & Integration | GitHub GraphQL, REST endpoints, HTTP client patterns -->
 
@@ -474,3 +474,42 @@ usageStats:
 - **Problem solved:** MCP CallToolRequestSchema expects error handling at transport layer, not exception throws
 - **Why this works:** MCP spec requirement for stdio transport: exceptions don't propagate cleanly, but structured responses are predictable and can be logged
 - **Trade-offs:** More verbose handler code but guaranteed to never crash MCP connection; client must check result.success (not automatic rejection)
+
+
+### ArchivalService keeps start()/stop() public API but decoupled from interval management — they now only toggle an aborted flag. Scheduler externally drives the interval. (2026-03-15)
+- **Context:** Migrating setInterval ownership to SchedulerService meant start/stop had to stop managing the timer. But API was part of the public contract.
+- **Why:** Preserve backwards compatibility and encapsulation (service owns its running state); actual interval management becomes SchedulerService concern.
+- **Rejected:** Remove start/stop entirely — breaks any code calling them; make them take a SchedulerService reference — inverts dependency, makes service aware of scheduler.
+- **Trade-offs:** Easier: no breaking API changes. Harder: start/stop semantics are now opaque (they don't actually start/stop the polling cycle), potential for caller confusion.
+- **Breaking if changed:** Calling start/stop no longer guarantees the archival cycle will run (must manually register interval with scheduler). Silent semantic breakage if caller depends on start/stop controlling execution.
+
+#### [Pattern] Idempotent pause/resume operations: when a timer is already in the target state, return 200 success with clarifying message rather than 409 conflict or 400 bad-request. (2026-03-15)
+- **Problem solved:** State transitions that can be safely repeated without side effects
+- **Why this works:** Prevents client retry logic from failing; simplifies error handling; follows REST principle that same request is safe to repeat. UI can safely retry without knowing current state.
+- **Trade-offs:** Easier for clients but loses ability to distinguish 'changed state' from 'no-op state change' in response code. Mitigated by returning clarifying message.
+
+#### [Pattern] Bulk operations (pause-all, resume-all) return count of affected items, not just success/failure, enabling UI to provide feedback about how many timers were impacted. (2026-03-15)
+- **Problem solved:** Bulk state transitions where number of changes varies based on current state
+- **Why this works:** Different from single-resource operations where 0-or-1 affected. Bulk needs to communicate scope of change. Helps detect no-ops (count=0) from API response without state inspection.
+- **Trade-offs:** Slightly more complex response structure but avoids extra round-trip. Count is useful for logging/monitoring. Returning full id list would be redundant.
+
+### Check tier is polymorphic: tier can be 'critical' | 'full' | ['critical', 'full'] allowing single checks to participate in multiple sweep tiers. (2026-03-15)
+- **Context:** Need to support checks that run in both critical (5min) and full (6h) sweeps without duplicating check logic.
+- **Why:** Avoids check duplication while preserving tier semantics and allowing flexible composition. A single maintenance task (e.g., gc collection) might need to run on both schedules.
+- **Rejected:** Single-tier-only design (less flexible); separate checks per tier (duplicates maintenance logic); discriminated union (more complex filtering).
+- **Trade-offs:** More expressive API vs slightly more complex filtering logic that must branch on typeof tier.
+- **Breaking if changed:** Filtering logic in runSweep() must handle both string and array cases. Removing array support forces checks into single tier or duplication.
+
+### Instance IDs use composite format 'parentId:date' instead of separate parentId and instanceDate fields (2026-03-15)
+- **Context:** Need to uniquely identify individual occurrences within a recurring series while maintaining backward compatibility with single-event ID format
+- **Why:** Single ID field is simpler for API consumers; colon separator is unambiguous. Allows reusing existing ID infrastructure without new fields
+- **Rejected:** Separate parentId + instanceDate fields (breaks single-ID assumption); UUID per instance (loses parent relationship in ID); parent ID only (loses instance uniqueness)
+- **Trade-offs:** Easier API—one ID field instead of two. But callers must parse the ID to extract parentId for 'get all instances of this parent' queries. Searching by parentId requires regex/string parsing rather than indexed field lookup
+- **Breaking if changed:** Changing ID format breaks all stored references. Parsing logic must handle 'parent-abc:2026-03-01' format correctly—what if parentId contains colons?
+
+### Added `recurring?: boolean` as informational field; UI interpretation left out-of-scope (2026-03-15)
+- **Context:** Need to distinguish recurring ceremony events from one-time auto-mode calendars
+- **Why:** Separates data contract (backend) from presentation logic (frontend), avoids backend enforcing UI behavior
+- **Rejected:** Backend-enforced recurrence display rules, no field at all (UI guesses), RecurrenceRule object
+- **Trade-offs:** Frontend flexibility and independence vs responsibility on UI to consume field correctly
+- **Breaking if changed:** If UI fails to check recurring field, all events render identically and recurrence becomes unrepresentable

@@ -367,9 +367,11 @@ function serializePathNode(node: LocalPath, className: string, depth: number): s
   const fill = (node.fills ?? [])[0];
   const fillColor =
     fill?.type === 'solid' && fill.color ? resolveColor(fill.color) : 'currentColor';
+  // Pen parser uses `path`, codegen uses `pathData` — accept both
+  const pathData = node.pathData ?? (node as unknown as { path?: string }).path ?? '';
   return [
     `${ind}<svg class="${className}" aria-hidden="true">`,
-    `${ind2}<path d="${escapeHtml(node.pathData)}" fill="${fillColor}" />`,
+    `${ind2}<path d="${escapeHtml(pathData)}" fill="${fillColor}" />`,
     `${ind}</svg>`,
   ].join('\n');
 }

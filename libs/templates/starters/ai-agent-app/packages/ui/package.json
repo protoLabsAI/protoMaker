@@ -6,7 +6,8 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./atoms": "./src/atoms/index.ts"
+    "./atoms": "./src/atoms/index.ts",
+    "./tool-results/*": "./src/tool-results/*"
   },
   "dependencies": {
     "@radix-ui/react-popover": "^1.1.4",

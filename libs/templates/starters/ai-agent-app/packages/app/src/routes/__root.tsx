@@ -1,15 +1,41 @@
 import { createRootRoute, Link, Outlet } from '@tanstack/react-router';
+import { useEffect } from 'react';
 import { MessageSquare, History, Settings, Workflow, FileText } from 'lucide-react';
+import { useSettingsStore } from '../store/settings-store.js';
 
-// ─── Root route ───────────────────────────────────────────────────────────────
+// ── Root route ───────────────────────────────────────────────────────────────
 
 export const Route = createRootRoute({
   component: RootLayout,
 });
 
-// ─── Layout ───────────────────────────────────────────────────────────────────
+// ── Theme sync ───────────────────────────────────────────────────────────────
+
+function useThemeSync() {
+  const theme = useSettingsStore((s) => s.theme);
+
+  useEffect(() => {
+    const apply = (resolved: 'dark' | 'light') => {
+      document.documentElement.dataset.theme = resolved;
+    };
+
+    if (theme === 'system') {
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      apply(mq.matches ? 'dark' : 'light');
+      const handler = (e: MediaQueryListEvent) => apply(e.matches ? 'dark' : 'light');
+      mq.addEventListener('change', handler);
+      return () => mq.removeEventListener('change', handler);
+    }
+
+    apply(theme);
+  }, [theme]);
+}
+
+// ── Layout ───────────────────────────────────────────────────────────────────
 
 function RootLayout() {
+  useThemeSync();
+
   return (
     <div
       style={{
@@ -28,7 +54,7 @@ function RootLayout() {
   );
 }
 
-// ─── Sidebar ──────────────────────────────────────────────────────────────────
+// ── Sidebar ──────────────────────────────────────────────────────────────────
 
 const navItems = [
   { to: '/' as const, label: 'Chat', icon: MessageSquare, exact: true },

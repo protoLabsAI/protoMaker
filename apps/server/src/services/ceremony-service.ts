@@ -439,6 +439,7 @@ export class CeremonyService {
         date: new Date().toISOString().slice(0, 10),
         type: 'ceremony',
         description: `Recurring standup and retro ceremonies for project ${projectTitle}`,
+        recurrence: { frequency: 'daily' },
       });
       logger.debug(`Upserted ceremony calendar event for ${projectSlug}`);
     } catch (err) {

@@ -10,7 +10,9 @@
  *
  * Routes:
  *   GET  /api/health         → { status: "ok" }
- *   POST /api/agents/design  → run the design agent
+ *   POST /api/agents/design     → run the design agent
+ *   POST /api/agents/implement  → run the implement agent
+ *   POST /api/agents/a11y       → run the a11y agent
  */
 
 import express, { type Request, type Response } from 'express';
@@ -34,7 +36,7 @@ export function createApp(): express.Application {
     res.json({ status: 'ok' });
   });
 
-  app.use('/api/agents/design', agentsRouter);
+  app.use('/api/agents', agentsRouter);
 
   return app;
 }

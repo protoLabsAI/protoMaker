@@ -27,6 +27,7 @@ async function gracefulShutdown(server: http.Server, services: ServiceContainer)
     leadEngineerService,
     autoModeService,
     healthMonitorService,
+    maintenanceOrchestrator,
     schedulerService,
     worktreeLifecycleService,
     issueCreationService,
@@ -60,6 +61,7 @@ async function gracefulShutdown(server: http.Server, services: ServiceContainer)
   }
   leadEngineerService.destroy();
   await autoModeService.shutdown();
+  maintenanceOrchestrator.stop();
   healthMonitorService.stopMonitoring();
   schedulerService.stop();
   terminalService.cleanup();

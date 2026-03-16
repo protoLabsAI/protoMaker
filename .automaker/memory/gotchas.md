@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1522
-  referenced: 399
-  successfulFeatures: 399
+  loaded: 1541
+  referenced: 407
+  successfulFeatures: 407
 ---
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
@@ -1080,3 +1080,8 @@ usageStats:
 - **Situation:** Writing comprehensive README and reference docs before complementary features (MCP tool wiring, API endpoints) were complete
 - **Root cause:** Root cause: documentation planning assumed parallel feature completion timelines; creating links to 'future' pages sets reader expectations but creates broken links and context gaps when features lag
 - **How to avoid:** Transparency about incompleteness vs. appearance of incomplete product; helps roadmap visibility but requires discipline to fill gaps or readers encounter 404s
+
+#### [Gotcha] Timezone is static at expansion time—if timezone definitions change (e.g., DST rule updates) or user changes their timezone, expanded instances don't retroactively update (2026-03-15)
+- **Situation:** Timezone field is stored once on the parent event and copied to all expanded instances at query time
+- **Root cause:** Simplicity: each instance gets a fixed timezone rather than computing it dynamically. Matches common calendar behavior (events remember their creation-time timezone)
+- **How to avoid:** Simple and predictable, but historical events can show wrong local times if timezone rules change (e.g., country changes DST schedule). Users who move timezones see old events in old timezone

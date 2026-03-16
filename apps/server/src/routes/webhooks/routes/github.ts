@@ -6,10 +6,11 @@
  */
 
 import type { Request, Response } from 'express';
-import { createHmac, timingSafeEqual } from 'crypto';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { createLogger } from '@protolabsai/utils';
+import { verifyWebhookSignature } from '../../../lib/webhook-signature.js';
+import type { WebhookSecrets } from '../../../lib/webhook-signature.js';
 
 const execAsync = promisify(exec);
 import type { EventEmitter } from '../../../lib/events.js';
@@ -76,29 +77,8 @@ interface GitHubIssueCommentPayload {
   };
 }
 
-/**
- * Verify GitHub webhook signature
- */
-function verifySignature(secret: string, signature: string | undefined, body: string): boolean {
-  if (!signature) {
-    return false;
-  }
-
-  // GitHub sends signature as "sha256=<hash>"
-  const parts = signature.split('=');
-  if (parts.length !== 2 || parts[0] !== 'sha256') {
-    return false;
-  }
-
-  const hash = createHmac('sha256', secret).update(body).digest('hex');
-
-  // Use timing-safe comparison to prevent timing attacks
-  try {
-    return timingSafeEqual(Buffer.from(hash), Buffer.from(parts[1]));
-  } catch {
-    return false;
-  }
-}
+// Webhook signature verification is handled by the shared utility
+// in lib/webhook-signature.ts (verifyWebhookSignature with dual-secret support)
 
 /**
  * After a PR merges, update all other open PRs targeting the same base branch
@@ -222,8 +202,16 @@ export function createGitHubWebhookHandler(events: EventEmitter, settingsService
         const signature = req.headers['x-hub-signature-256'] as string | undefined;
         const body = JSON.stringify(req.body);
 
-        if (!verifySignature(webhookSecret, signature, body)) {
-          logger.warn('GitHub webhook signature verification failed');
+        // Build secrets object with optional previous secret for rotation support
+        const secrets: WebhookSecrets = {
+          current: webhookSecret,
+          previous: credentials.webhookSecrets?.previousGithub,
+          previousExpiresAt: credentials.webhookSecrets?.previousGithubExpiresAt,
+        };
+
+        const verification = verifyWebhookSignature(body, signature, secrets);
+        if (!verification.valid) {
+          logger.warn(`GitHub webhook signature verification failed: ${verification.error}`);
           res.status(401).json({
             success: false,
             error: 'Invalid signature',

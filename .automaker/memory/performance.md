@@ -5,11 +5,10 @@ relevantTo: [performance]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 45
-  referenced: 14
-  successfulFeatures: 14
+  loaded: 47
+  referenced: 15
+  successfulFeatures: 15
 ---
-
 <!-- domain: Performance Optimization | Rendering, caching, latency reduction patterns -->
 
 # performance

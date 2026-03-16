@@ -88,6 +88,10 @@ This directory is NOT included in the public VitePress build. Content here is fo
 - [Ava Chat](./server/ava-chat.md)
 - [Calendar API](./server/calendar-api.md)
 - [DORA Metrics](./server/dora-metrics.md)
+- [Ops Control Plane](./server/ops-control-plane.md)
+- [Timer Registry](./server/timer-registry.md)
+- [Maintenance Checks](./server/maintenance-checks.md)
+- [Ops Dashboard](./server/ops-dashboard.md)
 
 ## protoLabs
 

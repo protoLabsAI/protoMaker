@@ -5,7 +5,6 @@
  * Supports automatic feature creation from GitHub issues when configured.
  */
 
-import { createHmac, timingSafeEqual } from 'crypto';
 import { z } from 'zod';
 import type { Request, Response, NextFunction } from 'express';
 import { createLogger } from '@protolabsai/utils';
@@ -16,7 +15,6 @@ import type {
   GitHubPullRequestReviewWebhookPayload,
   GitHubPushWebhookPayload,
   GitHubPingWebhookPayload,
-  WebhookVerificationResult,
   GitHubCheckSuiteWebhookPayload,
   GitHubCheckRunWebhookPayload,
 } from '@protolabsai/types';
@@ -24,6 +22,7 @@ import type { SettingsService } from '../../../services/settings-service.js';
 import type { EventEmitter } from '../../../lib/events.js';
 import { getPRWatcherService } from '../../../services/pr-watcher-service.js';
 import { projectPathSchema } from '../../../lib/validation.js';
+import { verifySingleSecret } from '../../../lib/webhook-signature.js';
 
 const logger = createLogger('GitHubWebhook');
 
@@ -47,64 +46,8 @@ const webhookPayloadSchema = z
   })
   .passthrough();
 
-/**
- * Verify GitHub webhook signature using HMAC-SHA256
- *
- * @param payload - Raw request body (string or Buffer)
- * @param signature - GitHub signature from X-Hub-Signature-256 header
- * @param secret - Webhook secret configured in GitHub and project settings
- * @returns Verification result with valid flag and optional error
- */
-function verifyWebhookSignature(
-  payload: string | Buffer,
-  signature: string | undefined,
-  secret: string
-): WebhookVerificationResult {
-  if (!signature) {
-    return {
-      valid: false,
-      error: 'Missing X-Hub-Signature-256 header',
-    };
-  }
-
-  if (!signature.startsWith('sha256=')) {
-    return {
-      valid: false,
-      error: 'Invalid signature format (expected sha256=...)',
-    };
-  }
-
-  // Compute expected signature
-  const hmac = createHmac('sha256', secret);
-  hmac.update(payload);
-  const expectedSignature = `sha256=${hmac.digest('hex')}`;
-
-  // Timing-safe comparison to prevent timing attacks
-  try {
-    const signatureBuffer = Buffer.from(signature);
-    const expectedBuffer = Buffer.from(expectedSignature);
-
-    if (signatureBuffer.length !== expectedBuffer.length) {
-      return {
-        valid: false,
-        error: 'Invalid signature',
-      };
-    }
-
-    const isValid = timingSafeEqual(signatureBuffer, expectedBuffer);
-
-    return {
-      valid: isValid,
-      error: isValid ? undefined : 'Invalid signature',
-    };
-  } catch (error) {
-    logger.error('Error verifying webhook signature:', error);
-    return {
-      valid: false,
-      error: 'Signature verification failed',
-    };
-  }
-}
+// Webhook signature verification is handled by the shared utility
+// in lib/webhook-signature.ts (verifySingleSecret for per-project secrets)
 
 /**
  * Handle GitHub ping event (webhook test)
@@ -379,13 +322,9 @@ export function createWebhookHandler(
         return;
       }
 
-      // Verify signature
+      // Verify signature using shared utility
       const signature = req.headers['x-hub-signature-256'] as string | undefined;
-      const verification = verifyWebhookSignature(
-        rawBody,
-        signature,
-        webhookSettings.webhookSecret
-      );
+      const verification = verifySingleSecret(rawBody, signature, webhookSettings.webhookSecret);
 
       if (!verification.valid) {
         logger.warn(`Webhook signature verification failed: ${verification.error}`);

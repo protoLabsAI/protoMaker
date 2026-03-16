@@ -1,20 +1,70 @@
-/* ── Playground chrome tokens ───────────────────────────────────────────────
-   These control the playground UI itself (sidebar, toolbar, etc.).
-   Your design system tokens go in a separate file loaded by the preview.
+/* ── Design System Chrome Tokens ──────────────────────────────────────────────
+   Dark-mode-first design tokens for the design system app chrome.
+   Uses the protoLabs brand palette (OKLch-based violet accent).
    ─────────────────────────────────────────────────────────────────────────── */
 
 :root {
-  --pg-bg: #f8fafc;
-  --pg-fg: #0f172a;
-  --pg-fg-secondary: #475569;
-  --pg-muted: #94a3b8;
-  --pg-border: #e2e8f0;
-  --pg-border-subtle: #f1f5f9;
-  --pg-sidebar: #ffffff;
-  --pg-toolbar: #ffffff;
-  --pg-input-bg: #f8fafc;
-  --pg-code-bg: #f1f5f9;
-  --pg-accent: #3b82f6;
-  --pg-selected-bg: #eff6ff;
-  --pg-item-fg: #374151;
+  --pg-bg: #09090b;
+  --pg-fg: #fafafa;
+  --pg-fg-secondary: #a1a1aa;
+  --pg-muted: #71717a;
+  --pg-border: #27272a;
+  --pg-border-subtle: #1c1c1f;
+  --pg-sidebar: #111113;
+  --pg-toolbar: #111113;
+  --pg-input-bg: #18181b;
+  --pg-code-bg: #18181b;
+  --pg-accent: #a78bfa;
+  --pg-accent-hover: #c4b5fd;
+  --pg-selected-bg: rgba(167, 139, 250, 0.12);
+  --pg-item-fg: #d4d4d8;
+  --pg-surface-1: #111113;
+  --pg-surface-2: #18181b;
+  --pg-success: #4ade80;
+  --pg-warning: #facc15;
+  --pg-error: #f87171;
+  --pg-info: #60a5fa;
+  --primary: #a78bfa;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--pg-bg);
+  color: var(--pg-fg);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: rgba(167, 139, 250, 0.3);
+  color: #fff;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }

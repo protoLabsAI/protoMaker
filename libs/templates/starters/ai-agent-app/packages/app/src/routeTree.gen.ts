@@ -12,12 +12,46 @@
 // This is a minimal stub. Run `npm run dev` to regenerate with full type info.
 // ──────────────────────────────────────────────────────────────────────────────
 
+import { createRoute } from '@tanstack/react-router';
 import { Route as rootRoute } from './routes/__root';
-import { Route as IndexRoute } from './routes/index';
-import { Route as SessionsRoute } from './routes/sessions';
-import { Route as SettingsRoute } from './routes/settings';
-import { Route as FlowsRoute } from './routes/flows';
-import { Route as PromptsRoute } from './routes/prompts';
+
+// Import components from route files
+import { Route as IndexFileRoute } from './routes/index';
+import { Route as SessionsFileRoute } from './routes/sessions';
+import { Route as SettingsFileRoute } from './routes/settings';
+import { Route as FlowsFileRoute } from './routes/flows';
+import { Route as PromptsFileRoute } from './routes/prompts';
+
+// Re-create routes with proper parent wiring and explicit paths
+const IndexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/',
+  component: IndexFileRoute.options?.component,
+});
+
+const SessionsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/sessions',
+  component: SessionsFileRoute.options?.component,
+});
+
+const SettingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/settings',
+  component: SettingsFileRoute.options?.component,
+});
+
+const FlowsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/flows',
+  component: FlowsFileRoute.options?.component,
+});
+
+const PromptsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/prompts',
+  component: PromptsFileRoute.options?.component,
+});
 
 // Build the route tree
 export const routeTree = rootRoute.addChildren([

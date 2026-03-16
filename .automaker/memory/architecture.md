@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 554
-  referenced: 137
-  successfulFeatures: 137
+  loaded: 573
+  referenced: 145
+  successfulFeatures: 145
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -1793,3 +1793,158 @@ usageStats:
 - **Problem solved:** 5 markdown files added without touching build configuration, TypeScript compilation, or Playwright tests; build verification still passed 18/18 tasks
 - **Why this works:** Markdown documentation is static content independent of runtime - decoupling docs from build enables parallel development, allows docs to be written/reviewed asynchronously, and prevents docs from being blocked by unrelated build failures
 - **Trade-offs:** Development velocity and independence vs. higher risk of docs describing unimplemented/removed features; requires discipline to keep docs synchronized
+
+### Interval task metadata is NOT persisted to disk; cron task overrides ARE persisted. Intervals are always re-registered at startup via code. (2026-03-15)
+- **Context:** Design of TimerRegistryEntry persistence strategy — what should survive application restarts
+- **Why:** Interval tasks are code-registered (not user-configurable like cron overrides stored in DB); persisting metadata would duplicate source-of-truth. Cron overrides persist because they represent user intent to modify preconfigured tasks.
+- **Rejected:** Persist all metadata to disk (interval + cron) — creates confusion about which system owns the data; cron tasks already have a persistence layer for user overrides
+- **Trade-offs:** Simpler startup (no metadata recovery logic needed for intervals), single source of truth in code; loses execution history across restarts for intervals (acceptable for auto-registered tasks)
+- **Breaking if changed:** If interval tasks later become user-configurable, persistence layer would need to be added; current consumers must assume metadata is reset on restart
+
+### pauseAll() and resumeAll() affect BOTH cron and interval tasks simultaneously, not separately. (2026-03-15)
+- **Context:** API design for pausing/resuming all scheduled work during maintenance windows
+- **Why:** Unified pause/resume is safer than separate controls — avoids scenarios where some timers keep running; typically used for coordinated service maintenance
+- **Rejected:** Separate pauseAllIntervals() / pauseAllCron() — allows finer control but increases API surface and risk of partial pause bugs
+- **Trade-offs:** Simpler API (single pause/resume call), guaranteed consistency; less flexibility if future use cases need independent timer control
+- **Breaking if changed:** Code expecting independent control of cron vs interval pause would break; would need API splitting if decoupled pause is ever required
+
+#### [Pattern] AgentManifestService consolidated per-project setInterval watchers into a single global tick() method that checks all watched paths. Instead of N intervals (one per project), one interval drives N project checks via iteration. (2026-03-15)
+- **Problem solved:** Service had multiple per-project file watchers, each with own setInterval. Moving to registry required choosing between many intervals or one consolidated tick.
+- **Why this works:** Registry doesn't distinguish per-instance intervals; consolidation simplifies registration, reduces timer overhead, and all projects share same 2s cadence anyway (no per-project timing requirements).
+- **Trade-offs:** Easier: single scheduler registration, fewer timers. Harder: managing multiple watchers from one tick point, potential future per-project timing would require refactor back to separate intervals.
+
+#### [Gotcha] registerInterval() and unregisterInterval() methods did not exist on SchedulerService — had to be added as auto-fix-critical. Feature was described in requirements without verifying the foundation API existed. (2026-03-15)
+- **Situation:** Feature spec said 'migrate to TimerRegistry' but didn't check if SchedulerService had the methods needed to implement it.
+- **Root cause:** Requirements-first implementation without API design review. The registry pattern requires registration/deregistration hooks that were missing.
+- **How to avoid:** Adding them was straightforward but delayed feature completion. Prevents hardcoding of intervals in client code.
+
+#### [Pattern] SensorRegistryService preserved an initial immediate poll in _startElectronIdlePoller() before scheduler takes over, ensuring fresh data on startup without waiting for first scheduled tick. (2026-03-15)
+- **Problem solved:** Service needs current electron idle state available immediately on startup, not after first 30s scheduler tick.
+- **Why this works:** Startup often depends on having current state; deferring to scheduler would add 30s cold-start delay. Initial fire is cheap and ensures system is immediately ready.
+- **Trade-offs:** Easier: fast startup state. Harder: two code paths executing same polling logic (manual + scheduled), potential for subtle divergence.
+
+### listAll() returns unified TimerRegistryEntry[] covering both interval-registered timers and cron tasks, presenting them as a single registry abstraction. (2026-03-15)
+- **Context:** SchedulerService manages two timer types: intervals (new) and cron tasks (existing). listAll() needs to represent both to callers.
+- **Why:** Unifies observability — callers can see all timers in one place regardless of type. Prevents 'invisible' timers if only one type is exposed.
+- **Rejected:** Separate listIntervals() and listCronTasks() — adds API surface, callers need multiple calls for full picture. Return only intervals — loses visibility of cron tasks.
+- **Trade-offs:** Easier: single call to see all timers. Harder: callers must handle heterogeneous entry types; harder to sort/filter by type.
+- **Breaking if changed:** If new timer types are added in future, listAll() contract expands; callers not prepared for new entry types will fail.
+
+#### [Pattern] Timer categorization encoded in ID strings using hierarchical naming (e.g., 'lead-engineer:{path}:refresh', 'discord-monitor:channel:{id}') rather than adding structured fields to IntervalEntry schema (2026-03-15)
+- **Problem solved:** Need to centralize 3 services with different monitoring contexts into a shared registry without schema changes
+- **Why this works:** Avoids database migration and type definition changes; works with existing flat IntervalEntry structure; enables dynamic categorization
+- **Trade-offs:** String parsing logic needed for queries vs type-safe schema; harder to enforce valid categories; easier to add new services without schema updates
+
+#### [Gotcha] Initialization order coupling: setSchedulerService() must be called BEFORE service.start() is invoked. Services falling back to raw setInterval when scheduler isn't injected yet (2026-03-15)
+- **Situation:** LeadEngineerService wiring in scheduler.module.ts happens before initialize() in services.ts, but if start() is called before that wiring, scheduler won't be available
+- **Root cause:** No forced dependency in constructor - services accept scheduler as optional injection, not mandatory initialization parameter
+- **How to avoid:** Flexible instantiation vs fragile initialization order; fallback path adds safety but obscures bugs if order is wrong
+
+#### [Pattern] Fallback implementation pattern: every service maintains parallel timer management (raw setInterval maps + scheduler calls), creating code duplication across all three services (2026-03-15)
+- **Problem solved:** Need backwards compatibility for services instantiated without scheduler context, and for existing fallback code paths
+- **Why this works:** Guarantees functionality even if scheduler is unavailable; doesn't force all instantiation paths through scheduler.module.ts
+- **Trade-offs:** Maintenance burden of duplicate logic vs flexibility in instantiation; fallback path must be tested/maintained indefinitely even if rarely used
+
+#### [Gotcha] Partial adoption risk: GitHubMonitor and DiscordMonitor instances created in HeadsdownService and discord.module.ts are not wired to schedulerService, even though capability exists (2026-03-15)
+- **Situation:** Only services initialized through scheduler.module.ts get setSchedulerService() called; other instantiation paths skip this step
+- **Root cause:** Out-of-scope changes; would require modifying multiple files outside core services
+- **How to avoid:** Smaller changeset vs incomplete migration; some timers in registry, others in fallback paths
+
+### DiscordMonitor.getMonitoredChannels() refactored to use lastMessageIds (always accurate) as source of truth instead of intervals map (fallback-only) (2026-03-15)
+- **Context:** Intervals map only contains data when scheduler is unavailable; lastMessageIds is updated on every message regardless of monitoring mode
+- **Why:** Removes semantic ambiguity - 'monitored' now means 'ever contacted' (single source of truth) vs conflicting definitions in scheduler vs fallback paths
+- **Rejected:** Keep reading from intervals map - would require maintaining both sources and deciding which takes precedence
+- **Trade-offs:** Simpler single source of truth vs changed semantic meaning of 'monitored'; no longer returns ONLY actively polling channels
+- **Breaking if changed:** Code expecting getMonitoredChannels() to return only 'actively monitoring' channels (not historical) will get different results
+
+#### [Gotcha] Express route registration order is critical: bulk routes (/pause-all, /resume-all) must be registered BEFORE parameterized routes (/:id/pause) to prevent Express from matching 'pause-all' as an id parameter value. (2026-03-15)
+- **Situation:** Implementing timer control endpoints with both specific and bulk operations
+- **Root cause:** Express matches routes in registration order. Without explicit ordering, parameterized route handlers execute first and incorrectly capture literal paths.
+- **How to avoid:** More brittle code structure but guaranteed correct routing; any future additions must maintain this ordering discipline
+
+### Unified GET /api/ops/timers endpoint exposes both cron tasks AND managed intervals as a single collection, despite being backed by different scheduler implementations. (2026-03-15)
+- **Context:** System has two types of background jobs (cron-based and interval-based) that need unified control
+- **Why:** Single source of truth for monitoring/control; simpler client consumption; easier to add pause/resume controls to both types consistently; reduces endpoint proliferation
+- **Rejected:** Separate endpoints for /timers/cron and /timers/intervals; expose only cron tasks and ignore intervals; different endpoints for listing vs controlling
+- **Trade-offs:** Response payload is more complex (mixed types). Future changes requiring type-specific behavior (e.g., cron reschedule) force refactoring. Current design prioritizes simplicity.
+- **Breaking if changed:** If requirements demand separate control paths for cron vs intervals (e.g., cron can reschedule, intervals cannot), this abstraction must be split into separate endpoints
+
+#### [Pattern] Every state mutation emits typed WebSocket events (timer:paused, timer:resumed, timer:all-paused, timer:all-resumed) so remote clients stay synchronized without polling or request-response coupling. (2026-03-15)
+- **Problem solved:** Multiple clients (UI, other services, MCP tools) need real-time awareness of timer state changes
+- **Why this works:** Decouples clients from request-response cycle; scales to N clients without N API calls; enables reactive UI updates; single source of truth for what happened
+- **Trade-offs:** Requires event infrastructure (WebSocket, event bus). Reliability depends on event emission succeeding. If event emission fails silently, clients diverge from server state.
+
+### MCP tools access scheduler via HTTP endpoints (GET /api/ops/timers, POST /ops/timers/:id/pause) instead of directly manipulating scheduler state, ensuring events are emitted and business logic is centralized. (2026-03-15)
+- **Context:** MCP server needs to control timers; timer state changes must emit events for client sync
+- **Why:** Single source of truth for pause/resume logic; guarantees event emission happens; prevents duplicate logic between HTTP and MCP paths; MCP service can be replicated without breaking consistency
+- **Rejected:** MCP tools directly call scheduler.disableTask(); HTTP endpoints and MCP have separate control logic; MCP calls internal methods instead of HTTP
+- **Trade-offs:** MCP execution requires HTTP call (latency, network). Benefit: event system works everywhere. Cost: tight coupling to HTTP API version.
+- **Breaking if changed:** If HTTP endpoints change signature/behavior, MCP tools break. If removed, MCP loses ability to control timers or events stop emitting.
+
+#### [Gotcha] TimerRegistry interval registration happens during MaintenanceOrchestrator.start() and must occur only after scheduler service is live. Intervals registered before scheduler is ready will not fire. (2026-03-15)
+- **Situation:** MaintenanceOrchestrator wires critical (5min) and full (6h) intervals during start(), but those intervals need the scheduler service to be processing timer events.
+- **Root cause:** Scheduler service has its own lifecycle; registering intervals against a scheduler that hasn't started yet leaves orphaned registrations that never execute.
+- **How to avoid:** Explicit async ordering is clearer but requires callers to understand scheduler lifecycle; implicit internal waits would be simpler but hide this requirement.
+
+### When a check throws an error during execution, the error is caught, recorded as 'fail' status with error message, and sweep continues with remaining checks rather than crash. (2026-03-15)
+- **Context:** Maintenance sweeps must be resilient so a single broken check doesn't lose visibility into all other checks and create blind spots.
+- **Why:** Resilience: allows full result aggregation and event emission even when checks fail. Provides complete picture of system health rather than partial view.
+- **Rejected:** Fail-fast approach (simpler code, crashes on first error) would make system fragile and lose visibility into checks that would have passed.
+- **Trade-offs:** Error isolation improves reliability and observability but requires more error handling code and forces caller to handle partial results.
+- **Breaking if changed:** Switching to fail-fast causes a single throwing check to abort the entire maintenance sweep, creating silent blind spots if that check is broken.
+
+### Checks are executed sequentially rather than in parallel during a sweep. (2026-03-15)
+- **Context:** Multiple checks need to execute, but chosen sequential execution pattern over parallel Promise.all().
+- **Why:** Simpler error handling (isolation), deterministic ordering for result correlation, easier to tie check:started/check:completed events to specific checks, avoids concurrent error race conditions.
+- **Rejected:** Parallel execution via Promise.all() would be faster for independent checks but complicates error handling, event correlation, and makes results non-deterministic.
+- **Trade-offs:** Simplicity and determinism vs potential performance hit if checks are I/O-bound and many. Sequential is safer for first-version reliability.
+- **Breaking if changed:** Parallelizing check execution breaks the 1:1 correspondence between event order and result order, complicates error propagation semantics.
+
+#### [Pattern] Maintenance sweep lifecycle exposed via event emission (maintenance:sweep:started, maintenance:check:started, maintenance:check:completed, maintenance:sweep:completed) rather than callbacks/hooks API. (2026-03-15)
+- **Problem solved:** Need external systems (logging, metrics, alerting) to react to maintenance events without coupling them to orchestrator implementation.
+- **Why this works:** Event-driven pattern decouples observability from orchestrator; handlers can be added/removed without modifying orchestrator. Enables flexible multi-consumer scenarios (metrics + logging + alerting all at once).
+- **Trade-offs:** Event pattern is more decoupled and flexible but requires event subscribers to exist; simpler for callers to just await sweep result but less observable.
+
+### Lazy expansion of recurring events at read-time (listEvents) rather than at write-time (createEvent) (2026-03-15)
+- **Context:** Recurring events could spawn hundreds of instances; storing each separately would bloat the database
+- **Why:** Avoids storing N instances for recurring events; instances generated dynamically only when queried. Job executor then auto-schedules next occurrence after each job runs, creating instances on-demand as needed
+- **Rejected:** Eager expansion at creation time (would require storing all instances upfront) or pre-computing a fixed number of instances
+- **Trade-offs:** Saves storage and write latency, but shifts CPU cost to read path. Every listEvents() call recomputes instances—timezone conversions happen at query time, not creation time
+- **Breaking if changed:** Changing expansion logic changes behavior of all historical queries. If expansion algorithm changes (e.g., weekly recurrence day-of-week calculation), all already-computed instances appear different. No audit trail of what was expanded and when
+
+#### [Pattern] Range-based expansion: expandRecurringEvent(event, startDate, endDate) only generates instances within the query window (2026-03-15)
+- **Problem solved:** Unlimited recurrence (daily forever) could generate infinite instances; callers need bounded results
+- **Why this works:** Enables pagination without loading entire series. Callers control how far into future to expand. Prevents accidental quadratic behavior if recurrence logic is called in a loop
+- **Trade-offs:** Efficient pagination. But callers must track dateRange state for pagination; naive implementation could expand same instance multiple times across page requests. Boundary handling is critical—test shows 'excludes instances before query range start', meaning logic must be >= startDate and <= endDate
+
+#### [Pattern] Lifecycle-aware timer registration: Register timers in service lifecycle hooks (start/stop) rather than constructor or dependency injection initialization (2026-03-15)
+- **Problem solved:** CrdtSyncService heartbeat must only execute when service is running; registering in constructor would cause timers to fire in wrong lifecycle state
+- **Why this works:** Couples timer lifecycle to actual service operation state, preventing premature timer execution and enabling clean lifecycle transitions
+- **Trade-offs:** More boilerplate (explicit lifecycle methods) but safer correctness; easier to reason about than event-based timer management
+
+#### [Pattern] Setter injection for module-level service coordination: Use post-construction setter methods for dependency wiring during module initialization when circular dependencies exist (2026-03-15)
+- **Problem solved:** SchedulerService must be constructed before services register with it, but services only need scheduler reference when they start, not in constructor
+- **Why this works:** Avoids circular dependency and initialization ordering deadlock; provides explicit control over when dependencies are wired; services remain ignorant of scheduler until needed
+- **Trade-offs:** Tighter coupling compared to event-bus but simpler; more setup boilerplate but dependencies are explicit and ordering is controllable
+
+#### [Gotcha] TimerRegistryEntry uses 'type' discriminant field, not 'kind' - test assertions must match actual implementation discriminant exactly (2026-03-15)
+- **Situation:** New test files used 'kind' field but implementation defines 'type' as the discriminant, causing 6+ test assertion failures
+- **Root cause:** Type discriminants are the contract between registry and consumers; misalignment breaks compile-time type safety and runtime assertions
+- **How to avoid:** Naming consistency over intent - 'type' is more standard TypeScript discriminant naming than 'kind'
+
+#### [Pattern] All event handler errors caught and logged as warnings, never thrown (2026-03-15)
+- **Problem solved:** Event-driven service integrating with feature lifecycle and auto-mode events
+- **Why this works:** Prevents cascade failures into main application flow; keeps service lightweight and non-blocking as a hard requirement
+- **Trade-offs:** Silent failures easier to miss in monitoring vs guaranteed non-blocking execution for critical path
+
+### Relied on existing `upsertBySourceId` idempotency instead of implementing custom deduplication (2026-03-15)
+- **Context:** Multiple events could trigger calendar entry creation; no event deduping middleware existed
+- **Why:** Exploits existing idempotent storage operation, eliminates need for separate deduplication layer or state tracking
+- **Rejected:** Event deduplication middleware, in-memory cache tracking, event replay protection
+- **Trade-offs:** Simpler service code vs hidden dependency on storage layer contract
+- **Breaking if changed:** If upsertBySourceId becomes non-idempotent or if event sources begin replaying historical events, duplicates appear silently
+
+#### [Gotcha] Service fully dependent on event emission from multiple sources (feature lifecycle, auto-mode); has no active discovery mechanism (2026-03-15)
+- **Situation:** Pure event subscription model with no polling or health check fallback
+- **Root cause:** Event-driven design is efficient and real-time, but creates invisible coupling points
+- **How to avoid:** Efficient real-time updates vs difficult debugging if event sources stop emitting

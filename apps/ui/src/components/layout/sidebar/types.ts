@@ -17,6 +17,8 @@ export interface NavItem {
   isLoading?: boolean;
   /** Custom click action that overrides route navigation */
   action?: () => void;
+  /** Optional suffix element rendered after the label (e.g. status dot) */
+  suffix?: React.ReactNode;
 }
 
 export interface SortableProjectItemProps {

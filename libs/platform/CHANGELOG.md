@@ -1,5 +1,110 @@
 # @protolabsai/platform
 
+## 0.62.0
+
+### Minor Changes
+
+- ### Features
+  - wire disconnected features and fix template bugs
+  - wire disconnected features and fix template bugs
+  - enhanced ops dashboard with health dot sidebar integration (M5)
+  - observability integration and ops documentation (M6)
+  - ops dashboard UI and webhook delivery service (M4-P1 + M5)
+  - rate limiting middleware and webhook secret rotation (M4-P2)
+  - event router service with delivery tracking API (M4-P3)
+  - job conflict detection and calendar UI updates (M3-P3 cherry-pick)
+  - enhanced ops dashboard with health dot sidebar integration (M5)
+  - observability integration and ops documentation (M6)
+  - ops dashboard UI and webhook delivery service (M4-P1 + M5)
+  - rate limiting middleware and webhook secret rotation (M4-P2)
+  - event router service with delivery tracking API (M4-P3)
+  - job conflict detection and calendar UI updates (M3-P3 cherry-pick)
+  - add Timer Registry API routes with pause/resume controls
+  - add Timer Registry API routes with pause/resume controls
+  - add tokens viewer, design workbench, and AI chat routes
+  - add tokens viewer, design workbench, and AI chat routes
+  - add Timer Registry API routes with pause/resume controls
+  - add Timer Registry API routes with pause/resume controls
+  - add nav bar, dark-mode-first tokens, wire docs route
+  - Design System starter kit — MCP server + monorepo skeleton (#2683)
+  - add MCP server package to design-system starter kit (#2682)
+  - AI a11y agent + axe-core audit package for design-system starter (#2674)
+  - AI design agent for design-system starter kit (#2670)
+  - add TinaCMS site builder to design-system starter kit (#2667)
+  - Vite-native component playground for design-system starter (#2664)
+  - add color science package (OKLCH scales, harmonies, WCAG contrast, semantic tokens) (#2662)
+  - add HTML/CSS output target to design-system starter kit (#2659)
+  - add W3C DTCG design token package to design-system starter (#2661)
+  - pen-to-React pipeline for design system starter kit (#2658)
+  - add MCP server package to ai-agent-app starter kit (#2652)
+  - wire ai-agent-app into scaffold route, UI picker, and starter features (#2651)
+  - add agent role system with GET /api/roles endpoint (#2648)
+  - add slash command system to ai-agent-app starter kit (#2646)
+  - add visual LangGraph flow builder to ai-agent-app starter kit (#2645)
+  - compose chat view with streaming, tool progress, and weather card (#2644)
+  - add session store and chat session hook to ai-agent-app starter kit (#2641)
+  - extract LangGraph state graphs package for ai-agent-app starter kit (#2643)
+  - add trace viewer UI and in-memory tracing (#2639)
+  - add App + State + Chat UI scaffold for ai-agent-app starter kit (#2640)
+  - add WebSocket sideband + ToolProgressEmitter to ai-agent-app starter (#2638)
+  - ToolDefinition + requiresConfirmation registry pattern (#2637)
+  - add observability package with Langfuse + file tracing (#2636)
+  - add POST /api/chat streaming endpoint (#2634)
+  - wire tools package into server with Anthropic agentic loop (#2633)
+  - add model-resolver and Express server to ai-agent-app starter kit (#2631)
+  - add CSS theming system and UI atoms for ai-agent-app (#2627)
+  - add perplexity-style word fade-in animation for streaming responses (#2630)
+  - tools package — define once, deploy everywhere (starter kit) (#2629)
+  - add packages/tools to AI Agent App Starter Kit (#2628)
+  - add ai-agent-app monorepo starter kit (#2624)
+  - add landing page starter kit template
+  - add nav bar, dark-mode-first tokens, wire docs route
+  - add nav bar, dark-mode-first tokens, wire docs route
+
+  ### Bug Fixes
+  - export RecurrenceFrequency and RecurrenceRule from @protolabsai/types
+  - resolve CI failures for staging promotion
+  - export RecurrenceFrequency and RecurrenceRule from @protolabsai/types
+  - resolve CI failures for staging promotion
+  - remove HealthMonitorService from timer-registry integration test
+  - timer registry tests use 'type' not 'kind' for TimerRegistryEntry
+  - handle pen parser path node shape in codegen
+  - isolate codegen errors per generator with stack traces
+  - resolve type divergence between Feature 1 canonical types and Feature 2/3/5 implementations
+  - bridge pen parser variables to codegen array format
+  - remove HealthMonitorService from timer-registry integration test
+  - timer registry tests use 'type' not 'kind' for TimerRegistryEntry
+  - handle pen parser path node shape in codegen
+  - isolate codegen errors per generator with stack traces
+  - resolve type divergence between Feature 1 canonical types and Feature 2/3/5 implementations
+  - resolve type divergence between Feature 1 canonical types and Feature 2/3/5 implementations
+  - bridge pen parser variables to codegen array format
+  - default preview theme to system preference
+  - resolve build issues for end-to-end verification (#2686)
+  - add missing git ls-remote mock in completion-detector shell safety test
+  - skip epic PR when children merged directly to dev (no epic branch on remote) (#2632)
+  - default preview theme to system preference
+  - default preview theme to system preference
+
+  ### Refactors
+  - Job conflict detection and calendar UI updates
+  - Job conflict detection and calendar UI updates
+  - Update docs after: Unified Operations Control Plane (#2706)
+  - migrate GitHubMonitor, DiscordMonitor, and LeadEngineerService to TimerRegistry
+  - Update docs after: Unified Operations Control Plane (#2706)
+  - migrate GitHubMonitor, DiscordMonitor, and LeadEngineerService to TimerRegistry
+  - Migrate health and monitoring services to TimerRegistry (#2695)
+  - migrate GitHubMonitor, DiscordMonitor, and LeadEngineerService to TimerRegistry
+  - migrate GitHubMonitor, DiscordMonitor, and LeadEngineerService to TimerRegistry
+  - Migrate health and monitoring services to TimerRegistry (#2695)
+  - End-to-end verification and build test (#2656)
+  - Migrate health and monitoring services to TimerRegistry (#2695)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.62.0
+
 ## 0.61.0
 
 ### Minor Changes

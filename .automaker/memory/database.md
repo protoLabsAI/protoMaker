@@ -255,3 +255,16 @@ usageStats:
 - **Problem solved:** Sidebar needs to organize navigation by design system hierarchy without hardcoded mappings
 - **Why this works:** Content becomes self-describing via frontmatter. Single source of truth. Scales without code changes. Follows established atomic design principles.
 - **Trade-offs:** Gains: self-describing content, scalable. Loses: requires consistent frontmatter discipline, category changes aren't validated at build time.
+
+
+#### [Gotcha] @protolabsai/utils DTS files must be built before server tsc can resolve type imports, causing build failures if package dependencies are built out-of-order. (2026-03-15)
+- **Situation:** Build pipeline encountered missing exports when server tried to import types from @protolabsai/utils before that package's build completed
+- **Root cause:** TypeScript's module resolution fails on missing .d.ts files even if source exists; monorepo packages must be built in dependency order (bottom-up)
+- **How to avoid:** Forces strict build ordering (slower) for correctness; ensures no stale/missing type definitions
+
+### Support both count-based and endDate-based recurrence limits (frequency + interval + {count OR endDate}) (2026-03-15)
+- **Context:** Some users think 'repeat 5 times', others think 'repeat until March 31'
+- **Why:** Flexibility for different mental models. Real-world calendars support both (iCalendar spec has both RRULE:COUNT and RRULE:UNTIL)
+- **Rejected:** Only count (can't express 'until a date'); only endDate (can't express 'exactly N times')
+- **Trade-offs:** Covers both use cases. But test shows separate code paths—must test both. Ambiguity if both are specified: does count or endDate win? Not visible in tests if there's a precedence rule
+- **Breaking if changed:** If precedence is implicit (count wins over endDate), changing it breaks events defined with both. If expansion logic has a bug (e.g., checks count first, never checks endDate), entire classes of events behave wrong

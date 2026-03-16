@@ -150,6 +150,17 @@ export function SidebarNavigation({
                     >
                       {item.label}
                     </span>
+                    {/* Suffix element (e.g. health dot) */}
+                    {item.suffix && sidebarOpen && (
+                      <span
+                        className={cn(
+                          'transition-opacity duration-200',
+                          contentReady ? 'opacity-100' : 'opacity-0'
+                        )}
+                      >
+                        {item.suffix}
+                      </span>
+                    )}
                     {/* Count badge */}
                     {item.count !== undefined && item.count > 0 && sidebarOpen && (
                       <span

@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 /**
  * Vite configuration for the AI Agent App frontend.
@@ -9,7 +10,7 @@ import react from '@vitejs/plugin-react';
  * are served from the same origin or configure CORS accordingly.
  */
 export default defineConfig({
-  plugins: [react()],
+  plugins: [tailwindcss(), react()],
 
   server: {
     port: 5173,
