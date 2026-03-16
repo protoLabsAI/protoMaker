@@ -34,6 +34,30 @@
   --popover-foreground: #fafafa;
 }
 
+/* Light theme overrides */
+[data-theme='light'] {
+  --background: #fafafa;
+  --surface: #ffffff;
+  --border: #e4e4e7;
+  --primary: #7c3aed;
+  --primary-foreground: #ffffff;
+  --foreground: #09090b;
+
+  --surface-2: #f4f4f5;
+  --surface-3: #e4e4e7;
+
+  --text-secondary: #52525b;
+  --text-muted: #71717a;
+
+  --success: #16a34a;
+  --warning: #ca8a04;
+  --error: #dc2626;
+  --info: #2563eb;
+
+  --popover: #ffffff;
+  --popover-foreground: #09090b;
+}
+
 /* Tailwind CSS 4 @theme inline bridge — maps CSS vars to Tailwind color utilities */
 @theme inline {
   --color-background: var(--background);

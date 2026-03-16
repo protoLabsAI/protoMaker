@@ -134,6 +134,20 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
           // ── Tools available to the model ─────────────────────────────────
           tools: {
             getCurrentTime,
+            get_weather: tool({
+              description: 'Get current weather for a location (demo — returns mock data).',
+              inputSchema: z.object({
+                location: z.string().describe('City name or location'),
+              }),
+              execute: async ({ location }) => ({
+                location,
+                temperature: Math.round(15 + Math.random() * 20),
+                condition: ['sunny', 'cloudy', 'rainy', 'partly cloudy'][
+                  Math.floor(Math.random() * 4)
+                ],
+                humidity: Math.round(30 + Math.random() * 50),
+              }),
+            }),
           },
 
           // ── Agent loop limit ─────────────────────────────────────────────
