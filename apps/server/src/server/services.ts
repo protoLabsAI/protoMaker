@@ -81,6 +81,7 @@ import { ChannelRouter } from '../services/channel-router.js';
 import { NotificationRouter } from '../services/notification-router.js';
 import { JobExecutorService } from '../services/job-executor-service.js';
 import { DoraMetricsService } from '../services/dora-metrics-service.js';
+import { DeploymentTrackerService } from '../services/deployment-tracker-service.js';
 import { MetricsCollectionService } from '../services/metrics-collection-service.js';
 import { ErrorBudgetService } from '../services/error-budget-service.js';
 import {
@@ -277,6 +278,9 @@ export interface ServiceContainer {
   // DORA metrics (lead time, deployment frequency, change failure rate, recovery time, rework rate)
   doraMetricsService: DoraMetricsService;
 
+  // Deployment tracking (real CI/CD pipeline event capture for DORA metrics)
+  deploymentTrackerService: DeploymentTrackerService;
+
   // DORA metrics collection (event-driven time-series collector, persists to .automaker/metrics/dora.json)
   metricsCollectionService: MetricsCollectionService;
 
@@ -326,7 +330,13 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   const trustTierService = new TrustTierService(dataDir);
   const agentService = new AgentService(dataDir, events, settingsService, featureLoader);
   const metricsService = new MetricsService(featureLoader);
-  const doraMetricsService = new DoraMetricsService(featureLoader);
+  // Deployment Tracker Service — records real CI/CD deployment events (global, not per-project)
+  const deploymentTrackerService = new DeploymentTrackerService(dataDir, events);
+  const doraMetricsService = new DoraMetricsService(
+    featureLoader,
+    undefined,
+    deploymentTrackerService
+  );
 
   // DORA Metrics Collection Service — event-driven time-series persistence
   const metricsCollectionService = new MetricsCollectionService(
@@ -919,6 +929,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     crdtSyncService,
     todoService,
     doraMetricsService,
+    deploymentTrackerService,
     metricsCollectionService,
     errorBudgetService,
     frictionTrackerService,

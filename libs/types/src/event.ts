@@ -362,7 +362,11 @@ export type EventType =
   | 'webhook:delivery:received'
   | 'webhook:delivery:completed'
   | 'webhook:delivery:failed'
-  | 'webhook:delivery:retrying';
+  | 'webhook:delivery:retrying'
+  // Deployment tracking events (CI/CD pipeline event capture)
+  | 'deploy:started'
+  | 'deploy:succeeded'
+  | 'deploy:failed';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
@@ -929,6 +933,34 @@ export interface EventPayloadMap {
     eventType: string;
     attempt: number;
     nextRetryAt: string;
+    timestamp: string;
+  };
+
+  // Deployment tracking events (CI/CD pipeline)
+  'deploy:started': {
+    deploymentId: string;
+    environment: import('./deployment.js').DeployEnvironment;
+    commitSha: string;
+    commitShort: string;
+    runId?: string;
+    runUrl?: string;
+    timestamp: string;
+  };
+  'deploy:succeeded': {
+    deploymentId: string;
+    environment: import('./deployment.js').DeployEnvironment;
+    commitSha: string;
+    version?: string;
+    durationMs: number;
+    timestamp: string;
+  };
+  'deploy:failed': {
+    deploymentId: string;
+    environment: import('./deployment.js').DeployEnvironment;
+    commitSha: string;
+    error?: string;
+    rolledBack: boolean;
+    durationMs: number;
     timestamp: string;
   };
 }

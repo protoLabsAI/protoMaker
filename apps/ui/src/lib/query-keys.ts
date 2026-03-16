@@ -260,6 +260,8 @@ export const queryKeys = {
     /** DORA history buckets for trend charts */
     history: (projectPath: string, window: '7d' | '30d' | '90d') =>
       ['dora', 'history', projectPath, window] as const,
+    /** Deployment history for CI/CD tracking */
+    deployments: (environment?: string) => ['dora', 'deployments', environment] as const,
   },
 
   // ============================================

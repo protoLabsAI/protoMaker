@@ -26,6 +26,9 @@ import type {
   DiscordChannelSignalConfig,
   DoraMetrics,
   DoraRegulationAlert,
+  DeploymentEvent,
+  DeploymentStats,
+  DeployEnvironment,
   Project,
   ProjectHealth,
   HivemindPeer,
@@ -90,6 +93,26 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
           window: string;
         }>(
           `/api/dora/history?projectPath=${encodeURIComponent(projectPath)}${window ? `&window=${window}` : ''}`
+        ),
+    };
+
+    // Deployments API (real CI/CD deployment tracking)
+    deployments = {
+      list: (opts?: { environment?: DeployEnvironment; since?: string; limit?: number }) =>
+        this.get<{
+          success: boolean;
+          deployments: DeploymentEvent[];
+          stats: DeploymentStats;
+        }>(
+          `/api/deploy/deployments${
+            opts
+              ? `?${new URLSearchParams(
+                  Object.entries(opts)
+                    .filter(([, v]) => v != null)
+                    .map(([k, v]) => [k, String(v)])
+                ).toString()}`
+              : ''
+          }`
         ),
     };
 

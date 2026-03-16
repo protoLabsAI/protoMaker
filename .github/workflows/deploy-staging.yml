@@ -102,6 +102,26 @@ jobs:
           fi
           echo "Disk space OK: ${AVAIL_GB}GB free (minimum ${MIN_GB}GB)"
 
+      - name: Record deployment start
+        run: |
+          AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' "$ENV_SOURCE" || echo "")
+          echo "::add-mask::$AUTOMAKER_API_KEY"
+          COMMIT="${{ github.sha }}"
+          COMMIT_SHORT="${COMMIT:0:8}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          RESPONSE=$(curl -sf -X POST http://localhost:3008/api/deploy/start \
+            -H "Content-Type: application/json" \
+            -H "X-API-Key: $AUTOMAKER_API_KEY" \
+            -d "{\"environment\":\"staging\",\"commitSha\":\"${COMMIT}\",\"commitShort\":\"${COMMIT_SHORT}\",\"runId\":\"${{ github.run_id }}\",\"runUrl\":\"${RUN_URL}\"}" \
+            --max-time 10 2>/dev/null || echo "")
+          if [ -n "$RESPONSE" ]; then
+            DEPLOYMENT_ID=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployment',{}).get('id',''))" 2>/dev/null || echo "")
+            echo "DEPLOYMENT_ID=$DEPLOYMENT_ID" >> "$GITHUB_ENV"
+            echo "Deployment tracking started: $DEPLOYMENT_ID"
+          else
+            echo "Deployment tracking skipped (server not running)"
+          fi
+
       - name: Drain running agents
         run: |
           # Gracefully stop auto-mode and wait for agents to finish.
@@ -184,6 +204,21 @@ jobs:
         env:
           DISCORD_ALERTS_WEBHOOK: ${{ secrets.DISCORD_ALERTS_WEBHOOK }}
 
+      - name: Record deployment success
+        if: success()
+        run: |
+          AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' "$ENV_SOURCE" || echo "")
+          echo "::add-mask::$AUTOMAKER_API_KEY"
+          DEPLOYMENT_ID="${DEPLOYMENT_ID:-}"
+          if [ -n "$DEPLOYMENT_ID" ]; then
+            VERSION=$(curl -sf http://localhost:3008/api/health | python3 -c "import sys,json; print(json.load(sys.stdin).get('version','unknown'))" 2>/dev/null || echo "unknown")
+            curl -sf -X POST http://localhost:3008/api/deploy/complete \
+              -H "Content-Type: application/json" \
+              -H "X-API-Key: $AUTOMAKER_API_KEY" \
+              -d "{\"deploymentId\":\"${DEPLOYMENT_ID}\",\"status\":\"succeeded\",\"version\":\"${VERSION}\"}" \
+              --max-time 10 || echo "Deploy completion recording skipped"
+          fi
+
       - name: Rollback on failure
         id: rollback
         if: failure() && (steps.rebuild.outcome == 'failure' || steps.verify.outcome == 'failure' || steps.smoke.outcome == 'failure')
@@ -237,6 +272,18 @@ jobs:
             echo "CRITICAL: Rollback also failed. Manual intervention required."
             docker compose -f docker-compose.staging.yml logs --tail=50 server
             exit 1
+          fi
+
+          # Record deployment failure (server may be back up after rollback)
+          DEPLOYMENT_ID="${DEPLOYMENT_ID:-}"
+          if [ -n "$DEPLOYMENT_ID" ]; then
+            AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' "$ENV_SOURCE" || echo "")
+            echo "::add-mask::$AUTOMAKER_API_KEY"
+            curl -sf -X POST http://localhost:3008/api/deploy/complete \
+              -H "Content-Type: application/json" \
+              -H "X-API-Key: $AUTOMAKER_API_KEY" \
+              -d "{\"deploymentId\":\"${DEPLOYMENT_ID}\",\"status\":\"rolled_back\",\"rolledBack\":true,\"error\":\"Deploy verification failed, rolled back\"}" \
+              --max-time 10 || echo "Deploy failure recording skipped"
           fi
 
       - name: Cleanup

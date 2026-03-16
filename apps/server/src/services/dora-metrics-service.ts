@@ -1,6 +1,7 @@
 import type { Feature, DoraMetrics, DoraRegulationAlert } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
 import type { FeatureLoader } from './feature-loader.js';
+import type { DeploymentTrackerService } from './deployment-tracker-service.js';
 
 const logger = createLogger('DoraMetricsService');
 
@@ -31,10 +32,16 @@ const DEFAULT_THRESHOLDS: DoraThresholds = {
 export class DoraMetricsService {
   private featureLoader: FeatureLoader;
   private thresholds: DoraThresholds;
+  private deploymentTracker?: DeploymentTrackerService;
 
-  constructor(featureLoader: FeatureLoader, thresholds?: Partial<DoraThresholds>) {
+  constructor(
+    featureLoader: FeatureLoader,
+    thresholds?: Partial<DoraThresholds>,
+    deploymentTracker?: DeploymentTrackerService
+  ) {
     this.featureLoader = featureLoader;
     this.thresholds = { ...DEFAULT_THRESHOLDS, ...thresholds };
+    this.deploymentTracker = deploymentTracker;
   }
 
   async getMetrics(
@@ -51,8 +58,8 @@ export class DoraMetricsService {
 
     const leadTime = this.computeLeadTime(recentFeatures);
     const deploymentFrequency = this.computeDeploymentFrequency(recentFeatures, timeWindowDays);
-    const changeFailureRate = this.computeChangeFailureRate(recentFeatures);
-    const recoveryTime = this.computeRecoveryTime(recentFeatures);
+    const changeFailureRate = this.computeChangeFailureRate(recentFeatures, timeWindowDays);
+    const recoveryTime = this.computeRecoveryTime(recentFeatures, timeWindowDays);
     const reworkRate = this.computeReworkRate(recentFeatures);
 
     const metrics: DoraMetrics = {
@@ -199,13 +206,48 @@ export class DoraMetricsService {
     return Number((avgMs / (60 * 60 * 1000)).toFixed(2));
   }
 
+  /**
+   * Deployment frequency: when real deployment data exists, use actual production
+   * deployments per day. Falls back to feature completion rate.
+   */
   private computeDeploymentFrequency(features: Feature[], timeWindowDays: number): number {
+    if (this.deploymentTracker) {
+      const stats = this.deploymentTracker.getStats(timeWindowDays);
+      // Use real production deploys if any exist
+      const prodDeploys = this.deploymentTracker.getDeployments({
+        environment: 'production',
+        since: new Date(Date.now() - timeWindowDays * 24 * 60 * 60 * 1000).toISOString(),
+      });
+      const succeededProd = prodDeploys.filter((d) => d.status === 'succeeded');
+      if (succeededProd.length > 0 && timeWindowDays > 0) {
+        return Number((succeededProd.length / timeWindowDays).toFixed(3));
+      }
+      // Fall back to all succeeded deploys (including staging)
+      if (stats.succeeded > 0 && timeWindowDays > 0) {
+        return Number((stats.succeeded / timeWindowDays).toFixed(3));
+      }
+    }
+
+    // Feature-based fallback
     const completed = features.filter((f) => f.status === 'done' && f.completedAt);
     if (completed.length === 0 || timeWindowDays === 0) return 0;
     return Number((completed.length / timeWindowDays).toFixed(3));
   }
 
-  private computeChangeFailureRate(features: Feature[]): number {
+  /**
+   * Change failure rate: when real deployment data exists, use
+   * (failed + rolled_back) / total_completed. Falls back to feature-based.
+   */
+  private computeChangeFailureRate(features: Feature[], timeWindowDays: number = 30): number {
+    if (this.deploymentTracker) {
+      const stats = this.deploymentTracker.getStats(timeWindowDays);
+      const total = stats.succeeded + stats.failed + stats.rolledBack;
+      if (total > 0) {
+        return Number(((stats.failed + stats.rolledBack) / total).toFixed(3));
+      }
+    }
+
+    // Feature-based fallback
     const completed = features.filter((f) => f.status === 'done');
     if (completed.length === 0) return 0;
 
@@ -218,7 +260,45 @@ export class DoraMetricsService {
     return Number((rolledBack.length / completed.length).toFixed(3));
   }
 
-  private computeRecoveryTime(features: Feature[]): number {
+  /**
+   * Recovery time (MTTR): when real deployment data exists, use the time
+   * from a failed deploy to the next successful deploy. Falls back to
+   * feature blocked→unblocked durations.
+   */
+  private computeRecoveryTime(features: Feature[], timeWindowDays: number = 30): number {
+    if (this.deploymentTracker) {
+      const cutoff = new Date(Date.now() - timeWindowDays * 24 * 60 * 60 * 1000).toISOString();
+      const deploys = this.deploymentTracker.getDeployments({ since: cutoff });
+
+      // Walk deploys chronologically (oldest first) to find failed→succeeded pairs
+      const sorted = [...deploys]
+        .filter((d) => d.completedAt)
+        .sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
+
+      const recoveryDurations: number[] = [];
+      let lastFailedAt: number | null = null;
+
+      for (const d of sorted) {
+        if (d.status === 'failed' || d.status === 'rolled_back') {
+          if (lastFailedAt === null && d.completedAt) {
+            lastFailedAt = new Date(d.completedAt).getTime();
+          }
+        } else if (d.status === 'succeeded' && lastFailedAt !== null && d.completedAt) {
+          const recoveredAt = new Date(d.completedAt).getTime();
+          if (recoveredAt > lastFailedAt) {
+            recoveryDurations.push(recoveredAt - lastFailedAt);
+          }
+          lastFailedAt = null;
+        }
+      }
+
+      if (recoveryDurations.length > 0) {
+        const avgMs = recoveryDurations.reduce((a, b) => a + b, 0) / recoveryDurations.length;
+        return Number((avgMs / (60 * 60 * 1000)).toFixed(2));
+      }
+    }
+
+    // Feature-based fallback
     const durations: number[] = [];
 
     for (const f of features) {

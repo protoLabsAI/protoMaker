@@ -8,7 +8,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { queryKeys } from '@/lib/query-keys';
-import type { TimeSeriesMetric, TimeGroupBy } from '@protolabsai/types';
+import type { TimeSeriesMetric, TimeGroupBy, DeployEnvironment } from '@protolabsai/types';
 import type { FrictionResponse, FailureBreakdownResponse } from '@/lib/http-api-client';
 
 const DORA_STALE_TIME = 60 * 1000; // 1 minute
@@ -486,5 +486,24 @@ export function useActivityFeed(projectPath?: string, limit: number = 50) {
     refetchInterval: ACTIVITY_FEED_STALE_TIME,
     refetchOnWindowFocus: false,
     retry: 1,
+  });
+}
+
+const DEPLOYMENTS_STALE_TIME = 60 * 1000; // 1 minute
+
+/**
+ * Fetch deployment history and stats from the deployment tracker.
+ * Uses GET /api/deploy/deployments.
+ */
+export function useDeployments(environment?: DeployEnvironment) {
+  return useQuery({
+    queryKey: queryKeys.dora.deployments(environment),
+    queryFn: async () => {
+      const api = getHttpApiClient();
+      return api.deployments.list(environment ? { environment } : undefined);
+    },
+    staleTime: DEPLOYMENTS_STALE_TIME,
+    refetchInterval: DEPLOYMENTS_STALE_TIME,
+    refetchOnWindowFocus: false,
   });
 }

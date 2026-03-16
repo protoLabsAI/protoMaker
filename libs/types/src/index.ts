@@ -976,6 +976,15 @@ export type {
 // DORA metrics types (lead time, deployment frequency, change failure rate, recovery time, rework rate)
 export type { DoraMetrics, MetricValue, DoraRegulationAlert } from './dora-metrics.js';
 
+// Deployment tracking types (real CI/CD pipeline event capture)
+export type {
+  DeployEnvironment,
+  DeploymentStatus,
+  DeploymentEvent,
+  DeploymentDocument,
+  DeploymentStats,
+} from './deployment.js';
+
 // Friction tracker types (self-improvement loop — recurring failure pattern detection)
 export type { FrictionReport } from './friction-report.js';
 
