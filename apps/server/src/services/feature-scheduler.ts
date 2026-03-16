@@ -861,6 +861,14 @@ export class FeatureScheduler {
             continue;
           }
 
+          // Skip features assigned to a human — only undefined, null, or "agent" are eligible
+          if (feature.assignee && feature.assignee !== 'agent') {
+            logger.info(
+              `[loadPendingFeatures] Skipping feature ${feature.id} — assigned to human: "${feature.assignee}"`
+            );
+            continue;
+          }
+
           // Creation cooldown: skip features created too recently to allow the creator time
           // to set dependencies, adjust properties, or batch-create related features.
           if (feature.createdAt) {
