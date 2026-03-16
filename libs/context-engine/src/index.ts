@@ -25,3 +25,5 @@
 
 export * from './store/index.js';
 export * from './compaction/index.js';
+export * from './retrieval/index.js';
+export * from './interception/index.js';

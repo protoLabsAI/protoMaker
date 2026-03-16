@@ -94,6 +94,7 @@ import { createDoraRoutes } from '../routes/dora/index.js';
 import { createAgentRoutes } from '../routes/agents.js';
 import { createOpsRoutes } from '../routes/ops/index.js';
 import { createQaRoutes } from '../routes/qa/index.js';
+import { createContextEngineRoutes } from '../routes/context-engine.js';
 
 const logger = createLogger('Server:Routes');
 
@@ -453,6 +454,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // QA check aggregation (consolidated report for Quinn QA agent)
   app.use('/api/qa', createQaRoutes(services));
   logger.info('QA routes mounted at /api/qa');
+
+  // Context-engine retrieval tools (lcm_grep, lcm_describe, lcm_expand)
+  app.use('/api/context-engine', createContextEngineRoutes());
+  logger.info('Context-engine routes mounted at /api/context-engine');
 
   // Note: Sentry v8 automatically captures Express errors - no manual error handler needed
 }

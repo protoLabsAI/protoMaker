@@ -14,7 +14,8 @@
       "@protolabsai/templates": ["../../libs/templates/src/index.ts"],
       "@protolabsai/tools": ["../../libs/tools/dist/index.d.ts"],
       "@protolabsai/types": ["../../libs/types/dist/index.d.ts"],
-      "@protolabsai/utils": ["../../libs/utils/dist/index.d.ts"]
+      "@protolabsai/utils": ["../../libs/utils/dist/index.d.ts"],
+      "@protolabsai/context-engine": ["../../libs/context-engine/dist/index.d.ts"]
     }
   }
 }

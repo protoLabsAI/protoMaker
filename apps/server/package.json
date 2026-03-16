@@ -45,6 +45,7 @@
     "@opentelemetry/exporter-trace-otlp-http": "^0.212.0",
     "@opentelemetry/sdk-node": "^0.212.0",
     "@opentelemetry/sdk-trace-base": "^2.0.0",
+    "@protolabsai/context-engine": "^0.68.1",
     "@protolabsai/dependency-resolver": "^0.69.0",
     "@protolabsai/error-tracking": "^0.53.16",
     "@protolabsai/flows": "^0.69.0",
