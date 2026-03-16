@@ -5,6 +5,7 @@
 import { Router } from 'express';
 import type { EventEmitter } from '../../lib/events.js';
 import { validatePathParams } from '../../middleware/validate-paths.js';
+import { createRateLimiter } from '../../middleware/rate-limiter.js';
 import { createCheckGitHubRemoteHandler } from './routes/check-github-remote.js';
 import { createListIssuesHandler } from './routes/list-issues.js';
 import { createListPRsHandler } from './routes/list-prs.js';
@@ -21,6 +22,9 @@ import { createProcessCodeRabbitFeedbackHandler } from './routes/process-coderab
 import { createGetPRFeedbackHandler } from './routes/get-pr-feedback.js';
 import { createResolvePRThreadsHandler } from './routes/resolve-pr-threads.js';
 import { createWebhookHandler } from './routes/webhook.js';
+import { createRotateSecretHandler } from './routes/rotate-secret.js';
+
+const webhookRateLimiter = createRateLimiter();
 import { createMergePRHandler } from './routes/merge-pr.js';
 import { createCheckPRStatusHandler } from './routes/check-pr-status.js';
 import { createPRReviewCommentsHandler } from './routes/pr-review-comments.js';
@@ -37,7 +41,12 @@ export function createGitHubRoutes(
   // Webhook endpoint - must be first (no validatePathParams middleware)
   // Uses query parameter for project path to support GitHub webhook configuration
   if (settingsService) {
-    router.post('/webhook', createWebhookHandler(settingsService, events));
+    router.post(
+      '/webhook',
+      webhookRateLimiter.middleware,
+      createWebhookHandler(settingsService, events)
+    );
+    router.post('/rotate-secret', createRotateSecretHandler(settingsService));
   }
 
   router.post('/check-remote', validatePathParams('projectPath'), createCheckGitHubRemoteHandler());

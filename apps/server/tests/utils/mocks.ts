@@ -78,6 +78,7 @@ export function createMockExpressContext() {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
     send: vi.fn().mockReturnThis(),
+    setHeader: vi.fn().mockReturnThis(),
   } as any;
 
   const next = vi.fn();

@@ -147,6 +147,10 @@ export interface Credentials {
   webhookSecrets?: {
     /** GitHub webhook secret for HMAC-SHA256 signature verification */
     github?: string;
+    /** Previous GitHub webhook secret, used during secret rotation for zero-downtime */
+    previousGithub?: string;
+    /** ISO 8601 expiry timestamp for the previous secret (ignored after expiry) */
+    previousGithubExpiresAt?: string;
   };
   /** Discord bot tokens for MCP integration */
   discordTokens?: {
