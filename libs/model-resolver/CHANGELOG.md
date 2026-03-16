@@ -1,5 +1,22 @@
 # @protolabsai/model-resolver
 
+## 0.71.0
+
+### Minor Changes
+
+- ### Features
+  - parameterize Ava prompt via getEngineeringBase (#2759)
+  - parameterize Ava prompt via getEngineeringBase (#2759)
+
+  ### Bug Fixes
+  - address QA findings for v0.70.0 (Dockerfile rebuild, enabled flag, shutdown cleanup)
+  - address QA findings for v0.70.0 (Dockerfile rebuild, enabled flag, shutdown cleanup)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.71.0
+
 ## 0.70.0
 
 ### Minor Changes
