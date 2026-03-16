@@ -285,6 +285,7 @@ export class AutoModeService {
       getGlobalRunningCount: () => this.concurrencyManager.size,
       hasInProgressFeatures: this.hasInProgressFeatures.bind(this),
       isFeatureRunning: this.isFeatureRunning.bind(this),
+      getRunningFeatureIds: () => [...this.runningFeatures.keys()],
       isFeatureActiveInPipeline: (featureId: string) =>
         this.leadEngineerService?.isFeatureActive(featureId) ?? false,
       isFeatureFinished: this.isFeatureFinished.bind(this),
