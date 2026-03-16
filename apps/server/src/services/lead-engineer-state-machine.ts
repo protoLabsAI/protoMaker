@@ -334,7 +334,14 @@ export class FeatureStateMachine {
           const cs = this.checkpointService;
           const nextStateSnapshot = result.nextState;
           this.persistQueue.enqueue(() =>
-            cs.save(projectPath, feature.id, nextStateSnapshot, ctx, completedStates, goalGateResults)
+            cs.save(
+              projectPath,
+              feature.id,
+              nextStateSnapshot,
+              ctx,
+              completedStates,
+              goalGateResults
+            )
           );
           this.emitPipelineEvent('pipeline:checkpoint-saved', {
             featureId: feature.id,

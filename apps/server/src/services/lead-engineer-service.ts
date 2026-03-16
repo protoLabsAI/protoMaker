@@ -639,7 +639,9 @@ export class LeadEngineerService {
       // Track suspended features (REVIEW/MERGE) for external re-trigger.
       const SUSPEND_STATES = new Set<string>(['REVIEW', 'MERGE']);
       if (SUSPEND_STATES.has(result.finalState)) {
-        logger.info(`[LeadEngineer] Feature ${featureId} suspended in ${result.finalState} — queued for resume`);
+        logger.info(
+          `[LeadEngineer] Feature ${featureId} suspended in ${result.finalState} — queued for resume`
+        );
         this.pendingResumes.set(featureId, { projectPath, featureId });
       }
 
