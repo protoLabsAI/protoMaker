@@ -36,6 +36,7 @@ COPY libs/tools/package*.json ./libs/tools/
 COPY libs/pen-parser/package*.json ./libs/pen-parser/
 COPY libs/templates/package*.json ./libs/templates/
 COPY libs/ui/package*.json ./libs/ui/
+COPY libs/context-engine/package*.json ./libs/context-engine/
 
 # Copy scripts (needed by npm workspace)
 COPY scripts ./scripts
