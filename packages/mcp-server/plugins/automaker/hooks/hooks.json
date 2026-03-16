@@ -1,4 +1,5 @@
 {
+  "_deprecated": "This file is superseded by plugin.json. The hooks field in .claude-plugin/plugin.json is the single source of truth. This file is kept for backward compatibility with Claude Code versions that read hooks.json separately. When Claude Code supports {{pluginDir}} variable substitution in plugin.json hooks, this file will be removed.",
   "description": "Automaker operational hooks — autonomous operation, safety guards, context injection",
   "hooks": {
     "SessionStart": [

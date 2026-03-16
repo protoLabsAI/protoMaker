@@ -212,11 +212,11 @@ The plugin configuration is in `packages/mcp-server/plugins/automaker/.claude-pl
 
 ```json
 {
-  "name": "automaker",
-  "description": "protoLabs Studio — AI Development Studio. Manage Kanban boards, AI agents, and feature orchestration.",
-  "version": "1.1.1",
+  "name": "protolabs",
+  "description": "protoLabs Studio - AI Development Studio...",
+  "version": "0.69.0",
   "mcpServers": {
-    "automaker": {
+    "studio": {
       "command": "bash",
       "args": ["${AUTOMAKER_ROOT}/packages/mcp-server/plugins/automaker/hooks/start-mcp.sh"],
       "env": {
@@ -226,11 +226,43 @@ The plugin configuration is in `packages/mcp-server/plugins/automaker/.claude-pl
         "ENABLE_TOOL_SEARCH": "auto:10"
       }
     }
+  },
+  "hooks": {
+    "PreToolUse": [{ "matcher": "Bash", "hooks": [{ "type": "command", "command": "..." }] }],
+    "PostToolUse": [
+      { "matcher": "Edit|Write", "hooks": [{ "type": "command", "command": "..." }] }
+    ],
+    "SessionStart": [{ "matcher": "startup", "hooks": [{ "type": "command", "command": "..." }] }],
+    "SessionEnd": [{ "hooks": [{ "type": "command", "command": "..." }] }],
+    "PreCompact": [{ "hooks": [{ "type": "command", "command": "..." }] }],
+    "PostToolUseFailure": [
+      {
+        "matcher": "mcp__plugin_protolabs_studio__",
+        "hooks": [{ "type": "command", "command": "..." }]
+      }
+    ]
   }
 }
 ```
 
 The MCP server is launched via `start-mcp.sh` which handles path resolution and env loading automatically.
+
+### Plugin-Distributed Hooks
+
+Hooks ship alongside MCP servers in `plugin.json`. When you install the plugin, hooks are automatically registered -- no manual configuration needed. The `hooks` field supports all Claude Code lifecycle events:
+
+| Event                | Purpose                                    |
+| -------------------- | ------------------------------------------ |
+| `SessionStart`       | Diagnostics, context injection on startup  |
+| `PreToolUse`         | Safety guards before tool execution        |
+| `PostToolUse`        | Post-processing (formatting, agent launch) |
+| `PreCompact`         | Snapshot state before context compression  |
+| `SessionEnd`         | Persist session summary and history        |
+| `PostToolUseFailure` | Diagnostic output on MCP tool failures     |
+
+Hook scripts live in `packages/mcp-server/plugins/automaker/hooks/` and use `${CLAUDE_PLUGIN_ROOT}` for path resolution. See [Plugin Deep Dive](./plugin-deep-dive.md) for the full hook reference.
+
+**Plugin hooks and project hooks both run.** If your project has hooks in `.claude/settings.json`, they execute after plugin hooks. If any hook returns exit code 2, the tool call is blocked.
 
 ## Docker Deployment
 

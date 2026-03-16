@@ -25,38 +25,45 @@ claude plugin install protolabs
 # Update (picks up new tools, commands)
 claude plugin update protolabs
 
-# Full reinstall (required after hooks.json changes)
+# Full reinstall (required after plugin.json hooks changes)
 claude plugin uninstall protolabs && claude plugin install protolabs
 
 # Check installed versions
 claude plugin list
 ```
 
-## hooks.json Format
+## Hook Configuration
 
-Plugin hooks require a `"hooks"` wrapper key at top level. Events go INSIDE the wrapper:
+Hooks are defined in `plugin.json` (`.claude-plugin/plugin.json`), not in `hooks.json`. The `hooks` field sits alongside `mcpServers`:
 
 ```json
 {
+  "name": "protolabs",
+  "mcpServers": { ... },
   "hooks": {
-    "SessionStart": [...],
+    "PreToolUse": [{ "matcher": "Bash", "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/block-dangerous.sh\"" }] }],
     "PostToolUse": [...],
-    "PreToolUse": [...]
+    "SessionStart": [...],
+    "SessionEnd": [...],
+    "PreCompact": [...],
+    "PostToolUseFailure": [...]
   }
 }
 ```
 
 Use `${CLAUDE_PLUGIN_ROOT}` for paths to hook scripts within the plugin directory.
 
+`hooks/hooks.json` is deprecated -- kept only for backward compatibility. All new hooks go in `plugin.json`.
+
 ## When to Reinstall vs Update
 
-| Change                  | Action                               |
-| ----------------------- | ------------------------------------ |
-| New MCP tool added      | `claude plugin update protolabs`     |
-| Tool schema changed     | `claude plugin update protolabs`     |
-| hooks.json modified     | Full reinstall (uninstall + install) |
-| New command/skill added | `claude plugin update protolabs`     |
-| Plugin .env changed     | Restart Claude Code session          |
+| Change                       | Action                               |
+| ---------------------------- | ------------------------------------ |
+| New MCP tool added           | `claude plugin update protolabs`     |
+| Tool schema changed          | `claude plugin update protolabs`     |
+| Hooks changed in plugin.json | Full reinstall (uninstall + install) |
+| New command/skill added      | `claude plugin update protolabs`     |
+| Plugin .env changed          | Restart Claude Code session          |
 
 **`update` alone doesn't pick up hooks changes.** Always do full reinstall for hooks.
 

@@ -19,7 +19,7 @@ packages/mcp-server/
     ├── .claude-plugin/
     │   └── plugin.json       # Plugin manifest (name, version, mcpServers, hooks)
     ├── hooks/
-    │   ├── hooks.json        # Hook configuration (mirrors plugin.json)
+    │   ├── hooks.json        # DEPRECATED — plugin.json is authoritative
     │   ├── start-mcp.sh      # MCP server launcher
     │   ├── check-mcp-health.sh
     │   ├── session-context.sh
@@ -185,7 +185,9 @@ Hooks are shell scripts (or Node.js scripts) that fire at Claude Code lifecycle 
 
 ### Hook Configuration
 
-Hooks are defined in both `plugin.json` and `hooks.json`. The plugin manifest is authoritative; `hooks.json` is a development-readable copy kept in sync.
+Hooks are defined in the `hooks` field of `plugin.json` (`.claude-plugin/plugin.json`). This is the single source of truth. A legacy `hooks/hooks.json` file exists for backward compatibility but is deprecated -- all new hooks go in `plugin.json`.
+
+Hook commands use `${CLAUDE_PLUGIN_ROOT}` for path resolution to scripts within the plugin directory. A future Claude Code release will support `{{pluginDir}}` as a standardized variable -- at that point, all paths will migrate to the new format.
 
 ### Lifecycle Events
 
@@ -421,18 +423,23 @@ Reinstall the plugin: `claude plugin uninstall protolabs && claude plugin instal
 
 1. Create the script in `packages/mcp-server/plugins/automaker/hooks/`
 2. Make it executable: `chmod +x hooks/my-hook.sh`
-3. Register in both `plugin.json` and `hooks.json`:
+3. Register in `plugin.json` (`.claude-plugin/plugin.json`) under the appropriate event:
 
 ```json
 {
-  "event": "PostToolUse",
-  "matcher": "ToolPattern",
-  "hooks": [
-    {
-      "type": "command",
-      "command": "bash ${AUTOMAKER_ROOT}/packages/mcp-server/plugins/automaker/hooks/my-hook.sh"
-    }
-  ]
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "ToolPattern",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/my-hook.sh\""
+          }
+        ]
+      }
+    ]
+  }
 }
 ```
 
