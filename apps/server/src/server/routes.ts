@@ -158,6 +158,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     crdtSyncService,
     todoService,
     schedulerService,
+    eventRouterService,
   } = services;
 
   // Run stale validation cleanup every hour to prevent memory leaks from crashed validations
@@ -445,7 +446,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   logger.info('Agent routes mounted at /api/agents');
 
   // Ops routes (timer registry, operational controls)
-  app.use('/api/ops', createOpsRoutes(schedulerService, events));
+  app.use('/api/ops', createOpsRoutes(schedulerService, events, eventRouterService));
   logger.info('Ops routes mounted at /api/ops');
 
   // Note: Sentry v8 automatically captures Express errors - no manual error handler needed
