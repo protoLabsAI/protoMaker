@@ -9,9 +9,7 @@
   "mcpServers": {
     "studio": {
       "command": "bash",
-      "args": [
-        "${AUTOMAKER_ROOT}/packages/mcp-server/plugins/automaker/hooks/start-mcp.sh"
-      ],
+      "args": ["${AUTOMAKER_ROOT}/packages/mcp-server/plugins/automaker/hooks/start-mcp.sh"],
       "env": {
         "AUTOMAKER_API_URL": "http://localhost:3008",
         "AUTOMAKER_API_KEY": "${AUTOMAKER_API_KEY}",
