@@ -7,6 +7,7 @@
 
 import type { EventHookTrigger } from './event-settings.js';
 import type { SignalIntent } from './signal-intent.js';
+import type { GoogleWorkspaceConfig } from './google-workspace.js';
 
 // ============================================================================
 // Discord Settings - Global Discord bot configuration
@@ -280,6 +281,8 @@ export interface GoogleIntegrationConfig {
   email?: string;
   /** Selected Google Calendar ID (defaults to 'primary') */
   calendarId?: string;
+  /** Extended Google Workspace config (webhooks, Gmail, HITL) */
+  workspace?: GoogleWorkspaceConfig;
 }
 
 // ============================================================================
