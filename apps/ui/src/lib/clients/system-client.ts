@@ -253,6 +253,60 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
         }),
     };
 
+    // QA Check API
+    qa = {
+      check: (projectPath: string) =>
+        this.get<{
+          success: boolean;
+          report: {
+            timestamp: string;
+            projectPath: string;
+            health: { status: string; version: string; uptimeMs: number; memoryUsageMb: number };
+            wiring: {
+              totalServices: number;
+              services: Array<{ name: string; wired: boolean }>;
+            };
+            timers: {
+              total: number;
+              running: number;
+              paused: number;
+              signalTimers: string[];
+              healthTimers: string[];
+            };
+            deployments: {
+              total: number;
+              recentCount: number;
+              successRate: number;
+              lastDeploy: {
+                environment: string;
+                status: string;
+                timestamp: string;
+              } | null;
+            };
+            dora: {
+              deploymentFrequency: number;
+              changeFailureRate: number;
+              leadTime: number;
+              recoveryTime: number;
+            } | null;
+            board: {
+              total: number;
+              backlog: number;
+              inProgress: number;
+              review: number;
+              blocked: number;
+              done: number;
+            };
+            signals: {
+              totalPending: number;
+              exceptions: number;
+              decisions: number;
+              signalItems: number;
+            };
+          };
+        }>(`/api/qa/check?projectPath=${encodeURIComponent(projectPath)}`),
+    };
+
     // System API
     system = {
       healthDashboard: (projectPath?: string) =>
