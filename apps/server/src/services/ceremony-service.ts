@@ -15,7 +15,12 @@ import readline from 'readline';
 import { createLogger } from '@protolabsai/utils';
 import { secureFs, getProjectDir, getDataDirectory, getAutomakerDir } from '@protolabsai/platform';
 import { ChatAnthropic } from '@langchain/anthropic';
-import { createStandupFlow, createRetroFlow, createProjectRetroFlow } from '@protolabsai/flows';
+import {
+  createStandupFlow,
+  createRetroFlow,
+  createProjectRetroFlow,
+  createPostProjectDocsFlow,
+} from '@protolabsai/flows';
 import type { CeremonyState, MilestoneUpdateData, ProjectRetroData } from '@protolabsai/types';
 import { flowRegistry } from './automation-service.js';
 import type { EventEmitter } from '../lib/events.js';
@@ -256,6 +261,9 @@ export class CeremonyService {
     });
     flowRegistry.register('project-retro-flow', async (_modelConfig) => {
       logger.info('project-retro-flow: execution handled via ceremony event system');
+    });
+    flowRegistry.register('post-project-docs-flow', async (_modelConfig) => {
+      logger.info('post-project-docs-flow: execution handled via ceremony event system');
     });
 
     // Load persisted dedup state before subscribing to events
@@ -1046,6 +1054,13 @@ export class CeremonyService {
         projectPath,
         retroData: projectRetroData,
       });
+
+      // Fire post-project docs ceremony (fire-and-forget — failure never affects project status)
+      this.handlePostProjectDocs(payload).catch((err) =>
+        logger.warn(
+          `Post-project docs ceremony failed for ${projectSlug}: ${err instanceof Error ? err.message : String(err)}`
+        )
+      );
     } catch (err) {
       this.ceremonyCounts.discordPostFailures++;
       logger.warn(`Project retro flow failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -1062,6 +1077,94 @@ export class CeremonyService {
       });
     } finally {
       this.activeReflection = null;
+    }
+  }
+
+  /**
+   * Run the post-project docs ceremony.
+   *
+   * Creates a backlog feature with project PRD, merged PR summaries, and a list of
+   * doc files that reference changed code. An agent picks this up and opens a single
+   * documentation PR.
+   *
+   * Fire-and-forget: failure here never surfaces to the caller or affects project status.
+   */
+  private async handlePostProjectDocs(payload: ProjectCompletedPayload): Promise<void> {
+    if (!this.featureLoader || !this.settingsService) return;
+
+    const { projectPath, projectSlug, projectTitle } = payload;
+
+    const projectSettings = await this.settingsService.getProjectSettings(projectPath);
+    const ceremonySettings = projectSettings.ceremonySettings;
+    if (!ceremonySettings?.enabled || !ceremonySettings?.enablePostProjectDocs) {
+      logger.debug('Post-project docs ceremony disabled, skipping');
+      return;
+    }
+
+    this.ceremonyCounts.postProjectDocs++;
+    this.lastCeremonyAt = new Date().toISOString();
+    logger.info(`Running post-project docs ceremony for "${projectTitle}"`);
+
+    const correlationId = `post-project-docs-${projectSlug}-${Date.now()}`;
+
+    try {
+      const flow = createPostProjectDocsFlow({
+        featureLoader: this.featureLoader,
+        projectPath,
+        projectSlug,
+        projectTitle,
+        totalFeatures: payload.totalFeatures,
+        milestoneSummaries: payload.milestoneSummaries,
+      });
+
+      const result = await flow.invoke({});
+
+      this.emitter?.emit('ceremony:post-project-docs', {
+        projectPath,
+        projectSlug,
+        featureId: result.createdFeatureId ?? null,
+      });
+
+      this.auditLog?.record({
+        id: correlationId,
+        timestamp: new Date().toISOString(),
+        ceremonyType: 'post_project_docs',
+        projectPath,
+        projectSlug,
+        deliveryStatus: result.createdFeatureId ? 'delivered' : 'skipped',
+        payload: {
+          title: `Post-Project Docs: ${projectTitle}`,
+          summary: result.createdFeatureId
+            ? `Created docs update feature ${result.createdFeatureId}`
+            : 'No doc update feature created',
+        },
+      });
+
+      if (result.createdFeatureId) {
+        logger.info(
+          `Post-project docs ceremony: created feature ${result.createdFeatureId} for "${projectTitle}"`
+        );
+      }
+    } catch (err) {
+      logger.warn(
+        `Post-project docs ceremony failed for "${projectTitle}": ${err instanceof Error ? err.message : String(err)}`
+      );
+      this.auditLog?.record({
+        id: correlationId,
+        timestamp: new Date().toISOString(),
+        ceremonyType: 'post_project_docs',
+        projectPath,
+        projectSlug,
+        deliveryStatus: 'failed',
+        errorMessage: err instanceof Error ? err.message : String(err),
+        payload: { title: `Post-Project Docs: ${projectTitle}` },
+      });
+
+      this.emitter?.emit('ceremony:post-project-docs:failed', {
+        projectPath,
+        projectSlug,
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
