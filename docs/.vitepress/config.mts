@@ -118,6 +118,30 @@ export default defineConfig({
           items: generateSidebar('templates', '/templates'),
         },
       ],
+      '/dev/': [
+        {
+          text: 'Development',
+          items: generateSidebar('dev', '/dev'),
+        },
+      ],
+      '/agents/': [
+        {
+          text: 'Agent System',
+          items: generateSidebar('agents', '/agents'),
+        },
+      ],
+      '/server/': [
+        {
+          text: 'Server',
+          items: generateSidebar('server', '/server'),
+        },
+      ],
+      '/infra/': [
+        {
+          text: 'Infrastructure',
+          items: generateSidebar('infra', '/infra'),
+        },
+      ],
     },
 
     socialLinks: [{ icon: 'github', link: 'https://github.com/protoLabsAI/protomaker' }],
