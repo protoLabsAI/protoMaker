@@ -99,12 +99,12 @@ runs:
     - name: Rebuild native modules (root)
       if: inputs.skip-native-rebuild != 'true' && inputs.rebuild-node-pty-path == ''
       shell: bash
-      # Rebuild node-pty and other native modules for Electron
-      run: npm rebuild node-pty
+      # Rebuild node-pty, better-sqlite3, and other native modules for Electron
+      run: npm rebuild node-pty better-sqlite3
 
     - name: Rebuild native modules (workspace)
       if: inputs.skip-native-rebuild != 'true' && inputs.rebuild-node-pty-path != ''
       shell: bash
-      # Rebuild node-pty and other native modules needed for server
-      run: npm rebuild node-pty
+      # Rebuild node-pty, better-sqlite3, and other native modules needed for server
+      run: npm rebuild node-pty better-sqlite3
       working-directory: ${{ inputs.rebuild-node-pty-path }}
