@@ -647,6 +647,11 @@ export type {
   IdleTaskConfig,
   WorkItem,
   RoleCapabilities,
+  TwitterMonitorConfig,
+  YouTubeMonitorConfig,
+  SubstackMonitorConfig,
+  RSSMonitorConfig,
+  SocialMonitorConfig,
 } from './agent-roles.js';
 export { BUILT_IN_AGENT_ROLES, ROLE_CAPABILITIES } from './agent-roles.js';
 

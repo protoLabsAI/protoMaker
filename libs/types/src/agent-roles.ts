@@ -233,6 +233,59 @@ export interface RoleCapabilities {
 /**
  * Default role capabilities
  */
+// ---------------------------------------------------------------------------
+// Social Monitor Configuration Types
+// ---------------------------------------------------------------------------
+
+export interface TwitterMonitorConfig {
+  /** Twitter/X username to monitor (without @) */
+  username: string;
+  /** Monitor mentions of this account */
+  monitorMentions?: boolean;
+  /** Monitor replies to this account's tweets */
+  monitorReplies?: boolean;
+  /** Monitor quote tweets */
+  monitorQuotes?: boolean;
+  /** Poll interval in milliseconds (default: 300000 = 5 min) */
+  pollInterval?: number;
+}
+
+export interface YouTubeMonitorConfig {
+  /** YouTube video IDs to monitor for comments */
+  videoIds: string[];
+  /** Poll interval in milliseconds (default: 300000 = 5 min) */
+  pollInterval?: number;
+  /** Maximum videos to monitor (quota safety, default: 30) */
+  maxVideos?: number;
+}
+
+export interface SubstackMonitorConfig {
+  /** Substack newsletter subdomain (e.g., 'newsletter' for newsletter.substack.com) */
+  newsletter: string;
+  /** Poll interval in milliseconds (default: 600000 = 10 min) */
+  pollInterval?: number;
+}
+
+export interface RSSMonitorConfig {
+  /** RSS feed URLs to monitor */
+  feeds: Array<{
+    url: string;
+    label: string;
+  }>;
+  /** Default poll interval if feed doesn't specify TTL (default: 900000 = 15 min) */
+  pollInterval?: number;
+}
+
+export interface SocialMonitorConfig {
+  twitter?: TwitterMonitorConfig;
+  youtube?: YouTubeMonitorConfig;
+  substack?: SubstackMonitorConfig;
+  rss?: RSSMonitorConfig;
+}
+
+/**
+ * Default role capabilities
+ */
 export const ROLE_CAPABILITIES: Record<string, RoleCapabilities> = {
   'product-manager': {
     role: 'product-manager',

@@ -368,7 +368,13 @@ export type EventType =
   | 'deploy:succeeded'
   | 'deploy:failed'
   // Signal dictionary events (portfolio attention engine)
-  | 'signal:triggered';
+  | 'signal:triggered'
+  // Social monitor events (Twitter, YouTube, Substack, RSS)
+  | 'twitter:mention:detected'
+  | 'youtube:comment:detected'
+  | 'substack:post:detected'
+  | 'rss:item:detected'
+  | 'social:health:check';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
@@ -963,6 +969,17 @@ export interface EventPayloadMap {
     error?: string;
     rolledBack: boolean;
     durationMs: number;
+    timestamp: string;
+  };
+
+  // Social monitor events
+  'social:health:check': {
+    monitors: Array<{
+      name: string;
+      healthy: boolean;
+      lastPollAt: string | null;
+      consecutiveErrors: number;
+    }>;
     timestamp: string;
   };
 
