@@ -489,6 +489,27 @@ export function useActivityFeed(projectPath?: string, limit: number = 50) {
   });
 }
 
+const QA_CHECK_STALE_TIME = 30 * 1000; // 30 seconds
+
+/**
+ * Fetch consolidated QA check report (service wiring, timers, board state, signals).
+ * Uses GET /api/qa/check.
+ */
+export function useQaCheck(projectPath: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.qa.check(projectPath ?? ''),
+    queryFn: async () => {
+      if (!projectPath) throw new Error('No project path');
+      const api = getHttpApiClient();
+      return api.qa.check(projectPath);
+    },
+    enabled: !!projectPath,
+    staleTime: QA_CHECK_STALE_TIME,
+    refetchInterval: QA_CHECK_STALE_TIME,
+    refetchOnWindowFocus: false,
+  });
+}
+
 const DEPLOYMENTS_STALE_TIME = 60 * 1000; // 1 minute
 
 /**
