@@ -1,5 +1,13 @@
 # @protolabsai/types
 
+## 0.66.0
+
+### Minor Changes
+
+- ### Features
+  - production chat patterns, CLI auth, proper theming
+  - production chat patterns, CLI auth, proper theming
+
 ## 0.65.0
 
 ### Minor Changes

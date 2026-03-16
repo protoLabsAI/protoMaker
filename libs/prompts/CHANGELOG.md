@@ -1,5 +1,19 @@
 # @protolabsai/prompts
 
+## 0.66.0
+
+### Minor Changes
+
+- ### Features
+  - production chat patterns, CLI auth, proper theming
+  - production chat patterns, CLI auth, proper theming
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.66.0
+  - @protolabsai/utils@0.66.0
+
 ## 0.65.0
 
 ### Minor Changes
