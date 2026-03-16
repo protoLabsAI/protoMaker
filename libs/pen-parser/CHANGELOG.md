@@ -1,5 +1,12 @@
 # @protolabsai/pen-parser
 
+## 0.53.11
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.64.0
+
 ## 0.53.10
 
 ### Patch Changes

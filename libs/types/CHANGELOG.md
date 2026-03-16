@@ -1,5 +1,13 @@
 # @protolabsai/types
 
+## 0.64.0
+
+### Minor Changes
+
+- ### Features
+  - add portfolio attention engine with signal dictionary and auto-computed project health
+  - add portfolio attention engine with signal dictionary and auto-computed project health
+
 ## 0.63.0
 
 ### Minor Changes

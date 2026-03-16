@@ -1,5 +1,19 @@
 # @protolabsai/observability
 
+## 0.64.0
+
+### Minor Changes
+
+- ### Features
+  - add portfolio attention engine with signal dictionary and auto-computed project health
+  - add portfolio attention engine with signal dictionary and auto-computed project health
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.64.0
+  - @protolabsai/utils@0.64.0
+
 ## 0.63.0
 
 ### Minor Changes
