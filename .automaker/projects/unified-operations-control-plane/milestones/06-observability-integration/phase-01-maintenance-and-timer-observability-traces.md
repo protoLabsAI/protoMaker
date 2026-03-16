@@ -16,12 +16,14 @@ Create OpsTracingService wrapping sweeps and timer ticks with Langfuse traces. M
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/ops-tracing-service.ts`
 - [ ] `apps/server/src/services/maintenance-orchestrator.ts`
 - [ ] `apps/server/src/services/scheduler-service.ts`
 - [ ] `apps/server/src/server/wiring.ts`
 
 ### Verification
+
 - [ ] Maintenance sweeps create Langfuse traces
 - [ ] Per-check child spans with duration and result
 - [ ] High-frequency timer sampling at configurable rate

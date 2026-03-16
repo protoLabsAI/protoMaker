@@ -16,6 +16,7 @@ Add conflict detection for overlapping job events (advisory, not blocking). Upda
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/calendar-service.ts`
 - [ ] `apps/ui/src/components/views/calendar-view/calendar-view.tsx`
 - [ ] `apps/ui/src/components/views/calendar-view/use-calendar-events.ts`
@@ -23,6 +24,7 @@ Add conflict detection for overlapping job events (advisory, not blocking). Upda
 - [ ] `apps/ui/src/components/views/calendar-view/create-event-dialog.tsx`
 
 ### Verification
+
 - [ ] Conflict detection checks for overlapping jobs
 - [ ] Calendar UI shows recurring event indicators
 - [ ] Ops events displayed with distinct styling

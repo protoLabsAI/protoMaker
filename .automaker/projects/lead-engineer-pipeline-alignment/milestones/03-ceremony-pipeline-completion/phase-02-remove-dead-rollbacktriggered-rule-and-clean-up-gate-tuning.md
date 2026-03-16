@@ -20,11 +20,13 @@ Fix: Remove rollbackTriggered from DEFAULT_RULES array and delete the rule defin
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/lead-engineer-rules.ts`
 - [ ] `apps/server/src/services/ceremony-action-executor.ts`
 - [ ] `libs/types/src/lead-engineer.ts`
 
 ### Verification
+
 - [ ] rollbackTriggered rule removed from DEFAULT_RULES and definition deleted
 - [ ] gate-tuning removed from ActionType union in ceremony-action-executor
 - [ ] Items formerly classified as gate-tuning are classified as improvement-feature

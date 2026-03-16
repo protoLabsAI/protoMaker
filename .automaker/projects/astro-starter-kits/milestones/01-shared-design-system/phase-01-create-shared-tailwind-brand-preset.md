@@ -16,9 +16,11 @@ Extract brand design tokens from site/index.html into a reusable Tailwind v4 CSS
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/src/design-tokens.ts`
 
 ### Verification
+
 - [ ] Tailwind v4 CSS with all brand tokens as CSS custom properties
 - [ ] Exported from libs/templates/src/design-tokens.ts
 - [ ] Matches site/index.html visual language

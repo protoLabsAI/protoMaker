@@ -16,10 +16,12 @@ Two bugs: (1) Fire-and-forget actions race causing featureLoader.update interlea
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/lead-engineer-action-executor.ts`
 - [ ] `apps/server/tests/unit/services/lead-engineer-action-executor.test.ts`
 
 ### Verification
+
 - [ ] Actions targeting same featureId execute sequentially
 - [ ] enable_auto_merge uses --merge for staging/main/epic branches
 - [ ] enable_auto_merge uses --squash for dev branches

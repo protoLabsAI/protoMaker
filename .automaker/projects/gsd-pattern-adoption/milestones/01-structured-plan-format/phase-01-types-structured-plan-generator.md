@@ -16,10 +16,12 @@ Add structured plan types (StructuredPlan, PlanTask, AcceptanceCriterion, Deviat
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/types/src/lead-engineer.ts`
 - [ ] `apps/server/src/services/lead-engineer-processors.ts`
 
 ### Verification
+
 - [ ] StructuredPlan, PlanTask, AcceptanceCriterion, DeviationRule types exported from @protolabsai/types
 - [ ] StateContext includes optional structuredPlan field
 - [ ] PlanProcessor generates structured JSON plan via simpleQuery with engineered prompt

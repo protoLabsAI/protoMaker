@@ -16,12 +16,14 @@ Migrate GitHubMonitor (30s), DiscordMonitor (30s), and LeadEngineerService (3 ti
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/github-monitor.ts`
 - [ ] `apps/server/src/services/discord-monitor.ts`
 - [ ] `apps/server/src/services/lead-engineer-service.ts`
 - [ ] `apps/server/src/services/scheduler.module.ts`
 
 ### Verification
+
 - [ ] All services use schedulerService.registerInterval()
 - [ ] LeadEngineer timer IDs are project-scoped
 - [ ] Category field distinguishes timer types

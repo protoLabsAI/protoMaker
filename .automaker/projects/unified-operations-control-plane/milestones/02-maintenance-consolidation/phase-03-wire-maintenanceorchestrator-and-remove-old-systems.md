@@ -16,6 +16,7 @@ Wire MaintenanceOrchestrator into server startup. Register all check modules. Re
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/scheduler.module.ts`
 - [ ] `apps/server/src/server/wiring.ts`
 - [ ] `apps/server/src/services/health-monitor-service.ts`
@@ -23,6 +24,7 @@ Wire MaintenanceOrchestrator into server startup. Register all check modules. Re
 - [ ] `apps/server/src/services/maintenance-tasks.ts`
 
 ### Verification
+
 - [ ] MaintenanceOrchestrator wired at startup
 - [ ] Old board-health cron removed
 - [ ] HealthMonitorService periodic loop removed

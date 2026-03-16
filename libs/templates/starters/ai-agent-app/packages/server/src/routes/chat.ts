@@ -193,7 +193,11 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   }
 
   // Resolve model: header > body > env > default (matches production Ava pattern)
-  const modelAlias = (req.headers['x-model-alias'] as string) || bodyModel || process.env['MODEL'] || 'claude-opus-4-6';
+  const modelAlias =
+    (req.headers['x-model-alias'] as string) ||
+    bodyModel ||
+    process.env['MODEL'] ||
+    'claude-opus-4-6';
   const resolvedModelId = modelAlias;
 
   // Create Anthropic provider with credential chain matching the main app:
@@ -204,10 +208,11 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   // UIMessages use `parts` array, not `content` string
   let resolvedSystem = system;
   const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user');
-  const lastUserText = lastUserMessage?.parts
-    ?.filter((p): p is { type: 'text'; text: string } => p.type === 'text')
-    .map((p) => p.text)
-    .join('') ?? '';
+  const lastUserText =
+    lastUserMessage?.parts
+      ?.filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+      .map((p) => p.text)
+      .join('') ?? '';
 
   const parsed = lastUserText ? parseSlashCommand(lastUserText) : null;
   if (parsed) {

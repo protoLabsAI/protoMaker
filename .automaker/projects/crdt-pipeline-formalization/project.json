@@ -172,9 +172,7 @@
           "name": "refactor-notes-routes-to-use-crdtstore-with-disk-fallback",
           "title": "Refactor notes routes to use CRDTStore with disk fallback",
           "description": "Refactor the notes route handlers in apps/server/src/routes/notes/index.ts to use CRDTStore when available, with fallback to disk (current behavior) when CRDT is not initialized. For reads: use store.subscribe() or store.getOrCreate() to read from the Automerge document. For writes (create-tab, write-tab, update-tab, delete-tab): use store.change() to mutate the Automerge document AND write to disk (dual-write for backwards compat). Emit notes:tab-updated event after mutations as before. The disk workspace.json remains as a local backup/fallback.",
-          "filesToModify": [
-            "apps/server/src/routes/notes/index.ts"
-          ],
+          "filesToModify": ["apps/server/src/routes/notes/index.ts"],
           "acceptanceCriteria": [
             "get-workspace and list-tabs routes read from CRDT document when available",
             "create-tab, write-tab, delete-tab, rename-tab routes call store.change() for mutations",
@@ -193,10 +191,7 @@
           "name": "expose-notes-crdt-via-mcp-tools-and-document-the-boundary",
           "title": "Expose notes CRDT via MCP tools and document the boundary",
           "description": "Verify that the MCP tools for notes (list_note_tabs, read_note_tab, write_note_tab, create_note_tab, delete_note_tab) work correctly through the refactored notes routes. Update the MCP tool descriptions or server-side validation if needed to reflect CRDT-backed behavior. Add a comment block at the top of the notes route file documenting the storage model: primary=CRDT (Automerge, domain='notes', id='workspace'), fallback=disk (.automaker/notes/workspace.json). Update docs/dev/ with a notes-sync.md page documenting the notes CRDT domain, conflict semantics (LWW per tab), and the deferred TipTap binding.",
-          "filesToModify": [
-            "apps/server/src/routes/notes/index.ts",
-            "docs/dev/notes-sync.md"
-          ],
+          "filesToModify": ["apps/server/src/routes/notes/index.ts", "docs/dev/notes-sync.md"],
           "acceptanceCriteria": [
             "All 5 MCP note tools function correctly with CRDT-backed routes",
             "Storage model comment block added to notes route file",
@@ -222,9 +217,7 @@
           "name": "fill-crdtsyncservice-test-gaps",
           "title": "Fill CrdtSyncService test gaps",
           "description": "Add missing test cases to apps/server/tests/unit/crdt-sync-service.test.ts. Tests to add: (1) Partition recovery — simulate worker disconnect, enqueue events in outboundQueue, reconnect, verify queued events are replayed to primary in order. (2) Registry sync — simulate worker connecting to primary, verify primary sends registry_sync message, verify worker calls adoptRemoteRegistry() with the received registry. (3) Settings event broadcast — verify that publishSettings() sends CrdtSettingsEvent to all connected peers and that a received settings_event invokes the onSettingsReceived callback. (4) Peer eviction on TTL — advance mock clock past peerTtlMs, verify peer is marked offline and isOnline returns false.",
-          "filesToModify": [
-            "apps/server/tests/unit/crdt-sync-service.test.ts"
-          ],
+          "filesToModify": ["apps/server/tests/unit/crdt-sync-service.test.ts"],
           "acceptanceCriteria": [
             "Partition recovery test: outboundQueue fills during disconnect, events replayed on reconnect",
             "Registry sync test: worker receives registry from primary, adoptRemoteRegistry called",
@@ -241,9 +234,7 @@
           "name": "fill-crdtstore-test-gaps",
           "title": "Fill CRDTStore test gaps",
           "description": "Add missing test cases to libs/crdt/src/__tests__/crdt-store.test.ts. Tests to add: (1) Compaction checkpoint — call compact(), verify checkpoint files are written to storageDir/checkpoints/ for each loaded document handle. (2) Filesystem hydration — on first init with a hydrationFn, verify the function is called exactly once; on subsequent init (registry already populated), verify hydrationFn is NOT called. (3) Registry persistence — create document, close store, re-init, verify the same Automerge URL is returned from the registry (not a new document).",
-          "filesToModify": [
-            "libs/crdt/src/__tests__/crdt-store.test.ts"
-          ],
+          "filesToModify": ["libs/crdt/src/__tests__/crdt-store.test.ts"],
           "acceptanceCriteria": [
             "Compaction test: checkpoint files exist on disk after compact() call",
             "Hydration test: hydrationFn called once on fresh init, not called on subsequent init",
@@ -259,10 +250,7 @@
           "name": "upgrade-automerge-packages-to-latest-3-x",
           "title": "Upgrade @automerge packages to latest 3.x",
           "description": "Upgrade all four @automerge packages in libs/crdt/package.json to latest 3.x versions: @automerge/automerge, @automerge/automerge-repo, @automerge/automerge-repo-network-websocket, @automerge/automerge-repo-storage-nodefs. Check Automerge 3.x CHANGELOG for breaking changes (the Text class rename from v3.0 may affect our code — check for any RawString or Text usage). Verify the file format is backwards compatible with existing .automaker/crdt/ checkpoint files. Run full test suite. Also add @automerge/prosemirror to apps/ui/package.json as a forward-looking dependency for the future TipTap binding project (installed but not wired yet).",
-          "filesToModify": [
-            "libs/crdt/package.json",
-            "apps/ui/package.json"
-          ],
+          "filesToModify": ["libs/crdt/package.json", "apps/ui/package.json"],
           "acceptanceCriteria": [
             "All @automerge/* packages upgraded to latest 3.x in libs/crdt/package.json",
             "@automerge/prosemirror added to apps/ui/package.json",

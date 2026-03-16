@@ -16,10 +16,12 @@ CodeRabbitResolver and git-workflow-service build GraphQL queries via string int
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/coderabbit-resolver-service.ts`
 - [ ] `apps/server/src/services/git-workflow-service.ts`
 
 ### Verification
+
 - [ ] All gh api graphql calls use execFile with argument arrays
 - [ ] Owner/repo parsing deduplicated into helper method
 - [ ] npm run typecheck passes

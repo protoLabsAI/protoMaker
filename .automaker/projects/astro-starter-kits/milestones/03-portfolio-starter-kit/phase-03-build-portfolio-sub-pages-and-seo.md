@@ -16,9 +16,11 @@ Sub-pages: /projects, /projects/[slug], /blog, /blog/[slug], /about, /contact. S
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/portfolio/src/pages/`
 
 ### Verification
+
 - [ ] All sub-pages with content from Collections
 - [ ] Dynamic routes for slugs
 - [ ] SEO meta tags on every page

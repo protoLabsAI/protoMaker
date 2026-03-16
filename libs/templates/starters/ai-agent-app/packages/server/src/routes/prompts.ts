@@ -247,7 +247,9 @@ router.post('/', (req: Request, res: Response): void => {
 
   const safeId = sanitiseId(id);
   if (!safeId) {
-    res.status(400).json({ error: 'Invalid prompt ID — use alphanumeric, hyphens, or underscores' });
+    res
+      .status(400)
+      .json({ error: 'Invalid prompt ID — use alphanumeric, hyphens, or underscores' });
     return;
   }
 
@@ -265,9 +267,10 @@ router.post('/', (req: Request, res: Response): void => {
   // Build frontmatter
   const fmName = name ?? safeId;
   const fmDesc = description ?? '';
-  const fmVars = Array.isArray(variables) && variables.length > 0
-    ? `\nvariables:\n${variables.map((v) => `  - ${v}`).join('\n')}`
-    : '';
+  const fmVars =
+    Array.isArray(variables) && variables.length > 0
+      ? `\nvariables:\n${variables.map((v) => `  - ${v}`).join('\n')}`
+      : '';
   const frontmatter = `---\nname: ${fmName}\ndescription: ${fmDesc}${fmVars}\n---\n`;
   const body = typeof content === 'string' ? content : '';
 

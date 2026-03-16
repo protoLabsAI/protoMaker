@@ -72,7 +72,7 @@ if (externallyMerged) {
     status: 'done',
   });
   return {
-    nextState: null,  // ⚠️ Skips MERGE, DEPLOY, goal-verification, trajectory recording
+    nextState: null, // ⚠️ Skips MERGE, DEPLOY, goal-verification, trajectory recording
     shouldContinue: false,
     reason: 'PR merged externally via branch detection',
   };
@@ -88,7 +88,7 @@ The budget constants create a tight squeeze [7][8]:
 ```typescript
 // /home/josh/dev/ava/apps/server/src/services/lead-engineer-state-machine.ts:150-156
 let transitionCount = 0;
-const MAX_TRANSITIONS = 20;         // ⚠️ Tight: normal remediation uses ~14-20 slots
+const MAX_TRANSITIONS = 20; // ⚠️ Tight: normal remediation uses ~14-20 slots
 let sameStateCount = 0;
 const MAX_SAME_STATE_TRANSITIONS = 100; // ⚠️ Generous: allows ~50 min of REVIEW polling
 ```
@@ -259,7 +259,7 @@ The auto-loop coordinator tracks failures in a 60-second rolling window, pausing
 // FILE: apps/server/src/services/auto-mode/auto-loop-coordinator.ts:261
 const FAILURE_WINDOW_MS = 60_000;
 const FAILURE_THRESHOLD = 3;
-state.failureTimestamps = state.failureTimestamps.filter(ts => now - ts < FAILURE_WINDOW_MS);
+state.failureTimestamps = state.failureTimestamps.filter((ts) => now - ts < FAILURE_WINDOW_MS);
 if (state.failureTimestamps.length >= FAILURE_THRESHOLD) return true;
 ```
 
@@ -287,16 +287,17 @@ Per-category `maxConcurrent=1` prevents overlapping self-healing runs; hash-set 
 
 The system implements **six layers** of error handling:
 
-| Layer | Component | Citation |
-|-------|-----------|----------|
-| Circuit Breaker | `circuit-breaker.ts` — opens after threshold, auto-resets after cooldown | [41] |
+| Layer                | Component                                                                   | Citation |
+| -------------------- | --------------------------------------------------------------------------- | -------- |
+| Circuit Breaker      | `circuit-breaker.ts` — opens after threshold, auto-resets after cooldown    | [41]     |
 | Error Classification | `error-handler.ts` (server + libs) — typed categories with `retryable` flag | [42][43] |
-| Bounded Retry | `api-client.ts` — 3 attempts, `[1s, 2s, 4s]` backoff + provider offsets | [44] |
-| Timeout Enforcement | `timeout-enforcer.ts` — races operations, propagates `AbortSignal` | [45] |
-| Health Monitor | `health-monitor-service.ts` — periodic scans, auto-remediation | [46] |
-| Recovery Service | `recovery-service.ts` — 6 strategies, JSONL persistence | [47] |
+| Bounded Retry        | `api-client.ts` — 3 attempts, `[1s, 2s, 4s]` backoff + provider offsets     | [44]     |
+| Timeout Enforcement  | `timeout-enforcer.ts` — races operations, propagates `AbortSignal`          | [45]     |
+| Health Monitor       | `health-monitor-service.ts` — periodic scans, auto-remediation              | [46]     |
+| Recovery Service     | `recovery-service.ts` — 6 strategies, JSONL persistence                     | [47]     |
 
 **Recovery strategies** [47]:
+
 ```typescript
 switch (strategy.type) {
   case 'retry':                  result = await this.executeRetry(...); break;
@@ -340,6 +341,7 @@ The post-execution middleware [49] and worktree recovery service [48] run on eve
 Server coverage thresholds: lines 60%, functions 75%, branches 55%, statements 60% [54]. Routes, middleware, `claude-usage-service.ts`, and `mcp-test-service.ts` are excluded [55].
 
 Three services have **zero test coverage** (~2,379 lines total) [56][57][58]:
+
 - `git-workflow-service.ts` — 1,660 lines
 - `stream-observer-service.ts` — 248 lines
 - `coderabbit-resolver-service.ts` — 471 lines
@@ -353,9 +355,13 @@ CI runs `npm run test:packages` and `npm run test:server:coverage` on PRs/pushes
 #### 5.3 Test Infrastructure
 
 Test setup [62]:
+
 ```typescript
 const mockLogger = vi.hoisted(() => ({
-  info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
 }));
 vi.mock('@protolabsai/git-utils', async (importOriginal) => {
   const actual = await importOriginal();
@@ -410,40 +416,40 @@ No external web research was conducted for this report. All findings are derived
 
 ### Phase 1: Critical Security (Immediate)
 
-| # | Finding | Fix | Files |
-|---|---------|-----|-------|
-| S1 | Shell injection via epic title [14] | Replace `execAsync` string interpolation with `execFile` array args or `shell-escape` | `completion-detector-service.ts` |
-| S2 | GraphQL injection [15][16][17] | Parameterize queries or apply strict allowlist validation (`/^[a-zA-Z0-9._-]+$/`) on `owner`/`repoName` | `coderabbit-resolver-service.ts`, `git-workflow-service.ts`, `pr-status-checker.ts` |
-| S3 | Incomplete GraphQL escaping [18] | Implement full GraphQL string escaping (backslash, tab, CR, unicode) or use parameterized mutations | `coderabbit-resolver-service.ts` |
-| S4 | Hook variable injection [19] | Shell-escape all substituted values using `shell-quote` or equivalent | `event-hook-service.ts` |
-| S5 | Branch name validation [20] | Extract existing regex guard into shared `validateBranchName()`, apply at all shell-command call sites | `git-workflow-service.ts`, shared util |
+| #   | Finding                             | Fix                                                                                                     | Files                                                                               |
+| --- | ----------------------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| S1  | Shell injection via epic title [14] | Replace `execAsync` string interpolation with `execFile` array args or `shell-escape`                   | `completion-detector-service.ts`                                                    |
+| S2  | GraphQL injection [15][16][17]      | Parameterize queries or apply strict allowlist validation (`/^[a-zA-Z0-9._-]+$/`) on `owner`/`repoName` | `coderabbit-resolver-service.ts`, `git-workflow-service.ts`, `pr-status-checker.ts` |
+| S3  | Incomplete GraphQL escaping [18]    | Implement full GraphQL string escaping (backslash, tab, CR, unicode) or use parameterized mutations     | `coderabbit-resolver-service.ts`                                                    |
+| S4  | Hook variable injection [19]        | Shell-escape all substituted values using `shell-quote` or equivalent                                   | `event-hook-service.ts`                                                             |
+| S5  | Branch name validation [20]         | Extract existing regex guard into shared `validateBranchName()`, apply at all shell-command call sites  | `git-workflow-service.ts`, shared util                                              |
 
 ### Phase 2: State Machine Correctness
 
-| # | Finding | Fix | Files |
-|---|---------|-----|-------|
-| M1 | Missing DONE processor [3] | Register a no-op `DoneProcessor` that returns `{ shouldContinue: false, nextState: null }` | `lead-engineer-state-machine.ts` |
-| M2 | Terminal state logging [4] | Set `currentState = 'DONE'` (or `result.nextState`) before logging when nextState is null | `lead-engineer-state-machine.ts` |
-| M3 | External merge bypass [6] | Route externally merged PRs through MERGE→DEPLOY (or a fast-path that still records trajectory) | `lead-engineer-review-merge-processors.ts` |
-| M4 | Transition budget [7][8] | Increase `MAX_TRANSITIONS` to 30; decrease `MAX_SAME_STATE_TRANSITIONS` to 20 | `lead-engineer-state-machine.ts` |
-| M5 | Remediation guard gap [5] | Add null-check for `PRFeedbackService`; default to max-iterations-exceeded when undefined | `lead-engineer-review-merge-processors.ts` |
-| M6 | Hardcoded gate overrides [12] | Make phase overrides configurable; for `auto` gate mode, remove `SPEC_REVIEW`/`VERIFY` holds | `pipeline-orchestrator.ts` |
-| M7 | Unmapped events [9] | Add fallback with `logger.warn` for unmapped events; optionally emit an event for monitoring | `pipeline-orchestrator.ts` |
-| M8 | Ceremony blindness [13] | Add `logger.warn` for unrecognized event/phase combinations | `ceremony-state-machine.ts` |
+| #   | Finding                       | Fix                                                                                             | Files                                      |
+| --- | ----------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| M1  | Missing DONE processor [3]    | Register a no-op `DoneProcessor` that returns `{ shouldContinue: false, nextState: null }`      | `lead-engineer-state-machine.ts`           |
+| M2  | Terminal state logging [4]    | Set `currentState = 'DONE'` (or `result.nextState`) before logging when nextState is null       | `lead-engineer-state-machine.ts`           |
+| M3  | External merge bypass [6]     | Route externally merged PRs through MERGE→DEPLOY (or a fast-path that still records trajectory) | `lead-engineer-review-merge-processors.ts` |
+| M4  | Transition budget [7][8]      | Increase `MAX_TRANSITIONS` to 30; decrease `MAX_SAME_STATE_TRANSITIONS` to 20                   | `lead-engineer-state-machine.ts`           |
+| M5  | Remediation guard gap [5]     | Add null-check for `PRFeedbackService`; default to max-iterations-exceeded when undefined       | `lead-engineer-review-merge-processors.ts` |
+| M6  | Hardcoded gate overrides [12] | Make phase overrides configurable; for `auto` gate mode, remove `SPEC_REVIEW`/`VERIFY` holds    | `pipeline-orchestrator.ts`                 |
+| M7  | Unmapped events [9]           | Add fallback with `logger.warn` for unmapped events; optionally emit an event for monitoring    | `pipeline-orchestrator.ts`                 |
+| M8  | Ceremony blindness [13]       | Add `logger.warn` for unrecognized event/phase combinations                                     | `ceremony-state-machine.ts`                |
 
 ### Phase 3: Concurrency Fixes
 
-| # | Finding | Fix | Files |
-|---|---------|-----|-------|
-| C1 | In-memory dedup race [10] | Add file-system-based lock (or Redis if available) for cross-process deduplication | `feature-scheduler.ts` |
-| C2 | Infinite recursion [11] | Add `maxRetries` counter (e.g., 5) to `scheduleStartingTimeout`; force cleanup + log.error on exhaustion | `feature-scheduler.ts` |
+| #   | Finding                   | Fix                                                                                                      | Files                  |
+| --- | ------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------- |
+| C1  | In-memory dedup race [10] | Add file-system-based lock (or Redis if available) for cross-process deduplication                       | `feature-scheduler.ts` |
+| C2  | Infinite recursion [11]   | Add `maxRetries` counter (e.g., 5) to `scheduleStartingTimeout`; force cleanup + log.error on exhaustion | `feature-scheduler.ts` |
 
 ### Phase 4: Error Handling Gaps
 
-| # | Finding | Fix | Files |
-|---|---------|-----|-------|
-| E1 | No alerting | Add webhook/Discord notification on ESCALATE and health-critical states | `health-monitor-service.ts`, new alerting util |
-| E2 | Secret validation [21] | Add startup-time validation for required env vars with format checks | `server/src/config.ts` or entry point |
+| #   | Finding                | Fix                                                                     | Files                                          |
+| --- | ---------------------- | ----------------------------------------------------------------------- | ---------------------------------------------- |
+| E1  | No alerting            | Add webhook/Discord notification on ESCALATE and health-critical states | `health-monitor-service.ts`, new alerting util |
+| E2  | Secret validation [21] | Add startup-time validation for required env vars with format checks    | `server/src/config.ts` or entry point          |
 
 ### Phase 5: Test Coverage [61]
 
@@ -479,69 +485,69 @@ Each fix phase: 30–60 minutes, `npm run test:server` + `npm run typecheck` mus
 
 ## Citations
 
-| # | Source | Summary |
-|---|--------|---------|
-| [1] | `/home/josh/dev/ava/apps/server/src/services/lead-engineer-types.ts:105` | `FeatureProcessingState` string union type |
-| [2] | `/home/josh/dev/ava/libs/types/src/lead-engineer.ts:303` | `FeatureState` enum (parallel representation) |
-| [3] | `/home/josh/dev/ava/apps/server/src/services/lead-engineer-state-machine.ts:111` | Processor registration missing DONE |
-| [4] | `/home/josh/dev/ava/apps/server/src/services/lead-engineer-state-machine.ts:295` | Terminal state logging bug |
-| [5] | `/home/josh/dev/ava/apps/server/src/services/lead-engineer-review-merge-processors.ts:181` | REVIEW→EXECUTE remediation guard gap |
-| [6] | `/home/josh/dev/ava/apps/server/src/services/lead-engineer-review-merge-processors.ts:88` | External merge bypasses terminal flow |
-| [7] | `/home/josh/dev/ava/apps/server/src/services/lead-engineer-state-machine.ts:152` | MAX_SAME_STATE_TRANSITIONS = 100 |
-| [8] | `/home/josh/dev/ava/apps/server/src/services/lead-engineer-state-machine.ts:150` | MAX_TRANSITIONS = 20 budget exhaustion |
-| [9] | `/home/josh/dev/ava/apps/server/src/services/pipeline-orchestrator.ts:37` | EVENT_PHASE_MAP no fallback |
-| [10] | `/home/josh/dev/ava/apps/server/src/services/feature-scheduler.ts:403` | Per-instance in-memory deduplication race |
-| [11] | `/home/josh/dev/ava/apps/server/src/services/feature-scheduler.ts:435` | Infinite recursion in worktree-lock timeout |
-| [12] | `/home/josh/dev/ava/apps/server/src/services/pipeline-orchestrator.ts:829` | Hardcoded gate phase overrides |
-| [13] | `/home/josh/dev/ava/apps/server/src/services/ceremony-state-machine.ts:19` | Silent invalid-event handling |
-| [14] | `apps/server/src/services/completion-detector-service.ts:373-375` | Shell injection via epic title |
-| [15] | `apps/server/src/services/coderabbit-resolver-service.ts:152-154` | GraphQL injection via repository name |
-| [16] | `apps/server/src/services/git-workflow-service.ts:913-916` | GraphQL injection via repository name |
-| [17] | `apps/server/src/services/pr-status-checker.ts:149-151` | GraphQL injection via repository name |
-| [18] | `apps/server/src/services/coderabbit-resolver-service.ts:222-224, 259-263` | Incomplete GraphQL string escaping |
-| [19] | `apps/server/src/services/event-hook-service.ts:715-724, 888-896` | Shell injection via hook variable substitution |
-| [20] | `apps/server/src/services/lead-engineer-review-merge-processors.ts:357-358` | Inconsistent branch name validation |
-| [21] | `apps/server/.env.example` | Missing startup secret validation |
-| [22] | `apps/server/package.json` | YAML deserialization risk |
-| [23] | `apps/server/src/services/feature-scheduler.ts:404` | startingFeatures.add() |
-| [24] | `apps/server/src/services/auto-mode/auto-loop-coordinator.ts:87` | startingFeatures Set type |
-| [25] | `apps/server/src/services/auto-mode-service.ts:203` | Synchronous TOCTOU prevention |
-| [26] | `apps/server/src/services/auto-mode/concurrency-manager.ts:38` | Lease-based concurrency with re-entrance |
-| [27] | `apps/server/src/services/auto-mode/concurrency-manager.ts:136` | Stale lease eviction |
-| [28] | `apps/server/src/services/feature-scheduler.ts:413` | Starting timeout with activity check |
-| [29] | `apps/server/src/services/auto-mode/auto-loop-coordinator.ts:148` | AbortController pattern |
-| [30] | `apps/server/src/services/feature-scheduler.ts:335` | Memory-pressure abort |
-| [31] | `apps/server/src/services/auto-mode/auto-loop-coordinator.ts:261` | Rolling failure window circuit breaker |
-| [32] | `apps/server/src/services/event-hook-service.ts:682` | Promise.allSettled for hooks |
-| [33] | `apps/server/src/services/mcp-test-service.ts:64` | Promise.race for timeout |
-| [34] | `apps/server/src/services/auto-mode/execution-service.ts:2341` | Memory-pressure heartbeat |
-| [35] | `apps/server/src/services/reactive-spawner-service.ts:9` | Reactive spawner budget controls |
-| [36] | `apps/server/.automaker/memory/gotchas.md:622` | Double-cleanup race gotcha |
-| [37] | `apps/server/src/services/auto-mode/feature-state-manager.ts:77` | Persist-before-emit ordering |
-| [38] | `apps/server/src/services/auto-mode/execution-service.ts:2289` | Timer cleanup pattern |
-| [39] | `apps/server/src/services/auto-mode/execution-service.ts:1657` | Exponential backoff retry |
-| [40] | `apps/server/src/services/auto-mode-service.ts:200` | runningFeatures map |
-| [41] | `apps/server/src/lib/circuit-breaker.ts` | Circuit breaker implementation |
-| [42] | `apps/server/src/lib/error-handler.ts` | Server error classification |
-| [43] | `libs/utils/src/error-handler.ts` | Shared error classification |
-| [44] | `apps/server/src/lib/api-client.ts` | Bounded retry with backoff |
-| [45] | `apps/server/src/lib/timeout-enforcer.ts` | Timeout enforcement |
-| [46] | `apps/server/src/services/health-monitor-service.ts` | Health monitor with auto-remediation |
-| [47] | `apps/server/src/services/recovery-service.ts` | Six-strategy recovery service |
-| [48] | `apps/server/src/services/worktree-recovery-service.ts` | Worktree recovery |
-| [49] | `apps/server/src/services/auto-mode/post-execution-middleware.ts` | Post-execution safety net |
-| [50] | `apps/server/src/server/shutdown.ts` | Process-level crash guards |
-| [51] | `apps/server/src/services/auto-mode/post-execution-middleware.ts:173` | Silent catch with logging |
-| [52] | `apps/server/src/services/health-monitor-service.ts:335` | Silent catch with logging |
-| [53] | `/home/josh/dev/ava/vitest.config.ts:1-13` | Root vitest config with project discovery |
-| [54] | `/home/josh/dev/ava/apps/server/vitest.config.ts:11-36` | Server coverage thresholds |
-| [55] | `/home/josh/dev/ava/apps/server/vitest.config.ts:18-23` | Coverage exclusions |
-| [56] | `apps/server/src/services/git-workflow-service.ts` | 1,660 lines, zero coverage |
-| [57] | `apps/server/src/services/stream-observer-service.ts` | 248 lines, zero coverage |
-| [58] | `apps/server/src/services/coderabbit-resolver-service.ts` | 471 lines, zero coverage |
-| [59] | `/home/josh/dev/ava/.github/workflows/test.yml:53-73` | CI test pipeline |
-| [60] | `/home/josh/dev/ava/.github/workflows/test.yml:65-73` | Codecov integration commented out |
-| [61] | `/home/josh/dev/ava/.automaker/projects/pipeline-autonomy-hardening/project.json:325-406` | Milestone 5 test plan |
-| [62] | `apps/server/tests/unit/services/execution-service.test.ts:1-80` | Test mock patterns |
-| [63] | `apps/server/tests/unit/services/lead-engineer-execute-processor.test.ts:38-100` | Factory helper patterns |
-| [64] | `/home/josh/dev/ava/.automaker/projects/pipeline-autonomy-hardening/project.json:413-414` | Fix phase constraints |
+| #    | Source                                                                                     | Summary                                        |
+| ---- | ------------------------------------------------------------------------------------------ | ---------------------------------------------- |
+| [1]  | `/home/josh/dev/ava/apps/server/src/services/lead-engineer-types.ts:105`                   | `FeatureProcessingState` string union type     |
+| [2]  | `/home/josh/dev/ava/libs/types/src/lead-engineer.ts:303`                                   | `FeatureState` enum (parallel representation)  |
+| [3]  | `/home/josh/dev/ava/apps/server/src/services/lead-engineer-state-machine.ts:111`           | Processor registration missing DONE            |
+| [4]  | `/home/josh/dev/ava/apps/server/src/services/lead-engineer-state-machine.ts:295`           | Terminal state logging bug                     |
+| [5]  | `/home/josh/dev/ava/apps/server/src/services/lead-engineer-review-merge-processors.ts:181` | REVIEW→EXECUTE remediation guard gap           |
+| [6]  | `/home/josh/dev/ava/apps/server/src/services/lead-engineer-review-merge-processors.ts:88`  | External merge bypasses terminal flow          |
+| [7]  | `/home/josh/dev/ava/apps/server/src/services/lead-engineer-state-machine.ts:152`           | MAX_SAME_STATE_TRANSITIONS = 100               |
+| [8]  | `/home/josh/dev/ava/apps/server/src/services/lead-engineer-state-machine.ts:150`           | MAX_TRANSITIONS = 20 budget exhaustion         |
+| [9]  | `/home/josh/dev/ava/apps/server/src/services/pipeline-orchestrator.ts:37`                  | EVENT_PHASE_MAP no fallback                    |
+| [10] | `/home/josh/dev/ava/apps/server/src/services/feature-scheduler.ts:403`                     | Per-instance in-memory deduplication race      |
+| [11] | `/home/josh/dev/ava/apps/server/src/services/feature-scheduler.ts:435`                     | Infinite recursion in worktree-lock timeout    |
+| [12] | `/home/josh/dev/ava/apps/server/src/services/pipeline-orchestrator.ts:829`                 | Hardcoded gate phase overrides                 |
+| [13] | `/home/josh/dev/ava/apps/server/src/services/ceremony-state-machine.ts:19`                 | Silent invalid-event handling                  |
+| [14] | `apps/server/src/services/completion-detector-service.ts:373-375`                          | Shell injection via epic title                 |
+| [15] | `apps/server/src/services/coderabbit-resolver-service.ts:152-154`                          | GraphQL injection via repository name          |
+| [16] | `apps/server/src/services/git-workflow-service.ts:913-916`                                 | GraphQL injection via repository name          |
+| [17] | `apps/server/src/services/pr-status-checker.ts:149-151`                                    | GraphQL injection via repository name          |
+| [18] | `apps/server/src/services/coderabbit-resolver-service.ts:222-224, 259-263`                 | Incomplete GraphQL string escaping             |
+| [19] | `apps/server/src/services/event-hook-service.ts:715-724, 888-896`                          | Shell injection via hook variable substitution |
+| [20] | `apps/server/src/services/lead-engineer-review-merge-processors.ts:357-358`                | Inconsistent branch name validation            |
+| [21] | `apps/server/.env.example`                                                                 | Missing startup secret validation              |
+| [22] | `apps/server/package.json`                                                                 | YAML deserialization risk                      |
+| [23] | `apps/server/src/services/feature-scheduler.ts:404`                                        | startingFeatures.add()                         |
+| [24] | `apps/server/src/services/auto-mode/auto-loop-coordinator.ts:87`                           | startingFeatures Set type                      |
+| [25] | `apps/server/src/services/auto-mode-service.ts:203`                                        | Synchronous TOCTOU prevention                  |
+| [26] | `apps/server/src/services/auto-mode/concurrency-manager.ts:38`                             | Lease-based concurrency with re-entrance       |
+| [27] | `apps/server/src/services/auto-mode/concurrency-manager.ts:136`                            | Stale lease eviction                           |
+| [28] | `apps/server/src/services/feature-scheduler.ts:413`                                        | Starting timeout with activity check           |
+| [29] | `apps/server/src/services/auto-mode/auto-loop-coordinator.ts:148`                          | AbortController pattern                        |
+| [30] | `apps/server/src/services/feature-scheduler.ts:335`                                        | Memory-pressure abort                          |
+| [31] | `apps/server/src/services/auto-mode/auto-loop-coordinator.ts:261`                          | Rolling failure window circuit breaker         |
+| [32] | `apps/server/src/services/event-hook-service.ts:682`                                       | Promise.allSettled for hooks                   |
+| [33] | `apps/server/src/services/mcp-test-service.ts:64`                                          | Promise.race for timeout                       |
+| [34] | `apps/server/src/services/auto-mode/execution-service.ts:2341`                             | Memory-pressure heartbeat                      |
+| [35] | `apps/server/src/services/reactive-spawner-service.ts:9`                                   | Reactive spawner budget controls               |
+| [36] | `apps/server/.automaker/memory/gotchas.md:622`                                             | Double-cleanup race gotcha                     |
+| [37] | `apps/server/src/services/auto-mode/feature-state-manager.ts:77`                           | Persist-before-emit ordering                   |
+| [38] | `apps/server/src/services/auto-mode/execution-service.ts:2289`                             | Timer cleanup pattern                          |
+| [39] | `apps/server/src/services/auto-mode/execution-service.ts:1657`                             | Exponential backoff retry                      |
+| [40] | `apps/server/src/services/auto-mode-service.ts:200`                                        | runningFeatures map                            |
+| [41] | `apps/server/src/lib/circuit-breaker.ts`                                                   | Circuit breaker implementation                 |
+| [42] | `apps/server/src/lib/error-handler.ts`                                                     | Server error classification                    |
+| [43] | `libs/utils/src/error-handler.ts`                                                          | Shared error classification                    |
+| [44] | `apps/server/src/lib/api-client.ts`                                                        | Bounded retry with backoff                     |
+| [45] | `apps/server/src/lib/timeout-enforcer.ts`                                                  | Timeout enforcement                            |
+| [46] | `apps/server/src/services/health-monitor-service.ts`                                       | Health monitor with auto-remediation           |
+| [47] | `apps/server/src/services/recovery-service.ts`                                             | Six-strategy recovery service                  |
+| [48] | `apps/server/src/services/worktree-recovery-service.ts`                                    | Worktree recovery                              |
+| [49] | `apps/server/src/services/auto-mode/post-execution-middleware.ts`                          | Post-execution safety net                      |
+| [50] | `apps/server/src/server/shutdown.ts`                                                       | Process-level crash guards                     |
+| [51] | `apps/server/src/services/auto-mode/post-execution-middleware.ts:173`                      | Silent catch with logging                      |
+| [52] | `apps/server/src/services/health-monitor-service.ts:335`                                   | Silent catch with logging                      |
+| [53] | `/home/josh/dev/ava/vitest.config.ts:1-13`                                                 | Root vitest config with project discovery      |
+| [54] | `/home/josh/dev/ava/apps/server/vitest.config.ts:11-36`                                    | Server coverage thresholds                     |
+| [55] | `/home/josh/dev/ava/apps/server/vitest.config.ts:18-23`                                    | Coverage exclusions                            |
+| [56] | `apps/server/src/services/git-workflow-service.ts`                                         | 1,660 lines, zero coverage                     |
+| [57] | `apps/server/src/services/stream-observer-service.ts`                                      | 248 lines, zero coverage                       |
+| [58] | `apps/server/src/services/coderabbit-resolver-service.ts`                                  | 471 lines, zero coverage                       |
+| [59] | `/home/josh/dev/ava/.github/workflows/test.yml:53-73`                                      | CI test pipeline                               |
+| [60] | `/home/josh/dev/ava/.github/workflows/test.yml:65-73`                                      | Codecov integration commented out              |
+| [61] | `/home/josh/dev/ava/.automaker/projects/pipeline-autonomy-hardening/project.json:325-406`  | Milestone 5 test plan                          |
+| [62] | `apps/server/tests/unit/services/execution-service.test.ts:1-80`                           | Test mock patterns                             |
+| [63] | `apps/server/tests/unit/services/lead-engineer-execute-processor.test.ts:38-100`           | Factory helper patterns                        |
+| [64] | `/home/josh/dev/ava/.automaker/projects/pipeline-autonomy-hardening/project.json:413-414`  | Fix phase constraints                          |

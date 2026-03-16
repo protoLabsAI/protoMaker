@@ -20,9 +20,11 @@ Fix: In FeatureLoader.update() (around line 747-758), after emitting feature:sta
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/feature-loader.ts`
 
 ### Verification
+
 - [ ] feature:started emitted when feature status changes to in_progress
 - [ ] feature:blocked emitted when feature status changes to blocked
 - [ ] feature:stopped emitted when feature status changes to done

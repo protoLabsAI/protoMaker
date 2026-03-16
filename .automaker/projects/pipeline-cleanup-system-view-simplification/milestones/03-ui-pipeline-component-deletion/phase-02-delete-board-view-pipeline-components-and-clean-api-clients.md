@@ -16,6 +16,7 @@ Delete from apps/ui/src/components/views/board-view/dialogs/: pipeline-settings-
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/ui/src/components/views/board-view/dialogs/pipeline-settings-dialog.tsx`
 - [ ] `apps/ui/src/components/views/board-view/dialogs/add-edit-pipeline-step-dialog.tsx`
 - [ ] `apps/ui/src/components/views/board-view/dialogs/pipeline-step-templates/`
@@ -26,6 +27,7 @@ Delete from apps/ui/src/components/views/board-view/dialogs/: pipeline-settings-
 - [ ] `apps/ui/src/hooks/queries/use-pipeline.ts`
 
 ### Verification
+
 - [ ] Pipeline dialog and template files deleted
 - [ ] board-view.tsx has no pipeline dialog imports
 - [ ] engine-client.ts has no pipeline endpoint methods

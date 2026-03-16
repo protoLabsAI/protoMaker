@@ -127,9 +127,7 @@
           "name": "remove-defunct-graph-registry-entries",
           "title": "Remove defunct graph registry entries",
           "description": "In apps/server/src/lib/graph-registry.ts, remove 3 of the 7 graph topology entries: unified-pipeline, lead-engineer-reflection, and interrupt-loop. The 4 remaining entries are: review-flow, coordinator-flow, antagonistic-review, content-creation. Note: review-flow and coordinator-flow remain in the registry for UI visualization topology display even though their LangGraph implementations are deleted — their registry entries describe topology for display only. Update the registry export array.",
-          "filesToModify": [
-            "apps/server/src/lib/graph-registry.ts"
-          ],
+          "filesToModify": ["apps/server/src/lib/graph-registry.ts"],
           "acceptanceCriteria": [
             "graph-registry.ts exports exactly 4 graph definitions",
             "No unified-pipeline, lead-engineer-reflection, or interrupt-loop entries",
@@ -224,9 +222,7 @@
           "name": "rebuild-flow-graph-constants-to-2-lane-topology",
           "title": "Rebuild flow-graph constants to 2-lane topology",
           "description": "Rewrite apps/ui/src/components/views/flow-graph/constants.ts to define exactly 2 lanes: (1) Production lane at y=100 with nodes: lead-engineer-rules, auto-mode-orchestrator, agent-execution, git-workflow, pr-pipeline. (2) Integration nodes sidebar at x=1400: github-integration, discord-integration. Remove: pre-production lane (signal-sources, triage, decomposition, launch), pipeline-stages lane (backlog/in-progress/review/done stage nodes), GTM branch nodes, reflection loop nodes. Update static edge definitions and NODE_IDs exports for the new 2-lane topology.",
-          "filesToModify": [
-            "apps/ui/src/components/views/flow-graph/constants.ts"
-          ],
+          "filesToModify": ["apps/ui/src/components/views/flow-graph/constants.ts"],
           "acceptanceCriteria": [
             "constants.ts defines exactly 2 lanes",
             "No pre-production lane or pipeline-stages lane nodes",
@@ -316,9 +312,7 @@
           "name": "enhance-projects-features-tab-with-milestone-progress",
           "title": "Enhance projects features tab with milestone progress",
           "description": "Improve apps/ui/src/components/views/projects-view/tabs/features-tab.tsx to be a better project-progress-at-a-glance view. Add: (1) Milestone progress bars at the top showing X/Y phases complete per milestone. (2) Overall project completion percentage (done features / total features). (3) A jump-to-board link on each feature row that navigates to /board?featureId=X. Keep the existing epic accordion structure. Data is available via useProjectFeatures hook.",
-          "filesToModify": [
-            "apps/ui/src/components/views/projects-view/tabs/features-tab.tsx"
-          ],
+          "filesToModify": ["apps/ui/src/components/views/projects-view/tabs/features-tab.tsx"],
           "acceptanceCriteria": [
             "Features tab shows milestone progress bars (X/Y phases complete)",
             "Overall project completion % visible at top",

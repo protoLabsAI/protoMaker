@@ -1,4 +1,5 @@
 # Changelog: Astro Starter Kits - Shared Design System
+
 **Generated:** 2026-03-14
 
 ## ✨ Features

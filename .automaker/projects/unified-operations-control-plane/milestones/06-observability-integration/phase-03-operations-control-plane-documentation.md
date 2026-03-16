@@ -16,6 +16,7 @@ Create comprehensive docs: internal architecture, timer registry guide, maintena
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `docs/internal/ops-control-plane.md`
 - [ ] `docs/internal/timer-registry.md`
 - [ ] `docs/internal/maintenance-checks.md`
@@ -24,6 +25,7 @@ Create comprehensive docs: internal architecture, timer registry guide, maintena
 - [ ] `docs/server/calendar.md`
 
 ### Verification
+
 - [ ] Architecture doc explains system relationships
 - [ ] Timer registry doc shows how to add tasks
 - [ ] Maintenance checks doc shows module creation

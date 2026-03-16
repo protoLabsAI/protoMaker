@@ -28,6 +28,7 @@ The `PipelineOrchestrator` is the largest single block of dead code. It is insta
  */
 private enabled = false;
 ```
+
 [2][45]
 
 The startup wiring reads the flag and passes it through, but `pipeline` is never `true` in any default configuration:
@@ -39,6 +40,7 @@ void settingsService.getGlobalSettings().then((s) => {
   pipelineOrchestrator.setEnabled(s.featureFlags?.pipeline ?? false);
 });
 ```
+
 [3]
 
 ```typescript
@@ -52,6 +54,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   reactorEnabled: false,
 };
 ```
+
 [46][69]
 
 Processor registration is hardcoded inline rather than using the `wiring.ts` module, confirming the orchestrator was never fully integrated into the service container lifecycle [16][17]:
@@ -60,6 +63,7 @@ Processor registration is hardcoded inline rather than using the `wiring.ts` mod
 // [FILE: apps/server/src/server/services.ts:811]
 pipelineOrchestrator.setProcessors({ ops: pmAgent, gtm: gtmAgent, projm: projmAgent });
 ```
+
 [17]
 
 The `ServiceContainer` interface declares the orchestrator alongside live services — removal requires updating this type [3]:
@@ -67,9 +71,9 @@ The `ServiceContainer` interface declares the orchestrator alongside live servic
 ```typescript
 // ServiceContainer (services.ts:205–209)
 signalIntakeService: SignalIntakeService;
-pipelineOrchestrator: PipelineOrchestrator;   // DEAD — remove
-pipelineService: typeof pipelineService;       // LIVE — keep
-channelRouter: ChannelRouter;                  // SHARED — keep
+pipelineOrchestrator: PipelineOrchestrator; // DEAD — remove
+pipelineService: typeof pipelineService; // LIVE — keep
+channelRouter: ChannelRouter; // SHARED — keep
 ```
 
 ### 2. Live `PipelineService` (Must Preserve)
@@ -78,17 +82,20 @@ The `PipelineService` is a distinct, live Kanban-step manager that operates on `
 
 ```typescript
 // [FILE: apps/server/src/services/auto-mode-service.ts:3798]
-pipelineService.isPipelineStatus(currentStatus)
+pipelineService.isPipelineStatus(currentStatus);
 ```
+
 [4]
 
 ```typescript
 // [FILE: apps/server/src/services/auto-mode/execution-service.ts:938]
-pipelineService.getPipelineConfig(projectPath)
+pipelineService.getPipelineConfig(projectPath);
 ```
+
 [5]
 
 The live pipeline route must be preserved:
+
 ```typescript
 // Live route (routes.ts:326)
 app.use('/api/pipeline', createPipelineRoutes(pipelineService));
@@ -102,12 +109,18 @@ The `@protolabsai/flows` package (v0.56.0) [1] exports ~20+ factory functions. T
 // [FILE: libs/flows/src/index.ts:17]
 export { createReviewFlow } from './graphs/review-flow.js';
 ```
+
 [11]
 
 ```typescript
 // [FILE: libs/flows/src/index.ts:22]
-export { createCoordinatorGraph, createResearcherGraph, createAnalyzerGraph } from './graphs/coordinator-flow.js';
+export {
+  createCoordinatorGraph,
+  createResearcherGraph,
+  createAnalyzerGraph,
+} from './graphs/coordinator-flow.js';
 ```
+
 [12]
 
 The `unified-pipeline` graph definition in the registry mirrors the dead orchestrator's topology and is safe to remove while keeping the registry itself intact for observability [13]:
@@ -118,6 +131,7 @@ The `unified-pipeline` graph definition in the registry mirrors the dead orchest
   // ops: triage → research → spec_review → design → plan → execute → verify → publish
   // gtm: triage → research → spec_review → execute → verify → publish }
 ```
+
 [13]
 
 ### 4. Dead Engine Routes
@@ -130,6 +144,7 @@ router.post('/signal/approve-prd', ..., async (req, res) => {
   pipelineOrchestrator.resolveGate(...)
 })
 ```
+
 [9]
 
 ```typescript
@@ -140,6 +155,7 @@ router.post('/pipeline/status', ..., async (req, res) => {
   }
 })
 ```
+
 [10]
 
 ### 5. Deprecated No-Op Methods in AutoModeService
@@ -162,6 +178,7 @@ private recordSuccess(): void {
   // no-op: legacy global consecutiveFailures field removed
 }
 ```
+
 [47][70]
 
 ```typescript
@@ -175,6 +192,7 @@ async startAutoLoop(
 ): Promise<void> {
   // For backward compatibility, delegate to the new per-project method
 ```
+
 [75]
 
 ### 6. Deprecated Type Fields Across Codebase
@@ -200,19 +218,30 @@ The system view renders at `/system-view` via `AnalyticsView` → `FlowGraphView
 ```typescript
 // [FILE: apps/ui/src/components/views/flow-graph/types.ts:30]
 export type EngineServiceId =
-  | 'signal-sources' | 'triage' | 'decomposition' | 'launch'
-  | 'auto-mode' | 'agent-execution' | 'git-workflow' | 'pr-feedback'
-  | 'lead-engineer-rules' | 'reflection' | 'content-pipeline' | 'project-planning';
+  | 'signal-sources'
+  | 'triage'
+  | 'decomposition'
+  | 'launch'
+  | 'auto-mode'
+  | 'agent-execution'
+  | 'git-workflow'
+  | 'pr-feedback'
+  | 'lead-engineer-rules'
+  | 'reflection'
+  | 'content-pipeline'
+  | 'project-planning';
 ```
+
 [30]
 
 `PipelineStageNode` is a separate type that tracks work-item aggregates via WebSocket, not engine API [23][34]:
 
 ```typescript
 // [FILE: apps/ui/src/components/views/flow-graph/hooks/use-flow-graph-data.ts:1]
-import { usePipelineTracker } from './use-pipeline-tracker';  // WebSocket
+import { usePipelineTracker } from './use-pipeline-tracker'; // WebSocket
 import { useEngineStatus } from '@/hooks/queries/use-metrics'; // HTTP poll
 ```
+
 [34]
 
 The current **3-lane layout** is defined in `constants.ts` [21][31]:
@@ -224,9 +253,11 @@ The current **3-lane layout** is defined in `constants.ts` [21][31]:
 // GTM (y=-70): Content Pipeline
 // Reflection (y=840)
 ```
+
 [31]
 
 **Data assembly** occurs in a single hook — `useFlowGraphData` — merging five data sources [25]:
+
 1. `/api/engine/status` → engine-service nodes
 2. `usePipelineTracker` (WebSocket) → pipeline-stage nodes
 3. `/api/integration/status` → integration nodes
@@ -241,6 +272,7 @@ const services = gtmEnabled
   ? ENGINE_SERVICES
   : ENGINE_SERVICES.filter((s) => s.serviceId !== 'content-pipeline');
 ```
+
 [32]
 
 The **node type registry** maps 11 types; removing a type string here prevents rendering [26][33]:
@@ -261,6 +293,7 @@ export const nodeTypes: NodeTypes = {
   'flow-start-end': FlowStartEndNode,
 };
 ```
+
 [33]
 
 Five flow-graph metrics are stubbed with hardcoded zeros [64]:
@@ -269,6 +302,7 @@ Five flow-graph metrics are stubbed with hardcoded zeros [64]:
 // [FILE: apps/ui/src/components/views/flow-graph/hooks/use-flow-graph-data.ts:115-168]
 // Five `throughput: 0` with `// TODO: Wire real ... once ... exposes metrics`
 ```
+
 [64]
 
 ### 8. Features Board & Project Awareness
@@ -283,6 +317,7 @@ projectSlug?: string;       // Project this feature belongs to
 milestoneSlug?: string;     // Milestone this feature belongs to
 phaseSlug?: string;         // Phase this feature was created from
 ```
+
 [36]
 
 The backend `getProjectFeatures()` method is implemented and filters by slug [37]:
@@ -297,6 +332,7 @@ async getProjectFeatures(projectPath: string, projectSlug: string): Promise<{ fe
   return { features, epics };
 }
 ```
+
 [37]
 
 The UI client binding already exists [39]:
@@ -304,8 +340,9 @@ The UI client binding already exists [39]:
 ```typescript
 // [FILE: apps/ui/src/lib/clients/system-client.ts:482]
 getProjectFeatures: (projectPath: string, projectSlug: string) =>
-  this.post('/api/projects/tools/project_list_features', { projectPath, projectSlug })
+  this.post('/api/projects/tools/project_list_features', { projectPath, projectSlug });
 ```
+
 [39]
 
 A reference implementation exists in `ProjectsView`'s features tab, which renders project-scoped feature lists grouped by epic with status badges [38]. The board header (`board-header.tsx`) is confirmed as the extension point for a project-filter dropdown [40][43].
@@ -325,6 +362,7 @@ export class ChannelRouter {
   getHandler(featureId: string): ChannelHandler | undefined { ... }
 }
 ```
+
 [6]
 
 **`github-channel-handler.ts`** has a hard constructor dependency on `PipelineOrchestrator`, calling `resolveGate()` at line 237. This handler is live and must be refactored to remove the orchestrator dependency without breaking GitHub webhook processing [8]:
@@ -333,6 +371,7 @@ export class ChannelRouter {
 // [FILE: apps/server/src/services/channel-handlers/github-channel-handler.ts:87]
 constructor(private readonly pipelineOrchestrator: PipelineOrchestrator, ...)
 ```
+
 [8]
 
 The channel-handlers module wires both together [7]:
@@ -341,6 +380,7 @@ The channel-handlers module wires both together [7]:
 // [FILE: apps/server/src/services/channel-handlers/channel-handlers.module.ts:10]
 const { pipelineOrchestrator, channelRouter } = container;
 ```
+
 [7]
 
 ### Live Services Boundary
@@ -352,6 +392,7 @@ const { pipelineOrchestrator, channelRouter } = container;
 ### Feature Flag Gating Pattern
 
 Two other route sets use the same disabled-by-default pattern:
+
 - Content routes return 403 when `gtmEnabled` is false [65][76]
 - HITL form creation returns 403 when `featureFlags.pipeline` is false [66][77]
 
@@ -431,67 +472,67 @@ No external APIs, libraries, or third-party documentation were consulted for thi
 
 ## Citations
 
-| # | Source | Description |
-|---|--------|-------------|
-| [1] | `libs/flows/package.json:2` | `@protolabsai/flows` package identity |
-| [2] | `apps/server/src/services/pipeline-orchestrator.ts:116` | `enabled = false` field |
-| [3] | `apps/server/src/server/services.ts:464` | Orchestrator instantiation and flag wiring |
-| [4] | `apps/server/src/services/auto-mode-service.ts:3798` | Live `pipelineService.isPipelineStatus()` call |
-| [5] | `apps/server/src/services/auto-mode/execution-service.ts:938` | Live `pipelineService.getPipelineConfig()` call |
-| [6] | `apps/server/src/services/channel-router.ts:63` | `ChannelRouter` class — shared dependency |
-| [7] | `apps/server/src/services/channel-handlers/channel-handlers.module.ts:10` | Module destructures orchestrator + router |
-| [8] | `apps/server/src/services/channel-handlers/github-channel-handler.ts:87` | Hard constructor dependency on orchestrator |
-| [9] | `apps/server/src/routes/engine/index.ts:625` | Dead `/signal/approve-prd` route |
-| [10] | `apps/server/src/routes/engine/index.ts:842` | Dead `/pipeline/status` route |
-| [11] | `libs/flows/src/index.ts:17` | Dead `createReviewFlow` export |
-| [12] | `libs/flows/src/index.ts:22` | Dead `createCoordinatorGraph` exports |
-| [13] | `apps/server/src/lib/graph-registry.ts:229` | Dead `unified-pipeline` graph definition |
-| [15] | `apps/server/src/services/signal-intake-service.ts` | Live service, NOT an orchestrator consumer |
-| [16] | `apps/server/src/server/wiring.ts:24` | Wiring module does NOT register pipeline |
-| [17] | `apps/server/src/server/services.ts:811` | Hardcoded processor registration |
-| [18] | `apps/ui/src/routes/system-view.tsx:1` | System view route |
-| [19] | `apps/ui/src/components/views/analytics-view.tsx:1` | AnalyticsView wrapper |
-| [20] | `apps/ui/src/components/views/flow-graph/flow-graph-canvas.tsx:1` | React Flow canvas |
-| [21] | `apps/ui/src/components/views/flow-graph/constants.ts:1` | Topology constants |
-| [22] | `apps/ui/src/components/views/flow-graph/types.ts:30` | `EngineServiceId` type |
-| [23] | `apps/ui/src/components/views/flow-graph/types.ts:114` | `PipelineStageNode` type |
-| [25] | `apps/ui/src/components/views/flow-graph/hooks/use-flow-graph-data.ts:419` | Data assembly hook |
-| [26] | `apps/ui/src/components/views/flow-graph/nodes/index.ts:32` | Node type registry |
-| [27] | `apps/ui/src/components/views/flow-graph/constants.ts:149` | Static edges (partial) |
-| [28] | `.automaker/.../phase-01-rebuild-flow-graph-constants-to-2-lane-topology.md:12` | 2-lane spec |
-| [29] | `apps/ui/src/components/views/flow-graph/types.ts:186` | `FlowNode` union type |
-| [30] | `apps/ui/src/components/views/flow-graph/types.ts:30` | `EngineServiceId` 12-value union |
-| [31] | `apps/ui/src/components/views/flow-graph/constants.ts:57` | 3-lane layout positions |
-| [32] | `apps/ui/src/components/views/flow-graph/hooks/use-flow-graph-data.ts:422` | GTM filtering gate |
-| [33] | `apps/ui/src/components/views/flow-graph/nodes/index.ts:32` | Full `nodeTypes` object |
-| [34] | `apps/ui/src/components/views/flow-graph/hooks/use-flow-graph-data.ts:1` | WebSocket/HTTP imports |
-| [35] | `apps/ui/src/components/views/board-view/hooks/use-board-column-features.ts:1` | Board column hook |
-| [36] | `libs/types/src/feature.ts:172` | `projectSlug` field on Feature |
-| [37] | `apps/server/src/services/project-service.ts:885` | `getProjectFeatures()` implementation |
-| [38] | `apps/ui/src/components/views/projects-view/tabs/features-tab.tsx:53` | Reference features tab |
-| [39] | `apps/ui/src/lib/clients/system-client.ts:482` | Client binding for project features |
-| [40] | `apps/ui/src/components/views/board-view/board-header.tsx` | Board header extension point |
-| [43] | `.automaker/.../phase-01-add-project-filter-dropdown-to-board-header.md` | Board awareness spec |
-| [45] | `apps/server/src/services/pipeline-orchestrator.ts:111-116` | Orchestrator flag documentation |
-| [46] | `libs/types/src/global-settings.ts:218-226` | Default feature flags (all false) |
-| [47] | `apps/server/src/services/auto-mode-service.ts:721-745` | Deprecated no-op methods |
-| [48] | `libs/types/src/global-settings.ts:392-395` | Deprecated model fields |
-| [49] | `libs/types/src/global-settings.ts:547,553,707` | Deprecated settings fields |
-| [50] | `libs/types/src/feature.ts:567-586` | `LegacyFeatureStatus` deprecated type |
-| [51] | `libs/types/src/feature.ts:408-413` | `lastTraceId` deprecated field |
-| [52] | `apps/server/src/services/agent-discord-router.ts:66-67` | Event bus migration TODO |
-| [53] | `libs/types/src/provider-settings.ts:325,362,377` | Deprecated provider types |
-| [55] | `libs/types/src/model.ts:26` | `CLAUDE_MODEL_MAP` deprecated |
-| [59] | `apps/server/src/lib/settings-helpers.ts:398` | `resolveActiveClaudeApiProfile()` deprecated |
-| [64] | `apps/ui/src/.../use-flow-graph-data.ts:115-168` | Five hardcoded throughput zeros |
-| [65] | `apps/server/src/routes/content/index.ts:23-35` | GTM 403 gate |
-| [66] | `apps/server/src/routes/hitl-forms/routes/create.ts:52-57` | HITL 403 gate |
-| [69] | `libs/types/src/global-settings.ts:218-226` | Default flags (verbatim) |
-| [70] | `apps/server/src/services/auto-mode-service.ts:721-745` | No-op methods (verbatim) |
-| [71] | `libs/types/src/global-settings.ts:391-395` | Deprecated model fields (verbatim) |
-| [72] | `libs/types/src/feature.ts:567-586` | Legacy status (verbatim) |
-| [73] | `libs/types/src/feature.ts:408-413` | `lastTraceId` (verbatim) |
-| [74] | `apps/server/src/services/agent-discord-router.ts:66-67` | Event subscribe TODO (verbatim) |
-| [75] | `apps/server/src/services/auto-mode-service.ts:1050-1058` | Deprecated `startAutoLoop` (verbatim) |
-| [76] | `apps/server/src/routes/content/index.ts:23-35` | GTM gate (verbatim) |
-| [77] | `apps/server/src/routes/hitl-forms/routes/create.ts:52-57` | HITL gate (verbatim) |
+| #    | Source                                                                          | Description                                     |
+| ---- | ------------------------------------------------------------------------------- | ----------------------------------------------- |
+| [1]  | `libs/flows/package.json:2`                                                     | `@protolabsai/flows` package identity           |
+| [2]  | `apps/server/src/services/pipeline-orchestrator.ts:116`                         | `enabled = false` field                         |
+| [3]  | `apps/server/src/server/services.ts:464`                                        | Orchestrator instantiation and flag wiring      |
+| [4]  | `apps/server/src/services/auto-mode-service.ts:3798`                            | Live `pipelineService.isPipelineStatus()` call  |
+| [5]  | `apps/server/src/services/auto-mode/execution-service.ts:938`                   | Live `pipelineService.getPipelineConfig()` call |
+| [6]  | `apps/server/src/services/channel-router.ts:63`                                 | `ChannelRouter` class — shared dependency       |
+| [7]  | `apps/server/src/services/channel-handlers/channel-handlers.module.ts:10`       | Module destructures orchestrator + router       |
+| [8]  | `apps/server/src/services/channel-handlers/github-channel-handler.ts:87`        | Hard constructor dependency on orchestrator     |
+| [9]  | `apps/server/src/routes/engine/index.ts:625`                                    | Dead `/signal/approve-prd` route                |
+| [10] | `apps/server/src/routes/engine/index.ts:842`                                    | Dead `/pipeline/status` route                   |
+| [11] | `libs/flows/src/index.ts:17`                                                    | Dead `createReviewFlow` export                  |
+| [12] | `libs/flows/src/index.ts:22`                                                    | Dead `createCoordinatorGraph` exports           |
+| [13] | `apps/server/src/lib/graph-registry.ts:229`                                     | Dead `unified-pipeline` graph definition        |
+| [15] | `apps/server/src/services/signal-intake-service.ts`                             | Live service, NOT an orchestrator consumer      |
+| [16] | `apps/server/src/server/wiring.ts:24`                                           | Wiring module does NOT register pipeline        |
+| [17] | `apps/server/src/server/services.ts:811`                                        | Hardcoded processor registration                |
+| [18] | `apps/ui/src/routes/system-view.tsx:1`                                          | System view route                               |
+| [19] | `apps/ui/src/components/views/analytics-view.tsx:1`                             | AnalyticsView wrapper                           |
+| [20] | `apps/ui/src/components/views/flow-graph/flow-graph-canvas.tsx:1`               | React Flow canvas                               |
+| [21] | `apps/ui/src/components/views/flow-graph/constants.ts:1`                        | Topology constants                              |
+| [22] | `apps/ui/src/components/views/flow-graph/types.ts:30`                           | `EngineServiceId` type                          |
+| [23] | `apps/ui/src/components/views/flow-graph/types.ts:114`                          | `PipelineStageNode` type                        |
+| [25] | `apps/ui/src/components/views/flow-graph/hooks/use-flow-graph-data.ts:419`      | Data assembly hook                              |
+| [26] | `apps/ui/src/components/views/flow-graph/nodes/index.ts:32`                     | Node type registry                              |
+| [27] | `apps/ui/src/components/views/flow-graph/constants.ts:149`                      | Static edges (partial)                          |
+| [28] | `.automaker/.../phase-01-rebuild-flow-graph-constants-to-2-lane-topology.md:12` | 2-lane spec                                     |
+| [29] | `apps/ui/src/components/views/flow-graph/types.ts:186`                          | `FlowNode` union type                           |
+| [30] | `apps/ui/src/components/views/flow-graph/types.ts:30`                           | `EngineServiceId` 12-value union                |
+| [31] | `apps/ui/src/components/views/flow-graph/constants.ts:57`                       | 3-lane layout positions                         |
+| [32] | `apps/ui/src/components/views/flow-graph/hooks/use-flow-graph-data.ts:422`      | GTM filtering gate                              |
+| [33] | `apps/ui/src/components/views/flow-graph/nodes/index.ts:32`                     | Full `nodeTypes` object                         |
+| [34] | `apps/ui/src/components/views/flow-graph/hooks/use-flow-graph-data.ts:1`        | WebSocket/HTTP imports                          |
+| [35] | `apps/ui/src/components/views/board-view/hooks/use-board-column-features.ts:1`  | Board column hook                               |
+| [36] | `libs/types/src/feature.ts:172`                                                 | `projectSlug` field on Feature                  |
+| [37] | `apps/server/src/services/project-service.ts:885`                               | `getProjectFeatures()` implementation           |
+| [38] | `apps/ui/src/components/views/projects-view/tabs/features-tab.tsx:53`           | Reference features tab                          |
+| [39] | `apps/ui/src/lib/clients/system-client.ts:482`                                  | Client binding for project features             |
+| [40] | `apps/ui/src/components/views/board-view/board-header.tsx`                      | Board header extension point                    |
+| [43] | `.automaker/.../phase-01-add-project-filter-dropdown-to-board-header.md`        | Board awareness spec                            |
+| [45] | `apps/server/src/services/pipeline-orchestrator.ts:111-116`                     | Orchestrator flag documentation                 |
+| [46] | `libs/types/src/global-settings.ts:218-226`                                     | Default feature flags (all false)               |
+| [47] | `apps/server/src/services/auto-mode-service.ts:721-745`                         | Deprecated no-op methods                        |
+| [48] | `libs/types/src/global-settings.ts:392-395`                                     | Deprecated model fields                         |
+| [49] | `libs/types/src/global-settings.ts:547,553,707`                                 | Deprecated settings fields                      |
+| [50] | `libs/types/src/feature.ts:567-586`                                             | `LegacyFeatureStatus` deprecated type           |
+| [51] | `libs/types/src/feature.ts:408-413`                                             | `lastTraceId` deprecated field                  |
+| [52] | `apps/server/src/services/agent-discord-router.ts:66-67`                        | Event bus migration TODO                        |
+| [53] | `libs/types/src/provider-settings.ts:325,362,377`                               | Deprecated provider types                       |
+| [55] | `libs/types/src/model.ts:26`                                                    | `CLAUDE_MODEL_MAP` deprecated                   |
+| [59] | `apps/server/src/lib/settings-helpers.ts:398`                                   | `resolveActiveClaudeApiProfile()` deprecated    |
+| [64] | `apps/ui/src/.../use-flow-graph-data.ts:115-168`                                | Five hardcoded throughput zeros                 |
+| [65] | `apps/server/src/routes/content/index.ts:23-35`                                 | GTM 403 gate                                    |
+| [66] | `apps/server/src/routes/hitl-forms/routes/create.ts:52-57`                      | HITL 403 gate                                   |
+| [69] | `libs/types/src/global-settings.ts:218-226`                                     | Default flags (verbatim)                        |
+| [70] | `apps/server/src/services/auto-mode-service.ts:721-745`                         | No-op methods (verbatim)                        |
+| [71] | `libs/types/src/global-settings.ts:391-395`                                     | Deprecated model fields (verbatim)              |
+| [72] | `libs/types/src/feature.ts:567-586`                                             | Legacy status (verbatim)                        |
+| [73] | `libs/types/src/feature.ts:408-413`                                             | `lastTraceId` (verbatim)                        |
+| [74] | `apps/server/src/services/agent-discord-router.ts:66-67`                        | Event subscribe TODO (verbatim)                 |
+| [75] | `apps/server/src/services/auto-mode-service.ts:1050-1058`                       | Deprecated `startAutoLoop` (verbatim)           |
+| [76] | `apps/server/src/routes/content/index.ts:23-35`                                 | GTM gate (verbatim)                             |
+| [77] | `apps/server/src/routes/hitl-forms/routes/create.ts:52-57`                      | HITL gate (verbatim)                            |

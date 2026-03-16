@@ -28,6 +28,7 @@ this.timer = setInterval(() => {
   });
 }, CHECK_INTERVAL_MS);
 ```
+
 [44][52]
 
 This pattern repeats identically in `HealthMonitorService` [3], `PRWatcherService`, `GitHubMonitor`, `DiscordMonitor`, `WorktreeLifecycleService`, `SensorRegistryService`, `PeerMeshService` [16], `AgentManifestService`, `LeadEngineerService` [15], `SpecGenerationMonitor`, and `WorkIntakeService` [1].
@@ -36,10 +37,26 @@ This pattern repeats identically in `HealthMonitorService` [3], `PRWatcherServic
 
 ```typescript
 // FILE: apps/server/src/services/lead-engineer-service.ts:332–384
-this.refreshIntervals.set(projectPath, setInterval(async () => { /* world state */ }, WORLD_STATE_REFRESH_MS));
-this.supervisorIntervals.set(projectPath, setInterval(() => { /* supervisor */ }, SUPERVISOR_CHECK_MS));
-this.prMergeIntervals.set(projectPath, setInterval(() => { /* merge poll */ }, PR_MERGE_POLL_MS));
+this.refreshIntervals.set(
+  projectPath,
+  setInterval(async () => {
+    /* world state */
+  }, WORLD_STATE_REFRESH_MS)
+);
+this.supervisorIntervals.set(
+  projectPath,
+  setInterval(() => {
+    /* supervisor */
+  }, SUPERVISOR_CHECK_MS)
+);
+this.prMergeIntervals.set(
+  projectPath,
+  setInterval(() => {
+    /* merge poll */
+  }, PR_MERGE_POLL_MS)
+);
 ```
+
 [2][15]
 
 Timer count scales linearly with projects, making this the highest-growth source of unmanaged intervals.
@@ -57,14 +74,18 @@ this.ttlTimer = setInterval(() => {
     if (now - lastSeen > ttl) peer.identity.status = 'offline';
 }, ...);
 ```
+
 [16]
 
 **SchedulerService** itself is just another `setInterval` consumer:
 
 ```typescript
 // FILE: apps/server/src/services/scheduler-service.ts:790
-this.intervalId = setInterval(() => { void this.tick(); }, this.checkInterval);
+this.intervalId = setInterval(() => {
+  void this.tick();
+}, this.checkInterval);
 ```
+
 [8]
 
 All interval constants are centralized in `timeouts.ts` with environment variable overrides [39][53]:
@@ -76,9 +97,10 @@ All interval constants are centralized in `timeouts.ts` with environment variabl
  * Each reads from a named environment variable with a sensible default.
  */
 ```
+
 [39]
 
-This centralization of *values* without centralization of *lifecycle management* is the core structural gap.
+This centralization of _values_ without centralization of _lifecycle management_ is the core structural gap.
 
 ### 2. Four Overlapping Board Health Systems
 
@@ -92,6 +114,7 @@ this.intervalId = setInterval(() => {
   });
 }, this.config.checkIntervalMs);
 ```
+
 [3]
 
 **System B — FeatureHealthService** provides on-demand audits detecting `orphaned_epic_ref`, `dangling_dependency`, `stale_running`, `stale_gate`, `stale_lease`, `closed_pr_in_review`, `completed_epic_children` with dry-run and auto-fix modes [4].
@@ -103,7 +126,9 @@ this.intervalId = setInterval(() => {
 ```typescript
 // FILE: apps/server/src/services/maintenance-tasks.ts:679
 async function runBoardHealthAudit(
-  featureHealthService: FeatureHealthService, events: EventEmitter, projectPaths: string[]
+  featureHealthService: FeatureHealthService,
+  events: EventEmitter,
+  projectPaths: string[]
 ): Promise<void> {
   for (const projectPath of projectPaths) {
     const report = await featureHealthService.audit(projectPath, true);
@@ -112,6 +137,7 @@ async function runBoardHealthAudit(
   }
 }
 ```
+
 [6][7]
 
 Systems A and B detect partially overlapping issue classes with different detection logic. System D duplicates System B on a fixed cadence. System C is purely synchronous. None share a unified issue taxonomy or remediation tracking.
@@ -133,6 +159,7 @@ try {
 const duration = Date.now() - startTime; // ← computed, never histogrammed
 this.emitEvent('scheduler:task_completed', { ...result });
 ```
+
 [70]
 
 ### 4. Calendar Architecture
@@ -150,6 +177,7 @@ emitReminder(payload: CalendarReminderPayload): void {
   this.reminderEmitter.emit('calendar:reminder', payload);
 }
 ```
+
 [23][33]
 
 This isolation means calendar reminders are invisible to the global event bus and any event-triggered automation [21][32].
@@ -162,16 +190,16 @@ Two GitHub webhook entry points exist: `POST /webhooks/github` (HMAC-SHA256 vali
 
 `registerMaintenanceFlows()` seeds 8 built-in tasks into `FlowRegistry` [13][20]:
 
-| Task | Cadence |
-|---|---|
-| `stale-features` | Hourly |
-| `stale-worktrees` | Daily |
-| `branch-cleanup` | Weekly |
-| `data-integrity` | 5 min |
-| `built-in:board-health` | 6h |
-| `auto-merge-prs` | 5 min |
-| `auto-rebase-stale-prs` | 30 min |
-| `runner-health` | 5 min |
+| Task                    | Cadence |
+| ----------------------- | ------- |
+| `stale-features`        | Hourly  |
+| `stale-worktrees`       | Daily   |
+| `branch-cleanup`        | Weekly  |
+| `data-integrity`        | 5 min   |
+| `built-in:board-health` | 6h      |
+| `auto-merge-prs`        | 5 min   |
+| `auto-rebase-stale-prs` | 30 min  |
+| `runner-health`         | 5 min   |
 
 All marked `isBuiltIn: true` (undeleteable) and executed via the `AutomationService → SchedulerService` chain [13][17][20].
 
@@ -192,6 +220,7 @@ export interface EventEmitter extends EventBus {
   setRemoteBroadcaster(fn: RemoteBroadcastFn): void;
 }
 ```
+
 [18][29]
 
 It supports typed handlers, a catch-all `subscribe()`, and pluggable remote broadcasting for CRDT sync over WebSocket [45]. This is the natural integration point for a unified timer registry to emit lifecycle events.
@@ -204,23 +233,34 @@ It supports typed handlers, a catch-all `subscribe()`, and pluggable remote broa
 // FILE: apps/server/src/services/scheduler.module.ts:28
 schedulerService.initialize(events, dataDir);
 schedulerService.setSettingsService(settingsService);
-void schedulerService
-  .start()
-  .then(async () => {
-    await automationService.syncWithScheduler({
-      events, autoModeService, featureHealthService,
-      integrityWatchdogService, featureLoader, settingsService,
-    });
-    await schedulerService.registerTask(
-      'job-executor:tick', 'Calendar Job Executor', '* * * * *',
-      () => container.jobExecutorService.tick(), true
-    );
-    await schedulerService.registerTask(
-      'google-calendar:sync', 'Google Calendar Sync', '0 */6 * * *',
-      async () => { /* ... */ }, true
-    );
+void schedulerService.start().then(async () => {
+  await automationService.syncWithScheduler({
+    events,
+    autoModeService,
+    featureHealthService,
+    integrityWatchdogService,
+    featureLoader,
+    settingsService,
   });
+  await schedulerService.registerTask(
+    'job-executor:tick',
+    'Calendar Job Executor',
+    '* * * * *',
+    () => container.jobExecutorService.tick(),
+    true
+  );
+  await schedulerService.registerTask(
+    'google-calendar:sync',
+    'Google Calendar Sync',
+    '0 */6 * * *',
+    async () => {
+      /* ... */
+    },
+    true
+  );
+});
 ```
+
 [19][30]
 
 ### AutomationService — Event-Triggered Dispatch
@@ -233,8 +273,10 @@ eventsEmitter.subscribe((type: unknown, _payload: unknown) => {
   void (async () => {
     const allAutomations = await this.readAutomations();
     const matching = allAutomations.filter(
-      (a) => a.enabled && a.trigger.type === 'event' &&
-             (a.trigger as StoredEventTrigger).eventType === type
+      (a) =>
+        a.enabled &&
+        a.trigger.type === 'event' &&
+        (a.trigger as StoredEventTrigger).eventType === type
     );
     for (const automation of matching) {
       this.executeAutomation(automation.id, 'scheduler').catch(/* ... */);
@@ -242,6 +284,7 @@ eventsEmitter.subscribe((type: unknown, _payload: unknown) => {
   })();
 });
 ```
+
 [21][32]
 
 This means any new events emitted by a unified timer registry would automatically be available as automation triggers.
@@ -264,6 +307,7 @@ export class AutoModeCoordinator {
   }
 }
 ```
+
 [25][34]
 
 This pattern — event-driven behavioral gates — is the model for how unified health signals should control timer behavior.
@@ -276,6 +320,7 @@ This pattern — event-driven behavioral gates — is the model for how unified 
 // FILE: apps/server/src/services/infrastructure.module.ts:16
 healthMonitorService.setEventEmitter(events);
 ```
+
 [24][36]
 
 ### Persistence — Fully Siloed
@@ -291,6 +336,7 @@ Module-level `Map<string, FlowFactory>` shared between `AutomationService` and `
 ```typescript
 // FILE: apps/server/src/services/automation-service.ts:42–49
 ```
+
 Already formalizes shared requirements: `EventEmitter`, `AutoModeService`, `FeatureHealthService`, `DataIntegrityWatchdogService`, `FeatureLoader`, `SettingsService` [28]. This interface is the natural extension point for injecting a `TimerRegistry` dependency.
 
 ---
@@ -312,6 +358,7 @@ const sdk = new NodeSDK({
   instrumentations: [getNodeAutoInstrumentations()],
 });
 ```
+
 [40][50]
 
 Dependencies include `@opentelemetry/sdk-node ^0.212.0`, `@opentelemetry/api ^1.9.0`, `@opentelemetry/exporter-trace-otlp-http ^0.212.0`, `@opentelemetry/auto-instrumentations-node ^0.70.1`, `@langfuse/otel ^4.6.1` [41][49].
@@ -325,6 +372,7 @@ if (!publicKey || !secretKey) {
   return;
 }
 ```
+
 [48]
 
 Tracing covers only LLM provider invocations [76]. Health checks, scheduler ticks, and loop state transitions produce no spans [76].
@@ -348,6 +396,7 @@ export const agentExecutionDuration = new Histogram({
 });
 // ⚠️ No scheduler_task_duration, health_check_status, loop_state.
 ```
+
 [42][68]
 
 **Missing from Prometheus:** scheduler task execution counts/durations [70], health-check results [69], auto-loop circuit-breaker state [71], ava-cron skip rates [72], and dashboard historical data [73].
@@ -364,6 +413,7 @@ this.events.emit('health:issue-detected', { type, severity, message, metrics: re
 logger.info(`Health check: ${duration}ms`); // ← text only, no histogram
 this.events.emit('health:check-completed', result);
 ```
+
 [69]
 
 The auto-loop coordinator's state is entirely memory-resident [71]:
@@ -371,11 +421,12 @@ The auto-loop coordinator's state is entirely memory-resident [71]:
 ```typescript
 // FILE: apps/server/src/services/auto-mode/auto-loop-coordinator.ts:54–95
 export interface LoopState {
-  isPaused: boolean;            // ← no Gauge
-  failureTimestamps: number[];  // ← never metric
-  humanBlockedCount: number;    // ← never exported
+  isPaused: boolean; // ← no Gauge
+  failureTimestamps: number[]; // ← never metric
+  humanBlockedCount: number; // ← never exported
 }
 ```
+
 [71]
 
 ### Grafana & Alerting — Blind Spots
@@ -403,6 +454,7 @@ The event bus is a bespoke `Set`-based `EventEmitter` [45]. No RxJS, Redis, Kafk
 **Create `TimerRegistry` service** that replaces all 24 direct `setInterval` calls with registered, named, observable timers.
 
 **Design:**
+
 - Central `Map<timerId, TimerEntry>` tracking name, handler, interval, last-run, next-run, execution count, failure count, state (running/paused/stopped)
 - Each service calls `timerRegistry.register({ id, name, handler, intervalMs, category })` instead of `setInterval`
 - Registry owns all `setInterval`/`clearInterval` calls
@@ -416,6 +468,7 @@ The event bus is a bespoke `Set`-based `EventEmitter` [45]. No RxJS, Redis, Kafk
 ### Phase 2: Maintenance Orchestrator (Health Consolidation)
 
 **Merge the four health systems** into a single `MaintenanceOrchestrator`:
+
 - Absorb `HealthMonitorService` detection logic [3] and `FeatureHealthService` audit logic [4] into a unified issue taxonomy
 - Consolidate System A's 5-minute background loop and System D's 6-hour cron [6] into a single configurable schedule registered through `TimerRegistry`
 - Keep API health routes [5] as thin read-only endpoints over the orchestrator's latest state
@@ -430,12 +483,14 @@ The event bus is a bespoke `Set`-based `EventEmitter` [45]. No RxJS, Redis, Kafk
 ### Phase 4: Observability Integration
 
 **Wire TimerRegistry to Prometheus** [42] with:
+
 - `Histogram`: `timer_execution_duration_seconds` (labels: `timer_id`, `category`)
 - `Counter`: `timer_execution_total` (labels: `timer_id`, `status: success|failure`)
 - `Gauge`: `timer_active_count` (label: `category`)
 - `Gauge`: `timer_state` (labels: `timer_id`, `state: running|paused|stopped`)
 
 **Wire health orchestrator to Prometheus:**
+
 - `Gauge`: `health_issues_detected` (labels: `type`, `severity`)
 - `Counter`: `health_auto_remediation_total` (labels: `type`, `result: fixed|failed`)
 - `Histogram`: `health_check_duration_seconds`
@@ -464,7 +519,7 @@ Phase 1 is foundational — all subsequent phases depend on centralized timer li
 
 1. **LeadEngineerService per-project timer scaling** [15]: With N projects × 3 timers, migration must handle dynamic registration/deregistration as projects activate/deactivate. The timer registry must support `register`/`unregister` per projectPath without leaking handles.
 
-2. **PeerMeshService timing sensitivity** [16]: Heartbeat and TTL timers are infrastructure-critical for peer presence. Any jitter introduced by a shared registry tick (vs. dedicated `setInterval`) could cause false peer-offline detection. These may need to remain as dedicated high-priority timers with registry *observation* but not *management*.
+2. **PeerMeshService timing sensitivity** [16]: Heartbeat and TTL timers are infrastructure-critical for peer presence. Any jitter introduced by a shared registry tick (vs. dedicated `setInterval`) could cause false peer-offline detection. These may need to remain as dedicated high-priority timers with registry _observation_ but not _management_.
 
 3. **Health system consolidation — detection overlap**: Systems A [3] and B [4] detect partially overlapping issue sets with different logic. A unified taxonomy must decide authoritative detection for overlapping categories (`stuck_feature` in A vs. `stale_running` in B). Requires careful mapping before code changes.
 
@@ -490,83 +545,83 @@ Phase 1 is foundational — all subsequent phases depend on centralized timer li
 
 ## Citations
 
-| # | Source |
-|---|---|
-| [1] | `apps/server/src/services/work-intake-service.ts:121` |
-| [2] | `apps/server/src/services/lead-engineer-service.ts:334–384` |
-| [3] | `apps/server/src/services/health-monitor-service.ts:177` — Background `setInterval` (5 min), detects stuck_feature, retryable_feature, orphaned_worktree, high_memory_usage, disk_space_low |
-| [4] | `apps/server/src/services/feature-health-service.ts` — On-demand audit detecting orphaned_epic_ref, dangling_dependency, stale_running, etc. |
-| [5] | `apps/server/src/routes/health/` — Five graduated HTTP endpoints |
-| [6] | `apps/server/src/services/maintenance-tasks.ts:679` — 6-hour `built-in:board-health` automation |
-| [7] | `apps/server/src/services/maintenance-tasks.ts:679` |
-| [8] | `apps/server/src/services/scheduler-service.ts:790` |
-| [9] | `apps/server/src/services/calendar-service.ts` |
-| [10] | `libs/types/src/calendar.ts` |
-| [11] | `apps/server/src/routes/webhooks/routes/github.ts` |
-| [12] | `apps/server/src/routes/github/routes/webhook.ts` — Persistence: three independent JSON stores |
-| [13] | `apps/server/src/services/maintenance-tasks.ts` |
-| [14] | `libs/flows/src/maintenance/maintenance-flow.ts` |
-| [15] | `apps/server/src/services/lead-engineer-service.ts:332–384` — Per-project 3-timer multiplication |
-| [16] | `apps/server/src/services/peer-mesh-service.ts:670, 856, 908` — Three infrastructure timers |
-| [17] | `apps/server/src/services/automation-service.ts` |
-| [18] | `apps/server/src/lib/events.ts:31` — Central EventEmitter interface |
-| [19] | `apps/server/src/services/scheduler.module.ts:28` — Primary orchestration wiring |
-| [20] | `apps/server/src/services/automation-service.ts:484` — `syncWithScheduler()` maintenance bridge |
-| [21] | `apps/server/src/services/automation-service.ts:511` — Event-triggered automation dispatch |
-| [22] | `apps/server/src/services/job-executor-service.ts:70` — Calendar-to-scheduler integration |
-| [23] | `apps/server/src/services/calendar-service.ts:40` — Private reminder emitter |
-| [24] | `apps/server/src/services/infrastructure.module.ts:16` — Independent health wiring |
-| [25] | `apps/server/src/services/auto-mode/auto-mode-coordinator.ts:22` — Cross-system state gate |
-| [26] | `apps/server/src/services/automation-service.ts:37` — FlowRegistry singleton |
-| [27] | `apps/server/src/server/wiring.ts` — Module registration entry point |
-| [28] | `apps/server/src/services/automation-service.ts:42` — `SyncWithSchedulerDeps` interface |
-| [29] | `apps/server/src/lib/events.ts:31` — EventEmitter interface definition |
-| [30] | `apps/server/src/services/scheduler.module.ts:28` — Wiring code excerpt |
-| [31] | `apps/server/src/services/automation-service.ts:484` — `syncWithScheduler()` code |
-| [32] | `apps/server/src/services/automation-service.ts:511` — Catch-all subscriber code |
-| [33] | `apps/server/src/services/calendar-service.ts:40` — Private emitter code |
-| [34] | `apps/server/src/services/auto-mode/auto-mode-coordinator.ts:22` — Coordinator code |
-| [35] | `apps/server/src/services/job-executor-service.ts:70` — Constructor dependencies |
-| [36] | `apps/server/src/services/infrastructure.module.ts:16` — `setEventEmitter` call |
-| [37] | `apps/server/package.json:28–83` — No cron/scheduler dependencies |
-| [38] | `apps/server/src/services/scheduler-service.ts:1–22` — Hand-rolled cron parser |
-| [39] | `apps/server/src/config/timeouts.ts:1–24` — Centralized timeout constants |
-| [40] | `apps/server/src/lib/otel.ts:69–74` — NodeSDK configuration |
-| [41] | `apps/server/package.json:37–47` — OTel dependencies |
-| [42] | `apps/server/src/lib/prometheus.ts:8–21` — Prometheus registry setup |
-| [43] | `apps/server/src/lib/prometheus.ts:26–131` — Custom metrics |
-| [44] | `apps/server/src/services/archival-service.ts:33, 55–59` — Timer pattern example |
-| [45] | `apps/server/src/lib/events.ts` — Set-based EventEmitter with remote broadcaster |
-| [46] | `apps/server/package.json:74` — Morgan HTTP logging |
-| [47] | `apps/server/src/services/health-monitor-service.ts`, `feature-health-service.ts` — No external health framework |
-| [48] | `apps/server/src/lib/otel.ts:31–36` — Langfuse credential gate |
-| [49] | `apps/server/package.json:37–47, 74, 78` — Full OTel/Langfuse dependency list |
-| [50] | `apps/server/src/lib/otel.ts:69–77` — SDK initialization |
-| [51] | `apps/server/src/lib/prometheus.ts:15–21` — Registry and default metrics |
-| [52] | `apps/server/src/services/archival-service.ts:33, 55–59` — Repeated timer pattern |
-| [53] | `apps/server/src/config/timeouts.ts:34–52` — Polling timeout constants |
-| [54] | `vitest.config.ts:1` — Monorepo test project configuration |
-| [55] | `apps/server/tests/unit/services/scheduler-loop.test.ts:1` — Real Date math, no fake timers |
-| [56] | `apps/server/tests/unit/services/calendar-service.test.ts:1` — Real Date math |
-| [57] | `apps/server/tests/unit/services/agent-manifest-service.test.ts:1` — `vi.useFakeTimers()` usage |
-| [58] | `apps/server/vitest.config.ts:1` — Coverage thresholds and exclusions |
-| [59] | `apps/server/tests/setup.ts:1` — Global test setup |
-| [60] | `apps/server/tests/helpers/mock-factories.ts:1` — Mock factory infrastructure |
-| [61] | `apps/server/tests/integration/services/auto-mode-service.integration.test.ts:1` — 25KB integration test |
-| [62] | `apps/server/tests/integration/services/lifecycle-cascade.integration.test.ts:1` — 13KB cascade test |
-| [63] | `apps/server/tests/unit/routes/health.test.ts:1` — Thin health route tests (71 lines) |
-| [64] | `libs/types/tests/webhook.test.ts:1` — Webhook type validation tests |
-| [65] | `libs/flows/tests/unit/maintenance-flow.test.ts:1` — Shallow maintenance flow tests (98 lines) |
-| [66] | `.github/workflows/test.yml:1` — CI test pipeline |
-| [67] | `apps/ui/tests/scheduler-status-verification.spec.ts:1` — Playwright E2E scheduler test |
-| [68] | `apps/server/src/lib/prometheus.ts:1` — 10 custom metrics, agent/HTTP focus |
-| [69] | `apps/server/src/services/health-monitor-service.ts:288` — Events emitted, no Prometheus |
-| [70] | `apps/server/src/services/scheduler-service.ts:534` — 11 event types, zero Prometheus |
-| [71] | `apps/server/src/services/auto-mode/auto-loop-coordinator.ts:54` — Memory-only loop state |
-| [72] | `apps/server/src/services/ava-cron-tasks.ts:26` — Three ava cron tasks, no skip metrics |
-| [73] | `apps/server/src/routes/dashboard.ts:24` — Point-in-time snapshot, no persistence |
-| [74] | `monitoring/grafana/provisioning/dashboards/` — Four dashboards, blind to schedulers/timers |
-| [75] | `monitoring/grafana/provisioning/alerting/rules.yml` — Five rules, no scheduler/health coverage |
-| [76] | `libs/observability/src/langfuse/middleware.ts` — AI-only tracing |
-| [77] | `prometheus.yml:24` — Scrape configuration |
-| [78] | `apps/server/src/routes/metrics/prometheus.ts:24` — Registry-only metrics endpoint |
+| #    | Source                                                                                                                                                                                      |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [1]  | `apps/server/src/services/work-intake-service.ts:121`                                                                                                                                       |
+| [2]  | `apps/server/src/services/lead-engineer-service.ts:334–384`                                                                                                                                 |
+| [3]  | `apps/server/src/services/health-monitor-service.ts:177` — Background `setInterval` (5 min), detects stuck_feature, retryable_feature, orphaned_worktree, high_memory_usage, disk_space_low |
+| [4]  | `apps/server/src/services/feature-health-service.ts` — On-demand audit detecting orphaned_epic_ref, dangling_dependency, stale_running, etc.                                                |
+| [5]  | `apps/server/src/routes/health/` — Five graduated HTTP endpoints                                                                                                                            |
+| [6]  | `apps/server/src/services/maintenance-tasks.ts:679` — 6-hour `built-in:board-health` automation                                                                                             |
+| [7]  | `apps/server/src/services/maintenance-tasks.ts:679`                                                                                                                                         |
+| [8]  | `apps/server/src/services/scheduler-service.ts:790`                                                                                                                                         |
+| [9]  | `apps/server/src/services/calendar-service.ts`                                                                                                                                              |
+| [10] | `libs/types/src/calendar.ts`                                                                                                                                                                |
+| [11] | `apps/server/src/routes/webhooks/routes/github.ts`                                                                                                                                          |
+| [12] | `apps/server/src/routes/github/routes/webhook.ts` — Persistence: three independent JSON stores                                                                                              |
+| [13] | `apps/server/src/services/maintenance-tasks.ts`                                                                                                                                             |
+| [14] | `libs/flows/src/maintenance/maintenance-flow.ts`                                                                                                                                            |
+| [15] | `apps/server/src/services/lead-engineer-service.ts:332–384` — Per-project 3-timer multiplication                                                                                            |
+| [16] | `apps/server/src/services/peer-mesh-service.ts:670, 856, 908` — Three infrastructure timers                                                                                                 |
+| [17] | `apps/server/src/services/automation-service.ts`                                                                                                                                            |
+| [18] | `apps/server/src/lib/events.ts:31` — Central EventEmitter interface                                                                                                                         |
+| [19] | `apps/server/src/services/scheduler.module.ts:28` — Primary orchestration wiring                                                                                                            |
+| [20] | `apps/server/src/services/automation-service.ts:484` — `syncWithScheduler()` maintenance bridge                                                                                             |
+| [21] | `apps/server/src/services/automation-service.ts:511` — Event-triggered automation dispatch                                                                                                  |
+| [22] | `apps/server/src/services/job-executor-service.ts:70` — Calendar-to-scheduler integration                                                                                                   |
+| [23] | `apps/server/src/services/calendar-service.ts:40` — Private reminder emitter                                                                                                                |
+| [24] | `apps/server/src/services/infrastructure.module.ts:16` — Independent health wiring                                                                                                          |
+| [25] | `apps/server/src/services/auto-mode/auto-mode-coordinator.ts:22` — Cross-system state gate                                                                                                  |
+| [26] | `apps/server/src/services/automation-service.ts:37` — FlowRegistry singleton                                                                                                                |
+| [27] | `apps/server/src/server/wiring.ts` — Module registration entry point                                                                                                                        |
+| [28] | `apps/server/src/services/automation-service.ts:42` — `SyncWithSchedulerDeps` interface                                                                                                     |
+| [29] | `apps/server/src/lib/events.ts:31` — EventEmitter interface definition                                                                                                                      |
+| [30] | `apps/server/src/services/scheduler.module.ts:28` — Wiring code excerpt                                                                                                                     |
+| [31] | `apps/server/src/services/automation-service.ts:484` — `syncWithScheduler()` code                                                                                                           |
+| [32] | `apps/server/src/services/automation-service.ts:511` — Catch-all subscriber code                                                                                                            |
+| [33] | `apps/server/src/services/calendar-service.ts:40` — Private emitter code                                                                                                                    |
+| [34] | `apps/server/src/services/auto-mode/auto-mode-coordinator.ts:22` — Coordinator code                                                                                                         |
+| [35] | `apps/server/src/services/job-executor-service.ts:70` — Constructor dependencies                                                                                                            |
+| [36] | `apps/server/src/services/infrastructure.module.ts:16` — `setEventEmitter` call                                                                                                             |
+| [37] | `apps/server/package.json:28–83` — No cron/scheduler dependencies                                                                                                                           |
+| [38] | `apps/server/src/services/scheduler-service.ts:1–22` — Hand-rolled cron parser                                                                                                              |
+| [39] | `apps/server/src/config/timeouts.ts:1–24` — Centralized timeout constants                                                                                                                   |
+| [40] | `apps/server/src/lib/otel.ts:69–74` — NodeSDK configuration                                                                                                                                 |
+| [41] | `apps/server/package.json:37–47` — OTel dependencies                                                                                                                                        |
+| [42] | `apps/server/src/lib/prometheus.ts:8–21` — Prometheus registry setup                                                                                                                        |
+| [43] | `apps/server/src/lib/prometheus.ts:26–131` — Custom metrics                                                                                                                                 |
+| [44] | `apps/server/src/services/archival-service.ts:33, 55–59` — Timer pattern example                                                                                                            |
+| [45] | `apps/server/src/lib/events.ts` — Set-based EventEmitter with remote broadcaster                                                                                                            |
+| [46] | `apps/server/package.json:74` — Morgan HTTP logging                                                                                                                                         |
+| [47] | `apps/server/src/services/health-monitor-service.ts`, `feature-health-service.ts` — No external health framework                                                                            |
+| [48] | `apps/server/src/lib/otel.ts:31–36` — Langfuse credential gate                                                                                                                              |
+| [49] | `apps/server/package.json:37–47, 74, 78` — Full OTel/Langfuse dependency list                                                                                                               |
+| [50] | `apps/server/src/lib/otel.ts:69–77` — SDK initialization                                                                                                                                    |
+| [51] | `apps/server/src/lib/prometheus.ts:15–21` — Registry and default metrics                                                                                                                    |
+| [52] | `apps/server/src/services/archival-service.ts:33, 55–59` — Repeated timer pattern                                                                                                           |
+| [53] | `apps/server/src/config/timeouts.ts:34–52` — Polling timeout constants                                                                                                                      |
+| [54] | `vitest.config.ts:1` — Monorepo test project configuration                                                                                                                                  |
+| [55] | `apps/server/tests/unit/services/scheduler-loop.test.ts:1` — Real Date math, no fake timers                                                                                                 |
+| [56] | `apps/server/tests/unit/services/calendar-service.test.ts:1` — Real Date math                                                                                                               |
+| [57] | `apps/server/tests/unit/services/agent-manifest-service.test.ts:1` — `vi.useFakeTimers()` usage                                                                                             |
+| [58] | `apps/server/vitest.config.ts:1` — Coverage thresholds and exclusions                                                                                                                       |
+| [59] | `apps/server/tests/setup.ts:1` — Global test setup                                                                                                                                          |
+| [60] | `apps/server/tests/helpers/mock-factories.ts:1` — Mock factory infrastructure                                                                                                               |
+| [61] | `apps/server/tests/integration/services/auto-mode-service.integration.test.ts:1` — 25KB integration test                                                                                    |
+| [62] | `apps/server/tests/integration/services/lifecycle-cascade.integration.test.ts:1` — 13KB cascade test                                                                                        |
+| [63] | `apps/server/tests/unit/routes/health.test.ts:1` — Thin health route tests (71 lines)                                                                                                       |
+| [64] | `libs/types/tests/webhook.test.ts:1` — Webhook type validation tests                                                                                                                        |
+| [65] | `libs/flows/tests/unit/maintenance-flow.test.ts:1` — Shallow maintenance flow tests (98 lines)                                                                                              |
+| [66] | `.github/workflows/test.yml:1` — CI test pipeline                                                                                                                                           |
+| [67] | `apps/ui/tests/scheduler-status-verification.spec.ts:1` — Playwright E2E scheduler test                                                                                                     |
+| [68] | `apps/server/src/lib/prometheus.ts:1` — 10 custom metrics, agent/HTTP focus                                                                                                                 |
+| [69] | `apps/server/src/services/health-monitor-service.ts:288` — Events emitted, no Prometheus                                                                                                    |
+| [70] | `apps/server/src/services/scheduler-service.ts:534` — 11 event types, zero Prometheus                                                                                                       |
+| [71] | `apps/server/src/services/auto-mode/auto-loop-coordinator.ts:54` — Memory-only loop state                                                                                                   |
+| [72] | `apps/server/src/services/ava-cron-tasks.ts:26` — Three ava cron tasks, no skip metrics                                                                                                     |
+| [73] | `apps/server/src/routes/dashboard.ts:24` — Point-in-time snapshot, no persistence                                                                                                           |
+| [74] | `monitoring/grafana/provisioning/dashboards/` — Four dashboards, blind to schedulers/timers                                                                                                 |
+| [75] | `monitoring/grafana/provisioning/alerting/rules.yml` — Five rules, no scheduler/health coverage                                                                                             |
+| [76] | `libs/observability/src/langfuse/middleware.ts` — AI-only tracing                                                                                                                           |
+| [77] | `prometheus.yml:24` — Scrape configuration                                                                                                                                                  |
+| [78] | `apps/server/src/routes/metrics/prometheus.ts:24` — Registry-only metrics endpoint                                                                                                          |

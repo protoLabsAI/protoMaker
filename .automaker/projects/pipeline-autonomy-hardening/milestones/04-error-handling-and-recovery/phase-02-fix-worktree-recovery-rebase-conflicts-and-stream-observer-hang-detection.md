@@ -16,11 +16,13 @@ Two fixes: (1) WorktreeRecoveryService creates PRs with known rebase conflicts. 
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/worktree-recovery-service.ts`
 - [ ] `apps/server/src/services/stream-observer-service.ts`
 - [ ] `apps/server/src/services/auto-mode/execution-service.ts`
 
 ### Verification
+
 - [ ] Recovery result includes rebaseConflict flag
 - [ ] Caller blocks feature when rebase conflicts detected
 - [ ] Recovery base branch defaults to dev

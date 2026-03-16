@@ -14,10 +14,10 @@ Handle server shutdown gracefully and resume interrupted work on restart.
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-graceful-shutdown-handler.md](./phase-01-graceful-shutdown-handler.md) | 1 week | None | TBD |
-| 2 | [phase-02-restart-detection-resume.md](./phase-02-restart-detection-resume.md) | 1 week | None | TBD |
+| Phase | File                                                                             | Duration | Dependencies | Owner |
+| ----- | -------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-graceful-shutdown-handler.md](./phase-01-graceful-shutdown-handler.md) | 1 week   | None         | TBD   |
+| 2     | [phase-02-restart-detection-resume.md](./phase-02-restart-detection-resume.md)   | 1 week   | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M6 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

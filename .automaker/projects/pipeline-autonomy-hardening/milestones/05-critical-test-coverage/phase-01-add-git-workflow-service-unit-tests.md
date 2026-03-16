@@ -16,9 +16,11 @@ git-workflow-service.ts is 1660 lines with zero dedicated tests. Cover: runPostC
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/tests/unit/services/git-workflow-service.test.ts`
 
 ### Verification
+
 - [ ] Tests cover success and failure paths for post-completion workflow
 - [ ] Tests cover counter management including error paths
 - [ ] Tests cover merge strategy for dev, staging, main, epic branches

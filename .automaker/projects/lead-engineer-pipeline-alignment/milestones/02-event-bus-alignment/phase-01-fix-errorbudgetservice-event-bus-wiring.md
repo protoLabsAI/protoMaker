@@ -18,13 +18,15 @@ Fix: Remove `extends EventEmitter` from ErrorBudgetService. Add a `private event
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/error-budget-service.ts`
 - [ ] `apps/server/src/server/wiring.ts`
 
 ### Verification
+
 - [ ] ErrorBudgetService no longer extends Node EventEmitter
 - [ ] ErrorBudgetService emits error_budget:exhausted on the shared app event bus
-- [ ] AutoModeCoordinator._handleExhausted fires when error budget is exhausted
+- [ ] AutoModeCoordinator.\_handleExhausted fires when error budget is exhausted
 - [ ] isPickupFrozen() returns true after error_budget:exhausted
 - [ ] npm run typecheck passes
 - [ ] npm run test:server passes

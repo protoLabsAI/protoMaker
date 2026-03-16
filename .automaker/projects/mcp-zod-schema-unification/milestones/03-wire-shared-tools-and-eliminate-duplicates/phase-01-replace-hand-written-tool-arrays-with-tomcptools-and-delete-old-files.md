@@ -16,10 +16,12 @@ Auto-generate MCP tool list from Zod definitions, delete 22 hand-written tool fi
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `packages/mcp-server/src/index.ts`
 - [ ] `packages/mcp-server/src/tools/`
 
 ### Verification
+
 - [ ] Tool list auto-generated
 - [ ] 22 old files deleted
 - [ ] Schema output matches

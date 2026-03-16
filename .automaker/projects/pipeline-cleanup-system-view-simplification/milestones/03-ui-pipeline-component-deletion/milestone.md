@@ -14,10 +14,10 @@ Delete all pipeline-specific UI components: flow-graph panels/dialogs/edges/node
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-delete-flow-graph-pipeline-components-and-update-registries.md](./phase-01-delete-flow-graph-pipeline-components-and-update-registries.md) | 1 week | None | TBD |
-| 2 | [phase-02-delete-board-view-pipeline-components-and-clean-api-clients.md](./phase-02-delete-board-view-pipeline-components-and-clean-api-clients.md) | 1 week | None | TBD |
+| Phase | File                                                                                                                                                 | Duration | Dependencies | Owner |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-delete-flow-graph-pipeline-components-and-update-registries.md](./phase-01-delete-flow-graph-pipeline-components-and-update-registries.md) | 1 week   | None         | TBD   |
+| 2     | [phase-02-delete-board-view-pipeline-components-and-clean-api-clients.md](./phase-02-delete-board-view-pipeline-components-and-clean-api-clients.md) | 1 week   | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M3 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

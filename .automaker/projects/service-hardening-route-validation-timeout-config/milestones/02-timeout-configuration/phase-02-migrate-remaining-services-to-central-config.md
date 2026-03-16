@@ -16,6 +16,7 @@ Update all remaining services that define their own timeout constants to import 
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/crdt-sync-service.ts`
 - [ ] `apps/server/src/services/health-monitor-service.ts`
 - [ ] `apps/server/src/services/archival-service.ts`
@@ -31,6 +32,7 @@ Update all remaining services that define their own timeout constants to import 
 - [ ] `apps/server/src/services/ava-channel-reactor-service.ts`
 
 ### Verification
+
 - [ ] All listed services import timeouts from central config
 - [ ] No locally-defined timeout constants remain (except truly service-private ones like rate limit delays)
 - [ ] Duplicate constant names resolved (DRIFT_CHECK_INTERVAL_MS, POLL_INTERVAL_MS)

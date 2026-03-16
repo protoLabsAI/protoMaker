@@ -16,10 +16,12 @@ Create defineSharedTool for project orchestration, settings, and utility tools
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/tools/src/project-tools.ts`
 - [ ] `libs/tools/src/utility-tools.ts`
 
 ### Verification
+
 - [ ] All project, settings, utility tools defined
 - [ ] npm run build:packages passes
 

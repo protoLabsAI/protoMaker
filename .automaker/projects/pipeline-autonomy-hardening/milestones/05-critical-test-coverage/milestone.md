@@ -14,12 +14,12 @@ Add dedicated unit tests for untested critical-path services plus regression tes
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-add-git-workflow-service-unit-tests.md](./phase-01-add-git-workflow-service-unit-tests.md) | 2 weeks | None | TBD |
-| 2 | [phase-02-add-stream-observer-service-unit-tests.md](./phase-02-add-stream-observer-service-unit-tests.md) | 1 week | None | TBD |
-| 3 | [phase-03-add-coderabbit-resolver-service-unit-tests.md](./phase-03-add-coderabbit-resolver-service-unit-tests.md) | 1 week | None | TBD |
-| 4 | [phase-04-add-lead-engineer-state-transition-regression-tests.md](./phase-04-add-lead-engineer-state-transition-regression-tests.md) | 1 week | None | TBD |
+| Phase | File                                                                                                                                 | Duration | Dependencies | Owner |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------ | -------- | ------------ | ----- |
+| 1     | [phase-01-add-git-workflow-service-unit-tests.md](./phase-01-add-git-workflow-service-unit-tests.md)                                 | 2 weeks  | None         | TBD   |
+| 2     | [phase-02-add-stream-observer-service-unit-tests.md](./phase-02-add-stream-observer-service-unit-tests.md)                           | 1 week   | None         | TBD   |
+| 3     | [phase-03-add-coderabbit-resolver-service-unit-tests.md](./phase-03-add-coderabbit-resolver-service-unit-tests.md)                   | 1 week   | None         | TBD   |
+| 4     | [phase-04-add-lead-engineer-state-transition-regression-tests.md](./phase-04-add-lead-engineer-state-transition-regression-tests.md) | 1 week   | None         | TBD   |
 
 ---
 
@@ -37,6 +37,7 @@ M5 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

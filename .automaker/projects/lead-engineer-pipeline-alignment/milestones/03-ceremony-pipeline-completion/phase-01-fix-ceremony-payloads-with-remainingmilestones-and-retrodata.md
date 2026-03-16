@@ -22,11 +22,13 @@ Fix: In ceremony-service.ts milestone retro emission, calculate remaining milest
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/ceremony-service.ts`
 - [ ] `apps/server/src/services/ceremony-state-machine.ts`
 - [ ] `apps/server/src/services/ceremony-action-executor.ts`
 
 ### Verification
+
 - [ ] ceremony:fired milestone_retro events include remainingMilestones count
 - [ ] ceremony:fired events include retroData with retro analysis
 - [ ] Ceremony state machine transitions to project_retro when remainingMilestones is 0

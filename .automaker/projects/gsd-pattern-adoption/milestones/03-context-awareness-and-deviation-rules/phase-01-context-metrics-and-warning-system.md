@@ -16,11 +16,13 @@ Extend StreamObserverService with context/token usage tracking. Add ContextMetri
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/stream-observer-service.ts`
 - [ ] `libs/types/src/lead-engineer.ts`
 - [ ] `apps/server/src/services/lead-engineer-execute-processor.ts`
 
 ### Verification
+
 - [ ] ContextMetrics type added (inputTokens, outputTokens, estimatedCostUsd, contextUsagePercent)
 - [ ] StreamObserverService tracks cumulative token counts per session
 - [ ] Configurable warning threshold via pipeline.contextWarningThreshold (default 0.7)

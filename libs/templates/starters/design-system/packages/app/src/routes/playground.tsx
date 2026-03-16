@@ -102,8 +102,8 @@ export function PlaygroundRoute() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [args, setArgs] = useState<Record<string, unknown>>({});
-  const [theme, setTheme] = useState<Theme>(
-    () => (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+  const [theme, setTheme] = useState<Theme>(() =>
+    window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
   );
   const [viewport, setViewport] = useState<ViewportPreset>(VIEWPORTS[0]!);
 

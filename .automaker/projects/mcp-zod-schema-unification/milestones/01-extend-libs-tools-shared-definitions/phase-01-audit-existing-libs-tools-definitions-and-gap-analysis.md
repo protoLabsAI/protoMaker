@@ -16,10 +16,12 @@ Map existing defineSharedTool definitions, document adapter interfaces, produce 
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/tools/src/board-tools.ts`
 - [ ] `libs/tools/src/adapters/mcp-adapter.ts`
 
 ### Verification
+
 - [ ] Gap analysis listing all tools needing definitions
 - [ ] Migration checklist created
 

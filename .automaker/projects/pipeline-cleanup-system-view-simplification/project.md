@@ -45,7 +45,7 @@ Remove PipelineOrchestrator, PipelineService, PipelineCheckpointService and all 
 #### Phases
 
 1. **Delete PipelineOrchestrator and engine pipeline routes** (medium)
-2. **Delete PipelineService and /api/pipeline/* routes** (medium)
+2. **Delete PipelineService and /api/pipeline/\* routes** (medium)
 3. **Delete PipelineCheckpointService and remove featureFlags.pipeline** (medium)
 
 ### 2. Flow Library and Registry Cleanup

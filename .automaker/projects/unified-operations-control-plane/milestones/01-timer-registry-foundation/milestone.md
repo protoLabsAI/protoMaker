@@ -14,13 +14,13 @@ Extend SchedulerService to support interval-based tasks alongside cron, create a
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-timerregistry-interface-and-schedulerservice-extension.md](./phase-01-timerregistry-interface-and-schedulerservice-extension.md) | 1 week | None | TBD |
-| 2 | [phase-02-migrate-health-and-monitoring-services-to-timerregistry.md](./phase-02-migrate-health-and-monitoring-services-to-timerregistry.md) | 1 week | None | TBD |
-| 3 | [phase-03-migrate-lifecycle-and-sync-services-to-timerregistry.md](./phase-03-migrate-lifecycle-and-sync-services-to-timerregistry.md) | 1 week | None | TBD |
-| 4 | [phase-04-migrate-external-monitors-and-lead-engineer-timers.md](./phase-04-migrate-external-monitors-and-lead-engineer-timers.md) | 1 week | None | TBD |
-| 5 | [phase-05-timer-registry-api-routes-and-mcp-tools.md](./phase-05-timer-registry-api-routes-and-mcp-tools.md) | 1 week | None | TBD |
+| Phase | File                                                                                                                                         | Duration | Dependencies | Owner |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-timerregistry-interface-and-schedulerservice-extension.md](./phase-01-timerregistry-interface-and-schedulerservice-extension.md)   | 1 week   | None         | TBD   |
+| 2     | [phase-02-migrate-health-and-monitoring-services-to-timerregistry.md](./phase-02-migrate-health-and-monitoring-services-to-timerregistry.md) | 1 week   | None         | TBD   |
+| 3     | [phase-03-migrate-lifecycle-and-sync-services-to-timerregistry.md](./phase-03-migrate-lifecycle-and-sync-services-to-timerregistry.md)       | 1 week   | None         | TBD   |
+| 4     | [phase-04-migrate-external-monitors-and-lead-engineer-timers.md](./phase-04-migrate-external-monitors-and-lead-engineer-timers.md)           | 1 week   | None         | TBD   |
+| 5     | [phase-05-timer-registry-api-routes-and-mcp-tools.md](./phase-05-timer-registry-api-routes-and-mcp-tools.md)                                 | 1 week   | None         | TBD   |
 
 ---
 
@@ -38,6 +38,7 @@ M1 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

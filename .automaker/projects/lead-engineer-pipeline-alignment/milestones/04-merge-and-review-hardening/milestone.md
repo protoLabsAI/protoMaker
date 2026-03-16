@@ -14,9 +14,9 @@ Fix MergeProcessor to respect per-project merge strategy configuration and add a
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-mergeprocessor-respects-prmergestrategy-and-pr-merge-race-guard.md](./phase-01-mergeprocessor-respects-prmergestrategy-and-pr-merge-race-guard.md) | 1 week | None | TBD |
+| Phase | File                                                                                                                                                         | Duration | Dependencies | Owner |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- | ------------ | ----- |
+| 1     | [phase-01-mergeprocessor-respects-prmergestrategy-and-pr-merge-race-guard.md](./phase-01-mergeprocessor-respects-prmergestrategy-and-pr-merge-race-guard.md) | 1 week   | None         | TBD   |
 
 ---
 
@@ -34,6 +34,7 @@ M4 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

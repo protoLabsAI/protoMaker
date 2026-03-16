@@ -22,10 +22,12 @@ Fix: In PRMergePoller, before processing a merged PR, check if the feature statu
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/lead-engineer-review-merge-processors.ts`
 - [ ] `apps/server/src/services/lead-engineer-service.ts`
 
 ### Verification
+
 - [ ] MergeProcessor reads prMergeStrategy from workflow settings
 - [ ] Feature PRs use configured strategy (squash, merge, or rebase)
 - [ ] Promotion PRs always use --merge regardless of setting

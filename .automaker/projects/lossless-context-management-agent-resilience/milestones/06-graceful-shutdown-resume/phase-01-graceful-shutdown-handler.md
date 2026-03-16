@@ -16,10 +16,12 @@ SIGTERM/SIGINT handler: stop new agent starts, suspend active workflows, checkpo
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/lib/graceful-shutdown.ts`
 - [ ] `apps/server/src/index.ts`
 
 ### Verification
+
 - [ ] SIGTERM/SIGINT triggers orderly shutdown
 - [ ] Active workflows suspended with checkpoint
 - [ ] Running agents saved to context engine

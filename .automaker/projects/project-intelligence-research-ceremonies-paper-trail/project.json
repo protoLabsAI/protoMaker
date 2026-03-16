@@ -15,10 +15,7 @@
           "name": "add-research-and-ceremony-types",
           "title": "Add research and ceremony types",
           "description": "Add ResearchStatus ('idle' | 'running' | 'complete' | 'failed'), ResearchSource (url, title, summary), and ResearchReport (status, summary, sources, completedAt) types to libs/types/src/project.ts. Add researchStatus field to Project interface. Add 'research-report' to ArtifactType union in project.ts. Add GlobalCeremoniesConfig interface (dailyStandup: { enabled: boolean, lastRunAt?: string }) and add ceremonies field to GlobalSettings in libs/types/src/global-settings.ts.",
-          "filesToModify": [
-            "libs/types/src/project.ts",
-            "libs/types/src/global-settings.ts"
-          ],
+          "filesToModify": ["libs/types/src/project.ts", "libs/types/src/global-settings.ts"],
           "acceptanceCriteria": [
             "ResearchStatus, ResearchSource, ResearchReport types exported from @protolabsai/types",
             "Project interface has researchStatus?: ResearchStatus",
@@ -34,9 +31,7 @@
           "name": "add-platform-helpers-for-research-paths",
           "title": "Add platform helpers for research paths",
           "description": "Add getResearchMdPath(projectPath, slug) and getResearchArtifactDir(projectPath, slug) helper functions to libs/platform/src/projects.ts. These return the paths for research.md and the research-report artifact directory respectively.",
-          "filesToModify": [
-            "libs/platform/src/projects.ts"
-          ],
+          "filesToModify": ["libs/platform/src/projects.ts"],
           "acceptanceCriteria": [
             "getResearchMdPath() returns correct path to .automaker/projects/{slug}/research.md",
             "getResearchArtifactDir() returns correct path to .automaker/projects/{slug}/artifacts/research-report/",
@@ -101,9 +96,7 @@
           "name": "pm-agent-reads-research-before-prd-generation",
           "title": "PM Agent reads research before PRD generation",
           "description": "Update PM Agent's PRD generation step to check if research.md exists at getResearchMdPath(). If it does, read the file content and include it as additional context in the SPARC PRD generation prompt under a 'Research Findings' section. If research.md does not exist, proceed as before with no change to existing behavior.",
-          "filesToModify": [
-            "apps/server/src/services/authority-agents/pm-agent.ts"
-          ],
+          "filesToModify": ["apps/server/src/services/authority-agents/pm-agent.ts"],
           "acceptanceCriteria": [
             "PM Agent reads research.md when it exists before calling PRD generation",
             "Research findings are included in the PRD generation prompt context",
@@ -128,9 +121,7 @@
           "name": "wire-ceremonyservice-to-projectartifactservice",
           "title": "Wire CeremonyService to ProjectArtifactService",
           "description": "Update CeremonyService so that after each ceremony flow completes (standup, retro, project retro), the output is saved via ProjectArtifactService.saveArtifact() as a 'ceremony-report' artifact. Also append a TimelineEntry to the project's ceremony-timeline via ProjectTimelineService. This ensures every ceremony produces a persistent artifact and a timeline record automatically.",
-          "filesToModify": [
-            "apps/server/src/services/ceremony-service.ts"
-          ],
+          "filesToModify": ["apps/server/src/services/ceremony-service.ts"],
           "acceptanceCriteria": [
             "After standup flow: ceremony-report artifact saved with ceremony type in metadata",
             "After milestone retro flow: ceremony-report artifact saved",
@@ -187,9 +178,7 @@
           "name": "phase-execution-status-sync-from-feature-events",
           "title": "Phase execution status sync from feature events",
           "description": "Add a feature:status-changed event listener in ProjectService that finds the project and phase linked to the changed feature (via phase.featureId) and updates phase.executionStatus to mirror the feature status: backlog→pending, in_progress→in-progress, review→in-review, done→completed, blocked→blocked. Write the updated project.json to disk and emit project:updated via CRDT sync.",
-          "filesToModify": [
-            "apps/server/src/services/project-service.ts"
-          ],
+          "filesToModify": ["apps/server/src/services/project-service.ts"],
           "acceptanceCriteria": [
             "feature:status-changed triggers phase executionStatus update",
             "Status mapping is correct (backlog→pending, in_progress→in-progress, done→completed, blocked→blocked)",
@@ -304,9 +293,7 @@
           "name": "artifacts-tab-polish-ceremony-reports-standups-retros",
           "title": "Artifacts tab polish — ceremony reports, standups, retros",
           "description": "Update apps/ui/src/components/views/projects/project-artifact-viewer.tsx to: (1) show ceremony-report artifacts grouped by type (Standup, Milestone Retro, Project Retro) with distinct icons; (2) add expandable markdown content rendering inside each artifact card (replace plain text preview); (3) add a Download as Markdown button per artifact that triggers a file download; (4) sort artifacts by date descending with a type filter dropdown at the top.",
-          "filesToModify": [
-            "apps/ui/src/components/views/projects/project-artifact-viewer.tsx"
-          ],
+          "filesToModify": ["apps/ui/src/components/views/projects/project-artifact-viewer.tsx"],
           "acceptanceCriteria": [
             "Ceremony reports grouped by Standup / Milestone Retro / Project Retro",
             "Each artifact has distinct icon matching its type",

@@ -16,10 +16,12 @@ Implement multi-depth condensation: when depth N summaries accumulate beyond con
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/context-engine/src/compaction/condensation.ts`
 - [ ] `libs/context-engine/src/compaction/prompts.ts`
 
 ### Verification
+
 - [ ] Condensation creates depth N+1 from N-level summaries
 - [ ] D1 prompts preserve session decisions
 - [ ] D2+ prompts preserve only trajectory and durable decisions

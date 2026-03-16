@@ -16,6 +16,7 @@ Create libs/context-engine/ package with TypeScript types for the DAG model: Mes
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/context-engine/package.json`
 - [ ] `libs/context-engine/tsconfig.json`
 - [ ] `libs/context-engine/src/index.ts`
@@ -24,6 +25,7 @@ Create libs/context-engine/ package with TypeScript types for the DAG model: Mes
 - [ ] `package.json`
 
 ### Verification
+
 - [ ] Package builds with npm run build:packages
 - [ ] Types exported and importable from @protolabsai/context-engine
 - [ ] ContextEngine interface defined with ingest, compact, assemble, retrieve methods

@@ -191,8 +191,8 @@ const sectionLabelStyle: React.CSSProperties = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function UsageExample({ entry, args: argOverride }: UsageExampleProps) {
-  const [theme, setTheme] = useState<'light' | 'dark'>(
-    () => (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+  const [theme, setTheme] = useState<'light' | 'dark'>(() =>
+    window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
   );
   const [showCode, setShowCode] = useState(false);
 

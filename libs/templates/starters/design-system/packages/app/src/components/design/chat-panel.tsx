@@ -87,14 +87,16 @@ export function ChatPanel({ onClose, penFilePath }: ChatPanelProps) {
       const assistantMsg: ChatMessage = {
         role: 'assistant',
         content:
-          (data as Record<string, unknown>).response as string ??
-          (data as Record<string, unknown>).report as string ??
+          ((data as Record<string, unknown>).response as string) ??
+          ((data as Record<string, unknown>).report as string) ??
           JSON.stringify(data, null, 2),
         screenshots: (data as Record<string, unknown>).screenshots as string[] | undefined,
         operations: Array.isArray((data as Record<string, unknown>).operations)
-          ? ((data as { operations: Array<{ type?: string; target?: string }> }).operations).map((op) => ({
-              summary: `${op.type ?? 'op'} on ${op.target ?? 'unknown'}`,
-            }))
+          ? (data as { operations: Array<{ type?: string; target?: string }> }).operations.map(
+              (op) => ({
+                summary: `${op.type ?? 'op'} on ${op.target ?? 'unknown'}`,
+              })
+            )
           : undefined,
       };
       setMessages((prev) => [...prev, assistantMsg]);
@@ -191,9 +193,7 @@ export function ChatPanel({ onClose, penFilePath }: ChatPanelProps) {
           <div style={{ color: 'var(--pg-muted)', textAlign: 'center', padding: 40, fontSize: 12 }}>
             Send a message to the {AGENT_LABELS[agent]} agent.
             {penFilePath && (
-              <div style={{ marginTop: 8, ...monoFont, fontSize: 11 }}>
-                Context: {penFilePath}
-              </div>
+              <div style={{ marginTop: 8, ...monoFont, fontSize: 11 }}>Context: {penFilePath}</div>
             )}
           </div>
         )}

@@ -1,6 +1,6 @@
 # Project-Level Agent Extensions
 
-Make agent roles extensible at the project level — discoverable from .automaker/agents/*.yml manifests, wired into execution (model selection + prompt injection), with auto-assignment match rules and a settings UI.
+Make agent roles extensible at the project level — discoverable from .automaker/agents/\*.yml manifests, wired into execution (model selection + prompt injection), with auto-assignment match rules and a settings UI.
 
 **Status:** completed
 **Created:** 2026-03-13T18:25:10.033Z
@@ -10,7 +10,7 @@ Make agent roles extensible at the project level — discoverable from .automake
 
 ### Situation
 
-protoLabs Studio has 8 hardcoded AgentRole values defined as a TypeScript union type in libs/types/src/agent-roles.ts. CLI personas (Matt, Kai, Sam, Jon) exist as .claude/commands/*.md files but are user-invoked only. The assignedRole field on features is wired to this union but isn't enforced during execution — getModelForFeature() in execution-service.ts looks at complexity and failure count, never at the assigned role. No mechanism exists to load a role-specific prompt or model override from a project-level manifest.
+protoLabs Studio has 8 hardcoded AgentRole values defined as a TypeScript union type in libs/types/src/agent-roles.ts. CLI personas (Matt, Kai, Sam, Jon) exist as .claude/commands/\*.md files but are user-invoked only. The assignedRole field on features is wired to this union but isn't enforced during execution — getModelForFeature() in execution-service.ts looks at complexity and failure count, never at the assigned role. No mechanism exists to load a role-specific prompt or model override from a project-level manifest.
 
 ### Problem
 
@@ -24,7 +24,7 @@ protoLabs Studio has 8 hardcoded AgentRole values defined as a TypeScript union 
 
 M1 — Type Foundation: Change AgentRole from a union to string with BUILT_IN_AGENT_ROLES as a const array. Add ProjectAgent and AgentManifest types. Add agentConfig to per-project workflow settings.
 
-M2 — Manifest Service: AgentManifestService discovers and parses .automaker/agents.yml + .automaker/agents/*.yml at project load. Exposes agents via API route. Caches per project with file-watch invalidation.
+M2 — Manifest Service: AgentManifestService discovers and parses .automaker/agents.yml + .automaker/agents/\*.yml at project load. Exposes agents via API route. Caches per project with file-watch invalidation.
 
 M3 — Execution Wiring: getModelForFeature() checks assigned role's manifest entry for model override. Agent system prompt loader checks for role-specific prompt file and prepends it. Match rules run before auto-mode pickup to auto-assign assignedRole.
 
@@ -33,7 +33,7 @@ M4 — Settings UI: Project settings Agents tab shows discovered project agents.
 ### Results
 
 - assignedRole becomes meaningful in execution — drives model selection and prompt injection
-- Project-level agents discoverable from .automaker/agents/*.yml manifests
+- Project-level agents discoverable from .automaker/agents/\*.yml manifests
 - Auto-assignment via match rules (category, keywords, file patterns)
 - Backward compatible — all existing features and built-in roles unchanged
 - Foundation for RFC-001 Phase 2+ (quality gates, agent groups) without rework

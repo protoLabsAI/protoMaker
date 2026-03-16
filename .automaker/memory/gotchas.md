@@ -9,6 +9,7 @@ usageStats:
   referenced: 414
   successfulFeatures: 414
 ---
+
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
 # gotchas
@@ -1075,13 +1076,14 @@ usageStats:
 - **Root cause:** The serializer didn't validate `cc.classes` before emitting; filter-on-read in deserializer was meant as safety net but exposed asymmetry. Real fix: filter-on-write.
 - **How to avoid:** Filter at serialization source → smaller XCL (+efficiency), but requires deserializer to expect no empty conditions. Simpler codec logic, harder to debug if one side breaks.
 
-
 #### [Gotcha] Documentation scope declared completeness beyond actual implementation (README links to mcp-tools.md and api.md reference pages that don't exist) (2026-03-15)
+
 - **Situation:** Writing comprehensive README and reference docs before complementary features (MCP tool wiring, API endpoints) were complete
 - **Root cause:** Root cause: documentation planning assumed parallel feature completion timelines; creating links to 'future' pages sets reader expectations but creates broken links and context gaps when features lag
 - **How to avoid:** Transparency about incompleteness vs. appearance of incomplete product; helps roadmap visibility but requires discipline to fill gaps or readers encounter 404s
 
 #### [Gotcha] Timezone is static at expansion time—if timezone definitions change (e.g., DST rule updates) or user changes their timezone, expanded instances don't retroactively update (2026-03-15)
+
 - **Situation:** Timezone field is stored once on the parent event and copied to all expanded instances at query time
 - **Root cause:** Simplicity: each instance gets a fixed timezone rather than computing it dynamically. Matches common calendar behavior (events remember their creation-time timezone)
 - **How to avoid:** Simple and predictable, but historical events can show wrong local times if timezone rules change (e.g., country changes DST schedule). Users who move timezones see old events in old timezone

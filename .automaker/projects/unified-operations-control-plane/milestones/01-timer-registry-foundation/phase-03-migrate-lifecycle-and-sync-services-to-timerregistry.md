@@ -16,6 +16,7 @@ Migrate WorktreeLifecycleService (6h drift check), ArchivalService (10min), Sens
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/worktree-lifecycle-service.ts`
 - [ ] `apps/server/src/services/archival-service.ts`
 - [ ] `apps/server/src/services/sensor-registry-service.ts`
@@ -23,6 +24,7 @@ Migrate WorktreeLifecycleService (6h drift check), ArchivalService (10min), Sens
 - [ ] `apps/server/src/services/scheduler.module.ts`
 
 ### Verification
+
 - [ ] All five services use schedulerService.registerInterval()
 - [ ] All five appear in schedulerService.listAll()
 - [ ] Intervals match existing timeouts.ts constants

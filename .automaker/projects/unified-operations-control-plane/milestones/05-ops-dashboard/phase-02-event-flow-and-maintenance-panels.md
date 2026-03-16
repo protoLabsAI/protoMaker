@@ -16,12 +16,14 @@ Event Flow panel showing webhook deliveries, signal activity, routing. Maintenan
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/ui/src/components/views/ops-view/event-flow-panel.tsx`
 - [ ] `apps/ui/src/components/views/ops-view/use-event-flow.ts`
 - [ ] `apps/ui/src/components/views/ops-view/maintenance-panel.tsx`
 - [ ] `apps/ui/src/components/views/ops-view/use-maintenance-status.ts`
 
 ### Verification
+
 - [ ] Event flow panel shows deliveries with status
 - [ ] Classification details displayed
 - [ ] Maintenance panel shows sweep results

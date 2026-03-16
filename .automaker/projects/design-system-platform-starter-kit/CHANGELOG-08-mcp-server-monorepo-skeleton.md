@@ -1,4 +1,5 @@
 # Changelog: Design System Platform Starter Kit - MCP Server + Monorepo Skeleton
+
 **Generated:** 2026-03-15
 
 ## ✨ Features

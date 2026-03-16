@@ -16,10 +16,12 @@ Three bugs: (1) executionSettled assigned AFTER event subscription creating race
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/lead-engineer-execute-processor.ts`
 - [ ] `apps/server/tests/unit/services/lead-engineer-execute-processor.test.ts`
 
 ### Verification
+
 - [ ] executionSettled promise created before event subscription
 - [ ] Pre-flight failure with shouldContinue:true causes ESCALATE to run
 - [ ] Execution gate tracks rejections and escalates after 3

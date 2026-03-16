@@ -14,12 +14,12 @@ Ensure every state transition leads to a valid terminal state with no stuck path
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-fix-staledeps-rule-done-features-excluded-from-worldstate.md](./phase-01-fix-staledeps-rule-done-features-excluded-from-worldstate.md) | 0.5 weeks | None | TBD |
-| 2 | [phase-02-fix-state-machine-null-nextstate-and-done-terminal-handling.md](./phase-02-fix-state-machine-null-nextstate-and-done-terminal-handling.md) | 1 week | None | TBD |
-| 3 | [phase-03-fix-action-executor-race-and-enable-auto-merge-strategy.md](./phase-03-fix-action-executor-race-and-enable-auto-merge-strategy.md) | 1 week | None | TBD |
-| 4 | [phase-04-fix-error-classification-breadth-and-merge-retry-logic.md](./phase-04-fix-error-classification-breadth-and-merge-retry-logic.md) | 1 week | None | TBD |
+| Phase | File                                                                                                                                                 | Duration  | Dependencies | Owner |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ------------ | ----- |
+| 1     | [phase-01-fix-staledeps-rule-done-features-excluded-from-worldstate.md](./phase-01-fix-staledeps-rule-done-features-excluded-from-worldstate.md)     | 0.5 weeks | None         | TBD   |
+| 2     | [phase-02-fix-state-machine-null-nextstate-and-done-terminal-handling.md](./phase-02-fix-state-machine-null-nextstate-and-done-terminal-handling.md) | 1 week    | None         | TBD   |
+| 3     | [phase-03-fix-action-executor-race-and-enable-auto-merge-strategy.md](./phase-03-fix-action-executor-race-and-enable-auto-merge-strategy.md)         | 1 week    | None         | TBD   |
+| 4     | [phase-04-fix-error-classification-breadth-and-merge-retry-logic.md](./phase-04-fix-error-classification-breadth-and-merge-retry-logic.md)           | 1 week    | None         | TBD   |
 
 ---
 
@@ -37,6 +37,7 @@ M3 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

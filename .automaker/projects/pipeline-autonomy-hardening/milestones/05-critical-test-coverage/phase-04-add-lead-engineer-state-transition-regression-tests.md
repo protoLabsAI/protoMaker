@@ -16,9 +16,11 @@ Regression tests for audit findings: staleDeps with done deps, ESCALATE reachabi
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/tests/unit/services/lead-engineer-regression.test.ts`
 
 ### Verification
+
 - [ ] Test staleDeps rule with done dependencies
 - [ ] Test pre-flight failure reaches ESCALATE
 - [ ] Test execution gate escalates after 3 rejections

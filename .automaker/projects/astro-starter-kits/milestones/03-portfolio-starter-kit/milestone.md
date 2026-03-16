@@ -14,12 +14,12 @@ Custom Astro SSG + React Islands portfolio/marketing site. The flagship onboardi
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-scaffold-portfolio-project-structure.md](./phase-01-scaffold-portfolio-project-structure.md) | 1 week | None | TBD |
-| 2 | [phase-02-build-portfolio-page-sections.md](./phase-02-build-portfolio-page-sections.md) | 2 weeks | None | TBD |
-| 3 | [phase-03-build-portfolio-sub-pages-and-seo.md](./phase-03-build-portfolio-sub-pages-and-seo.md) | 1 week | None | TBD |
-| 4 | [phase-04-add-portfolio-kit-ci-and-agent-context.md](./phase-04-add-portfolio-kit-ci-and-agent-context.md) | 1 week | None | TBD |
+| Phase | File                                                                                                       | Duration | Dependencies | Owner |
+| ----- | ---------------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-scaffold-portfolio-project-structure.md](./phase-01-scaffold-portfolio-project-structure.md)     | 1 week   | None         | TBD   |
+| 2     | [phase-02-build-portfolio-page-sections.md](./phase-02-build-portfolio-page-sections.md)                   | 2 weeks  | None         | TBD   |
+| 3     | [phase-03-build-portfolio-sub-pages-and-seo.md](./phase-03-build-portfolio-sub-pages-and-seo.md)           | 1 week   | None         | TBD   |
+| 4     | [phase-04-add-portfolio-kit-ci-and-agent-context.md](./phase-04-add-portfolio-kit-ci-and-agent-context.md) | 1 week   | None         | TBD   |
 
 ---
 
@@ -37,6 +37,7 @@ M3 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

@@ -16,12 +16,14 @@ Create a `validateBody` Express middleware using Zod. Define shared schemas for 
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/lib/validation.ts`
 - [ ] `apps/server/src/routes/features/routes/get.ts`
 - [ ] `apps/server/src/routes/features/routes/list.ts`
 - [ ] `apps/server/src/routes/health/routes/index.ts`
 
 ### Verification
+
 - [ ] validateBody middleware returns 400 with Zod error details on invalid input
 - [ ] projectPathSchema validates string, non-empty, absolute path
 - [ ] Applied to feature get/list routes — type assertions replaced

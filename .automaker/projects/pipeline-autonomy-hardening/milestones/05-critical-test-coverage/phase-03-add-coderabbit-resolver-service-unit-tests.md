@@ -16,9 +16,11 @@ coderabbit-resolver-service.ts is 471 lines with zero tests. Cover: review threa
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/tests/unit/services/coderabbit-resolver-service.test.ts`
 
 ### Verification
+
 - [ ] Tests cover thread parsing with mock GraphQL responses
 - [ ] Tests cover owner/repo extraction from HTTPS and SSH URLs
 - [ ] Tests cover graceful GraphQL error handling

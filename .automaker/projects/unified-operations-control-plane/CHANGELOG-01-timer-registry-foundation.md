@@ -1,4 +1,5 @@
 # Changelog: Unified Operations Control Plane - Timer Registry Foundation
+
 **Generated:** 2026-03-15
 
 ## 📦 Other Changes

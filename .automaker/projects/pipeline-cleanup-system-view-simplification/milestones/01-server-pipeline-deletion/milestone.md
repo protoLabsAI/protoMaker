@@ -14,11 +14,11 @@ Remove PipelineOrchestrator, PipelineService, PipelineCheckpointService and all 
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-delete-pipelineorchestrator-and-engine-pipeline-routes.md](./phase-01-delete-pipelineorchestrator-and-engine-pipeline-routes.md) | 1 week | None | TBD |
-| 2 | [phase-02-delete-pipelineservice-and-api-pipeline-routes.md](./phase-02-delete-pipelineservice-and-api-pipeline-routes.md) | 1 week | None | TBD |
-| 3 | [phase-03-delete-pipelinecheckpointservice-and-remove-featureflags-pipeline.md](./phase-03-delete-pipelinecheckpointservice-and-remove-featureflags-pipeline.md) | 1 week | None | TBD |
+| Phase | File                                                                                                                                                             | Duration | Dependencies | Owner |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-delete-pipelineorchestrator-and-engine-pipeline-routes.md](./phase-01-delete-pipelineorchestrator-and-engine-pipeline-routes.md)                       | 1 week   | None         | TBD   |
+| 2     | [phase-02-delete-pipelineservice-and-api-pipeline-routes.md](./phase-02-delete-pipelineservice-and-api-pipeline-routes.md)                                       | 1 week   | None         | TBD   |
+| 3     | [phase-03-delete-pipelinecheckpointservice-and-remove-featureflags-pipeline.md](./phase-03-delete-pipelinecheckpointservice-and-remove-featureflags-pipeline.md) | 1 week   | None         | TBD   |
 
 ---
 
@@ -36,6 +36,7 @@ M1 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

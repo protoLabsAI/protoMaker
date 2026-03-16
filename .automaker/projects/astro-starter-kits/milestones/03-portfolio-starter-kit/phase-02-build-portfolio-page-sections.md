@@ -16,9 +16,11 @@ Hero (gradient text, terminal mockup, CTAs), ProjectGrid (filterable React islan
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/portfolio/src/components/sections/`
 
 ### Verification
+
 - [ ] Hero with gradient text and terminal mockup
 - [ ] ProjectGrid with tag filtering React island
 - [ ] About with skills and timeline

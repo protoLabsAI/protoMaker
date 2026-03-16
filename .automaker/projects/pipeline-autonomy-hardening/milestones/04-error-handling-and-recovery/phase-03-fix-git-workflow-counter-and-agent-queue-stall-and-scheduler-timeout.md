@@ -16,11 +16,13 @@ Three small fixes: (1) git-workflow-service activeWorkflows counter not in final
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/git-workflow-service.ts`
 - [ ] `apps/server/src/services/agent-service.ts`
 - [ ] `apps/server/src/services/feature-scheduler.ts`
 
 ### Verification
+
 - [ ] activeWorkflows counter always decrements via finally
 - [ ] Agent queue processes next item after error
 - [ ] Scheduler timeout checks runningFeatures before removal

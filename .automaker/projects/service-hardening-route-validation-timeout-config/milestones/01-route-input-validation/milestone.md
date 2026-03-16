@@ -14,11 +14,11 @@ Add Zod-based runtime validation to all Express route handlers. Create shared sc
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-validation-middleware-and-core-schemas.md](./phase-01-validation-middleware-and-core-schemas.md) | 1 week | None | TBD |
-| 2 | [phase-02-validate-feature-crud-routes.md](./phase-02-validate-feature-crud-routes.md) | 1 week | None | TBD |
-| 3 | [phase-03-validate-project-auto-mode-and-remaining-routes.md](./phase-03-validate-project-auto-mode-and-remaining-routes.md) | 1 week | None | TBD |
+| Phase | File                                                                                                                         | Duration | Dependencies | Owner |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-validation-middleware-and-core-schemas.md](./phase-01-validation-middleware-and-core-schemas.md)                   | 1 week   | None         | TBD   |
+| 2     | [phase-02-validate-feature-crud-routes.md](./phase-02-validate-feature-crud-routes.md)                                       | 1 week   | None         | TBD   |
+| 3     | [phase-03-validate-project-auto-mode-and-remaining-routes.md](./phase-03-validate-project-auto-mode-and-remaining-routes.md) | 1 week   | None         | TBD   |
 
 ---
 
@@ -36,6 +36,7 @@ M1 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

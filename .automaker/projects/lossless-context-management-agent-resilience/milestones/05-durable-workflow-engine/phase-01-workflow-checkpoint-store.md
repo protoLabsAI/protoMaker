@@ -16,11 +16,13 @@ SQLite-backed workflow checkpoint store. Tables: workflow_executions, workflow_s
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/context-engine/src/workflow/checkpoint-store.ts`
 - [ ] `libs/context-engine/src/workflow/types.ts`
 - [ ] `libs/context-engine/src/store/migrations.ts`
 
 ### Verification
+
 - [ ] Workflow state persists to SQLite
 - [ ] Atomic transitions with optimistic locking
 - [ ] Can query all suspended workflows

@@ -16,6 +16,7 @@ CI workflow, .automaker/ context, wire into libs/templates/. Add 'portfolio' to 
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/src/types.ts`
 - [ ] `libs/templates/src/features.ts`
 - [ ] `libs/templates/src/coding-rules.ts`
@@ -23,6 +24,7 @@ CI workflow, .automaker/ context, wire into libs/templates/. Add 'portfolio' to 
 - [ ] `libs/templates/src/ci.ts`
 
 ### Verification
+
 - [ ] StarterKitType includes portfolio
 - [ ] Portfolio starter features defined
 - [ ] Astro+React coding rules added

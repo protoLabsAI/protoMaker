@@ -280,13 +280,14 @@ usageStats:
 - **Trade-offs:** Easier: publish agents independently, no hidden deps. Harder: must ensure sibling packages are built before calling generate()
 - **Breaking if changed:** If agents tries to import siblings as static npm deps, it will either fail to install (circular) or create implicit dependency on build order
 
-
 #### [Pattern] Query sanitization for FTS5 user input before building search queries (2026-03-16)
+
 - **Problem solved:** searchSummaries() accepts user-provided query string and constructs FTS5 queries
 - **Why this works:** FTS5 has special syntax (quotes, wildcards, boolean operators). Unsanitized input could malform queries or bypass filters. Sanitization prevents syntax-injection-like issues.
 - **Trade-offs:** Slightly slower query construction vs. robustness. Sanitized queries may not support advanced FTS5 features but prevent breakage.
 
 #### [Pattern] Parameterized SQL queries (prepared statements with ?) used throughout, even for internal-only data (2026-03-16)
+
 - **Problem solved:** All database queries use .prepare() with ? bind parameters, never string interpolation
 - **Why this works:** Defense-in-depth: protects against SQL injection even if assumptions about data origin change. Shows preventive security culture. Scales to future multi-tenant scenarios.
 - **Trade-offs:** Minimal performance cost (statement caching), significant security benefit

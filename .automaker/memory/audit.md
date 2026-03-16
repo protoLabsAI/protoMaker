@@ -9,6 +9,7 @@ usageStats:
   referenced: 6
   successfulFeatures: 6
 ---
+
 <!-- domain: Audit & Compliance | Audit trail patterns, decision logging, compliance tracking -->
 
 # audit

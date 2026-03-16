@@ -16,6 +16,7 @@ Delete: libs/flows/src/graphs/coordinator-flow.ts, libs/flows/src/graphs/review-
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/flows/src/graphs/coordinator-flow.ts`
 - [ ] `libs/flows/src/graphs/review-flow.ts`
 - [ ] `libs/flows/src/graphs/interrupt-loop.ts`
@@ -25,6 +26,7 @@ Delete: libs/flows/src/graphs/coordinator-flow.ts, libs/flows/src/graphs/review-
 - [ ] `libs/flows/src/index.ts`
 
 ### Verification
+
 - [ ] 3 flow files deleted
 - [ ] 3 test files deleted
 - [ ] index.ts exports no coordinator/review/interrupt-loop symbols

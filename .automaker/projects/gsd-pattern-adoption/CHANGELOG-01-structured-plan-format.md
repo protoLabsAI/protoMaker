@@ -1,4 +1,5 @@
 # Changelog: GSD Pattern Adoption - Structured Plan Format
+
 **Generated:** 2026-03-14
 
 ## 📦 Other Changes

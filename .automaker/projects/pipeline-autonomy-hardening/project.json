@@ -80,9 +80,7 @@
           "name": "add-per-session-event-processing-queue-to-lead-engineer",
           "title": "Add per-session event processing queue to Lead Engineer",
           "description": "Lead Engineer onEvent() processes events without per-session locking. Concurrent events produce conflicting actions. Add a per-session Promise chain that serializes evaluateAndExecute calls. Also whitelist event types instead of blacklisting - exclude all lead-engineer:* events to prevent cascading loops. Skip rule evaluation when world state refresh fails.",
-          "filesToModify": [
-            "apps/server/src/services/lead-engineer-service.ts"
-          ],
+          "filesToModify": ["apps/server/src/services/lead-engineer-service.ts"],
           "acceptanceCriteria": [
             "evaluateAndExecute calls for same session are serialized via Promise chain",
             "lead-engineer:* events do not trigger rule evaluation",
@@ -339,9 +337,7 @@
           "name": "add-git-workflow-service-unit-tests",
           "title": "Add git-workflow-service unit tests",
           "description": "git-workflow-service.ts is 1660 lines with zero dedicated tests. Cover: runPostCompletionWorkflow, commit/push failure handling, PR creation, format pipeline, activeWorkflows counter, merge strategy resolution.",
-          "filesToModify": [
-            "apps/server/tests/unit/services/git-workflow-service.test.ts"
-          ],
+          "filesToModify": ["apps/server/tests/unit/services/git-workflow-service.test.ts"],
           "acceptanceCriteria": [
             "Tests cover success and failure paths for post-completion workflow",
             "Tests cover counter management including error paths",
@@ -357,9 +353,7 @@
           "name": "add-stream-observer-service-unit-tests",
           "title": "Add stream-observer-service unit tests",
           "description": "stream-observer-service.ts is 248 lines with zero tests. Cover: loop detection, stall detection, complete hang detection, excluded tools, hash collision resistance.",
-          "filesToModify": [
-            "apps/server/tests/unit/services/stream-observer-service.test.ts"
-          ],
+          "filesToModify": ["apps/server/tests/unit/services/stream-observer-service.test.ts"],
           "acceptanceCriteria": [
             "Tests cover loop detection with repeated tool calls",
             "Tests cover stall and complete hang detection",
@@ -375,9 +369,7 @@
           "name": "add-coderabbit-resolver-service-unit-tests",
           "title": "Add coderabbit-resolver-service unit tests",
           "description": "coderabbit-resolver-service.ts is 471 lines with zero tests. Cover: review thread parsing, resolution, reply-and-resolve, owner/repo extraction from URL formats, error handling.",
-          "filesToModify": [
-            "apps/server/tests/unit/services/coderabbit-resolver-service.test.ts"
-          ],
+          "filesToModify": ["apps/server/tests/unit/services/coderabbit-resolver-service.test.ts"],
           "acceptanceCriteria": [
             "Tests cover thread parsing with mock GraphQL responses",
             "Tests cover owner/repo extraction from HTTPS and SSH URLs",
@@ -393,9 +385,7 @@
           "name": "add-lead-engineer-state-transition-regression-tests",
           "title": "Add Lead Engineer state transition regression tests",
           "description": "Regression tests for audit findings: staleDeps with done deps, ESCALATE reachability, concurrent event serialization, nextState null mapping, action executor sequential execution.",
-          "filesToModify": [
-            "apps/server/tests/unit/services/lead-engineer-regression.test.ts"
-          ],
+          "filesToModify": ["apps/server/tests/unit/services/lead-engineer-regression.test.ts"],
           "acceptanceCriteria": [
             "Test staleDeps rule with done dependencies",
             "Test pre-flight failure reaches ESCALATE",

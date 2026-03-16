@@ -46,9 +46,7 @@
           "name": "remove-crdt-dual-write-from-notes-routes",
           "title": "Remove CRDT dual-write from notes routes",
           "description": "Remove all CRDT imports and the saveWorkspaceWithCrdt helper from apps/server/src/routes/notes/index.ts. Replace CRDT reads with disk-only reads. Remove the duplicate NotesWorkspaceDocument type definition. All reads and writes go directly to .automaker/notes/workspace.json.",
-          "filesToModify": [
-            "apps/server/src/routes/notes/index.ts"
-          ],
+          "filesToModify": ["apps/server/src/routes/notes/index.ts"],
           "acceptanceCriteria": [
             "No @protolabsai/crdt or @automerge imports in notes/index.ts",
             "Notes read/write uses disk path directly",
@@ -84,9 +82,7 @@
           "name": "refactor-projectservice-remove-automerge-doc-in-memory-usage",
           "title": "Refactor ProjectService — remove Automerge.Doc in-memory usage",
           "description": "Replace Automerge.Doc<ProjectsDoc> in-memory cache in project-service.ts with a plain Map<string, Record<string, Project>>. The disk path is already the source of truth. This removes the last @automerge/automerge import from apps/server/src/.",
-          "filesToModify": [
-            "apps/server/src/services/project-service.ts"
-          ],
+          "filesToModify": ["apps/server/src/services/project-service.ts"],
           "acceptanceCriteria": [
             "No @automerge imports in project-service.ts",
             "Project CRUD operations still work correctly",
@@ -163,11 +159,7 @@
           "name": "delete-libs-crdt-package-and-remove-automerge-dependencies",
           "title": "Delete libs/crdt package and remove @automerge dependencies",
           "description": "Delete the entire libs/crdt/ directory. Remove @protolabsai/crdt and all @automerge/* packages from package.json files. Delete the .automaker/crdt/ runtime directory.",
-          "filesToModify": [
-            "libs/crdt/",
-            "apps/server/package.json",
-            "package.json"
-          ],
+          "filesToModify": ["libs/crdt/", "apps/server/package.json", "package.json"],
           "acceptanceCriteria": [
             "libs/crdt/ directory deleted",
             "No @automerge/* in any package.json",

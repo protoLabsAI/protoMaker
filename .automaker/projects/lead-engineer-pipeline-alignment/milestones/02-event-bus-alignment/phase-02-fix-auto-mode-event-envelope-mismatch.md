@@ -18,10 +18,12 @@ Fix: In TypedEventBus emitAutoModeEvent(), after emitting the auto-mode:event en
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/auto-mode/typed-event-bus.ts`
 - [ ] `apps/server/src/services/lead-engineer-rules.ts`
 
 ### Verification
+
 - [ ] TypedEventBus emits both auto-mode:event envelope AND direct event type
 - [ ] autoModeHealth rule triggers array matches the emitted direct event types
 - [ ] autoModeHealth rule evaluates when auto-mode stops with backlog items

@@ -16,10 +16,12 @@ FailureClassifier has broad regex and missing patterns. Add word boundaries to n
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/failure-classifier-service.ts`
 - [ ] `apps/server/src/server/services.ts`
 
 ### Verification
+
 - [ ] Numeric patterns use word boundaries
 - [ ] Five new failure patterns added for documented modes
 - [ ] FailureClassifierService in ServiceContainer

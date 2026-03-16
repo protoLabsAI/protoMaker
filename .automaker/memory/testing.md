@@ -270,43 +270,50 @@ usageStats:
 - **Why this works:** Asymmetric bugs are hard to spot: one direction works, other direction seems to work but loses data. Round-trip testing forces both paths to be tested together. Catches lossy serialization.
 - **Trade-offs:** More test code required (need to compare deep object structures after round-trip). More coverage: catches codec asymmetries that separate tests miss.
 
-
 #### [Pattern] Git pre-commit hooks enforce correct file paths (caught attempt to write docs to main repo instead of worktree) (2026-03-15)
+
 - **Problem solved:** Developer path selection error was automatically blocked by hook before being committed
 - **Why this works:** Filesystem path validation in hooks is layered safety mechanism - more reliable than guidelines or code review alone; prevents organizational/maintenance issues from wrong paths
 - **Trade-offs:** Automatic enforcement prevents mistakes but adds tooling complexity and can cause friction if overly strict or misconfigured
 
 #### [Gotcha] vi.runAllTimersAsync() with fake timers causes infinite loops when testing repeating intervals (setInterval). Use vi.advanceTimersToNextTimer() + flushPromises() instead. (2026-03-15)
+
 - **Situation:** Unit tests for interval task registration were hanging/failing due to timer advancement strategy with repeating intervals
 - **Root cause:** vi.runAllTimersAsync() recursively fires all pending timers until the 10000-timer limit is reached; with repeating intervals, this creates infinite recursion. vi.advanceTimersToNextTimer() advances only to the next scheduled timer, allowing controlled test flow for intervals.
 - **How to avoid:** More verbose test setup (flushPromises helper) but reliable, predictable interval testing; allows testing pause/resume logic that wouldn't work with runAllTimersAsync
 
 #### [Pattern] Use internal interface (IntervalTask) to wrap native setInterval with metadata tracking (lastRun, duration, failureCount, executionCount). Store wrapped tasks in Map keyed by ID. (2026-03-15)
+
 - **Problem solved:** Need to track execution metrics for interval tasks while maintaining ability to clear handles on pause/destroy
 - **Why this works:** setInterval returns a primitive handle that can't store metadata; wrapping in interface allows co-location of handle + metrics. Map by ID enables O(1) lookup for pause/resume/metrics operations.
 - **Trade-offs:** More memory per task (wrapper object) but unified data structure; enables atomic pause/resume of all task properties together
 
 #### [Gotcha] Test strategy must shift when intervals are externalized: vi.useFakeTimers() + vi.advanceTimersByTime() no longer works because setInterval is gone. Tests must call service.tick() directly. (2026-03-15)
+
 - **Situation:** agent-manifest-service.test.ts relied on fake timers to trigger setInterval callbacks. Migration removed setInterval, breaking the test's timing mechanism.
 - **Root cause:** No setInterval means no fake timer hooks to advance. Direct tick() call is the new contract. Tests lose ability to verify actual interval cadence.
 - **How to avoid:** Easier: direct method calls, no fake timer setup. Harder: can't verify interval timing/cadence from test level; timing verification moves entirely to scheduler's domain.
 
 #### [Pattern] Test suite explicitly verifies event emission (timer:paused, timer:resumed) for every state transition, not just response codes, ensuring event-driven architecture actually works in practice. (2026-03-15)
+
 - **Problem solved:** Event-driven synchronization is critical to system correctness but can silently fail if events don't emit
 - **Why this works:** Response code tests are insufficient; events are invisible in happy-path testing. Explicit event verification catches missing event emissions early. Tests should reflect architecture guarantees.
 - **Trade-offs:** Tests are more verbose but catch real failures. Couples tests to event system. Requires mock/spy setup.
 
 #### [Pattern] Field preservation tests verify all original fields (description, color, type, recurrence itself) are copied to expanded instances (2026-03-15)
+
 - **Problem solved:** Easy to accidentally lose fields when cloning objects during expansion
 - **Why this works:** Catches silent data loss bugs where expansion omits fields. Instance must be identical to parent except for id and date
 - **Trade-offs:** Comprehensive but verbose test. Guarantees instances are complete objects. Cost: need to update test whenever new event fields are added
 
 #### [Gotcha] SQLite operations complete within the same millisecond when executed in rapid succession. Tests checking timestamp-based ordering (updated_at) will fail with non-deterministic results because both records receive identical ISO timestamps. (2026-03-16)
+
 - **Situation:** Test 'listConversations returns all in recency order' failed because createConversation(A) and createConversation(B) executed too fast to produce different updated_at values.
 - **Root cause:** SQLite uses system time for timestamps. In tests, operations are CPU-bound and hit the same clock tick. Attempting to fix via updateConversation() or createMessage() still hits the same millisecond.
 - **How to avoid:** Using vi.useFakeTimers() makes tests deterministic and readable but requires manual time manipulation in test setup. Real-world operations (human-paced) naturally spread across different timestamps.
 
 #### [Gotcha] Package-local vitest.config.ts required to prevent root workspace config from interfering with package tests (2026-03-16)
+
 - **Situation:** Context-engine package tests failed when inheriting root vitest.workspace.ts config
 - **Root cause:** Root workspace config defines global settings (environment, globals) that don't apply to individual packages. Package needs to override (name, globals: true, environment: 'node', coverage thresholds).
-- **How to avoid:** Local config duplication vs. ability to run tests with correct environment. Monorepo testing trade-off: explicit per-package config >  implicit inheritance.
+- **How to avoid:** Local config duplication vs. ability to run tests with correct environment. Monorepo testing trade-off: explicit per-package config > implicit inheritance.

@@ -16,6 +16,7 @@ Extract checks from FeatureHealthService, HealthMonitorService, and maintenance-
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/maintenance/checks/stuck-feature-check.ts`
 - [ ] `apps/server/src/services/maintenance/checks/orphaned-worktree-check.ts`
 - [ ] `apps/server/src/services/maintenance/checks/dangling-dependency-check.ts`
@@ -25,6 +26,7 @@ Extract checks from FeatureHealthService, HealthMonitorService, and maintenance-
 - [ ] `apps/server/src/services/maintenance/checks/stale-pr-check.ts`
 
 ### Verification
+
 - [ ] Each check implements MaintenanceCheck interface
 - [ ] All thresholds match existing services
 - [ ] Auto-fix logic preserved from all source systems

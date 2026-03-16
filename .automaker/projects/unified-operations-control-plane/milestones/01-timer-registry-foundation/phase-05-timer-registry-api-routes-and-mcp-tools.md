@@ -16,12 +16,14 @@ Add API routes: GET /api/ops/timers (list all), POST /api/ops/timers/:id/pause, 
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/routes/ops/index.ts`
 - [ ] `apps/server/src/routes/ops/routes/timers.ts`
 - [ ] `packages/mcp-server/src/tools/scheduler-tools.ts`
 - [ ] `libs/types/src/event.ts`
 
 ### Verification
+
 - [ ] GET /api/ops/timers returns all cron + interval tasks
 - [ ] Pause/resume endpoints work per timer and bulk
 - [ ] MCP get_scheduler_status includes interval tasks

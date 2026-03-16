@@ -326,10 +326,7 @@
           "name": "graceful-shutdown-handler",
           "title": "Graceful Shutdown Handler",
           "description": "SIGTERM/SIGINT handler: stop new agent starts, suspend active workflows, checkpoint running agents, flush Langfuse traces, close SQLite, exit. Configurable 30s timeout with force-kill.",
-          "filesToModify": [
-            "apps/server/src/lib/graceful-shutdown.ts",
-            "apps/server/src/index.ts"
-          ],
+          "filesToModify": ["apps/server/src/lib/graceful-shutdown.ts", "apps/server/src/index.ts"],
           "acceptanceCriteria": [
             "SIGTERM/SIGINT triggers orderly shutdown",
             "Active workflows suspended with checkpoint",

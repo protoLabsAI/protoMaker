@@ -16,12 +16,14 @@ Migrate HealthMonitorService (30s), PRWatcherService (30s), SpecGenerationMonito
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/health-monitor-service.ts`
 - [ ] `apps/server/src/services/pr-watcher-service.ts`
 - [ ] `apps/server/src/services/spec-generation-monitor.ts`
 - [ ] `apps/server/src/services/scheduler.module.ts`
 
 ### Verification
+
 - [ ] All three services use schedulerService.registerInterval()
 - [ ] All three appear in schedulerService.listAll()
 - [ ] No behavioral change from existing functionality

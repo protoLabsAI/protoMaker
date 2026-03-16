@@ -16,9 +16,11 @@ Rewrite apps/ui/src/components/views/flow-graph/constants.ts to define exactly 2
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/ui/src/components/views/flow-graph/constants.ts`
 
 ### Verification
+
 - [ ] constants.ts defines exactly 2 lanes
 - [ ] No pre-production lane or pipeline-stages lane nodes
 - [ ] Production lane nodes match actual running services (Lead Engineer, Auto-Mode, Agent Execution, Git Workflow, PR Pipeline)

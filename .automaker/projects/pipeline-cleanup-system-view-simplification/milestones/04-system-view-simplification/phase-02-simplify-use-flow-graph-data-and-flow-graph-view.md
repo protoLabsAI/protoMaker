@@ -16,11 +16,13 @@ Update apps/ui/src/components/views/flow-graph/hooks/use-flow-graph-data.ts to r
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/ui/src/components/views/flow-graph/hooks/use-flow-graph-data.ts`
 - [ ] `apps/ui/src/components/views/flow-graph/flow-graph-view.tsx`
 - [ ] `apps/ui/src/components/views/analytics-view.tsx`
 
 ### Verification
+
 - [ ] use-flow-graph-data.ts has no pipeline tracker or pipeline stage node code
 - [ ] flow-graph-view.tsx renders with no deleted panel imports
 - [ ] System view loads without runtime errors

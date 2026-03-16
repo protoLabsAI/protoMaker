@@ -1,4 +1,5 @@
 # Changelog: Astro Starter Kits - Portfolio Starter Kit
+
 **Generated:** 2026-03-15
 
 ## ✨ Features

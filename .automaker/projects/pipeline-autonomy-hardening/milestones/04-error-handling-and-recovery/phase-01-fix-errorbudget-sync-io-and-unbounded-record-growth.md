@@ -9,17 +9,19 @@
 
 ## Overview
 
-ErrorBudgetService uses readFileSync/writeFileSync on every operation blocking the event loop. Records grow without bound. Fix: in-memory cache with async I/O, prune old records, fix exhaustion event threshold mismatch, persist _isExhaustedState.
+ErrorBudgetService uses readFileSync/writeFileSync on every operation blocking the event loop. Records grow without bound. Fix: in-memory cache with async I/O, prune old records, fix exhaustion event threshold mismatch, persist \_isExhaustedState.
 
 ---
 
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/error-budget-service.ts`
 - [ ] `apps/server/tests/unit/services/error-budget-service.test.ts`
 
 ### Verification
+
 - [ ] All filesystem ops are async
 - [ ] Records older than 2x windowMs pruned on write
 - [ ] Exhaustion event fires at same threshold as isExhausted()

@@ -16,9 +16,11 @@ stream-observer-service.ts is 248 lines with zero tests. Cover: loop detection, 
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/tests/unit/services/stream-observer-service.test.ts`
 
 ### Verification
+
 - [ ] Tests cover loop detection with repeated tool calls
 - [ ] Tests cover stall and complete hang detection
 - [ ] Tests verify excluded tools dont trigger detection

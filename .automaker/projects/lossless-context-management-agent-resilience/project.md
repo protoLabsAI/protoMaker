@@ -24,7 +24,7 @@ protoLabs Studio agents run long feature implementation sessions (30-120 min) po
 
 ### Problem
 
-1) Context loss: Agents on long sessions hit token limits, /compact destroys details irreversibly, agents hallucinate from compressed memory. No way to recover original messages or search compressed history. 2) State loss: Server crashes lose all in-flight feature state. LeadEngineerService state machine is in-memory only. Stale agent-output.md files from crashed sessions trigger the stale context trap. 3) No checkpoint/resume: Interrupted feature executions restart from scratch.
+1. Context loss: Agents on long sessions hit token limits, /compact destroys details irreversibly, agents hallucinate from compressed memory. No way to recover original messages or search compressed history. 2) State loss: Server crashes lose all in-flight feature state. LeadEngineerService state machine is in-memory only. Stale agent-output.md files from crashed sessions trigger the stale context trap. 3) No checkpoint/resume: Interrupted feature executions restart from scratch.
 
 ### Approach
 

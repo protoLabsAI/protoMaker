@@ -1,4 +1,4 @@
-# Phase 2: Delete PipelineService and /api/pipeline/* routes
+# Phase 2: Delete PipelineService and /api/pipeline/\* routes
 
 **Duration**: 1-1.5 weeks
 **Owner**: TBD
@@ -16,6 +16,7 @@ Delete apps/server/src/services/pipeline-service.ts and the entire apps/server/s
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/pipeline-service.ts`
 - [ ] `apps/server/src/routes/pipeline/`
 - [ ] `apps/server/src/server/routes.ts`
@@ -25,9 +26,10 @@ Delete apps/server/src/services/pipeline-service.ts and the entire apps/server/s
 - [ ] `apps/server/tests/unit/services/pipeline-service.test.ts`
 
 ### Verification
+
 - [ ] pipeline-service.ts deleted
 - [ ] routes/pipeline/ directory deleted
-- [ ] No /api/pipeline/* routes in routes.ts
+- [ ] No /api/pipeline/\* routes in routes.ts
 - [ ] auto-mode-service.ts has no pipelineService reference
 - [ ] execution-service.ts has no pipelineConfig.steps reference
 - [ ] npm run build:server passes

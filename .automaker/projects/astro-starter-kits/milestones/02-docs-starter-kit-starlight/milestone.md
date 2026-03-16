@@ -14,10 +14,10 @@ Complete Astro Starlight documentation site with protoLabs custom theme.
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-scaffold-starlight-project-with-protolabs-theme.md](./phase-01-scaffold-starlight-project-with-protolabs-theme.md) | 1 week | None | TBD |
-| 2 | [phase-02-add-docs-kit-ci-and-agent-context.md](./phase-02-add-docs-kit-ci-and-agent-context.md) | 0.5 weeks | None | TBD |
+| Phase | File                                                                                                                         | Duration  | Dependencies | Owner |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------- | --------- | ------------ | ----- |
+| 1     | [phase-01-scaffold-starlight-project-with-protolabs-theme.md](./phase-01-scaffold-starlight-project-with-protolabs-theme.md) | 1 week    | None         | TBD   |
+| 2     | [phase-02-add-docs-kit-ci-and-agent-context.md](./phase-02-add-docs-kit-ci-and-agent-context.md)                             | 0.5 weeks | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M2 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

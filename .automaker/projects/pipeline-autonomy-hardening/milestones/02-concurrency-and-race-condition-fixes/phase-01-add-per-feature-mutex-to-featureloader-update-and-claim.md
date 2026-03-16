@@ -16,10 +16,12 @@ FeatureLoader.update() performs read-modify-write without locking. Two concurren
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/feature-loader.ts`
 - [ ] `apps/server/tests/unit/services/feature-loader.test.ts`
 
 ### Verification
+
 - [ ] Concurrent update() calls for same feature are serialized
 - [ ] claim() is atomic - two simultaneous claims cannot both succeed
 - [ ] Unit test fires concurrent updates verifying all fields present

@@ -14,10 +14,10 @@ Fix the ceremony state machine so it can advance through the full lifecycle. Rem
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-fix-ceremony-payloads-with-remainingmilestones-and-retrodata.md](./phase-01-fix-ceremony-payloads-with-remainingmilestones-and-retrodata.md) | 1 week | None | TBD |
-| 2 | [phase-02-remove-dead-rollbacktriggered-rule-and-clean-up-gate-tuning.md](./phase-02-remove-dead-rollbacktriggered-rule-and-clean-up-gate-tuning.md) | 0.5 weeks | None | TBD |
+| Phase | File                                                                                                                                                   | Duration  | Dependencies | Owner |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- | ------------ | ----- |
+| 1     | [phase-01-fix-ceremony-payloads-with-remainingmilestones-and-retrodata.md](./phase-01-fix-ceremony-payloads-with-remainingmilestones-and-retrodata.md) | 1 week    | None         | TBD   |
+| 2     | [phase-02-remove-dead-rollbacktriggered-rule-and-clean-up-gate-tuning.md](./phase-02-remove-dead-rollbacktriggered-rule-and-clean-up-gate-tuning.md)   | 0.5 weeks | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M3 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

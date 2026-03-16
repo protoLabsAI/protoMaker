@@ -16,6 +16,7 @@ Delete from apps/ui/src/components/views/flow-graph/: pipeline-panel.tsx, pipeli
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/ui/src/components/views/flow-graph/pipeline-panel.tsx`
 - [ ] `apps/ui/src/components/views/flow-graph/pipeline-analytics.tsx`
 - [ ] `apps/ui/src/components/views/flow-graph/pipeline-event-log.tsx`
@@ -33,6 +34,7 @@ Delete from apps/ui/src/components/views/flow-graph/: pipeline-panel.tsx, pipeli
 - [ ] `apps/ui/src/components/views/flow-graph/types.ts`
 
 ### Verification
+
 - [ ] All 10 pipeline component/hook files deleted
 - [ ] Barrel exports have no dead references
 - [ ] flow-graph-view.tsx imports no deleted components

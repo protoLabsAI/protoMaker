@@ -73,7 +73,10 @@ const score = (tagScore + relevantToScore + summaryScore + categoryScore) * impo
 
 ```typescript
 // apps/server/src/server/shutdown.ts:54
-fs.writeFileSync(path.join(dataDir, '.clean-shutdown'), JSON.stringify({ timestamp: new Date().toISOString() }));
+fs.writeFileSync(
+  path.join(dataDir, '.clean-shutdown'),
+  JSON.stringify({ timestamp: new Date().toISOString() })
+);
 ```
 
 **Fatal crashes** handled via `uncaughtException`/`unhandledRejection` handlers. Non-fatal codes (`ECONNRESET`, `EPIPE`, `ERR_STREAM_DESTROYED`, `ERR_STREAM_WRITE_AFTER_END`) are filtered; fatal exceptions trigger graceful shutdown with a 10-second timeout + force exit, notifying `ReactiveSpawnerService` [15].
@@ -146,25 +149,25 @@ Heap checks before agent spawn: 80% threshold stops new agents, 90% aborts runni
 
 Based on the architecture analysis, six integration points have been identified:
 
-| Point | Location | Purpose |
-|-------|----------|---------|
-| **A. Pre-spawn** | `auto-mode-service.ts` → `ExecutionService.runFeature()` | Assemble DAG context before SDK call |
-| **B. Output sink** | `agent-output.md` write | Persist raw messages for DAG leaf creation |
-| **C. Post-crash** | `shutdown.ts` uncaughtException handler | Flush in-flight DAG state before exit |
-| **D. Resume** | `resumeInterruptedFeatures()` → `feature.lastSessionId` | Rebuild context from DAG on restart |
-| **E. Pre-flight** | `worktree-guard.ts` → `ensureCleanWorktree()` | Exclude DAG SQLite from git staging |
-| **F. Storage** | `.automaker/features/{id}/` | Colocate DAG database with feature state |
+| Point              | Location                                                 | Purpose                                    |
+| ------------------ | -------------------------------------------------------- | ------------------------------------------ |
+| **A. Pre-spawn**   | `auto-mode-service.ts` → `ExecutionService.runFeature()` | Assemble DAG context before SDK call       |
+| **B. Output sink** | `agent-output.md` write                                  | Persist raw messages for DAG leaf creation |
+| **C. Post-crash**  | `shutdown.ts` uncaughtException handler                  | Flush in-flight DAG state before exit      |
+| **D. Resume**      | `resumeInterruptedFeatures()` → `feature.lastSessionId`  | Rebuild context from DAG on restart        |
+| **E. Pre-flight**  | `worktree-guard.ts` → `ensureCleanWorktree()`            | Exclude DAG SQLite from git staging        |
+| **F. Storage**     | `.automaker/features/{id}/`                              | Colocate DAG database with feature state   |
 
 ### Mapping VoltAgent Patterns to Existing Infrastructure
 
-| VoltAgent Pattern | Automaker Equivalent | Gap |
-|-------------------|---------------------|-----|
-| `createSuspendController()` [48] | `abortController` in ExecuteOptions [1] | No suspend-specific abort reason payload |
-| `WorkflowSuspensionMetadata` [53] | `Feature.executionHistory` + `pendingTools` [17][11] | No per-step checkpoint granularity |
-| `shutdown()` orchestration [55] | `shutdown.ts` graceful + ReactiveSpawner [14][15] | No `suspendAllActiveWorkflows()` equivalent |
-| `SIGTERM`/`SIGINT` handlers [57] | `process.on('uncaughtException')` [15] | Only handles exceptions, not signals |
-| Step-level `suspend(reason)` [50] | N/A | No mid-execution suspend capability |
-| `execution.resume(resumeData)` [50] | `resumeInterruptedFeatures()` [16] | Coarser: resumes entire feature, not specific step |
+| VoltAgent Pattern                   | Automaker Equivalent                                 | Gap                                                |
+| ----------------------------------- | ---------------------------------------------------- | -------------------------------------------------- |
+| `createSuspendController()` [48]    | `abortController` in ExecuteOptions [1]              | No suspend-specific abort reason payload           |
+| `WorkflowSuspensionMetadata` [53]   | `Feature.executionHistory` + `pendingTools` [17][11] | No per-step checkpoint granularity                 |
+| `shutdown()` orchestration [55]     | `shutdown.ts` graceful + ReactiveSpawner [14][15]    | No `suspendAllActiveWorkflows()` equivalent        |
+| `SIGTERM`/`SIGINT` handlers [57]    | `process.on('uncaughtException')` [15]               | Only handles exceptions, not signals               |
+| Step-level `suspend(reason)` [50]   | N/A                                                  | No mid-execution suspend capability                |
+| `execution.resume(resumeData)` [50] | `resumeInterruptedFeatures()` [16]                   | Coarser: resumes entire feature, not specific step |
 
 ---
 
@@ -179,11 +182,18 @@ Based on the architecture analysis, six integration points have been identified:
 ```typescript
 // src/compaction.ts
 function generateSummaryId(content: string): string {
-  return "sum_" + createHash("sha256").update(content + Date.now().toString()).digest("hex").slice(0, 16);
+  return (
+    'sum_' +
+    createHash('sha256')
+      .update(content + Date.now().toString())
+      .digest('hex')
+      .slice(0, 16)
+  );
 }
 ```
 
 **CompactionEngine** operates in three modes [36]:
+
 1. **Incremental**: leaf pass + optional condensation
 2. **Full sweep**: complete recompaction
 3. **Budget-targeted**: iterates ≤10 rounds to fit within token budget
@@ -194,12 +204,12 @@ Escalation progression: normal (temperature 0.2) → aggressive (temperature 0.1
 
 ```typescript
 export interface CompactionConfig {
-  contextThreshold: number;      // fraction of budget (default 0.75)
-  freshTailCount: number;        // protected recent turns (default 8)
-  leafChunkTokens?: number;      // max source tokens per chunk (default 20k)
-  leafTargetTokens: number;      // target summary size (default 600)
+  contextThreshold: number; // fraction of budget (default 0.75)
+  freshTailCount: number; // protected recent turns (default 8)
+  leafChunkTokens?: number; // max source tokens per chunk (default 20k)
+  leafTargetTokens: number; // target summary size (default 600)
   condensedTargetTokens: number; // target summary size (default 900)
-  maxRounds: number;             // max compaction rounds (default 10)
+  maxRounds: number; // max compaction rounds (default 10)
 }
 ```
 
@@ -207,13 +217,13 @@ export interface CompactionConfig {
 
 **Depth-keyed prompts** encode semantic compression priorities [38]:
 
-| Depth | Focus | Target |
-|-------|-------|--------|
-| d0 (leaf) | Preserve decisions, rationale, constraints, tasks, file ops | 35% reduction |
-| d1 (condensed) | Condense leaves + timeline; preserve decisions + blockers | — |
-| d2 | Multi-session trajectory; drop session-local detail | — |
-| d3+ | Durable memory: decisions, work, constraints, lessons | — |
-| Fallback | Deterministic truncation (~512 tokens, marked `[Truncated]`) | — |
+| Depth          | Focus                                                        | Target        |
+| -------------- | ------------------------------------------------------------ | ------------- |
+| d0 (leaf)      | Preserve decisions, rationale, constraints, tasks, file ops  | 35% reduction |
+| d1 (condensed) | Condense leaves + timeline; preserve decisions + blockers    | —             |
+| d2             | Multi-session trajectory; drop session-local detail          | —             |
+| d3+            | Durable memory: decisions, work, constraints, lessons        | —             |
+| Fallback       | Deterministic truncation (~512 tokens, marked `[Truncated]`) | —             |
 
 **Context assembly**: Fetches context items → resolves to `AgentMessage` → splits into evictable prefix + protected tail → fills budget oldest-first → sanitizes orphaned tool pairs. Summaries become XML-wrapped user messages [47]:
 
@@ -250,7 +260,7 @@ export function createSuspendController(): WorkflowSuspendController {
       if (!suspended && !cancelled) {
         suspensionReason = reason;
         suspended = true;
-        abortController.abort({ type: "suspended", reason: suspensionReason });
+        abortController.abort({ type: 'suspended', reason: suspensionReason });
       }
     },
     isSuspended: () => suspended,
@@ -264,8 +274,8 @@ export function createSuspendController(): WorkflowSuspendController {
 ```typescript
 execute: async ({ data, suspend, resumeData }) => {
   if (resumeData) return { approved: resumeData.approved };
-  await suspend("Waiting for approval");
-}
+  await suspend('Waiting for approval');
+};
 ```
 
 **Checkpoint persistence** [53][54]: `WorkflowSuspensionMetadata` captures `suspendedStepIndex`, `completedStepsData[]`, `workflowState`, per-step `stepData` snapshots, and `usage`. Written to memory adapter under `"__voltagent_restart_checkpoint"` key on each step completion (configurable `checkpointInterval`):
@@ -373,79 +383,79 @@ public async shutdown(): Promise<void> {
 
 ## Open Questions & Risks
 
-| # | Question / Risk | Impact | Mitigation |
-|---|----------------|--------|------------|
-| 1 | **SQLite in worktrees**: If DAG databases live in `.automaker/features/`, worktree copies may conflict with main repo. | Data corruption, merge conflicts | Exclude `context.sqlite*` from git staging [12]; use WAL mode for concurrent reads |
-| 2 | **Compaction latency**: DAG summarization requires LLM calls. At depth 0 with 20K-token chunks [44], each compaction round adds ~5-10s. | Agent response lag | Run compaction asynchronously between turns; use incremental mode [36] |
-| 3 | **Memory drift amplified**: SQLite files in worktrees add to the existing memory drift problem [12]. | Pre-flight merge failures | Fix git-staging-utils to exclude `*.sqlite*` globally; prioritize the memory drift fix |
-| 4 | **No signal handlers**: Current shutdown only handles `uncaughtException` [15], not `SIGTERM`/`SIGINT`. Deploy rotations kill agents without suspension. | Lost in-flight work | Add `process.once('SIGTERM')` and `process.once('SIGINT')` [57] in Phase 2 |
-| 5 | **Expansion sub-agent cost**: `lcm_expand` spawns a sub-agent with 120s timeout [40]. Frequent expansions multiply API costs. | Budget overrun | Rate-limit expansions per session; cache expanded results in SQLite FTS5 [39] |
-| 6 | **Heuristic token counting**: Replacing 4-char heuristic [5] with a real tokenizer changes compaction trigger timing. | Over/under-compaction during rollout | A/B test with shadow compaction: run both counters, log divergence, switch after validation |
-| 7 | **SDK session ID lifetime**: `sdkSessionId` [6] has an unknown TTL on Anthropic's side. Long suspensions may invalidate it. | Resume fails, full restart required | Always persist DAG context as fallback; treat SDK resume as optimization, not requirement |
-| 8 | **No external database**: All persistence is file-based JSON/markdown [23]. SQLite is the first non-JSON store. | Operational complexity | SQLite is embedded (no server); use the same atomic-write + backup-recovery patterns [18] |
-| 9 | **Heap pressure during compaction**: Compaction LLM calls consume heap. With 80% stop threshold [23], compaction may be blocked when most needed. | Agents can't compact under memory pressure | Run compaction in a child process or worker thread; exempt compaction calls from heap checks |
-| 10 | **Test coverage gap**: Zero existing tests for context compression behavior or kill-and-rehydrate flows [25][26]. | Regressions ship silently | Phase 3 testing is prerequisite to production rollout; gate behind feature flag |
+| #   | Question / Risk                                                                                                                                          | Impact                                     | Mitigation                                                                                   |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| 1   | **SQLite in worktrees**: If DAG databases live in `.automaker/features/`, worktree copies may conflict with main repo.                                   | Data corruption, merge conflicts           | Exclude `context.sqlite*` from git staging [12]; use WAL mode for concurrent reads           |
+| 2   | **Compaction latency**: DAG summarization requires LLM calls. At depth 0 with 20K-token chunks [44], each compaction round adds ~5-10s.                  | Agent response lag                         | Run compaction asynchronously between turns; use incremental mode [36]                       |
+| 3   | **Memory drift amplified**: SQLite files in worktrees add to the existing memory drift problem [12].                                                     | Pre-flight merge failures                  | Fix git-staging-utils to exclude `*.sqlite*` globally; prioritize the memory drift fix       |
+| 4   | **No signal handlers**: Current shutdown only handles `uncaughtException` [15], not `SIGTERM`/`SIGINT`. Deploy rotations kill agents without suspension. | Lost in-flight work                        | Add `process.once('SIGTERM')` and `process.once('SIGINT')` [57] in Phase 2                   |
+| 5   | **Expansion sub-agent cost**: `lcm_expand` spawns a sub-agent with 120s timeout [40]. Frequent expansions multiply API costs.                            | Budget overrun                             | Rate-limit expansions per session; cache expanded results in SQLite FTS5 [39]                |
+| 6   | **Heuristic token counting**: Replacing 4-char heuristic [5] with a real tokenizer changes compaction trigger timing.                                    | Over/under-compaction during rollout       | A/B test with shadow compaction: run both counters, log divergence, switch after validation  |
+| 7   | **SDK session ID lifetime**: `sdkSessionId` [6] has an unknown TTL on Anthropic's side. Long suspensions may invalidate it.                              | Resume fails, full restart required        | Always persist DAG context as fallback; treat SDK resume as optimization, not requirement    |
+| 8   | **No external database**: All persistence is file-based JSON/markdown [23]. SQLite is the first non-JSON store.                                          | Operational complexity                     | SQLite is embedded (no server); use the same atomic-write + backup-recovery patterns [18]    |
+| 9   | **Heap pressure during compaction**: Compaction LLM calls consume heap. With 80% stop threshold [23], compaction may be blocked when most needed.        | Agents can't compact under memory pressure | Run compaction in a child process or worker thread; exempt compaction calls from heap checks |
+| 10  | **Test coverage gap**: Zero existing tests for context compression behavior or kill-and-rehydrate flows [25][26].                                        | Regressions ship silently                  | Phase 3 testing is prerequisite to production rollout; gate behind feature flag              |
 
 ---
 
 ## Citations
 
-| # | Source |
-|---|--------|
-| [1] | `apps/server/src/services/agent-service.ts:143` — Session interface and management |
-| [2] | `apps/server/src/services/agent-service.ts:348` — Conversation history construction |
-| [3] | `apps/server/src/routes/chat/message-compaction.ts:16` — Compaction budget (100K tokens) |
-| [4] | `apps/server/src/routes/chat/message-compaction.ts:142` — Last 10 messages preserved verbatim |
-| [5] | `apps/server/src/routes/chat/message-compaction.ts:68` — Heuristic token estimation |
-| [6] | `apps/server/src/providers/claude-provider.ts:264` — SDK session resumption |
-| [7] | `apps/server/src/lib/sdk-options.ts:747` — File checkpointing (auto-mode only) |
-| [8] | `apps/server/src/lib/sdk-options.ts:315` — Max turns configuration |
-| [9] | `libs/utils/src/context-loader.ts:462` — Memory file scoring |
-| [10] | `apps/server/src/services/agent-service.ts:544` — MessageQueueMiddleware injection |
-| [11] | `apps/server/src/services/agent-service.ts:226` — Interrupted tool recovery |
-| [12] | `apps/server/src/lib/git-staging-utils.ts:18` — Git staging includes memory files |
-| [13] | `apps/server/src/services/agent-service.ts:442` — System prompt layering |
-| [14] | `apps/server/src/server/shutdown.ts:54` — Graceful shutdown marker |
-| [15] | `apps/server/src/server/shutdown.ts:125-173` — Uncaught exception handler |
-| [16] | `apps/server/src/services/auto-mode-service.ts:3343-3433` — Resume interrupted features |
-| [17] | `libs/types/src/feature.ts:72-97` — Feature type with execution metadata |
-| [18] | `apps/server/src/services/feature-loader.ts:1-150` — Atomic JSON writes with backup recovery |
-| [19] | `apps/server/src/lib/worktree-metadata.ts:73-128` — Worktree metadata read/write |
-| [20] | `apps/server/src/services/worktree-recovery-service.ts:58-150` — Uncommitted work recovery |
-| [21] | `apps/server/src/services/worktree-lifecycle-service.ts:198-290` — Worktree cleanup |
-| [22] | `apps/server/src/services/worktree-lifecycle-service.ts:31,137-188` — 6-hour drift detection |
-| [23] | `apps/server/src/services/auto-mode-service.ts` — Heap pressure thresholds |
-| [24] | `apps/server/src/services/auto-mode-service.ts:3385-3403` — agent-output.md presence check |
-| [25] | `apps/server/tests/unit/services/agent-service.test.ts:166` — Pending tools interrupt test |
-| [26] | `apps/server/tests/unit/services/agent-service.test.ts:211` — Idempotent replay guard |
-| [27] | `apps/server/tests/unit/providers/claude-provider.test.ts:147` — SDK resume test |
-| [28] | `apps/server/tests/unit/services/recovery-service.test.ts:1` — Failure recovery framework tests |
-| [29] | `apps/server/tests/unit/services/worktree-recovery-service.test.ts` — Git fault injection tests |
-| [30] | `apps/server/vitest.config.ts:30` — CI coverage thresholds |
-| [31] | [CCF: Context Compression Framework](https://arxiv.org/html/2509.09199v1) — ROUGE-L 0.97–1.00 at 8× compression |
-| [32] | [Replay Testing (Temporal/DBOS)](https://www.bitovi.com/blog/replay-testing-to-avoid-non-determinism-in-temporal-workflows) |
-| [33] | [agent-chaos (Python)](https://github.com/deepankarm/agent-chaos) — Composable fault injection |
-| [34] | [ReliabilityBench](https://arxiv.org/pdf/2601.06112) — Agent reliability benchmarking |
-| [35] | `research-lossless-claw-20260316121321.json:357` — Confidence/completeness metrics |
-| [36] | `research-lossless-claw-20260316121321.json:84` — CompactionEngine modes and escalation |
-| [37] | `research-lossless-claw-20260316121321.json:203` — Fresh tail protection |
-| [38] | `research-lossless-claw-20260316121321.json:111` — Depth-keyed prompt definitions |
-| [39] | `research-lossless-claw-20260316121321.json:172` — SQLite schema and key operations |
-| [40] | `research-lossless-claw-20260316121321.json:137` — Expansion system with sub-agent |
-| [41] | `research-lossless-claw-20260316121321.json:149` — Large file interception threshold |
-| [42] | `research-lossless-claw-20260316121321.json:214` — JSONL crash recovery |
-| [43] | `research-lossless-claw-20260316121321.json:194` — Dependency injection pattern |
-| [44] | [lossless-claw `src/compaction.ts`](https://github.com/Martian-Engineering/lossless-claw) — CompactionConfig interface |
-| [45] | [lossless-claw repository](https://github.com/Martian-Engineering/lossless-claw) — MIT, 2,230 stars |
-| [46] | [lossless-claw architecture docs](https://github.com/Martian-Engineering/lossless-claw/blob/main/docs/architecture.md) — DAG structure |
+| #    | Source                                                                                                                                      |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| [1]  | `apps/server/src/services/agent-service.ts:143` — Session interface and management                                                          |
+| [2]  | `apps/server/src/services/agent-service.ts:348` — Conversation history construction                                                         |
+| [3]  | `apps/server/src/routes/chat/message-compaction.ts:16` — Compaction budget (100K tokens)                                                    |
+| [4]  | `apps/server/src/routes/chat/message-compaction.ts:142` — Last 10 messages preserved verbatim                                               |
+| [5]  | `apps/server/src/routes/chat/message-compaction.ts:68` — Heuristic token estimation                                                         |
+| [6]  | `apps/server/src/providers/claude-provider.ts:264` — SDK session resumption                                                                 |
+| [7]  | `apps/server/src/lib/sdk-options.ts:747` — File checkpointing (auto-mode only)                                                              |
+| [8]  | `apps/server/src/lib/sdk-options.ts:315` — Max turns configuration                                                                          |
+| [9]  | `libs/utils/src/context-loader.ts:462` — Memory file scoring                                                                                |
+| [10] | `apps/server/src/services/agent-service.ts:544` — MessageQueueMiddleware injection                                                          |
+| [11] | `apps/server/src/services/agent-service.ts:226` — Interrupted tool recovery                                                                 |
+| [12] | `apps/server/src/lib/git-staging-utils.ts:18` — Git staging includes memory files                                                           |
+| [13] | `apps/server/src/services/agent-service.ts:442` — System prompt layering                                                                    |
+| [14] | `apps/server/src/server/shutdown.ts:54` — Graceful shutdown marker                                                                          |
+| [15] | `apps/server/src/server/shutdown.ts:125-173` — Uncaught exception handler                                                                   |
+| [16] | `apps/server/src/services/auto-mode-service.ts:3343-3433` — Resume interrupted features                                                     |
+| [17] | `libs/types/src/feature.ts:72-97` — Feature type with execution metadata                                                                    |
+| [18] | `apps/server/src/services/feature-loader.ts:1-150` — Atomic JSON writes with backup recovery                                                |
+| [19] | `apps/server/src/lib/worktree-metadata.ts:73-128` — Worktree metadata read/write                                                            |
+| [20] | `apps/server/src/services/worktree-recovery-service.ts:58-150` — Uncommitted work recovery                                                  |
+| [21] | `apps/server/src/services/worktree-lifecycle-service.ts:198-290` — Worktree cleanup                                                         |
+| [22] | `apps/server/src/services/worktree-lifecycle-service.ts:31,137-188` — 6-hour drift detection                                                |
+| [23] | `apps/server/src/services/auto-mode-service.ts` — Heap pressure thresholds                                                                  |
+| [24] | `apps/server/src/services/auto-mode-service.ts:3385-3403` — agent-output.md presence check                                                  |
+| [25] | `apps/server/tests/unit/services/agent-service.test.ts:166` — Pending tools interrupt test                                                  |
+| [26] | `apps/server/tests/unit/services/agent-service.test.ts:211` — Idempotent replay guard                                                       |
+| [27] | `apps/server/tests/unit/providers/claude-provider.test.ts:147` — SDK resume test                                                            |
+| [28] | `apps/server/tests/unit/services/recovery-service.test.ts:1` — Failure recovery framework tests                                             |
+| [29] | `apps/server/tests/unit/services/worktree-recovery-service.test.ts` — Git fault injection tests                                             |
+| [30] | `apps/server/vitest.config.ts:30` — CI coverage thresholds                                                                                  |
+| [31] | [CCF: Context Compression Framework](https://arxiv.org/html/2509.09199v1) — ROUGE-L 0.97–1.00 at 8× compression                             |
+| [32] | [Replay Testing (Temporal/DBOS)](https://www.bitovi.com/blog/replay-testing-to-avoid-non-determinism-in-temporal-workflows)                 |
+| [33] | [agent-chaos (Python)](https://github.com/deepankarm/agent-chaos) — Composable fault injection                                              |
+| [34] | [ReliabilityBench](https://arxiv.org/pdf/2601.06112) — Agent reliability benchmarking                                                       |
+| [35] | `research-lossless-claw-20260316121321.json:357` — Confidence/completeness metrics                                                          |
+| [36] | `research-lossless-claw-20260316121321.json:84` — CompactionEngine modes and escalation                                                     |
+| [37] | `research-lossless-claw-20260316121321.json:203` — Fresh tail protection                                                                    |
+| [38] | `research-lossless-claw-20260316121321.json:111` — Depth-keyed prompt definitions                                                           |
+| [39] | `research-lossless-claw-20260316121321.json:172` — SQLite schema and key operations                                                         |
+| [40] | `research-lossless-claw-20260316121321.json:137` — Expansion system with sub-agent                                                          |
+| [41] | `research-lossless-claw-20260316121321.json:149` — Large file interception threshold                                                        |
+| [42] | `research-lossless-claw-20260316121321.json:214` — JSONL crash recovery                                                                     |
+| [43] | `research-lossless-claw-20260316121321.json:194` — Dependency injection pattern                                                             |
+| [44] | [lossless-claw `src/compaction.ts`](https://github.com/Martian-Engineering/lossless-claw) — CompactionConfig interface                      |
+| [45] | [lossless-claw repository](https://github.com/Martian-Engineering/lossless-claw) — MIT, 2,230 stars                                         |
+| [46] | [lossless-claw architecture docs](https://github.com/Martian-Engineering/lossless-claw/blob/main/docs/architecture.md) — DAG structure      |
 | [47] | [lossless-claw architecture docs](https://github.com/Martian-Engineering/lossless-claw/blob/main/docs/architecture.md) — XML summary format |
-| [48] | [VoltAgent repository](https://github.com/VoltAgent/voltagent) — Suspend controller |
-| [49] | [VoltAgent workflow hooks](https://voltagent.dev/docs/workflows/hooks/) — Graceful/immediate modes |
-| [50] | [VoltAgent streaming](https://voltagent.dev/docs/workflows/streaming/) — Step-level suspend/resume |
-| [51] | [VoltAgent streaming](https://voltagent.dev/docs/workflows/streaming/) — Resume API |
-| [52] | [VoltAgent REST endpoints](https://voltagent.dev/docs/api/endpoints/workflows/) — Suspend/resume/state APIs |
-| [53] | [VoltAgent `packages/core/src/workflow/types.ts`](https://github.com/VoltAgent/voltagent) — WorkflowSuspensionMetadata |
-| [54] | [VoltAgent `packages/core/src/workflow/core.ts`](https://github.com/VoltAgent/voltagent) — Checkpoint persistence |
-| [55] | [VoltAgent `packages/core/src/voltagent.ts`](https://github.com/VoltAgent/voltagent) — Shutdown orchestration |
-| [56] | [VoltAgent `packages/core/src/workflow/registry.ts`](https://github.com/VoltAgent/voltagent) — suspendAllActiveWorkflows |
-| [57] | [VoltAgent `packages/core/src/voltagent.ts`](https://github.com/VoltAgent/voltagent) — Signal handlers |
+| [48] | [VoltAgent repository](https://github.com/VoltAgent/voltagent) — Suspend controller                                                         |
+| [49] | [VoltAgent workflow hooks](https://voltagent.dev/docs/workflows/hooks/) — Graceful/immediate modes                                          |
+| [50] | [VoltAgent streaming](https://voltagent.dev/docs/workflows/streaming/) — Step-level suspend/resume                                          |
+| [51] | [VoltAgent streaming](https://voltagent.dev/docs/workflows/streaming/) — Resume API                                                         |
+| [52] | [VoltAgent REST endpoints](https://voltagent.dev/docs/api/endpoints/workflows/) — Suspend/resume/state APIs                                 |
+| [53] | [VoltAgent `packages/core/src/workflow/types.ts`](https://github.com/VoltAgent/voltagent) — WorkflowSuspensionMetadata                      |
+| [54] | [VoltAgent `packages/core/src/workflow/core.ts`](https://github.com/VoltAgent/voltagent) — Checkpoint persistence                           |
+| [55] | [VoltAgent `packages/core/src/voltagent.ts`](https://github.com/VoltAgent/voltagent) — Shutdown orchestration                               |
+| [56] | [VoltAgent `packages/core/src/workflow/registry.ts`](https://github.com/VoltAgent/voltagent) — suspendAllActiveWorkflows                    |
+| [57] | [VoltAgent `packages/core/src/voltagent.ts`](https://github.com/VoltAgent/voltagent) — Signal handlers                                      |

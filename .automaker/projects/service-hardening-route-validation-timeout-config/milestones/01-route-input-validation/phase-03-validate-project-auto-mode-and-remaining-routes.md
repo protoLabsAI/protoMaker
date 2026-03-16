@@ -16,6 +16,7 @@ Add Zod schemas to project CRUD routes, auto-mode start/stop/reconcile, session 
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/routes/projects/routes/create.ts`
 - [ ] `apps/server/src/routes/projects/routes/update.ts`
 - [ ] `apps/server/src/routes/projects/routes/get.ts`
@@ -27,6 +28,7 @@ Add Zod schemas to project CRUD routes, auto-mode start/stop/reconcile, session 
 - [ ] `apps/server/src/routes/sessions/routes/index.ts`
 
 ### Verification
+
 - [ ] All listed routes use validateBody or validateQuery middleware
 - [ ] GitHub webhook validates payload structure before processing
 - [ ] maxConcurrency in auto-mode start has numeric range validation (1-20)

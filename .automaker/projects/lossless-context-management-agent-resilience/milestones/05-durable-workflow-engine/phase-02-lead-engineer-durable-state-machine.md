@@ -16,11 +16,13 @@ Refactor LeadEngineerService to use checkpoint store. Checkpoint before each tra
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/lead-engineer-service.ts`
 - [ ] `apps/server/src/services/lead-engineer-state-machine.ts`
 - [ ] `apps/server/src/index.ts`
 
 ### Verification
+
 - [ ] State machine checkpoints before every transition
 - [ ] Server restart resumes suspended workflows
 - [ ] REVIEW and MERGE states suspend properly

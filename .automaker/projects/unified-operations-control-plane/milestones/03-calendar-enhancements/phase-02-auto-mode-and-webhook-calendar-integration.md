@@ -16,12 +16,14 @@ Create CalendarIntegrationService listening to operational events. Feature start
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/calendar-integration-service.ts`
 - [ ] `libs/types/src/calendar.ts`
 - [ ] `apps/server/src/services/ceremony-service.ts`
 - [ ] `apps/server/src/server/wiring.ts`
 
 ### Verification
+
 - [ ] CalendarIntegrationService listens to feature lifecycle events
 - [ ] Ops-type calendar entries created for key events
 - [ ] CeremonyService uses recurring events

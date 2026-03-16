@@ -256,13 +256,14 @@ usageStats:
 - **Why this works:** Content becomes self-describing via frontmatter. Single source of truth. Scales without code changes. Follows established atomic design principles.
 - **Trade-offs:** Gains: self-describing content, scalable. Loses: requires consistent frontmatter discipline, category changes aren't validated at build time.
 
-
 #### [Gotcha] @protolabsai/utils DTS files must be built before server tsc can resolve type imports, causing build failures if package dependencies are built out-of-order. (2026-03-15)
+
 - **Situation:** Build pipeline encountered missing exports when server tried to import types from @protolabsai/utils before that package's build completed
 - **Root cause:** TypeScript's module resolution fails on missing .d.ts files even if source exists; monorepo packages must be built in dependency order (bottom-up)
 - **How to avoid:** Forces strict build ordering (slower) for correctness; ensures no stale/missing type definitions
 
 ### Support both count-based and endDate-based recurrence limits (frequency + interval + {count OR endDate}) (2026-03-15)
+
 - **Context:** Some users think 'repeat 5 times', others think 'repeat until March 31'
 - **Why:** Flexibility for different mental models. Real-world calendars support both (iCalendar spec has both RRULE:COUNT and RRULE:UNTIL)
 - **Rejected:** Only count (can't express 'until a date'); only endDate (can't express 'exactly N times')
@@ -270,6 +271,7 @@ usageStats:
 - **Breaking if changed:** If precedence is implicit (count wins over endDate), changing it breaks events defined with both. If expansion logic has a bug (e.g., checks count first, never checks endDate), entire classes of events behave wrong
 
 ### Token counting uses a 4-chars/token heuristic, stored per message_part and summed at query time on messages. No ML tokenizer integration. (2026-03-16)
+
 - **Context:** Needed fast token budgeting for conversation context management without blocking on ML model tokenization calls.
 - **Why:** Synchronous, deterministic, no external dependencies. Sufficient for budget enforcement in real-time chat. ML tokenizers are slow and variable.
 - **Rejected:** Using actual tokenizer (Anthropic SDK, LangChain): requires async calls, adds latency, increases dependency footprint. Storing pre-summed token counts on messages: reduces query flexibility.
@@ -277,6 +279,7 @@ usageStats:
 - **Breaking if changed:** If you change the heuristic ratio, all persisted token_count values become incorrect. Requires data migration or cache invalidation strategy.
 
 ### Used synchronous better-sqlite3 (no async/await) for the entire persistence layer. All CRUD operations are blocking calls. (2026-03-16)
+
 - **Context:** Building a conversation store that integrates with async Node.js event loop without callback hell or complex queue management.
 - **Why:** Simpler mental model and API surface. better-sqlite3 is fast enough that blocking never matters in practice (single-threaded JS can handle microseconds). No promise chains, no error handling complexity.
 - **Rejected:** Async drivers (sql.js, node-sqlite3 with callbacks, knex): require async/await on every access, complicate error boundaries, add callback overhead. Workers would still serialize access.
@@ -284,16 +287,19 @@ usageStats:
 - **Breaking if changed:** Switching to async driver requires rewriting entire public API to return Promises. All callsites must await.
 
 #### [Pattern] Three-table normalized schema (conversations → messages → message_parts) with CASCADE foreign key deletes and structured deletion semantics. (2026-03-16)
+
 - **Problem solved:** Needed to store conversations with multiple messages, each message having structured multi-part content (text, images, tool calls).
 - **Why this works:** Normalization ensures one source of truth (no denormalized copies). CASCADE deletes prevent orphaned records and enforce referential integrity. Structured parts enable filtering/analysis per content type.
 - **Trade-offs:** Gained: Data integrity, flexible querying, clear responsibility per table. Lost: Must JOIN three tables for full message. Extra primary keys increase storage slightly.
 
 #### [Pattern] Migration system using schema_migrations table with sequential version numbers and transaction-wrapped execution. Each migration is idempotent and runs exactly once. (2026-03-16)
+
 - **Problem solved:** Needed safe schema evolution that can be applied to production SQLite databases without manual SQL or coordination.
 - **Why this works:** Prevents schema drift (multiple versions of app running different migrations). Transaction wrapper ensures atomicity (rollback on error). Idempotency allows retries without duplicating side effects.
 - **Trade-offs:** Gained: Reproducible schema evolution, safe concurrent deployments, easy rollback. Lost: Must manage version numbers manually, no branch-friendly schema changes.
 
 ### Enabled SQLite WAL (Write-Ahead Logging) mode by default in schema initialization. (2026-03-16)
+
 - **Context:** SQLite database used for conversation persistence in multi-process environment (main + potential workers).
 - **Why:** WAL improves concurrent read/write performance by decoupling write buffers from main journal. Readers don't block writers. Better recovery semantics after crashes.
 - **Rejected:** Default rollback journal: readers block writers on commit, slower for mixed workloads. DELETE mode (journal deletion): worse crash recovery.
@@ -301,6 +307,7 @@ usageStats:
 - **Breaking if changed:** Removing WAL requires DELETE journal mode migration. Existing WAL files become inaccessible. Some SQLite tools don't understand WAL mode (old versions).
 
 ### FTS5 full-text search index split into separate migration (v2) from core schema (v1) (2026-03-16)
+
 - **Context:** SQLite schema with full-text search capability needed to maintain consistency between content table and FTS5 virtual index
 - **Why:** Separates stable core schema from index-maintenance concerns. FTS5 requires INSERT/UPDATE/DELETE sync triggers; isolating these in v2 allows core data to be valid independently of search index state. If sync triggers fail, core data persists intact.
 - **Rejected:** Single migration combining both (v1 includes FTS5) - would couple core schema evolution to index maintenance and complicate future modifications
@@ -308,21 +315,25 @@ usageStats:
 - **Breaking if changed:** If merged into v1, would require re-versioning the entire schema if triggers need changes, losing the isolation benefit
 
 #### [Gotcha] FTS5 search filters by session_id in application code AFTER the search query, not within the FTS5 query (2026-03-16)
+
 - **Situation:** searchSummaries() returns FTS5 results, then filters to matching session in memory
 - **Root cause:** Simpler FTS5 query construction (no session_id in virtual table definition). FTS5 index is global across all sessions.
 - **How to avoid:** Simpler code now, but at scale with many sessions the full index scans and post-filters inefficiently. Would need index rebuild if changed to pre-filter.
 
 #### [Pattern] Bidirectional provenance tracking: summaries store both coveredMessageIds (what sources them) AND childSummaryIds (what they source) (2026-03-16)
+
 - **Problem solved:** DAG model must answer both 'what is this built from' and 'what uses this'
 - **Why this works:** Enables efficient traversal in both directions without full table scans. getSourceMessages (bottom-up) needs coveredMessageIds; getDescendants (top-down) needs to know children. Explicit links avoid expensive recursive queries.
 - **Trade-offs:** Extra storage and dual-update burden vs. O(1) bidirectional lookups. Must keep both fields in sync on create/update.
 
 #### [Pattern] Session-scoped atomic upsert for context items: clearContextItems + upsertContextItems as atomic replacement (2026-03-16)
+
 - **Problem solved:** Assembly scratch table holds temp context (messages + summaries) being assembled for a single session
 - **Why this works:** Prevents race conditions when rebuilding context. If partial updates interleave from two assembly processes, context becomes inconsistent. Atomic replace ensures session-context snapshot is always valid.
 - **Trade-offs:** All-or-nothing replacement (simple, atomic) vs. incremental delta updates (more complex synchronization). Simple model trades micro-efficiency for correctness.
 
 ### Idempotent migration runner with CREATE TABLE IF NOT EXISTS pattern (2026-03-16)
+
 - **Context:** runMigrations() must be safe to call multiple times without state tracking or version checks
 - **Why:** Eliminates versioning state machine (current_schema_version). Can re-run migrations on every deployment without side effects. Simpler deployment and easier to reason about schema state.
 - **Rejected:** Stateful migrations (track applied_migrations in DB) - requires version table and state logic, more prone to edge cases if migration fails partway
@@ -330,11 +341,13 @@ usageStats:
 - **Breaking if changed:** If migrations become non-idempotent (e.g., ALTER TABLE without IF NOT EXISTS), re-runs fail and require manual intervention
 
 #### [Pattern] Row mapping layer (mapRow) centralizes database-to-domain translation with JSON metadata parsing (2026-03-16)
+
 - **Problem solved:** SQLite stores metadata as JSON strings, column names use snake_case, but TypeScript domain uses camelCase and typed objects
 - **Why this works:** Decouples database schema from TypeScript types. Allows independent evolution of both. Single point of change if metadata format evolves. Safe JSON parsing with fallback to empty object.
 - **Trade-offs:** Extra method call per row vs cleaner type safety and schema independence
 
 ### Timestamp stored as ISO 8601 string (toISOString()) rather than Unix timestamp (2026-03-16)
+
 - **Context:** Need to order intercepted files by stored_at, support human debugging
 - **Why:** ISO strings sort alphabetically (no conversion needed), human-readable in debugging, native JavaScript format. Trade-off accepts larger storage for debuggability.
 - **Rejected:** Unix timestamp (smaller, faster comparison but opaque in logs)
@@ -342,6 +355,7 @@ usageStats:
 - **Breaking if changed:** If you change format, ORDER BY queries and human inspection of database break
 
 ### Summary pre-computed and stored rather than generated on-demand from content (2026-03-16)
+
 - **Context:** Summary appears in compact reference (always shown) and in list queries (often needed)
 - **Why:** Avoids recomputing summary on every expand/list operation. Supports metadata-only queries (listForConversation) without loading full content. Summary generation is deterministic (first N lines) not LLM-based, so storage cost is acceptable.
 - **Rejected:** Compute summary on-demand (requires full content load), semantic summarization (adds cost/latency)
@@ -349,6 +363,7 @@ usageStats:
 - **Breaking if changed:** If you remove stored summary, you must load full content to answer list queries or regenerate summaries
 
 ### Support optional part_id and conversation_id (stored as NULL) to decouple from message structure (2026-03-16)
+
 - **Context:** Large files may be intercepted outside message context or without conversation association
 - **Why:** Enables flexibility: tool results can be intercepted in batch mode, testing, async contexts. Indexing on both optional fields allows efficient queries with or without context. Acknowledges that not all content has conversation origin.
 - **Rejected:** Require both fields (breaks non-conversation scenarios), omit columns (can't filter by conversation)
@@ -356,6 +371,7 @@ usageStats:
 - **Breaking if changed:** If you require conversation_id, batch/async interception fails; if you remove indexes, conversation filtering becomes O(n)
 
 ### Optimistic locking via `version` field incremented on every state transition, not pessimistic locks (2026-03-16)
+
 - **Context:** Workflow state transitions happen asynchronously across multiple agents/processes
 - **Why:** Pessimistic locks cause contention bottlenecks in distributed execution. Optimistic locking lets concurrent callers detect conflicts via version mismatch
 - **Rejected:** Pessimistic locking (mutex/row locks) - would block workflow resumption while transitions are in flight
@@ -363,36 +379,43 @@ usageStats:
 - **Breaking if changed:** If version checks are removed, concurrent `transitionState()` calls can cause lost updates (both transitions overwrite state)
 
 #### [Gotcha] Checkpoint data JSON parsing silently returns null on parse failure instead of throwing (2026-03-16)
+
 - **Situation:** Database stores checkpoint_data as JSON string; application deserializes on retrieval
 - **Root cause:** Prevents deserialization errors from crashing workflows; graceful degradation
 - **How to avoid:** Consumers can't distinguish between 'no checkpoint' (null input) and 'corrupted checkpoint' (parse error returning null)
 
 #### [Gotcha] Unsafe enum casting: `row.state as WorkflowState` doesn't validate database value is valid enum (2026-03-16)
+
 - **Situation:** Database state column contains string; TypeScript cast assumes it's valid WorkflowState union member
 - **Root cause:** Type system provides no runtime validation; data corruption (invalid state in DB) produces invalid domain object
 - **How to avoid:** Faster hot path vs. safety against data corruption; impossible to detect bad data at application boundary
 
 #### [Pattern] ACID transaction wraps entire read-check-write cycle for optimistic locking conflict detection (2026-03-16)
+
 - **Problem solved:** transitionState() reads current version, checks it matches expected, then updates state+version atomically
 - **Why this works:** Prevents race where: T1 reads v1, T2 reads v1 and updates to v2, T1 checks still sees v1 and updates, losing T2's change
 - **Trade-offs:** Transaction overhead vs. correctness; serialization points limit concurrency but ensure no lost updates
 
 #### [Gotcha] Parent workflow existence check before addStep() is TOCTOU: workflow could be deleted between check and insert (2026-03-16)
+
 - **Situation:** App-level check `if (!this.getWorkflow(workflowId))` before `INSERT workflow_steps`
 - **Root cause:** Database FK constraint exists anyway; check provides early, user-friendly error message vs FK violation
 - **How to avoid:** App-level check improves UX but introduces race condition window; FK constraint ultimately prevents corruption
 
 #### [Gotcha] List queries getWorkflowsByFeature() and getSuspendedWorkflows() return all rows with no pagination/cursor (2026-03-16)
+
 - **Situation:** No LIMIT/OFFSET or cursor support; O(n) memory load of all matching workflows into application
 - **Root cause:** Simple implementation; typical workflow volumes are small
 - **How to avoid:** Simplicity vs. scalability; fine for 100-1000 workflows, problematic at 100k+
 
 #### [Gotcha] JSON.stringify of step input/output will crash if values contain circular references (2026-03-16)
+
 - **Situation:** addStep() does `JSON.stringify(step.input)` and `JSON.stringify(step.output)` directly
 - **Root cause:** Allows flexible step data without schema constraints
 - **How to avoid:** Simplicity vs. robustness; silent failure if step contains circular object (Agent returns large object tree)
 
 ### Version field incremented on EVERY state transition, not just on conflict (2026-03-16)
+
 - **Context:** Each transitionState() call does `newVersion = existing.version + 1`
 - **Why:** Creates monotonic ordering for event audit trail and optimistic conflict detection
 - **Rejected:** Increment only on conflict - loses audit trail; version is meaningless for ordering
@@ -400,6 +423,7 @@ usageStats:
 - **Breaking if changed:** If version increment is removed, all transitions overwrite each other's versions, making conflict detection impossible
 
 ### Separate mapping layer (mapExecution, mapStep) converts DB rows to domain types (2026-03-16)
+
 - **Context:** DbWorkflowExecution schema types separate from WorkflowExecution API types
 - **Why:** Decouples database schema evolution from API/business logic contracts
 - **Rejected:** Direct use of DB rows as domain types - tightly couples schema to API

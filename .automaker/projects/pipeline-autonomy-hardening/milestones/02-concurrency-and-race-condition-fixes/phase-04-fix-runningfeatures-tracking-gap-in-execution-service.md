@@ -16,10 +16,12 @@ During recursive executeFeature() calls, code deletes featureId from runningFeat
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/auto-mode/execution-service.ts`
 - [ ] `apps/server/tests/unit/services/execution-service.test.ts`
 
 ### Verification
+
 - [ ] runningFeatures.has(featureId) true throughout entire lifecycle including recursion
 - [ ] Terminal status set no longer includes review
 - [ ] npm run test:server passes

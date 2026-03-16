@@ -16,11 +16,13 @@ Complete coverage for all remaining tool categories
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/tools/src/git-tools.ts`
 - [ ] `libs/tools/src/discord-tools.ts`
 - [ ] `libs/tools/src/integration-tools.ts`
 
 ### Verification
+
 - [ ] Full 153-tool coverage
 - [ ] toMCPTools generates all tools
 

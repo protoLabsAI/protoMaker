@@ -16,9 +16,11 @@ In apps/server/src/lib/graph-registry.ts, remove 3 of the 7 graph topology entri
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/lib/graph-registry.ts`
 
 ### Verification
+
 - [ ] graph-registry.ts exports exactly 4 graph definitions
 - [ ] No unified-pipeline, lead-engineer-reflection, or interrupt-loop entries
 - [ ] npm run build:server passes

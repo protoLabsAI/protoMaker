@@ -28,11 +28,25 @@ interface FlatToken {
 function classifyToken(path: string, type: DTCGTokenType | undefined): TokenCategory {
   if (type === 'color') return 'color';
   if (type === 'dimension') return 'spacing';
-  if (type === 'font-family' || type === 'font-weight' || type === 'font-style') return 'typography';
+  if (type === 'font-family' || type === 'font-weight' || type === 'font-style')
+    return 'typography';
   const lower = path.toLowerCase();
   if (lower.includes('color') || lower.includes('bg') || lower.includes('fill')) return 'color';
-  if (lower.includes('space') || lower.includes('size') || lower.includes('radius') || lower.includes('gap') || lower.includes('padding')) return 'spacing';
-  if (lower.includes('font') || lower.includes('weight') || lower.includes('line-height') || lower.includes('letter')) return 'typography';
+  if (
+    lower.includes('space') ||
+    lower.includes('size') ||
+    lower.includes('radius') ||
+    lower.includes('gap') ||
+    lower.includes('padding')
+  )
+    return 'spacing';
+  if (
+    lower.includes('font') ||
+    lower.includes('weight') ||
+    lower.includes('line-height') ||
+    lower.includes('letter')
+  )
+    return 'typography';
   return 'other';
 }
 
@@ -104,7 +118,9 @@ function ColorToken({ token }: { token: FlatToken }) {
       />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ ...monoFont, color: 'var(--pg-fg)' }}>{token.cssVar}</div>
-        <div style={{ ...monoFont, color: 'var(--pg-muted)', fontSize: 11, marginTop: 2 }}>{val}</div>
+        <div style={{ ...monoFont, color: 'var(--pg-muted)', fontSize: 11, marginTop: 2 }}>
+          {val}
+        </div>
       </div>
       {token.themes && <ThemeBadges themes={token.themes} type="color" />}
     </div>
@@ -129,7 +145,9 @@ function SpacingToken({ token }: { token: FlatToken }) {
       />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ ...monoFont, color: 'var(--pg-fg)' }}>{token.cssVar}</div>
-        <div style={{ ...monoFont, color: 'var(--pg-muted)', fontSize: 11, marginTop: 2 }}>{val}</div>
+        <div style={{ ...monoFont, color: 'var(--pg-muted)', fontSize: 11, marginTop: 2 }}>
+          {val}
+        </div>
       </div>
       {token.themes && <ThemeBadges themes={token.themes} type="spacing" />}
     </div>
@@ -152,7 +170,9 @@ function TypographyToken({ token }: { token: FlatToken }) {
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ ...monoFont, color: 'var(--pg-fg)' }}>{token.cssVar}</div>
-        <div style={{ ...monoFont, color: 'var(--pg-muted)', fontSize: 11, marginTop: 2 }}>{val}</div>
+        <div style={{ ...monoFont, color: 'var(--pg-muted)', fontSize: 11, marginTop: 2 }}>
+          {val}
+        </div>
       </div>
       {token.themes && <ThemeBadges themes={token.themes} type="typography" />}
     </div>
@@ -164,7 +184,9 @@ function GenericToken({ token }: { token: FlatToken }) {
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0' }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ ...monoFont, color: 'var(--pg-fg)' }}>{token.cssVar}</div>
-        <div style={{ ...monoFont, color: 'var(--pg-muted)', fontSize: 11, marginTop: 2 }}>{String(token.value)}</div>
+        <div style={{ ...monoFont, color: 'var(--pg-muted)', fontSize: 11, marginTop: 2 }}>
+          {String(token.value)}
+        </div>
       </div>
       {token.themes && <ThemeBadges themes={token.themes} type="other" />}
     </div>
@@ -200,7 +222,9 @@ function ThemeBadges({ themes, type }: { themes: Record<string, string | number>
               }}
             />
           )}
-          <span>{mode}: {String(val)}</span>
+          <span>
+            {mode}: {String(val)}
+          </span>
         </div>
       ))}
     </div>
@@ -209,10 +233,13 @@ function ThemeBadges({ themes, type }: { themes: Record<string, string | number>
 
 function TokenGrid({ tokens, category }: { tokens: FlatToken[]; category: TokenCategory }) {
   const Renderer =
-    category === 'color' ? ColorToken
-    : category === 'spacing' ? SpacingToken
-    : category === 'typography' ? TypographyToken
-    : GenericToken;
+    category === 'color'
+      ? ColorToken
+      : category === 'spacing'
+        ? SpacingToken
+        : category === 'typography'
+          ? TypographyToken
+          : GenericToken;
 
   return (
     <div>
@@ -260,24 +287,38 @@ export default function TokensRoute() {
       }
 
       const { document: dtcgDoc } = extractTokensFromPen(
-        doc.variables as Record<string, { type: string; value: string | number | Array<{ value: string | number; theme: Record<string, string> }> }>,
-        doc.themes as Record<string, string[]> | undefined,
+        doc.variables as Record<
+          string,
+          {
+            type: string;
+            value:
+              | string
+              | number
+              | Array<{ value: string | number; theme: Record<string, string> }>;
+          }
+        >,
+        doc.themes as Record<string, string[]> | undefined
       );
 
       const flat: FlatToken[] = [];
-      walkTokens(dtcgDoc, (token: DTCGToken, path: string, resolvedType: DTCGTokenType | undefined) => {
-        const cssVar = '--' + path.replace(/\./g, '-');
-        const category = classifyToken(path, resolvedType);
-        const themes = (token.$extensions as Record<string, unknown> | undefined)?.['themes'] as Record<string, string | number> | undefined;
-        flat.push({
-          path,
-          cssVar,
-          value: token.$value as string | number,
-          type: resolvedType,
-          category,
-          themes: themes && Object.keys(themes).length > 0 ? themes : undefined,
-        });
-      });
+      walkTokens(
+        dtcgDoc,
+        (token: DTCGToken, path: string, resolvedType: DTCGTokenType | undefined) => {
+          const cssVar = '--' + path.replace(/\./g, '-');
+          const category = classifyToken(path, resolvedType);
+          const themes = (token.$extensions as Record<string, unknown> | undefined)?.['themes'] as
+            | Record<string, string | number>
+            | undefined;
+          flat.push({
+            path,
+            cssVar,
+            value: token.$value as string | number,
+            type: resolvedType,
+            category,
+            themes: themes && Object.keys(themes).length > 0 ? themes : undefined,
+          });
+        }
+      );
 
       setPenTokens(flat);
       setPenFileName(file.name);
@@ -289,7 +330,12 @@ export default function TokensRoute() {
 
   const tokens = source === 'css' ? cssTokens : penTokens;
   const grouped = useMemo(() => {
-    const map: Record<TokenCategory, FlatToken[]> = { color: [], spacing: [], typography: [], other: [] };
+    const map: Record<TokenCategory, FlatToken[]> = {
+      color: [],
+      spacing: [],
+      typography: [],
+      other: [],
+    };
     for (const t of tokens) {
       map[t.category].push(t);
     }
@@ -299,7 +345,16 @@ export default function TokensRoute() {
   const activeTokens = grouped[activeCategory];
 
   return (
-    <div style={{ ...baseFont, display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--pg-bg)', color: 'var(--pg-fg)' }}>
+    <div
+      style={{
+        ...baseFont,
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        background: 'var(--pg-bg)',
+        color: 'var(--pg-fg)',
+      }}
+    >
       {/* Toolbar */}
       <div
         style={{
@@ -378,7 +433,14 @@ export default function TokensRoute() {
 
       {/* Error */}
       {error && (
-        <div style={{ padding: '10px 20px', background: 'rgba(248,113,113,0.1)', color: 'var(--pg-error)', fontSize: 13 }}>
+        <div
+          style={{
+            padding: '10px 20px',
+            background: 'rgba(248,113,113,0.1)',
+            color: 'var(--pg-error)',
+            fontSize: 13,
+          }}
+        >
           {error}
         </div>
       )}

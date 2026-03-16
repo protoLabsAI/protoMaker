@@ -15,9 +15,7 @@
           "name": "create-shared-tailwind-brand-preset",
           "title": "Create shared Tailwind brand preset",
           "description": "Extract brand design tokens from site/index.html into a reusable Tailwind v4 CSS preset. Includes: surface colors, accent violet, gradient definitions, Geist font families, glow effects, border opacity tokens, badge styles, and semantic colors.",
-          "filesToModify": [
-            "libs/templates/src/design-tokens.ts"
-          ],
+          "filesToModify": ["libs/templates/src/design-tokens.ts"],
           "acceptanceCriteria": [
             "Tailwind v4 CSS with all brand tokens as CSS custom properties",
             "Exported from libs/templates/src/design-tokens.ts",
@@ -33,9 +31,7 @@
           "name": "create-shared-astro-component-library",
           "title": "Create shared Astro component library",
           "description": "Build reusable Astro components: Nav (sticky header with React mobile menu island), Footer (links, social, copyright), SEO (meta tags from props), Button (primary/secondary/ghost), Badge (color variants), Card (surface-2 bg with hover glow).",
-          "filesToModify": [
-            "libs/templates/src/components/"
-          ],
+          "filesToModify": ["libs/templates/src/components/"],
           "acceptanceCriteria": [
             "Nav with sticky positioning and gradient logo text",
             "Footer with configurable links and social icons",
@@ -62,9 +58,7 @@
           "name": "scaffold-starlight-project-with-protolabs-theme",
           "title": "Scaffold Starlight project with protoLabs theme",
           "description": "Create Astro Starlight docs site at libs/templates/starters/docs/. Custom theme: brand colors, Geist fonts, violet accent sidebar, gradient logo, dark-first. Content Collections for docs. Sample Diataxis content.",
-          "filesToModify": [
-            "libs/templates/starters/docs/"
-          ],
+          "filesToModify": ["libs/templates/starters/docs/"],
           "acceptanceCriteria": [
             "Working Starlight site with npm run dev",
             "Custom theme with brand colors and Geist fonts",
@@ -110,9 +104,7 @@
           "name": "scaffold-portfolio-project-structure",
           "title": "Scaffold portfolio project structure",
           "description": "Create Astro project at libs/templates/starters/portfolio/. Configure Astro 5.x, @astrojs/react, Tailwind v4, View Transitions, Content Collections. Zod schemas for projects, blog, testimonials, site config. Seed content.",
-          "filesToModify": [
-            "libs/templates/starters/portfolio/"
-          ],
+          "filesToModify": ["libs/templates/starters/portfolio/"],
           "acceptanceCriteria": [
             "Working Astro project with npm run dev",
             "Content Collections with Zod schemas",
@@ -129,9 +121,7 @@
           "name": "build-portfolio-page-sections",
           "title": "Build portfolio page sections",
           "description": "Hero (gradient text, terminal mockup, CTAs), ProjectGrid (filterable React island), About (skills, timeline), Testimonials, Contact (React island form), BlogList. All composable on index.astro.",
-          "filesToModify": [
-            "libs/templates/starters/portfolio/src/components/sections/"
-          ],
+          "filesToModify": ["libs/templates/starters/portfolio/src/components/sections/"],
           "acceptanceCriteria": [
             "Hero with gradient text and terminal mockup",
             "ProjectGrid with tag filtering React island",
@@ -149,9 +139,7 @@
           "name": "build-portfolio-sub-pages-and-seo",
           "title": "Build portfolio sub-pages and SEO",
           "description": "Sub-pages: /projects, /projects/[slug], /blog, /blog/[slug], /about, /contact. SEO meta on all pages. Sitemap, RSS feed. Lighthouse 95+.",
-          "filesToModify": [
-            "libs/templates/starters/portfolio/src/pages/"
-          ],
+          "filesToModify": ["libs/templates/starters/portfolio/src/pages/"],
           "acceptanceCriteria": [
             "All sub-pages with content from Collections",
             "Dynamic routes for slugs",
@@ -201,9 +189,7 @@
           "name": "wire-starter-kits-into-create-protolab-scaffold-flow",
           "title": "Wire starter kits into create-protolab scaffold flow",
           "description": "Update scaffolding so docs/portfolio types copy the Astro project with name/config substitution. Verify full flow: select type, scaffold, install, dev server.",
-          "filesToModify": [
-            "libs/templates/src/index.ts"
-          ],
+          "filesToModify": ["libs/templates/src/index.ts"],
           "acceptanceCriteria": [
             "create-protolab offers docs and portfolio options",
             "Scaffolded project works immediately",

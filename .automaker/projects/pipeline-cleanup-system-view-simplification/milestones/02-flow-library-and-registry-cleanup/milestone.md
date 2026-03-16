@@ -14,10 +14,10 @@ Delete 3 dead LangGraph flow graphs and their tests. Remove 3 defunct graph regi
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-delete-dead-langgraph-flows-and-update-barrel-exports.md](./phase-01-delete-dead-langgraph-flows-and-update-barrel-exports.md) | 0.5 weeks | None | TBD |
-| 2 | [phase-02-remove-defunct-graph-registry-entries.md](./phase-02-remove-defunct-graph-registry-entries.md) | 0.5 weeks | None | TBD |
+| Phase | File                                                                                                                                     | Duration  | Dependencies | Owner |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------- | ------------ | ----- |
+| 1     | [phase-01-delete-dead-langgraph-flows-and-update-barrel-exports.md](./phase-01-delete-dead-langgraph-flows-and-update-barrel-exports.md) | 0.5 weeks | None         | TBD   |
+| 2     | [phase-02-remove-defunct-graph-registry-entries.md](./phase-02-remove-defunct-graph-registry-entries.md)                                 | 0.5 weeks | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M2 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

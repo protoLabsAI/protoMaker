@@ -16,6 +16,7 @@ Final visual pass on both kits. Brand consistency with landing page. Responsive 
 ## Tasks
 
 ### Verification
+
 - [ ] Both kits match protoLabs landing page aesthetic
 - [ ] Responsive at all breakpoints
 - [ ] View Transitions smooth
