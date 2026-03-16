@@ -368,7 +368,9 @@ export type EventType =
   | 'deploy:succeeded'
   | 'deploy:failed'
   // Signal dictionary events (portfolio attention engine)
-  | 'signal:triggered';
+  | 'signal:triggered'
+  // GitHub Actions runner health events (self-hosted CI monitoring)
+  | 'maintenance:runner-health';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
@@ -972,6 +974,29 @@ export interface EventPayloadMap {
     currentValue: number;
     category: import('./signal-dictionary.js').SignalCategory;
     context: import('./signal-dictionary.js').SignalContext;
+  };
+
+  // GitHub Actions runner health events (self-hosted CI monitoring)
+  'maintenance:runner-health': {
+    action: 'health-check' | 'cancel-stuck-run' | 'congestion-alert' | 'check-failed';
+    /** Total in-progress workflow runs */
+    totalRuns?: number;
+    /** Number of runs detected as stuck (>10 min no update) */
+    stuckRuns?: number;
+    /** Total self-hosted runners in the pool */
+    totalRunners?: number;
+    /** Number of runners currently busy */
+    busyRunners?: number;
+    /** Runner pool utilization ratio (0-1) */
+    utilization?: number;
+    /** Stuck run details (for cancel-stuck-run action) */
+    runId?: number;
+    runName?: string;
+    runNumber?: number;
+    elapsedMinutes?: number;
+    /** Error message (for check-failed action) */
+    error?: string;
+    timestamp: string;
   };
 }
 

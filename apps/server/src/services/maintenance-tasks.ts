@@ -21,7 +21,11 @@ import { createLogger } from '@protolabsai/utils';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import type { FlowFactory } from '@protolabsai/types';
-import { DEFAULT_GIT_WORKFLOW_SETTINGS } from '@protolabsai/types';
+import {
+  DEFAULT_GIT_WORKFLOW_SETTINGS,
+  EscalationSeverity,
+  EscalationSource,
+} from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { DataIntegrityWatchdogService } from './data-integrity-watchdog-service.js';
