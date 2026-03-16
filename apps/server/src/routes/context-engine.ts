@@ -72,15 +72,14 @@ function serverError(res: Response, message: string): void {
  * ```
  */
 function handleGrep(req: Request, res: Response): void {
-  const { dbPath, query, conversationId, limit, searchNodes, searchLargeFiles } =
-    req.body as {
-      dbPath?: string;
-      query?: string;
-      conversationId?: string;
-      limit?: number;
-      searchNodes?: boolean;
-      searchLargeFiles?: boolean;
-    };
+  const { dbPath, query, conversationId, limit, searchNodes, searchLargeFiles } = req.body as {
+    dbPath?: string;
+    query?: string;
+    conversationId?: string;
+    limit?: number;
+    searchNodes?: boolean;
+    searchLargeFiles?: boolean;
+  };
 
   if (!dbPath) return badRequest(res, 'dbPath is required');
   if (!query || typeof query !== 'string' || query.trim() === '') {
