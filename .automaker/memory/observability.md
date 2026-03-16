@@ -5,11 +5,10 @@ relevantTo: [observability]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 29
-  referenced: 6
-  successfulFeatures: 6
+  loaded: 31
+  referenced: 7
+  successfulFeatures: 7
 ---
-
 <!-- domain: Observability & Tracing | Langfuse tracing, cost tracking, performance measurement -->
 
 # observability

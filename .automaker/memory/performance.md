@@ -461,3 +461,9 @@ usageStats:
 - **Problem solved:** LLM context window is expensive. React component definitions are verbose (props, types, handlers). XCL compresses by mapping prop types to compact syntax in XML attributes.
 - **Why this works:** Most props are primitives or event handlers. Shorthand: `x:="10"` (number), `label:="Hi"` (string), `disabled` (bool), `@click={handleClick}` (handler). Removes TypeScript boilerplate from codegen.
 - **Trade-offs:** More tokens: human-readable, self-documenting. Fewer tokens: harder to learn syntax, requires XCL spec reference. Trade compression for learnability.
+
+
+#### [Pattern] PersistQueue: non-blocking background checkpoint persistence with exponential backoff. State machine enqueues writes, continues immediately; background worker flushes with retry logic (2026-03-16)
+- **Problem solved:** State machine cannot block on I/O while handling events; checkpoints must survive agent crashes
+- **Why this works:** Blocking on atomic writes would stall state transitions. Queueing + background flush decouples operational latency from durability guarantees. Exponential backoff prevents hammering storage on transient failures
+- **Trade-offs:** More complex lifecycle (pendingResumes map, resume interval timer) but much lower operational latency and better user experience

@@ -265,5 +265,71 @@
     "sourceId": "ops:feature:pr-merged:feature-1773689186221-dnmxq8tm3",
     "createdAt": "2026-03-16T20:31:35.608Z",
     "updatedAt": "2026-03-16T20:31:35.608Z"
+  },
+  {
+    "title": "Merged: feature-1773468551387-nimrhw1og",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773693461090-xhq4oh4n7",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773468551387-nimrhw1og",
+    "createdAt": "2026-03-16T20:37:41.087Z",
+    "updatedAt": "2026-03-16T20:37:41.087Z"
+  },
+  {
+    "title": "Started: Update docs after: Lossless Context Management & Agent Resilience",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773694000262-z1kir1i7a",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773693096052-fn9g87hvd",
+    "createdAt": "2026-03-16T20:46:40.258Z",
+    "updatedAt": "2026-03-16T20:46:40.258Z"
+  },
+  {
+    "title": "Merged: feature-1773693096052-fn9g87hvd",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773694471721-ykua082gp",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773693096052-fn9g87hvd",
+    "createdAt": "2026-03-16T20:54:31.718Z",
+    "updatedAt": "2026-03-16T20:54:31.718Z"
+  },
+  {
+    "title": "Completed: Update docs after: Lossless Context Management & Agent Resilience",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation completed",
+    "id": "event-1773694471728-zzp5y7vqz",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:completed:feature-1773693096052-fn9g87hvd",
+    "createdAt": "2026-03-16T20:54:31.727Z",
+    "updatedAt": "2026-03-16T20:54:31.727Z"
+  },
+  {
+    "title": "Started: Leaf Summarization",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773694911574-zk6bugo98",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773689186215-1q5hm2ott",
+    "createdAt": "2026-03-16T21:01:51.572Z",
+    "updatedAt": "2026-03-16T21:05:39.975Z"
+  },
+  {
+    "title": "Started: System Improvement: recurring merge_conflict failures",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773695080455-2i799b205",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773695049401-q699unnqb",
+    "createdAt": "2026-03-16T21:04:40.453Z",
+    "updatedAt": "2026-03-16T21:04:40.453Z"
   }
 ]

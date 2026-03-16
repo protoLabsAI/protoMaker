@@ -78,7 +78,7 @@
           "executionStatus": "in-progress"
         }
       ],
-      "status": "pending",
+      "status": "completed",
       "epicId": "feature-1773689186210-w50240rb6"
     },
     {
@@ -106,7 +106,8 @@
             "Fresh tail never compacted"
           ],
           "complexity": "medium",
-          "featureId": "feature-1773689186215-1q5hm2ott"
+          "featureId": "feature-1773689186215-1q5hm2ott",
+          "executionStatus": "blocked"
         },
         {
           "number": 2,
@@ -363,7 +364,7 @@
           "executionStatus": "pending"
         }
       ],
-      "status": "pending",
+      "status": "completed",
       "epicId": "feature-1773689186223-k6w2pnbm9"
     }
   ],
@@ -377,7 +378,7 @@
     "generatedAt": "2026-03-16T19:22:00.000Z"
   },
   "createdAt": "2026-03-16T19:24:53.941Z",
-  "updatedAt": "2026-03-16T20:31:35.929Z",
+  "updatedAt": "2026-03-16T21:05:41.911Z",
   "researchStatus": "complete",
   "health": "on-track"
 }
