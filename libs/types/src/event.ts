@@ -182,6 +182,9 @@ export type EventType =
   | 'project:prd:changes-requested'
   // CoS intake events
   | 'cos:prd-submitted'
+  // Linear integration events
+  | 'linear:intake:triggered' // Fired when a Linear issue moves to "In Progress" — creates a simple board feature
+  | 'linear:approval:detected' // Fired when a Linear issue moves to "Approved"/"Ready for Planning" — creates an epic feature
   // PR watcher events (background CI monitor for Ava)
   | 'pr:watch-added'
   | 'pr:watch-resolved'

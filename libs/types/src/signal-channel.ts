@@ -9,7 +9,7 @@
  * Identifies the originating channel of a signal.
  * Used to track where a feature request came from and where replies should go.
  */
-export type SignalChannel = 'discord' | 'github' | 'mcp' | 'ui';
+export type SignalChannel = 'discord' | 'github' | 'linear' | 'mcp' | 'ui';
 
 /**
  * Metadata describing the origin of a signal and routing context for replies.

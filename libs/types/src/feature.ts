@@ -562,6 +562,19 @@ export interface Feature {
    * Customer context for this feature: who it's for, the problem, and expected benefit.
    */
   customerContext?: CustomerContext;
+
+  /**
+   * Linear issue ID that originated this feature.
+   * Used by LinearIntakeBridge and LinearApprovalBridge for deduplication —
+   * prevents duplicate features when Linear sends multiple webhooks for the same issue.
+   */
+  linearIssueId?: string;
+
+  /**
+   * Human-readable Linear issue identifier (e.g. "PRO-261").
+   * Stored alongside linearIssueId for display and logging.
+   */
+  linearIdentifier?: string;
 }
 
 /**
