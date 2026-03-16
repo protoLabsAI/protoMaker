@@ -285,7 +285,9 @@
           "name": "update-readme-with-full-platform-docs",
           "title": "Update README with full platform documentation",
           "description": "Update the root README.md to reflect the expanded platform: all packages (ui, server, app, tools, tracing, flows, prompts, mcp), all routes (/chat, /flows, /prompts, /traces, /sessions, /settings), all features. Add architecture diagram showing how packages connect. Add 'What can I build?' section with examples. Update env vars table with all new configuration (LANGFUSE_*, OPENAI_API_KEY, GOOGLE_API_KEY). Add quick links to docs/ for each topic.",
-          "filesToModify": ["libs/templates/starters/ai-agent-app/README.md"],
+          "filesToModify": [
+            "libs/templates/starters/ai-agent-app/README.md"
+          ],
           "acceptanceCriteria": [
             "All 8 packages documented",
             "All 6 routes described",
@@ -311,5 +313,6 @@
     "generatedAt": "2026-03-15T06:40:00.000Z"
   },
   "createdAt": "2026-03-15T06:39:49.665Z",
-  "updatedAt": "2026-03-15T11:58:11.489Z"
+  "updatedAt": "2026-03-16T18:46:44.036Z",
+  "health": "on-track"
 }

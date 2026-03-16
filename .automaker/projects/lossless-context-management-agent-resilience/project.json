@@ -1,0 +1,386 @@
+{
+  "slug": "lossless-context-management-agent-resilience",
+  "title": "Lossless Context Management & Agent Resilience",
+  "goal": "Integrate DAG-based context compression (from lossless-claw) and workflow suspend/resume with graceful shutdown (from VoltAgent) into the protoLabs agent pipeline. Solves two critical pain points: agents losing context on long sessions, and server crashes losing in-flight feature state.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-foundation-context-engine-package",
+      "title": "Foundation - Context Engine Package",
+      "description": "Create the @protolabsai/context-engine package with SQLite persistence layer, core types, and message store.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "context-engine-types-package-scaffold",
+          "title": "Context Engine Types & Package Scaffold",
+          "description": "Create libs/context-engine/ package with TypeScript types for the DAG model: Message, Summary, SummaryNode, ContextItem, CompactionConfig, AssemblyResult. Define the ContextEngine interface. Set up package.json, tsconfig, exports. Add to workspace.",
+          "filesToModify": [
+            "libs/context-engine/package.json",
+            "libs/context-engine/tsconfig.json",
+            "libs/context-engine/src/index.ts",
+            "libs/context-engine/src/types.ts",
+            "libs/context-engine/src/engine.ts",
+            "package.json"
+          ],
+          "acceptanceCriteria": [
+            "Package builds with npm run build:packages",
+            "Types exported and importable from @protolabsai/context-engine",
+            "ContextEngine interface defined with ingest, compact, assemble, retrieve methods",
+            "CompactionConfig covers all knobs: freshTailCount, contextThreshold, leafMinFanout, condensedMinFanout, incrementalMaxDepth"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773689186212-sfxiypdkk",
+          "executionStatus": "in-progress"
+        },
+        {
+          "number": 2,
+          "name": "sqlite-message-store",
+          "title": "SQLite Message Store",
+          "description": "Implement ConversationStore with better-sqlite3. Tables: conversations, messages, message_parts. CRUD operations, token counting, ordered retrieval. Migration system for schema versioning.",
+          "filesToModify": [
+            "libs/context-engine/src/store/conversation-store.ts",
+            "libs/context-engine/src/store/migrations.ts",
+            "libs/context-engine/src/store/index.ts",
+            "libs/context-engine/package.json"
+          ],
+          "acceptanceCriteria": [
+            "Messages persist to SQLite and survive process restarts",
+            "Token count estimated and stored per message",
+            "Content blocks stored as structured parts",
+            "Ordered retrieval by conversation with offset/limit",
+            "Migration system creates tables on first run",
+            "Unit tests pass for CRUD operations"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773689186213-7sc471zcd",
+          "executionStatus": "in-progress"
+        },
+        {
+          "number": 3,
+          "name": "sqlite-summary-store-dag-model",
+          "title": "SQLite Summary Store & DAG Model",
+          "description": "Implement SummaryStore for the DAG. Tables: summaries, summary_sources, summary_parents, context_items. FTS5 index on summaries content. DAG traversal helpers: getAncestors, getDescendants, getSourceMessages.",
+          "filesToModify": [
+            "libs/context-engine/src/store/summary-store.ts",
+            "libs/context-engine/src/store/migrations.ts"
+          ],
+          "acceptanceCriteria": [
+            "Summary DAG persists with bidirectional provenance links",
+            "Can traverse from summary to original source messages",
+            "Can traverse from summary to parent condensed summaries",
+            "FTS5 full-text search across summary content works",
+            "Context items table tracks active context assembly",
+            "Unit tests verify DAG construction and traversal"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773689186214-4ogkm5mzm",
+          "executionStatus": "in-progress"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773689186210-w50240rb6"
+    },
+    {
+      "number": 2,
+      "slug": "02-compaction-engine",
+      "title": "Compaction Engine",
+      "description": "Implement hierarchical summarization: leaf compaction, cascading condensation, depth-aware prompts, and Expand footer system.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "leaf-summarization",
+          "title": "Leaf Summarization",
+          "description": "Implement leaf compaction: when uncompacted messages exceed leafChunkTokens, group into chunks of leafMinFanout messages, send to Haiku with leaf-level prompt preserving file paths, commands, errors. Store summary with depth=0, link to sources, generate Expand footer. Three-level escalation: normal > aggressive > deterministic fallback.",
+          "filesToModify": [
+            "libs/context-engine/src/compaction/leaf-compactor.ts",
+            "libs/context-engine/src/compaction/prompts.ts",
+            "libs/context-engine/src/compaction/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "Leaf summaries compress 8+ messages into ~1200 token nodes",
+            "Summary preserves file paths, commands, errors",
+            "Expand footer lists compressed topics",
+            "Source message links maintained",
+            "Three-level escalation works",
+            "Fresh tail never compacted"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773689186215-1q5hm2ott"
+        },
+        {
+          "number": 2,
+          "name": "cascading-condensation",
+          "title": "Cascading Condensation",
+          "description": "Implement multi-depth condensation: when depth N summaries accumulate beyond condensedMinFanout, create depth N+1 summary. Depth-aware prompts: D1 preserves session decisions, D2+ preserves trajectory only. Configurable incrementalMaxDepth.",
+          "filesToModify": [
+            "libs/context-engine/src/compaction/condensation.ts",
+            "libs/context-engine/src/compaction/prompts.ts"
+          ],
+          "acceptanceCriteria": [
+            "Condensation creates depth N+1 from N-level summaries",
+            "D1 prompts preserve session decisions",
+            "D2+ prompts preserve only trajectory and durable decisions",
+            "incrementalMaxDepth config respected",
+            "Context items updated after condensation",
+            "DAG remains valid (no cycles)"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773689186216-ig1sclg11"
+        },
+        {
+          "number": 3,
+          "name": "context-assembler",
+          "title": "Context Assembler",
+          "description": "Implement budget-constrained context assembly. Fetch context_items, resolve summaries to structured XML and raw messages to content, apply budget with fresh tail protection, inject recall guidance when summaries present.",
+          "filesToModify": [
+            "libs/context-engine/src/assembly/assembler.ts",
+            "libs/context-engine/src/assembly/formatter.ts",
+            "libs/context-engine/src/assembly/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "Assembly produces messages within token budget",
+            "Fresh tail always included",
+            "Summaries formatted as structured XML with metadata",
+            "Oldest summaries dropped first when budget constrained",
+            "Recall guidance injected when summaries present",
+            "Token budget tracking reports headroom"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773689186216-sdwdztkbj"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773689186214-zoza9y3nx"
+    },
+    {
+      "number": 3,
+      "slug": "03-retrieval-tools-large-file-handling",
+      "title": "Retrieval Tools & Large File Handling",
+      "description": "Agent-facing tools for searching and expanding compressed history, plus large file interception.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "retrieval-tools-grep-describe-expand",
+          "title": "Retrieval Tools (grep, describe, expand)",
+          "description": "Three agent retrieval tools: lcm_grep (FTS5 search across messages and summaries), lcm_describe (summary metadata and lineage), lcm_expand (bounded sub-agent DAG walk). Expose all via MCP server.",
+          "filesToModify": [
+            "libs/context-engine/src/retrieval/grep.ts",
+            "libs/context-engine/src/retrieval/describe.ts",
+            "libs/context-engine/src/retrieval/expand.ts",
+            "libs/context-engine/src/retrieval/index.ts",
+            "apps/server/src/routes/context-engine.ts",
+            "packages/mcp-server/plugins/automaker/src/tools/context-engine.ts"
+          ],
+          "acceptanceCriteria": [
+            "lcm_grep returns relevant matches from full history",
+            "lcm_describe shows summary content with provenance chain",
+            "lcm_expand spawns bounded sub-agent for focused questions",
+            "Sub-agent respects token cap and TTL",
+            "All three exposed via MCP server",
+            "Tools work within agent sessions"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1773689186218-k8vhlx0po"
+        },
+        {
+          "number": 2,
+          "name": "large-file-interception",
+          "title": "Large File Interception",
+          "description": "Intercept tool results exceeding 25K tokens. Store full content in large_files table. Replace with compact reference plus exploration summary. Agent can drill in via lcm_expand.",
+          "filesToModify": [
+            "libs/context-engine/src/interception/large-file-handler.ts",
+            "libs/context-engine/src/store/migrations.ts",
+            "libs/context-engine/src/interception/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "Tool results >25K tokens intercepted automatically",
+            "Full content stored with metadata",
+            "Compact reference replaces original in context",
+            "Agent can retrieve full content via lcm_expand",
+            "Threshold configurable via WorkflowSettings",
+            "Normal-sized results pass through unchanged"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773689186219-hamerd650",
+          "executionStatus": "in-progress"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773689186217-p98tv4d52"
+    },
+    {
+      "number": 4,
+      "slug": "04-agent-pipeline-integration",
+      "title": "Agent Pipeline Integration",
+      "description": "Wire context engine into the agent execution pipeline.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "agent-service-integration",
+          "title": "Agent Service Integration",
+          "description": "Integrate ContextEngine into AgentService. On agent start: create/resume conversation keyed by feature ID. Each message exchange: ingest, compact check, assemble. Replace flat JSON sessions with context-engine-backed sessions. Backward compatible with existing sessions.",
+          "filesToModify": [
+            "apps/server/src/services/agent-service.ts",
+            "apps/server/src/providers/claude-provider.ts",
+            "apps/server/src/services/agent-session-manager.ts"
+          ],
+          "acceptanceCriteria": [
+            "Agent sessions backed by context engine SQLite",
+            "Compaction triggers automatically during long sessions",
+            "Context assembly respects token budget each turn",
+            "Feature ID maps to conversation ID for resume",
+            "Existing sessions without context engine still load",
+            "Agent retrieval tools available during execution"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1773689186220-t3hv64wzd"
+        },
+        {
+          "number": 2,
+          "name": "configuration-settings-wiring",
+          "title": "Configuration & Settings Wiring",
+          "description": "Add context engine config to WorkflowSettings. Settings: contextEngine.enabled, freshTailCount, contextThreshold, leafMinFanout, condensedMinFanout, incrementalMaxDepth, leafChunkTokens, largeFileThreshold. UI controls in Settings. Disabled by default.",
+          "filesToModify": [
+            "libs/types/src/workflow-settings.ts",
+            "apps/server/src/services/settings-service.ts",
+            "apps/ui/src/components/views/settings/workflow-settings.tsx"
+          ],
+          "acceptanceCriteria": [
+            "Context engine settings in WorkflowSettings type",
+            "Settings persisted to .automaker/settings.json",
+            "UI controls in Settings page",
+            "Disabled by default (enabled: false)",
+            "Settings propagated to ContextEngine on init",
+            "Defaults match lossless-claw proven values"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773689186221-v7nt11awz"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773689186219-nkwwcghq2"
+    },
+    {
+      "number": 5,
+      "slug": "05-durable-workflow-engine",
+      "title": "Durable Workflow Engine",
+      "description": "Replace in-memory Lead Engineer state machine with durable SQLite-backed workflow engine with suspend/resume.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "workflow-checkpoint-store",
+          "title": "Workflow Checkpoint Store",
+          "description": "SQLite-backed workflow checkpoint store. Tables: workflow_executions, workflow_steps. CRUD, query by state (find suspended), query by feature. Atomic state transitions with optimistic locking.",
+          "filesToModify": [
+            "libs/context-engine/src/workflow/checkpoint-store.ts",
+            "libs/context-engine/src/workflow/types.ts",
+            "libs/context-engine/src/store/migrations.ts"
+          ],
+          "acceptanceCriteria": [
+            "Workflow state persists to SQLite",
+            "Atomic transitions with optimistic locking",
+            "Can query all suspended workflows",
+            "Can query by feature ID",
+            "Step history preserved for debugging",
+            "Checkpoint data includes arbitrary JSON"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773689186222-7bkkkrlq8",
+          "executionStatus": "in-progress"
+        },
+        {
+          "number": 2,
+          "name": "lead-engineer-durable-state-machine",
+          "title": "Lead Engineer Durable State Machine",
+          "description": "Refactor LeadEngineerService to use checkpoint store. Checkpoint before each transition. Suspend at REVIEW and MERGE states. Resume from checkpoint on server restart. Background persist queue with retry. Fixes stale context trap.",
+          "filesToModify": [
+            "apps/server/src/services/lead-engineer-service.ts",
+            "apps/server/src/services/lead-engineer-state-machine.ts",
+            "apps/server/src/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "State machine checkpoints before every transition",
+            "Server restart resumes suspended workflows",
+            "REVIEW and MERGE states suspend properly",
+            "Stale context trap eliminated",
+            "Background persist queue with retry",
+            "Fast-path rules still work with durable state"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1773689186223-9c7b20786",
+          "executionStatus": "in-progress"
+        }
+      ],
+      "status": "completed",
+      "epicId": "feature-1773689186221-dnmxq8tm3"
+    },
+    {
+      "number": 6,
+      "slug": "06-graceful-shutdown-resume",
+      "title": "Graceful Shutdown & Resume",
+      "description": "Handle server shutdown gracefully and resume interrupted work on restart.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "graceful-shutdown-handler",
+          "title": "Graceful Shutdown Handler",
+          "description": "SIGTERM/SIGINT handler: stop new agent starts, suspend active workflows, checkpoint running agents, flush Langfuse traces, close SQLite, exit. Configurable 30s timeout with force-kill.",
+          "filesToModify": [
+            "apps/server/src/lib/graceful-shutdown.ts",
+            "apps/server/src/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "SIGTERM/SIGINT triggers orderly shutdown",
+            "Active workflows suspended with checkpoint",
+            "Running agents saved to context engine",
+            "Langfuse traces flushed",
+            "SQLite connections closed",
+            "30s timeout with force-kill",
+            "Each step logged"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773689186224-l6fic6a5y",
+          "executionStatus": "in-progress"
+        },
+        {
+          "number": 2,
+          "name": "restart-detection-resume",
+          "title": "Restart Detection & Resume",
+          "description": "On startup: check checkpoint store for suspended workflows. Validate feature and worktree exist. Present resume options via WebSocket and MCP. Auto-resume if auto-mode was active. Board shows interrupted features.",
+          "filesToModify": [
+            "apps/server/src/services/restart-recovery-service.ts",
+            "apps/server/src/index.ts",
+            "apps/server/src/routes/agent.ts"
+          ],
+          "acceptanceCriteria": [
+            "Startup detects interrupted workflows",
+            "Validates feature and worktree before resume",
+            "Resume options visible in UI",
+            "Auto-mode resumes if was active",
+            "MCP tool for manual resume",
+            "Board shows interrupted features"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773689186225-99uza6qr7",
+          "executionStatus": "pending"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773689186223-k6w2pnbm9"
+    }
+  ],
+  "researchSummary": "This report synthesizes research across five parallel investigations into integrating DAG-based context compression and workflow suspend/resume into the protoLabs agent pipeline. The project addresses two critical pain points: **agents losing context on long sessions** (current compaction discards information destructively at 100K tokens [3]) and **server crashes losing in-flight feature state** (P1 known issue, partially mitigated by file-based recovery [14][15]).\n\nThe core finding is that the existing architecture—file-based persistence, session-keyed execution, heuristic compaction, and crash-recovery via `pendingTools` injection—provides solid scaffolding for both capabilities. **lossless-claw** [45] offers a production-grade DAG summarization engine with SQLite-backed storage, depth-keyed compression prompts, and an expansion system that can replace the current lossy `message-compaction.ts`. **VoltAgent** [48] provides a suspend controller pattern, checkpoint-per-step persistence, and a `shutdown()` orchestration sequence that maps cleanly onto the existing `shutdown.ts` + `resumeInterruptedFeatures()` flow.\n\nKey integration risk: the codebase uses no external database [23]—all state is JSON/markdown in `.automaker/`. Introducing SQLite for the summary DAG requires careful consideration of worktree isolation, atomic writes, and the existing backup-recovery pattern [18].\n\n---",
+  "prd": {
+    "situation": "protoLabs Studio agents run long feature implementation sessions (30-120 min) powered by Claude Agent SDK. Conversations are stored in flat JSON files in data/agent-sessions/. The Lead Engineer service manages feature lifecycle through a state machine (INTAKE > PLAN > EXECUTE > REVIEW > MERGE > DEPLOY) but state is held in memory. When context windows fill, Claude's built-in /compact performs lossy one-way compression. When the dev server crashes (P1 known issue), all in-flight feature state is lost.",
+    "problem": "1) Context loss: Agents on long sessions hit token limits, /compact destroys details irreversibly, agents hallucinate from compressed memory. No way to recover original messages or search compressed history. 2) State loss: Server crashes lose all in-flight feature state. LeadEngineerService state machine is in-memory only. Stale agent-output.md files from crashed sessions trigger the stale context trap. 3) No checkpoint/resume: Interrupted feature executions restart from scratch.",
+    "approach": "Three workstreams: (1) @protolabsai/context-engine package with DAG-based context compression, SQLite persistence, hierarchical summarization, budget-constrained context assembly, and agent retrieval tools. (2) Durable workflow engine in LeadEngineerService with SQLite-backed state checkpointing and suspend/resume. (3) Graceful shutdown handler with agent checkpointing and restart recovery.",
+    "results": "Agents maintain full conversation history with no information loss. Context windows stay within budget via intelligent DAG compression with drill-down recovery. Server crashes no longer lose feature state. Agent retrieval tools let models search their own compressed history. Measurable: zero context-loss hallucinations, zero lost-state restarts, 50%+ reduction in wasted compute from re-runs.",
+    "constraints": "Must integrate with existing Claude Agent SDK (not replacing it). Must work with git worktree isolation. SQLite for all persistence. New @protolabsai/context-engine package in libs/. Agent retrieval tools exposed via MCP. Config via WorkflowSettings. Summarization uses Haiku for cost. Fresh tail (32 messages) always protected. Must not break existing pipeline during rollout.",
+    "generatedAt": "2026-03-16T19:22:00.000Z"
+  },
+  "createdAt": "2026-03-16T19:24:53.941Z",
+  "updatedAt": "2026-03-16T20:31:35.929Z",
+  "researchStatus": "complete",
+  "health": "on-track"
+}

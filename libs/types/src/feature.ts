@@ -253,6 +253,14 @@ export interface Feature {
    */
   lastSessionId?: string;
   /**
+   * Human or agent assignee for this feature.
+   * If set to a human name (any string other than "agent"), auto-mode will skip this feature.
+   * Only features with `assignee: undefined`, `assignee: null`, or `assignee: "agent"` are
+   * eligible for automatic agent pickup.
+   * Example: `assignee: "josh"` → auto-mode skips; `assignee: "agent"` → auto-mode picks up.
+   */
+  assignee?: string;
+  /**
    * Assigned agent role (for headsdown agents)
    * Determines which specialized agent should work on this feature.
    */

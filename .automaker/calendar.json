@@ -31,5 +31,239 @@
     "sourceId": "ceremony:unified-operations-control-plane",
     "createdAt": "2026-03-15T22:06:50.605Z",
     "updatedAt": "2026-03-15T22:06:50.605Z"
+  },
+  {
+    "title": "Auto-mode started",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Autonomous feature processing started",
+    "id": "event-1773687597716-j8x1kknoo",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:auto-mode:started:2026-03-16",
+    "createdAt": "2026-03-16T18:59:57.716Z",
+    "updatedAt": "2026-03-16T18:59:57.716Z"
+  },
+  {
+    "title": "Ceremonies: lossless-context-management-agent-resilience",
+    "date": "2026-03-16",
+    "type": "ceremony",
+    "description": "Recurring standup and retro ceremonies for project lossless-context-management-agent-resilience",
+    "recurrence": {
+      "frequency": "daily"
+    },
+    "id": "event-1773689203169-eq0uhl1au",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ceremony:lossless-context-management-agent-resilience",
+    "createdAt": "2026-03-16T19:26:43.166Z",
+    "updatedAt": "2026-03-16T19:26:43.166Z"
+  },
+  {
+    "title": "Started: Context Engine Types & Package Scaffold",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773689218349-0jrsnvbyu",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773689186212-sfxiypdkk",
+    "createdAt": "2026-03-16T19:26:58.347Z",
+    "updatedAt": "2026-03-16T19:26:58.347Z"
+  },
+  {
+    "title": "Merged: feature-1773689186212-sfxiypdkk",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773689630507-l8fhxivrt",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773689186212-sfxiypdkk",
+    "createdAt": "2026-03-16T19:33:50.505Z",
+    "updatedAt": "2026-03-16T19:33:50.505Z"
+  },
+  {
+    "title": "Started: SQLite Message Store",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773689659155-k3b5g64di",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773689186213-7sc471zcd",
+    "createdAt": "2026-03-16T19:34:19.144Z",
+    "updatedAt": "2026-03-16T19:34:19.144Z"
+  },
+  {
+    "title": "Merged: feature-1773689186213-7sc471zcd",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773690244638-ffy1v6byk",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773689186213-7sc471zcd",
+    "createdAt": "2026-03-16T19:44:04.635Z",
+    "updatedAt": "2026-03-16T19:44:04.635Z"
+  },
+  {
+    "title": "Completed: SQLite Message Store",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation completed",
+    "id": "event-1773690244644-oad6hdg5r",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:completed:feature-1773689186213-7sc471zcd",
+    "createdAt": "2026-03-16T19:44:04.644Z",
+    "updatedAt": "2026-03-16T19:44:04.644Z"
+  },
+  {
+    "title": "Started: SQLite Summary Store & DAG Model",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773690253444-uubum4yy1",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773689186214-4ogkm5mzm",
+    "createdAt": "2026-03-16T19:44:13.442Z",
+    "updatedAt": "2026-03-16T19:44:13.442Z"
+  },
+  {
+    "title": "Started: Large File Interception",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773690856189-j5iru0ctv",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773689186219-hamerd650",
+    "createdAt": "2026-03-16T19:54:16.186Z",
+    "updatedAt": "2026-03-16T19:54:16.186Z"
+  },
+  {
+    "title": "Merged: feature-1773689186219-hamerd650",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773691300515-d7eov74cx",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773689186219-hamerd650",
+    "createdAt": "2026-03-16T20:01:40.514Z",
+    "updatedAt": "2026-03-16T20:01:40.514Z"
+  },
+  {
+    "title": "Started: Workflow Checkpoint Store",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773691326672-wxkgdfc6m",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773689186222-7bkkkrlq8",
+    "createdAt": "2026-03-16T20:02:06.645Z",
+    "updatedAt": "2026-03-16T20:02:06.645Z"
+  },
+  {
+    "title": "Merged: feature-1773689186222-7bkkkrlq8",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773691556779-3ztmqvls6",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773689186222-7bkkkrlq8",
+    "createdAt": "2026-03-16T20:05:56.777Z",
+    "updatedAt": "2026-03-16T20:05:56.777Z"
+  },
+  {
+    "title": "Completed: Workflow Checkpoint Store",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation completed",
+    "id": "event-1773691556787-7hdyxa7c8",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:completed:feature-1773689186222-7bkkkrlq8",
+    "createdAt": "2026-03-16T20:05:56.786Z",
+    "updatedAt": "2026-03-16T20:05:56.786Z"
+  },
+  {
+    "title": "Started: Lead Engineer Durable State Machine",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773691579094-asx82gg5y",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773689186223-9c7b20786",
+    "createdAt": "2026-03-16T20:06:19.092Z",
+    "updatedAt": "2026-03-16T20:06:19.092Z"
+  },
+  {
+    "title": "Merged: feature-1773689186223-9c7b20786",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773692491823-pniln14ru",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773689186223-9c7b20786",
+    "createdAt": "2026-03-16T20:21:31.821Z",
+    "updatedAt": "2026-03-16T20:21:31.821Z"
+  },
+  {
+    "title": "Completed: Lead Engineer Durable State Machine",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation completed",
+    "id": "event-1773692491829-3kjypdkwv",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:completed:feature-1773689186223-9c7b20786",
+    "createdAt": "2026-03-16T20:21:31.827Z",
+    "updatedAt": "2026-03-16T20:21:31.827Z"
+  },
+  {
+    "title": "Started: Graceful Shutdown Handler",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773692516696-7x04f7iug",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773689186224-l6fic6a5y",
+    "createdAt": "2026-03-16T20:21:56.694Z",
+    "updatedAt": "2026-03-16T20:21:56.694Z"
+  },
+  {
+    "title": "Merged: feature-1773689186224-l6fic6a5y",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773692822826-dfe18o154",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773689186224-l6fic6a5y",
+    "createdAt": "2026-03-16T20:27:02.824Z",
+    "updatedAt": "2026-03-16T20:27:02.824Z"
+  },
+  {
+    "title": "Completed: Graceful Shutdown Handler",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation completed",
+    "id": "event-1773692822834-upxgjnfrf",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:completed:feature-1773689186224-l6fic6a5y",
+    "createdAt": "2026-03-16T20:27:02.833Z",
+    "updatedAt": "2026-03-16T20:27:02.833Z"
+  },
+  {
+    "title": "Started: Restart Detection & Resume",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773692830986-eg9dmgnfl",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773689186225-99uza6qr7",
+    "createdAt": "2026-03-16T20:27:10.983Z",
+    "updatedAt": "2026-03-16T20:27:50.245Z"
+  },
+  {
+    "title": "Merged: [Epic] Durable Workflow Engine",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773693095620-lqhq1u5dm",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773689186221-dnmxq8tm3",
+    "createdAt": "2026-03-16T20:31:35.608Z",
+    "updatedAt": "2026-03-16T20:31:35.608Z"
   }
 ]

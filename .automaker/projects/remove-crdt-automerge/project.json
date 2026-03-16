@@ -216,6 +216,7 @@
     "generatedAt": "2026-03-14T04:54:00.000Z"
   },
   "createdAt": "2026-03-14T04:56:20.838Z",
-  "updatedAt": "2026-03-15T05:06:35.726Z",
-  "researchStatus": "running"
+  "updatedAt": "2026-03-16T18:46:44.370Z",
+  "researchStatus": "running",
+  "health": "on-track"
 }

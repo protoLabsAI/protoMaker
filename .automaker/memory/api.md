@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 599
-  referenced: 180
-  successfulFeatures: 180
+  loaded: 613
+  referenced: 187
+  successfulFeatures: 187
 ---
 <!-- domain: API Design & Integration | GitHub GraphQL, REST endpoints, HTTP client patterns -->
 
@@ -513,3 +513,31 @@ usageStats:
 - **Rejected:** Backend-enforced recurrence display rules, no field at all (UI guesses), RecurrenceRule object
 - **Trade-offs:** Frontend flexibility and independence vs responsibility on UI to consume field correctly
 - **Breaking if changed:** If UI fails to check recurring field, all events render identically and recurrence becomes unrepresentable
+
+### All ContextEngine interface methods return Promise<T> (async) rather than sync values to support both in-memory and persistence-backed implementations without future interface changes (2026-03-16)
+- **Context:** Designing contract for a DAG-based context window engine that may need disk/DB backing later
+- **Why:** Async contract unifies the implementation space—in-memory ops can be instant Promises, but future SQL/RocksDB backends won't require breaking interface changes
+- **Rejected:** Sync-first API with Promise wrappers added later—would require interface version bump or dual APIs
+- **Trade-offs:** Slightly more verbose for in-memory-only use cases, but eliminates major refactoring risk as storage requirements change
+- **Breaking if changed:** If reverted to sync, any persistence-backed implementation would be awkward or require wrapper overhead
+
+### CompactionConfig includes 'force?: boolean' flag in the compact() method to allow callers to trigger compaction below threshold for testing and session teardown (2026-03-16)
+- **Context:** Testing and cleanup scenarios need to force compaction independently of config threshold values
+- **Why:** Separates policy (thresholds in config) from control (force override in method params), allowing tests to verify compaction logic without threshold manipulation
+- **Rejected:** Changing config thresholds in tests or requiring full session teardown to trigger compaction
+- **Trade-offs:** Adds one optional param but eliminates test-data-pollution patterns where thresholds get modified mid-test
+- **Breaking if changed:** Without force flag, tests can't trigger compaction for low-token scenarios, limiting test coverage of edge cases
+
+### Compact reference format is self-documenting with file ID, original size, summary inline (2026-03-16)
+- **Context:** Agent needs to understand why content was replaced and how to retrieve it
+- **Why:** Format itself teaches agent: why (token threshold), how (lcm_expand), and gives preview. No separate documentation needed. Enables agent autonomy without being told how to use the tool.
+- **Rejected:** Opaque token (agent doesn't know what it's requesting), minimal reference (agent must guess threshold)
+- **Trade-offs:** Larger context cost per reference but enables informed agent decisions
+- **Breaking if changed:** If you change fileId encoding, tool calls fail; if you remove token count from reference, agents can't prioritize expansion
+
+### Threshold-based filtering using token count (configurable default 25K) applied uniformly across all content types (2026-03-16)
+- **Context:** Need to decide which tool results get intercepted and stored
+- **Why:** Token count is objective, measurable, directly aligns with actual context window impact. Configurable threshold allows ops to tune without code change. Simple heuristic avoids content-type guessing.
+- **Rejected:** Size-based filtering (bytes don't correlate with tokens), content-type heuristics (fragile), always-store (wastes space)
+- **Trade-offs:** May intercept unimportant large files or miss important small ones, but predictable and tunable
+- **Breaking if changed:** If threshold changes, all future interceptions change scope; if you change to different heuristic, all filtering logic must change

@@ -1,5 +1,31 @@
 # @protolabsai/spec-parser
 
+## 0.69.0
+
+### Minor Changes
+
+- ### Features
+  - durable workflow engine — checkpoint-before-transition, suspend/resume, background persist queue (#2747)
+  - SQLite-backed ConversationStore (#2741)
+  - durable workflow engine — checkpoint-before-transition, suspend/resume, background persist queue (#2747)
+  - SQLite-backed ConversationStore (#2741)
+  - add Wiring tab to Ops Dashboard with service instantiation status (#2735)
+  - durable workflow engine — checkpoint-before-transition, suspend/resume, background persist queue (#2747)
+  - SQLite-backed ConversationStore (#2741)
+
+  ### Bug Fixes
+  - route bug features to source project board, not server root
+  - skip features with human assignee in auto-mode pickup (#2750)
+  - rebuild better-sqlite3 native bindings in CI
+  - route bug features to source project board, not server root
+  - skip features with human assignee in auto-mode pickup (#2750)
+  - rebuild better-sqlite3 native bindings in CI
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.69.0
+
 ## 0.68.0
 
 ### Minor Changes

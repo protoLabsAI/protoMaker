@@ -4,7 +4,7 @@ Replace the over-engineered Automerge/CRDT layer with simple disk-backed storage
 
 **Status:** completed
 **Created:** 2026-03-14T04:56:20.838Z
-**Updated:** 2026-03-15T05:06:35.726Z
+**Updated:** 2026-03-16T18:46:44.370Z
 
 ## PRD
 

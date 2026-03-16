@@ -107,6 +107,7 @@ export class LeadEngineerService {
   private refreshIntervals = new Map<string, ReturnType<typeof setInterval>>();
   private supervisorIntervals = new Map<string, ReturnType<typeof setInterval>>();
   private prMergeIntervals = new Map<string, ReturnType<typeof setInterval>>();
+  private readonly resumeIntervals = new Map<string, NodeJS.Timeout>();
   private activeFeatures = new Set<string>();
 
   private schedulerService?: SchedulerService;
@@ -117,6 +118,8 @@ export class LeadEngineerService {
   private codeRabbitResolver?: CodeRabbitResolverService;
   private prFeedbackService?: PRFeedbackService;
   private checkpointService?: PipelineCheckpointService;
+  /** Features suspended in REVIEW/MERGE awaiting external re-trigger */
+  private readonly pendingResumes = new Map<string, { projectPath: string; featureId: string }>();
   private contextFidelityService?: ContextFidelityService;
   private knowledgeStoreService?: KnowledgeStoreService;
   private handoffService?: LeadHandoffService;
@@ -416,7 +419,59 @@ export class LeadEngineerService {
       this.prMergeIntervals.set(projectPath, setInterval(prMergeHandler, PR_MERGE_POLL_MS));
     }
 
+    const resumeSuspendedHandler = async () => {
+      const s = this.sessions.get(projectPath);
+      if (!s || s.flowState !== 'running') return;
+      // Collect items to process (snapshot to avoid mutation during iteration)
+      const toResume: Array<{ projectPath: string; featureId: string }> = [];
+      for (const [fid, info] of this.pendingResumes.entries()) {
+        if (info.projectPath !== projectPath) continue;
+        if (this.activeFeatures.has(fid)) continue;
+        toResume.push(info);
+        this.pendingResumes.delete(fid);
+      }
+      for (const { featureId: fid } of toResume) {
+        logger.info(`[LeadEngineer] Resuming suspended/checkpointed feature ${fid}`);
+        void this.process(projectPath, fid).catch((err) =>
+          logger.error(`[LeadEngineer] Resume failed for ${fid}:`, err)
+        );
+      }
+    };
+
+    const RESUME_POLL_MS = 60_000; // 1-minute resume poll
+    if (this.schedulerService) {
+      this.schedulerService.registerInterval(
+        `lead-engineer:${projectPath}:resume-suspended`,
+        `Lead Engineer Suspended Feature Resume (${projectSlug})`,
+        RESUME_POLL_MS,
+        resumeSuspendedHandler
+      );
+    } else {
+      this.resumeIntervals.set(projectPath, setInterval(resumeSuspendedHandler, RESUME_POLL_MS));
+    }
+
     await this.sessionStore.save(session);
+
+    // Recover any checkpointed features from a previous server run.
+    // On restart, features in REVIEW/MERGE (suspended) or mid-processing need re-queuing.
+    if (this.checkpointService) {
+      try {
+        const checkpoints = await this.checkpointService.listAll(projectPath);
+        for (const cp of checkpoints) {
+          if (!this.activeFeatures.has(cp.featureId)) {
+            this.pendingResumes.set(cp.featureId, { projectPath, featureId: cp.featureId });
+          }
+        }
+        if (checkpoints.length > 0) {
+          logger.info(
+            `[LeadEngineer] Scheduled crash-recovery resume for ${checkpoints.length} checkpointed feature(s) in ${projectPath}`
+          );
+        }
+      } catch (err) {
+        logger.warn(`[LeadEngineer] Failed to scan checkpoints for crash recovery:`, err);
+      }
+    }
+
     this.events.emit('lead-engineer:started', { projectPath, projectSlug });
     logger.info(`Lead Engineer started for ${projectSlug}`);
     return session;
@@ -487,9 +542,19 @@ export class LeadEngineerService {
           logger.info(
             `[LeadEngineer] Resuming ${featureId} from checkpoint ${checkpoint.currentState}`
           );
+          const restoredContext = this.checkpointService.restoreContext(checkpoint);
+          // Stale context trap fix: prefer live feature data over checkpointed values.
+          // prNumber: use board value if available (checkpoint may be stale after PR recreation).
+          if (feature.prNumber && !restoredContext.prNumber) {
+            restoredContext.prNumber = feature.prNumber;
+          }
+          // ciStatus: clear 'pending' on resume — REVIEW processor will re-check live status.
+          if (restoredContext.ciStatus === 'pending') {
+            restoredContext.ciStatus = undefined;
+          }
           resumeFromCheckpoint = {
             state: checkpoint.currentState as FeatureProcessingState,
-            restoredContext: this.checkpointService.restoreContext(checkpoint),
+            restoredContext,
           };
         }
       }
@@ -571,6 +636,15 @@ export class LeadEngineerService {
         failureCount: result.context.retryCount,
       };
 
+      // Track suspended features (REVIEW/MERGE) for external re-trigger.
+      const SUSPEND_STATES = new Set<string>(['REVIEW', 'MERGE']);
+      if (SUSPEND_STATES.has(result.finalState)) {
+        logger.info(
+          `[LeadEngineer] Feature ${featureId} suspended in ${result.finalState} — queued for resume`
+        );
+        this.pendingResumes.set(featureId, { projectPath, featureId });
+      }
+
       logger.info(`[LeadEngineer] Feature processing completed`, {
         featureId,
         finalState: result.finalState,
@@ -633,6 +707,7 @@ export class LeadEngineerService {
       this.schedulerService.unregisterInterval(`lead-engineer:${projectPath}:refresh`);
       this.schedulerService.unregisterInterval(`lead-engineer:${projectPath}:supervisor`);
       this.schedulerService.unregisterInterval(`lead-engineer:${projectPath}:pr-merge-poll`);
+      this.schedulerService.unregisterInterval(`lead-engineer:${projectPath}:resume-suspended`);
     } else {
       const r = this.refreshIntervals.get(projectPath);
       if (r) {
@@ -648,6 +723,11 @@ export class LeadEngineerService {
       if (p) {
         clearInterval(p);
         this.prMergeIntervals.delete(projectPath);
+      }
+      const resumeInterval = this.resumeIntervals.get(projectPath);
+      if (resumeInterval) {
+        clearInterval(resumeInterval);
+        this.resumeIntervals.delete(projectPath);
       }
     }
   }

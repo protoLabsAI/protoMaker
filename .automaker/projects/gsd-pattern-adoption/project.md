@@ -4,7 +4,7 @@ Adopt 5 high-value patterns from the GSD framework into the Lead Engineer pipeli
 
 **Status:** active
 **Created:** 2026-03-14T16:28:04.299Z
-**Updated:** 2026-03-14T17:12:28.044Z
+**Updated:** 2026-03-16T18:46:44.179Z
 
 ## PRD
 

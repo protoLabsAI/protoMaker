@@ -1,0 +1,46 @@
+{
+  "name": "@protolabsai/context-engine",
+  "version": "0.68.1",
+  "type": "module",
+  "description": "Conversation storage and context management for AutoMaker agents",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "build:check": "tsc --noEmit",
+    "watch": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "automaker",
+    "context",
+    "conversation",
+    "sqlite"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": "AutoMaker Team",
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "node": ">=22.0.0 <23.0.0"
+  },
+  "dependencies": {
+    "@protolabsai/utils": "^0.69.0",
+    "better-sqlite3": "^11.7.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "22.19.3",
+    "tsup": "^8.5.1",
+    "typescript": "5.9.3",
+    "vitest": "4.0.16"
+  }
+}
