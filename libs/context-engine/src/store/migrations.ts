@@ -72,6 +72,30 @@ export const MIGRATIONS: Migration[] = [
         ON message_parts(message_id, position);
     `,
   },
+  {
+    version: 2,
+    description: 'Add large_files table for intercepted large tool results',
+    up: `
+      -- Large files: full content of tool results that exceeded the token threshold.
+      -- Compact references (containing the id) are stored in message_parts instead.
+      CREATE TABLE IF NOT EXISTS large_files (
+        id TEXT PRIMARY KEY,
+        part_id TEXT,
+        conversation_id TEXT,
+        original_content TEXT NOT NULL,
+        token_count INTEGER NOT NULL,
+        summary TEXT NOT NULL,
+        stored_at TEXT NOT NULL,
+        metadata TEXT NOT NULL DEFAULT '{}'
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_large_files_part_id
+        ON large_files(part_id);
+
+      CREATE INDEX IF NOT EXISTS idx_large_files_conversation_id
+        ON large_files(conversation_id);
+    `,
+  },
 ];
 
 /**
