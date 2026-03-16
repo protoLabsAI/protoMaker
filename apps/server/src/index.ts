@@ -44,6 +44,7 @@ import { registerRoutes } from './server/routes.js';
 import { setupWebSockets } from './server/websockets.js';
 import { runStartup } from './server/startup.js';
 import { setupShutdown } from './server/shutdown.js';
+import { registerShutdownSignals } from './lib/graceful-shutdown.js';
 
 // Register file log transport before creating any loggers that matter
 registerLogTransport(createFileLogTransport());
@@ -130,6 +131,18 @@ runStartup(services, setRequestLoggingEnabled).catch((err) =>
   logger.error('Startup sequence failed:', err)
 );
 setupShutdown(server, services);
+
+// Register enhanced graceful-shutdown handler: agent suspension, SQLite close,
+// Langfuse flush, and 30s force-kill timeout.
+registerShutdownSignals({
+  server,
+  shutdownAgents: async () => {
+    await services.autoModeService.shutdown();
+  },
+  closeSqlite: () => {
+    services.knowledgeStoreService.close();
+  },
+});
 
 // Start listening
 server.listen(PORT, HOST, () => {

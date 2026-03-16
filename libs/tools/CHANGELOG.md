@@ -1,5 +1,33 @@
 # @protolabsai/tools
 
+## 0.68.0
+
+### Minor Changes
+
+- ### Features
+  - add Wiring tab to Ops Dashboard with service instantiation status (#2735)
+  - add Wiring tab to Ops Dashboard with service instantiation status (#2735)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.68.0
+
+## 0.67.0
+
+### Minor Changes
+
+- ### Features
+  - switch ai-agent-app template to git clone from protoAgent-starter repo
+  - switch ai-agent-app template to git clone from protoAgent-starter repo
+  - production chat patterns, CLI auth, proper theming
+  - production chat patterns, CLI auth, proper theming
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.67.0
+
 ## 0.66.0
 
 ### Minor Changes
