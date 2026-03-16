@@ -24,3 +24,4 @@
  */
 
 export * from './store/index.js';
+export * from './workflow/index.js';

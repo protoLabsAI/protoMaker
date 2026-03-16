@@ -72,6 +72,47 @@ export const MIGRATIONS: Migration[] = [
         ON message_parts(message_id, position);
     `,
   },
+  {
+    version: 2,
+    description: 'Create workflow_executions and workflow_steps tables',
+    up: `
+      -- Workflow executions: top-level durable workflow instances
+      CREATE TABLE IF NOT EXISTS workflow_executions (
+        id TEXT PRIMARY KEY,
+        feature_id TEXT NOT NULL,
+        state TEXT NOT NULL CHECK(state IN ('pending', 'running', 'suspended', 'completed', 'failed')),
+        version INTEGER NOT NULL DEFAULT 0,
+        checkpoint_data TEXT NOT NULL DEFAULT 'null',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        suspended_at TEXT
+      );
+
+      -- Workflow steps: individual steps within a workflow execution
+      CREATE TABLE IF NOT EXISTS workflow_steps (
+        id TEXT PRIMARY KEY,
+        workflow_id TEXT NOT NULL REFERENCES workflow_executions(id) ON DELETE CASCADE,
+        step_name TEXT NOT NULL,
+        state TEXT NOT NULL CHECK(state IN ('pending', 'running', 'suspended', 'completed', 'failed')),
+        input TEXT NOT NULL DEFAULT 'null',
+        output TEXT NOT NULL DEFAULT 'null',
+        error TEXT,
+        started_at TEXT NOT NULL,
+        completed_at TEXT,
+        FOREIGN KEY (workflow_id) REFERENCES workflow_executions(id) ON DELETE CASCADE
+      );
+
+      -- Indices for efficient queries
+      CREATE INDEX IF NOT EXISTS idx_workflow_executions_state
+        ON workflow_executions(state);
+
+      CREATE INDEX IF NOT EXISTS idx_workflow_executions_feature_id
+        ON workflow_executions(feature_id);
+
+      CREATE INDEX IF NOT EXISTS idx_workflow_steps_workflow_id
+        ON workflow_steps(workflow_id, started_at);
+    `,
+  },
 ];
 
 /**
