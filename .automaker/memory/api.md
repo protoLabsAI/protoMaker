@@ -9,6 +9,7 @@ usageStats:
   referenced: 191
   successfulFeatures: 191
 ---
+
 <!-- domain: API Design & Integration | GitHub GraphQL, REST endpoints, HTTP client patterns -->
 
 # api
@@ -475,8 +476,8 @@ usageStats:
 - **Why this works:** MCP spec requirement for stdio transport: exceptions don't propagate cleanly, but structured responses are predictable and can be logged
 - **Trade-offs:** More verbose handler code but guaranteed to never crash MCP connection; client must check result.success (not automatic rejection)
 
-
 ### ArchivalService keeps start()/stop() public API but decoupled from interval management — they now only toggle an aborted flag. Scheduler externally drives the interval. (2026-03-15)
+
 - **Context:** Migrating setInterval ownership to SchedulerService meant start/stop had to stop managing the timer. But API was part of the public contract.
 - **Why:** Preserve backwards compatibility and encapsulation (service owns its running state); actual interval management becomes SchedulerService concern.
 - **Rejected:** Remove start/stop entirely — breaks any code calling them; make them take a SchedulerService reference — inverts dependency, makes service aware of scheduler.
@@ -484,16 +485,19 @@ usageStats:
 - **Breaking if changed:** Calling start/stop no longer guarantees the archival cycle will run (must manually register interval with scheduler). Silent semantic breakage if caller depends on start/stop controlling execution.
 
 #### [Pattern] Idempotent pause/resume operations: when a timer is already in the target state, return 200 success with clarifying message rather than 409 conflict or 400 bad-request. (2026-03-15)
+
 - **Problem solved:** State transitions that can be safely repeated without side effects
 - **Why this works:** Prevents client retry logic from failing; simplifies error handling; follows REST principle that same request is safe to repeat. UI can safely retry without knowing current state.
 - **Trade-offs:** Easier for clients but loses ability to distinguish 'changed state' from 'no-op state change' in response code. Mitigated by returning clarifying message.
 
 #### [Pattern] Bulk operations (pause-all, resume-all) return count of affected items, not just success/failure, enabling UI to provide feedback about how many timers were impacted. (2026-03-15)
+
 - **Problem solved:** Bulk state transitions where number of changes varies based on current state
 - **Why this works:** Different from single-resource operations where 0-or-1 affected. Bulk needs to communicate scope of change. Helps detect no-ops (count=0) from API response without state inspection.
 - **Trade-offs:** Slightly more complex response structure but avoids extra round-trip. Count is useful for logging/monitoring. Returning full id list would be redundant.
 
 ### Check tier is polymorphic: tier can be 'critical' | 'full' | ['critical', 'full'] allowing single checks to participate in multiple sweep tiers. (2026-03-15)
+
 - **Context:** Need to support checks that run in both critical (5min) and full (6h) sweeps without duplicating check logic.
 - **Why:** Avoids check duplication while preserving tier semantics and allowing flexible composition. A single maintenance task (e.g., gc collection) might need to run on both schedules.
 - **Rejected:** Single-tier-only design (less flexible); separate checks per tier (duplicates maintenance logic); discriminated union (more complex filtering).
@@ -501,6 +505,7 @@ usageStats:
 - **Breaking if changed:** Filtering logic in runSweep() must handle both string and array cases. Removing array support forces checks into single tier or duplication.
 
 ### Instance IDs use composite format 'parentId:date' instead of separate parentId and instanceDate fields (2026-03-15)
+
 - **Context:** Need to uniquely identify individual occurrences within a recurring series while maintaining backward compatibility with single-event ID format
 - **Why:** Single ID field is simpler for API consumers; colon separator is unambiguous. Allows reusing existing ID infrastructure without new fields
 - **Rejected:** Separate parentId + instanceDate fields (breaks single-ID assumption); UUID per instance (loses parent relationship in ID); parent ID only (loses instance uniqueness)
@@ -508,6 +513,7 @@ usageStats:
 - **Breaking if changed:** Changing ID format breaks all stored references. Parsing logic must handle 'parent-abc:2026-03-01' format correctly—what if parentId contains colons?
 
 ### Added `recurring?: boolean` as informational field; UI interpretation left out-of-scope (2026-03-15)
+
 - **Context:** Need to distinguish recurring ceremony events from one-time auto-mode calendars
 - **Why:** Separates data contract (backend) from presentation logic (frontend), avoids backend enforcing UI behavior
 - **Rejected:** Backend-enforced recurrence display rules, no field at all (UI guesses), RecurrenceRule object
@@ -515,6 +521,7 @@ usageStats:
 - **Breaking if changed:** If UI fails to check recurring field, all events render identically and recurrence becomes unrepresentable
 
 ### All ContextEngine interface methods return Promise<T> (async) rather than sync values to support both in-memory and persistence-backed implementations without future interface changes (2026-03-16)
+
 - **Context:** Designing contract for a DAG-based context window engine that may need disk/DB backing later
 - **Why:** Async contract unifies the implementation space—in-memory ops can be instant Promises, but future SQL/RocksDB backends won't require breaking interface changes
 - **Rejected:** Sync-first API with Promise wrappers added later—would require interface version bump or dual APIs
@@ -522,6 +529,7 @@ usageStats:
 - **Breaking if changed:** If reverted to sync, any persistence-backed implementation would be awkward or require wrapper overhead
 
 ### CompactionConfig includes 'force?: boolean' flag in the compact() method to allow callers to trigger compaction below threshold for testing and session teardown (2026-03-16)
+
 - **Context:** Testing and cleanup scenarios need to force compaction independently of config threshold values
 - **Why:** Separates policy (thresholds in config) from control (force override in method params), allowing tests to verify compaction logic without threshold manipulation
 - **Rejected:** Changing config thresholds in tests or requiring full session teardown to trigger compaction
@@ -529,6 +537,7 @@ usageStats:
 - **Breaking if changed:** Without force flag, tests can't trigger compaction for low-token scenarios, limiting test coverage of edge cases
 
 ### Compact reference format is self-documenting with file ID, original size, summary inline (2026-03-16)
+
 - **Context:** Agent needs to understand why content was replaced and how to retrieve it
 - **Why:** Format itself teaches agent: why (token threshold), how (lcm_expand), and gives preview. No separate documentation needed. Enables agent autonomy without being told how to use the tool.
 - **Rejected:** Opaque token (agent doesn't know what it's requesting), minimal reference (agent must guess threshold)
@@ -536,6 +545,7 @@ usageStats:
 - **Breaking if changed:** If you change fileId encoding, tool calls fail; if you remove token count from reference, agents can't prioritize expansion
 
 ### Threshold-based filtering using token count (configurable default 25K) applied uniformly across all content types (2026-03-16)
+
 - **Context:** Need to decide which tool results get intercepted and stored
 - **Why:** Token count is objective, measurable, directly aligns with actual context window impact. Configurable threshold allows ops to tune without code change. Simple heuristic avoids content-type guessing.
 - **Rejected:** Size-based filtering (bytes don't correlate with tokens), content-type heuristics (fragile), always-store (wastes space)
@@ -543,11 +553,13 @@ usageStats:
 - **Breaking if changed:** If threshold changes, all future interceptions change scope; if you change to different heuristic, all filtering logic must change
 
 #### [Pattern] Add implicit/missing fields to the type interface as explicit optional fields with semantic JSDoc. This makes an implicit contract ("assignee affects auto-mode behavior") part of the formal API. (2026-03-16)
+
 - **Problem solved:** The bug existed because Feature.assignee was never explicitly defined in the type—it was silently undefined everywhere, so callers had no way to know it should exist or what it means.
 - **Why this works:** Explicit typing forces future code to consciously acknowledge the field exists and what it does. Prevents similar silent-miss bugs. Type contract is stronger than documentation-only.
 - **Trade-offs:** Requires discipline to keep type definitions in sync with data model. Gains: anyone reading the type immediately sees the field and can navigate to its JSDoc semantics.
 
 ### Non-text message parts (tool_use, tool_result, image, document) are converted to inline text placeholders like `[tool_use: ...]` rather than preserved as structured content (2026-03-16)
+
 - **Context:** Message extraction must produce string content for AssembledMessage while preserving signal about non-text parts
 - **Why:** Simplified API contract (string content), model can still recognize non-text occurred. Avoids complex content union types in assembly layer.
 - **Rejected:** Preserving structured content (union types); complicates assembler API. Dropping non-text entirely; loses signal to model.

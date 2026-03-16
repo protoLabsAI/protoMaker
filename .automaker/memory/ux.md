@@ -9,6 +9,7 @@ usageStats:
   referenced: 0
   successfulFeatures: 0
 ---
+
 # ux
 
 #### [Pattern] Each starter kit has two complementary onboarding mechanisms: (1) a features array that populates actionable board items, and (2) a context function that generates `.automaker/CONTEXT.md` with reference documentation. (2026-03-15)
