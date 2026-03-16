@@ -21,43 +21,19 @@ function SettingsPage() {
   const { defaultModel, theme, setDefaultModel, setTheme } = useSettingsStore();
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        padding: 24,
-        overflowY: 'auto',
-      }}
-    >
-      <h1 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Settings</h1>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 480 }}>
+    <div className="flex h-full flex-col overflow-y-auto p-6">
+      <h1 className="mb-4 text-lg font-semibold">Settings</h1>
+      <div className="flex max-w-lg flex-col gap-3">
         {/* Model config */}
-        <section
-          style={{
-            borderRadius: 8,
-            border: '1px solid var(--border)',
-            backgroundColor: 'var(--surface)',
-            padding: 16,
-          }}
-        >
-          <h2 style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Default Model</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 12 }}>
+        <section className="rounded-lg border border-border bg-card p-4">
+          <h2 className="text-sm font-semibold">Default Model</h2>
+          <p className="mb-3 mt-1 text-xs text-muted-foreground">
             Model used when creating new chat sessions.
           </p>
           <select
             value={defaultModel}
             onChange={(e) => setDefaultModel(e.target.value)}
-            style={{
-              width: '100%',
-              background: 'var(--surface-2)',
-              color: 'var(--foreground)',
-              border: '1px solid var(--border)',
-              borderRadius: 6,
-              padding: '6px 10px',
-              fontSize: 14,
-              cursor: 'pointer',
-            }}
+            className="w-full rounded-md border border-border bg-input px-2.5 py-1.5 text-sm text-foreground"
           >
             {MODEL_OPTIONS.map((m) => (
               <option key={m.alias} value={m.alias}>
@@ -68,35 +44,21 @@ function SettingsPage() {
         </section>
 
         {/* Theme config */}
-        <section
-          style={{
-            borderRadius: 8,
-            border: '1px solid var(--border)',
-            backgroundColor: 'var(--surface)',
-            padding: 16,
-          }}
-        >
-          <h2 style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Theme</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 12 }}>
+        <section className="rounded-lg border border-border bg-card p-4">
+          <h2 className="text-sm font-semibold">Theme</h2>
+          <p className="mb-3 mt-1 text-xs text-muted-foreground">
             Customize the appearance of your app.
           </p>
-          <div style={{ display: 'flex', gap: 4 }}>
+          <div className="flex gap-1">
             {THEME_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
                 onClick={() => setTheme(opt.value)}
-                style={{
-                  flex: 1,
-                  padding: '6px 12px',
-                  fontSize: 13,
-                  fontWeight: 500,
-                  borderRadius: 6,
-                  border: '1px solid var(--border)',
-                  cursor: 'pointer',
-                  background: theme === opt.value ? 'var(--primary)' : 'var(--surface-2)',
-                  color: theme === opt.value ? 'var(--primary-foreground)' : 'var(--foreground)',
-                  transition: 'background-color 150ms, color 150ms',
-                }}
+                className={`flex-1 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  theme === opt.value
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-input text-foreground hover:bg-accent'
+                }`}
               >
                 {opt.label}
               </button>

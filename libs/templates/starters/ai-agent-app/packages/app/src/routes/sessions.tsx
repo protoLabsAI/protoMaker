@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { X } from 'lucide-react';
 import { useSessionStore } from '../store/session-store.js';
 
 export const Route = createFileRoute('/sessions')({
@@ -39,116 +40,40 @@ function SessionsPage() {
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        padding: 24,
-        overflowY: 'auto',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 16,
-        }}
-      >
-        <h1 style={{ fontSize: 18, fontWeight: 600 }}>Sessions</h1>
+    <div className="flex h-full flex-col overflow-y-auto p-6">
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-lg font-semibold">Sessions</h1>
         <button
           onClick={handleNew}
-          style={{
-            background: 'var(--primary)',
-            color: 'var(--primary-foreground)',
-            border: 'none',
-            borderRadius: 6,
-            padding: '6px 14px',
-            fontSize: 13,
-            fontWeight: 500,
-            cursor: 'pointer',
-          }}
+          className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
           New Chat
         </button>
       </div>
 
       {sorted.length === 0 ? (
-        <div
-          style={{
-            flex: 1,
-            borderRadius: 8,
-            border: '1px solid var(--border)',
-            backgroundColor: 'var(--surface)',
-            padding: 16,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-            No sessions yet. Start a new chat!
-          </p>
+        <div className="flex flex-1 items-center justify-center rounded-lg border border-border bg-card p-4">
+          <p className="text-sm text-muted-foreground">No sessions yet. Start a new chat!</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div className="flex flex-col gap-1">
           {sorted.map((session) => (
             <div
               key={session.id}
               onClick={() => handleSelect(session.id)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '10px 14px',
-                borderRadius: 8,
-                border: '1px solid var(--border)',
-                backgroundColor:
-                  session.id === currentSessionId ? 'var(--surface-2)' : 'var(--surface)',
-                cursor: 'pointer',
-                transition: 'background-color 150ms',
-              }}
+              className={`group flex cursor-pointer items-center gap-3 rounded-lg border border-border px-3.5 py-2.5 transition-colors hover:bg-accent/50 ${
+                session.id === currentSessionId ? 'bg-accent' : 'bg-card'
+              }`}
             >
-              {/* Title + meta */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 500,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {session.title}
-                </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    marginTop: 2,
-                    fontSize: 12,
-                    color: 'var(--text-muted)',
-                  }}
-                >
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium">{session.title}</div>
+                <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
                   <span>{session.messages.length} messages</span>
                   <span>{timeAgo(session.updatedAt)}</span>
                 </div>
               </div>
 
-              {/* Model badge */}
-              <span
-                style={{
-                  fontSize: 11,
-                  padding: '2px 8px',
-                  borderRadius: 4,
-                  backgroundColor: 'var(--surface-3)',
-                  color: 'var(--text-secondary)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
+              <span className="whitespace-nowrap rounded bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
                 {session.model.includes('haiku')
                   ? 'Haiku'
                   : session.model.includes('sonnet')
@@ -158,22 +83,12 @@ function SessionsPage() {
                       : session.model}
               </span>
 
-              {/* Delete button */}
               <button
                 onClick={(e) => handleDelete(e, session.id)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  cursor: 'pointer',
-                  padding: '4px 6px',
-                  borderRadius: 4,
-                  fontSize: 14,
-                  lineHeight: 1,
-                }}
+                className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
                 title="Delete session"
               >
-                x
+                <X size={14} />
               </button>
             </div>
           ))}

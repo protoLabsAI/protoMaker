@@ -19,8 +19,8 @@
  *   loop after the specified number of steps, preventing runaway inference.
  *
  * Tool support:
- *   Define tools below. Each tool is executed server-side and its result is streamed
- *   back within the same response so the client stays in sync with every step.
+ *   Tools are defined using AI SDK's `tool()` helper and wrapped with progress
+ *   emission so the WebSocket sideband receives live updates during execution.
  */
 
 import { Router, type Request, type Response } from 'express';
@@ -28,44 +28,154 @@ import {
   streamText,
   createUIMessageStream,
   pipeUIMessageStreamToResponse,
+  convertToModelMessages,
   stepCountIs,
   tool,
-  type ModelMessage,
+  type UIMessage,
 } from 'ai';
 import { createAnthropic } from '@ai-sdk/anthropic';
+import { execSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
 import { z } from 'zod';
 import { traceStore } from '../tracing/trace-store.js';
 import { buildTrace, type StepData } from '../tracing/build-trace.js';
 import { getCommand, parseSlashCommand } from '../commands/registry.js';
+import { toolProgress } from '../tools/progress.js';
 
 // Side-effect import: registers all built-in commands into the registry
 import '../commands/example.js';
 
 const router = Router();
 
+// ─── Anthropic provider with CLI auth support ─────────────────────────────────
+//
+// Matches the production credential chain: env var → CLI OAuth file → macOS Keychain.
+// This lets the template work with Claude CLI auth (claude login) without needing
+// a separate ANTHROPIC_API_KEY.
+
+let _cachedProvider: ReturnType<typeof createAnthropic> | null = null;
+
+function getAnthropicProvider(): ReturnType<typeof createAnthropic> {
+  if (_cachedProvider) return _cachedProvider;
+
+  // 1. ANTHROPIC_API_KEY env var
+  if (process.env['ANTHROPIC_API_KEY']) {
+    _cachedProvider = createAnthropic({ apiKey: process.env['ANTHROPIC_API_KEY'] });
+    return _cachedProvider;
+  }
+
+  // 2. ANTHROPIC_AUTH_TOKEN env var
+  if (process.env['ANTHROPIC_AUTH_TOKEN']) {
+    _cachedProvider = createAnthropic({
+      authToken: process.env['ANTHROPIC_AUTH_TOKEN'],
+      headers: { 'anthropic-beta': 'oauth-2025-04-20' },
+    });
+    return _cachedProvider;
+  }
+
+  // 3. Claude CLI OAuth token from credential files
+  const token = readCliOAuthToken();
+  if (token) {
+    console.log('Using Claude CLI OAuth token for authentication');
+    _cachedProvider = createAnthropic({
+      authToken: token,
+      headers: { 'anthropic-beta': 'oauth-2025-04-20' },
+    });
+    return _cachedProvider;
+  }
+
+  // 4. Fallback — will fail if no auth is available
+  console.warn('No API key or CLI auth found. Set ANTHROPIC_API_KEY or run: claude login');
+  _cachedProvider = createAnthropic();
+  return _cachedProvider;
+}
+
+function readCliOAuthToken(): string | null {
+  // Read from ~/.claude/.credentials.json (Claude Code CLI)
+  const homedir = process.env['HOME'] ?? process.env['USERPROFILE'] ?? '';
+  const credPaths = [
+    path.join(homedir, '.claude', '.credentials.json'),
+    path.join(homedir, '.claude', 'credentials.json'),
+  ];
+
+  for (const credPath of credPaths) {
+    try {
+      if (!fs.existsSync(credPath)) continue;
+      const content = fs.readFileSync(credPath, 'utf-8');
+      const creds = JSON.parse(content) as Record<string, unknown>;
+
+      // Claude Code format: { claudeAiOauth: { accessToken } }
+      const claudeOauth = creds.claudeAiOauth as { accessToken?: string } | undefined;
+      if (claudeOauth?.accessToken) return claudeOauth.accessToken;
+
+      // Legacy formats
+      if (typeof creds.oauth_token === 'string') return creds.oauth_token;
+      if (typeof creds.access_token === 'string') return creds.access_token;
+    } catch {
+      continue;
+    }
+  }
+
+  // Try macOS Keychain
+  if (process.platform === 'darwin') {
+    try {
+      const raw = execSync('security find-generic-password -s "Claude Code-credentials" -w', {
+        encoding: 'utf-8',
+        timeout: 5000,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }).trim();
+      const creds = JSON.parse(raw) as Record<string, unknown>;
+      const claudeOauth = creds.claudeAiOauth as { accessToken?: string } | undefined;
+      if (claudeOauth?.accessToken) return claudeOauth.accessToken;
+    } catch {
+      // Keychain not available
+    }
+  }
+
+  return null;
+}
+
 // ─── Tool definitions ─────────────────────────────────────────────────────────
 //
-// Add your domain tools here.  Each entry in the `tools` object below is
-// automatically exposed to the model and streamed back to `useChat` on the
-// client.  For reusable, cross-adapter tools (MCP / LangGraph / Express) see
-// packages/tools/src/examples/.
+// Each tool is wrapped with progress emission so the WebSocket sideband
+// receives live updates during execution.
 
-/**
- * getCurrentTime — Demo tool that returns the current UTC timestamp.
- * Replace (or augment) with real tools for your application.
- */
 const getCurrentTime = tool({
   description: 'Return the current date and time in UTC as an ISO 8601 string.',
   inputSchema: z.object({}),
-  execute: async (): Promise<{ time: string }> => ({
-    time: new Date().toISOString(),
+  execute: async () => {
+    toolProgress.emit('getCurrentTime', 'Getting current time...');
+    const result = { time: new Date().toISOString() };
+    toolProgress.emit('getCurrentTime', 'Done');
+    toolProgress.flush();
+    return result;
+  },
+});
+
+const get_weather = tool({
+  description: 'Get current weather for a location (demo — returns mock data).',
+  inputSchema: z.object({
+    location: z.string().describe('City name or location'),
   }),
+  execute: async ({ location }) => {
+    toolProgress.emit('get_weather', `Fetching weather for ${location}...`);
+    const result = {
+      location,
+      temperature: Math.round(15 + Math.random() * 20),
+      condition: ['sunny', 'cloudy', 'rainy', 'partly cloudy'][Math.floor(Math.random() * 4)],
+      humidity: Math.round(30 + Math.random() * 50),
+    };
+    toolProgress.emit('get_weather', `Weather for ${location} ready`);
+    toolProgress.flush();
+    return result;
+  },
 });
 
 // ─── Request schema ───────────────────────────────────────────────────────────
 
 interface ChatRequestBody {
-  messages: ModelMessage[];
+  messages: UIMessage[];
   model?: string;
   system?: string;
   maxSteps?: number;
@@ -74,7 +184,7 @@ interface ChatRequestBody {
 // ─── POST / ───────────────────────────────────────────────────────────────────
 
 router.post('/', async (req: Request, res: Response): Promise<void> => {
-  const { messages, model: modelId, system, maxSteps = 5 } = req.body as ChatRequestBody;
+  const { messages, model: bodyModel, system, maxSteps = 5 } = req.body as ChatRequestBody;
 
   // Validate required fields
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -82,29 +192,22 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  // Resolve model: explicit request body > MODEL env var > hardcoded default
-  const resolvedModelId = modelId ?? process.env['MODEL'] ?? 'claude-opus-4-6';
+  // Resolve model: header > body > env > default (matches production Ava pattern)
+  const modelAlias = (req.headers['x-model-alias'] as string) || bodyModel || process.env['MODEL'] || 'claude-opus-4-6';
+  const resolvedModelId = modelAlias;
 
-  // Create a scoped Anthropic provider (reads ANTHROPIC_API_KEY automatically)
-  const provider = createAnthropic({
-    apiKey: process.env['ANTHROPIC_API_KEY'],
-  });
+  // Create Anthropic provider with credential chain matching the main app:
+  // 1. ANTHROPIC_API_KEY env var → 2. Claude CLI OAuth token (file) → 3. macOS Keychain
+  const provider = getAnthropicProvider();
 
   // ── Slash-command expansion ─────────────────────────────────────────────────
-  // If the last user message starts with `/commandname [args]`, expand it into
-  // a system-prompt prefix so the model receives the command's instruction
-  // before the conversation messages.
+  // UIMessages use `parts` array, not `content` string
   let resolvedSystem = system;
   const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user');
-  const lastUserText =
-    lastUserMessage && typeof lastUserMessage.content === 'string'
-      ? lastUserMessage.content
-      : lastUserMessage && Array.isArray(lastUserMessage.content)
-        ? lastUserMessage.content
-            .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
-            .map((p) => p.text)
-            .join('')
-        : '';
+  const lastUserText = lastUserMessage?.parts
+    ?.filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+    .map((p) => p.text)
+    .join('') ?? '';
 
   const parsed = lastUserText ? parseSlashCommand(lastUserText) : null;
   if (parsed) {
@@ -115,13 +218,19 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
     }
   }
 
-  // Trace bookkeeping — assign a unique ID and record the start time
+  // Convert UIMessages (parts array) to ModelMessages (content string) for streamText
+  // Production Ava uses the same pattern — must await and pass tools for tool result conversion
+  const modelMessages = await convertToModelMessages(messages, {
+    tools: {
+      getCurrentTime,
+      get_weather,
+    },
+  });
+
+  // Trace bookkeeping
   const traceId = crypto.randomUUID();
   const traceStartedAt = new Date();
 
-  // Build and pipe the UI message stream to the HTTP response.
-  // createUIMessageStream wraps the async generator and handles backpressure;
-  // pipeUIMessageStreamToResponse sets the correct headers and flushes to the client.
   pipeUIMessageStreamToResponse({
     response: res,
     stream: createUIMessageStream({
@@ -129,33 +238,15 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
         const result = streamText({
           model: provider(resolvedModelId),
           system: resolvedSystem,
-          messages,
+          messages: modelMessages,
 
-          // ── Tools available to the model ─────────────────────────────────
           tools: {
             getCurrentTime,
-            get_weather: tool({
-              description: 'Get current weather for a location (demo — returns mock data).',
-              inputSchema: z.object({
-                location: z.string().describe('City name or location'),
-              }),
-              execute: async ({ location }) => ({
-                location,
-                temperature: Math.round(15 + Math.random() * 20),
-                condition: ['sunny', 'cloudy', 'rainy', 'partly cloudy'][
-                  Math.floor(Math.random() * 4)
-                ],
-                humidity: Math.round(30 + Math.random() * 50),
-              }),
-            }),
+            get_weather,
           },
 
-          // ── Agent loop limit ─────────────────────────────────────────────
-          // stopWhen: stepCountIs(n) stops after n model steps, preventing
-          // runaway tool-call chains.  Clients may pass maxSteps to override.
           stopWhen: stepCountIs(Math.max(1, maxSteps)),
 
-          // ── Observability: capture trace on completion ────────────────────
           onFinish: ({ steps }) => {
             const traceEndedAt = new Date();
             const stepData: StepData[] = steps.map((s) => ({
@@ -186,9 +277,6 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
           },
         });
 
-        // Merge the streamText events (text deltas, tool calls, step
-        // boundaries, usage data) into the UI message stream writer so the
-        // client's useChat hook receives a fully-formed UIMessage stream.
         writer.merge(result.toUIMessageStream());
       },
 

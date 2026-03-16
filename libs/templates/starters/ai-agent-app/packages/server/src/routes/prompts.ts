@@ -229,4 +229,80 @@ router.put('/:id', (req: Request, res: Response): void => {
   }
 });
 
+// ─── POST / — create a new prompt ─────────────────────────────────────────────
+
+router.post('/', (req: Request, res: Response): void => {
+  const { id, name, description, variables, content } = req.body as {
+    id?: string;
+    name?: string;
+    description?: string;
+    variables?: string[];
+    content?: string;
+  };
+
+  if (!id || typeof id !== 'string') {
+    res.status(400).json({ error: '"id" is required (alphanumeric, hyphens, underscores)' });
+    return;
+  }
+
+  const safeId = sanitiseId(id);
+  if (!safeId) {
+    res.status(400).json({ error: 'Invalid prompt ID — use alphanumeric, hyphens, or underscores' });
+    return;
+  }
+
+  const filepath = path.join(PROMPTS_DIR, `${safeId}.md`);
+  if (fs.existsSync(filepath)) {
+    res.status(409).json({ error: `Prompt "${safeId}" already exists` });
+    return;
+  }
+
+  // Ensure prompts directory exists
+  if (!fs.existsSync(PROMPTS_DIR)) {
+    fs.mkdirSync(PROMPTS_DIR, { recursive: true });
+  }
+
+  // Build frontmatter
+  const fmName = name ?? safeId;
+  const fmDesc = description ?? '';
+  const fmVars = Array.isArray(variables) && variables.length > 0
+    ? `\nvariables:\n${variables.map((v) => `  - ${v}`).join('\n')}`
+    : '';
+  const frontmatter = `---\nname: ${fmName}\ndescription: ${fmDesc}${fmVars}\n---\n`;
+  const body = typeof content === 'string' ? content : '';
+
+  try {
+    fs.writeFileSync(filepath, frontmatter + body, 'utf-8');
+    const created = loadPrompt(safeId);
+    res.status(201).json(created);
+  } catch (err) {
+    console.error(`[POST /api/prompts]`, err);
+    res.status(500).json({ error: 'Failed to create prompt' });
+  }
+});
+
+// ─── DELETE /:id — delete a prompt ────────────────────────────────────────────
+
+router.delete('/:id', (req: Request, res: Response): void => {
+  const id = sanitiseId(String(req.params['id'] ?? ''));
+  if (!id) {
+    res.status(400).json({ error: 'Invalid prompt ID' });
+    return;
+  }
+
+  const filepath = path.join(PROMPTS_DIR, `${id}.md`);
+  if (!fs.existsSync(filepath)) {
+    res.status(404).json({ error: `Prompt "${id}" not found` });
+    return;
+  }
+
+  try {
+    fs.unlinkSync(filepath);
+    res.json({ deleted: true, id });
+  } catch (err) {
+    console.error(`[DELETE /api/prompts/${id}]`, err);
+    res.status(500).json({ error: 'Failed to delete prompt' });
+  }
+});
+
 export default router;

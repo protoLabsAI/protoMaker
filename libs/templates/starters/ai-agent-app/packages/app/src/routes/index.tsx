@@ -1,34 +1,11 @@
 /**
  * Chat page — main route (`/`).
  *
- * Composes the full chat UI from the `@@PROJECT_NAME-ui` package:
- *
- * - **ChatMessageList** — scrollable message thread with stick-to-bottom
- * - **ChatMessage** — role-based bubbles rendering all UIMessagePart types
- *   including text (markdown), reasoning (ChainOfThought), tool calls
- *   (ToolInvocationPart), and HITL confirmation cards (ConfirmationCard)
- * - **ChatInput** — auto-resizing textarea with send/stop actions
- * - **PromptInputProvider** — context provider for the input value
- * - **WeatherCard** — registers custom renderer for the `get_weather` tool
- *
- * ## State management
- *
- * `useChatSession` coordinates AI SDK's `useChat` with the persistent
- * Zustand session store, giving us multi-session support, model switching,
- * and message persistence for free.
- *
- * ## Tool progress
- *
- * `useToolProgress` subscribes to the WebSocket sideband (`WS_PORT`, default
- * 3002) and feeds live progress labels to tool invocation cards so users see
- * e.g. "Fetching forecast..." while `get_weather` is running.
- *
- * ## HITL confirmation
- *
- * When the model requests approval for a destructive tool call, the streaming
- * response includes an `approval-requested` state. `ToolInvocationPart`
- * renders a `ConfirmationCard` with Approve/Reject buttons.  The handlers
- * below send the decision back via `sendMessage()`.
+ * Follows the production Ava chat overlay pattern:
+ *   - useChatSession hook with DefaultChatTransport (model in headers)
+ *   - ChatMessageList for message rendering with tool progress
+ *   - ChatInput with PromptInputProvider for auto-resizing input
+ *   - Role selector and model switcher in header bar
  */
 
 import { createFileRoute } from '@tanstack/react-router';
@@ -36,8 +13,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { UIMessage } from 'ai';
 
 import { ChatMessageList, ChatInput, PromptInputProvider } from '@@PROJECT_NAME-ui';
-
-// Register the WeatherCard custom tool renderer (side-effect import)
 import '@@PROJECT_NAME-ui/tool-results/weather-card.js';
 
 import { useChatSession } from '../hooks/use-chat-session.js';
@@ -49,7 +24,6 @@ interface AgentRole {
   id: string;
   name: string;
   systemPrompt: string;
-  defaultModel?: string;
 }
 
 // ── Route ────────────────────────────────────────────────────────────────────
@@ -58,7 +32,7 @@ export const Route = createFileRoute('/')({
   component: ChatPage,
 });
 
-// ── Model aliases ────────────────────────────────────────────────────────────
+// ── Model options ────────────────────────────────────────────────────────────
 
 const MODEL_OPTIONS = [
   { alias: 'claude-haiku-4-5-20251001', label: 'Haiku' },
@@ -82,36 +56,28 @@ function ChatPage() {
           setSelectedRoleId(data[0].id);
         }
       })
-      .catch(() => {
-        // Roles endpoint may not be available — continue without roles
-      });
-    // Only fetch once on mount
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const selectedRole = roles.find((r) => r.id === selectedRoleId);
 
-  // ── Streaming chat state via session hook ────────────────────────────────
+  // ── Chat state (production Ava pattern) ─────────────────────────────────
   const {
     messages,
     sendMessage,
     stop,
     isStreaming,
-    currentSession,
+    modelAlias,
     handleNewChat,
     handleModelChange,
   } = useChatSession({
-    body: selectedRole ? { system: selectedRole.systemPrompt } : undefined,
+    system: selectedRole?.systemPrompt,
   });
 
   // ── Tool progress from WebSocket sideband ─────────────────────────────────
   const { getProgressByToolName } = useToolProgress();
 
-  /**
-   * Build a toolCallId -> toolName lookup from the current message stream so
-   * we can map the toolCallId (used by ChatMessage) to the toolName key used
-   * by the progress map.
-   */
   const toolCallIdToName = useMemo(() => {
     const map = new Map<string, string>();
     for (const msg of messages) {
@@ -133,77 +99,44 @@ function ChatPage() {
     [toolCallIdToName, getProgressByToolName]
   );
 
-  // ── Input submission ──────────────────────────────────────────────────────
+  // ── Handlers ──────────────────────────────────────────────────────────────
   const handleSubmit = useCallback(
     (text: string) => {
+      if (isStreaming) return;
       void sendMessage({ text });
     },
-    [sendMessage]
+    [isStreaming, sendMessage]
   );
 
-  // ── HITL tool approval ────────────────────────────────────────────────────
   const handleToolApprove = useCallback(
     (approvalId: string) => {
-      void sendMessage({
-        text: `Approved tool call ${approvalId}`,
-      });
+      void sendMessage({ text: `Approved tool call ${approvalId}` });
     },
     [sendMessage]
   );
 
   const handleToolReject = useCallback(
     (approvalId: string) => {
-      void sendMessage({
-        text: `Rejected tool call ${approvalId}`,
-      });
+      void sendMessage({ text: `Rejected tool call ${approvalId}` });
     },
     [sendMessage]
   );
 
-  // ── Current model display label ─────────────────────────────────────────
-  const currentModel = currentSession?.model ?? 'claude-haiku-4-5-20251001';
   const currentModelLabel =
-    MODEL_OPTIONS.find((m) => m.alias === currentModel)?.label ?? currentModel;
+    MODEL_OPTIONS.find((m) => m.alias === modelAlias)?.label ?? modelAlias;
 
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <PromptInputProvider>
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100%',
-          overflow: 'hidden',
-        }}
-      >
+      <div className="flex h-full flex-col overflow-hidden">
         {/* ── Header bar ─────────────────────────────────────────────── */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            padding: '8px 16px',
-            borderBottom: '1px solid var(--border)',
-            backgroundColor: 'var(--surface)',
-            flexShrink: 0,
-            fontSize: 13,
-          }}
-        >
-          {/* Role selector */}
+        <div className="flex shrink-0 items-center gap-3 border-b border-border bg-card px-3 py-2">
           {roles.length > 0 && (
             <select
               value={selectedRoleId}
               onChange={(e) => setSelectedRoleId(e.target.value)}
-              style={{
-                background: 'var(--surface-2)',
-                color: 'var(--foreground)',
-                border: '1px solid var(--border)',
-                borderRadius: 6,
-                padding: '4px 8px',
-                fontSize: 13,
-                cursor: 'pointer',
-              }}
+              className="rounded-md border border-border bg-input px-2 py-1 text-xs text-foreground"
             >
               {roles.map((role) => (
                 <option key={role.id} value={role.id}>
@@ -213,19 +146,10 @@ function ChatPage() {
             </select>
           )}
 
-          {/* Model selector */}
           <select
-            value={currentModel}
+            value={modelAlias}
             onChange={(e) => handleModelChange(e.target.value)}
-            style={{
-              background: 'var(--surface-2)',
-              color: 'var(--foreground)',
-              border: '1px solid var(--border)',
-              borderRadius: 6,
-              padding: '4px 8px',
-              fontSize: 13,
-              cursor: 'pointer',
-            }}
+            className="rounded-md border border-border bg-input px-2 py-1 text-xs text-foreground"
           >
             {MODEL_OPTIONS.map((m) => (
               <option key={m.alias} value={m.alias}>
@@ -234,24 +158,13 @@ function ChatPage() {
             ))}
           </select>
 
-          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{currentModelLabel}</span>
+          <span className="text-[11px] text-muted-foreground">{currentModelLabel}</span>
 
-          {/* Spacer */}
-          <div style={{ flex: 1 }} />
+          <div className="flex-1" />
 
-          {/* New Chat button */}
           <button
             onClick={handleNewChat}
-            style={{
-              background: 'var(--primary)',
-              color: 'var(--primary-foreground)',
-              border: 'none',
-              borderRadius: 6,
-              padding: '4px 12px',
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: 'pointer',
-            }}
+            className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             New Chat
           </button>

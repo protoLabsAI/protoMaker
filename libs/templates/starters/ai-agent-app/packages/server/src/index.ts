@@ -6,6 +6,7 @@ import tracesRouter from './routes/traces.js';
 import commandsRouter from './routes/commands.js';
 import promptsRouter from './routes/prompts.js';
 import rolesRouter from './routes/roles.js';
+import { startWebSocketServer } from './ws.js';
 
 // ─── App factory ──────────────────────────────────────────────────────────────
 
@@ -54,4 +55,7 @@ app.listen(PORT, () => {
   const { modelId, provider } = getDefaultModel();
   console.log(`Server listening on http://localhost:${PORT}`);
   console.log(`Active model: ${modelId} (${provider})`);
+
+  // Start the optional WebSocket sideband for tool progress events
+  startWebSocketServer();
 });

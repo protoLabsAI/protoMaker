@@ -77,6 +77,15 @@ export function startWebSocketServer(
     console.log(`WebSocket sideband listening on ws://localhost:${port}`);
   });
 
+  _wss.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      console.warn(`WebSocket port ${port} already in use — sideband disabled`);
+      _wss = null;
+    } else {
+      console.error('WebSocket server error:', err);
+    }
+  });
+
   return _wss;
 }
 

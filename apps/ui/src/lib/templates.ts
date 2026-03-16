@@ -86,8 +86,8 @@ export const starterTemplates: StarterTemplate[] = [
     name: 'AI Agent App',
     description:
       'Full-stack agentic chat application with a streaming React UI, Express server running an Anthropic tool-use loop, shared tool definitions (MCP/LangGraph/Express adapters), LangGraph flows, prompt registry, and Langfuse tracing.',
-    source: 'scaffold',
-    kitType: 'ai-agent-app',
+    source: 'clone',
+    repoUrl: 'https://github.com/protoLabsAI/protoAgent-starter',
     techStack: [
       'React 19',
       'Vite',

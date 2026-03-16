@@ -37,17 +37,9 @@ function RootLayout() {
   useThemeSync();
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        height: '100vh',
-        backgroundColor: 'var(--background)',
-        color: 'var(--foreground)',
-        overflow: 'hidden',
-      }}
-    >
+    <div className="flex h-screen overflow-hidden bg-background text-foreground">
       <Sidebar />
-      <main style={{ flex: 1, overflow: 'hidden' }}>
+      <main className="flex-1 overflow-hidden">
         <Outlet />
       </main>
     </div>
@@ -66,39 +58,19 @@ const navItems = [
 
 function Sidebar() {
   return (
-    <nav
-      style={{
-        width: 64,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 4,
-        padding: '16px 0',
-        borderRight: '1px solid var(--border)',
-        backgroundColor: 'var(--surface)',
-        flexShrink: 0,
-      }}
-    >
+    <nav className="flex w-16 shrink-0 flex-col items-center gap-1 border-r border-border bg-card py-4">
       {navItems.map(({ to, label, icon: Icon, exact }) => (
-        <Link key={to} to={to} style={{ width: 52 }} activeOptions={{ exact }}>
+        <Link key={to} to={to} className="w-[52px]" activeOptions={{ exact }}>
           {({ isActive }) => (
             <span
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 4,
-                padding: '10px 8px',
-                borderRadius: 8,
-                cursor: 'pointer',
-                color: isActive ? 'var(--primary)' : 'var(--text-muted)',
-                backgroundColor: isActive ? 'var(--surface-2)' : 'transparent',
-                transition: 'background-color 150ms, color 150ms',
-                textDecoration: 'none',
-              }}
+              className={`flex flex-col items-center gap-1 rounded-lg px-2 py-2.5 text-[10px] font-medium transition-colors ${
+                isActive
+                  ? 'bg-accent text-primary'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+              }`}
             >
               <Icon size={20} />
-              <span style={{ fontSize: 10, fontWeight: 500 }}>{label}</span>
+              {label}
             </span>
           )}
         </Link>

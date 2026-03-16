@@ -18,7 +18,7 @@ export interface ChatSession {
   id: string;
   /** Display title, auto-generated from the first user message. */
   title: string;
-  /** AI model identifier, e.g. "claude-3-5-haiku-20241022" */
+  /** AI model identifier, e.g. "claude-haiku-4-5-20251001" */
   model: string;
   messages: UIMessage[];
   createdAt: number; // epoch ms
@@ -73,7 +73,7 @@ export function autoTitle(messages: UIMessage[]): string {
 // ============================================================================
 
 const MAX_SESSIONS = 50;
-const DEFAULT_MODEL = 'claude-3-5-haiku-20241022';
+const DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
 
 export const useSessionStore = create<SessionStoreState & SessionActions>()(
   persist(

@@ -30,14 +30,12 @@
       "optional": true
     }
   },
+  "main": "./src/index.ts",
   "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    },
-    "./adapters/mcp": "./dist/adapters/mcp-adapter.js",
-    "./adapters/langgraph": "./dist/adapters/langgraph-adapter.js",
-    "./adapters/express": "./dist/adapters/express-adapter.js",
-    "./examples": "./dist/examples/index.js"
+    ".": "./src/index.ts",
+    "./adapters/mcp": "./src/adapters/mcp-adapter.ts",
+    "./adapters/langgraph": "./src/adapters/langgraph-adapter.ts",
+    "./adapters/express": "./src/adapters/express-adapter.ts",
+    "./examples": "./src/examples/index.ts"
   }
 }

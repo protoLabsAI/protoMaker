@@ -1,5 +1,33 @@
 # @protolabsai/platform
 
+## 0.67.0
+
+### Minor Changes
+
+- ### Features
+  - switch ai-agent-app template to git clone from protoAgent-starter repo
+  - switch ai-agent-app template to git clone from protoAgent-starter repo
+  - production chat patterns, CLI auth, proper theming
+  - production chat patterns, CLI auth, proper theming
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.67.0
+
+## 0.66.0
+
+### Minor Changes
+
+- ### Features
+  - production chat patterns, CLI auth, proper theming
+  - production chat patterns, CLI auth, proper theming
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.66.0
+
 ## 0.65.0
 
 ### Minor Changes
