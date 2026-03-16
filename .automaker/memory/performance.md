@@ -467,3 +467,8 @@ usageStats:
 - **Problem solved:** State machine cannot block on I/O while handling events; checkpoints must survive agent crashes
 - **Why this works:** Blocking on atomic writes would stall state transitions. Queueing + background flush decouples operational latency from durability guarantees. Exponential backoff prevents hammering storage on transient failures
 - **Trade-offs:** More complex lifecycle (pendingResumes map, resume interval timer) but much lower operational latency and better user experience
+
+#### [Gotcha] Token count (`summaryTokens`) is estimated _after_ building full text with footer, not before. Means reported compression ratio is misleading: summaryTokens includes footer overhead. (2026-03-16)
+- **Situation:** Token budgeting is critical to compaction; incorrect counts can cause cascading over-compression or wasted budget.
+- **Root cause:** Footer will be included in context, so realistic token tracking must include it. Otherwise, downstream compaction decisions think summary is smaller than it actually is.
+- **How to avoid:** Reported compression ratio is less impressive (footer adds 50–100 tokens), but actual memory footprint is accurate. Requires clearer documentation of what summaryTokens includes.
