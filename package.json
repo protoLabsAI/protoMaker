@@ -85,8 +85,10 @@
     "changeset:publish": "changeset publish",
     "changeset:status": "changeset status",
     "release:prepare": "node scripts/prepare-release-changeset.mjs",
-    "stats:generate": "node site/scripts/generate-stats.mjs && node site/scripts/generate-changelog.mjs && node site/scripts/generate-roadmap.mjs",
-    "stats:generate:full": "node site/scripts/generate-stats.mjs --with-ledger && node site/scripts/generate-changelog.mjs && node site/scripts/generate-roadmap.mjs"
+    "add-utm-params": "node site/scripts/add-utm-params.mjs",
+    "test:utm": "node --test site/scripts/validate-utm.test.mjs",
+    "stats:generate": "node site/scripts/generate-stats.mjs && node site/scripts/generate-changelog.mjs && node site/scripts/generate-roadmap.mjs && node site/scripts/add-utm-params.mjs",
+    "stats:generate:full": "node site/scripts/generate-stats.mjs --with-ledger && node site/scripts/generate-changelog.mjs && node site/scripts/generate-roadmap.mjs && node site/scripts/add-utm-params.mjs"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mts,cts,json,css,md,html,yml,yaml}": [

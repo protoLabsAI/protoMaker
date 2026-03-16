@@ -1,0 +1,140 @@
+{
+  "conventions": {
+    "source": [
+      "twitter",
+      "twitch",
+      "youtube",
+      "substack",
+      "github",
+      "linkedin",
+      "discord",
+      "hacker-news",
+      "protolabs"
+    ],
+    "medium": ["social", "video", "newsletter", "community", "referral", "website"],
+    "campaign": [
+      "nav",
+      "footer",
+      "cross-nav",
+      "github-nav",
+      "social-nav",
+      "launch",
+      "feature-announcement",
+      "changelog-update",
+      "roadmap-update",
+      "weekly-update",
+      "organic"
+    ]
+  },
+  "skip": [
+    "github.com/protoLabsAI/protoMaker/pull/",
+    "github.com/AutoMaker-Org/automaker/pull/",
+    "fonts.googleapis.com",
+    "fonts.gstatic.com",
+    "cdn.tailwindcss.com",
+    "umami.proto-labs.ai"
+  ],
+  "rules": [
+    {
+      "match": "x.com/protoLabsAI",
+      "source": "protolabs",
+      "medium": "social",
+      "campaign": "social-nav",
+      "description": "Links from site nav/footer to Twitter/X profile"
+    },
+    {
+      "match": "github.com/protoLabsAI",
+      "source": "protolabs",
+      "medium": "website",
+      "campaign": "github-nav",
+      "description": "Links from site to GitHub organization"
+    },
+    {
+      "match": "github.com/AutoMaker-Org/automaker",
+      "source": "protolabs",
+      "medium": "website",
+      "campaign": "github-nav",
+      "description": "Links from site to legacy GitHub repo"
+    },
+    {
+      "match": "docs.protolabs.studio",
+      "source": "protolabs",
+      "medium": "referral",
+      "campaign": "cross-nav",
+      "description": "Cross-site navigation to docs subdomain"
+    },
+    {
+      "match": "changelog.protolabs.studio",
+      "source": "protolabs",
+      "medium": "referral",
+      "campaign": "cross-nav",
+      "description": "Cross-site navigation to changelog subdomain"
+    },
+    {
+      "match": "roadmap.protolabs.studio",
+      "source": "protolabs",
+      "medium": "referral",
+      "campaign": "cross-nav",
+      "description": "Cross-site navigation to roadmap subdomain"
+    },
+    {
+      "match": "report.protolabs.studio",
+      "source": "protolabs",
+      "medium": "referral",
+      "campaign": "cross-nav",
+      "description": "Cross-site navigation to report subdomain"
+    },
+    {
+      "match": "protolabs.consulting",
+      "source": "protolabs",
+      "medium": "referral",
+      "campaign": "cross-nav",
+      "description": "Cross-site navigation to consulting subdomain"
+    },
+    {
+      "match": "protolabs.studio",
+      "source": "protolabs",
+      "medium": "referral",
+      "campaign": "cross-nav",
+      "description": "Cross-site navigation back to main site"
+    }
+  ],
+  "outboundSharing": {
+    "twitter": {
+      "source": "twitter",
+      "medium": "social",
+      "campaign": "organic",
+      "description": "Links shared manually on Twitter/X"
+    },
+    "twitch": {
+      "source": "twitch",
+      "medium": "video",
+      "campaign": "stream",
+      "description": "Links in Twitch stream descriptions"
+    },
+    "youtube": {
+      "source": "youtube",
+      "medium": "video",
+      "campaign": "description",
+      "description": "Links in YouTube video descriptions"
+    },
+    "substack": {
+      "source": "substack",
+      "medium": "newsletter",
+      "campaign": "weekly-update",
+      "description": "Links in Substack newsletter"
+    },
+    "discord": {
+      "source": "discord",
+      "medium": "community",
+      "campaign": "organic",
+      "description": "Links shared in Discord"
+    },
+    "hacker-news": {
+      "source": "hacker-news",
+      "medium": "community",
+      "campaign": "organic",
+      "description": "Links posted on Hacker News"
+    }
+  }
+}
