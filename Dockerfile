@@ -35,6 +35,7 @@ COPY libs/observability/package*.json ./libs/observability/
 COPY libs/tools/package*.json ./libs/tools/
 COPY libs/pen-parser/package*.json ./libs/pen-parser/
 COPY libs/templates/package*.json ./libs/templates/
+COPY libs/context-engine/package*.json ./libs/context-engine/
 COPY libs/ui/package*.json ./libs/ui/
 
 # Copy scripts (needed by npm workspace)
