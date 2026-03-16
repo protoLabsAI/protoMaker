@@ -18,6 +18,10 @@ protoLabs methodology. Scan any repo, analyze gaps, propose alignment, and execu
 - **[CI/CD Setup](./ci-cd-setup)** — GitHub Actions and branch protection setup
 - **[Flow Development Pattern](./flow-development-pattern)** — 5-layer flow development pattern
 
+## Content & Marketing
+
+- **[Twitch to YouTube Shorts](./twitch-to-youtube-shorts)** — Post-stream workflow: OBS setup, OpusClip, Gling, TubeBuddy scheduling
+
 ## Quick links
 
 | Task                         | Start here                                                   |
