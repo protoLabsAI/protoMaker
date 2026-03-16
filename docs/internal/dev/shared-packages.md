@@ -18,6 +18,7 @@ libs/
 ├── spec-parser/        # XML/markdown spec parsing
 ├── git-utils/          # Git operations
 ├── flows/              # LangGraph state graph primitives
+├── context-engine/     # SQLite conversation + workflow checkpoint storage
 └── observability/      # Langfuse tracing and cost tracking
 ```
 
@@ -292,6 +293,59 @@ import { LangfuseClient, wrapProviderWithTracing } from '@protolabsai/observabil
 ```
 
 **Full documentation:** [Observability Package](./observability-package)
+
+### @protolabsai/context-engine
+
+**Use when:** You need SQLite-backed persistence for agent conversations or durable workflow checkpoints.
+
+**Import for:**
+
+- `ConversationStore` - Persist conversation threads and messages across agent sessions
+- `estimateTokens(text)` - Estimate token count (4 chars/token heuristic) for context budgeting
+- `runMigrations`, `getCurrentSchemaVersion` - Database schema migration utilities
+- Types: `MessageRole`, `PartType`, `ConversationRow`, `MessageRow`, `MessagePartRow`
+- Types: `CreateConversationInput`, `CreateMessageInput`, `CreatePartInput`, `ListMessagesOptions`
+
+**Workflow checkpoint store** (`@protolabsai/context-engine/workflow`):
+
+- `CheckpointStore` - SQLite-backed durable workflow execution store with optimistic locking
+- Types: `WorkflowExecution`, `WorkflowStep`, `WorkflowState`, `CreateWorkflowInput`, `UpdateWorkflowStateInput`, `WorkflowQuery`
+
+**Example — conversation persistence:**
+
+```typescript
+import { ConversationStore } from '@protolabsai/context-engine';
+
+const store = new ConversationStore();
+store.open('/path/to/conversations.db');
+
+const conv = store.createConversation({ title: 'Agent session' });
+store.createMessage(conv.id, {
+  role: 'user',
+  parts: [{ type: 'text', content: 'Hello!' }],
+});
+
+const messages = store.listMessages(conv.id);
+store.close();
+```
+
+**Example — workflow checkpointing:**
+
+```typescript
+import { CheckpointStore } from '@protolabsai/context-engine/workflow';
+
+const store = new CheckpointStore();
+store.open('/path/to/checkpoints.db');
+
+const exec = store.createWorkflow({ featureId: 'feat-123', checkpointData: { state: 'REVIEW' } });
+store.updateWorkflowState({
+  id: exec.id,
+  newState: 'suspended',
+  checkpointData: { state: 'REVIEW' },
+});
+```
+
+**Note:** `PipelineCheckpointService` in `apps/server/src/services/` is the production layer on top of these primitives. Prefer using the service through `LeadEngineerService.setCheckpointService()` rather than instantiating `CheckpointStore` directly in server code.
 
 ## Common Patterns
 
