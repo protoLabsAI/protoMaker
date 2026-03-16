@@ -45,6 +45,13 @@ import {
 const execAsync = promisify(exec);
 const logger = createLogger('FeatureScheduler');
 
+/**
+ * Files that are frequently modified by parallel agents and cause merge conflicts.
+ * When two features both declare one of these in filesToModify, the scheduler
+ * defers the later candidate to avoid predictable merge_conflict failures.
+ */
+const HOT_FILE_BASENAMES = new Set(['wiring.ts', 'event.ts', 'index.ts', 'services.ts']);
+
 // ── Public interfaces ──────────────────────────────────────────────────────
 
 /** Structured outcome from an auto-loop feature dispatch attempt. */
@@ -71,6 +78,8 @@ export interface SchedulerCallbacks {
   getGlobalRunningCount(): number;
   hasInProgressFeatures(projectPath: string, branchName: string | null): Promise<boolean>;
   isFeatureRunning(featureId: string): boolean;
+  /** Returns IDs of all currently running features (for hot-file overlap checks). */
+  getRunningFeatureIds(): string[];
   isFeatureActiveInPipeline(featureId: string): boolean;
   isFeatureFinished(feature: Feature): boolean;
   emitAutoModeEvent(eventType: string, data: Record<string, unknown>): void;
@@ -168,6 +177,53 @@ export class FeatureScheduler {
     this.instanceId = instanceId;
     this.getAssignedProjectSlugs = getAssignedProjectSlugs;
     this.overflowEnabled = overflowEnabled;
+  }
+
+  // ── Hot-file overlap detection ───────────────────────────────────────────
+
+  /**
+   * Check if a candidate feature shares hot files with any currently running
+   * or starting features. Returns the overlapping basenames, or an empty array
+   * if no overlap is detected.
+   *
+   * Only blocks when both candidate AND at least one active feature explicitly
+   * declare overlapping hot files in filesToModify. If filesToModify is absent
+   * or empty on either side, no blocking occurs.
+   */
+  private async getHotFileOverlap(
+    projectPath: string,
+    candidate: Feature,
+    startingFeatureIds: Set<string>
+  ): Promise<string[]> {
+    const candidateFiles = candidate.filesToModify;
+    if (!candidateFiles || candidateFiles.length === 0) return [];
+
+    // Extract hot basenames from the candidate
+    const candidateHotFiles = candidateFiles
+      .map((f) => path.basename(f))
+      .filter((b) => HOT_FILE_BASENAMES.has(b));
+    if (candidateHotFiles.length === 0) return [];
+
+    // Collect IDs of all active features (running + starting)
+    const activeIds = new Set([...this.callbacks.getRunningFeatureIds(), ...startingFeatureIds]);
+    activeIds.delete(candidate.id); // exclude self
+
+    if (activeIds.size === 0) return [];
+
+    // Load active features and check for overlap
+    const overlapping = new Set<string>();
+    for (const fid of activeIds) {
+      const feature = await this.featureLoader.get(projectPath, fid);
+      if (!feature?.filesToModify || feature.filesToModify.length === 0) continue;
+      for (const filePath of feature.filesToModify) {
+        const basename = path.basename(filePath);
+        if (candidateHotFiles.includes(basename)) {
+          overlapping.add(basename);
+        }
+      }
+    }
+
+    return [...overlapping];
   }
 
   // ── Loop ─────────────────────────────────────────────────────────────────
@@ -423,6 +479,21 @@ export class FeatureScheduler {
               `[AutoLoop] Race condition detected: at capacity ${currentRunningCount} running + ${currentStartingCount} starting = ${currentTotalOccupied}/${projectState.config.maxConcurrency} when trying to start feature ${nextFeature.id}, skipping`
             );
             await this.callbacks.sleep(1000);
+            continue;
+          }
+
+          // Hot-file overlap guard: defer features that share hot files with active agents
+          // to prevent predictable merge_conflict failures from parallel modifications.
+          const hotOverlap = await this.getHotFileOverlap(
+            projectPath,
+            nextFeature,
+            projectState.startingFeatures
+          );
+          if (hotOverlap.length > 0) {
+            logger.warn(
+              `[AutoLoop] Deferring feature ${nextFeature.id} (${nextFeature.title}) — hot-file overlap with active agents: ${hotOverlap.join(', ')}`
+            );
+            await this.callbacks.sleep(SLEEP_INTERVAL_NORMAL_MS);
             continue;
           }
 

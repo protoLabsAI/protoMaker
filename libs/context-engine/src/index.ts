@@ -24,3 +24,5 @@
  */
 
 export * from './store/index.js';
+export * from './compaction/index.js';
+export * from './assembly/index.js';
