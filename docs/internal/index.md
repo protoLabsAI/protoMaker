@@ -56,6 +56,7 @@ This directory is NOT included in the public VitePress build. Content here is fo
 - [Notes Panel](./dev/notes-panel.md)
 - [Clean Code](./dev/clean-code.md)
 - [Testing Patterns](./dev/testing-patterns.md)
+- [QA Engineer (Quinn)](./dev/qa-engineer.md)
 - [Contribution Model](./dev/contribution-model.md)
 - [Desktop Testing](./dev/desktop-testing.md)
 - [Add New Cursor Model](./dev/add-new-cursor-model.md)
