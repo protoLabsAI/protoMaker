@@ -4,7 +4,7 @@ Aggressively remove all dead pipeline/flow infrastructure (~2,000 lines of disab
 
 **Status:** active
 **Created:** 2026-03-14T20:48:29.493Z
-**Updated:** 2026-03-14T23:19:06.319Z
+**Updated:** 2026-03-16T18:46:44.274Z
 
 ## Research Summary
 

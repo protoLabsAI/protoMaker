@@ -300,3 +300,13 @@ usageStats:
 - **Problem solved:** Easy to accidentally lose fields when cloning objects during expansion
 - **Why this works:** Catches silent data loss bugs where expansion omits fields. Instance must be identical to parent except for id and date
 - **Trade-offs:** Comprehensive but verbose test. Guarantees instances are complete objects. Cost: need to update test whenever new event fields are added
+
+#### [Gotcha] SQLite operations complete within the same millisecond when executed in rapid succession. Tests checking timestamp-based ordering (updated_at) will fail with non-deterministic results because both records receive identical ISO timestamps. (2026-03-16)
+- **Situation:** Test 'listConversations returns all in recency order' failed because createConversation(A) and createConversation(B) executed too fast to produce different updated_at values.
+- **Root cause:** SQLite uses system time for timestamps. In tests, operations are CPU-bound and hit the same clock tick. Attempting to fix via updateConversation() or createMessage() still hits the same millisecond.
+- **How to avoid:** Using vi.useFakeTimers() makes tests deterministic and readable but requires manual time manipulation in test setup. Real-world operations (human-paced) naturally spread across different timestamps.
+
+#### [Gotcha] Package-local vitest.config.ts required to prevent root workspace config from interfering with package tests (2026-03-16)
+- **Situation:** Context-engine package tests failed when inheriting root vitest.workspace.ts config
+- **Root cause:** Root workspace config defines global settings (environment, globals) that don't apply to individual packages. Package needs to override (name, globals: true, environment: 'node', coverage thresholds).
+- **How to avoid:** Local config duplication vs. ability to run tests with correct environment. Monorepo testing trade-off: explicit per-package config >  implicit inheritance.

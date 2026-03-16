@@ -4,7 +4,7 @@ Unify all feature creation paths to consistently set projectSlug, enabling proje
 
 **Status:** completed
 **Created:** 2026-03-13T22:49:31.382Z
-**Updated:** 2026-03-14T02:17:57.017Z
+**Updated:** 2026-03-16T18:46:44.345Z
 
 ## PRD
 

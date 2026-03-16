@@ -4,7 +4,7 @@ Build two production-quality Astro starter kits (docs + portfolio/marketing) wit
 
 **Status:** completed
 **Created:** 2026-03-14T23:26:49.046Z
-**Updated:** 2026-03-15T01:10:37.087Z
+**Updated:** 2026-03-16T18:46:44.059Z
 
 ## PRD
 

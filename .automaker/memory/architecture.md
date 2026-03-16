@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 573
-  referenced: 145
-  successfulFeatures: 145
+  loaded: 587
+  referenced: 152
+  successfulFeatures: 152
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -1948,3 +1948,105 @@ usageStats:
 - **Situation:** Pure event subscription model with no polling or health check fallback
 - **Root cause:** Event-driven design is efficient and real-time, but creates invisible coupling points
 - **How to avoid:** Efficient real-time updates vs difficult debugging if event sources stop emitting
+
+#### [Gotcha] tsup.config.ts must be explicitly provided for npm run build:packages to work—it is NOT auto-discovered from tsconfig.json (2026-03-16)
+- **Situation:** New workspace package build failed silently until explicit build config was added
+- **Root cause:** npm run build:packages scans for tsup.config.ts in each package directory; tsconfig.json alone doesn't trigger inclusion in the monorepo build pipeline
+- **How to avoid:** Explicit per-package config is verbose but makes build inclusion explicit and auditable
+
+#### [Pattern] New workspace packages require TWO manual package-lock.json entries when npm install cannot be run: one under 'packages.libs/<name>' (with metadata, engines, devDependencies) and one under 'packages.node_modules/@protolabsai/<name>' (symlink declaration) (2026-03-16)
+- **Problem solved:** Adding new workspace package in a worktree without npm install step
+- **Why this works:** Lock file entries must mirror both the workspace package declaration and the node_modules symlink layout for offline-first CI/CD and predictable installs
+- **Trade-offs:** Manual entries are error-prone but required by monorepo's hermetic build constraints
+
+### Package starts as type-definitions-only (interfaces and DEFAULT_COMPACTION_CONFIG) with concrete implementations (in-memory store, DAG builder, LLM summarizer) deferred to subsequent milestones (2026-03-16)
+- **Context:** Need to ship package scaffold and API contract before implementation details are finalized
+- **Why:** Allows API to stabilize and be validated by downstream consumers (agents, retrieval) without committing to implementation details; decouples contract design from performance tuning
+- **Rejected:** Full implementation in one milestone—would delay contract validation and make interface changes costly once code depends on it
+- **Trade-offs:** Enables parallel work (API users can develop stubs) but requires discipline to not leak implementation assumptions into the interface
+- **Breaking if changed:** Without interface-only approach, any DAG model refinement would require implementation rework, compounding changes
+
+#### [Pattern] Lazy-loading pattern for context windows: intercept large content, return compact reference + summary, provide lcm_expand() tool for agents to drill in on-demand (2026-03-16)
+- **Problem solved:** Token limits on LLM context windows require managing content size while preserving full data access
+- **Why this works:** Respects token budget while giving agents agency to expand only what's needed. Similar to REST pagination but applied to context management. Enables agent to make informed decision based on exploration summary before committing tokens to full content.
+- **Trade-offs:** Adds database indirection and tool call overhead, but frees ~25K tokens per large file and supports atomic content retrieval
+
+#### [Gotcha] PipelineCheckpointService existed with a setter method but was never instantiated or wired into LeadEngineerService. The infrastructure was half-built. (2026-03-16)
+- **Situation:** Discovered when implementing durable workflows - the checkpoint service had been added to the codebase but the critical wiring step (instantiation in services.ts + calling setCheckpointService) was missing.
+- **Root cause:** Suggests incomplete refactoring or infrastructure PR that wasn't fully integrated. Easy to add setters without adding the corresponding setup code.
+- **How to avoid:** Full wiring required only 2-3 lines but was invisible until actually implementing the feature that uses it
+
+### Checkpoint is saved BEFORE processor.enter(), not after. Pre-transition checkpoint vs post-transition. (2026-03-16)
+- **Context:** If a crash occurs during processor execution (which is where complex state changes happen), post-transition checkpoint leaves the system unrecoverable.
+- **Why:** In durable workflows, the goal is to recover from crashes mid-processing. Checkpointing before means: currentState is saved, processor executes, if it crashes we can resume from the saved state and re-run the processor.
+- **Rejected:** Post-transition checkpoint (await checkpoint after processor completes) - this leaves a gap where crashes during processing cannot be recovered
+- **Trade-offs:** Pre-transition means you might re-run a processor twice in pathological cases (process once, crash, restart and process again). Trade acceptable duplication for recoverability.
+- **Breaking if changed:** If checkpoint timing moves to post-transition, any failure during processor.enter() becomes unrecoverable and requires manual intervention
+
+#### [Pattern] PersistQueue decouples checkpoint I/O from the state machine's critical path. Checkpoints are enqueued asynchronously instead of awaited inline. (2026-03-16)
+- **Problem solved:** Checkpoint writes to disk/database can be slow (100ms-500ms+). If these block the state machine, feature processing throughput is bottlenecked by I/O latency.
+- **Why this works:** Background queue with retry logic provides durability guarantees without blocking the state machine. State transitions can proceed immediately; I/O happens in the background with exponential-backoff retry (3 attempts: 100ms, 200ms, 400ms).
+- **Trade-offs:** Adds complexity (queue management, retry logic, potential out-of-order delivery if not careful) but allows state machine to process multiple features concurrently without I/O blocking
+
+#### [Gotcha] REVIEW/MERGE states can self-loop indefinitely while waiting for external events (CI to complete, review to happen). Busy-polling blocks other features. Solution: checkpoint and return early, let external interval re-trigger. (2026-03-16)
+- **Situation:** State machine is processing feature by feature. If REVIEW state loops waiting for CI, it blocks the whole queue. But REVIEW can't transition to MERGE until CI passes - that change is external to the state machine.
+- **Root cause:** Suspend on self-loop breaks the busy-poll anti-pattern: save currentState, emit pipeline:feature-suspended event, return immediately. A separate 1-minute interval re-triggers process() for suspended features. This unblocks the state machine to process other features.
+- **How to avoid:** Adds resume-suspended interval (1-minute latency) but unblocks the state machine and allows parallel feature processing. Also simplifies state machine logic (no complex wait/retry inside processors).
+
+#### [Gotcha] Checkpointed state becomes stale over time. REVIEW state checkpoints with ciStatus='pending', but 5 minutes later CI has actually completed. On resume, using the stale checkpoint causes re-entry to stale logic. (2026-03-16)
+- **Situation:** Feature is suspended waiting for CI. Checkpoint saved with ciStatus='pending'. Time passes. CI finishes. Service restarts and resumes from checkpoint. Code sees ciStatus='pending' and repeats old CI-waiting logic instead of moving to MERGE.
+- **Root cause:** Must prefer live feature.prNumber and live CI status from PR API over checkpointed values. Checkpoints preserve state machine state, not external reality. External state (PR object, CI status) must always be re-fetched on resume.
+- **How to avoid:** Requires live fetch of feature/PR data on every resume (extra API call) but guarantees the state machine sees current reality, not stale cached state from minutes ago
+
+#### [Pattern] On service start(), scan all existing checkpoints via checkpointService.listAll() and queue them into pendingResumes Map for 1-minute resume interval to re-trigger. (2026-03-16)
+- **Problem solved:** Service crashes mid-feature processing. Multiple features have checkpoints saved. Service restarts. Those features are orphaned - no one knows they need to resume.
+- **Why this works:** Crash recovery: on startup, the service discovers all abandoned checkpoints and enqueues them for resume. This ensures no work is lost even if the service dies repeatedly.
+- **Trade-offs:** Adds startup scan cost but guarantees no features are orphaned after crashes. The scan happens once at boot, not per-request.
+
+### pendingResumes Map is shared service-wide, protected by activeFeatures guard and flowState === 'running' check in resume interval. (2026-03-16)
+- **Context:** Multiple features might be suspended. Service might be shutting down or in a degraded state. Can't blindly resume everything.
+- **Why:** The resume interval respects operational state: only re-trigger if the service is actively processing and the feature is in activeFeatures. Prevents resume attempts during shutdown or when service is paused.
+- **Rejected:** Resume everything in pendingResumes regardless of service state (could cause chaos during shutdown or recovery)
+- **Trade-offs:** Adds state checks (small performance cost) but prevents orphaned resumes that would confuse the shutdown sequence or retry suspended features when the service is degraded
+- **Breaking if changed:** Removing the guard checks could cause pending features to resume during shutdown, triggering partial state transitions that leave the system in an inconsistent state
+
+#### [Gotcha] clearIntervals() must handle both scheduler-managed intervals and raw setInterval() paths. The resume-suspended interval can be registered either way depending on initialization path. (2026-03-16)
+- **Situation:** Service supports two scheduling modes: via Scheduler class or raw setInterval. Both paths needed updates to deregister the new resume-suspended interval, but this wasn't obvious.
+- **Root cause:** Leftover intervals cause memory leaks and ghost resume attempts after the service is destroyed. Both paths must be cleaned up.
+- **How to avoid:** Requires more clearIntervals() maintenance (2 paths to think about) but ensures clean shutdown and no memory leaks
+
+### Resume-suspended interval runs every 1 minute, not event-driven from external systems (e.g., CI webhook). (2026-03-16)
+- **Context:** Features are suspended waiting for CI or reviews. Could wait for CI webhooks or GitHub events to trigger resume. Chose polling instead.
+- **Why:** Polling is simple, reliable, and decoupled from external webhooks. 1-minute latency is acceptable for non-critical features. Event-driven would require webhook integration, GitHub OAuth, and handling race conditions where events arrive before the feature is suspended.
+- **Rejected:** Event-driven resume from CI webhooks (more responsive but adds complexity and external dependencies)
+- **Trade-offs:** Polling adds 1-minute latency in the happy path (feature is ready but service doesn't know for up to 1 minute) but gains simplicity and reliability
+- **Breaking if changed:** Removing polling without replacing with event-driven would cause suspended features to never resume until manually triggered or service restart
+
+### Shutdown sequence ordered: agents → Langfuse → SQLite → HTTP server (2026-03-16)
+- **Context:** Graceful shutdown must clean up in dependency order to prevent data loss and half-closed states
+- **Why:** Agents must stop first to prevent new writes to databases. Langfuse must flush while operations complete. SQLite closes after in-flight writes finish. HTTP server closes last to handle final cleanup. Reverse order would orphan requests or lose trace data.
+- **Rejected:** Parallel shutdown of all components would risk closing DB before agents finish writing, or closing server before traces flush
+- **Trade-offs:** Sequential ordering is slower but safe. Parallel would be faster but risky.
+- **Breaking if changed:** Reordering steps causes data loss (if SQLite closes before agents) or incomplete traces (if HTTP closes before Langfuse flushes). Agents must go first.
+
+#### [Pattern] Use `.unref()` on force-kill watchdog timer to prevent holding event loop alive (2026-03-16)
+- **Problem solved:** 30-second timeout needs to fire only if shutdown hangs, not keep process open if shutdown completes early
+- **Why this works:** Without `.unref()`, the setTimeout keeps the event loop alive even after all shutdown steps complete and process.exit(0) is called, delaying process termination. `.unref()` removes this artificial hold.
+- **Trade-offs:** `.unref()` adds subtle behavior (timer doesn't block exit) but is non-obvious to developers unfamiliar with Node.js event loop internals. Without it, shutdown appears to hang even when it succeeds.
+
+#### [Gotcha] Non-fatal error handling in each step creates risk of exiting(0) despite partial failure (2026-03-16)
+- **Situation:** Each shutdown step wraps errors in try/catch and logs warnings, but shutdown continues and exits(0) regardless
+- **Root cause:** Chosen for resilience—if one component fails to close cleanly, other components still get a chance to close rather than hard-killing. Better than cascading failures.
+- **How to avoid:** More resilient but observability cost: code exits cleanly (0) even if something failed to close. Requires careful log analysis to detect partial failures. Operators might miss that SQLite didn't close properly if Langfuse flush succeeded.
+
+### Module-level `shuttingDown` flag guards against re-entrant signal calls (2026-03-16)
+- **Context:** SIGTERM and SIGINT can fire multiple times (e.g., rapid Ctrl+C presses), and process signal handlers are called multiple times if not guarded
+- **Why:** Prevents shutdown steps from executing twice in parallel, which would cause double-closes on services (e.g., closing SQLite twice) and confusing log interleaving
+- **Rejected:** Without guard, second SIGTERM during active shutdown re-enters runGracefulShutdown, executing steps concurrently or duplicatively
+- **Trade-offs:** Flag is module-level (shared across all callers), so it's not reusable in parallel shutdown scenarios (though that's rare). Trade simplicity for single-process correctness.
+- **Breaking if changed:** Removing the flag causes concurrent shutdown execution: if SIGTERM fires while shutdown is in progress, steps run twice, potentially closing the same resource twice and corrupting state
+
+#### [Pattern] Options interface with callbacks for dependency injection instead of hard-coded service calls (2026-03-16)
+- **Problem solved:** Shutdown handler needs to call `autoModeService.shutdown()` and `knowledgeStoreService.close()` but doesn't own these services
+- **Why this works:** Decouples shutdown logic from service implementation. Caller decides what to shut down. Enables testing (pass mock callbacks), extension (caller can inject additional cleanups), and flexibility if services change.
+- **Trade-offs:** Options pattern adds an interface layer (more code to maintain) but gains flexibility. Caller must understand the shutdown contract and pass correct callbacks. Testing easier, real usage requires setup ceremony.

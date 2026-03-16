@@ -6,7 +6,7 @@
   "ongoing": true,
   "milestones": [],
   "createdAt": "2026-03-03T20:50:26.903Z",
-  "updatedAt": "2026-03-09T18:32:15.034Z",
+  "updatedAt": "2026-03-16T18:46:44.108Z",
   "updates": [
     {
       "id": "update-1772709832216-bc8b8j",
@@ -16,5 +16,6 @@
       "createdAt": "2026-03-05T11:23:52.216Z"
     }
   ],
-  "color": "#ef4444"
+  "color": "#ef4444",
+  "health": "on-track"
 }

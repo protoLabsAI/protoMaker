@@ -25,6 +25,53 @@ import type {
 
 const logger = createLogger('LeadEngineerService');
 
+// ────────────────────────── PersistQueue ──────────────────────────
+
+/**
+ * Background persist queue — decouples checkpoint I/O from the state machine.
+ * Saves are enqueued and executed sequentially with exponential-backoff retry.
+ */
+class PersistQueue {
+  private readonly queue: Array<() => Promise<void>> = [];
+  private running = false;
+  private readonly maxRetries: number;
+
+  constructor(maxRetries = 3) {
+    this.maxRetries = maxRetries;
+  }
+
+  enqueue(task: () => Promise<void>): void {
+    this.queue.push(task);
+    if (!this.running) void this.drain();
+  }
+
+  private async drain(): Promise<void> {
+    this.running = true;
+    while (this.queue.length > 0) {
+      const task = this.queue.shift()!;
+      await this.runWithRetry(task);
+    }
+    this.running = false;
+  }
+
+  private async runWithRetry(task: () => Promise<void>): Promise<void> {
+    for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+      try {
+        await task();
+        return;
+      } catch (err) {
+        if (attempt < this.maxRetries) {
+          await new Promise((r) => setTimeout(r, 100 * Math.pow(2, attempt)));
+        } else {
+          // Final attempt failed — log and move on (non-fatal)
+          const queueLogger = createLogger('PersistQueue');
+          queueLogger.error('Checkpoint persist failed after max retries:', err);
+        }
+      }
+    }
+  }
+}
+
 // ────────────────────────── Goal Gates ──────────────────────────
 
 /**
@@ -99,6 +146,7 @@ export class FeatureStateMachine {
   private readonly goalGates: Map<string, GoalGateValidator>;
   private checkpointService?: PipelineCheckpointService;
   private events?: EventEmitter;
+  private readonly persistQueue: PersistQueue;
 
   constructor(
     serviceContext: ProcessorServiceContext,
@@ -120,6 +168,7 @@ export class FeatureStateMachine {
     this.goalGates = opts?.goalGatesEnabled === false ? new Map() : new Map(DEFAULT_GOAL_GATES);
     this.checkpointService = opts?.checkpointService;
     this.events = opts?.events;
+    this.persistQueue = new PersistQueue();
   }
 
   /**
@@ -225,6 +274,15 @@ export class FeatureStateMachine {
           timestamp: new Date().toISOString(),
         });
 
+        // Pre-transition checkpoint: persist currentState before processing begins.
+        // Ensures crash during processing is recoverable — resume starts at current state.
+        if (this.checkpointService) {
+          const cs = this.checkpointService;
+          this.persistQueue.enqueue(() =>
+            cs.save(projectPath, feature.id, currentState, ctx, completedStates, goalGateResults)
+          );
+        }
+
         await processor.enter(ctx);
         const result: StateTransitionResult = await processor.process(ctx);
         await processor.exit(ctx);
@@ -271,25 +329,49 @@ export class FeatureStateMachine {
           shouldContinue: result.shouldContinue,
         });
 
-        // Save checkpoint after successful transition
+        // Post-transition checkpoint: update to nextState after successful transition.
         if (this.checkpointService && result.nextState) {
-          try {
-            await this.checkpointService.save(
+          const cs = this.checkpointService;
+          const nextStateSnapshot = result.nextState;
+          this.persistQueue.enqueue(() =>
+            cs.save(
               projectPath,
               feature.id,
-              result.nextState,
+              nextStateSnapshot,
               ctx,
               completedStates,
               goalGateResults
-            );
-            this.emitPipelineEvent('pipeline:checkpoint-saved', {
-              featureId: feature.id,
-              state: result.nextState,
-              checkpointId: `${feature.id}-${result.nextState}`,
-            });
-          } catch (err) {
-            logger.error('Failed to save checkpoint', { error: err });
-          }
+            )
+          );
+          this.emitPipelineEvent('pipeline:checkpoint-saved', {
+            featureId: feature.id,
+            state: result.nextState,
+            checkpointId: `${feature.id}-${result.nextState}`,
+          });
+        }
+
+        // Suspend REVIEW/MERGE rather than busy-polling.
+        // A self-loop in a suspendable state means the processor is waiting for
+        // external progress (PR approval, CI). Checkpoint and exit cleanly so an
+        // external scheduler can re-trigger instead of blocking this event loop.
+        const SUSPENDABLE_STATES = new Set<FeatureProcessingState>(['REVIEW', 'MERGE']);
+        if (
+          result.shouldContinue &&
+          result.nextState === currentState &&
+          SUSPENDABLE_STATES.has(currentState)
+        ) {
+          logger.info('Suspending feature for external resume', {
+            featureId: feature.id,
+            state: currentState,
+            reason: result.reason,
+          });
+          this.emitPipelineEvent('pipeline:feature-suspended', {
+            featureId: feature.id,
+            state: currentState,
+            reason: result.reason ?? 'polling state — external resume required',
+          });
+          // Return without deleting the checkpoint — caller uses it to reschedule
+          return { finalState: currentState, context: ctx };
         }
 
         if (!result.shouldContinue || !result.nextState) {

@@ -35,3 +35,9 @@ usageStats:
 - **Situation:** TypeScript source compiles to dist/.js files. Node.js ESM doesn't infer .ts->.js transformation.
 - **Root cause:** NodeNext resolution follows strict Node.js behavior: requires exact file extension. TypeScript compiler strips extensions during emit but doesn't rewrite source imports.
 - **How to avoid:** Verbose import statements (import X from './file.js') vs Node.js compatibility
+
+
+#### [Gotcha] Promise returned by runGracefulShutdown never resolves—process.exit(0) terminates before await completes (2026-03-16)
+- **Situation:** Code calls `runGracefulShutdown(opts)` but the promise never resolves because the function calls process.exit(0)
+- **Root cause:** process.exit() is synchronous and terminates the process immediately. The promise chain from signal handlers (.catch() block) handles errors, but successful completion is handled by process exit, not promise resolution.
+- **How to avoid:** Promise return type is misleading but matches Node.js async patterns. Benefit is .catch() error handling in signal hooks. Cost is developer confusion about why promise never resolves.

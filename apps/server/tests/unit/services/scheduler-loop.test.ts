@@ -772,3 +772,110 @@ describe('FeatureScheduler - project affinity filtering', () => {
     expect(ownIdx).toBeLessThan(overflowIdx);
   });
 });
+
+// ─── FeatureScheduler - human assignee filtering ─────────────────────────────
+
+describe('FeatureScheduler - human assignee filtering', () => {
+  let scheduler: FeatureScheduler;
+  const mockFeatureLoader = {
+    update: vi.fn().mockResolvedValue(undefined),
+    get: vi.fn(),
+    getAll: vi.fn(),
+    create: vi.fn(),
+    delete: vi.fn(),
+  };
+  const mockEvents = {
+    subscribe: vi.fn(),
+    emit: vi.fn(),
+    on: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
+    broadcast: vi.fn(),
+  };
+  const mockRunner: PipelineRunner = { run: vi.fn() };
+  const mockCallbacks: SchedulerCallbacks = {
+    getRunningCountForWorktree: vi.fn().mockResolvedValue(0),
+    hasInProgressFeatures: vi.fn().mockResolvedValue(false),
+    isFeatureRunning: vi.fn().mockReturnValue(false),
+    isFeatureFinished: vi.fn().mockReturnValue(false),
+    emitAutoModeEvent: vi.fn(),
+    getHeapUsagePercent: vi.fn().mockReturnValue(0),
+    getMostRecentRunningFeature: vi.fn().mockReturnValue(null),
+    recordSuccessForProject: vi.fn(),
+    trackFailureAndCheckPauseForProject: vi.fn().mockReturnValue(false),
+    signalShouldPauseForProject: vi.fn(),
+    sleep: vi.fn().mockResolvedValue(undefined),
+    HEAP_USAGE_STOP_NEW_AGENTS_THRESHOLD: 85,
+    HEAP_USAGE_ABORT_AGENTS_THRESHOLD: 92,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetFeaturesDir.mockReturnValue('/fake/project/.automaker/features');
+    mockEvents.on.mockReturnValue({ unsubscribe: vi.fn() });
+    mockFeatureLoader.update.mockResolvedValue(undefined);
+    scheduler = new FeatureScheduler({
+      featureLoader: mockFeatureLoader as never,
+      settingsService: null,
+      events: mockEvents as never,
+      runner: mockRunner,
+      callbacks: mockCallbacks,
+    });
+  });
+
+  it('skips a feature assigned to a human (e.g. "josh")', async () => {
+    const humanAssigned = makeFeature({ id: 'feat-human', assignee: 'josh' });
+    const unassigned = makeFeature({ id: 'feat-unassigned' });
+
+    setupDefaultExecMocks();
+    setupFeaturesOnDisk([humanAssigned, unassigned]);
+
+    const result = await scheduler.loadPendingFeatures('/fake/project');
+    const ids = result.map((f) => f.id);
+
+    expect(ids).not.toContain('feat-human');
+    expect(ids).toContain('feat-unassigned');
+  });
+
+  it('picks up a feature with assignee set to "agent"', async () => {
+    const agentAssigned = makeFeature({ id: 'feat-agent', assignee: 'agent' });
+
+    setupDefaultExecMocks();
+    setupFeaturesOnDisk([agentAssigned]);
+
+    const result = await scheduler.loadPendingFeatures('/fake/project');
+    const ids = result.map((f) => f.id);
+
+    expect(ids).toContain('feat-agent');
+  });
+
+  it('picks up a feature with no assignee (undefined)', async () => {
+    const noAssignee = makeFeature({ id: 'feat-noassignee' });
+    // Confirm no assignee field is set
+    expect(noAssignee.assignee).toBeUndefined();
+
+    setupDefaultExecMocks();
+    setupFeaturesOnDisk([noAssignee]);
+
+    const result = await scheduler.loadPendingFeatures('/fake/project');
+    const ids = result.map((f) => f.id);
+
+    expect(ids).toContain('feat-noassignee');
+  });
+
+  it('skips all human-assigned features and returns only eligible ones', async () => {
+    const josh = makeFeature({ id: 'feat-josh', assignee: 'josh' });
+    const matt = makeFeature({ id: 'feat-matt', assignee: 'matt' });
+    const agentPick = makeFeature({ id: 'feat-agent', assignee: 'agent' });
+    const unassigned = makeFeature({ id: 'feat-unassigned' });
+
+    setupDefaultExecMocks();
+    setupFeaturesOnDisk([josh, matt, agentPick, unassigned]);
+
+    const result = await scheduler.loadPendingFeatures('/fake/project');
+    const ids = result.map((f) => f.id);
+
+    expect(ids).not.toContain('feat-josh');
+    expect(ids).not.toContain('feat-matt');
+    expect(ids).toContain('feat-agent');
+    expect(ids).toContain('feat-unassigned');
+  });
+});

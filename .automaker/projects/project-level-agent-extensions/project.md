@@ -4,7 +4,7 @@ Make agent roles extensible at the project level — discoverable from .automake
 
 **Status:** completed
 **Created:** 2026-03-13T18:25:10.033Z
-**Updated:** 2026-03-15T05:06:23.790Z
+**Updated:** 2026-03-16T18:46:44.322Z
 
 ## PRD
 

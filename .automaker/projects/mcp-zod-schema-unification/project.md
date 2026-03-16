@@ -4,7 +4,7 @@ Replace the 22 hand-written JSON Schema tool files and 1600-line switch statemen
 
 **Status:** active
 **Created:** 2026-03-14T19:29:21.295Z
-**Updated:** 2026-03-14T19:43:00.872Z
+**Updated:** 2026-03-16T18:46:44.226Z
 
 ## PRD
 

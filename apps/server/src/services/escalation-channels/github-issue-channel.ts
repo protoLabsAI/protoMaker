@@ -123,11 +123,15 @@ export class GitHubIssueChannel implements EscalationChannel {
     // Reserve dedup key before any async work to prevent parallel duplicates
     this.issuedDeduplicationKeys.add(signal.deduplicationKey);
 
+    // Use the signal's projectPath (source project) when available, fall back to server default
+    const projectPath =
+      (signal.context.projectPath as string | undefined) || this.config.projectPath;
+
     try {
       const title = this.buildIssueTitle(signal);
-      const body = await this.buildIssueBody(signal);
+      const body = await this.buildIssueBody(signal, projectPath);
 
-      const bugFeature = await this.config.featureLoader.create(this.config.projectPath, {
+      const bugFeature = await this.config.featureLoader.create(projectPath, {
         title,
         description: body,
         category: 'bug',
@@ -140,7 +144,7 @@ export class GitHubIssueChannel implements EscalationChannel {
 
       this.config.events.emit('issue:created', {
         featureId: signal.context.featureId,
-        projectPath: this.config.projectPath,
+        projectPath,
         bugFeatureId: bugFeature.id,
         source: signal.source,
         severity: signal.severity,
@@ -178,7 +182,7 @@ export class GitHubIssueChannel implements EscalationChannel {
   /**
    * Build issue body with full context
    */
-  private async buildIssueBody(signal: EscalationSignal): Promise<string> {
+  private async buildIssueBody(signal: EscalationSignal, projectPath: string): Promise<string> {
     const sections: string[] = [];
 
     // Header
@@ -214,7 +218,7 @@ export class GitHubIssueChannel implements EscalationChannel {
       sections.push(`- **Feature ID**: \`${featureId}\``);
 
       // Try to load feature for additional context
-      const feature = await this.config.featureLoader.get(this.config.projectPath, featureId);
+      const feature = await this.config.featureLoader.get(projectPath, featureId);
 
       if (feature) {
         if (feature.title) {

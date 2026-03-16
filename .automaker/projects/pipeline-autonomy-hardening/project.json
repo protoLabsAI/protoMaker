@@ -422,6 +422,7 @@
     "generatedAt": "2026-03-14T19:00:00Z"
   },
   "createdAt": "2026-03-14T19:00:57.078Z",
-  "updatedAt": "2026-03-14T22:16:09.880Z",
-  "researchStatus": "complete"
+  "updatedAt": "2026-03-16T18:46:44.252Z",
+  "researchStatus": "complete",
+  "health": "on-track"
 }
