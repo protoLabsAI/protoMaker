@@ -177,7 +177,11 @@ describe('AgentSessionManager', () => {
       // We need > 100 such messages to reach 25 000 tokens.
       const longContent = 'x'.repeat(1_000);
       for (let i = 0; i < 120; i++) {
-        manager.ingestMessage(convId, i % 2 === 0 ? 'user' : 'assistant', `Turn ${i}: ${longContent}`);
+        manager.ingestMessage(
+          convId,
+          i % 2 === 0 ? 'user' : 'assistant',
+          `Turn ${i}: ${longContent}`
+        );
       }
 
       // Should not throw regardless of whether compaction was triggered

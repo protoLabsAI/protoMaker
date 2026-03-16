@@ -29,11 +29,7 @@
 import path from 'path';
 import * as fs from 'node:fs';
 import Anthropic from '@anthropic-ai/sdk';
-import {
-  ConversationStore,
-  type MessageRole,
-  type MessageRow,
-} from '@protolabsai/context-engine';
+import { ConversationStore, type MessageRole, type MessageRow } from '@protolabsai/context-engine';
 import {
   ContextAssembler,
   type AssembledMessage,
@@ -161,9 +157,7 @@ export class AgentSessionManager {
 
     // Slow-path: look for an existing conversation tagged with this key
     const conversations = this.store.listConversations(500);
-    const existing = conversations.find(
-      (c) => (c.metadata as Record<string, unknown>).key === key
-    );
+    const existing = conversations.find((c) => (c.metadata as Record<string, unknown>).key === key);
 
     if (existing) {
       this.keyToConversationId.set(key, existing.id);
@@ -281,9 +275,7 @@ export class AgentSessionManager {
    * Oldest summaries are dropped first when the token budget is exceeded;
    * the fresh tail is always preserved.
    */
-  assembleHistory(
-    conversationId: string
-  ): Array<{ role: 'user' | 'assistant'; content: string }> {
+  assembleHistory(conversationId: string): Array<{ role: 'user' | 'assistant'; content: string }> {
     const messages = this.store.listMessages(conversationId, { limit: 2000 });
     if (messages.length === 0) return [];
 
