@@ -34,6 +34,7 @@ async function gracefulShutdown(server: http.Server, services: ServiceContainer)
     hitlFormService,
     actionableItemBridge,
     agentDiscordRouter,
+    agentService,
     crdtSyncService,
     dataDir,
   } = services;
@@ -71,6 +72,8 @@ async function gracefulShutdown(server: http.Server, services: ServiceContainer)
   actionableItemBridge.shutdown();
   agentDiscordRouter.stop();
   await crdtSyncService.shutdown();
+  // Close context-engine SQLite connection
+  agentService.shutdown();
   // Dispose AgentManifestService fs.watch handles to prevent leaked watchers
   try {
     getAgentManifestService().dispose();

@@ -209,20 +209,50 @@ export class AgentService {
   async initialize(): Promise<void> {
     await secureFs.mkdir(this.stateDir, { recursive: true });
 
-    // Initialise the context-engine-backed session manager.
-    // Resolve the Anthropic API key for LLM-assisted compaction; if unavailable
-    // the manager falls back to deterministic extraction automatically.
+    // Initialise the context-engine-backed session manager only when enabled.
+    // The contextEngine setting lives in per-project workflow settings; resolve
+    // the current project from global settings so we can read the flag.
     try {
-      const dataDir = path.dirname(this.stateDir);
-      let anthropicApiKey: string | undefined;
+      let contextEngineEnabled = false;
       if (this.settingsService) {
-        const credentials = await this.settingsService.getCredentials();
-        anthropicApiKey = credentials?.apiKeys?.anthropic || undefined;
+        const globalSettings = await this.settingsService.getGlobalSettings();
+        const currentProject = globalSettings.projects?.find(
+          (p) => p.id === globalSettings.currentProjectId
+        );
+        if (currentProject?.path) {
+          const projectSettings = await this.settingsService.getProjectSettings(
+            currentProject.path
+          );
+          contextEngineEnabled = projectSettings.workflow?.contextEngine?.enabled ?? false;
+        }
       }
-      this.contextSessionManager = new AgentSessionManager(dataDir, anthropicApiKey);
+
+      if (contextEngineEnabled) {
+        const dataDir = path.dirname(this.stateDir);
+        let anthropicApiKey: string | undefined;
+        if (this.settingsService) {
+          const credentials = await this.settingsService.getCredentials();
+          anthropicApiKey = credentials?.apiKeys?.anthropic || undefined;
+        }
+        this.contextSessionManager = new AgentSessionManager(dataDir, anthropicApiKey);
+        this.logger.info('AgentSessionManager initialised (contextEngine enabled)');
+      } else {
+        this.logger.info('Context engine disabled — skipping AgentSessionManager initialisation');
+      }
     } catch (error) {
       this.logger.error('Failed to initialise AgentSessionManager:', error);
       // Non-fatal — agent service continues without context-engine backing
+    }
+  }
+
+  /**
+   * Graceful shutdown: close the context-engine SQLite connection if open.
+   */
+  shutdown(): void {
+    if (this.contextSessionManager) {
+      this.contextSessionManager.close();
+      this.contextSessionManager = null;
+      this.logger.info('AgentSessionManager closed');
     }
   }
 

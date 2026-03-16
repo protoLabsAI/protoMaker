@@ -55,7 +55,7 @@ COPY apps/ui/package.json ./apps/ui/
 # Install dependencies (--ignore-scripts to skip husky/prepare, then rebuild native modules)
 # Note: apps/ui/package.json must exist above for npm ci to validate the lockfile,
 # but electron/desktop deps are skipped since we only build the server.
-RUN npm ci --ignore-scripts && npm rebuild node-pty
+RUN npm ci --ignore-scripts && npm rebuild node-pty better-sqlite3
 
 # Copy all source files
 COPY libs ./libs
