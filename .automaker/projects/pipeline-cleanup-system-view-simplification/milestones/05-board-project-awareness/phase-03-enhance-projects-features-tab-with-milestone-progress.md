@@ -16,9 +16,11 @@ Improve apps/ui/src/components/views/projects-view/tabs/features-tab.tsx to be a
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/ui/src/components/views/projects-view/tabs/features-tab.tsx`
 
 ### Verification
+
 - [ ] Features tab shows milestone progress bars (X/Y phases complete)
 - [ ] Overall project completion % visible at top
 - [ ] Each feature row has a jump-to-board link

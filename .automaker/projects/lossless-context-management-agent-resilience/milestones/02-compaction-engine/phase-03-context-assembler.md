@@ -16,11 +16,13 @@ Implement budget-constrained context assembly. Fetch context_items, resolve summ
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/context-engine/src/assembly/assembler.ts`
 - [ ] `libs/context-engine/src/assembly/formatter.ts`
 - [ ] `libs/context-engine/src/assembly/index.ts`
 
 ### Verification
+
 - [ ] Assembly produces messages within token budget
 - [ ] Fresh tail always included
 - [ ] Summaries formatted as structured XML with metadata

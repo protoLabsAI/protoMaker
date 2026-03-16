@@ -14,11 +14,11 @@ Merge the four overlapping board health systems into a single MaintenanceOrchest
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-maintenanceorchestrator-service-with-check-module-interface.md](./phase-01-maintenanceorchestrator-service-with-check-module-interface.md) | 1 week | None | TBD |
-| 2 | [phase-02-extract-health-checks-to-maintenance-modules.md](./phase-02-extract-health-checks-to-maintenance-modules.md) | 2 weeks | None | TBD |
-| 3 | [phase-03-wire-maintenanceorchestrator-and-remove-old-systems.md](./phase-03-wire-maintenanceorchestrator-and-remove-old-systems.md) | 2 weeks | None | TBD |
+| Phase | File                                                                                                                                                 | Duration | Dependencies | Owner |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-maintenanceorchestrator-service-with-check-module-interface.md](./phase-01-maintenanceorchestrator-service-with-check-module-interface.md) | 1 week   | None         | TBD   |
+| 2     | [phase-02-extract-health-checks-to-maintenance-modules.md](./phase-02-extract-health-checks-to-maintenance-modules.md)                               | 2 weeks  | None         | TBD   |
+| 3     | [phase-03-wire-maintenanceorchestrator-and-remove-old-systems.md](./phase-03-wire-maintenanceorchestrator-and-remove-old-systems.md)                 | 2 weeks  | None         | TBD   |
 
 ---
 
@@ -36,6 +36,7 @@ M2 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

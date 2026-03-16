@@ -16,10 +16,12 @@ WorldStateBuilder excludes done features from featureMap. staleDeps rule treats 
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/lead-engineer-world-state.ts`
 - [ ] `apps/server/tests/unit/services/lead-engineer-rules.test.ts`
 
 ### Verification
+
 - [ ] staleDeps rule correctly identifies done dependencies
 - [ ] Unit test: blocked feature with done dep gets unblock action
 - [ ] Unit test: blocked feature with in_progress dep stays blocked

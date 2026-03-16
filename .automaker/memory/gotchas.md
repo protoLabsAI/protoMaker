@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1555
-  referenced: 414
-  successfulFeatures: 414
+  loaded: 1566
+  referenced: 421
+  successfulFeatures: 421
 ---
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
@@ -1075,13 +1075,26 @@ usageStats:
 - **Root cause:** The serializer didn't validate `cc.classes` before emitting; filter-on-read in deserializer was meant as safety net but exposed asymmetry. Real fix: filter-on-write.
 - **How to avoid:** Filter at serialization source → smaller XCL (+efficiency), but requires deserializer to expect no empty conditions. Simpler codec logic, harder to debug if one side breaks.
 
-
 #### [Gotcha] Documentation scope declared completeness beyond actual implementation (README links to mcp-tools.md and api.md reference pages that don't exist) (2026-03-15)
+
 - **Situation:** Writing comprehensive README and reference docs before complementary features (MCP tool wiring, API endpoints) were complete
 - **Root cause:** Root cause: documentation planning assumed parallel feature completion timelines; creating links to 'future' pages sets reader expectations but creates broken links and context gaps when features lag
 - **How to avoid:** Transparency about incompleteness vs. appearance of incomplete product; helps roadmap visibility but requires discipline to fill gaps or readers encounter 404s
 
 #### [Gotcha] Timezone is static at expansion time—if timezone definitions change (e.g., DST rule updates) or user changes their timezone, expanded instances don't retroactively update (2026-03-15)
+
 - **Situation:** Timezone field is stored once on the parent event and copied to all expanded instances at query time
 - **Root cause:** Simplicity: each instance gets a fixed timezone rather than computing it dynamically. Matches common calendar behavior (events remember their creation-time timezone)
 - **How to avoid:** Simple and predictable, but historical events can show wrong local times if timezone rules change (e.g., country changes DST schedule). Users who move timezones see old events in old timezone
+
+#### [Gotcha] Feature ID sanitization for filesystem paths must be identical everywhere worktree paths are derived (2026-03-16)
+
+- **Situation:** Path derivation uses featureId.replace(/[^a-zA-Z0-9_-]/g, '-'). This pattern is replicated in auto-mode-service and restart-recovery-service. If sanitization differs (e.g., '-' vs '\_'), same feature produces different paths in different services.
+- **Root cause:** Feature IDs can contain characters invalid in filesystem paths (dots, slashes, special chars). Sanitization must be consistent or path lookups fail silently — one service writes to '.worktrees/feature-abc', another reads from '.worktrees/feature_abc', they don't match, recovery incorrectly marks feature as missing worktree.
+- **How to avoid:** Requires conscious consistency across codebase vs. simple, auditable regex. Could extract to shared utility to reduce duplication.
+
+#### [Gotcha] CheckpointStore (workflow checkpoint persistence) is NOT re-exported from @protolabsai/context-engine root; requires subpath import: @protolabsai/context-engine/workflow (2026-03-16)
+
+- **Situation:** context-engine exports ConversationStore from root but workflow exports are subpath-only
+- **Root cause:** Intentional separation: conversation persistence is primary export, workflow checkpointing is lower-level infrastructure requiring explicit intent to access
+- **How to avoid:** Discoverable API surface (clear what's primary) vs friction for accessing workflow store

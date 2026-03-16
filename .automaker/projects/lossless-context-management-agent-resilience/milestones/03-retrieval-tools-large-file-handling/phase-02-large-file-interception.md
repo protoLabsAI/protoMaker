@@ -16,11 +16,13 @@ Intercept tool results exceeding 25K tokens. Store full content in large_files t
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/context-engine/src/interception/large-file-handler.ts`
 - [ ] `libs/context-engine/src/store/migrations.ts`
 - [ ] `libs/context-engine/src/interception/index.ts`
 
 ### Verification
+
 - [ ] Tool results >25K tokens intercepted automatically
 - [ ] Full content stored with metadata
 - [ ] Compact reference replaces original in context

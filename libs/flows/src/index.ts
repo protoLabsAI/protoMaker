@@ -203,3 +203,10 @@ export {
   type ProjectRetroFeatureLoader,
   type ProjectRetroDiscordBot,
 } from './ceremonies/project-retro-flow.js';
+
+export {
+  createPostProjectDocsFlow,
+  type PostProjectDocsFlowDeps,
+  type PostProjectDocsFeatureLoader,
+  type PostProjectDocsMilestoneSummary,
+} from './ceremonies/post-project-docs-flow.js';

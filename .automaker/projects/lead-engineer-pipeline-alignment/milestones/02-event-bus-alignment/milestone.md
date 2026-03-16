@@ -14,11 +14,11 @@ Fix the three event bus disconnects that leave critical rules and subscribers de
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-fix-errorbudgetservice-event-bus-wiring.md](./phase-01-fix-errorbudgetservice-event-bus-wiring.md) | 0.5 weeks | None | TBD |
-| 2 | [phase-02-fix-auto-mode-event-envelope-mismatch.md](./phase-02-fix-auto-mode-event-envelope-mismatch.md) | 0.5 weeks | None | TBD |
-| 3 | [phase-03-emit-feature-lifecycle-events-from-status-changes.md](./phase-03-emit-feature-lifecycle-events-from-status-changes.md) | 1 week | None | TBD |
+| Phase | File                                                                                                                             | Duration  | Dependencies | Owner |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------- | --------- | ------------ | ----- |
+| 1     | [phase-01-fix-errorbudgetservice-event-bus-wiring.md](./phase-01-fix-errorbudgetservice-event-bus-wiring.md)                     | 0.5 weeks | None         | TBD   |
+| 2     | [phase-02-fix-auto-mode-event-envelope-mismatch.md](./phase-02-fix-auto-mode-event-envelope-mismatch.md)                         | 0.5 weeks | None         | TBD   |
+| 3     | [phase-03-emit-feature-lifecycle-events-from-status-changes.md](./phase-03-emit-feature-lifecycle-events-from-status-changes.md) | 1 week    | None         | TBD   |
 
 ---
 
@@ -36,6 +36,7 @@ M2 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

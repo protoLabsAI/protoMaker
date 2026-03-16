@@ -14,10 +14,10 @@ Wire context engine into the agent execution pipeline.
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-agent-service-integration.md](./phase-01-agent-service-integration.md) | 2 weeks | None | TBD |
-| 2 | [phase-02-configuration-settings-wiring.md](./phase-02-configuration-settings-wiring.md) | 0.5 weeks | None | TBD |
+| Phase | File                                                                                     | Duration  | Dependencies | Owner |
+| ----- | ---------------------------------------------------------------------------------------- | --------- | ------------ | ----- |
+| 1     | [phase-01-agent-service-integration.md](./phase-01-agent-service-integration.md)         | 2 weeks   | None         | TBD   |
+| 2     | [phase-02-configuration-settings-wiring.md](./phase-02-configuration-settings-wiring.md) | 0.5 weeks | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M4 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

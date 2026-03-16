@@ -72,6 +72,67 @@ export const MIGRATIONS: Migration[] = [
         ON message_parts(message_id, position);
     `,
   },
+  {
+    version: 2,
+    description: 'Create large_files table for LargeFileHandler interception',
+    up: `
+      -- Large files: stores full content of tool results that exceed the token threshold.
+      -- The agent is given a compact reference instead and can call lcm_expand(<id>)
+      -- to retrieve the original content.
+      CREATE TABLE IF NOT EXISTS large_files (
+        id TEXT PRIMARY KEY,
+        part_id TEXT,
+        conversation_id TEXT,
+        original_content TEXT NOT NULL,
+        token_count INTEGER NOT NULL DEFAULT 0,
+        summary TEXT NOT NULL DEFAULT '',
+        stored_at TEXT NOT NULL,
+        metadata TEXT NOT NULL DEFAULT '{}'
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_large_files_conversation_id
+        ON large_files(conversation_id, stored_at);
+    `,
+  },
+  {
+    version: 3,
+    description: 'Create context_nodes table and messages_fts FTS5 index for retrieval tools',
+    up: `
+      -- Context nodes: persists CompactedNode (depth=0) and CondensedNode (depth>=1)
+      -- produced by LeafCompactor and CondensationEngine.
+      -- source_ids is a JSON array of IDs (message IDs for depth=0, node IDs for depth>0).
+      CREATE TABLE IF NOT EXISTS context_nodes (
+        id TEXT PRIMARY KEY,
+        conversation_id TEXT,
+        depth INTEGER NOT NULL DEFAULT 0,
+        summary TEXT NOT NULL DEFAULT '',
+        expand_footer TEXT NOT NULL DEFAULT '',
+        source_ids TEXT NOT NULL DEFAULT '[]',
+        original_tokens INTEGER NOT NULL DEFAULT 0,
+        summary_tokens INTEGER NOT NULL DEFAULT 0,
+        mode TEXT,
+        stored_at TEXT NOT NULL,
+        metadata TEXT NOT NULL DEFAULT '{}'
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_context_nodes_conversation_id
+        ON context_nodes(conversation_id, stored_at);
+
+      CREATE INDEX IF NOT EXISTS idx_context_nodes_depth
+        ON context_nodes(depth, conversation_id);
+
+      -- FTS5 virtual table for full-text search across message_parts (lcm_grep).
+      -- Content is indexed via ContextFtsIndex.index() after message creation.
+      -- Uses porter stemmer for English-language token matching.
+      CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
+        part_id UNINDEXED,
+        message_id UNINDEXED,
+        conversation_id UNINDEXED,
+        content,
+        tokenize = 'porter ascii'
+      );
+    `,
+  },
 ];
 
 /**

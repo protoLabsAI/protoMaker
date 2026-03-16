@@ -15,9 +15,7 @@
           "name": "qa-doc-generator-launch-hook",
           "title": "QA doc generator + launch hook",
           "description": "Add a private `generateQaDoc(projectPath, project)` method to `ProjectLifecycleService`. The method reads project.milestones, iterates phases with acceptanceCriteria, and builds a markdown QA checklist string. It then calls `this.projectService.createDoc()` to save it as a document titled 'QA Checklist'. Hook the call into the existing `launch()` method after backlog features are confirmed, wrapped in try/catch so it never fails the launch. Add idempotency check: call `this.projectService.listDocs()` first and skip if a doc titled 'QA Checklist' already exists.",
-          "filesToModify": [
-            "apps/server/src/services/project-lifecycle-service.ts"
-          ],
+          "filesToModify": ["apps/server/src/services/project-lifecycle-service.ts"],
           "acceptanceCriteria": [
             "Launching a project with milestones/phases creates a 'QA Checklist' document in Resources",
             "The document is organized by milestone and phase headings",

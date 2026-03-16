@@ -15,9 +15,7 @@
           "name": "fix-built-in-role-capabilities-in-api-agents-get",
           "title": "Fix built-in role capabilities in /api/agents/get",
           "description": "When /api/agents/get falls back to a synthetic built-in agent, getResolvedCapabilities returns null because the agent isn't in the manifest cache. Add direct ROLE_CAPABILITIES lookup as fallback so built-in roles always return their capabilities.",
-          "filesToModify": [
-            "apps/server/src/routes/agents.ts"
-          ],
+          "filesToModify": ["apps/server/src/routes/agents.ts"],
           "acceptanceCriteria": [
             "GET a built-in role returns non-null capabilities object",
             "GET a project-manifest agent still works as before",
@@ -32,9 +30,7 @@
           "name": "dispose-agentmanifestservice-on-shutdown",
           "title": "Dispose AgentManifestService on shutdown",
           "description": "Add getAgentManifestService().dispose() to the graceful shutdown sequence in shutdown.ts. This closes fs.watch handles and prevents leaked watchers in test environments.",
-          "filesToModify": [
-            "apps/server/src/server/shutdown.ts"
-          ],
+          "filesToModify": ["apps/server/src/server/shutdown.ts"],
           "acceptanceCriteria": [
             "dispose() called during graceful shutdown",
             "Server shuts down cleanly without open handle warnings",
@@ -49,9 +45,7 @@
           "name": "add-auto-assignment-to-pipeline-execution-path",
           "title": "Add auto-assignment to pipeline execution path",
           "description": "The pipeline execution path (executePipelineSteps) calls loadRolePromptPrefix but has no matchFeature auto-assignment step before it. Add the same auto-assignment logic used in the single-agent path.",
-          "filesToModify": [
-            "apps/server/src/services/auto-mode/execution-service.ts"
-          ],
+          "filesToModify": ["apps/server/src/services/auto-mode/execution-service.ts"],
           "acceptanceCriteria": [
             "Features entering pipeline path get auto-assigned role",
             "Pipeline role prompt reflects the auto-assigned role",
@@ -142,9 +136,7 @@
           "name": "add-route-tests-for-api-agents-endpoints",
           "title": "Add route tests for /api/agents endpoints",
           "description": "Add integration-style tests for the three agent API endpoints: list, get, and match. Test input validation, built-in role handling, manifest merging, and error cases.",
-          "filesToModify": [
-            "apps/server/tests/unit/routes/agents.test.ts"
-          ],
+          "filesToModify": ["apps/server/tests/unit/routes/agents.test.ts"],
           "acceptanceCriteria": [
             "Tests cover list, get, and match endpoints",
             "Tests verify built-in role fallback in get",
@@ -178,9 +170,7 @@
           "name": "fix-documentation-inaccuracies",
           "title": "Fix documentation inaccuracies",
           "description": "Fix three doc issues: (1) prompt injection section shows wrong order (should be role prompt then context+memory), (2) manifestPaths documented but not implemented, (3) description field listed as Required but defaults to empty string.",
-          "filesToModify": [
-            "docs/agents/agent-manifests.md"
-          ],
+          "filesToModify": ["docs/agents/agent-manifests.md"],
           "acceptanceCriteria": [
             "Prompt injection section matches actual code behavior",
             "manifestPaths either documented as implemented or removed",

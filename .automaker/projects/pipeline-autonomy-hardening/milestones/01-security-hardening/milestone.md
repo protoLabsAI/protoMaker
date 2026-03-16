@@ -14,10 +14,10 @@ Fix injection vulnerabilities that allow arbitrary command execution via user-su
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-fix-shell-injection-in-completiondetector-gh-pr-create.md](./phase-01-fix-shell-injection-in-completiondetector-gh-pr-create.md) | 0.5 weeks | None | TBD |
-| 2 | [phase-02-fix-graphql-injection-in-coderabbitresolver-and-git-workflow-service.md](./phase-02-fix-graphql-injection-in-coderabbitresolver-and-git-workflow-service.md) | 1 week | None | TBD |
+| Phase | File                                                                                                                                                                   | Duration  | Dependencies | Owner |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ------------ | ----- |
+| 1     | [phase-01-fix-shell-injection-in-completiondetector-gh-pr-create.md](./phase-01-fix-shell-injection-in-completiondetector-gh-pr-create.md)                             | 0.5 weeks | None         | TBD   |
+| 2     | [phase-02-fix-graphql-injection-in-coderabbitresolver-and-git-workflow-service.md](./phase-02-fix-graphql-injection-in-coderabbitresolver-and-git-workflow-service.md) | 1 week    | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M1 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

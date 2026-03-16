@@ -16,11 +16,13 @@ Integrate ContextEngine into AgentService. On agent start: create/resume convers
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/agent-service.ts`
 - [ ] `apps/server/src/providers/claude-provider.ts`
 - [ ] `apps/server/src/services/agent-session-manager.ts`
 
 ### Verification
+
 - [ ] Agent sessions backed by context engine SQLite
 - [ ] Compaction triggers automatically during long sessions
 - [ ] Context assembly respects token budget each turn

@@ -16,9 +16,11 @@ Build reusable Astro components: Nav (sticky header with React mobile menu islan
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/src/components/`
 
 ### Verification
+
 - [ ] Nav with sticky positioning and gradient logo text
 - [ ] Footer with configurable links and social icons
 - [ ] SEO component for all meta tags

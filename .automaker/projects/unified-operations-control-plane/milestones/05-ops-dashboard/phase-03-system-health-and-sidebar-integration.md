@@ -16,12 +16,14 @@ System Health panel with memory, CPU, disk, agents, uptime. Compact ops indicato
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/ui/src/components/views/ops-view/system-health-panel.tsx`
 - [ ] `apps/ui/src/components/views/ops-view/use-system-health.ts`
 - [ ] `apps/ui/src/components/layout/sidebar.tsx`
 - [ ] `apps/ui/src/components/layout/ops-status-indicator.tsx`
 
 ### Verification
+
 - [ ] System health panel shows all metrics
 - [ ] Health dot: green/amber/red
 - [ ] Sidebar shows compact indicator

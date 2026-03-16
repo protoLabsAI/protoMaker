@@ -16,12 +16,14 @@ Implement ConversationStore with better-sqlite3. Tables: conversations, messages
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/context-engine/src/store/conversation-store.ts`
 - [ ] `libs/context-engine/src/store/migrations.ts`
 - [ ] `libs/context-engine/src/store/index.ts`
 - [ ] `libs/context-engine/package.json`
 
 ### Verification
+
 - [ ] Messages persist to SQLite and survive process restarts
 - [ ] Token count estimated and stored per message
 - [ ] Content blocks stored as structured parts

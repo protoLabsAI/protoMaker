@@ -14,11 +14,11 @@ Consolidate webhook handling with delivery tracking, retry logic, rate limiting,
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-webhook-delivery-tracking-and-retry-service.md](./phase-01-webhook-delivery-tracking-and-retry-service.md) | 1 week | None | TBD |
-| 2 | [phase-02-rate-limiting-and-webhook-secret-rotation.md](./phase-02-rate-limiting-and-webhook-secret-rotation.md) | 1 week | None | TBD |
-| 3 | [phase-03-event-router-service-and-delivery-api.md](./phase-03-event-router-service-and-delivery-api.md) | 1 week | None | TBD |
+| Phase | File                                                                                                                 | Duration | Dependencies | Owner |
+| ----- | -------------------------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-webhook-delivery-tracking-and-retry-service.md](./phase-01-webhook-delivery-tracking-and-retry-service.md) | 1 week   | None         | TBD   |
+| 2     | [phase-02-rate-limiting-and-webhook-secret-rotation.md](./phase-02-rate-limiting-and-webhook-secret-rotation.md)     | 1 week   | None         | TBD   |
+| 3     | [phase-03-event-router-service-and-delivery-api.md](./phase-03-event-router-service-and-delivery-api.md)             | 1 week   | None         | TBD   |
 
 ---
 
@@ -36,6 +36,7 @@ M4 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

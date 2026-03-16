@@ -14,10 +14,10 @@ Rebuild system view to a 2-lane topology: Production lane (Lead Engineer → Aut
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-rebuild-flow-graph-constants-to-2-lane-topology.md](./phase-01-rebuild-flow-graph-constants-to-2-lane-topology.md) | 1 week | None | TBD |
-| 2 | [phase-02-simplify-use-flow-graph-data-and-flow-graph-view.md](./phase-02-simplify-use-flow-graph-data-and-flow-graph-view.md) | 1 week | None | TBD |
+| Phase | File                                                                                                                           | Duration | Dependencies | Owner |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------ | -------- | ------------ | ----- |
+| 1     | [phase-01-rebuild-flow-graph-constants-to-2-lane-topology.md](./phase-01-rebuild-flow-graph-constants-to-2-lane-topology.md)   | 1 week   | None         | TBD   |
+| 2     | [phase-02-simplify-use-flow-graph-data-and-flow-graph-view.md](./phase-02-simplify-use-flow-graph-data-and-flow-graph-view.md) | 1 week   | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M4 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

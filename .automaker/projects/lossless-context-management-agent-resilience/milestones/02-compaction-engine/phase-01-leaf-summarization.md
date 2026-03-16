@@ -16,11 +16,13 @@ Implement leaf compaction: when uncompacted messages exceed leafChunkTokens, gro
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/context-engine/src/compaction/leaf-compactor.ts`
 - [ ] `libs/context-engine/src/compaction/prompts.ts`
 - [ ] `libs/context-engine/src/compaction/index.ts`
 
 ### Verification
+
 - [ ] Leaf summaries compress 8+ messages into ~1200 token nodes
 - [ ] Summary preserves file paths, commands, errors
 - [ ] Expand footer lists compressed topics

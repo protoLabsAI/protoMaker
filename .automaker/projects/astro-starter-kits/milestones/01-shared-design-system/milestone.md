@@ -14,10 +14,10 @@ Extract protoLabs brand tokens into a shared Tailwind config and component libra
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-create-shared-tailwind-brand-preset.md](./phase-01-create-shared-tailwind-brand-preset.md) | 0.5 weeks | None | TBD |
-| 2 | [phase-02-create-shared-astro-component-library.md](./phase-02-create-shared-astro-component-library.md) | 1 week | None | TBD |
+| Phase | File                                                                                                     | Duration  | Dependencies | Owner |
+| ----- | -------------------------------------------------------------------------------------------------------- | --------- | ------------ | ----- |
+| 1     | [phase-01-create-shared-tailwind-brand-preset.md](./phase-01-create-shared-tailwind-brand-preset.md)     | 0.5 weeks | None         | TBD   |
+| 2     | [phase-02-create-shared-astro-component-library.md](./phase-02-create-shared-astro-component-library.md) | 1 week    | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M1 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

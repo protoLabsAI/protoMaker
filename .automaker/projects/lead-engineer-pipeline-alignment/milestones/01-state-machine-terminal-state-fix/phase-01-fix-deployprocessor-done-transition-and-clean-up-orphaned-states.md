@@ -24,11 +24,13 @@ Fix three interconnected issues in the state machine terminal state:
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/lead-engineer-deploy-processor.ts`
 - [ ] `apps/server/src/services/lead-engineer-state-machine.ts`
 - [ ] `libs/types/src/lead-engineer.ts`
 
 ### Verification
+
 - [ ] DeployProcessor.process() returns nextState DONE with shouldContinue false
 - [ ] FeatureState enum does not contain VERIFY
 - [ ] No references to verified status in any lead engineer processor

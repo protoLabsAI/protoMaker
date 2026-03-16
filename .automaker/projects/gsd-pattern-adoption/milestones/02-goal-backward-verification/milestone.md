@@ -14,10 +14,10 @@ Add goal-backward verification at two pipeline stages: pre-execution (validate p
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-pre-execution-plan-validation.md](./phase-01-pre-execution-plan-validation.md) | 1 week | None | TBD |
-| 2 | [phase-02-post-execution-goal-verification.md](./phase-02-post-execution-goal-verification.md) | 1 week | None | TBD |
+| Phase | File                                                                                           | Duration | Dependencies | Owner |
+| ----- | ---------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-pre-execution-plan-validation.md](./phase-01-pre-execution-plan-validation.md)       | 1 week   | None         | TBD   |
+| 2     | [phase-02-post-execution-goal-verification.md](./phase-02-post-execution-goal-verification.md) | 1 week   | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M2 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

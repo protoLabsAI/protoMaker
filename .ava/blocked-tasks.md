@@ -1,6 +1,7 @@
 # Blocked Tasks
 
 ## gh auth not configured
+
 - **Task:** ava-daily-board-health
 - **Blocked since:** 2026-03-11
 - **Reason:** `gh auth login` has not been run. No GitHub API access.

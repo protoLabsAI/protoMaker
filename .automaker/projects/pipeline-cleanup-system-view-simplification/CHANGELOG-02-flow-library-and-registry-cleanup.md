@@ -1,4 +1,5 @@
 # Changelog: Pipeline Cleanup & System View Simplification - Flow Library and Registry Cleanup
+
 **Generated:** 2026-03-14
 
 ## 📦 Other Changes

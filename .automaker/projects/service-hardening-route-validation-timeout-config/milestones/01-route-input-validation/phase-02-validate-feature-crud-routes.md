@@ -16,6 +16,7 @@ Add Zod schemas to feature create, update, delete, bulk-update, bulk-delete, mov
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/routes/features/routes/create.ts`
 - [ ] `apps/server/src/routes/features/routes/update.ts`
 - [ ] `apps/server/src/routes/features/routes/delete.ts`
@@ -25,6 +26,7 @@ Add Zod schemas to feature create, update, delete, bulk-update, bulk-delete, mov
 - [ ] `apps/server/src/routes/features/routes/rollback.ts`
 
 ### Verification
+
 - [ ] All 7 feature CRUD routes use validateBody middleware
 - [ ] No `as` type assertions remain in these files for req.body
 - [ ] Invalid feature updates return 400 not 500

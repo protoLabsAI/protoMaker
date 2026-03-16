@@ -16,10 +16,12 @@ Add semantic verification step to DeployProcessor after typecheck passes. Run a 
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/lead-engineer-deploy-processor.ts`
 - [ ] `libs/types/src/lead-engineer.ts`
 
 ### Verification
+
 - [ ] DeployProcessor runs goal verification after typecheck succeeds
 - [ ] Verification uses haiku model via simpleQuery (fire-and-forget, non-blocking)
 - [ ] Verification prompt includes acceptance criteria + git diff of merged changes

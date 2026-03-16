@@ -1,4 +1,5 @@
 # Changelog: Astro Starter Kits - Project Complete
+
 **Generated:** 2026-03-15
 
 ## ✨ Features
@@ -12,7 +13,7 @@
 
 ## 🐛 Fixes
 
-- **Bug: hitl-form-service test expects expired forms to be null but they persist** [PR#2581](https://github.com/protoLabsAI/protoMaker/pull/2581) - **Problem:** `tests/unit/services/hitl-form-service.test.ts` lines 93 and 99 fail intermittently in 
+- **Bug: hitl-form-service test expects expired forms to be null but they persist** [PR#2581](https://github.com/protoLabsAI/protoMaker/pull/2581) - **Problem:** `tests/unit/services/hitl-form-service.test.ts` lines 93 and 99 fail intermittently in
 
 ## 📦 Other Changes
 

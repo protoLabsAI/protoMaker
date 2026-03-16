@@ -14,13 +14,13 @@ Eliminate data races that cause silent state loss, duplicate agents, and stuck f
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-add-per-feature-mutex-to-featureloader-update-and-claim.md](./phase-01-add-per-feature-mutex-to-featureloader-update-and-claim.md) | 1 week | None | TBD |
-| 2 | [phase-02-add-per-session-event-processing-queue-to-lead-engineer.md](./phase-02-add-per-session-event-processing-queue-to-lead-engineer.md) | 1 week | None | TBD |
-| 3 | [phase-03-fix-executeprocessor-waitforcompletion-race-and-pre-flight-shouldcontinue.md](./phase-03-fix-executeprocessor-waitforcompletion-race-and-pre-flight-shouldcontinue.md) | 2 weeks | None | TBD |
-| 4 | [phase-04-fix-runningfeatures-tracking-gap-in-execution-service.md](./phase-04-fix-runningfeatures-tracking-gap-in-execution-service.md) | 1 week | None | TBD |
-| 5 | [phase-05-unify-concurrency-tracking-and-fix-settings-and-ledger-races.md](./phase-05-unify-concurrency-tracking-and-fix-settings-and-ledger-races.md) | 2 weeks | None | TBD |
+| Phase | File                                                                                                                                                                             | Duration | Dependencies | Owner |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-add-per-feature-mutex-to-featureloader-update-and-claim.md](./phase-01-add-per-feature-mutex-to-featureloader-update-and-claim.md)                                     | 1 week   | None         | TBD   |
+| 2     | [phase-02-add-per-session-event-processing-queue-to-lead-engineer.md](./phase-02-add-per-session-event-processing-queue-to-lead-engineer.md)                                     | 1 week   | None         | TBD   |
+| 3     | [phase-03-fix-executeprocessor-waitforcompletion-race-and-pre-flight-shouldcontinue.md](./phase-03-fix-executeprocessor-waitforcompletion-race-and-pre-flight-shouldcontinue.md) | 2 weeks  | None         | TBD   |
+| 4     | [phase-04-fix-runningfeatures-tracking-gap-in-execution-service.md](./phase-04-fix-runningfeatures-tracking-gap-in-execution-service.md)                                         | 1 week   | None         | TBD   |
+| 5     | [phase-05-unify-concurrency-tracking-and-fix-settings-and-ledger-races.md](./phase-05-unify-concurrency-tracking-and-fix-settings-and-ledger-races.md)                           | 2 weeks  | None         | TBD   |
 
 ---
 
@@ -38,6 +38,7 @@ M2 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

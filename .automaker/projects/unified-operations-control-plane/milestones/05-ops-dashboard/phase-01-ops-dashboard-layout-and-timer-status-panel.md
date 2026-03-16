@@ -16,12 +16,14 @@ Create /ops route with OpsView component. Tab layout: Timers, Events, Maintenanc
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/ui/src/routes/ops.tsx`
 - [ ] `apps/ui/src/components/views/ops-view/ops-view.tsx`
 - [ ] `apps/ui/src/components/views/ops-view/timer-panel.tsx`
 - [ ] `apps/ui/src/components/views/ops-view/use-timer-status.ts`
 
 ### Verification
+
 - [ ] /ops route renders OpsView
 - [ ] Timer panel lists all tasks
 - [ ] Pause/resume controls work

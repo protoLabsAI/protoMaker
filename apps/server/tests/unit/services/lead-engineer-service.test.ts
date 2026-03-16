@@ -994,4 +994,113 @@ describe('FeatureStateMachine — pipeline state transitions', () => {
     );
     expect(escalationEmit).toBeDefined();
   });
+
+  it('ESCALATE sets statusChangeReason and increments failureCount via featureLoader.update', async () => {
+    const feature = makeFeature({ failureCount: 1 });
+    mockFeatureLoader.update.mockResolvedValue(undefined);
+
+    const stateMachine = new FeatureStateMachine(serviceContext, { goalGatesEnabled: false });
+
+    // INTAKE signals ESCALATE with a specific reason
+    stateMachine.registerProcessor('INTAKE', {
+      enter: vi.fn().mockResolvedValue(undefined),
+      process: vi.fn().mockImplementation(async (ctx: StateContext) => {
+        ctx.escalationReason = 'Unmet dependencies: dep-1, dep-2';
+        return { nextState: 'ESCALATE', shouldContinue: true, reason: 'Unmet deps' };
+      }),
+      exit: vi.fn().mockResolvedValue(undefined),
+    });
+
+    const { finalState } = await stateMachine.processFeature(
+      feature,
+      '/test/project',
+      makeOptions()
+    );
+
+    expect(finalState).toBe('ESCALATE');
+
+    // EscalateProcessor calls featureLoader.update with blocked status,
+    // statusChangeReason from ctx.escalationReason, and incremented failureCount
+    expect(mockFeatureLoader.update).toHaveBeenCalledWith(
+      '/test/project',
+      'feat-1',
+      expect.objectContaining({
+        status: 'blocked',
+        statusChangeReason: 'Unmet dependencies: dep-1, dep-2',
+        failureCount: 2, // was 1, incremented by EscalateProcessor
+      })
+    );
+  });
+
+  it('happy path traverses INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DEPLOY → DONE with status=done', async () => {
+    const feature = makeFeature({ complexity: 'large' });
+    const stateMachine = new FeatureStateMachine(serviceContext, { goalGatesEnabled: false });
+
+    stateMachine.registerProcessor('INTAKE', createMockProcessor('PLAN'));
+    stateMachine.registerProcessor('PLAN', createMockProcessor('EXECUTE'));
+    stateMachine.registerProcessor('EXECUTE', createMockProcessor('REVIEW'));
+    stateMachine.registerProcessor('REVIEW', createMockProcessor('MERGE'));
+    stateMachine.registerProcessor('MERGE', createMockProcessor('DEPLOY'));
+    // DEPLOY returns DONE with shouldContinue=false (matches real DeployProcessor behavior)
+    stateMachine.registerProcessor('DEPLOY', {
+      enter: vi.fn().mockResolvedValue(undefined),
+      process: vi.fn().mockResolvedValue({
+        nextState: 'DONE',
+        shouldContinue: false,
+        reason: 'Feature deployed and verified',
+      } as StateTransitionResult),
+      exit: vi.fn().mockResolvedValue(undefined),
+    });
+
+    const { finalState } = await stateMachine.processFeature(
+      feature,
+      '/test/project',
+      makeOptions()
+    );
+
+    // The state machine captures DONE from the DEPLOY processor's nextState
+    expect(finalState).toBe('DONE');
+  });
+
+  it('EXECUTE ESCALATE sets statusChangeReason with agent failure reason', async () => {
+    const feature = makeFeature({ failureCount: 0 });
+    mockFeatureLoader.update.mockResolvedValue(undefined);
+
+    const stateMachine = new FeatureStateMachine(serviceContext, { goalGatesEnabled: false });
+
+    stateMachine.registerProcessor('INTAKE', createMockProcessor('EXECUTE'));
+    stateMachine.registerProcessor('EXECUTE', {
+      enter: vi.fn().mockResolvedValue(undefined),
+      process: vi.fn().mockImplementation(async (ctx: StateContext) => {
+        ctx.retryCount = 3;
+        ctx.escalationReason = 'Max agent retries exceeded (3)';
+        return {
+          nextState: 'ESCALATE',
+          shouldContinue: true,
+          reason: 'Max agent retries exceeded (3)',
+        };
+      }),
+      exit: vi.fn().mockResolvedValue(undefined),
+    });
+
+    const { finalState, context } = await stateMachine.processFeature(
+      feature,
+      '/test/project',
+      makeOptions()
+    );
+
+    expect(finalState).toBe('ESCALATE');
+    expect(context.retryCount).toBe(3);
+
+    // Verify featureLoader.update was called with correct escalation data
+    expect(mockFeatureLoader.update).toHaveBeenCalledWith(
+      '/test/project',
+      'feat-1',
+      expect.objectContaining({
+        status: 'blocked',
+        statusChangeReason: 'Max agent retries exceeded (3)',
+        failureCount: 1, // was 0, incremented by EscalateProcessor
+      })
+    );
+  });
 });

@@ -153,7 +153,11 @@ export default function DesignRoute() {
           };
         })
       : [];
-    const cDoc = { ...doc, variables: varsArray, children: doc.children ?? [] } as unknown as CodegenDoc;
+    const cDoc = {
+      ...doc,
+      variables: varsArray,
+      children: doc.children ?? [],
+    } as unknown as CodegenDoc;
     const cFrame = selectedFrame as unknown as CodegenFrame;
 
     // Generate each output independently so one failure doesn't block others
@@ -175,7 +179,7 @@ export default function DesignRoute() {
     try {
       const htmlFile = generateHTMLFromFrame(
         cFrame as Parameters<typeof generateHTMLFromFrame>[0],
-        cDoc as Parameters<typeof generateHTMLFromFrame>[1],
+        cDoc as Parameters<typeof generateHTMLFromFrame>[1]
       );
       htmlCode = htmlFile.content;
     } catch (err) {
@@ -186,7 +190,7 @@ export default function DesignRoute() {
     try {
       const cssFile = generateCSSFromFrame(
         cFrame as Parameters<typeof generateCSSFromFrame>[0],
-        cDoc as Parameters<typeof generateCSSFromFrame>[1],
+        cDoc as Parameters<typeof generateCSSFromFrame>[1]
       );
       cssCode = cssFile.content;
     } catch (err) {
@@ -256,9 +260,7 @@ export default function DesignRoute() {
             gap: 8,
           }}
         >
-          <span style={{ fontWeight: 600, fontSize: 14, flex: 1 }}>
-            {fileName ?? 'Design'}
-          </span>
+          <span style={{ fontWeight: 600, fontSize: 14, flex: 1 }}>{fileName ?? 'Design'}</span>
           <button
             onClick={() => fileInputRef.current?.click()}
             style={{
@@ -286,7 +288,9 @@ export default function DesignRoute() {
         {/* Component list */}
         <nav style={{ flex: 1, overflow: 'auto', padding: '8px 0' }}>
           {components.length === 0 ? (
-            <div style={{ color: 'var(--pg-muted)', textAlign: 'center', padding: 40, fontSize: 12 }}>
+            <div
+              style={{ color: 'var(--pg-muted)', textAlign: 'center', padding: 40, fontSize: 12 }}
+            >
               {doc ? 'No reusable components found.' : 'Load a .pen file to start.'}
             </div>
           ) : (
@@ -376,13 +380,28 @@ export default function DesignRoute() {
         {/* Content area */}
         <div style={{ flex: 1, overflow: 'auto', padding: 0 }}>
           {error && (
-            <div style={{ padding: '12px 20px', background: 'rgba(248,113,113,0.1)', color: 'var(--pg-error)', fontSize: 13 }}>
+            <div
+              style={{
+                padding: '12px 20px',
+                background: 'rgba(248,113,113,0.1)',
+                color: 'var(--pg-error)',
+                fontSize: 13,
+              }}
+            >
               {error}
             </div>
           )}
 
           {!selectedFrame && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--pg-muted)' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                color: 'var(--pg-muted)',
+              }}
+            >
               {doc ? 'Select a component from the sidebar.' : 'Load a .pen file to get started.'}
             </div>
           )}
@@ -428,17 +447,25 @@ export default function DesignRoute() {
               <PropertyRow label="Layout" value={(selectedFrame as FrameNode).layout ?? 'none'} />
             )}
             {typeof (selectedFrame as FrameNode).cornerRadius === 'number' && (
-              <PropertyRow label="Corner Radius" value={String((selectedFrame as FrameNode).cornerRadius)} />
+              <PropertyRow
+                label="Corner Radius"
+                value={String((selectedFrame as FrameNode).cornerRadius)}
+              />
             )}
             {(selectedFrame as FrameNode).children && (
-              <PropertyRow label="Children" value={String(((selectedFrame as FrameNode).children ?? []).length)} />
+              <PropertyRow
+                label="Children"
+                value={String(((selectedFrame as FrameNode).children ?? []).length)}
+              />
             )}
           </div>
         </aside>
       )}
 
       {/* ── Chat panel overlay ── */}
-      {chatOpen && <ChatPanel onClose={() => setChatOpen(false)} penFilePath={fileName ?? undefined} />}
+      {chatOpen && (
+        <ChatPanel onClose={() => setChatOpen(false)} penFilePath={fileName ?? undefined} />
+      )}
     </div>
   );
 }
@@ -447,9 +474,18 @@ export default function DesignRoute() {
 
 function PropertyRow({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: 12 }}>
+    <div
+      style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: 12 }}
+    >
       <span style={{ color: 'var(--pg-muted)' }}>{label}</span>
-      <span style={{ color: 'var(--pg-fg)', ...{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 11 } }}>{value}</span>
+      <span
+        style={{
+          color: 'var(--pg-fg)',
+          ...{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 11 },
+        }}
+      >
+        {value}
+      </span>
     </div>
   );
 }

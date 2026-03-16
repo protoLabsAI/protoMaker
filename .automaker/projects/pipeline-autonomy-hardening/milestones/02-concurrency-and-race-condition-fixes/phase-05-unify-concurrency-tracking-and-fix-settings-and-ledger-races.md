@@ -16,12 +16,14 @@ Five fixes: (1) ConcurrencyManager release() underflow guard. (2) Reconciliation
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/auto-mode/concurrency-manager.ts`
 - [ ] `apps/server/src/services/auto-mode-service.ts`
 - [ ] `apps/server/src/services/settings-service.ts`
 - [ ] `apps/server/src/services/completion-detector-service.ts`
 
 ### Verification
+
 - [ ] ConcurrencyManager release never goes below 0
 - [ ] Reconciliation checks both tracking systems
 - [ ] Settings writes serialized via Promise chain

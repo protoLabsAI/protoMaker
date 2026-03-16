@@ -1,4 +1,5 @@
 # Changelog: Astro Starter Kits - Docs Starter Kit (Starlight)
+
 **Generated:** 2026-03-15
 
 ## ✨ Features

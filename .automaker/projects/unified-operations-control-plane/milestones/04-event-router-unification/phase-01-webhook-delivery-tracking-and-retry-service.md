@@ -16,12 +16,14 @@ Create WebhookDeliveryService wrapping all webhook processing with delivery reco
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/types/src/webhook.ts`
 - [ ] `apps/server/src/services/webhook-delivery-service.ts`
 - [ ] `apps/server/src/routes/github/routes/webhook.ts`
 - [ ] `apps/server/src/routes/webhooks/routes/github.ts`
 
 ### Verification
+
 - [ ] WebhookDelivery type defined
 - [ ] Every webhook creates delivery record
 - [ ] Failed deliveries retry with exponential backoff

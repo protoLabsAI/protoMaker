@@ -16,9 +16,11 @@ Update scaffolding so docs/portfolio types copy the Astro project with name/conf
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/src/index.ts`
 
 ### Verification
+
 - [ ] create-protolab offers docs and portfolio options
 - [ ] Scaffolded project works immediately
 - [ ] .automaker/ included with context

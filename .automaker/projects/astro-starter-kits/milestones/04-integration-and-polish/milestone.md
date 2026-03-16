@@ -14,10 +14,10 @@ Wire into create-protolab, verify end-to-end, and polish visuals.
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-wire-starter-kits-into-create-protolab-scaffold-flow.md](./phase-01-wire-starter-kits-into-create-protolab-scaffold-flow.md) | 1 week | None | TBD |
-| 2 | [phase-02-visual-polish-and-responsive-qa.md](./phase-02-visual-polish-and-responsive-qa.md) | 1 week | None | TBD |
+| Phase | File                                                                                                                                   | Duration | Dependencies | Owner |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-wire-starter-kits-into-create-protolab-scaffold-flow.md](./phase-01-wire-starter-kits-into-create-protolab-scaffold-flow.md) | 1 week   | None         | TBD   |
+| 2     | [phase-02-visual-polish-and-responsive-qa.md](./phase-02-visual-polish-and-responsive-qa.md)                                           | 1 week   | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M4 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

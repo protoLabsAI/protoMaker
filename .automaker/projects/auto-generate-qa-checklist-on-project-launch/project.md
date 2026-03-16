@@ -10,7 +10,7 @@ When a project launches, automatically create a QA Checklist document in the pro
 
 ### Situation
 
-Projects have milestones and phases with acceptance criteria defined at planning time. When a project launches and agents start implementing features, users have no structured way to know what to test. QA guidance exists in the acceptance criteria but isn't surfaced in a usable format through the UI. A QA.md file was previously created in .automaker/projects/*/QA.md — a dotfile directory not accessible through the product.
+Projects have milestones and phases with acceptance criteria defined at planning time. When a project launches and agents start implementing features, users have no structured way to know what to test. QA guidance exists in the acceptance criteria but isn't surfaced in a usable format through the UI. A QA.md file was previously created in .automaker/projects/\*/QA.md — a dotfile directory not accessible through the product.
 
 ### Problem
 

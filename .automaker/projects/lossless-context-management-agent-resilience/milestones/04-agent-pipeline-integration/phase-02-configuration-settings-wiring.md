@@ -16,11 +16,13 @@ Add context engine config to WorkflowSettings. Settings: contextEngine.enabled, 
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/types/src/workflow-settings.ts`
 - [ ] `apps/server/src/services/settings-service.ts`
 - [ ] `apps/ui/src/components/views/settings/workflow-settings.tsx`
 
 ### Verification
+
 - [ ] Context engine settings in WorkflowSettings type
 - [ ] Settings persisted to .automaker/settings.json
 - [ ] UI controls in Settings page

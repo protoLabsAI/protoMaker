@@ -16,11 +16,13 @@ On startup: check checkpoint store for suspended workflows. Validate feature and
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/restart-recovery-service.ts`
 - [ ] `apps/server/src/index.ts`
 - [ ] `apps/server/src/routes/agent.ts`
 
 ### Verification
+
 - [ ] Startup detects interrupted workflows
 - [ ] Validates feature and worktree before resume
 - [ ] Resume options visible in UI

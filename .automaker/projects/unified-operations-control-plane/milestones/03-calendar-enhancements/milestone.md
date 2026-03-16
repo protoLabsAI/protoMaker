@@ -14,11 +14,11 @@ Add recurring event support, timezone handling, bidirectional auto-mode/webhook 
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-recurring-events-and-timezone-support.md](./phase-01-recurring-events-and-timezone-support.md) | 1 week | None | TBD |
-| 2 | [phase-02-auto-mode-and-webhook-calendar-integration.md](./phase-02-auto-mode-and-webhook-calendar-integration.md) | 1 week | None | TBD |
-| 3 | [phase-03-job-conflict-detection-and-calendar-ui-updates.md](./phase-03-job-conflict-detection-and-calendar-ui-updates.md) | 1 week | None | TBD |
+| Phase | File                                                                                                                       | Duration | Dependencies | Owner |
+| ----- | -------------------------------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-recurring-events-and-timezone-support.md](./phase-01-recurring-events-and-timezone-support.md)                   | 1 week   | None         | TBD   |
+| 2     | [phase-02-auto-mode-and-webhook-calendar-integration.md](./phase-02-auto-mode-and-webhook-calendar-integration.md)         | 1 week   | None         | TBD   |
+| 3     | [phase-03-job-conflict-detection-and-calendar-ui-updates.md](./phase-03-job-conflict-detection-and-calendar-ui-updates.md) | 1 week   | None         | TBD   |
 
 ---
 
@@ -36,6 +36,7 @@ M3 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

@@ -28,8 +28,14 @@ No single gap is isolated — the bugs form dependency chains where fixing one (
 ```typescript
 // apps/server/src/services/lead-engineer-types.ts:97-105
 export type FeatureProcessingState =
-  | 'INTAKE' | 'PLAN' | 'EXECUTE' | 'REVIEW'
-  | 'MERGE' | 'DEPLOY' | 'DONE' | 'ESCALATE';
+  | 'INTAKE'
+  | 'PLAN'
+  | 'EXECUTE'
+  | 'REVIEW'
+  | 'MERGE'
+  | 'DEPLOY'
+  | 'DONE'
+  | 'ESCALATE';
 ```
 
 However, `FeatureStateMachine` registers only seven processors [14]:
@@ -94,7 +100,7 @@ export enum FeatureState {
   DEPLOY = 'DEPLOY',
   VERIFY = 'VERIFY',
   DONE = 'DONE',
-  ESCALATE = 'ESCALATE'
+  ESCALATE = 'ESCALATE',
 }
 ```
 
@@ -126,7 +132,7 @@ The `retryTarget: 'MERGE'` on `merge-exit` is dead code — the gate never fails
 ```typescript
 // apps/server/src/services/lead-engineer-review-merge-processors.ts:92-108
 logger.info('[REVIEW] Externally merged PR detected, transitioning to DONE', {
-  featureId: ctx.feature.id
+  featureId: ctx.feature.id,
 });
 return { nextState: null, shouldContinue: false, reason: 'PR merged externally' };
 ```
@@ -178,7 +184,7 @@ But `TypedEventBus.emitAutoModeEvent()` wraps all signals in an `'auto-mode:even
 ```typescript
 // apps/server/src/services/auto-mode/typed-event-bus.ts:59
 this.events.emit('auto-mode:event', {
-  type: eventType,  // 'stopped', 'idle', etc. buried in payload
+  type: eventType, // 'stopped', 'idle', etc. buried in payload
   ...data,
 });
 ```
@@ -222,8 +228,10 @@ By the time the rule evaluates, `feature.status` is already `'done'`, not `'revi
 ```typescript
 // apps/server/src/services/lead-engineer-rules.ts:781
 export function evaluateRules(
-  rules: LeadFastPathRule[], worldState: LeadWorldState,
-  eventType: string, eventPayload: unknown
+  rules: LeadFastPathRule[],
+  worldState: LeadWorldState,
+  eventType: string,
+  eventPayload: unknown
 ): LeadRuleAction[] {
   const actions: LeadRuleAction[] = [];
   for (const rule of rules) {
@@ -313,7 +321,7 @@ All three `ceremony:fired` emissions (lines 627–632, 750–755, 991) omit `ret
 // apps/server/src/services/ceremony-action-executor.ts:264
 if (!retroData) {
   logger.debug(`CeremonyActionExecutor: no retroData for ${type} in ${projectSlug}, skipping`);
-  return;   // ← always exits
+  return; // ← always exits
 }
 ```
 
@@ -377,9 +385,15 @@ Meanwhile, `GitHubMergeService` correctly routes strategies but is entirely bypa
 ```typescript
 // apps/server/src/services/github-merge-service.ts:148-186
 switch (strategy) {
-  case 'merge':  autoMergeCmd += ' --merge'; break;
-  case 'squash': autoMergeCmd += ' --squash'; break;
-  case 'rebase': autoMergeCmd += ' --rebase'; break;
+  case 'merge':
+    autoMergeCmd += ' --merge';
+    break;
+  case 'squash':
+    autoMergeCmd += ' --squash';
+    break;
+  case 'rebase':
+    autoMergeCmd += ' --rebase';
+    break;
 }
 ```
 
@@ -444,6 +458,7 @@ The service implements five eligibility checks (`ci_passing`, `reviews_approved`
 **Pattern 5: Service bypass.** `MergeProcessor` directly shells out to `gh pr merge` [30] rather than calling `GitHubMergeService` [31] or `MergeEligibilityService` [37], bypassing all strategy routing and eligibility checks.
 
 **Integration Points:**
+
 - `LeadEngineerService.processFeature()` → `FeatureStateMachine.run()` → outcome gate [3][12]
 - `CeremonyService` ↔ `CeremonyStateMachine` ↔ `CeremonyActionExecutor` [19][20][23]
 - `LeadEngineerCeremonies` → event bus → `CeremonyService` (broken: wrong event name) [28]
@@ -531,61 +546,61 @@ No external research was required for this analysis. All findings are derived fr
 
 ## Citations
 
-| # | Source | Description |
-|---|--------|-------------|
-| [1] | `apps/server/src/services/lead-engineer-types.ts:97-105` | `FeatureProcessingState` union type includes `'DONE'` but no processor registered |
-| [2] | `apps/server/src/services/lead-engineer-deploy-processor.ts:77-81` | `DeployProcessor.process()` returns `nextState: null` |
-| [3] | `apps/server/src/services/lead-engineer-service.ts:522-527` | Outcome gate marks all deployed features as `'blocked'` |
-| [4] | `libs/types/src/lead-engineer.ts:297-322` | Legacy `FeatureState` enum with orphaned `VERIFY` |
-| [5] | `apps/server/src/services/lead-engineer-state-machine.ts:62-81` | No-op `review-exit` and `merge-exit` gates |
-| [6] | `apps/server/src/services/lead-engineer-review-merge-processors.ts:91-108` | External-merge fast-path bypasses `DEPLOY` |
-| [7] | `apps/server/src/services/lead-engineer-review-merge-processors.ts:81-85` | ReviewProcessor "already done" returns `null` |
-| [8] | `apps/server/src/services/lead-engineer-state-machine.ts:352-361` | Checkpoint cleanup includes `DEPLOY` as terminal |
-| [9] | `apps/server/src/services/lead-engineer-state-machine.ts:151-156, 324-349` | Loop overflow detection (correct) |
-| [10] | `apps/server/src/services/lead-engineer-state-machine.ts:33-46` | `execute-entry` gate missing `retryTarget` |
-| [11] | `apps/server/src/services/lead-engineer-deploy-processor.ts:77-81` | Code excerpt: `nextState: null` return |
-| [12] | `apps/server/src/services/lead-engineer-service.ts:522-527` | Code excerpt: three-way outcome gate |
-| [13] | `apps/server/src/services/lead-engineer-types.ts:97-105` | Code excerpt: `FeatureProcessingState` type |
-| [14] | `apps/server/src/services/lead-engineer-state-machine.ts:112-118` | Code excerpt: processor registration (no `DONE`) |
-| [15] | `libs/types/src/lead-engineer.ts:297-322` | Code excerpt: JSDoc flow and `FeatureState` enum |
-| [16] | `apps/server/src/services/lead-engineer-state-machine.ts:62-81` | Code excerpt: no-op gates |
-| [17] | `apps/server/src/services/lead-engineer-review-merge-processors.ts:92-108` | Code excerpt: external merge log vs return mismatch |
-| [18] | `apps/server/src/services/lead-engineer-state-machine.ts:352-361` | Code excerpt: checkpoint cleanup terminals |
-| [19] | `apps/server/src/services/ceremony-service.ts:750` | `ceremony:fired` omits `remainingMilestones` |
-| [20] | `apps/server/src/services/ceremony-state-machine.ts:27` | State machine defaults `remaining` to `1` |
-| [21] | `apps/server/src/services/ceremony-service.ts:884` | `applyTransition` called with `'project:completed'` |
-| [22] | `apps/server/src/services/ceremony-state-machine.ts:19` | No rule for `'project:completed'` |
-| [23] | `apps/server/src/services/ceremony-action-executor.ts:264` | `handleRetroCompleted` exits when no `retroData` |
-| [24] | `apps/server/src/services/ceremony-service.ts:991` | `project_retro` emission omits `retroData` |
-| [25] | `apps/server/src/services/ceremony-action-executor.ts:291` | Action loop missing `gate-tuning` branch |
-| [26] | `apps/server/src/services/ceremony-service.ts:373` | `lastStandup`/`lastRetro` initialized empty, never updated |
-| [27] | `apps/server/src/services/ceremony-service.ts:582` | No `lastStandup` write after standup flow |
-| [28] | `apps/server/src/services/lead-engineer-ceremonies.ts:37` | Emits `'lead-engineer:project-completed'` not `'project:completed'` |
-| [29] | `apps/server/src/services/ceremony-service.ts:538` | Fire-and-forget state update race |
-| [30] | `apps/server/src/services/lead-engineer-review-merge-processors.ts:452` | Hardcoded `--squash` in `MergeProcessor` |
-| [31] | `apps/server/src/services/github-merge-service.ts:148-186` | `GitHubMergeService` strategy routing (bypassed) |
-| [32] | `apps/server/src/services/lead-engineer-state-machine.ts:71-81` | `merge-exit` gate with dead `retryTarget` |
-| [33] | `apps/server/src/services/lead-engineer-review-merge-processors.ts:481-493` | Status set to `'done'` before event emission |
-| [34] | `apps/server/src/services/lead-engineer-rules.ts:40-52` | `mergedNotDone` rule checks `status === 'review'` |
-| [35] | `apps/server/src/services/lead-engineer-review-merge-processors.ts:505-517` | CI gate retry fragile string matching |
-| [36] | `libs/git-utils/src/rebase.ts:53-82` | `rebaseWorktreeOnMain` uses `git merge` |
-| [37] | `apps/server/src/services/merge-eligibility-service.ts` | `MergeEligibilityService` unused by pipeline |
-| [38] | `libs/types/src/git-settings.ts:57-67` | `prBaseBranch` defaults to `'dev'` |
-| [39] | `apps/server/src/lib/events.ts:42` | Event bus architecture |
-| [40] | `apps/server/src/services/auto-mode/typed-event-bus.ts:60` | `emitAutoModeEvent` envelope wrapping |
-| [41] | `apps/server/src/services/lead-engineer-rules.ts:162` | `autoModeHealth` rule with unreachable triggers |
-| [42] | `apps/server/src/services/lead-engineer-rules.ts:546` | `rollbackTriggered` rule with non-existent events |
-| [43] | `apps/server/src/services/event-hook-service.ts:49` | `GENERIC_EVENT_TYPE_TO_TRIGGER` mapping |
-| [44] | `apps/server/src/services/lead-engineer-service.ts:252` | Recursion prevention exclusion filter |
-| [45] | `apps/server/src/services/lead-engineer-rules.ts:340` | `pr:merge-blocked-critical-threads` unverified |
-| [46] | `apps/server/src/services/lead-engineer-rules.ts:604` | `pr:missing-ci-checks` unverified |
-| [47] | `apps/server/src/lib/events.ts:92` | `broadcast()` dual dispatch |
-| [48] | `apps/server/src/services/lead-engineer-rules.ts:781` | `evaluateRules()` strict string-match |
-| [49] | `apps/server/src/services/event-hook-service.ts:49` | Event hook service excludes lead-engineer events |
-| [50] | `apps/server/src/lib/events.ts:54` | `emit()` dual-mode dispatch implementation |
-| [51] | `apps/server/src/lib/events.ts:92` | `broadcast()` local + remote implementation |
-| [52] | `apps/server/src/services/auto-mode/typed-event-bus.ts:59` | Envelope wrapping code excerpt |
-| [53] | `apps/server/src/services/lead-engineer-rules.ts:162` | `autoModeHealth` rule code excerpt |
-| [54] | `apps/server/src/services/lead-engineer-rules.ts:546` | `rollbackTriggered` rule code excerpt |
-| [55] | `apps/server/src/services/lead-engineer-service.ts:252` | Exclusion filter code excerpt |
-| [56] | `apps/server/src/services/lead-engineer-rules.ts:781` | `evaluateRules()` code excerpt |
+| #    | Source                                                                      | Description                                                                       |
+| ---- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| [1]  | `apps/server/src/services/lead-engineer-types.ts:97-105`                    | `FeatureProcessingState` union type includes `'DONE'` but no processor registered |
+| [2]  | `apps/server/src/services/lead-engineer-deploy-processor.ts:77-81`          | `DeployProcessor.process()` returns `nextState: null`                             |
+| [3]  | `apps/server/src/services/lead-engineer-service.ts:522-527`                 | Outcome gate marks all deployed features as `'blocked'`                           |
+| [4]  | `libs/types/src/lead-engineer.ts:297-322`                                   | Legacy `FeatureState` enum with orphaned `VERIFY`                                 |
+| [5]  | `apps/server/src/services/lead-engineer-state-machine.ts:62-81`             | No-op `review-exit` and `merge-exit` gates                                        |
+| [6]  | `apps/server/src/services/lead-engineer-review-merge-processors.ts:91-108`  | External-merge fast-path bypasses `DEPLOY`                                        |
+| [7]  | `apps/server/src/services/lead-engineer-review-merge-processors.ts:81-85`   | ReviewProcessor "already done" returns `null`                                     |
+| [8]  | `apps/server/src/services/lead-engineer-state-machine.ts:352-361`           | Checkpoint cleanup includes `DEPLOY` as terminal                                  |
+| [9]  | `apps/server/src/services/lead-engineer-state-machine.ts:151-156, 324-349`  | Loop overflow detection (correct)                                                 |
+| [10] | `apps/server/src/services/lead-engineer-state-machine.ts:33-46`             | `execute-entry` gate missing `retryTarget`                                        |
+| [11] | `apps/server/src/services/lead-engineer-deploy-processor.ts:77-81`          | Code excerpt: `nextState: null` return                                            |
+| [12] | `apps/server/src/services/lead-engineer-service.ts:522-527`                 | Code excerpt: three-way outcome gate                                              |
+| [13] | `apps/server/src/services/lead-engineer-types.ts:97-105`                    | Code excerpt: `FeatureProcessingState` type                                       |
+| [14] | `apps/server/src/services/lead-engineer-state-machine.ts:112-118`           | Code excerpt: processor registration (no `DONE`)                                  |
+| [15] | `libs/types/src/lead-engineer.ts:297-322`                                   | Code excerpt: JSDoc flow and `FeatureState` enum                                  |
+| [16] | `apps/server/src/services/lead-engineer-state-machine.ts:62-81`             | Code excerpt: no-op gates                                                         |
+| [17] | `apps/server/src/services/lead-engineer-review-merge-processors.ts:92-108`  | Code excerpt: external merge log vs return mismatch                               |
+| [18] | `apps/server/src/services/lead-engineer-state-machine.ts:352-361`           | Code excerpt: checkpoint cleanup terminals                                        |
+| [19] | `apps/server/src/services/ceremony-service.ts:750`                          | `ceremony:fired` omits `remainingMilestones`                                      |
+| [20] | `apps/server/src/services/ceremony-state-machine.ts:27`                     | State machine defaults `remaining` to `1`                                         |
+| [21] | `apps/server/src/services/ceremony-service.ts:884`                          | `applyTransition` called with `'project:completed'`                               |
+| [22] | `apps/server/src/services/ceremony-state-machine.ts:19`                     | No rule for `'project:completed'`                                                 |
+| [23] | `apps/server/src/services/ceremony-action-executor.ts:264`                  | `handleRetroCompleted` exits when no `retroData`                                  |
+| [24] | `apps/server/src/services/ceremony-service.ts:991`                          | `project_retro` emission omits `retroData`                                        |
+| [25] | `apps/server/src/services/ceremony-action-executor.ts:291`                  | Action loop missing `gate-tuning` branch                                          |
+| [26] | `apps/server/src/services/ceremony-service.ts:373`                          | `lastStandup`/`lastRetro` initialized empty, never updated                        |
+| [27] | `apps/server/src/services/ceremony-service.ts:582`                          | No `lastStandup` write after standup flow                                         |
+| [28] | `apps/server/src/services/lead-engineer-ceremonies.ts:37`                   | Emits `'lead-engineer:project-completed'` not `'project:completed'`               |
+| [29] | `apps/server/src/services/ceremony-service.ts:538`                          | Fire-and-forget state update race                                                 |
+| [30] | `apps/server/src/services/lead-engineer-review-merge-processors.ts:452`     | Hardcoded `--squash` in `MergeProcessor`                                          |
+| [31] | `apps/server/src/services/github-merge-service.ts:148-186`                  | `GitHubMergeService` strategy routing (bypassed)                                  |
+| [32] | `apps/server/src/services/lead-engineer-state-machine.ts:71-81`             | `merge-exit` gate with dead `retryTarget`                                         |
+| [33] | `apps/server/src/services/lead-engineer-review-merge-processors.ts:481-493` | Status set to `'done'` before event emission                                      |
+| [34] | `apps/server/src/services/lead-engineer-rules.ts:40-52`                     | `mergedNotDone` rule checks `status === 'review'`                                 |
+| [35] | `apps/server/src/services/lead-engineer-review-merge-processors.ts:505-517` | CI gate retry fragile string matching                                             |
+| [36] | `libs/git-utils/src/rebase.ts:53-82`                                        | `rebaseWorktreeOnMain` uses `git merge`                                           |
+| [37] | `apps/server/src/services/merge-eligibility-service.ts`                     | `MergeEligibilityService` unused by pipeline                                      |
+| [38] | `libs/types/src/git-settings.ts:57-67`                                      | `prBaseBranch` defaults to `'dev'`                                                |
+| [39] | `apps/server/src/lib/events.ts:42`                                          | Event bus architecture                                                            |
+| [40] | `apps/server/src/services/auto-mode/typed-event-bus.ts:60`                  | `emitAutoModeEvent` envelope wrapping                                             |
+| [41] | `apps/server/src/services/lead-engineer-rules.ts:162`                       | `autoModeHealth` rule with unreachable triggers                                   |
+| [42] | `apps/server/src/services/lead-engineer-rules.ts:546`                       | `rollbackTriggered` rule with non-existent events                                 |
+| [43] | `apps/server/src/services/event-hook-service.ts:49`                         | `GENERIC_EVENT_TYPE_TO_TRIGGER` mapping                                           |
+| [44] | `apps/server/src/services/lead-engineer-service.ts:252`                     | Recursion prevention exclusion filter                                             |
+| [45] | `apps/server/src/services/lead-engineer-rules.ts:340`                       | `pr:merge-blocked-critical-threads` unverified                                    |
+| [46] | `apps/server/src/services/lead-engineer-rules.ts:604`                       | `pr:missing-ci-checks` unverified                                                 |
+| [47] | `apps/server/src/lib/events.ts:92`                                          | `broadcast()` dual dispatch                                                       |
+| [48] | `apps/server/src/services/lead-engineer-rules.ts:781`                       | `evaluateRules()` strict string-match                                             |
+| [49] | `apps/server/src/services/event-hook-service.ts:49`                         | Event hook service excludes lead-engineer events                                  |
+| [50] | `apps/server/src/lib/events.ts:54`                                          | `emit()` dual-mode dispatch implementation                                        |
+| [51] | `apps/server/src/lib/events.ts:92`                                          | `broadcast()` local + remote implementation                                       |
+| [52] | `apps/server/src/services/auto-mode/typed-event-bus.ts:59`                  | Envelope wrapping code excerpt                                                    |
+| [53] | `apps/server/src/services/lead-engineer-rules.ts:162`                       | `autoModeHealth` rule code excerpt                                                |
+| [54] | `apps/server/src/services/lead-engineer-rules.ts:546`                       | `rollbackTriggered` rule code excerpt                                             |
+| [55] | `apps/server/src/services/lead-engineer-service.ts:252`                     | Exclusion filter code excerpt                                                     |
+| [56] | `apps/server/src/services/lead-engineer-rules.ts:781`                       | `evaluateRules()` code excerpt                                                    |

@@ -33,9 +33,7 @@
           "name": "wire-projectslug-auto-assignment-into-featureloader-create",
           "title": "Wire projectSlug auto-assignment into FeatureLoader.create",
           "description": "In FeatureLoader.create(), if the incoming feature data has no projectSlug, call the resolver to get one. This is the single choke point that all 18+ creation paths flow through, so fixing it here fixes everything.",
-          "filesToModify": [
-            "apps/server/src/services/feature-loader.ts"
-          ],
+          "filesToModify": ["apps/server/src/services/feature-loader.ts"],
           "acceptanceCriteria": [
             "Features created without projectSlug get it auto-assigned",
             "Features created WITH projectSlug keep their explicit value",
@@ -129,9 +127,7 @@
           "name": "add-fallback-timeline-from-feature-activity",
           "title": "Add fallback timeline from feature activity",
           "description": "When the event ledger has no entries for a project, fall back to constructing timeline events from the project's features directly (creation dates, status changes from feature.json metadata). This ensures timelines work even before the ledger enrichment.",
-          "filesToModify": [
-            "apps/server/src/routes/projects/routes/timeline.ts"
-          ],
+          "filesToModify": ["apps/server/src/routes/projects/routes/timeline.ts"],
           "acceptanceCriteria": [
             "Timeline shows activity for projects with features but no ledger entries",
             "Ledger-based entries take priority when available",
@@ -146,9 +142,7 @@
           "name": "verify-completion-detector-with-projectslug",
           "title": "Verify completion detector with projectSlug",
           "description": "The completion detector guards on feature.projectSlug && feature.milestoneSlug before checking milestone completion. Verify this works end-to-end now that features have projectSlug. Add a test that creates features with projectSlug, marks them done, and confirms milestone:completed event fires.",
-          "filesToModify": [
-            "apps/server/tests/unit/services/completion-detector.test.ts"
-          ],
+          "filesToModify": ["apps/server/tests/unit/services/completion-detector.test.ts"],
           "acceptanceCriteria": [
             "Milestone completion detection fires when all milestone features are done",
             "Test covers the full flow: feature done -> milestone:completed event",
@@ -163,9 +157,7 @@
           "name": "add-project-timeline-to-project-detail-view",
           "title": "Add project timeline to project detail view",
           "description": "Ensure the project detail page in the UI properly renders the timeline component. Verify the timeline refreshes on new events via WebSocket, and add a manual refresh button.",
-          "filesToModify": [
-            "apps/ui/src/components/views/projects/project-detail.tsx"
-          ],
+          "filesToModify": ["apps/ui/src/components/views/projects/project-detail.tsx"],
           "acceptanceCriteria": [
             "Project detail view shows timeline with real activity",
             "Timeline auto-refreshes on WebSocket events",

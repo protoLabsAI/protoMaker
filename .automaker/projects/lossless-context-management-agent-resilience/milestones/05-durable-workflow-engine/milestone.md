@@ -14,10 +14,10 @@ Replace in-memory Lead Engineer state machine with durable SQLite-backed workflo
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-workflow-checkpoint-store.md](./phase-01-workflow-checkpoint-store.md) | 1 week | None | TBD |
-| 2 | [phase-02-lead-engineer-durable-state-machine.md](./phase-02-lead-engineer-durable-state-machine.md) | 2 weeks | None | TBD |
+| Phase | File                                                                                                 | Duration | Dependencies | Owner |
+| ----- | ---------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-workflow-checkpoint-store.md](./phase-01-workflow-checkpoint-store.md)                     | 1 week   | None         | TBD   |
+| 2     | [phase-02-lead-engineer-durable-state-machine.md](./phase-02-lead-engineer-durable-state-machine.md) | 2 weeks  | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M5 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

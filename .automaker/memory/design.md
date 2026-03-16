@@ -9,6 +9,7 @@ usageStats:
   referenced: 6
   successfulFeatures: 6
 ---
+
 # design
 
 ### OKLCH chosen as canonical color space for all internal representations, with exact lightness shade values (50–950) encoded in system prompt. (2026-03-15)

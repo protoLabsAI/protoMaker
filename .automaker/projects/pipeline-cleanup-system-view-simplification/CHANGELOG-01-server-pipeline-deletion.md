@@ -1,4 +1,5 @@
 # Changelog: Pipeline Cleanup & System View Simplification - Server Pipeline Deletion
+
 **Generated:** 2026-03-14
 
 ## 📦 Other Changes

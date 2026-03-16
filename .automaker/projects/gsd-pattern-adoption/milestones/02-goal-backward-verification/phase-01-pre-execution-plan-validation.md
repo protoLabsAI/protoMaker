@@ -16,10 +16,12 @@ Enhance AntagonisticReviewService.verifyPlan() with goal-backward methodology. W
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/antagonistic-review-service.ts`
 - [ ] `apps/server/src/services/lead-engineer-processors.ts`
 
 ### Verification
+
 - [ ] verifyPlan() accepts optional StructuredPlan parameter
 - [ ] When structured plan provided, runs 3-level goal-backward check via simpleQuery
 - [ ] Verification identifies truths required, artifacts required, wiring required

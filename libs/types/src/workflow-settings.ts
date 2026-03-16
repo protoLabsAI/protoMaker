@@ -13,6 +13,35 @@ import type { CustomPrompt } from './prompts.js';
 import type { SignalDictionaryConfig } from './signal-dictionary.js';
 
 // ============================================================================
+// Context Engine Configuration
+// ============================================================================
+
+/**
+ * ContextEngineConfig — Configuration for the context engine compaction system.
+ *
+ * Controls leaf compaction, condensation DAG, large-file interception, and
+ * the token threshold that triggers compaction. Disabled by default.
+ */
+export interface ContextEngineConfig {
+  /** Enable context engine compaction and large-file interception. @default false */
+  enabled: boolean;
+  /** Messages protected from compaction at the tail of context. @default 4 */
+  freshTailCount?: number;
+  /** Token count threshold triggering leaf compaction. @default 25000 */
+  contextThreshold?: number;
+  /** Minimum messages to group per leaf compaction chunk. @default 8 */
+  leafMinFanout?: number;
+  /** Minimum summaries to group per condensation step. @default 4 */
+  condensedMinFanout?: number;
+  /** Maximum depth of the condensation DAG. @default 3 */
+  incrementalMaxDepth?: number;
+  /** Token size of each leaf compaction chunk. @default 25000 */
+  leafChunkTokens?: number;
+  /** Token threshold above which file content is intercepted. @default 25000 */
+  largeFileThreshold?: number;
+}
+
+// ============================================================================
 // Trust Boundary Settings - PRD Approval Gate Configuration
 // ============================================================================
 
@@ -370,6 +399,12 @@ export interface WorkflowSettings {
    * @see docs/internal/portfolio-philosophy.md
    */
   signalDictionary?: SignalDictionaryConfig;
+  /**
+   * Context engine compaction and large-file interception configuration.
+   * When absent or disabled, context management is left to the model provider.
+   * @default { enabled: false }
+   */
+  contextEngine?: ContextEngineConfig;
 }
 
 /** Default workflow settings */
@@ -406,4 +441,14 @@ export const DEFAULT_WORKFLOW_SETTINGS: WorkflowSettings = {
   postMergeVerificationCommands: ['npm run typecheck'],
   preFlightChecks: true,
   phaseTemperatures: DEFAULT_PHASE_TEMPERATURES,
+  contextEngine: {
+    enabled: false,
+    freshTailCount: 4,
+    contextThreshold: 25_000,
+    leafMinFanout: 8,
+    condensedMinFanout: 4,
+    incrementalMaxDepth: 3,
+    leafChunkTokens: 25_000,
+    largeFileThreshold: 25_000,
+  },
 };

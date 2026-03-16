@@ -16,10 +16,12 @@ Two bugs: (1) Processor returning nextState:null from REVIEW maps to blocked eve
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/lead-engineer-state-machine.ts`
 - [ ] `apps/server/tests/unit/services/lead-engineer-service.test.ts`
 
 ### Verification
+
 - [ ] nextState null with done feature maps to DONE finalState
 - [ ] DONE handled as terminal before processor lookup
 - [ ] Max transitions calls exit on interrupted processor

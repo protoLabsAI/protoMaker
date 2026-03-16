@@ -14,9 +14,9 @@ Fix the DEPLOY to DONE transition so features correctly reach terminal state. Re
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-fix-deployprocessor-done-transition-and-clean-up-orphaned-states.md](./phase-01-fix-deployprocessor-done-transition-and-clean-up-orphaned-states.md) | 0.5 weeks | None | TBD |
+| Phase | File                                                                                                                                                           | Duration  | Dependencies | Owner |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ------------ | ----- |
+| 1     | [phase-01-fix-deployprocessor-done-transition-and-clean-up-orphaned-states.md](./phase-01-fix-deployprocessor-done-transition-and-clean-up-orphaned-states.md) | 0.5 weeks | None         | TBD   |
 
 ---
 
@@ -34,6 +34,7 @@ M1 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

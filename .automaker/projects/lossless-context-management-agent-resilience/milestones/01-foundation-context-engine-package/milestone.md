@@ -14,11 +14,11 @@ Create the @protolabsai/context-engine package with SQLite persistence layer, co
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-context-engine-types-package-scaffold.md](./phase-01-context-engine-types-package-scaffold.md) | 0.5 weeks | None | TBD |
-| 2 | [phase-02-sqlite-message-store.md](./phase-02-sqlite-message-store.md) | 1 week | None | TBD |
-| 3 | [phase-03-sqlite-summary-store-dag-model.md](./phase-03-sqlite-summary-store-dag-model.md) | 1 week | None | TBD |
+| Phase | File                                                                                                     | Duration  | Dependencies | Owner |
+| ----- | -------------------------------------------------------------------------------------------------------- | --------- | ------------ | ----- |
+| 1     | [phase-01-context-engine-types-package-scaffold.md](./phase-01-context-engine-types-package-scaffold.md) | 0.5 weeks | None         | TBD   |
+| 2     | [phase-02-sqlite-message-store.md](./phase-02-sqlite-message-store.md)                                   | 1 week    | None         | TBD   |
+| 3     | [phase-03-sqlite-summary-store-dag-model.md](./phase-03-sqlite-summary-store-dag-model.md)               | 1 week    | None         | TBD   |
 
 ---
 
@@ -36,6 +36,7 @@ M1 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

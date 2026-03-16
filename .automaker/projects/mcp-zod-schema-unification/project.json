@@ -32,10 +32,7 @@
           "name": "add-zod-definitions-for-feature-and-agent-tools",
           "title": "Add Zod definitions for feature and agent tools",
           "description": "Create defineSharedTool for all feature management and agent control tools",
-          "filesToModify": [
-            "libs/tools/src/board-tools.ts",
-            "libs/tools/src/agent-tools.ts"
-          ],
+          "filesToModify": ["libs/tools/src/board-tools.ts", "libs/tools/src/agent-tools.ts"],
           "acceptanceCriteria": [
             "All feature and agent tools have Zod definitions",
             "npm run build:packages passes"
@@ -49,10 +46,7 @@
           "name": "add-zod-definitions-for-project-settings-and-utility-tools",
           "title": "Add Zod definitions for project, settings, and utility tools",
           "description": "Create defineSharedTool for project orchestration, settings, and utility tools",
-          "filesToModify": [
-            "libs/tools/src/project-tools.ts",
-            "libs/tools/src/utility-tools.ts"
-          ],
+          "filesToModify": ["libs/tools/src/project-tools.ts", "libs/tools/src/utility-tools.ts"],
           "acceptanceCriteria": [
             "All project, settings, utility tools defined",
             "npm run build:packages passes"
@@ -71,10 +65,7 @@
             "libs/tools/src/discord-tools.ts",
             "libs/tools/src/integration-tools.ts"
           ],
-          "acceptanceCriteria": [
-            "Full 153-tool coverage",
-            "toMCPTools generates all tools"
-          ],
+          "acceptanceCriteria": ["Full 153-tool coverage", "toMCPTools generates all tools"],
           "complexity": "large",
           "featureId": "feature-1773517379758-jiee8qqck",
           "executionStatus": "pending"
@@ -94,9 +85,7 @@
           "name": "create-toolhandlerregistry-with-apicall-dispatch",
           "title": "Create ToolHandlerRegistry with apiCall dispatch",
           "description": "Build registry class with registerApiTool helper for passthrough tools and custom handler support for enrichment tools",
-          "filesToModify": [
-            "packages/mcp-server/src/registry.ts"
-          ],
+          "filesToModify": ["packages/mcp-server/src/registry.ts"],
           "acceptanceCriteria": [
             "Registry class created with unit tests",
             "registerApiTool helper works"
@@ -113,10 +102,7 @@
             "packages/mcp-server/src/handlers/",
             "packages/mcp-server/src/index.ts"
           ],
-          "acceptanceCriteria": [
-            "Switch statement replaced",
-            "index.ts under 200 lines"
-          ],
+          "acceptanceCriteria": ["Switch statement replaced", "index.ts under 200 lines"],
           "complexity": "large",
           "featureId": "feature-1773517379764-uj6qnwgr7"
         }
@@ -135,10 +121,7 @@
           "name": "replace-hand-written-tool-arrays-with-tomcptools-and-delete-old-files",
           "title": "Replace hand-written tool arrays with toMCPTools and delete old files",
           "description": "Auto-generate MCP tool list from Zod definitions, delete 22 hand-written tool files",
-          "filesToModify": [
-            "packages/mcp-server/src/index.ts",
-            "packages/mcp-server/src/tools/"
-          ],
+          "filesToModify": ["packages/mcp-server/src/index.ts", "packages/mcp-server/src/tools/"],
           "acceptanceCriteria": [
             "Tool list auto-generated",
             "22 old files deleted",
@@ -156,10 +139,7 @@
             "apps/server/src/routes/features/",
             "packages/mcp-server/tests/schema-parity.test.ts"
           ],
-          "acceptanceCriteria": [
-            "Shared schemas in feature routes",
-            "Parity tests prevent drift"
-          ],
+          "acceptanceCriteria": ["Shared schemas in feature routes", "Parity tests prevent drift"],
           "complexity": "medium",
           "featureId": "feature-1773517379770-v05tka2z4"
         }

@@ -16,9 +16,11 @@ Create Astro Starlight docs site at libs/templates/starters/docs/. Custom theme:
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/docs/`
 
 ### Verification
+
 - [ ] Working Starlight site with npm run dev
 - [ ] Custom theme with brand colors and Geist fonts
 - [ ] Sample content: tutorial, how-to guide, reference page

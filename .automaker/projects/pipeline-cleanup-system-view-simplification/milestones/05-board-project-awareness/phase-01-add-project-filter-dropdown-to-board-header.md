@@ -16,11 +16,13 @@ In apps/ui/src/components/views/board-view/board-header.tsx, add a project filte
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/ui/src/components/views/board-view/board-header.tsx`
 - [ ] `apps/ui/src/components/views/board-view/hooks/use-board-column-features.ts`
 - [ ] `apps/ui/src/components/views/board-view/board-view.tsx`
 
 ### Verification
+
 - [ ] Board header shows project filter dropdown
 - [ ] Selecting a project filters features to only that project
 - [ ] All Projects option shows everything

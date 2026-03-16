@@ -16,6 +16,7 @@ Extend CalendarEvent with recurrence field (frequency, interval, daysOfWeek, end
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/types/src/calendar.ts`
 - [ ] `apps/server/src/services/calendar-service.ts`
 - [ ] `apps/server/src/services/job-executor-service.ts`
@@ -23,6 +24,7 @@ Extend CalendarEvent with recurrence field (frequency, interval, daysOfWeek, end
 - [ ] `packages/mcp-server/src/tools/calendar-tools.ts`
 
 ### Verification
+
 - [ ] CalendarEvent includes optional recurrence and timezone
 - [ ] listEvents expands recurring events within date range
 - [ ] Instance IDs: parentId:date format

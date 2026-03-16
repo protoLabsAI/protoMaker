@@ -14,11 +14,11 @@ Implement hierarchical summarization: leaf compaction, cascading condensation, d
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-leaf-summarization.md](./phase-01-leaf-summarization.md) | 1 week | None | TBD |
-| 2 | [phase-02-cascading-condensation.md](./phase-02-cascading-condensation.md) | 1 week | None | TBD |
-| 3 | [phase-03-context-assembler.md](./phase-03-context-assembler.md) | 1 week | None | TBD |
+| Phase | File                                                                       | Duration | Dependencies | Owner |
+| ----- | -------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-leaf-summarization.md](./phase-01-leaf-summarization.md)         | 1 week   | None         | TBD   |
+| 2     | [phase-02-cascading-condensation.md](./phase-02-cascading-condensation.md) | 1 week   | None         | TBD   |
+| 3     | [phase-03-context-assembler.md](./phase-03-context-assembler.md)           | 1 week   | None         | TBD   |
 
 ---
 
@@ -36,6 +36,7 @@ M2 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

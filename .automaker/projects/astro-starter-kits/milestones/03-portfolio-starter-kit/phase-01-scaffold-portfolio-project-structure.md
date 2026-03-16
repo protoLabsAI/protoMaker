@@ -16,9 +16,11 @@ Create Astro project at libs/templates/starters/portfolio/. Configure Astro 5.x,
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/portfolio/`
 
 ### Verification
+
 - [ ] Working Astro project with npm run dev
 - [ ] Content Collections with Zod schemas
 - [ ] Seed content for all collections

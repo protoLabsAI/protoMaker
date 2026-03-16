@@ -1,5 +1,48 @@
 # @protolabsai/prompts
 
+## 0.70.0
+
+### Minor Changes
+
+- ### Features
+  - add retrieval tools — lcm_grep, lcm_describe, lcm_expand
+  - add leaf compaction engine (depth=0 summarization) (#2775)
+  - add automated post-project documentation ceremony (#2772)
+  - add memory maintenance pipeline with category compaction and stale chunk pruning (#2764)
+  - add retrieval tools — lcm_grep, lcm_describe, lcm_expand
+  - add retrieval tools — lcm_grep, lcm_describe, lcm_expand
+  - add retrieval tools — lcm_grep, lcm_describe, lcm_expand
+  - add leaf compaction engine (depth=0 summarization) (#2775)
+  - add automated post-project documentation ceremony (#2772)
+  - add memory maintenance pipeline with category compaction and stale chunk pruning (#2764)
+  - add leaf compaction engine (depth=0 summarization) (#2775)
+  - add automated post-project documentation ceremony (#2772)
+  - add memory maintenance pipeline with category compaction and stale chunk pruning (#2764)
+  - durable workflow engine — checkpoint-before-transition, suspend/resume, background persist queue (#2747)
+  - SQLite-backed ConversationStore (#2741)
+  - add Wiring tab to Ops Dashboard with service instantiation status (#2735)
+
+  ### Bug Fixes
+  - route bug features to source project board, not server root
+  - skip features with human assignee in auto-mode pickup (#2750)
+  - rebuild better-sqlite3 native bindings in CI
+
+  ### Refactors
+  - Configuration & Settings Wiring (#2784)
+  - Cascading Condensation (#2776)
+  - [linear] Content: Everywhere all at once blog + Glyphkit Storybook relea (#2770)
+  - Configuration & Settings Wiring (#2784)
+  - Cascading Condensation (#2776)
+  - [linear] Content: Everywhere all at once blog + Glyphkit Storybook relea (#2770)
+  - Cascading Condensation (#2776)
+  - [linear] Content: Everywhere all at once blog + Glyphkit Storybook relea (#2770)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.70.0
+  - @protolabsai/utils@0.70.0
+
 ## 0.69.0
 
 ### Minor Changes

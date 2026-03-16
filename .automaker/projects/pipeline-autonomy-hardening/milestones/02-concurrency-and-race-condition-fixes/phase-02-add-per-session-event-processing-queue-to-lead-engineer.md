@@ -9,18 +9,20 @@
 
 ## Overview
 
-Lead Engineer onEvent() processes events without per-session locking. Concurrent events produce conflicting actions. Add a per-session Promise chain that serializes evaluateAndExecute calls. Also whitelist event types instead of blacklisting - exclude all lead-engineer:* events to prevent cascading loops. Skip rule evaluation when world state refresh fails.
+Lead Engineer onEvent() processes events without per-session locking. Concurrent events produce conflicting actions. Add a per-session Promise chain that serializes evaluateAndExecute calls. Also whitelist event types instead of blacklisting - exclude all lead-engineer:\* events to prevent cascading loops. Skip rule evaluation when world state refresh fails.
 
 ---
 
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/lead-engineer-service.ts`
 
 ### Verification
+
 - [ ] evaluateAndExecute calls for same session are serialized via Promise chain
-- [ ] lead-engineer:* events do not trigger rule evaluation
+- [ ] lead-engineer:\* events do not trigger rule evaluation
 - [ ] Stale world state from failed refresh does not trigger rule evaluation
 - [ ] npm run test:server passes
 

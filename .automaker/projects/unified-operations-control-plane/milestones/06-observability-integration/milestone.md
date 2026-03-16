@@ -14,11 +14,11 @@ Wire operational systems into Langfuse for tracing, cost tracking, and DORA metr
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-maintenance-and-timer-observability-traces.md](./phase-01-maintenance-and-timer-observability-traces.md) | 1 week | None | TBD |
-| 2 | [phase-02-webhook-delivery-and-dora-metrics.md](./phase-02-webhook-delivery-and-dora-metrics.md) | 1 week | None | TBD |
-| 3 | [phase-03-operations-control-plane-documentation.md](./phase-03-operations-control-plane-documentation.md) | 1 week | None | TBD |
+| Phase | File                                                                                                               | Duration | Dependencies | Owner |
+| ----- | ------------------------------------------------------------------------------------------------------------------ | -------- | ------------ | ----- |
+| 1     | [phase-01-maintenance-and-timer-observability-traces.md](./phase-01-maintenance-and-timer-observability-traces.md) | 1 week   | None         | TBD   |
+| 2     | [phase-02-webhook-delivery-and-dora-metrics.md](./phase-02-webhook-delivery-and-dora-metrics.md)                   | 1 week   | None         | TBD   |
+| 3     | [phase-03-operations-control-plane-documentation.md](./phase-03-operations-control-plane-documentation.md)         | 1 week   | None         | TBD   |
 
 ---
 
@@ -36,6 +36,7 @@ M6 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

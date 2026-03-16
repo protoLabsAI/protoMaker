@@ -63,17 +63,10 @@ function ChatPage() {
   const selectedRole = roles.find((r) => r.id === selectedRoleId);
 
   // ── Chat state (production Ava pattern) ─────────────────────────────────
-  const {
-    messages,
-    sendMessage,
-    stop,
-    isStreaming,
-    modelAlias,
-    handleNewChat,
-    handleModelChange,
-  } = useChatSession({
-    system: selectedRole?.systemPrompt,
-  });
+  const { messages, sendMessage, stop, isStreaming, modelAlias, handleNewChat, handleModelChange } =
+    useChatSession({
+      system: selectedRole?.systemPrompt,
+    });
 
   // ── Tool progress from WebSocket sideband ─────────────────────────────────
   const { getProgressByToolName } = useToolProgress();
@@ -122,8 +115,7 @@ function ChatPage() {
     [sendMessage]
   );
 
-  const currentModelLabel =
-    MODEL_OPTIONS.find((m) => m.alias === modelAlias)?.label ?? modelAlias;
+  const currentModelLabel = MODEL_OPTIONS.find((m) => m.alias === modelAlias)?.label ?? modelAlias;
 
   // ─────────────────────────────────────────────────────────────────────────
 

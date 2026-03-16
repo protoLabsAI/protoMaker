@@ -16,6 +16,7 @@ Three agent retrieval tools: lcm_grep (FTS5 search across messages and summaries
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/context-engine/src/retrieval/grep.ts`
 - [ ] `libs/context-engine/src/retrieval/describe.ts`
 - [ ] `libs/context-engine/src/retrieval/expand.ts`
@@ -24,6 +25,7 @@ Three agent retrieval tools: lcm_grep (FTS5 search across messages and summaries
 - [ ] `packages/mcp-server/plugins/automaker/src/tools/context-engine.ts`
 
 ### Verification
+
 - [ ] lcm_grep returns relevant matches from full history
 - [ ] lcm_describe shows summary content with provenance chain
 - [ ] lcm_expand spawns bounded sub-agent for focused questions

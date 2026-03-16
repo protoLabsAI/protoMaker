@@ -16,10 +16,12 @@ Migrate all 153 case handlers to registry registrations grouped by domain. Repla
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `packages/mcp-server/src/handlers/`
 - [ ] `packages/mcp-server/src/index.ts`
 
 ### Verification
+
 - [ ] Switch statement replaced
 - [ ] index.ts under 200 lines
 

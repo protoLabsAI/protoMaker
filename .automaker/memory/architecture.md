@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 587
-  referenced: 152
-  successfulFeatures: 152
+  loaded: 598
+  referenced: 159
+  successfulFeatures: 159
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -2050,3 +2050,160 @@ usageStats:
 - **Problem solved:** Shutdown handler needs to call `autoModeService.shutdown()` and `knowledgeStoreService.close()` but doesn't own these services
 - **Why this works:** Decouples shutdown logic from service implementation. Caller decides what to shut down. Enables testing (pass mock callbacks), extension (caller can inject additional cleanups), and flexibility if services change.
 - **Trade-offs:** Options pattern adds an interface layer (more code to maintain) but gains flexibility. Caller must understand the shutdown contract and pass correct callbacks. Testing easier, real usage requires setup ceremony.
+
+### Whitelist semantics for auto-mode eligibility: skip if `assignee && assignee !== 'agent'` (i.e., only undefined/null/"agent" are auto-eligible; all other values treated as human assignments and skipped). (2026-03-16)
+- **Context:** Auto-mode was incorrectly launching agents for features explicitly assigned to humans (e.g., assignee: 'josh'). Needed a guard to exclude human-assigned work.
+- **Why:** Whitelist approach is safer for maintainability. New system assignee values default to skipped by default, preventing accidental auto-pickup if a new system role is introduced. Blacklist (skip if in known human list) is fragile—easy to miss new humans or have naming collisions.
+- **Rejected:** Blacklist approach: `if (['josh', 'matt', ...].includes(feature.assignee))`. Breaks when human roster changes or new names conflict with system values.
+- **Trade-offs:** Whitelist requires knowing/agreeing on all valid system assignee values vs. blacklist requires maintaining an enumerated human roster. Whitelist is more declarative of intent.
+- **Breaking if changed:** Switching to blacklist means future system assignee values auto-pickup by default (wrong behavior). Whitelist is safer against unknown future extensions.
+
+### Worktree path is derived dynamically from (projectPath, featureId) rather than stored on Feature entity (2026-03-16)
+- **Context:** RestartRecoveryService must validate if interrupted features have intact worktrees. Initial attempt read feature.worktreePath, but this field doesn't exist on the Feature type.
+- **Why:** Feature is a domain model; storing infrastructure paths on it violates separation of concerns and creates a second source of truth. The derivation formula (path.join(projectPath, '.worktrees', sanitized(featureId))) is deterministic and already replicated in auto-mode-service. Single rule vs. stored data eliminates sync errors.
+- **Rejected:** Add worktreePath field to Feature entity and persist it — couples domain model to filesystem structure, requires migrations, increases failure modes if path derivation changes
+- **Trade-offs:** Worktree path must be recomputed when needed (negligible cost) vs. eliminates data consistency gaps where stored path diverges from derived reality
+- **Breaking if changed:** If the path derivation formula changes (folder structure, sanitization rules), all worktree validation fails silently because code still derives old paths. Formula must be replicated consistently everywhere.
+
+#### [Pattern] Recovery discovery via checkpoint store scanning, not a separate 'interrupted features' registry (2026-03-16)
+- **Problem solved:** On startup, recover features that were in-flight when server crashed. Could maintain a dedicated interrupted-features table or scan existing checkpoint data.
+- **Why this works:** Checkpoints are already the source of recovery data and are idempotent to scan. Separate registry creates data divergence risk — if checkpoint writes race with registry updates, they can disagree on which features need recovery. Single source of truth (checkpoint store) is simpler and requires no sync logic.
+- **Trade-offs:** Startup scans more data (all checkpoint stores) vs. avoiding a separate write path and its consistency guarantees
+
+### Startup recovery invoked inside server.listen() callback, not in earlier middleware or startup phase (2026-03-16)
+- **Context:** RestartRecoveryService.runStartupRecovery() is deferred until after server.listen() completes, even though it only needs disk access.
+- **Why:** Recovery emits feature:updated events and updates board state. If called before routes and event handlers are registered, those events fire into the void and listeners never receive them. Sequencing inside listen() callback guarantees entire event system is ready. Ensures dependent services can react to recovery.
+- **Rejected:** Call recovery in app initialization or middleware setup — events emit before handlers are registered, silently dropped; board state updates might not propagate
+- **Trade-offs:** Small delay before recovery runs (negligible) vs. guarantees event handlers are subscribed and all systems initialized
+- **Breaking if changed:** Moving recovery earlier in startup (e.g., before routes are added) causes feature:updated events to be emitted when no listeners are bound, breaking the recovery→board feedback loop.
+
+### Auto-resume only applies to features in auto-mode projects; others marked 'interrupted' for manual UI-driven resume (2026-03-16)
+- **Context:** Found interrupted features with valid worktrees. Could auto-resume all of them, or gate resume on project's auto-mode setting.
+- **Why:** Respects user's operational intent. If a project is in manual mode, auto-resuming workflows violates the user's explicit choice to control work manually. Auto-resume is a safety boundary: only applied where the user opted into automation. Manual-mode projects surface interrupted features to UI for explicit action.
+- **Rejected:** Auto-resume all interrupted features unconditionally — surprising automation for manual-mode users; violates their operational boundary
+- **Trade-offs:** Manual-mode projects require more user action post-crash vs. respecting automation boundaries and avoiding surprise behavior
+- **Breaking if changed:** If auto-resume becomes unconditional, manual-mode projects will silently resume workflows after crashes without user consent, violating their explicit non-automated operational model.
+
+#### [Pattern] Worktree validity validated via filesystem existence (existsSync), not a boolean state flag (2026-03-16)
+- **Problem solved:** To check if a worktree is intact, verify the directory exists at the derived path using existsSync(). Could instead store a 'worktree_exists' boolean in a database.
+- **Why this works:** Filesystem is the actual source of truth. A database flag can become stale or incorrect if the directory is deleted externally (git corruption, manual cleanup, symlink breakage). Filesystem check is idempotent — always reflects reality, requires no state sync or garbage collection of stale flags.
+- **Trade-offs:** Requires small I/O overhead per check vs. eliminates entire category of state consistency bugs and removes need for flag cleanup
+
+### Two-tier checkpoint persistence: PipelineCheckpointService uses atomic file-based JSON writes; context-engine/CheckpointStore provides SQLite-backed general-purpose persistence for conversations and workflows (2026-03-16)
+- **Context:** Durable workflow engine needs both operational checkpoint durability AND replayable conversation/step history
+- **Why:** File-based JSON gives operational simplicity for frequent writes and crash recovery via pendingResumes map. SQLite provides queryable history and schema evolution. Mixing would require complex JSON→SQL sync logic
+- **Rejected:** Single SQLite-based checkpoint store would add I/O latency to state machine transitions and require more complex crash recovery
+- **Trade-offs:** Operational code uses simpler file-based API, but infrastructure layer (context-engine) is more complex. Consumers must know which layer to use
+- **Breaking if changed:** Using CheckpointStore directly in server code instead of PipelineCheckpointService wrapper loses exponential backoff, event emission, and orphan lifecycle management
+
+#### [Pattern] Suspended states (REVIEW/MERGE) are self-loops that emit events and exit cleanly rather than blocking. State machine grants control back to caller; event listeners handle async outcome (2026-03-16)
+- **Problem solved:** Workflow must pause execution while awaiting external event (PR review approval, merge completion) without blocking the state machine thread
+- **Why this works:** Self-loop + event emission decouples waiting from blocking. Allows caller to disconnect, recover checkpoints, handle other work. Crash recovery can replay events and resume from checkpoint
+- **Trade-offs:** Requires event coordination logic outside state machine (listeners must handle emitted events) but enables clean multi-step recovery and better debuggability
+
+### Three-level escalation fallback: normal (full LLM) → aggressive (artefact-only LLM) → deterministic (pure regex). Each level invoked only if previous mode exceeds token budget. (2026-03-16)
+- **Context:** LLM-based summarization can fail (rate limits, timeouts, cost), and regex-only extraction loses semantic value. Need resilience without abandoning quality.
+- **Why:** Deterministic fallback ensures the system always produces _something meaningful_ rather than failing gracefully into nothing. Regex extracts high-signal artefacts (files, commands, errors) without external dependencies. Escalation preserves quality when possible, degrades gracefully under load.
+- **Rejected:** Pure LLM-only: simpler code, fails entirely on LLM errors. Pure regex-only: avoids LLM cost but loses semantic context. No escalation: picks one mode statically, can't adapt to message content.
+- **Trade-offs:** Escalation adds complexity (3 code paths) but buys resilience and cost adaptability. Deterministic mode is highly specific to CLI/error contexts; wouldn't work for prose-heavy transcripts.
+- **Breaking if changed:** Removing deterministic fallback makes system fail-hard on LLM unavailability. Removing escalation removes cost/latency adaptability.
+
+#### [Pattern] lcm_expand footer attached to every CompactedNode: unique ID, extracted topics, compression metrics. Footer is part of the summary text itself (affects token count), making expansion a first-class agent-driven feature. (2026-03-16)
+- **Problem solved:** Compacted nodes lose detail; agents need a hook to request re-expansion. Must signal what's expandable without requiring separate metadata channels.
+- **Why this works:** By embedding footer in summary text, it's visible in any context where the summary appears. The unique ID gives agents a stable reference for expansion requests. Topics hint at what was lost, guiding when to expand.
+- **Trade-offs:** Footer adds 50–100 tokens per node; this overhead is acceptable for the expansion contract it enables. Tightly couples summary format to expansion API.
+
+#### [Pattern] Topic extraction uses priority order: bullet points → artefact prefixes (File:, Cmd:, Error:) → sentence fragments. Structured output (lists) is trusted as already-summarized; prose requires interpretation. (2026-03-16)
+- **Problem solved:** Footer topics hint at what was compacted. Different message structures (deterministic output vs. prose) have different signal-to-noise ratios.
+- **Why this works:** Bullet points and artefact prefixes are machine-generated or explicitly structured; they're condensed by design. Sentence fragments require NLP to identify boundaries. Prefer high-confidence signals first.
+- **Trade-offs:** Prioritizes deterministic/artefact output; prose-heavy transcripts get generic topics. Works well for code/debug sessions, less ideal for meeting notes.
+
+### Fresh-tail protection: last N messages (configurable `freshTailSize`) are never compacted, even if total token budget is exceeded. (2026-03-16)
+- **Context:** Compaction is lossy; preserving recent context matters more than distant context because agents use recency bias.
+- **Why:** Recent messages have higher epistemic weight (more relevant to current task). Protecting them ensures agent context window isn't polluted by stale compacted summaries.
+- **Rejected:** Compress everything uniformly: simpler logic, but loses recent context which is most useful. Soft threshold: still risks compacting fresh messages under load.
+- **Trade-offs:** Reduces compactible window (less efficiency), but maintains availability of immediate context. Requires tuning `freshTailSize` per use case.
+- **Breaking if changed:** Removing fresh-tail protection causes recent context to age too quickly in memory-constrained scenarios, reducing agent effectiveness.
+
+### Deterministic regex extraction targets high-signal artefacts only: file paths (with extension validation), shell commands from code blocks + common CLI prefixes, error messages (first 120 chars). Ignores unstructured prose. (2026-03-16)
+- **Context:** Regex fallback must work without LLM, but can't parse arbitrary semantics. Need to extract what matters from dev/debug/CI output.
+- **Why:** File paths, commands, and errors are machine-parseable entities with high information density. They're actionable by agents without semantic interpretation. Ignoring prose keeps compaction deterministic and predictable.
+- **Rejected:** Extract prose (first/last N sentences): loses structure, requires downstream parsing. Extract everything (all text chunks): produces noise, compaction output becomes useless.
+- **Trade-offs:** Excellent for CLI/debug/CI logs, fails for prose-heavy contexts (emails, meeting notes). Produces very compact summaries at cost of semantic loss.
+- **Breaking if changed:** If you broaden extraction to prose, deterministic mode becomes non-deterministic (depends on LLM-like heuristics). If you narrow to only errors, lose file path context.
+
+### Fresh tail messages are reserved in budget and never dropped; oldest summaries are dropped first when budget exceeded (2026-03-16)
+- **Context:** Token budget must be respected while preserving critical recent context and compacted history
+- **Why:** Recent messages provide immediate conversation context; summaries represent historical knowledge. Dropping old summaries (already compacted) before recent messages preserves relevance while respecting budget constraints. Fresh tail isolation prevents budget fragmentation from blocking recent context.
+- **Rejected:** Treating all messages equally with priority weighting; would lose guaranteed recent context. Random drop strategy; would create unpredictable context loss.
+- **Trade-offs:** Simpler implementation (two tiers instead of weighted priority), guaranteed recent context, but may keep verbose old messages while dropping useful older summaries. Wastes budget if tail is very large.
+- **Breaking if changed:** Removing fresh-tail distinction means losing ability to guarantee recent context preservation. Regular messages would be subject to same budget pressure as summaries, degrading conversation continuity.
+
+#### [Pattern] Three-tier message assembly: [recall_guidance] → [surviving summaries] → [regular messages] → [fresh tail], preserving chronological order within categories (2026-03-16)
+- **Problem solved:** Model needs to understand how to retrieve expanded summaries (recall_guidance) before encountering compact summary references
+- **Why this works:** Guidance must precede summaries so model learns the expansion mechanism before needing it. Chronological ordering within summaries/messages preserves conversation flow. Fresh tail at end preserves recency bias.
+- **Trade-offs:** More structured ordering helps model parsing but breaks pure chronology. Improves model understanding at cost of context reordering.
+
+#### [Gotcha] Recall guidance tokens estimated twice (once to reserve budget, once to build message), creating potential budget overflow if estimates diverge (2026-03-16)
+- **Situation:** Budget accounting reserves recallGuidanceTokens upfront before building actual guidance message
+- **Root cause:** Guidance content isn't known until surviving summaries are determined, but budget must be reserved upfront. Two-pass approach required.
+- **How to avoid:** Clean separation of budget vs. message building, but token estimate inconsistency risk. Runtime budget validation needed.
+
+#### [Gotcha] Array index-based pairing between summaryItems and formattedSummaries; divergence causes silent mismatches (2026-03-16)
+- **Situation:** Loop uses parallel indices: `summaryItems[idx]` and `formattedSummaries[idx]`
+- **Root cause:** Implicit pairing via sort order avoids explicit map; assumes stable order throughout assembly
+- **How to avoid:** Compact code vs. fragile index coupling. Any future sort or filter change could silently pair wrong summary with formatted content.
+
+#### [Pattern] Nested lookup map (summaryByNodeId) is created but never used in final assembly; formatted summaries iterated directly (2026-03-16)
+- **Problem solved:** Code builds `summaryByNodeId` map early but relies on index-based iteration for survivors
+- **Why this works:** Early map construction suggests intent to use node IDs, but implementation reverts to indices. Likely defensive coding (map prepared but not needed) or refactoring artifact.
+- **Trade-offs:** Extra memory for unused map, but signposts intent for future refactoring. Unused map suggests API could improve.
+
+#### [Pattern] FTS5 with LIKE fallback in grep tool — full-text search with degradation path when index unpopulated (2026-03-16)
+- **Problem solved:** Implementing lcm_grep for message/node/file search
+- **Why this works:** FTS5 is fast when index exists, but index may not be built initially or in some edge cases. Fallback to LIKE ensures search always works without hard failure. Porter stemmer provides linguistic matching when possible.
+- **Trade-offs:** LIKE fallback slower but ensures availability; adds branching logic; requires detection of when to switch
+
+#### [Pattern] Depth-aware traversal strategy in expand — depth-0 nodes fetch original messages directly; depth≥1 recurses through CondensedNodes (2026-03-16)
+- **Problem solved:** Reconstructing full context from various node types at different abstraction levels
+- **Why this works:** Schema has structural hierarchy: depth indicates abstraction level. Depth-0 is original messages (direct fetch). Depth≥1 are transformations/compressions (need recursion to reconstruct). Prevents treating all nodes identically.
+- **Trade-offs:** Requires understanding depth semantics; faster reconstruction of depth-0; forces explicit handling of depth boundaries
+
+#### [Pattern] ContextNodeStore abstraction for persisting CompactedNode/CondensedNode to SQLite (2026-03-16)
+- **Problem solved:** expand tool needs to reconstruct original content from derived nodes stored in database
+- **Why this works:** Separates storage concern from retrieval logic. Allows expand to materialize nodes without knowing SQL details. Enables future storage backend changes. Persistence is orthogonal to expansion algorithm.
+- **Trade-offs:** Added abstraction layer but clearer separation of concerns; enables easier testing of ContextExpander logic in isolation
+
+#### [Pattern] Separated MCP tool definitions from implementation — tools/context-engine.ts contains schemas and tool metadata distinct from route/logic files (2026-03-16)
+- **Problem solved:** Exporting retrieval tools as MCP tools to be called from agent code
+- **Why this works:** Tool definitions are contracts (JSON schemas, input/output specs). Separating them from implementation lets agents/clients know about tools without importing heavy dependencies. Schemas are co-located with tool names, not buried in route handlers.
+- **Trade-offs:** Extra file but clearer contract surface; agents can introspect tools without loading server code
+
+#### [Pattern] RESTful route scoping under /api/context-engine prefix for all three tools (2026-03-16)
+- **Problem solved:** Exposing grep, describe, expand as HTTP endpoints
+- **Why this works:** Grouping related operations under single API prefix enables versioning, auth, and monitoring at feature level. All context-engine ops under one namespace. Clearer than scattered routes.
+- **Trade-offs:** Adds one path segment but clarifies API organization; future context-engine changes stay within namespace
+
+#### [Pattern] Fresh Tail Protection: Recent messages bypass budget constraints entirely, decoupled from summary-based compression. Fresh items included unconditionally; budget pressure only affects historical summaries. (2026-03-16)
+- **Problem solved:** Building token-budget-aware context assembly that must balance recency (uncompressed) with history (compressed summaries)
+- **Why this works:** Preserves recent conversation turns uncompressed while older context is summarized. Assumption: recent context is higher value and compression loss is unacceptable for recent turns.
+- **Trade-offs:** Guarantees capacity for N recent tokens, but reduces budget available for historical context. If recent context is minimal, budget is wasted.
+
+### Oldest-Summaries-First Drop Strategy: When budget exceeded, drop summaries starting from oldest (earliest timestamps), not by size or quality score (2026-03-16)
+- **Context:** Deciding prioritization when token budget forces summary exclusion in context assembly
+- **Why:** Encodes temporal preference: assumes recent context is more relevant to LLM reasoning than historical context. Oldest context is least likely to inform current turn.
+- **Rejected:** Drop-smallest strategy (smaller summaries have less cost, more can be kept); Drop-by-quality strategy (requires scoring mechanism)
+- **Trade-offs:** Temporal wins (recency bias matches LLM task); Information density loses (might drop high-value old context if summaries are coarse). Simpler than quality-based (no scoring overhead).
+- **Breaking if changed:** Changing to size-first or quality-first would keep older context at expense of newer, changing inference behavior for temporal reasoning
+
+#### [Pattern] Additive Barrel Export Pattern: Merge conflicts in library exports resolved by keeping all groups (assembly + retrieval + interception), enabling decoupled parallel feature development without export coordination (2026-03-16)
+- **Problem solved:** Multiple agents in parallel added different feature exports to same index.ts barrel; HEAD had assembly, origin/dev had retrieval+interception
+- **Why this works:** Allows feature teams to land exports independently without merge conflicts or coordination. Each feature owns its export group.
+- **Trade-offs:** Simpler merge behavior for parallel work; Risk of namespace pollution if multiple features export same symbol names. Requires discipline.
+
+### XML with Explicit Metadata for Summary Formatting: Summaries rendered as `<context_summary>` with id/depth/mode/tokens/source_count attributes, not JSON or plain text (2026-03-16)
+- **Context:** Choosing serialization format for compressed summaries that LLM must parse and understand within context window
+- **Why:** XML structure survives LLM tokenization better than JSON (fewer special tokens per key); Explicit metadata attributes are dense; Familiar to prompt engineering.
+- **Rejected:** JSON (more tokens for keys; Whitespace fragile in LLM); Plain text (no structure for extraction); Binary (not LLM-readable)
+- **Trade-offs:** XML is verbose in characters but token-efficient in LLM tokenization; Easier for LLM to parse structured attributes than JSON keys
+- **Breaking if changed:** Switching to JSON or plain text would increase token cost of summaries, reducing budget headroom

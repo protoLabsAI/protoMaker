@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 613
-  referenced: 187
-  successfulFeatures: 187
+  loaded: 622
+  referenced: 193
+  successfulFeatures: 193
 ---
 <!-- domain: API Design & Integration | GitHub GraphQL, REST endpoints, HTTP client patterns -->
 
@@ -541,3 +541,27 @@ usageStats:
 - **Rejected:** Size-based filtering (bytes don't correlate with tokens), content-type heuristics (fragile), always-store (wastes space)
 - **Trade-offs:** May intercept unimportant large files or miss important small ones, but predictable and tunable
 - **Breaking if changed:** If threshold changes, all future interceptions change scope; if you change to different heuristic, all filtering logic must change
+
+#### [Pattern] Add implicit/missing fields to the type interface as explicit optional fields with semantic JSDoc. This makes an implicit contract ("assignee affects auto-mode behavior") part of the formal API. (2026-03-16)
+- **Problem solved:** The bug existed because Feature.assignee was never explicitly defined in the type—it was silently undefined everywhere, so callers had no way to know it should exist or what it means.
+- **Why this works:** Explicit typing forces future code to consciously acknowledge the field exists and what it does. Prevents similar silent-miss bugs. Type contract is stronger than documentation-only.
+- **Trade-offs:** Requires discipline to keep type definitions in sync with data model. Gains: anyone reading the type immediately sees the field and can navigate to its JSDoc semantics.
+
+### Non-text message parts (tool_use, tool_result, image, document) are converted to inline text placeholders like `[tool_use: ...]` rather than preserved as structured content (2026-03-16)
+- **Context:** Message extraction must produce string content for AssembledMessage while preserving signal about non-text parts
+- **Why:** Simplified API contract (string content), model can still recognize non-text occurred. Avoids complex content union types in assembly layer.
+- **Rejected:** Preserving structured content (union types); complicates assembler API. Dropping non-text entirely; loses signal to model.
+- **Trade-offs:** Simpler API but rich content (images/documents) reduced to text labels. Model loses visual/document content but gains full context awareness.
+- **Breaking if changed:** If non-text parts must be preserved as structured content, entire AssembledMessage type and formatter require overhaul to support content unions.
+
+### Optional provenance chain walk in describe tool — metadata includes optional parent DAG traversal (2026-03-16)
+- **Context:** describe needs to surface where a condensed node came from
+- **Why:** Provenance (parent walk) is expensive — traversing parent DAG can recurse deep. Making it optional lets callers choose: fast shallow describe, or detailed lineage. Separates cheap metadata from expensive genealogy.
+- **Rejected:** Always include provenance (impacts performance); never include it (loses lineage data)
+- **Trade-offs:** More API flexibility but adds optional parameter; caller must understand cost difference between modes
+- **Breaking if changed:** Removing provenance option loses lineage visibility; always-on provenance causes performance regression on large graphs
+
+#### [Pattern] Transparency via BudgetReport: Assembly process returns explicit accounting of budgetTokens, usedTokens, headroom, droppedSummaries, includedSummaries, includedMessages for caller visibility (2026-03-16)
+- **Problem solved:** Token budget is constrained; callers need to understand what was included/excluded and why
+- **Why this works:** Enables debugging, observability, and adaptive calling patterns (caller can adjust budget if headroom is low). Surfaces lossy compression decisions.
+- **Trade-offs:** Report adds API surface and caller complexity; enables intelligent retry/adaptation strategies

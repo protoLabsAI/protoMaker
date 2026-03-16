@@ -16,11 +16,13 @@ Three fixes: (1) ExecuteProcessor isFatalInfraFailure patterns too broad. Use sp
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/lead-engineer-execute-processor.ts`
 - [ ] `apps/server/src/services/lead-engineer-review-merge-processors.ts`
 - [ ] `apps/server/src/services/lead-engineer-escalation.ts`
 
 ### Verification
+
 - [ ] Fatal infra patterns are specific not generic
 - [ ] Merge retry matches specific check failure strings
 - [ ] EscalateProcessor uses single featureLoader.update call

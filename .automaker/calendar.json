@@ -44,20 +44,6 @@
     "updatedAt": "2026-03-16T18:59:57.716Z"
   },
   {
-    "title": "Ceremonies: lossless-context-management-agent-resilience",
-    "date": "2026-03-16",
-    "type": "ceremony",
-    "description": "Recurring standup and retro ceremonies for project lossless-context-management-agent-resilience",
-    "recurrence": {
-      "frequency": "daily"
-    },
-    "id": "event-1773689203169-eq0uhl1au",
-    "projectPath": "/Users/kj/dev/automaker",
-    "sourceId": "ceremony:lossless-context-management-agent-resilience",
-    "createdAt": "2026-03-16T19:26:43.166Z",
-    "updatedAt": "2026-03-16T19:26:43.166Z"
-  },
-  {
     "title": "Started: Context Engine Types & Package Scaffold",
     "date": "2026-03-16",
     "type": "ops",
@@ -265,5 +251,247 @@
     "sourceId": "ops:feature:pr-merged:feature-1773689186221-dnmxq8tm3",
     "createdAt": "2026-03-16T20:31:35.608Z",
     "updatedAt": "2026-03-16T20:31:35.608Z"
+  },
+  {
+    "title": "Merged: feature-1773468551387-nimrhw1og",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773693461090-xhq4oh4n7",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773468551387-nimrhw1og",
+    "createdAt": "2026-03-16T20:37:41.087Z",
+    "updatedAt": "2026-03-16T20:37:41.087Z"
+  },
+  {
+    "title": "Started: Update docs after: Lossless Context Management & Agent Resilience",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773694000262-z1kir1i7a",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773693096052-fn9g87hvd",
+    "createdAt": "2026-03-16T20:46:40.258Z",
+    "updatedAt": "2026-03-16T20:46:40.258Z"
+  },
+  {
+    "title": "Merged: feature-1773693096052-fn9g87hvd",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773694471721-ykua082gp",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773693096052-fn9g87hvd",
+    "createdAt": "2026-03-16T20:54:31.718Z",
+    "updatedAt": "2026-03-16T20:54:31.718Z"
+  },
+  {
+    "title": "Completed: Update docs after: Lossless Context Management & Agent Resilience",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation completed",
+    "id": "event-1773694471728-zzp5y7vqz",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:completed:feature-1773693096052-fn9g87hvd",
+    "createdAt": "2026-03-16T20:54:31.727Z",
+    "updatedAt": "2026-03-16T20:54:31.727Z"
+  },
+  {
+    "title": "Started: Leaf Summarization",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773694911574-zk6bugo98",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773689186215-1q5hm2ott",
+    "createdAt": "2026-03-16T21:01:51.572Z",
+    "updatedAt": "2026-03-16T21:08:49.323Z"
+  },
+  {
+    "title": "Started: System Improvement: recurring merge_conflict failures",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773695080455-2i799b205",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773695049401-q699unnqb",
+    "createdAt": "2026-03-16T21:04:40.453Z",
+    "updatedAt": "2026-03-16T21:04:40.453Z"
+  },
+  {
+    "title": "Merged: feature-1773689186215-1q5hm2ott",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773695734410-wnfb4lxe9",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773689186215-1q5hm2ott",
+    "createdAt": "2026-03-16T21:15:34.406Z",
+    "updatedAt": "2026-03-16T21:17:07.299Z"
+  },
+  {
+    "title": "Completed: Leaf Summarization",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation completed",
+    "id": "event-1773695734419-ffsjve8j7",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:completed:feature-1773689186215-1q5hm2ott",
+    "createdAt": "2026-03-16T21:15:34.419Z",
+    "updatedAt": "2026-03-16T21:15:34.419Z"
+  },
+  {
+    "title": "Started: Cascading Condensation",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773695831032-bc199m65w",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773689186216-ig1sclg11",
+    "createdAt": "2026-03-16T21:17:11.030Z",
+    "updatedAt": "2026-03-16T21:17:11.030Z"
+  },
+  {
+    "title": "Completed: Cascading Condensation",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation completed",
+    "id": "event-1773696194610-dzq92z3ko",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:completed:feature-1773689186216-ig1sclg11",
+    "createdAt": "2026-03-16T21:23:14.607Z",
+    "updatedAt": "2026-03-16T21:23:14.607Z"
+  },
+  {
+    "title": "Started: Context Assembler",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773696197241-56qstajm4",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773689186216-sdwdztkbj",
+    "createdAt": "2026-03-16T21:23:17.238Z",
+    "updatedAt": "2026-03-16T21:23:17.238Z"
+  },
+  {
+    "title": "Merged: feature-1773689186216-ig1sclg11",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773696377824-xlpxr5a60",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773689186216-ig1sclg11",
+    "createdAt": "2026-03-16T21:26:17.805Z",
+    "updatedAt": "2026-03-16T21:26:17.805Z"
+  },
+  {
+    "title": "Merged: feature-1773689186216-sdwdztkbj",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773696432741-f4xfkfack",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773689186216-sdwdztkbj",
+    "createdAt": "2026-03-16T21:27:12.739Z",
+    "updatedAt": "2026-03-16T21:55:56.271Z"
+  },
+  {
+    "title": "Started: Retrieval Tools (grep, describe, expand)",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773696782224-euz36h2e4",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773689186218-k8vhlx0po",
+    "createdAt": "2026-03-16T21:33:02.214Z",
+    "updatedAt": "2026-03-16T21:33:02.214Z"
+  },
+  {
+    "title": "Merged: Retrieval Tools (grep, describe, expand)",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773697849417-xi6yo5poh",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773689186218-k8vhlx0po",
+    "createdAt": "2026-03-16T21:50:49.415Z",
+    "updatedAt": "2026-03-16T21:52:17.825Z"
+  },
+  {
+    "title": "Completed: Context Assembler",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation completed",
+    "id": "event-1773698148178-3l0b5l7kn",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:completed:feature-1773689186216-sdwdztkbj",
+    "createdAt": "2026-03-16T21:55:48.177Z",
+    "updatedAt": "2026-03-16T21:55:48.177Z"
+  },
+  {
+    "title": "Started: Agent Service Integration",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773698161116-0unosjc45",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773689186220-t3hv64wzd",
+    "createdAt": "2026-03-16T21:56:01.113Z",
+    "updatedAt": "2026-03-16T21:56:01.113Z"
+  },
+  {
+    "title": "Merged: [Epic] Retrieval Tools & Large File Handling",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773699750272-zb2xsfqti",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773689186217-p98tv4d52",
+    "createdAt": "2026-03-16T22:22:30.257Z",
+    "updatedAt": "2026-03-16T22:22:30.257Z"
+  },
+  {
+    "title": "Completed: Agent Service Integration",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation completed",
+    "id": "event-1773700161394-khx17ps52",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:completed:feature-1773689186220-t3hv64wzd",
+    "createdAt": "2026-03-16T22:29:21.391Z",
+    "updatedAt": "2026-03-16T22:29:21.391Z"
+  },
+  {
+    "title": "Started: Configuration & Settings Wiring",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773700632965-23mnrp7vt",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773689186221-v7nt11awz",
+    "createdAt": "2026-03-16T22:37:12.950Z",
+    "updatedAt": "2026-03-16T22:37:12.950Z"
+  },
+  {
+    "title": "Completed: Configuration & Settings Wiring",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature implementation completed",
+    "id": "event-1773701216278-8wgo0sd40",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:completed:feature-1773689186221-v7nt11awz",
+    "createdAt": "2026-03-16T22:46:56.275Z",
+    "updatedAt": "2026-03-16T22:46:56.275Z"
+  },
+  {
+    "title": "Merged: feature-1773689186221-v7nt11awz",
+    "date": "2026-03-16",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773701365205-lqfp6f7ah",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773689186221-v7nt11awz",
+    "createdAt": "2026-03-16T22:49:25.187Z",
+    "updatedAt": "2026-03-16T22:49:25.187Z"
   }
 ]

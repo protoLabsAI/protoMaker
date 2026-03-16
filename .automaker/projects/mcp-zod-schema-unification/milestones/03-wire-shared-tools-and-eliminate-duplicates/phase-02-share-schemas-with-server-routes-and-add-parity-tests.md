@@ -16,10 +16,12 @@ Import Zod schemas in server routes from libs/tools. Add tests verifying MCP and
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/routes/features/`
 - [ ] `packages/mcp-server/tests/schema-parity.test.ts`
 
 ### Verification
+
 - [ ] Shared schemas in feature routes
 - [ ] Parity tests prevent drift
 

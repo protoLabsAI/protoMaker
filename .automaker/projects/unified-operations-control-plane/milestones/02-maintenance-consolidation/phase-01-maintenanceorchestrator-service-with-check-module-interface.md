@@ -16,11 +16,13 @@ Create MaintenanceOrchestrator that runs composable check modules on configurabl
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/types/src/maintenance.ts`
 - [ ] `apps/server/src/services/maintenance-orchestrator.ts`
 - [ ] `apps/server/src/services/scheduler.module.ts`
 
 ### Verification
+
 - [ ] MaintenanceCheck interface defined in @protolabsai/types
 - [ ] Orchestrator accepts check module registration
 - [ ] Two-tier schedule: critical (5min) and full (6h)

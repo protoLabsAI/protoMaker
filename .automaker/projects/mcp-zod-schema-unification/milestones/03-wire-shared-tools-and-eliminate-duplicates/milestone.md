@@ -14,10 +14,10 @@ Connect MCP server to toMCPTools, share schemas with server routes, add parity t
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-replace-hand-written-tool-arrays-with-tomcptools-and-delete-old-files.md](./phase-01-replace-hand-written-tool-arrays-with-tomcptools-and-delete-old-files.md) | 1 week | None | TBD |
-| 2 | [phase-02-share-schemas-with-server-routes-and-add-parity-tests.md](./phase-02-share-schemas-with-server-routes-and-add-parity-tests.md) | 1 week | None | TBD |
+| Phase | File                                                                                                                                                                     | Duration | Dependencies | Owner |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- | ------------ | ----- |
+| 1     | [phase-01-replace-hand-written-tool-arrays-with-tomcptools-and-delete-old-files.md](./phase-01-replace-hand-written-tool-arrays-with-tomcptools-and-delete-old-files.md) | 1 week   | None         | TBD   |
+| 2     | [phase-02-share-schemas-with-server-routes-and-add-parity-tests.md](./phase-02-share-schemas-with-server-routes-and-add-parity-tests.md)                                 | 1 week   | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M3 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

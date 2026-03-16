@@ -16,6 +16,7 @@ Delete apps/server/src/services/pipeline-checkpoint-service.ts. Remove PipelineO
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/pipeline-checkpoint-service.ts`
 - [ ] `apps/server/src/server/services.ts`
 - [ ] `libs/types/src/global-settings.ts`
@@ -26,6 +27,7 @@ Delete apps/server/src/services/pipeline-checkpoint-service.ts. Remove PipelineO
 - [ ] `apps/server/src/routes/hitl-forms/routes/create.ts`
 
 ### Verification
+
 - [ ] pipeline-checkpoint-service.ts deleted
 - [ ] services.ts has no PipelineOrchestrator or PipelineCheckpointService
 - [ ] FeatureFlags interface has no pipeline field

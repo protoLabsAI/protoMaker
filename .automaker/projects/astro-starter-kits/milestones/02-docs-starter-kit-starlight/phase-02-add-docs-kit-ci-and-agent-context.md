@@ -16,11 +16,13 @@ Add CI workflow, .automaker/ context files, and wire into libs/templates/ Starte
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/templates/starters/docs/.github/`
 - [ ] `libs/templates/starters/docs/.automaker/`
 - [ ] `libs/templates/src/index.ts`
 
 ### Verification
+
 - [ ] CI with build, format, lint, deploy steps
 - [ ] Agent context file explains Starlight structure
 - [ ] Wired into StarterKitType exports

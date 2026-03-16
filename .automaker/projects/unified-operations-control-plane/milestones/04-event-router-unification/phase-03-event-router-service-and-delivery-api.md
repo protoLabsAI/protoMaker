@@ -16,12 +16,14 @@ Create EventRouterService unifying SignalIntakeService classification with webho
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/event-router-service.ts`
 - [ ] `apps/server/src/routes/ops/routes/deliveries.ts`
 - [ ] `packages/mcp-server/src/tools/ops-tools.ts`
 - [ ] `apps/server/src/server/wiring.ts`
 
 ### Verification
+
 - [ ] EventRouterService wraps classification + delivery tracking
 - [ ] Single classifyAndRoute method
 - [ ] API routes for deliveries

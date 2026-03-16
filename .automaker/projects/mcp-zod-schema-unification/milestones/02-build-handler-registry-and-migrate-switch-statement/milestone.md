@@ -14,10 +14,10 @@ Replace the 1600-line switch statement with a handler registry
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-create-toolhandlerregistry-with-apicall-dispatch.md](./phase-01-create-toolhandlerregistry-with-apicall-dispatch.md) | 1 week | None | TBD |
-| 2 | [phase-02-register-all-handlers-and-delete-switch-statement.md](./phase-02-register-all-handlers-and-delete-switch-statement.md) | 2 weeks | None | TBD |
+| Phase | File                                                                                                                             | Duration | Dependencies | Owner |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-create-toolhandlerregistry-with-apicall-dispatch.md](./phase-01-create-toolhandlerregistry-with-apicall-dispatch.md)   | 1 week   | None         | TBD   |
+| 2     | [phase-02-register-all-handlers-and-delete-switch-statement.md](./phase-02-register-all-handlers-and-delete-switch-statement.md) | 2 weeks  | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M2 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

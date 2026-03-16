@@ -35,6 +35,7 @@ import {
   getCustomSubagents,
   getProviderByModelId,
 } from '../lib/settings-helpers.js';
+import { AgentSessionManager } from './agent-session-manager.js';
 
 interface Message {
   id: string;
@@ -157,6 +158,12 @@ interface Session {
     phase: PipelinePhase;
   }; // Optional feature context for tool tracking
   pendingTools?: Array<{ name: string; startTime: number }>; // Tools awaiting completion
+  /**
+   * SQLite conversation ID managed by AgentSessionManager.
+   * Present only for feature-backed sessions (featureContext is set).
+   * Used to assemble token-budget-aware context and persist history in SQLite.
+   */
+  contextConversationId?: string;
 }
 
 interface SessionMetadata {
@@ -180,6 +187,11 @@ export class AgentService {
   private settingsService: SettingsService | null = null;
   private featureLoader: FeatureLoader | null = null;
   private logger = createLogger('AgentService');
+  /**
+   * Context-engine-backed session manager for feature sessions.
+   * Initialised lazily in initialize() once the data dir exists.
+   */
+  private contextSessionManager: AgentSessionManager | null = null;
 
   constructor(
     dataDir: string,
@@ -196,6 +208,22 @@ export class AgentService {
 
   async initialize(): Promise<void> {
     await secureFs.mkdir(this.stateDir, { recursive: true });
+
+    // Initialise the context-engine-backed session manager.
+    // Resolve the Anthropic API key for LLM-assisted compaction; if unavailable
+    // the manager falls back to deterministic extraction automatically.
+    try {
+      const dataDir = path.dirname(this.stateDir);
+      let anthropicApiKey: string | undefined;
+      if (this.settingsService) {
+        const credentials = await this.settingsService.getCredentials();
+        anthropicApiKey = credentials?.apiKeys?.anthropic || undefined;
+      }
+      this.contextSessionManager = new AgentSessionManager(dataDir, anthropicApiKey);
+    } catch (error) {
+      this.logger.error('Failed to initialise AgentSessionManager:', error);
+      // Non-fatal — agent service continues without context-engine backing
+    }
   }
 
   /**
@@ -345,11 +373,40 @@ export class AgentService {
       timestamp: new Date().toISOString(),
     };
 
-    // Build conversation history from existing messages BEFORE adding current message
-    const conversationHistory = session.messages.map((msg) => ({
-      role: msg.role,
-      content: msg.content,
-    }));
+    // ---------------------------------------------------------------------------
+    // Context-engine integration (feature sessions only)
+    //
+    // When a featureId is present we use the AgentSessionManager to:
+    //   1. Assemble prior history via a token-budget-aware assembler (replacing
+    //      the flat JSON history for the conversationHistory parameter).
+    //   2. Ingest each user/assistant turn into SQLite for durable persistence.
+    //   3. Trigger compaction after each exchange to keep the context compact.
+    //
+    // For sessions without featureContext the original flat-JSON path is used,
+    // preserving full backward compatibility.
+    // ---------------------------------------------------------------------------
+    let contextConversationId: string | undefined;
+
+    if (featureContext && this.contextSessionManager) {
+      // Initialise or resume the SQLite conversation for this feature
+      if (!session.contextConversationId) {
+        session.contextConversationId = this.contextSessionManager.getOrCreateConversation(
+          featureContext.featureId,
+          `Feature: ${featureContext.featureId}`
+        );
+      }
+      contextConversationId = session.contextConversationId;
+    }
+
+    // Build conversation history:
+    //   - Feature sessions: assembled from context-engine (budget-aware, compaction-ready)
+    //   - Other sessions:   flat map of in-memory messages (original behaviour)
+    const conversationHistory = contextConversationId
+      ? this.contextSessionManager!.assembleHistory(contextConversationId)
+      : session.messages.map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+        }));
 
     session.messages.push(userMessage);
     session.isRunning = true;
@@ -529,7 +586,9 @@ export class AgentService {
         abortController: session.abortController!,
         conversationHistory: conversationHistory.length > 0 ? conversationHistory : undefined,
         settingSources: settingSources.length > 0 ? settingSources : undefined,
-        sdkSessionId: session.sdkSessionId, // Pass SDK session ID for resuming
+        // For context-engine-backed sessions we own the full history via assembled context;
+        // skip the SDK session ID so the SDK does not try to resume its own state in parallel.
+        sdkSessionId: contextConversationId ? undefined : session.sdkSessionId,
         mcpServers: Object.keys(mcpServers).length > 0 ? mcpServers : undefined, // Pass MCP servers configuration
         agents: customSubagents, // Pass custom subagents for task delegation
         thinkingLevel: effectiveThinkingLevel, // Pass thinking level for Claude models
@@ -693,6 +752,22 @@ export class AgentService {
       }
 
       await this.saveSession(sessionId, session.messages);
+
+      // Ingest this exchange into the context-engine store and run compaction
+      if (contextConversationId && this.contextSessionManager) {
+        this.contextSessionManager.ingestMessage(contextConversationId, 'user', message);
+        if (responseText) {
+          this.contextSessionManager.ingestMessage(
+            contextConversationId,
+            'assistant',
+            responseText
+          );
+        }
+        // Fire-and-forget compaction — non-blocking, non-throwing
+        void this.contextSessionManager.maybeCompact(contextConversationId).catch((err) => {
+          this.logger.error('Background compaction error:', err);
+        });
+      }
 
       session.isRunning = false;
       session.abortController = null;

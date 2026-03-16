@@ -16,12 +16,14 @@ Trace webhook deliveries in Langfuse. Add DORAMetricsService calculating deploym
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/ops-tracing-service.ts`
 - [ ] `apps/server/src/services/dora-metrics-service.ts`
 - [ ] `apps/server/src/services/calendar-integration-service.ts`
 - [ ] `apps/ui/src/components/views/ops-view/system-health-panel.tsx`
 
 ### Verification
+
 - [ ] Webhook deliveries traced in Langfuse
 - [ ] DORA metrics calculated from event history
 - [ ] DORA displayed on Ops Dashboard

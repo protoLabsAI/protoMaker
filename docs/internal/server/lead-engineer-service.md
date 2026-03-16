@@ -21,18 +21,20 @@ The Lead Engineer pipeline processes features through discrete state phases, eac
 
 ```text
 LeadEngineerService (orchestrator)
-  ├── FeatureStateMachine       — per-feature state transitions (lead-engineer-state-machine.ts)
-  │     ├── IntakeProcessor       — entry point for every feature
-  │     ├── PlanProcessor         — plan generation + quality gate
-  │     ├── ExecuteProcessor      — agent invocation + monitoring
-  │     ├── ReviewProcessor       — PR monitoring and feedback cycles
-  │     ├── MergeProcessor        — CI verification and PR merge
-  │     ├── DeployProcessor       — post-merge verification → DONE
-  │     └── EscalateProcessor     — blocked/failed feature handling
-  ├── WorldStateBuilder         — board snapshot + incremental updates
-  ├── ActionExecutor            — fast-path rule execution + supervisor
-  ├── CeremonyOrchestrator      — project completion ceremonies
-  └── LeadEngineerSessionStore  — session persistence (DATA_DIR/lead-engineer-sessions.json)
+  ├── FeatureStateMachine          — per-feature state transitions (lead-engineer-state-machine.ts)
+  │     ├── IntakeProcessor          — entry point for every feature
+  │     ├── PlanProcessor            — plan generation + quality gate
+  │     ├── ExecuteProcessor         — agent invocation + monitoring
+  │     ├── ReviewProcessor          — PR monitoring and feedback cycles
+  │     ├── MergeProcessor           — CI verification and PR merge
+  │     ├── DeployProcessor          — post-merge verification → DONE
+  │     └── EscalateProcessor        — blocked/failed feature handling
+  ├── PersistQueue               — background checkpoint I/O (inside FeatureStateMachine)
+  ├── WorldStateBuilder          — board snapshot + incremental updates
+  ├── ActionExecutor             — fast-path rule execution + supervisor
+  ├── CeremonyOrchestrator       — project completion ceremonies
+  ├── PipelineCheckpointService  — durable state checkpoints (DATA_DIR/checkpoints/)
+  └── LeadEngineerSessionStore   — session persistence (DATA_DIR/lead-engineer-sessions.json)
 
 Each processor implements StateProcessor:
   enter(ctx)   → side effects on state entry
@@ -56,6 +58,24 @@ Goal gates can be disabled project-wide via `pipeline.goalGatesEnabled: false` i
 ### Session Persistence
 
 `LeadEngineerSessionStore` persists active sessions to `DATA_DIR/lead-engineer-sessions.json` (a single multi-project file keyed by `projectPath`). On server restart, `restore()` replays all persisted sessions so auto-mode resumes automatically.
+
+### Durable Workflow Checkpoints
+
+When `pipeline.checkpointEnabled` is `true` in workflow settings, `FeatureStateMachine` saves a checkpoint after every successful state transition. Checkpoints live at:
+
+```
+{projectPath}/.automaker/checkpoints/{featureId}.json
+```
+
+Each checkpoint records the current state, state context, completed-states list, and goal-gate results. This enables crash recovery: on `start()`, `LeadEngineerService` scans all existing checkpoints for the project and queues them for resume in `pendingResumes`. A 60-second interval (`RESUME_POLL_MS`) re-triggers `process()` for each suspended feature.
+
+**Checkpoint I/O is non-blocking.** `FeatureStateMachine` delegates all checkpoint writes to an internal `PersistQueue` that retries asynchronously with exponential backoff (3 attempts: 100 ms → 200 ms → 400 ms). State transitions proceed immediately without waiting for the disk write to complete.
+
+**Suspended states.** If `ReviewProcessor` or `MergeProcessor` returns a self-loop (same `nextState` as current), the state machine emits `pipeline:feature-suspended`, saves the checkpoint, and exits cleanly. The resume interval re-queues the feature rather than busy-polling inside the event loop.
+
+**Reconciliation.** `reconcileCheckpoints(projectPath)` removes orphaned checkpoint files for features that no longer exist on the board. Call it after bulk board cleanup to avoid accumulating stale checkpoints.
+
+**Terminal cleanup.** On reaching `DONE`, `DEPLOY`, or `ESCALATE`, the checkpoint file is deleted automatically.
 
 ## INTAKE Phase
 
@@ -122,16 +142,17 @@ interface StateContext {
 
 ## Key Files
 
-| File                                                                | Role                                                                       |
-| ------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `apps/server/src/services/lead-engineer-service.ts`                 | Orchestrator: wires `FeatureStateMachine`, `ActionExecutor`, session store |
-| `apps/server/src/services/lead-engineer-state-machine.ts`           | `FeatureStateMachine` class + default goal gate definitions                |
-| `apps/server/src/services/lead-engineer-processors.ts`              | `IntakeProcessor` and `PlanProcessor`                                      |
-| `apps/server/src/services/lead-engineer-execute-processor.ts`       | `ExecuteProcessor`                                                         |
-| `apps/server/src/services/lead-engineer-review-merge-processors.ts` | `ReviewProcessor` and `MergeProcessor`                                     |
-| `apps/server/src/services/lead-engineer-deploy-processor.ts`        | `DeployProcessor`                                                          |
-| `apps/server/src/services/lead-engineer-session-store.ts`           | Session persistence to `DATA_DIR/lead-engineer-sessions.json`              |
-| `apps/server/src/services/lead-engineer-types.ts`                   | `StateProcessor`, `StateContext`, `ProcessorServiceContext`, timing consts |
+| File                                                                | Role                                                                            |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `apps/server/src/services/lead-engineer-service.ts`                 | Orchestrator: wires `FeatureStateMachine`, `ActionExecutor`, session store      |
+| `apps/server/src/services/lead-engineer-state-machine.ts`           | `FeatureStateMachine` class + `PersistQueue` + default goal gate definitions    |
+| `apps/server/src/services/lead-engineer-processors.ts`              | `IntakeProcessor` and `PlanProcessor`                                           |
+| `apps/server/src/services/lead-engineer-execute-processor.ts`       | `ExecuteProcessor`                                                              |
+| `apps/server/src/services/lead-engineer-review-merge-processors.ts` | `ReviewProcessor` and `MergeProcessor`                                          |
+| `apps/server/src/services/lead-engineer-deploy-processor.ts`        | `DeployProcessor`                                                               |
+| `apps/server/src/services/lead-engineer-session-store.ts`           | Session persistence to `DATA_DIR/lead-engineer-sessions.json`                   |
+| `apps/server/src/services/lead-engineer-types.ts`                   | `StateProcessor`, `StateContext`, `ProcessorServiceContext`, timing consts      |
+| `apps/server/src/services/pipeline-checkpoint-service.ts`           | File-based checkpoint persistence under `{projectPath}/.automaker/checkpoints/` |
 
 ## See Also
 

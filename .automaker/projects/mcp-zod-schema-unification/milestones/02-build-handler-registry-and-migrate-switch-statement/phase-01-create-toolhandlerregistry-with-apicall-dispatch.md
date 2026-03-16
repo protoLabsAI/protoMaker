@@ -16,9 +16,11 @@ Build registry class with registerApiTool helper for passthrough tools and custo
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `packages/mcp-server/src/registry.ts`
 
 ### Verification
+
 - [ ] Registry class created with unit tests
 - [ ] registerApiTool helper works
 

@@ -14,11 +14,11 @@ Add lightweight project awareness: project filter dropdown in board header, comp
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-add-project-filter-dropdown-to-board-header.md](./phase-01-add-project-filter-dropdown-to-board-header.md) | 1 week | None | TBD |
-| 2 | [phase-02-add-project-badge-to-feature-cards.md](./phase-02-add-project-badge-to-feature-cards.md) | 0.5 weeks | None | TBD |
-| 3 | [phase-03-enhance-projects-features-tab-with-milestone-progress.md](./phase-03-enhance-projects-features-tab-with-milestone-progress.md) | 1 week | None | TBD |
+| Phase | File                                                                                                                                     | Duration  | Dependencies | Owner |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------- | ------------ | ----- |
+| 1     | [phase-01-add-project-filter-dropdown-to-board-header.md](./phase-01-add-project-filter-dropdown-to-board-header.md)                     | 1 week    | None         | TBD   |
+| 2     | [phase-02-add-project-badge-to-feature-cards.md](./phase-02-add-project-badge-to-feature-cards.md)                                       | 0.5 weeks | None         | TBD   |
+| 3     | [phase-03-enhance-projects-features-tab-with-milestone-progress.md](./phase-03-enhance-projects-features-tab-with-milestone-progress.md) | 1 week    | None         | TBD   |
 
 ---
 
@@ -36,6 +36,7 @@ M5 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

@@ -14,10 +14,10 @@ Add context usage tracking to agent execution monitoring and implement a deviati
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-context-metrics-and-warning-system.md](./phase-01-context-metrics-and-warning-system.md) | 1 week | None | TBD |
-| 2 | [phase-02-deviation-rule-engine.md](./phase-02-deviation-rule-engine.md) | 1 week | None | TBD |
+| Phase | File                                                                                               | Duration | Dependencies | Owner |
+| ----- | -------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-context-metrics-and-warning-system.md](./phase-01-context-metrics-and-warning-system.md) | 1 week   | None         | TBD   |
+| 2     | [phase-02-deviation-rule-engine.md](./phase-02-deviation-rule-engine.md)                           | 1 week   | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M3 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

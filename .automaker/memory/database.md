@@ -405,3 +405,18 @@ usageStats:
 - **Rejected:** Direct use of DB rows as domain types - tightly couples schema to API
 - **Trade-offs:** Overhead of mapping layer vs. freedom to change schema independently
 - **Breaking if changed:** If mapping layer is removed and DB row is used as API type, adding/removing DB columns breaks API consumers
+
+#### [Pattern] Checkpoint files auto-deleted at terminal states. Prevents orphan accumulation when workflow completes or fails (2026-03-16)
+- **Problem solved:** Each active workflow creates a checkpoint file; completed workflows must clean up to avoid disk bloat over time
+- **Why this works:** Explicit lifecycle management tied to state transitions is more reliable than separate cleanup jobs. Terminal states (success, terminal error) are guaranteed cleanup points
+- **Trade-offs:** State machine must know about file cleanup (coupling) vs guaranteed cleanup window (no orphans)
+
+#### [Gotcha] large_files table v2 migration backfill — table was referenced in LargeFileHandler code but never had a schema migration (2026-03-16)
+- **Situation:** Found code trying to persist large files but no corresponding table in migrations
+- **Root cause:** Indicates partial implementation: LargeFileHandler was written but its migration was skipped. During this feature work, retroactively added v2 migration to complete the gap.
+- **How to avoid:** Added v2 migration here instead of in original PR; now all large-file handling has backing schema
+
+#### [Pattern] FTS5 virtual table (messages_fts) with porter ASCII tokenizer as v3 migration (2026-03-16)
+- **Problem solved:** Supporting full-text search in lcm_grep across message content
+- **Why this works:** Virtual tables are async-safe in SQLite if used carefully. Porter ASCII tokenizer is deterministic (no Unicode casing issues), fast, and language-aware (stemming). ASCII constraint suggests codebase is English-primary or avoids i18n complexity in search.
+- **Trade-offs:** ASCII tokenizer sacrifices non-English support for determinism and speed; virtual table adds schema complexity but enables FTS without external index

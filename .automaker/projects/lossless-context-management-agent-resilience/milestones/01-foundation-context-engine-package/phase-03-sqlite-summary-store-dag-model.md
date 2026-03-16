@@ -16,10 +16,12 @@ Implement SummaryStore for the DAG. Tables: summaries, summary_sources, summary_
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/context-engine/src/store/summary-store.ts`
 - [ ] `libs/context-engine/src/store/migrations.ts`
 
 ### Verification
+
 - [ ] Summary DAG persists with bidirectional provenance links
 - [ ] Can traverse from summary to original source messages
 - [ ] Can traverse from summary to parent condensed summaries

@@ -14,10 +14,10 @@ Consolidate hardcoded timeout constants into a central config module with enviro
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-central-timeout-config-module.md](./phase-01-central-timeout-config-module.md) | 1 week | None | TBD |
-| 2 | [phase-02-migrate-remaining-services-to-central-config.md](./phase-02-migrate-remaining-services-to-central-config.md) | 1 week | None | TBD |
+| Phase | File                                                                                                                   | Duration | Dependencies | Owner |
+| ----- | ---------------------------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-central-timeout-config-module.md](./phase-01-central-timeout-config-module.md)                               | 1 week   | None         | TBD   |
+| 2     | [phase-02-migrate-remaining-services-to-central-config.md](./phase-02-migrate-remaining-services-to-central-config.md) | 1 week   | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M2 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

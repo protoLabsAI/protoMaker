@@ -16,10 +16,12 @@ CompletionDetector passes epic titles directly into shell command strings for gh
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/completion-detector-service.ts`
 - [ ] `apps/server/tests/unit/services/completion-detector-service.test.ts`
 
 ### Verification
+
 - [ ] gh pr create uses execFile with argument array, not exec with string interpolation
 - [ ] Unit test verifies epic title with special characters is safely escaped
 - [ ] npm run test:server passes

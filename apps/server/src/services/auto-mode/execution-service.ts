@@ -785,16 +785,34 @@ export class ExecutionService {
           });
         } catch (mergeError) {
           const mergeMsg = mergeError instanceof Error ? mergeError.message : String(mergeError);
-          // If merge fails (conflicts), abort and block the feature to prevent repeated merge_conflict failures
+          // If merge fails (conflicts), capture conflicting files, abort, and block the feature
           if (mergeMsg.includes('conflict') || mergeMsg.includes('CONFLICT')) {
             logger.warn(`Git merge encountered conflicts for ${branchName}, aborting merge`);
+            // Capture conflicting files before aborting (same pattern as Surface 1 origin/main merge)
+            let conflictingFiles: string[] = [];
+            try {
+              const { stdout: diffOut } = await execAsync('git diff --name-only --diff-filter=U', {
+                cwd: workDir,
+                timeout: 10000,
+              });
+              conflictingFiles = diffOut
+                .trim()
+                .split('\n')
+                .filter((f) => f.length > 0);
+            } catch {
+              // Non-fatal — we still block, just without file details
+            }
             try {
               await execAsync('git merge --abort', { cwd: workDir, timeout: 10000 });
             } catch {
               // Abort failed — not much we can do
             }
+            const fileList =
+              conflictingFiles.length > 0
+                ? ` Conflicting files: ${conflictingFiles.join(', ')}.`
+                : '';
             const reason =
-              `Pre-flight merge with origin/dev has conflicts — branch "${branchName}" must be manually merged before the agent can proceed. ` +
+              `Pre-flight merge with origin/dev has conflicts — branch "${branchName}" must be manually merged before the agent can proceed.${fileList} ` +
               `Blocking feature to prevent repeated merge_conflict failures.`;
             this.typedEventBus.emitAutoModeEvent('sync_warning', {
               featureId,

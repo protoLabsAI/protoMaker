@@ -35,9 +35,7 @@
           "name": "per-project-agent-config-in-workflowsettings",
           "title": "Per-project agent config in WorkflowSettings",
           "description": "Add an optional agentConfig section to WorkflowSettings (per-project .automaker/settings.json) that allows per-role model overrides and default agent assignment behavior.\n\nAdd to WorkflowSettings interface:\n- agentConfig?: { roleModelOverrides?: Record<string, PhaseModelEntry>; autoAssignEnabled?: boolean; manifestPaths?: string[] }\n\nroleModelOverrides maps role name (string) to model config. autoAssignEnabled controls whether match rules run (default: true). manifestPaths allows custom manifest locations beyond the default .automaker/agents/.\n\nUpdate DEFAULT_WORKFLOW_SETTINGS to not include agentConfig (undefined = use defaults).\n\nFiles to modify:\n- libs/types/src/workflow-settings.ts",
-          "filesToModify": [
-            "libs/types/src/workflow-settings.ts"
-          ],
+          "filesToModify": ["libs/types/src/workflow-settings.ts"],
           "acceptanceCriteria": [
             "agentConfig is optional on WorkflowSettings",
             "roleModelOverrides maps string role names to PhaseModelEntry",
@@ -83,10 +81,7 @@
           "name": "api-routes-for-agent-manifest",
           "title": "API routes for agent manifest",
           "description": "Add Express routes to expose discovered agents:\n\n1. POST /api/agents/list — returns all agents (built-in + project) for a given projectPath\n2. POST /api/agents/get — returns a single agent by name with resolved capabilities\n3. POST /api/agents/match — given a feature ID, returns the best-matching agent\n\nAll routes require projectPath in body. Built-in roles are always included in the list response, merged with any project manifest overrides.\n\nCreate route file following existing patterns in apps/server/src/routes/.\n\nFiles to create:\n- apps/server/src/routes/agents.ts\n\nFiles to modify:\n- apps/server/src/routes/index.ts (register routes)",
-          "filesToModify": [
-            "apps/server/src/routes/agents.ts",
-            "apps/server/src/routes/index.ts"
-          ],
+          "filesToModify": ["apps/server/src/routes/agents.ts", "apps/server/src/routes/index.ts"],
           "acceptanceCriteria": [
             "POST /api/agents/list returns built-in + project agents",
             "POST /api/agents/get returns single agent with resolved capabilities",
@@ -112,9 +107,7 @@
           "name": "wire-assignedrole-into-getmodelforfeature",
           "title": "Wire assignedRole into getModelForFeature()",
           "description": "Modify getModelForFeature() in apps/server/src/services/auto-mode/execution-service.ts to check the assigned role's model override BEFORE falling back to complexity-based selection.\n\nNew priority chain:\n1. feature.model (explicit per-feature override) — unchanged\n2. Failure escalation (2+ failures → opus) — unchanged\n3. Architectural complexity → opus — unchanged\n4. **NEW: assignedRole model override** — if feature.assignedRole is set, check:\n   a. AgentManifestService.getAgent(projectPath, assignedRole) for manifest model override\n   b. WorkflowSettings.agentConfig.roleModelOverrides[assignedRole] for settings override\n5. phaseModels.agentExecutionModel from settings — unchanged\n6. Complexity fallback — unchanged\n\nAlso check roleModelOverrides from WorkflowSettings (per-project settings.json). The manifest model takes precedence over settings if both exist, but settings override allows users to override manifest defaults without editing YAML.\n\nFiles to modify:\n- apps/server/src/services/auto-mode/execution-service.ts",
-          "filesToModify": [
-            "apps/server/src/services/auto-mode/execution-service.ts"
-          ],
+          "filesToModify": ["apps/server/src/services/auto-mode/execution-service.ts"],
           "acceptanceCriteria": [
             "getModelForFeature checks assignedRole manifest model after failure escalation",
             "WorkflowSettings roleModelOverrides checked as fallback after manifest",
@@ -130,9 +123,7 @@
           "name": "role-prompt-injection-in-agent-system-prompt",
           "title": "Role prompt injection in agent system prompt",
           "description": "When a feature has an assignedRole with a prompt file defined in the manifest, load that prompt file and prepend it to the agent's system prompt.\n\nModify the prompt construction path in execution-service.ts where contextFilesPrompt is built. After loading .automaker/context/*.md files, also check if the feature's assignedRole has a promptFile in the manifest. If so, read the file and prepend it as a role-specific instruction block.\n\nPrompt injection format:\n```\n## Agent Role: {agent.name}\n{agent.description}\n\n{contents of agent.promptFile}\n\n---\n{existing context files}\n{existing system prompt}\n```\n\nThe promptFile path is relative to projectPath (e.g., .claude/agents/kai.md or .automaker/agents/prompts/kai.md).\n\nFiles to modify:\n- apps/server/src/services/auto-mode/execution-service.ts",
-          "filesToModify": [
-            "apps/server/src/services/auto-mode/execution-service.ts"
-          ],
+          "filesToModify": ["apps/server/src/services/auto-mode/execution-service.ts"],
           "acceptanceCriteria": [
             "Role prompt file loaded when assignedRole has promptFile in manifest",
             "Prompt prepended before context files in system prompt",
@@ -148,9 +139,7 @@
           "name": "match-rule-auto-assignment-on-feature-pickup",
           "title": "Match rule auto-assignment on feature pickup",
           "description": "Before auto-mode picks up a feature for execution, run match rules to auto-assign a role if none is set.\n\nModify the feature pickup path in execution-service.ts (or auto-mode-service.ts where features are dequeued). After selecting a feature but before calling getModelForFeature():\n\n1. If feature.assignedRole is already set → skip (respect manual assignment)\n2. If WorkflowSettings.agentConfig?.autoAssignEnabled === false → skip\n3. Call AgentManifestService.matchFeature(projectPath, feature)\n4. If a match is found with confidence above threshold:\n   a. Set feature.assignedRole = match.name\n   b. Set feature.routingSuggestion = { role: match.name, confidence, reasoning, autoAssigned: true, suggestedAt }\n   c. Persist via featureLoader.update()\n5. Proceed with execution (getModelForFeature will now pick up the assigned role)\n\nMatch rule evaluation order:\n1. Category exact match (highest confidence)\n2. Keyword match in title/description (medium confidence)\n3. File pattern match against filesToModify (medium confidence)\n4. Multiple matches → pick highest combined confidence\n\nFiles to modify:\n- apps/server/src/services/auto-mode/execution-service.ts",
-          "filesToModify": [
-            "apps/server/src/services/auto-mode/execution-service.ts"
-          ],
+          "filesToModify": ["apps/server/src/services/auto-mode/execution-service.ts"],
           "acceptanceCriteria": [
             "Features without assignedRole get auto-matched before execution",
             "Manual assignedRole is never overwritten",

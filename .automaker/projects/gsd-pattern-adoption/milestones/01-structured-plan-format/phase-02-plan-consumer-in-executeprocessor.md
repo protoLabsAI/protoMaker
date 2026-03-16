@@ -16,10 +16,12 @@ Update ExecuteProcessor to parse structured plans and inject structured context 
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/lead-engineer-execute-processor.ts`
 - [ ] `libs/types/src/lead-engineer.ts`
 
 ### Verification
+
 - [ ] ExecuteProcessor detects and parses structuredPlan from StateContext
 - [ ] Agent system prompt includes formatted task checklist from structured plan
 - [ ] Agent system prompt includes file scope (which files to modify)

@@ -377,6 +377,7 @@ export type {
   // Workflow settings types
   WorkflowSettings,
   PhaseTemperaturesConfig,
+  ContextEngineConfig,
   // Ava Channel reactor settings
   AvaChannelReactorSettings,
   SchedulerSettings,

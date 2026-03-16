@@ -16,10 +16,12 @@ In apps/ui/src/components/views/board-view/components/kanban-card/kanban-card.ts
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/ui/src/components/views/board-view/components/kanban-card/kanban-card.tsx`
 - [ ] `apps/ui/src/components/views/board-view/components/list-view/list-view.tsx`
 
 ### Verification
+
 - [ ] Feature cards with projectSlug show a compact project badge
 - [ ] Badge is visually distinct but not overwhelming
 - [ ] Badge hidden when board is filtered to that project

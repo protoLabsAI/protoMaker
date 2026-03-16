@@ -16,6 +16,7 @@ Implement DeviationRuleService that evaluates agent scope against per-feature co
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/deviation-rule-service.ts`
 - [ ] `libs/types/src/lead-engineer.ts`
 - [ ] `libs/types/src/workflow-settings.ts`
@@ -23,6 +24,7 @@ Implement DeviationRuleService that evaluates agent scope against per-feature co
 - [ ] `apps/server/src/server/wiring.ts`
 
 ### Verification
+
 - [ ] DeviationRuleService created with loadRules() and formatForPrompt() methods
 - [ ] Four default rule categories: auto-fix-bugs, auto-fix-critical, auto-fix-blocking, escalate-architecture
 - [ ] Rules loaded from structured plan deviationRules or workflow settings defaults

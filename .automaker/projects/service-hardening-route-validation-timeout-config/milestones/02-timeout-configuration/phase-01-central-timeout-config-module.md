@@ -16,12 +16,14 @@ Create `apps/server/src/config/timeouts.ts` that exports all timeout constants, 
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/config/timeouts.ts`
 - [ ] `apps/server/src/services/lead-engineer-types.ts`
 - [ ] `apps/server/src/services/auto-mode/feature-scheduler.ts`
 - [ ] `apps/server/src/services/event-hook-service.ts`
 
 ### Verification
+
 - [ ] Central timeouts.ts exports all timeout constants grouped by domain
 - [ ] Each constant reads from a named env var with the current hardcoded value as default
 - [ ] lead-engineer-types.ts imports EXECUTE_TIMEOUT_MS, MERGE_RETRY_DELAY_MS, REVIEW_POLL_DELAY_MS from config
