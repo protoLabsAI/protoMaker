@@ -1,8 +1,8 @@
 {
-  "name": "@protolabsai/types",
+  "name": "@protolabsai/context-engine",
   "version": "0.67.0",
   "type": "module",
-  "description": "Shared type definitions for AutoMaker",
+  "description": "DAG-based context engine for intelligent context window management",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -18,7 +18,8 @@
   },
   "keywords": [
     "automaker",
-    "types"
+    "context-engine",
+    "compaction"
   ],
   "publishConfig": {
     "access": "public"
@@ -27,9 +28,6 @@
   "license": "SEE LICENSE IN LICENSE",
   "engines": {
     "node": ">=22.0.0 <23.0.0"
-  },
-  "dependencies": {
-    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "22.19.3",
