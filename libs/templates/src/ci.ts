@@ -6,6 +6,7 @@
 
 /**
  * Get docs site CI workflow (build + markdownlint + format check + Cloudflare Pages deploy).
+ * Output directory is .vitepress/dist/ (VitePress default).
  */
 export function getDocsCI(): string {
   return `name: CI
@@ -79,7 +80,7 @@ jobs:
         with:
           apiToken: \${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: \${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=\${{ github.event.repository.name }}
+          command: pages deploy .vitepress/dist --project-name=\${{ github.event.repository.name }}
 `;
 }
 

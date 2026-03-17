@@ -3,25 +3,16 @@
   "type": "module",
   "version": "0.1.0",
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview",
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint:md": "markdownlint-cli2 'src/content/**/*.{md,mdx}'"
-  },
-  "dependencies": {
-    "@astrojs/sitemap": "^3.3.0",
-    "@astrojs/starlight": "^0.37.0",
-    "astro": "^5.9.0",
-    "sharp": "^0.34.0",
-    "zod": "^3.25.0"
+    "lint:md": "markdownlint-cli2 '**/*.md' '#node_modules' '#.vitepress'"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.1.0",
     "markdownlint-cli2": "^0.17.0",
     "prettier": "^3.5.0",
-    "prettier-plugin-astro": "^0.14.0",
-    "tailwindcss": "^4.1.0"
+    "vitepress": "^1.6.0"
   }
 }

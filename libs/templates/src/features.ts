@@ -44,14 +44,8 @@ const DOCS_FEATURES: StarterFeature[] = [
   {
     title: 'Configure custom domain',
     description:
-      'Set up a custom domain for the documentation site. Update astro.config.mjs with the site URL and configure DNS records.',
+      'Set up a custom domain for the documentation site. Update .vitepress/config.mts with the sitemap hostname and configure DNS records.',
     complexity: 'small',
-  },
-  {
-    title: 'Add search',
-    description:
-      'Integrate Pagefind or Algolia DocSearch for full-text search across all documentation pages.',
-    complexity: 'medium',
   },
   {
     title: 'Create API reference page',

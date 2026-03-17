@@ -7,10 +7,6 @@
  */
 
 /**
- * Get the agent context file content for the Starlight docs starter kit.
- * Write this to `.automaker/CONTEXT.md` in the new project.
- */
-/**
  * Get the agent context file content for the portfolio starter kit.
  * Write this to `.automaker/CONTEXT.md` in the new project.
  */
@@ -143,97 +139,90 @@ Pass \`LANGFUSE_PUBLIC_KEY\` + \`LANGFUSE_SECRET_KEY\` to enable Langfuse. Fallb
 }
 
 /**
- * Get the agent context file content for the Starlight docs starter kit.
+ * Get the agent context file content for the VitePress docs starter kit.
  * Write this to `.automaker/CONTEXT.md` in the new project.
  */
 export function getDocsStarterContext(): string {
   return `# Docs Starter Kit — Agent Context
 
-This project is a **Starlight documentation site** built with Astro 5 and Starlight 0.37.
+This project is a **VitePress documentation site** built with VitePress 1.x.
 
 ## Project Structure
 
 \`\`\`
-src/
-  content/
-    docs/          ← All documentation pages live here
-      index.mdx    ← Root page (maps to /)
-      guides/      ← How-to guides
-      reference/   ← Reference pages
-      tutorials/   ← Step-by-step tutorials
-  styles/
-    global.css     ← Theme overrides (CSS variables + Tailwind v4 @theme block)
-  content.config.ts ← Collection schema (docsLoader + docsSchema)
-  assets/          ← Images and static files
-astro.config.mjs   ← Starlight + Astro config
+.vitepress/
+  config.mts       ← Site config (title, sidebar, nav, theme)
+  theme/
+    index.ts        ← Theme entry (extends default VitePress theme)
+    custom.css      ← Brand theme overrides (CSS variables)
+getting-started/   ← Tutorial pages
+guides/            ← How-to guides
+reference/         ← Reference pages
+index.md           ← Home page (hero layout)
+public/            ← Static assets (images, favicons)
 \`\`\`
 
-## Content Collections
+## Routing
 
-All docs use Astro's **content collections** via \`src/content.config.ts\`. The \`docs\` collection uses Starlight's \`docsLoader()\` and \`docsSchema()\`:
+VitePress generates routes from the file tree:
+- \`index.md\` → \`/\`
+- \`getting-started/quick-start.md\` → \`/getting-started/quick-start\`
+- \`guides/add-a-page.md\` → \`/guides/add-a-page\`
+- \`reference/configuration.md\` → \`/reference/configuration\`
 
-\`\`\`ts
-import { defineCollection } from 'astro:content';
-import { docsLoader, docsSchema } from '@astrojs/starlight/loaders';
+## Sidebar
 
-export const collections = {
-  docs: defineCollection({ loader: docsLoader(), schema: docsSchema() }),
-};
-\`\`\`
+The sidebar is manually configured in \`.vitepress/config.mts\` under \`themeConfig.sidebar\`. Each URL prefix maps to a sidebar group. When adding a new page, add it to the corresponding sidebar array.
 
-## Page Frontmatter
+## Page Format
 
-Every \`.mdx\` / \`.md\` file in \`src/content/docs/\` requires at minimum:
+Pages are plain Markdown (\`.md\`). Frontmatter is optional — the first \`# Heading\` becomes the page title. For SEO:
 
 \`\`\`yaml
 ---
 title: Page Title
-description: Short description for SEO and sidebar tooltips
+description: Short description for meta tags
 ---
 \`\`\`
 
-Optional fields: \`sidebar\` (label, order, badge, hidden), \`hero\`, \`tableOfContents\`, \`editUrl\`, \`prev\`, \`next\`.
+## Custom Containers
 
-## Routing
+Use VitePress built-in containers for callouts:
 
-Starlight auto-generates routes from the file tree:
-- \`src/content/docs/index.mdx\` → \`/\`
-- \`src/content/docs/guides/add-a-page.mdx\` → \`/guides/add-a-page/\`
-- \`src/content/docs/reference/configuration.mdx\` → \`/reference/configuration/\`
+\`\`\`markdown
+::: tip
+This is a tip.
+:::
+
+::: warning
+This is a warning.
+:::
+\`\`\`
 
 ## Theming
 
-Theme customization lives in \`src/styles/global.css\`. Starlight exposes \`--sl-*\` CSS variables. Override them inside a \`[data-theme='light']\` or \`[data-theme='dark']\` selector, or globally:
-
-\`\`\`css
-:root {
-  --sl-color-accent: 124, 58, 237;  /* violet accent */
-}
-\`\`\`
-
-A Tailwind v4 \`@theme\` block can also be added for utility classes.
+Theme customization lives in \`.vitepress/theme/custom.css\`. Override VitePress CSS variables (\`--vp-*\`) to change colors, fonts, and spacing.
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
 | \`npm run dev\` | Start local dev server |
-| \`npm run build\` | Build production site to \`dist/\` |
+| \`npm run build\` | Build production site to \`.vitepress/dist/\` |
 | \`npm run preview\` | Preview the production build |
 | \`npm run format\` | Format all files with Prettier |
 | \`npm run format:check\` | Check formatting (used in CI) |
-| \`npm run lint:md\` | Lint markdown/MDX content with markdownlint-cli2 |
+| \`npm run lint:md\` | Lint markdown content with markdownlint-cli2 |
 
 ## CI/CD
 
-\`.github/workflows/ci.yml\` runs **build**, **format**, and **lint** jobs on every PR and push to \`main\`. On merge to \`main\`, a **deploy** job pushes to Cloudflare Pages using \`CLOUDFLARE_API_TOKEN\` and \`CLOUDFLARE_ACCOUNT_ID\` secrets.
+\`.github/workflows/ci.yml\` runs **build**, **format**, and **lint** jobs on every PR and push to \`main\`. On merge to \`main\`, a **deploy** job pushes to Cloudflare Pages.
 
 ## Key Constraints
 
-- Starlight is pinned to \`^0.37.0\` (last Astro 5-compatible release). Do not upgrade to 0.38+ without also upgrading Astro to v6.
-- Zod is pinned to \`^3.25.0\` because Starlight 0.37 requires Zod v3 (monorepo root has v4).
-- \`*.astro\` files are excluded from Prettier — \`prettier-plugin-astro\` is installed locally but not at the monorepo root.
-- New pages go in \`src/content/docs/\`. Do not create pages in \`src/pages/\` — Starlight handles routing.
-- Search is powered by Pagefind, auto-enabled at build time. No config required.
+- New pages go as \`.md\` files in the appropriate directory (getting-started, guides, reference)
+- Always add new pages to the sidebar in \`.vitepress/config.mts\`
+- Search is built-in (local provider) — no extra configuration needed
+- Output directory is \`.vitepress/dist/\` (not \`dist/\`)
 `;
 }

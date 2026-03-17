@@ -1,6 +1,6 @@
-dist/
 node_modules/
-.astro/
+.vitepress/cache/
+.vitepress/dist/
 .env
 .env.*
 !.env.example

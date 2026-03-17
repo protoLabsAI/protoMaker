@@ -12,7 +12,7 @@ This page covers what starter kits are, how to use them, and what each one inclu
 
 | Kit                                               | Source   | Stack                                        | Use case                                           |
 | ------------------------------------------------- | -------- | -------------------------------------------- | -------------------------------------------------- |
-| [Documentation site](./docs-starter)              | scaffold | Astro + Starlight + Tailwind CSS 4           | Docs sites, API references, knowledge bases        |
+| [Documentation site](./docs-starter)              | scaffold | VitePress                                    | Docs sites, API references, knowledge bases        |
 | [Portfolio / marketing site](./portfolio-starter) | scaffold | Astro + React 19 + Tailwind CSS 4            | Personal sites, marketing pages, project showcases |
 | [Landing page](./landing-page-starter)            | scaffold | Astro + Tailwind CSS 4 + composable sections | Product landing pages, waitlist pages              |
 | [AI agent app](./ai-agent-app-starter)            | scaffold | Node.js + React 19 + Anthropic SDK           | Chat apps, tool-using agents, AI prototypes        |
@@ -27,7 +27,7 @@ This page covers what starter kits are, how to use them, and what each one inclu
 npx create-protolab
 ```
 
-Select a kit type when prompted. The CLI copies the starter into the current directory, substitutes your project name into `package.json` and `astro.config.mjs`, and creates the initial board features.
+Select a kit type when prompted. The CLI copies the starter into the current directory, substitutes your project name into `package.json` and config files, and creates the initial board features.
 
 **Via the UI:**
 
@@ -51,9 +51,9 @@ Run `npm install` inside the scaffolded directory before starting the dev server
 
 **Source:** scaffold (local copy)
 **Kit type:** `docs`
-**Stack:** Astro 5, Starlight, Tailwind CSS 4, MDX, Pagefind, Cloudflare Pages
+**Stack:** VitePress, Markdown, Cloudflare Pages
 
-Creates a Starlight documentation site with Diataxis sidebar structure and Pagefind full-text search. The `.automaker/` config includes context tuned for docs writing: writing style conventions, page structure patterns, and frontmatter rules.
+Creates a VitePress documentation site with Diataxis sidebar structure and built-in local search. The `.automaker/` config includes context tuned for docs writing: writing style conventions, page structure patterns, and frontmatter rules.
 
 See [Documentation site starter](./docs-starter) for a full walkthrough.
 
@@ -111,7 +111,7 @@ The agent analyzes your codebase on the first run and populates `app_spec.txt` w
 | ------------------------- | ---------------------------------------------------- | ---------------------------- |
 | How it works              | Files copied from `@protolabsai/templates` package   | `git clone` from GitHub      |
 | Offline support           | Yes                                                  | No — requires network access |
-| Project name substitution | Automatic (`package.json`, `astro.config.mjs`)       | Manual after clone           |
+| Project name substitution | Automatic (`package.json`, config files)             | Manual after clone           |
 | Used by                   | docs, portfolio, landing-page, ai-agent-app, general | browser-extension            |
 
 ## Next steps

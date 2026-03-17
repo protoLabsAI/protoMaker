@@ -1,8 +1,8 @@
 /**
  * Starter Kit Scaffolding
  *
- * Functions that copy Astro starter kit directories to a new location,
- * substituting the project name in package.json and astro.config.mjs.
+ * Functions that copy starter kit directories to a new location,
+ * substituting the project name in package.json and config files.
  *
  * These are async/file-I/O functions — the only ones in this package.
  * They exist here because scaffolding is tightly coupled to the starter
@@ -69,25 +69,28 @@ async function applySubstitutions(outputDir: string, projectName: string): Promi
     // package.json missing or malformed — skip
   }
 
-  // Patch astro.config.mjs: replace placeholder site URL
-  const configPath = path.join(outputDir, 'astro.config.mjs');
+  // Patch VitePress config.mts: replace placeholder title and description
+  const configPath = path.join(outputDir, '.vitepress', 'config.mts');
   try {
     let config = await fs.readFile(configPath, 'utf-8');
-    // Replace placeholder URLs with a comment indicating the user should update
+    config = config.replace(/title:\s*['"]My Project['"]/, `title: '${projectName}'`);
     config = config.replace(
-      /site:\s*['"]https:\/\/[^'"]+['"]/,
-      `site: 'https://${projectName}.dev' // TODO: update to your real domain`
-    );
-    // Replace Starlight title placeholder
-    config = config.replace(/title:\s*["']My Project["']/, `title: "${projectName}"`);
-    // Replace Starlight description placeholder
-    config = config.replace(
-      /description:\s*["']Documentation for My Project[^"']*["']/,
-      `description: "Documentation for ${projectName}."`
+      /description:\s*['"]Documentation for My Project\.?['"]/,
+      `description: 'Documentation for ${projectName}.'`
     );
     await fs.writeFile(configPath, config, 'utf-8');
   } catch {
-    // astro.config.mjs missing — skip
+    // config.mts missing — skip
+  }
+
+  // Patch home page hero name
+  const indexPath = path.join(outputDir, 'index.md');
+  try {
+    let index = await fs.readFile(indexPath, 'utf-8');
+    index = index.replace(/name:\s*My Project/, `name: ${projectName}`);
+    await fs.writeFile(indexPath, index, 'utf-8');
+  } catch {
+    // index.md missing — skip
   }
 }
 
@@ -105,12 +108,12 @@ export interface ScaffoldResult {
  * Scaffold a new **docs** starter kit at `options.outputDir`.
  *
  * Copies `starters/docs/` to the output directory, substituting
- * `projectName` into package.json and astro.config.mjs.
+ * `projectName` into package.json and .vitepress/config.mts.
  *
  * @example
  * ```ts
  * const result = await scaffoldDocsStarter({ projectName: 'my-docs', outputDir: '/tmp/my-docs' });
- * // → /tmp/my-docs/ contains a ready-to-run Starlight site
+ * // → /tmp/my-docs/ contains a ready-to-run VitePress site
  * ```
  */
 export async function scaffoldDocsStarter(options: ScaffoldOptions): Promise<ScaffoldResult> {

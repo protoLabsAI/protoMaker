@@ -65,7 +65,7 @@ description: One-line description for SEO and link previews
 
 ## Images
 
-- Store images in \`src/assets/\` and import them with relative paths
+- Store images in \`public/\` for static assets or use relative paths for co-located images
 - Use descriptive alt text for accessibility
 - Prefer SVG for diagrams and icons
 `;

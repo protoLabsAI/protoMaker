@@ -66,19 +66,21 @@ All three functions follow the same pattern:
 
 1. Resolve the source directory path relative to the compiled package
 2. Recursively copy the directory to `outputDir`, skipping `node_modules` and `package-lock.json`
-3. Apply name substitutions to `package.json` and `astro.config.mjs`
+3. Apply name substitutions to `package.json` and framework config files
 4. Return a `ScaffoldResult` with the list of top-level files created
 
 The `general` starter additionally writes an `app_spec.txt` with the project name and a placeholder structure.
 
 ### Name substitution
 
-After copying, `applySubstitutions()` patches two files:
+After copying, `applySubstitutions()` patches config files:
 
 - **`package.json`** — sets `name` to `projectName`
-- **`astro.config.mjs`** — updates the `site` URL, `title`, and `description` fields with `projectName`
+- **`.vitepress/config.mts`** (docs) — updates `title` and `description` with `projectName`
+- **`index.md`** (docs) — updates the hero name with `projectName`
+- **`astro.config.mjs`** (portfolio, landing-page) — updates `site`, `title`, and `description`
 
-If either file is missing (the general starter has no `astro.config.mjs`), the substitution is silently skipped.
+If a file is missing (e.g., the general starter has no framework config), the substitution is silently skipped.
 
 ### The `starters/` directory
 
@@ -92,10 +94,12 @@ libs/templates/starters/
 │   ├── .github/
 │   │   └── workflows/
 │   │       └── ci.yml
-│   ├── src/
-│   │   └── content/
-│   │       └── docs/
-│   ├── astro.config.mjs
+│   ├── .vitepress/
+│   │   ├── config.mts
+│   │   └── theme/
+│   ├── getting-started/
+│   ├── guides/
+│   ├── reference/
 │   └── package.json
 ├── portfolio/
 │   ├── src/
