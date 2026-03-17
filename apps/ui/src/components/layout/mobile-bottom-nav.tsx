@@ -1,8 +1,7 @@
 import { useNavigate, useRouterState } from '@tanstack/react-router';
-import { Grid, BarChart3, FileText, Settings, MessageCircle } from 'lucide-react';
+import { Grid, FileText, Settings, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-media-query';
-import { useAppStore } from '@/store/app-store';
 
 interface NavItem {
   id: string;
@@ -24,29 +23,17 @@ const chatNavItem: NavItem = {
   path: '/chat',
 };
 
-const systemViewItem: NavItem = {
-  id: 'system-view',
-  icon: BarChart3,
-  label: 'System',
-  path: '/system-view',
-};
-
 export function MobileBottomNav() {
   const navigate = useNavigate();
   const routerState = useRouterState();
   const isMobile = useIsMobile();
-  const { featureFlags } = useAppStore();
-
   // Don't render on desktop
   if (!isMobile) {
     return null;
   }
 
-  let navItems = [...baseNavItems];
+  const navItems = [...baseNavItems];
   navItems.splice(1, 0, chatNavItem);
-  if (featureFlags.systemView) {
-    navItems.splice(1, 0, systemViewItem);
-  }
 
   const currentPath = routerState.location.pathname;
 

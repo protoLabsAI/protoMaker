@@ -4,7 +4,6 @@ import {
   FileText,
   LayoutGrid,
   Library,
-  Network,
   Inbox,
   Settings,
   Settings2,
@@ -55,7 +54,6 @@ interface UseNavigationProps {
     board: string;
     settings: string;
     projectSettings: string;
-    systemView: string;
     inbox: string;
     fileEditor: string;
     designs: string;
@@ -68,7 +66,6 @@ interface UseNavigationProps {
   hideSpecEditor: boolean;
   hideDesigns: boolean;
   hideFileEditor: boolean;
-  hideSystemView: boolean;
   currentProject: Project | null;
   projects: Project[];
   projectHistory: string[];
@@ -92,7 +89,6 @@ export function useNavigation({
   hideSpecEditor,
   hideDesigns,
   hideFileEditor,
-  hideSystemView,
   currentProject,
   projects,
   projectHistory,
@@ -163,15 +159,6 @@ export function useNavigation({
         shortcut: shortcuts.board,
       },
     ];
-
-    if (!hideSystemView) {
-      projectItems.push({
-        id: 'system-view',
-        label: 'System View',
-        icon: Network,
-        shortcut: shortcuts.systemView,
-      });
-    }
 
     if (!hideFileEditor) {
       projectItems.push({
@@ -253,7 +240,6 @@ export function useNavigation({
     hideSpecEditor,
     hideDesigns,
     hideFileEditor,
-    hideSystemView,
     unreadNotificationsCount,
     unreadCeremonyCount,
     isSpecGenerating,

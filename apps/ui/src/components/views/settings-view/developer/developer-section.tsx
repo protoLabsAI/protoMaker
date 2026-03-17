@@ -25,10 +25,6 @@ const FEATURE_FLAG_LABELS: Record<keyof FeatureFlags, { label: string; descripti
     label: 'Spec Editor',
     description: 'Show the Spec Editor in the sidebar Tools section.',
   },
-  systemView: {
-    label: 'System View',
-    description: 'Show the System View (network/dependency graph) in the project sidebar.',
-  },
   userPresenceDetection: {
     label: 'User Presence Detection',
     description:
