@@ -9,7 +9,7 @@
 
 import type { Request, Response } from 'express';
 import { createLogger } from '@protolabsai/utils';
-import { getPRWatcherService } from '../../../services/pr-watcher-service.js';
+import { getPRFeedbackService } from '../../../services/pr-feedback-service.js';
 import type { EventEmitter } from '../../../lib/events.js';
 import { getErrorMessage } from './common.js';
 
@@ -22,7 +22,7 @@ interface WatchPRRequest {
   sessionId?: string;
 }
 
-export function createWatchPRHandler(events: EventEmitter) {
+export function createWatchPRHandler(_events: EventEmitter) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath, prNumber, sessionId } = req.body as WatchPRRequest;
@@ -39,10 +39,10 @@ export function createWatchPRHandler(events: EventEmitter) {
         return;
       }
 
-      // Initialise (or retrieve) the singleton watcher
-      const watcher = getPRWatcherService(events);
+      // Retrieve the singleton PR feedback service
+      const watcher = getPRFeedbackService();
       if (!watcher) {
-        res.status(500).json({ success: false, error: 'PRWatcherService unavailable' });
+        res.status(500).json({ success: false, error: 'PRFeedbackService unavailable' });
         return;
       }
 
