@@ -1,5 +1,19 @@
 # @protolabsai/flows
 
+## 0.71.2
+
+### Patch Changes
+
+- ### Bug Fixes
+  - replace hallucinating cron tasks with deterministic heartbeats
+  - replace hallucinating cron tasks with deterministic heartbeats
+- Updated dependencies
+  - @protolabsai/types@0.71.2
+  - @protolabsai/utils@0.71.2
+  - @protolabsai/prompts@0.71.2
+  - @protolabsai/model-resolver@0.71.2
+  - @protolabsai/observability@0.71.2
+
 ## 0.71.1
 
 ### Patch Changes
