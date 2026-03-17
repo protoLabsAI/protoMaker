@@ -23,6 +23,7 @@ import { promisify } from 'util';
 import type { FlowFactory } from '@protolabsai/types';
 import { DEFAULT_GIT_WORKFLOW_SETTINGS } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
+import { getEffectivePrBaseBranch } from '../lib/settings-helpers.js';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { DataIntegrityWatchdogService } from './data-integrity-watchdog-service.js';
 import type { FeatureLoader } from './feature-loader.js';
@@ -92,22 +93,21 @@ async function isBranchFullyMerged(
 
 /**
  * Resolve the integration branch for a project.
- * Reads prBaseBranch from global settings, then verifies the branch exists locally.
- * Falls back to main → master if the configured branch doesn't exist.
+ * Reads prBaseBranch from project settings first, then global, then verifies
+ * the branch exists locally. Falls back to main -> master if the configured
+ * branch doesn't exist.
  */
 async function resolveIntegrationBranch(
   cwd: string,
   settingsService?: SettingsService
 ): Promise<string | null> {
-  // Read prBaseBranch from settings
-  const configuredBranch = settingsService
-    ? (await settingsService.getGlobalSettings().catch(() => null))?.gitWorkflow?.prBaseBranch
-    : undefined;
-  const candidates = [
-    configuredBranch ?? DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch,
-    'main',
-    'master',
-  ];
+  // Read prBaseBranch from project settings first, then global
+  const configuredBranch = await getEffectivePrBaseBranch(
+    cwd,
+    settingsService,
+    '[MaintenanceTasks]'
+  );
+  const candidates = [configuredBranch, 'main', 'master'];
   // Deduplicate (e.g., if prBaseBranch is already 'main')
   const unique = [...new Set(candidates)];
 
@@ -1423,6 +1423,8 @@ export async function scanWorktreesForCrashRecovery(
 
         try {
           const globalSettings = await settingsService.getGlobalSettings();
+          const projectSettings = await settingsService.getProjectSettings(projectPath);
+          const projectPrBaseBranch = projectSettings.workflow?.gitWorkflow?.prBaseBranch;
           const result = await gitWorkflowService.runPostCompletionWorkflow(
             projectPath,
             feature.id,
@@ -1430,7 +1432,8 @@ export async function scanWorktreesForCrashRecovery(
             worktree.path,
             globalSettings,
             undefined,
-            events
+            events,
+            projectPrBaseBranch
           );
 
           if (result) {

@@ -50,10 +50,26 @@ export class ArchivalService {
   }
 
   /**
-   * Set the scheduler service for managed interval tracking
+   * Set the scheduler service for managed interval tracking.
+   * If start() already ran with a raw setInterval, migrates to the scheduler.
    */
   setSchedulerService(schedulerService: SchedulerService): void {
     this.schedulerService = schedulerService;
+    // Migrate to scheduler if start() already ran and is using a raw interval
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+      this.schedulerService.registerInterval(
+        ArchivalService.INTERVAL_ID,
+        'Archival Check',
+        CHECK_INTERVAL_MS,
+        () =>
+          this.runArchivalCycle().catch((err) => {
+            logger.error('Archival cycle failed:', err);
+          })
+      );
+      logger.info('ArchivalService: migrated timer to scheduler');
+    }
   }
 
   /**

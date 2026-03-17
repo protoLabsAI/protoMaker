@@ -1886,6 +1886,10 @@ Address the follow-up instructions above. Review the previous work and make the 
             }
           }
 
+          // Resolve per-project prBaseBranch override
+          const projectSettings = await this.settingsService.getProjectSettings(projectPath);
+          const projectPrBaseBranch = projectSettings.workflow?.gitWorkflow?.prBaseBranch;
+
           gitWorkflowResult = await gitWorkflowService.runPostCompletionWorkflow(
             projectPath,
             featureId,
@@ -1893,7 +1897,8 @@ Address the follow-up instructions above. Review the previous work and make the 
             workDir,
             settings,
             epicBranchName,
-            this.events
+            this.events,
+            projectPrBaseBranch
           );
           if (gitWorkflowResult) {
             // Check if git workflow encountered conflicts

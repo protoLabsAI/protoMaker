@@ -16,7 +16,15 @@ import type {
   Credentials,
   WorkflowSettings,
 } from '@protolabsai/types';
-import { DEFAULT_PHASE_MODELS, DEFAULT_WORKFLOW_SETTINGS } from '@protolabsai/types';
+import {
+  DEFAULT_PHASE_MODELS,
+  DEFAULT_WORKFLOW_SETTINGS,
+  DEFAULT_GIT_WORKFLOW_SETTINGS,
+} from '@protolabsai/types';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
 import {
   mergeAutoModePrompts,
   mergeAgentPrompts,
@@ -789,6 +797,10 @@ export async function getWorkflowSettings(
           projectSettings.workflow.preFlightChecks ?? DEFAULT_WORKFLOW_SETTINGS.preFlightChecks,
         toolProfile: projectSettings.workflow.toolProfile ?? DEFAULT_WORKFLOW_SETTINGS.toolProfile,
         agentConfig: projectSettings.workflow.agentConfig,
+        gitWorkflow: {
+          ...DEFAULT_WORKFLOW_SETTINGS.gitWorkflow,
+          ...projectSettings.workflow.gitWorkflow,
+        },
       };
     }
     return DEFAULT_WORKFLOW_SETTINGS;
@@ -796,4 +808,66 @@ export async function getWorkflowSettings(
     logger.warn(`${logPrefix} Failed to read workflow settings, using defaults:`, error);
     return DEFAULT_WORKFLOW_SETTINGS;
   }
+}
+
+/**
+ * Resolve the effective prBaseBranch for a project.
+ *
+ * Resolution order:
+ *   1. Per-project workflow.gitWorkflow.prBaseBranch (from .automaker/settings.json)
+ *   2. Global gitWorkflow.prBaseBranch (from data/settings.json)
+ *   3. Auto-detect from remote HEAD via `git symbolic-ref refs/remotes/origin/HEAD`
+ *   4. DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch ('dev')
+ *
+ * @param projectPath - Absolute path to the project (used for project settings + git detection)
+ * @param settingsService - Settings service instance
+ * @param logPrefix - Prefix for log messages
+ * @returns The resolved base branch name
+ */
+export async function getEffectivePrBaseBranch(
+  projectPath: string,
+  settingsService?: SettingsService | null,
+  logPrefix = '[PrBaseBranch]'
+): Promise<string> {
+  if (settingsService) {
+    try {
+      // 1. Check per-project workflow settings first
+      const projectSettings = await settingsService.getProjectSettings(projectPath);
+      const projectBranch = projectSettings.workflow?.gitWorkflow?.prBaseBranch;
+      if (projectBranch) {
+        logger.debug(`${logPrefix} Using project-level prBaseBranch: ${projectBranch}`);
+        return projectBranch;
+      }
+
+      // 2. Fall back to global settings
+      const globalSettings = await settingsService.getGlobalSettings();
+      const globalBranch = globalSettings.gitWorkflow?.prBaseBranch;
+      if (globalBranch) {
+        logger.debug(`${logPrefix} Using global prBaseBranch: ${globalBranch}`);
+        return globalBranch;
+      }
+    } catch (err) {
+      logger.warn(`${logPrefix} Failed to read settings for prBaseBranch:`, err);
+    }
+  }
+
+  // 3. Auto-detect from remote HEAD
+  try {
+    const { stdout } = await execFileAsync('git', ['symbolic-ref', 'refs/remotes/origin/HEAD'], {
+      cwd: projectPath,
+      timeout: 5000,
+      encoding: 'utf-8',
+    });
+    const ref = stdout.trim(); // e.g., refs/remotes/origin/main
+    const branch = ref.replace('refs/remotes/origin/', '');
+    if (branch) {
+      logger.debug(`${logPrefix} Auto-detected prBaseBranch from remote HEAD: ${branch}`);
+      return branch;
+    }
+  } catch {
+    // origin/HEAD not set or git not available — fall through to default
+  }
+
+  // 4. Final fallback
+  return DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch;
 }

@@ -291,3 +291,11 @@ usageStats:
 - **Problem solved:** All database queries use .prepare() with ? bind parameters, never string interpolation
 - **Why this works:** Defense-in-depth: protects against SQL injection even if assumptions about data origin change. Shows preventive security culture. Scales to future multi-tenant scenarios.
 - **Trade-offs:** Minimal performance cost (statement caching), significant security benefit
+
+
+### Enable anonymous Grafana access with Admin org role for local development; no authentication required for any user (2026-03-17)
+- **Context:** Local dev environment needs frictionless monitoring access without login credentials
+- **Why:** Development convenience prioritized; appropriate for isolated local dev but incompatible with production requirements
+- **Rejected:** Requiring login adds friction to rapid development iterations and local testing workflows
+- **Trade-offs:** Eliminates auth security for unrestricted admin access; requires different hardened configuration for production deployments
+- **Breaking if changed:** This configuration grants full admin access to anyone with network access; deploying this to staging/production creates critical auth vulnerability

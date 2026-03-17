@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 605
-  referenced: 164
-  successfulFeatures: 164
+  loaded: 607
+  referenced: 165
+  successfulFeatures: 165
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -2314,3 +2314,25 @@ usageStats:
 - **Problem solved:** Deleting the boardHealthCheck left featureHealthService orphaned; removing it from destructuring was a clean signal of the change
 - **Why this works:** Explicit destructuring forces all dependencies to be listed at the top of the function, making dead code detection trivial. Implicit container.get() access would hide the unused service.
 - **Trade-offs:** More verbose destructuring but self-documenting and refactoring-safe. Eliminates 'hidden dependency' bugs.
+
+#### [Pattern] Late-binding dependency migration: When a service initializes before its dependency (SchedulerService) is available, it runs in degraded mode (raw setInterval). When the dependency arrives via setter, the service detects already-running work and migrates it instead of discarding it. (2026-03-17)
+- **Problem solved:** PRFeedbackService.initialize() and ArchivalService.start() run before SchedulerService is wired (wiring.ts: registerLeadEngineer at line 39, registerScheduler at line 42). Services need to poll/archive immediately, can't wait for scheduler.
+- **Why this works:** Avoids reordering complex initialization sequences which would cascade to other services. Allows services to start work immediately while maintaining scheduler integration once available.
+- **Trade-offs:** setSchedulerService() gains migration logic (+12-17 LOC per service), but initialization sequence remains unchanged and services never block on missing dependencies. Cost: small, isolated, one-time check.
+
+#### [Gotcha] Idempotency guard in ArchivalService.start() (listAll().find(id)) is critical. When scheduler wiring happens early (normal path), start() must detect the already-scheduled interval and skip re-registration, preventing double-polling. (2026-03-17)
+- **Situation:** Two initialization paths exist: (1) setSchedulerService before start() [normal], (2) start() before setSchedulerService [late wiring]. Both must avoid registering twice.
+- **Root cause:** start() can't know which path it's on. The guard is simple—check if scheduler already has the work—but if missing, the normal path (most common) silently double-registers.
+- **How to avoid:** One listAll() query per start(), minimal cost. Makes start() inherently idempotent regardless of wiring order.
+
+### Migration condition is explicitly `if (timer != null)` — only migrate if raw timer was actually started. Don't unconditionally try to migrate in every setSchedulerService() call. (2026-03-17)
+- **Context:** setSchedulerService() is called once, but could theoretically be called multiple times. Must distinguish: (1) late arrival (raw timer exists, migrate), vs (2) early arrival (no raw timer, nothing to migrate).
+- **Why:** Prevents interference with normal wiring path. If scheduler arrives early, there's no raw timer to migrate—calling clear/register on null would fail or cause undefined behavior.
+- **Rejected:** Always attempt migration—simpler code, but fails when scheduler is wired before initialize()/start(). Breaks normal initialization path.
+- **Trade-offs:** One null check, clearer intent. Cost: negligible.
+- **Breaking if changed:** If removed: early wiring path tries to clear/unregister a non-existent raw timer, likely crashes or logs spurious errors. Migration becomes non-idempotent.
+
+#### [Pattern] Callback function is decoupled from execution mechanism. Same callback works with raw setInterval and SchedulerService.registerInterval—service doesn't need two versions or wrapper logic. (2026-03-17)
+- **Problem solved:** PRFeedbackService has a poll callback. ArchivalService has a check callback. Both need to work with either setInterval or SchedulerService.
+- **Why this works:** Reduces code duplication. Migration is just 'clear raw timer, register same callback with scheduler'—no callback surgery needed.
+- **Trade-offs:** Callback can't assume it has a raw NodeJS.Timeout handle or scheduler interval ID. Simpler: it's just a function that does work.

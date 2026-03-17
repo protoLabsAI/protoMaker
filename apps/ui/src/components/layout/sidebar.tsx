@@ -265,7 +265,6 @@ export function Sidebar() {
     hideSpecEditor: hideSpecEditor || !featureFlags.specEditor,
     hideDesigns: !featureFlags.designs,
     hideFileEditor: false,
-    hideSystemView: !featureFlags.systemView,
     currentProject,
     projects,
     projectHistory,

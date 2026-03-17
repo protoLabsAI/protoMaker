@@ -503,7 +503,7 @@
     "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:auto-mode:started:2026-03-17",
     "createdAt": "2026-03-17T02:23:22.586Z",
-    "updatedAt": "2026-03-17T02:28:14.695Z"
+    "updatedAt": "2026-03-17T07:44:43.261Z"
   },
   {
     "title": "Started: Migrate PRFeedbackService and ArchivalService timers",
@@ -680,5 +680,27 @@
     "sourceId": "ops:feature:pr-merged:feature-1773715283963-r1gv80ibx",
     "createdAt": "2026-03-17T04:18:13.721Z",
     "updatedAt": "2026-03-17T04:18:13.721Z"
+  },
+  {
+    "title": "Started: Bug: Timer migration wiring order — scheduler registration never fires",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773733673121-wbp2kdawx",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773733641068-tutcrz681",
+    "createdAt": "2026-03-17T07:47:53.108Z",
+    "updatedAt": "2026-03-17T07:47:53.108Z"
+  },
+  {
+    "title": "Merged: feature-1773733641068-tutcrz681",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773734027399-otk7r7buw",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773733641068-tutcrz681",
+    "createdAt": "2026-03-17T07:53:47.397Z",
+    "updatedAt": "2026-03-17T07:53:47.397Z"
   }
 ]

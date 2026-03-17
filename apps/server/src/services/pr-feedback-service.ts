@@ -134,6 +134,18 @@ export class PRFeedbackService {
 
   setSchedulerService(schedulerService: SchedulerService): void {
     this.schedulerService = schedulerService;
+    // Migrate to scheduler if initialize() already ran and is using a raw interval
+    if (this.initialized && this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+      this.schedulerService.registerInterval(
+        PRFeedbackService.INTERVAL_ID,
+        'PR Feedback Poll',
+        POLL_INTERVAL_MS,
+        () => this.pollAllPRs()
+      );
+      logger.info('PR Feedback Service: migrated timer to scheduler');
+    }
   }
 
   setLeadEngineerService(service: { isFeatureActive(featureId: string): boolean }): void {

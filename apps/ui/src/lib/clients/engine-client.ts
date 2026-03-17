@@ -1,8 +1,8 @@
 /**
- * Engine client mixin: status, auto-mode, flows, signals, content drafts.
+ * Engine client mixin: status, auto-mode, signals, content drafts.
  *
  * Extracted from the monolithic http-api-client.ts — contains:
- *   - engine  (status, detail endpoints, events history, flows,
+ *   - engine  (status, detail endpoints, events history,
  *              signal submit, PRD approval, content drafts/review)
  */
 import { BaseHttpClient, type Constructor } from './base-http-client';
@@ -23,7 +23,6 @@ export const withEngineClient = <TBase extends Constructor<BaseHttpClient>>(Base
         until?: number;
         limit?: number;
       }) => this.post('/api/engine/events/history', filter ?? {}),
-      flows: (graphId?: string) => this.post('/api/engine/flows', { graphId }),
       signalSubmit: (params: {
         content: string;
         projectPath?: string;

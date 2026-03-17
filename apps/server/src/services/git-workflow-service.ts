@@ -207,11 +207,17 @@ export class GitWorkflowService {
 
   /**
    * Resolve effective git workflow settings for a feature.
-   * Feature-level settings override global settings.
+   *
+   * Resolution order (first defined wins):
+   *   1. Feature-level override (feature.gitWorkflow)
+   *   2. Per-project override (projectPrBaseBranch — from .automaker/settings.json workflow.gitWorkflow)
+   *   3. Global settings (globalSettings.gitWorkflow)
+   *   4. DEFAULT_GIT_WORKFLOW_SETTINGS
    */
   resolveGitWorkflowSettings(
     feature: Feature,
-    globalSettings: GlobalSettings
+    globalSettings: GlobalSettings,
+    projectPrBaseBranch?: string
   ): Required<GitWorkflowSettings> {
     const global = globalSettings.gitWorkflow ?? DEFAULT_GIT_WORKFLOW_SETTINGS;
     const featureOverride = feature.gitWorkflow ?? {};
@@ -237,6 +243,7 @@ export class GitWorkflowService {
         featureOverride.waitForCI ?? global.waitForCI ?? DEFAULT_GIT_WORKFLOW_SETTINGS.waitForCI,
       prBaseBranch:
         featureOverride.prBaseBranch ??
+        projectPrBaseBranch ??
         global.prBaseBranch ??
         DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch,
       maxPRLinesChanged:
@@ -358,6 +365,7 @@ export class GitWorkflowService {
    * @param settings - Global settings containing git workflow config
    * @param epicBranchName - Optional epic branch name to use as PR base (for features in epics)
    * @param events - Optional event emitter for emitting workflow events
+   * @param projectPrBaseBranch - Optional per-project prBaseBranch override from workflow settings
    * @returns GitWorkflowResult with details of what was done, or null if no workflow needed
    */
   async runPostCompletionWorkflow(
@@ -367,9 +375,10 @@ export class GitWorkflowService {
     workDir: string,
     settings: GlobalSettings,
     epicBranchName?: string,
-    events?: EventEmitter
+    events?: EventEmitter,
+    projectPrBaseBranch?: string
   ): Promise<GitWorkflowResult | null> {
-    const gitSettings = this.resolveGitWorkflowSettings(feature, settings);
+    const gitSettings = this.resolveGitWorkflowSettings(feature, settings, projectPrBaseBranch);
 
     // Determine PR base branch:
     // - If feature belongs to an epic and epicBranchName is provided, use it

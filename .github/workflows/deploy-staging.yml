@@ -155,11 +155,90 @@ jobs:
           GIT_COMMIT_SHA: ${{ github.sha }}
           DOCKER_BUILDKIT: 1
           COMPOSE_DOCKER_CLI_BUILD: 1
+          # Plain progress streams full build output to CI logs (BuildKit TUI hides errors by default)
+          BUILDKIT_PROGRESS: plain
         run: |
-          # setup-staging.sh --build isolates storybook from critical services.
-          # If storybook fails to build, the script continues (non-fatal).
-          ./scripts/setup-staging.sh --build
-          ./scripts/setup-staging.sh --start
+          set -euo pipefail
+
+          echo "=== Pre-flight checks ==="
+          echo "DEPLOY_DIR: ${DEPLOY_DIR}"
+          echo "Working directory: $(pwd)"
+          echo "Git HEAD: $(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
+
+          # Verify compose file exists
+          if [ ! -f "docker-compose.staging.yml" ]; then
+            echo "::error::docker-compose.staging.yml not found at $(pwd)"
+            ls -la
+            exit 1
+          fi
+          echo "Compose file: OK"
+
+          # Verify Dockerfile exists
+          if [ ! -f "Dockerfile" ]; then
+            echo "::error::Dockerfile not found at $(pwd)"
+            ls -la
+            exit 1
+          fi
+          echo "Dockerfile: OK"
+
+          # Validate compose file syntax before attempting build
+          if ! docker compose -f docker-compose.staging.yml config --quiet 2>&1; then
+            echo "::error::docker-compose.staging.yml failed syntax validation"
+            docker compose -f docker-compose.staging.yml config 2>&1 || true
+            exit 1
+          fi
+          echo "Compose syntax: OK"
+
+          # Check required secrets are configured in .env
+          # Warn only — missing keys cause runtime failures, not build failures
+          ENV_FILE="${DEPLOY_DIR}/.env"
+          for key in ANTHROPIC_API_KEY AUTOMAKER_API_KEY GH_TOKEN; do
+            val=$(grep -oP "${key}=\K[^\n]*" "$ENV_FILE" 2>/dev/null | head -1 || echo "")
+            if [ -z "$val" ]; then
+              echo "WARN: ${key} not set in .env — staging agents may not function"
+            else
+              echo "OK: ${key} is configured"
+            fi
+          done
+
+          echo ""
+          echo "=== Build stage ==="
+          if ! ./scripts/setup-staging.sh --build; then
+            echo "::error::Image build failed"
+            echo "=== Container build logs (last 100 lines) ==="
+            docker compose -f docker-compose.staging.yml logs --tail=100 2>/dev/null || true
+            echo "=== Docker build cache/disk info ==="
+            docker system df 2>/dev/null || true
+            exit 1
+          fi
+
+          echo ""
+          echo "=== Start stage ==="
+          if ! ./scripts/setup-staging.sh --start; then
+            echo "::error::Service start failed"
+            echo "=== Container logs (last 100 lines per service) ==="
+            docker compose -f docker-compose.staging.yml logs --tail=100 2>/dev/null || true
+            echo "=== Container status ==="
+            docker compose -f docker-compose.staging.yml ps 2>/dev/null || true
+            exit 1
+          fi
+
+          echo ""
+          echo "=== Post-start container check ==="
+          docker compose -f docker-compose.staging.yml ps
+
+          # Detect immediate container crash — setup-staging.sh --start exits 0 even on health
+          # check timeout, so we must inspect the container state directly
+          SERVER_STATUS=$(docker inspect automaker-server --format='{{.State.Status}}' 2>/dev/null || echo "unknown")
+          echo "Server container status: ${SERVER_STATUS}"
+          if [ "$SERVER_STATUS" = "exited" ]; then
+            echo "::error::Server container exited immediately after start"
+            echo "=== Server container logs ==="
+            docker compose -f docker-compose.staging.yml logs --tail=100 server 2>/dev/null || true
+            echo "=== Server container inspect ==="
+            docker inspect automaker-server --format='ExitCode={{.State.ExitCode}} Error={{.State.Error}}' 2>/dev/null || true
+            exit 1
+          fi
 
       - name: Verify deployment
         id: verify
