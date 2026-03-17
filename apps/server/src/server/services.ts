@@ -763,8 +763,14 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Deviation Rule Service — evaluates agent scope against per-feature constraints
   const deviationRuleService = new DeviationRuleService();
 
-  // Register Ava cron tasks (daily board health, PR triage, staging ping)
-  void registerAvaCronTasks({ schedulerService, reactiveSpawnerService, projectPath: repoRoot });
+  // Register Ava cron tasks (daily board health, PR triage, staging ping) — deterministic, no LLM
+  void registerAvaCronTasks({
+    schedulerService,
+    projectPath: repoRoot,
+    featureLoader,
+    autoModeService,
+    discordBotService,
+  });
 
   // Subscribe to calendar:reminder events and forward to ReactiveSpawner
   calendarService.onReminder((payload) => {
