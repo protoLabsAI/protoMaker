@@ -1,5 +1,19 @@
 # @protolabsai/flows
 
+## 0.74.2
+
+### Patch Changes
+
+- ### Bug Fixes
+  - pre-flight merge reads per-feature prBaseBranch before git upstream
+  - pre-flight merge reads per-feature prBaseBranch before git upstream
+- Updated dependencies
+  - @protolabsai/types@0.74.2
+  - @protolabsai/utils@0.74.2
+  - @protolabsai/prompts@0.74.2
+  - @protolabsai/model-resolver@0.74.2
+  - @protolabsai/observability@0.74.2
+
 ## 0.74.1
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @protolabsai/types
 
+## 0.74.2
+
+### Patch Changes
+
+- ### Bug Fixes
+  - pre-flight merge reads per-feature prBaseBranch before git upstream
+  - pre-flight merge reads per-feature prBaseBranch before git upstream
+
 ## 0.74.1
 
 ### Patch Changes

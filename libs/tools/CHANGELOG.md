@@ -1,5 +1,15 @@
 # @protolabsai/tools
 
+## 0.74.2
+
+### Patch Changes
+
+- ### Bug Fixes
+  - pre-flight merge reads per-feature prBaseBranch before git upstream
+  - pre-flight merge reads per-feature prBaseBranch before git upstream
+- Updated dependencies
+  - @protolabsai/types@0.74.2
+
 ## 0.74.1
 
 ### Patch Changes
