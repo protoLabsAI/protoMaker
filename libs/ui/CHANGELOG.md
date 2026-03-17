@@ -1,5 +1,65 @@
 # @protolabsai/ui
 
+## 0.73.0
+
+### Minor Changes
+
+- ### Features
+  - centralize Discord channel IDs into settings with env var fallback (#2821)
+  - migrate PRFeedbackService and ArchivalService to SchedulerService (#2799)
+  - migrate PRFeedbackService and ArchivalService to SchedulerService (#2799)
+  - centralize Discord channel IDs into settings with env var fallback (#2821)
+  - migrate PRFeedbackService and ArchivalService to SchedulerService (#2799)
+
+  ### Bug Fixes
+  - align @tiptap/suggestion to v2 and type tiptap-editor props
+  - restore eslint-disable for pre-existing as any casts
+  - use eslint-disable-line for recharts formatter casts
+  - add eslint-disable for recharts formatter any casts
+  - cast recharts Tooltip formatter props to any
+
+  ### Refactors
+  - delete dead discord-service.ts stub and remove all references (#2816)
+  - delete dead discord-service.ts stub and remove all references (#2816)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.73.0
+  - @protolabsai/utils@0.73.0
+
+## 0.72.0
+
+### Minor Changes
+
+- ### Features
+  - enable context engine by default
+  - add Discord settings panel to integrations section (#2810)
+  - enable context engine by default
+  - add Discord settings panel to integrations section (#2810)
+
+  ### Bug Fixes
+  - add required enabled default in UI contextEngine merge
+  - context engine toggle not persisting in workflow settings
+  - remove duplicate esbuild entry and add git workflow rule
+  - add esbuild and update tailwind platform bindings
+  - add required enabled default in UI contextEngine merge
+  - context engine toggle not persisting in workflow settings
+  - remove duplicate esbuild entry and add git workflow rule
+  - add esbuild and update tailwind platform bindings
+
+  ### Refactors
+  - Add Discord channel message tools to MCP server (#2809)
+  - Bug: Blocked feature with merged PR not reconciled to done (#2818)
+  - Add Discord channel message tools to MCP server (#2809)
+  - Bug: Blocked feature with merged PR not reconciled to done (#2818)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.72.0
+  - @protolabsai/utils@0.72.0
+
 ## 0.71.3
 
 ### Patch Changes

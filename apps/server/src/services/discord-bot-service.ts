@@ -61,7 +61,7 @@ const ENV_CHANNELS = {
   suggestions: process.env.DISCORD_CHANNEL_SUGGESTIONS || '',
   projectPlanning: process.env.DISCORD_CHANNEL_PROJECT_PLANNING || '',
   agentLogs: process.env.DISCORD_CHANNEL_AGENT_LOGS || '',
-  codeReview: process.env.DISCORD_CHANNEL_CODE_REVIEW || '',
+  dev: process.env.DISCORD_CHANNEL_CODE_REVIEW || '',
   bugs: process.env.DISCORD_BUGS_CHANNEL_ID || '',
   infra: process.env.DISCORD_CHANNEL_INFRA || '',
 } as const;
@@ -151,6 +151,23 @@ export class DiscordBotService {
     this.settingsService = settingsService;
     this.projectPath = projectPath;
     this.agents = agents;
+  }
+
+  /**
+   * Resolve a Discord channel ID by name.
+   * Priority: global settings (discord.channels) → env var fallback → undefined.
+   */
+  async getChannelId(name: string): Promise<string | undefined> {
+    try {
+      const settings = await this.settingsService.getGlobalSettings();
+      const fromSettings =
+        settings.discord?.channels?.[name as keyof typeof settings.discord.channels];
+      if (fromSettings) return fromSettings;
+    } catch {
+      // settings unavailable — fall through to env var
+    }
+    const fromEnv = ENV_CHANNELS[name as keyof typeof ENV_CHANNELS];
+    return fromEnv || undefined;
   }
 
   /**
@@ -2024,7 +2041,7 @@ export class DiscordBotService {
       suggestions: config?.channels?.suggestions || ENV_CHANNELS.suggestions,
       projectPlanning: config?.channels?.projectPlanning || ENV_CHANNELS.projectPlanning,
       agentLogs: config?.channels?.agentLogs || ENV_CHANNELS.agentLogs,
-      codeReview: config?.channels?.dev || ENV_CHANNELS.codeReview,
+      codeReview: config?.channels?.dev || ENV_CHANNELS.dev,
       bugs: config?.channels?.bugs || ENV_CHANNELS.bugs,
       infra: config?.channels?.infra || ENV_CHANNELS.infra,
       ceremonies: config?.channels?.ceremonies || '',

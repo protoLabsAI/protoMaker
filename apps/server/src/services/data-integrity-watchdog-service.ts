@@ -16,7 +16,6 @@ import { getFeaturesDir } from '@protolabsai/platform';
 import * as secureFs from '../lib/secure-fs.js';
 import path from 'path';
 import type { EventEmitter } from '../lib/events.js';
-import type { DiscordService } from './discord-service.js';
 
 const logger = createLogger('DataIntegrityWatchdog');
 
@@ -81,8 +80,6 @@ const CRITICAL_DROP_THRESHOLD = 0.5;
 export class DataIntegrityWatchdogService {
   private stateFilePath: string;
   private events: EventEmitter | null = null;
-  private discordService: DiscordService | null = null;
-  private infraChannelId: string | null = null;
 
   constructor(dataDir: string) {
     this.stateFilePath = path.join(dataDir, 'integrity-state.json');
@@ -93,14 +90,6 @@ export class DataIntegrityWatchdogService {
    */
   setEventEmitter(events: EventEmitter): void {
     this.events = events;
-  }
-
-  /**
-   * Set Discord service and infra channel ID for critical alerts
-   */
-  setDiscordService(discordService: DiscordService, infraChannelId: string): void {
-    this.discordService = discordService;
-    this.infraChannelId = infraChannelId;
   }
 
   /**
@@ -302,42 +291,6 @@ export class DataIntegrityWatchdogService {
         dropPercentage: Math.round(dropPercentage * 100),
         message: errorMessage,
       });
-    }
-
-    // Post to Discord #infra
-    if (this.discordService && this.infraChannelId) {
-      const message = `🔴 **DATA INTEGRITY BREACH**
-
-**Project:** ${projectPath}
-**Feature Count Drop:** ${lastKnownCount} → ${currentCount} (${Math.round(dropPercentage * 100)}% reduction)
-
-**Auto-mode has been blocked until integrity is restored.**
-
-**Possible Causes:**
-- Accidental deletion of .automaker/features/ directory
-- File system corruption
-- Manual cleanup gone wrong
-
-**Required Action:**
-1. Investigate the cause of the feature loss
-2. Restore from backup if available
-3. Manually clear the integrity breach flag if intentional
-`;
-
-      try {
-        const result = await this.discordService.sendMessage({
-          channelId: this.infraChannelId,
-          message,
-        });
-
-        if (result.success) {
-          logger.info('Posted integrity breach alert to Discord #infra');
-        } else {
-          logger.error('Failed to post integrity breach alert to Discord', result.error);
-        }
-      } catch (error) {
-        logger.error('Error posting integrity breach to Discord', error);
-      }
     }
   }
 

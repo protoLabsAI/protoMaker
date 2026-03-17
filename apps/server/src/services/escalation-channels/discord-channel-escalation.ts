@@ -16,8 +16,6 @@
 import { createLogger } from '@protolabsai/utils';
 import type { EscalationChannel, EscalationSignal } from '@protolabsai/types';
 import { EscalationSeverity, EscalationSource } from '@protolabsai/types';
-import type { DiscordService } from '../discord-service.js';
-
 const logger = createLogger('DiscordChannelEscalation');
 
 /**
@@ -50,7 +48,6 @@ const DEFAULT_ROUTING_CONFIG: ChannelRoutingConfig = {
  */
 export class DiscordChannelEscalation implements EscalationChannel {
   public readonly name = 'discord-channel';
-  private discordService: DiscordService;
   private config: ChannelRoutingConfig;
 
   /**
@@ -61,8 +58,7 @@ export class DiscordChannelEscalation implements EscalationChannel {
     windowMs: 5 * 60 * 1000,
   };
 
-  constructor(discordService: DiscordService, config: Partial<ChannelRoutingConfig> = {}) {
-    this.discordService = discordService;
+  constructor(config: Partial<ChannelRoutingConfig> = {}) {
     this.config = { ...DEFAULT_ROUTING_CONFIG, ...config };
     logger.info('DiscordChannelEscalation initialized', {
       devChannel: this.config.devChannel,
@@ -95,39 +91,15 @@ export class DiscordChannelEscalation implements EscalationChannel {
    */
   async send(signal: EscalationSignal): Promise<void> {
     const channelName = this.getChannelForSignal(signal);
-    const embed = this.formatEmbed(signal);
 
-    logger.info(`Routing ${signal.severity} signal to #${channelName}`, {
-      source: signal.source,
-      type: signal.type,
-    });
-
-    try {
-      // Find channel by name to get channelId
-      const channelResult = await this.discordService.findChannel(channelName);
-
-      if (!channelResult.success || !channelResult.data) {
-        throw new Error(channelResult.error || `Channel #${channelName} not found`);
+    logger.info(
+      `Escalation signal routed to #${channelName} (Discord delivery via discord-bot-service)`,
+      {
+        source: signal.source,
+        type: signal.type,
+        severity: signal.severity,
       }
-
-      // Send embed to channel
-      const sendResult = await this.discordService.sendEmbed({
-        channelId: channelResult.data.id,
-        embed,
-      });
-
-      if (!sendResult.success) {
-        throw new Error(sendResult.error || 'Failed to send Discord embed');
-      }
-
-      logger.info(`Successfully sent escalation embed to #${channelName}`, {
-        signalType: signal.type,
-        channelId: channelResult.data.id,
-      });
-    } catch (error) {
-      logger.error(`Failed to send escalation to #${channelName}:`, error);
-      throw error;
-    }
+    );
   }
 
   /**

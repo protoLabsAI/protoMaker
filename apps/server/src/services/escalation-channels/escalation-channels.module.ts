@@ -10,11 +10,11 @@ import { GitHubIssueChannel } from './github-issue-channel.js';
  * the Discord bot service to be initialized first.
  */
 export async function register(container: ServiceContainer): Promise<void> {
-  const { events, featureLoader, repoRoot, escalationRouter, discordService } = container;
+  const { events, featureLoader, repoRoot, escalationRouter } = container;
 
   escalationRouter.setEventEmitter(events);
   escalationRouter.registerChannel(new UINotificationChannel(events));
-  escalationRouter.registerChannel(new DiscordChannelEscalation(discordService));
+  escalationRouter.registerChannel(new DiscordChannelEscalation());
   escalationRouter.registerChannel(
     new GitHubIssueChannel({ featureLoader, projectPath: repoRoot, events })
   );

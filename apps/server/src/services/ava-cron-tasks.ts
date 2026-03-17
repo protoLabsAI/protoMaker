@@ -22,8 +22,6 @@ import { getVersion } from '../lib/version.js';
 
 const logger = createLogger('AvaCronTasks');
 
-const INFRA_CHANNEL_ID = process.env.DISCORD_CHANNEL_INFRA || '1469109809939742814';
-
 // Embed colors
 const COLOR_GREEN = 0x2ecc71;
 const COLOR_YELLOW = 0xf1c40f;
@@ -42,6 +40,7 @@ export interface AvaCronTaskDeps {
  */
 async function sendEmbed(
   discordBotService: DiscordBotService,
+  channelId: string | undefined,
   embed: {
     title: string;
     description?: string;
@@ -51,14 +50,16 @@ async function sendEmbed(
     timestamp?: string;
   }
 ): Promise<void> {
-  try {
-    const sent = await discordBotService.sendEmbed(INFRA_CHANNEL_ID, embed);
-    if (sent) return;
-  } catch {
-    // Fall through to log output
+  if (channelId) {
+    try {
+      const sent = await discordBotService.sendEmbed(channelId, embed);
+      if (sent) return;
+    } catch {
+      // Fall through to log output
+    }
   }
 
-  // Discord unavailable — log the embed content
+  // Discord unavailable or no channel configured — log the embed content
   const fields = embed.fields?.map((f) => `  ${f.name}: ${f.value}`).join('\n') ?? '';
   logger.info(`[CronEmbed] ${embed.title}\n${embed.description ?? ''}\n${fields}`);
 }
@@ -87,6 +88,7 @@ function formatUptime(seconds: number): string {
  */
 async function handleStagingPing(deps: AvaCronTaskDeps): Promise<void> {
   const { featureLoader, autoModeService, discordBotService, projectPath } = deps;
+  const infraChannelId = await discordBotService.getChannelId('infra');
 
   let features: Feature[];
   try {
@@ -116,7 +118,7 @@ async function handleStagingPing(deps: AvaCronTaskDeps): Promise<void> {
     .filter(Boolean)
     .join(' / ');
 
-  await sendEmbed(discordBotService, {
+  await sendEmbed(discordBotService, infraChannelId, {
     title: 'Staging Heartbeat',
     color: COLOR_GREEN,
     fields: [
@@ -145,6 +147,7 @@ async function handleStagingPing(deps: AvaCronTaskDeps): Promise<void> {
  */
 async function handleDailyBoardHealth(deps: AvaCronTaskDeps): Promise<void> {
   const { featureLoader, discordBotService, projectPath } = deps;
+  const infraChannelId = await discordBotService.getChannelId('infra');
 
   let features: Feature[];
   try {
@@ -215,7 +218,7 @@ async function handleDailyBoardHealth(deps: AvaCronTaskDeps): Promise<void> {
         ? COLOR_YELLOW
         : COLOR_GREEN;
 
-  await sendEmbed(discordBotService, {
+  await sendEmbed(discordBotService, infraChannelId, {
     title: 'Daily Board Health',
     description: `**Total features:** ${features.length}\n${summaryLine}`,
     color,
@@ -242,6 +245,7 @@ async function handleDailyBoardHealth(deps: AvaCronTaskDeps): Promise<void> {
  */
 async function handlePrTriage(deps: AvaCronTaskDeps): Promise<void> {
   const { discordBotService, projectPath } = deps;
+  const infraChannelId = await discordBotService.getChannelId('infra');
 
   interface GhPr {
     number: number;
@@ -261,7 +265,7 @@ async function handlePrTriage(deps: AvaCronTaskDeps): Promise<void> {
     prs = JSON.parse(raw) as GhPr[];
   } catch (err) {
     logger.error('[ava-pr-triage] Failed to list PRs via gh CLI', err);
-    await sendEmbed(discordBotService, {
+    await sendEmbed(discordBotService, infraChannelId, {
       title: 'PR Triage',
       description: 'Failed to query GitHub PRs. Is the `gh` CLI authenticated?',
       color: COLOR_RED,
@@ -301,7 +305,7 @@ async function handlePrTriage(deps: AvaCronTaskDeps): Promise<void> {
 
   const color = stalePrs.length > 0 ? COLOR_YELLOW : COLOR_GREEN;
 
-  await sendEmbed(discordBotService, {
+  await sendEmbed(discordBotService, infraChannelId, {
     title: 'PR Triage',
     description: `**Open PRs:** ${prs.length}`,
     color,

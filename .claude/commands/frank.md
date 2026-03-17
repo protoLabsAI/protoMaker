@@ -215,13 +215,6 @@ Staging auto-deploys from `main` via GitHub Actions self-hosted runner.
 - `generate-changelog.yml` - AI-generated changelogs on release (uses Claude CLI)
 - `security-audit.yml` - Weekly npm audit (Mondays 9am UTC)
 
-### GitHub Secrets
-
-| Secret                   | Purpose                              |
-| ------------------------ | ------------------------------------ |
-| `DISCORD_DEPLOY_WEBHOOK` | Deploy notifications to #deployments |
-| `DISCORD_ALERTS_WEBHOOK` | Smoke test failures to #alerts       |
-
 ## Operating Procedures
 
 ### Startup Checklist

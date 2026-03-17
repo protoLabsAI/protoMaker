@@ -60,7 +60,6 @@ import { ProjectService } from '../services/project-service.js';
 import { getSpecGenerationMonitor } from '../services/spec-generation-monitor.js';
 import { FeatureHealthService } from '../services/feature-health-service.js';
 import { getAvaGatewayService } from '../services/ava-gateway-service.js';
-import { getDiscordService } from '../services/discord-service.js';
 import { TriageService } from '../services/triage-service.js';
 import { IssueCreationService } from '../services/issue-creation-service.js';
 import { EventStreamBuffer } from '../lib/event-stream-buffer.js';
@@ -183,7 +182,6 @@ export interface ServiceContainer {
   maintenanceOrchestrator: MaintenanceOrchestrator;
 
   // Discord
-  discordService: ReturnType<typeof getDiscordService>;
   discordBotService: DiscordBotService;
 
   // Knowledge
@@ -406,8 +404,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   const claudeUsageService = new ClaudeUsageService();
   const mcpTestService = new MCPTestService(settingsService);
   const featureHealthService = new FeatureHealthService(featureLoader, autoModeService);
-  const discordService = getDiscordService();
-
   // Knowledge Store Service for chunked retrieval
   const knowledgeStoreService = new KnowledgeStoreService();
 
@@ -914,7 +910,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     featureHealthService,
     healthMonitorService,
     maintenanceOrchestrator,
-    discordService,
     discordBotService,
     knowledgeStoreService,
     escalationRouter,
