@@ -1,5 +1,27 @@
 # @protolabsai/types
 
+## 0.73.0
+
+### Minor Changes
+
+- ### Features
+  - centralize Discord channel IDs into settings with env var fallback (#2821)
+  - migrate PRFeedbackService and ArchivalService to SchedulerService (#2799)
+  - migrate PRFeedbackService and ArchivalService to SchedulerService (#2799)
+  - centralize Discord channel IDs into settings with env var fallback (#2821)
+  - migrate PRFeedbackService and ArchivalService to SchedulerService (#2799)
+
+  ### Bug Fixes
+  - align @tiptap/suggestion to v2 and type tiptap-editor props
+  - restore eslint-disable for pre-existing as any casts
+  - use eslint-disable-line for recharts formatter casts
+  - add eslint-disable for recharts formatter any casts
+  - cast recharts Tooltip formatter props to any
+
+  ### Refactors
+  - delete dead discord-service.ts stub and remove all references (#2816)
+  - delete dead discord-service.ts stub and remove all references (#2816)
+
 ## 0.72.0
 
 ### Minor Changes
