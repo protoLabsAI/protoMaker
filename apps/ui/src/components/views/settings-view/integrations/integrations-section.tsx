@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/api-fetch';
 import type { IntegrationSummary } from '@protolabsai/types';
 import { IntegrationCard } from './integration-card';
 import { IntegrationConfigDialog } from './integration-config-dialog';
+import { DiscordSettingsPanel } from './discord-settings-panel';
 import { SignalsPanel } from './signals-panel';
 
 type ActiveTab = 'integrations' | 'signals';
@@ -27,6 +28,15 @@ export function IntegrationsSection() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [configDialogId, setConfigDialogId] = useState<string | null>(null);
+  const [discordPanelOpen, setDiscordPanelOpen] = useState(false);
+
+  const handleConfigure = useCallback((id: string) => {
+    if (id === 'discord') {
+      setDiscordPanelOpen(true);
+    } else {
+      setConfigDialogId(id);
+    }
+  }, []);
 
   const fetchIntegrations = useCallback(async () => {
     try {
@@ -147,7 +157,7 @@ export function IntegrationsSection() {
                         key={integration.id}
                         integration={integration}
                         onToggle={handleToggle}
-                        onConfigure={setConfigDialogId}
+                        onConfigure={handleConfigure}
                       />
                     ))}
                   </div>
@@ -155,6 +165,8 @@ export function IntegrationsSection() {
               ))}
             </div>
           )}
+
+          {discordPanelOpen && <DiscordSettingsPanel onClose={() => setDiscordPanelOpen(false)} />}
 
           <IntegrationConfigDialog
             integrationId={configDialogId}
