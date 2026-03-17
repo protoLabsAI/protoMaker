@@ -1,5 +1,28 @@
 # @protolabsai/types
 
+## 0.76.0
+
+### Minor Changes
+
+- ### Features
+  - add codex-native workflow layer
+  - add codex-native workflow layer
+  - add codex-native workflow layer
+
+  ### Bug Fixes
+  - install rollup native binary in docs CI
+  - install rollup native binary in docs CI
+  - install rollup native binary in docs CI
+  - address workflow review comments
+  - skip prepare script in docs deploy CI
+  - use locked install for docs deploy
+  - address workflow review comments
+  - skip prepare script in docs deploy CI
+  - use locked install for docs deploy
+  - address workflow review comments
+  - skip prepare script in docs deploy CI
+  - use locked install for docs deploy
+
 ## 0.75.0
 
 ### Minor Changes
