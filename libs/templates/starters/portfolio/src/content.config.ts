@@ -1,10 +1,11 @@
 import { defineCollection, z } from 'astro:content';
+import { glob } from 'astro/loaders';
 
 // ── Projects collection ─────────────────────────────────────────────────────
 // Each markdown file in src/content/projects/ represents a portfolio project.
 
 const projects = defineCollection({
-  type: 'content',
+  loader: glob({ pattern: '**/*.md', base: 'src/content/projects' }),
   schema: z.object({
     /** Project display title */
     title: z.string(),
@@ -33,7 +34,7 @@ const projects = defineCollection({
 // Each markdown file in src/content/blog/ is a blog post.
 
 const blog = defineCollection({
-  type: 'content',
+  loader: glob({ pattern: '**/*.md', base: 'src/content/blog' }),
   schema: z.object({
     /** Post title */
     title: z.string(),
@@ -60,7 +61,7 @@ const blog = defineCollection({
 // JSON or YAML files in src/content/testimonials/.
 
 const testimonials = defineCollection({
-  type: 'data',
+  loader: glob({ pattern: '**/*.json', base: 'src/content/testimonials' }),
   schema: z.object({
     /** Person's full name */
     author: z.string(),
@@ -84,7 +85,7 @@ const testimonials = defineCollection({
 // Access via: const [{ data: config }] = await getCollection('siteConfig')
 
 const siteConfig = defineCollection({
-  type: 'data',
+  loader: glob({ pattern: '**/*.json', base: 'src/content/siteConfig' }),
   schema: z.object({
     /** Your name — used in the <title> tag and nav logo */
     name: z.string(),

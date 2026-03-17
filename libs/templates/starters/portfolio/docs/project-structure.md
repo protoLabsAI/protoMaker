@@ -7,8 +7,8 @@ This page covers the file layout of the portfolio starter kit and explains how t
 ```
 portfolio-starter/
 ├── src/
+│   ├── content.config.ts       ← Zod schemas for all collections (Astro 6)
 │   ├── content/
-│   │   ├── config.ts           ← Zod schemas for all collections
 │   │   ├── blog/               ← blog posts (Markdown)
 │   │   ├── projects/           ← project case studies (Markdown)
 │   │   ├── siteConfig/         ← your name, bio, and nav links (JSON)
@@ -28,7 +28,7 @@ portfolio-starter/
 
 ## Content Collections
 
-The portfolio uses Astro Content Collections for all data. Each collection has a Zod schema defined in `src/content/config.ts`. Astro validates every file in the collection at build time — missing required fields produce a type error before the build completes.
+The portfolio uses Astro Content Collections for all data. Each collection has a Zod schema defined in `src/content.config.ts` (Astro 6 moved this from `src/content/config.ts`). Collections use the `glob` loader to find files. Astro validates every file in the collection at build time — missing required fields produce a type error before the build completes.
 
 ### Blog posts (`src/content/blog/`)
 
@@ -118,13 +118,10 @@ Do not add raw colour utilities like `bg-gray-900` or `text-blue-600` in compone
 The site outputs fully static HTML (`output: 'static'`). The `dist/` folder can be deployed to any static host.
 
 ```bash
-npm run build   # generates dist/
+npm run build    # generates dist/
+npm run deploy   # build + deploy to Cloudflare Pages
 ```
 
-For Cloudflare Pages or Netlify:
-
-1. Connect your Git repo.
-2. Set build command to `npm run build`.
-3. Set output directory to `dist`.
+For full deployment instructions including Cloudflare Pages setup, GitHub Actions CI/CD, custom domains, and other hosting options, see [Deployment](./deployment.md).
 
 Because the portfolio is a standalone project (not a monorepo workspace), run `npm install` inside this directory, not from a parent repo root.

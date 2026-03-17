@@ -7,13 +7,14 @@
     "build": "astro build",
     "preview": "astro preview",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "deploy": "npm run build && npx wrangler pages deploy dist"
   },
   "dependencies": {
-    "@astrojs/react": "^4.2.0",
+    "@astrojs/react": "^5.0.0",
     "@astrojs/rss": "^4.0.0",
-    "@astrojs/sitemap": "^3.3.0",
-    "astro": "^5.9.0",
+    "@astrojs/sitemap": "^3.7.1",
+    "astro": "^6.0.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "sharp": "^0.34.0"

@@ -46,3 +46,39 @@ jobs:
               --body "Automated daily site data regeneration (stats, changelog, roadmap)."
             gh pr merge --auto --squash
           fi
+
+      - name: Push data to protolabs.studio repo
+        env:
+          SITE_DEPLOY_KEY: ${{ secrets.SITE_DEPLOY_KEY }}
+        if: env.SITE_DEPLOY_KEY != ''
+        run: |
+          # Set up SSH key for cross-repo push
+          mkdir -p ~/.ssh
+          echo "$SITE_DEPLOY_KEY" > ~/.ssh/site_deploy_key
+          chmod 600 ~/.ssh/site_deploy_key
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/site_deploy_key -o StrictHostKeyChecking=no"
+
+          # Clone the site repo
+          SITE_DIR=$(mktemp -d)
+          git clone --depth 1 git@github.com:protoLabsAI/protolabs.studio.git "$SITE_DIR"
+
+          # Copy updated data and images
+          cp site/data/stats.json "$SITE_DIR/data/"
+          cp site/data/changelog.json "$SITE_DIR/data/"
+          cp site/data/roadmap.json "$SITE_DIR/data/"
+          cp site/images/og-*.png "$SITE_DIR/public/images/" 2>/dev/null || true
+
+          # Commit and push if changed
+          cd "$SITE_DIR"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/ public/images/
+          if git diff --cached --quiet; then
+            echo "No changes to site repo — skipping."
+          else
+            git commit -m "docs: update site data from automaker [skip ci]"
+            git push origin main
+          fi
+
+          # Cleanup
+          rm -rf "$SITE_DIR" ~/.ssh/site_deploy_key
