@@ -172,13 +172,12 @@ export function StageBreakdownChart({ projectPath }: StageBreakdownChartProps) {
                 />
                 <Tooltip
                   contentStyle={tooltipStyle}
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   formatter={
                     ((value: number | undefined, name: string | undefined) =>
                       [`${value ?? 0}h`, stageLabels[name ?? ''] ?? name ?? ''] as [
                         string,
                         string,
-                      ]) as any
+                      ]) as any // eslint-disable-line @typescript-eslint/no-explicit-any
                   }
                 />
                 <Legend
