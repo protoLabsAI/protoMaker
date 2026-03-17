@@ -1,5 +1,13 @@
 # @protolabsai/types
 
+## 0.71.1
+
+### Patch Changes
+
+- ### Bug Fixes
+  - strip dead workflow settings from UI (retro, cleanup, autoResearch, context engine sub-fields)
+  - strip dead workflow settings from UI (retro, cleanup, autoResearch, context engine sub-fields)
+
 ## 0.71.0
 
 ### Minor Changes
