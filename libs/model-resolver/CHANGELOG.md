@@ -1,5 +1,27 @@
 # @protolabsai/model-resolver
 
+## 0.71.3
+
+### Patch Changes
+
+- ### Bug Fixes
+  - add @esbuild/linux-x64 to Linux platform bindings install
+  - ungate rollup platform binding from skip-native-rebuild
+  - align @tiptap/suggestion to v2 and type tiptap-editor props
+  - restore eslint-disable for pre-existing as any casts
+  - use eslint-disable-line for recharts formatter casts
+  - add eslint-disable for recharts formatter any casts
+  - cast recharts Tooltip formatter props to any
+  - add @esbuild/linux-x64 to Linux platform bindings install
+  - ungate rollup platform binding from skip-native-rebuild
+  - align @tiptap/suggestion to v2 and type tiptap-editor props
+  - restore eslint-disable for pre-existing as any casts
+  - use eslint-disable-line for recharts formatter casts
+  - add eslint-disable for recharts formatter any casts
+  - cast recharts Tooltip formatter props to any
+- Updated dependencies
+  - @protolabsai/types@0.71.3
+
 ## 0.71.2
 
 ### Patch Changes
