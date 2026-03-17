@@ -260,12 +260,11 @@ node scripts/rewrite-release-notes.mjs --post-discord
 
 ### CI Integration
 
-Wired into `auto-release.yml` as the "Rewrite and post release notes to Discord" step. Runs after the GitHub Release is created, auto-detects the previous tag, and posts the rewritten notes as a Discord embed. Gated on `DISCORD_DEV_WEBHOOK` being set — skips gracefully if absent.
+Wired into `auto-release.yml` as the "Rewrite and post release notes to Discord" step. Runs after the GitHub Release is created, auto-detects the previous tag, and posts the rewritten notes as a Discord embed.
 
 ### Requirements
 
 - `ANTHROPIC_API_KEY` — required for Claude API calls
-- `DISCORD_DEV_WEBHOOK` — optional, required only for `--post-discord` flag
 - Git tags must exist locally (`git fetch origin --tags` if needed)
 
 The release workflow is documented in the internal development docs.
@@ -311,13 +310,6 @@ Auto-deploys to the production server (`/opt/protomaker`) when code is pushed to
 
 Runs on `[self-hosted, protolabs]` — the production runner inside CT 104 on pve01.
 
-### Secrets
-
-| Secret                   | Purpose                                   |
-| ------------------------ | ----------------------------------------- |
-| `DISCORD_DEPLOY_WEBHOOK` | Post deploy notifications to #deployments |
-| `DISCORD_ALERTS_WEBHOOK` | Post failure alerts to #alerts            |
-
 ### Self-Hosted Runner
 
 ```bash
@@ -327,13 +319,6 @@ Runs on `[self-hosted, protolabs]` — the production runner inside CT 104 on pv
 # Check status
 ./scripts/setup-runner.sh --status
 ```
-
-### Secrets
-
-| Secret                   | Purpose                                   |
-| ------------------------ | ----------------------------------------- |
-| `DISCORD_DEPLOY_WEBHOOK` | Post deploy notifications to #deployments |
-| `DISCORD_ALERTS_WEBHOOK` | Post smoke test failures to #alerts       |
 
 ## Composite Actions
 
@@ -380,14 +365,11 @@ IaC source of truth: `scripts/infra/rulesets/main.json`
 
 ## Secrets
 
-| Secret                   | Purpose                                                                    |
-| ------------------------ | -------------------------------------------------------------------------- |
-| `GITHUB_TOKEN`           | Auto-provided, used for releases                                           |
-| `GH_PAT`                 | PAT for `auto-release.yml` tag push (enables `build-electron.yml` trigger) |
-| `DISCORD_DEPLOY_WEBHOOK` | Staging deploy notifications (#deployments)                                |
-| `DISCORD_ALERTS_WEBHOOK` | Smoke test failure alerts (#alerts)                                        |
-| `DISCORD_DEV_WEBHOOK`    | Release notes posted to #dev (used by auto-release + rewrite script)       |
-| `ANTHROPIC_API_KEY`      | LLM release notes rewriting (Haiku 4.5)                                    |
+| Secret              | Purpose                                                                    |
+| ------------------- | -------------------------------------------------------------------------- |
+| `GITHUB_TOKEN`      | Auto-provided, used for releases                                           |
+| `GH_PAT`            | PAT for `auto-release.yml` tag push (enables `build-electron.yml` trigger) |
+| `ANTHROPIC_API_KEY` | LLM release notes rewriting (Haiku 4.5)                                    |
 
 ## Self-Hosted Runner Capabilities
 

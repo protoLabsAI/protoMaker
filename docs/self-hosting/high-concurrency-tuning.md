@@ -219,15 +219,6 @@ git pull origin main
 **Cause:** `packages/` not in Docker build context.
 **Fix:** Dockerfile uses `npm run build:libs` (not `build:packages`).
 
-### Discord Notifications Silent
-
-**Cause:** `DISCORD_DEPLOY_WEBHOOK` GitHub secret not set.
-
-| Secret                   | Purpose                   | Channel      |
-| ------------------------ | ------------------------- | ------------ |
-| `DISCORD_DEPLOY_WEBHOOK` | Deploy notifications      | #deployments |
-| `DISCORD_ALERTS_WEBHOOK` | Smoke test failure alerts | #deployments |
-
 ## Staging Hardening
 
 - **Nginx**: gzip, security headers, proxy buffers, static asset caching

@@ -59,14 +59,13 @@ node scripts/rewrite-release-notes.mjs --post-discord
 | Flag             | Description                                    |
 | ---------------- | ---------------------------------------------- |
 | `--dry-run`      | Print system + user prompt without calling API |
-| `--post-discord` | Post result to #dev via `DISCORD_DEV_WEBHOOK`  |
+| `--post-discord` | Post result to #dev via Discord webhook        |
 
 ### Environment Variables
 
-| Variable              | Required | Description                          |
-| --------------------- | -------- | ------------------------------------ |
-| `ANTHROPIC_API_KEY`   | Yes      | Anthropic API key for Claude calls   |
-| `DISCORD_DEV_WEBHOOK` | No       | Discord webhook URL for #dev channel |
+| Variable            | Required | Description                        |
+| ------------------- | -------- | ---------------------------------- |
+| `ANTHROPIC_API_KEY` | Yes      | Anthropic API key for Claude calls |
 
 ## Prompt Template
 
@@ -122,7 +121,6 @@ The `auto-release.yml` workflow calls the rewriter script as the final step afte
 
 ```yaml
 - name: Rewrite and post release notes to Discord
-  if: ${{ env.DISCORD_DEV_WEBHOOK != '' }}
   run: |
     VERSION="v${{ steps.version.outputs.version }}"
     PREV_TAG=$(git tag --sort=-v:refname | grep -v "^${VERSION}$" | head -1)
@@ -131,12 +129,10 @@ The `auto-release.yml` workflow calls the rewriter script as the final step afte
     ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
-The step is gated on `DISCORD_DEV_WEBHOOK` being set (defined at job level from secrets). If the webhook or API key is missing, the step is skipped gracefully.
-
 ### Enabling/Disabling
 
 - **Enabled by default**: Wired into `auto-release.yml` — runs on every `staging->main` merge
-- **Requires two secrets**: `ANTHROPIC_API_KEY` (Claude API) and `DISCORD_DEV_WEBHOOK` (Discord channel)
+- **Requires**: `ANTHROPIC_API_KEY` (Claude API)
 - **Manual runs**: `node scripts/rewrite-release-notes.mjs` locally with `ANTHROPIC_API_KEY` set
 - **Disable in CI**: Remove or comment out the "Rewrite and post release notes" step in `auto-release.yml`; the GitHub Release body still contains the raw auto-generated notes from `gh release create`
 
