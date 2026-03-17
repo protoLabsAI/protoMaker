@@ -78,6 +78,94 @@ services:
       retries: 5
       start_period: 60s
 
+  prometheus:
+    image: prom/prometheus:v2.51.2
+    container_name: automaker-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-infra-data:/prometheus
+    ports:
+      - '9090:9090'
+    networks:
+      - automaker-infra
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'wget --quiet --tries=1 --spider http://localhost:9090/-/healthy || exit 1']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: automaker-loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/config.yml
+    volumes:
+      - ./infra/loki/config.yml:/etc/loki/config.yml:ro
+      - loki-infra-data:/tmp/loki
+    ports:
+      - '3100:3100'
+    networks:
+      - automaker-infra
+    healthcheck:
+      test: ['CMD-SHELL', 'wget --quiet --tries=1 --spider http://localhost:3100/ready || exit 1']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    container_name: automaker-promtail
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./infra/promtail/config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - automaker-infra
+    depends_on:
+      loki:
+        condition: service_healthy
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: automaker-grafana
+    restart: unless-stopped
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: 'false'
+      GF_SERVER_HTTP_PORT: '3000'
+    volumes:
+      - ./infra/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - grafana-infra-data:/var/lib/grafana
+    ports:
+      - '3010:3000'
+    networks:
+      - automaker-infra
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'wget --quiet --tries=1 --spider http://localhost:3000/api/health || exit 1']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
 networks:
   automaker-infra:
     name: automaker-infra
@@ -86,3 +174,9 @@ networks:
 volumes:
   postgres-infra-data:
     name: automaker-infra-postgres-data
+  prometheus-infra-data:
+    name: automaker-infra-prometheus-data
+  loki-infra-data:
+    name: automaker-infra-loki-data
+  grafana-infra-data:
+    name: automaker-infra-grafana-data
