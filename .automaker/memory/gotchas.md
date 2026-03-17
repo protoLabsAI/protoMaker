@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1578
-  referenced: 429
-  successfulFeatures: 429
+  loaded: 1575
+  referenced: 427
+  successfulFeatures: 427
 ---
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
