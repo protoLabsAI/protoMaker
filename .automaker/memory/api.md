@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 622
-  referenced: 193
-  successfulFeatures: 193
+  loaded: 628
+  referenced: 197
+  successfulFeatures: 197
 ---
 <!-- domain: API Design & Integration | GitHub GraphQL, REST endpoints, HTTP client patterns -->
 
@@ -565,3 +565,10 @@ usageStats:
 - **Problem solved:** Token budget is constrained; callers need to understand what was included/excluded and why
 - **Why this works:** Enables debugging, observability, and adaptive calling patterns (caller can adjust budget if headroom is low). Surfaces lossy compression decisions.
 - **Trade-offs:** Report adds API surface and caller complexity; enables intelligent retry/adaptation strategies
+
+### Watch endpoint accepts optional `sessionId` parameter to route PR feedback notifications back to the specific chat session that created the watch (2026-03-17)
+- **Context:** From watch-pr.ts: 'Chat session ID — injected by the UI so the notification is routed back to the right session'
+- **Why:** Enables async feedback routing: user initiates PR watch in chat session A, notification arrives in session A (not broadcast to all sessions). Reduces notification noise
+- **Rejected:** Broadcasting feedback to all open sessions would force all sessions to filter/ignore notifications not relevant to them
+- **Trade-offs:** Gained: precise session routing, better UX. Lost: feedback cannot be shared across sessions without explicit mechanism
+- **Breaking if changed:** If sessionId is not provided and sessions are required, feedback goes to null and is unreachable. Requires UI to always inject sessionId or fallback strategy
