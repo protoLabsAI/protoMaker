@@ -1,0 +1,169 @@
+{
+  "slug": "scheduler-maintenance-cleanup",
+  "title": "Scheduler & Maintenance Cleanup",
+  "goal": "Consolidate 38 concurrent recurring timers into a clean, observable system. Migrate raw setInterval timers to the scheduler, delete dead code, simplify duplicated tasks, and ensure all background operations are visible in the Ops Dashboard.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-migrate-raw-timers-to-scheduler",
+      "title": "Migrate Raw Timers to Scheduler",
+      "description": "Migrate the top 5 long-lived raw setInterval timers to schedulerService.registerInterval() so they appear in the Ops Dashboard.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "migrate-prfeedbackservice-and-archivalservice-timers",
+          "title": "Migrate PRFeedbackService and ArchivalService timers",
+          "description": "Migrate PRFeedbackService (60s poll at pr-feedback-service.ts:212) and ArchivalService (10min at archival-service.ts:55) from raw setInterval to schedulerService.registerInterval(). Both are long-lived system timers that should be visible in Ops Dashboard. Replace the setInterval call with registerInterval, store the cleanup function, and call it on destroy/stop. Preserve existing behavior exactly.",
+          "filesToModify": [
+            "apps/server/src/services/pr-feedback-service.ts",
+            "apps/server/src/services/archival-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "PRFeedbackService timer visible in Ops Dashboard at /api/ops/timers",
+            "ArchivalService timer visible in Ops Dashboard",
+            "Both timers pause/resume correctly via scheduler",
+            "Existing polling behavior unchanged",
+            "No raw setInterval remains in either file",
+            "Server tests pass"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773715283958-zqdvykzzt",
+          "executionStatus": "blocked"
+        },
+        {
+          "number": 2,
+          "name": "migrate-worktreelifecycle-and-projectassignment-timers",
+          "title": "Migrate WorktreeLifecycle and ProjectAssignment timers",
+          "description": "Migrate WorktreeLifecycleModule (5min drift at worktree-lifecycle.module.ts:24), WorktreeLifecycleService (6h drift at worktree-lifecycle-service.ts:142), and ProjectAssignmentService (60s failover at project-assignment-service.ts:264) from raw setInterval to schedulerService.registerInterval(). These are all long-lived system timers.",
+          "filesToModify": [
+            "apps/server/src/services/worktree-lifecycle.module.ts",
+            "apps/server/src/services/worktree-lifecycle-service.ts",
+            "apps/server/src/services/project-assignment-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "All 3 timers visible in Ops Dashboard",
+            "Drift check behavior unchanged",
+            "Failover detection behavior unchanged",
+            "No raw setInterval remains in these files",
+            "Server tests pass"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773715283959-8zliacgj1"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773715283957-mn0uso8a3"
+    },
+    {
+      "number": 2,
+      "slug": "02-delete-dead-code-simplify-standup",
+      "title": "Delete Dead Code & Simplify Standup",
+      "description": "Remove dead maintenance check modules and simplify the daily standup cron.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "delete-dead-maintenance-check-modules",
+          "title": "Delete dead maintenance check modules",
+          "description": "Delete 5 unregistered maintenance check module files from services/maintenance/checks/: DanglingDependencyCheck, EpicCompletionCheck, MemoryPressureCheck, OrphanedWorktreeCheck, StalePRCheck. Verify each has zero non-test importers before deletion. Keep DataIntegrityCheck and StuckFeatureCheck ONLY if they are imported somewhere — otherwise delete them too. Remove any barrel exports (index.ts) that reference deleted files.",
+          "filesToModify": [
+            "apps/server/src/services/maintenance/checks/dangling-dependency-check.ts",
+            "apps/server/src/services/maintenance/checks/epic-completion-check.ts",
+            "apps/server/src/services/maintenance/checks/memory-pressure-check.ts",
+            "apps/server/src/services/maintenance/checks/orphaned-worktree-check.ts",
+            "apps/server/src/services/maintenance/checks/stale-pr-check.ts",
+            "apps/server/src/services/maintenance/checks/data-integrity-check.ts",
+            "apps/server/src/services/maintenance/checks/stuck-feature-check.ts"
+          ],
+          "acceptanceCriteria": [
+            "All dead check module files deleted",
+            "No broken imports remain (typecheck passes)",
+            "No test files reference deleted modules (or tests updated)",
+            "Zero importers verified before each deletion",
+            "Server tests pass"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773715283961-thf5kyz1k"
+        },
+        {
+          "number": 2,
+          "name": "simplify-daily-standup-to-daily-cron",
+          "title": "Simplify daily standup to daily cron",
+          "description": "Change daily-standup:check from polling every 15 minutes (*/15 * * * *) with a 20-hour check to a single daily cron (0 9 * * *). Remove the 'has 20 hours passed since last standup' conditional logic — the cron schedule itself ensures daily cadence. Keep the standup flow execution unchanged.",
+          "filesToModify": [
+            "apps/server/src/services/daily-standup-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "Cron changed from */15 to 0 9 * * * (daily at 9am)",
+            "20-hour elapsed check removed",
+            "Standup flow execution unchanged",
+            "Server tests pass"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773715283962-22il7h283"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773715283960-p9gr2wig3"
+    },
+    {
+      "number": 3,
+      "slug": "03-consolidate-overlapping-systems",
+      "title": "Consolidate Overlapping Systems",
+      "description": "Remove duplicate board health checks and consolidate PR monitoring.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "remove-duplicate-board-health-from-maintenance-module",
+          "title": "Remove duplicate board-health from maintenance module",
+          "description": "Remove the board-health check from maintenance.module.ts (the 6h full-sweep tier). Board health is already handled by automation-service maintenance:stale-features (hourly) and ava-cron-tasks ava-daily-board-health (daily Discord report). The maintenance.module version adds no unique value. Keep the resource-usage check (critical tier) — that one is unique.",
+          "filesToModify": [
+            "apps/server/src/services/maintenance.module.ts"
+          ],
+          "acceptanceCriteria": [
+            "board-health check removed from maintenance.module.ts",
+            "resource-usage check preserved (critical tier)",
+            "maintenance:sweep:full still runs but only resource-usage",
+            "No references to removed check break",
+            "Server tests pass"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773715283963-r1gv80ibx"
+        },
+        {
+          "number": 2,
+          "name": "consolidate-pr-watcher-into-pr-feedback-service",
+          "title": "Consolidate PR watcher into PR feedback service",
+          "description": "Merge pr-watcher-service.ts functionality into pr-feedback-service.ts. Both poll PRs for CI state changes — pr-watcher watches specific PRs for resolution, pr-feedback monitors PR reviews and CI for remediation. Combine into a single PRMonitorService that handles both use cases. Update all importers of PRWatcherService to use the consolidated service. Delete pr-watcher-service.ts.",
+          "filesToModify": [
+            "apps/server/src/services/pr-feedback-service.ts",
+            "apps/server/src/services/pr-watcher-service.ts",
+            "apps/server/src/server/services.ts"
+          ],
+          "acceptanceCriteria": [
+            "pr-watcher-service.ts deleted",
+            "All PR watching functionality preserved in pr-feedback-service",
+            "All importers updated",
+            "Typecheck passes",
+            "Server tests pass"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1773715283964-4wi628l56"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773715283962-opp96ua8c"
+    }
+  ],
+  "prd": {
+    "situation": "The server runs 38 concurrent recurring timers across three registration patterns: SchedulerService cron tasks, SchedulerService intervals, and raw setInterval calls. 15 raw setInterval timers bypass the scheduler and are invisible in the Ops Dashboard timer registry. 5 maintenance check modules exist as dead code (files present but never registered). Board health is checked in 3 overlapping places. PR monitoring is fragmented across 4-5 services. The daily standup uses a wasteful 15-minute poll pattern instead of a single daily cron.",
+    "problem": "1) 15 raw setInterval timers are invisible to operators — no pause/resume, no metrics, no Ops Dashboard visibility. 2) 5 dead maintenance check modules in services/maintenance/checks/ create confusion — they overlap with automation-service tasks but are never registered. 3) Board health duplication across ava-cron-tasks, maintenance-orchestrator, and automation-service wastes compute and creates conflicting results. 4) PR monitoring fragmented across pr-watcher, pr-feedback, ava-pr-triage, auto-merge, and auto-rebase services. 5) daily-standup:check polls every 15 minutes to check if 20 hours passed — should be a single daily cron.",
+    "approach": "Five workstreams: (1) Migrate top 5 long-lived raw setInterval timers to schedulerService.registerInterval() — PRFeedbackService, WorktreeLifecycleModule, WorktreeLifecycleService, ArchivalService, ProjectAssignmentService. (2) Delete 5 dead maintenance check module files that are never registered. (3) Simplify daily-standup from 15-min poll to daily cron. (4) Remove board-health check from maintenance.module.ts (keep automation-service version + ava-cron Discord reporter). (5) Merge pr-watcher-service into pr-feedback-service to consolidate PR monitoring.",
+    "results": "All long-lived background timers visible in Ops Dashboard. Dead code removed. No duplicate board health checks. PR monitoring consolidated to fewer services. Daily standup fires once at 9am instead of polling. Measurable: timer count in Ops Dashboard increases by 5 (migrated), dead files removed, no behavioral changes to existing functionality.",
+    "constraints": "Must not change runtime behavior — only registration pattern changes for timer migrations. Dead code deletion must verify zero importers first. PR consolidation must preserve all existing monitoring capabilities. All changes must pass existing tests.",
+    "generatedAt": "2026-03-17T02:40:00.000Z"
+  },
+  "createdAt": "2026-03-17T02:40:42.154Z",
+  "updatedAt": "2026-03-17T02:42:49.085Z",
+  "health": "on-track"
+}
