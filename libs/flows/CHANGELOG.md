@@ -1,5 +1,60 @@
 # @protolabsai/flows
 
+## 0.74.0
+
+### Minor Changes
+
+- ### Features
+  - add Prometheus, Loki, Promtail, and Grafana to infra compose
+  - migrate PRFeedbackService and ArchivalService to SchedulerService (#2799)
+  - add Prometheus, Loki, Promtail, and Grafana to infra compose
+  - migrate PRFeedbackService and ArchivalService to SchedulerService (#2799)
+  - add protoLabs status line for Claude Code
+  - add persistent enable/disable toggle to Ops Dashboard timer rows (#2833)
+  - migrate PRFeedbackService and ArchivalService to SchedulerService (#2799)
+  - add protoLabs status line for Claude Code
+  - add persistent enable/disable toggle to Ops Dashboard timer rows (#2833)
+  - add protoLabs status line for Claude Code
+  - add persistent enable/disable toggle to Ops Dashboard timer rows (#2833)
+  - add Prometheus, Loki, Promtail, and Grafana to infra compose
+  - migrate PRFeedbackService and ArchivalService to SchedulerService (#2799)
+  - centralize Discord channel IDs into settings with env var fallback (#2821)
+  - add Prometheus, Loki, Promtail, and Grafana to infra compose
+  - migrate PRFeedbackService and ArchivalService to SchedulerService (#2799)
+
+  ### Bug Fixes
+  - migrate PRFeedbackService and ArchivalService timers to scheduler on late wiring
+  - migrate PRFeedbackService and ArchivalService timers to scheduler on late wiring
+  - add esbuild and rollup platform bindings to Dockerfile
+  - add esbuild and rollup platform bindings to Dockerfile
+  - add esbuild and rollup platform bindings to Dockerfile
+  - migrate PRFeedbackService and ArchivalService timers to scheduler on late wiring
+
+  ### Refactors
+  - remove System View (flow graph) and @xyflow/react dependency
+  - delete old monitoring/observability compose stacks and config
+  - Infra compose with Postgres, Langfuse, and Umami (#2831)
+  - remove System View (flow graph) and @xyflow/react dependency
+  - delete old monitoring/observability compose stacks and config
+  - Infra compose with Postgres, Langfuse, and Umami (#2831)
+  - Infra compose with Postgres, Langfuse, and Umami (#2831)
+  - Infra compose with Postgres, Langfuse, and Umami (#2831)
+  - delete old monitoring/observability compose stacks and config
+  - delete old monitoring/observability compose stacks and config
+  - Infra compose with Postgres, Langfuse, and Umami (#2831)
+  - delete dead discord-service.ts stub and remove all references (#2816)
+  - Infra compose with Postgres, Langfuse, and Umami (#2831)
+  - Infra compose with Postgres, Langfuse, and Umami (#2831)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.74.0
+  - @protolabsai/utils@0.74.0
+  - @protolabsai/prompts@0.74.0
+  - @protolabsai/model-resolver@0.74.0
+  - @protolabsai/observability@0.74.0
+
 ## 0.73.0
 
 ### Minor Changes
