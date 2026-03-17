@@ -19,6 +19,7 @@ import type { LedgerService } from './ledger-service.js';
 import type { SettingsService } from './settings-service.js';
 import type { EventEmitter } from '../lib/events.js';
 import { ARCHIVAL_CHECK_INTERVAL_MS } from '../config/timeouts.js';
+import type { SchedulerService } from './scheduler-service.js';
 
 const logger = createLogger('ArchivalService');
 
@@ -32,6 +33,9 @@ export class ArchivalService {
   private events: EventEmitter;
   private timer: ReturnType<typeof setInterval> | null = null;
   private aborted = false;
+  private schedulerService: SchedulerService | null = null;
+
+  private static readonly INTERVAL_ID = 'archival:check';
 
   constructor(
     featureLoader: FeatureLoader,
@@ -46,17 +50,43 @@ export class ArchivalService {
   }
 
   /**
+   * Set the scheduler service for managed interval tracking
+   */
+  setSchedulerService(schedulerService: SchedulerService): void {
+    this.schedulerService = schedulerService;
+  }
+
+  /**
    * Start the archival check interval
    */
   start(): void {
-    if (this.timer) return;
+    if (this.schedulerService) {
+      const existing = this.schedulerService
+        .listAll()
+        .find((e) => e.id === ArchivalService.INTERVAL_ID);
+      if (existing) return;
+    } else if (this.timer) {
+      return;
+    }
     this.aborted = false;
 
-    this.timer = setInterval(() => {
-      this.runArchivalCycle().catch((err) => {
-        logger.error('Archival cycle failed:', err);
-      });
-    }, CHECK_INTERVAL_MS);
+    if (this.schedulerService) {
+      this.schedulerService.registerInterval(
+        ArchivalService.INTERVAL_ID,
+        'Archival Check',
+        CHECK_INTERVAL_MS,
+        () =>
+          this.runArchivalCycle().catch((err) => {
+            logger.error('Archival cycle failed:', err);
+          })
+      );
+    } else {
+      this.timer = setInterval(() => {
+        this.runArchivalCycle().catch((err) => {
+          logger.error('Archival cycle failed:', err);
+        });
+      }, CHECK_INTERVAL_MS);
+    }
 
     logger.info('ArchivalService started (10min interval)');
   }
@@ -66,7 +96,9 @@ export class ArchivalService {
    */
   stop(): void {
     this.aborted = true;
-    if (this.timer) {
+    if (this.schedulerService) {
+      this.schedulerService.unregisterInterval(ArchivalService.INTERVAL_ID);
+    } else if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
     }

@@ -25,6 +25,8 @@ export function register(container: ServiceContainer): void {
     healthMonitorService,
     specGenerationMonitor,
     leadEngineerService,
+    prFeedbackService,
+    archivalService,
   } = container;
 
   // Wire schedulerService into interval-tracked services so their timers
@@ -36,6 +38,8 @@ export function register(container: ServiceContainer): void {
   if (prWatcher) {
     prWatcher.setSchedulerService(schedulerService);
   }
+  prFeedbackService.setSchedulerService(schedulerService);
+  archivalService.setSchedulerService(schedulerService);
 
   // Scheduler Service initialization and task registration via AutomationService
   schedulerService.initialize(events, dataDir);
