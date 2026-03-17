@@ -1,3 +1,15 @@
+---
+tags: []
+summary: 'relevantTo: []'
+relevantTo: []
+importance: 0.5
+relatedFiles: []
+usageStats:
+  loaded: 2
+  referenced: 1
+  successfulFeatures: 1
+---
+
 # Ops Lessons
 
 Recurring operational failures and their fixes. Each entry captures the root cause, the fix, and prevention guidance.

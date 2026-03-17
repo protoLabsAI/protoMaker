@@ -5,10 +5,11 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1566
-  referenced: 421
-  successfulFeatures: 421
+  loaded: 1573
+  referenced: 426
+  successfulFeatures: 426
 ---
+
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
 # gotchas
@@ -1098,3 +1099,9 @@ usageStats:
 - **Situation:** context-engine exports ConversationStore from root but workflow exports are subpath-only
 - **Root cause:** Intentional separation: conversation persistence is primary export, workflow checkpointing is lower-level infrastructure requiring explicit intent to access
 - **How to avoid:** Discoverable API surface (clear what's primary) vs friction for accessing workflow store
+
+#### [Gotcha] Fallback to raw setInterval silently degrades observability without alerting developers (2026-03-17)
+
+- **Situation:** Services support both SchedulerService-registered timers (visible in Ops Dashboard) and raw setInterval (invisible)
+- **Root cause:** Graceful degradation ensures system keeps working if scheduler isn't set up, but creates silent partial failure mode
+- **How to avoid:** Improved: migration path, backward compatibility, availability. Damaged: observability, debuggability—timers vanish from Ops Dashboard in fallback mode with no warning

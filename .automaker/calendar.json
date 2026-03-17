@@ -528,6 +528,171 @@
     "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773715283958-zqdvykzzt",
     "createdAt": "2026-03-17T02:41:56.897Z",
-    "updatedAt": "2026-03-17T02:42:46.953Z"
+    "updatedAt": "2026-03-17T02:44:36.064Z"
+  },
+  {
+    "title": "Merged: feature-1773715283958-zqdvykzzt",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773715801145-g0yq4fkwc",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773715283958-zqdvykzzt",
+    "createdAt": "2026-03-17T02:50:01.143Z",
+    "updatedAt": "2026-03-17T02:50:01.143Z"
+  },
+  {
+    "title": "Started: Migrate WorktreeLifecycle and ProjectAssignment timers",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773715804188-zrtaady54",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773715283959-8zliacgj1",
+    "createdAt": "2026-03-17T02:50:04.185Z",
+    "updatedAt": "2026-03-17T02:50:04.185Z"
+  },
+  {
+    "title": "Started: Consolidate PR watcher into PR feedback service",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773715807348-69q9nos6e",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773715283964-4wi628l56",
+    "createdAt": "2026-03-17T02:50:07.346Z",
+    "updatedAt": "2026-03-17T02:50:07.346Z"
+  },
+  {
+    "title": "Completed: Migrate WorktreeLifecycle and ProjectAssignment timers",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature implementation completed",
+    "id": "event-1773716317356-yla3cmwip",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:completed:feature-1773715283959-8zliacgj1",
+    "createdAt": "2026-03-17T02:58:37.353Z",
+    "updatedAt": "2026-03-17T02:58:37.353Z"
+  },
+  {
+    "title": "Merged: feature-1773715283964-4wi628l56",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773716460134-fsz25h6sf",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773715283964-4wi628l56",
+    "createdAt": "2026-03-17T03:01:00.131Z",
+    "updatedAt": "2026-03-17T03:01:00.131Z"
+  },
+  {
+    "title": "Completed: Consolidate PR watcher into PR feedback service",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature implementation completed",
+    "id": "event-1773716460141-kpni5oyp5",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:completed:feature-1773715283964-4wi628l56",
+    "createdAt": "2026-03-17T03:01:00.141Z",
+    "updatedAt": "2026-03-17T03:01:00.141Z"
+  },
+  {
+    "title": "Started: Delete dead maintenance check modules",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773720222274-m2f4yybsc",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773715283961-thf5kyz1k",
+    "createdAt": "2026-03-17T04:03:42.271Z",
+    "updatedAt": "2026-03-17T04:03:42.271Z"
+  },
+  {
+    "title": "Merged: feature-1773715283961-thf5kyz1k",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773720423222-p9k6vlonc",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773715283961-thf5kyz1k",
+    "createdAt": "2026-03-17T04:07:03.220Z",
+    "updatedAt": "2026-03-17T04:07:03.220Z"
+  },
+  {
+    "title": "Completed: Delete dead maintenance check modules",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature implementation completed",
+    "id": "event-1773720423229-hiaz35qlc",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:completed:feature-1773715283961-thf5kyz1k",
+    "createdAt": "2026-03-17T04:07:03.228Z",
+    "updatedAt": "2026-03-17T04:07:03.228Z"
+  },
+  {
+    "title": "Started: Simplify daily standup to daily cron",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773720426567-kpsv6h6x3",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773715283962-22il7h283",
+    "createdAt": "2026-03-17T04:07:06.565Z",
+    "updatedAt": "2026-03-17T04:07:06.565Z"
+  },
+  {
+    "title": "Completed: Simplify daily standup to daily cron",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature implementation completed",
+    "id": "event-1773720617248-1gig970ts",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:completed:feature-1773715283962-22il7h283",
+    "createdAt": "2026-03-17T04:10:17.246Z",
+    "updatedAt": "2026-03-17T04:10:17.246Z"
+  },
+  {
+    "title": "Started: Update docs after: Scheduler & Maintenance Cleanup",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773720620118-ctzxri022",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773720225283-lz2a45por",
+    "createdAt": "2026-03-17T04:10:20.116Z",
+    "updatedAt": "2026-03-17T04:10:20.116Z"
+  },
+  {
+    "title": "Merged: feature-1773720225283-lz2a45por",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773720875470-cwc4fdubp",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773720225283-lz2a45por",
+    "createdAt": "2026-03-17T04:14:35.468Z",
+    "updatedAt": "2026-03-17T04:14:35.468Z"
+  },
+  {
+    "title": "Started: Remove duplicate board-health from maintenance module",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773720914496-la0bvzfvk",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773715283963-r1gv80ibx",
+    "createdAt": "2026-03-17T04:15:14.494Z",
+    "updatedAt": "2026-03-17T04:15:14.494Z"
+  },
+  {
+    "title": "Merged: feature-1773715283963-r1gv80ibx",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773721093730-nz8wktdjm",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:pr-merged:feature-1773715283963-r1gv80ibx",
+    "createdAt": "2026-03-17T04:18:13.721Z",
+    "updatedAt": "2026-03-17T04:18:13.721Z"
   }
 ]
