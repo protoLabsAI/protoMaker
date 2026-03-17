@@ -115,16 +115,16 @@ All `spawnForError` calls produce a prompt that includes:
 
 ## Cron-Trigger Patterns
 
-Three built-in Ava cron tasks call `spawnForCron()` via `registerAvaCronTasks()`.
+Three built-in Ava cron tasks are registered via `registerAvaCronTasks()`. These are **deterministic** — they query services directly and format Discord embeds. No LLM calls.
 
 **File:** `apps/server/src/services/ava-cron-tasks.ts`
-**Registered in:** `apps/server/src/server/services.ts` after `ReactiveSpawnerService` is initialized.
+**Registered in:** `apps/server/src/server/services.ts` after services are initialized.
 
-| Task ID                  | Schedule       | Purpose                                                                                                                             |
-| ------------------------ | -------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `ava-daily-board-health` | `0 9 * * *`    | Check for stale features (>24h no activity), blocked agents, open PRs with failing CI — file tickets for anything needing attention |
-| `ava-pr-triage`          | `0 */4 * * *`  | Scan open PRs for CodeRabbit threads, CI failures, merge conflicts — act or file tickets                                            |
-| `ava-staging-ping`       | `*/30 * * * *` | Post a capacity_heartbeat to the Ava Channel; alert if staging has been quiet >2h                                                   |
+| Task ID                  | Schedule       | Purpose                                                             |
+| ------------------------ | -------------- | ------------------------------------------------------------------- |
+| `ava-staging-ping`       | `*/30 * * * *` | Capacity heartbeat: version, uptime, board counts, auto-mode status |
+| `ava-daily-board-health` | `0 9 * * *`    | Board summary with blocked features (with reasons) and stale (>24h) |
+| `ava-pr-triage`          | `0 */4 * * *`  | Open PR count via `gh pr list`, flags stale PRs (>7 days no update) |
 
 ### Calendar Reminder Integration
 
