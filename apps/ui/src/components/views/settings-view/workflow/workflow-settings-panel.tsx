@@ -222,6 +222,12 @@ export function WorkflowSettingsPanel() {
             | Record<string, unknown>
             | undefined),
         },
+        contextEngine: {
+          ...DEFAULT_WORKFLOW_SETTINGS.contextEngine,
+          ...((data.workflow as Record<string, unknown>).contextEngine as
+            | Record<string, unknown>
+            | undefined),
+        },
       };
       setLocalSettings(merged);
       setIsDirty(false);

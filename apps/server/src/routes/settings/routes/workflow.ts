@@ -62,11 +62,14 @@ export function createUpdateWorkflowHandler(
       const existing = await settingsService.getProjectSettings(projectPath);
       const current = existing.workflow ?? DEFAULT_WORKFLOW_SETTINGS;
       const merged: WorkflowSettings = {
+        ...current,
+        ...workflow,
         pipeline: { ...current.pipeline, ...workflow.pipeline },
         retro: { ...current.retro, ...workflow.retro },
         cleanup: { ...current.cleanup, ...workflow.cleanup },
         signalIntake: { ...current.signalIntake, ...workflow.signalIntake },
         bugs: { ...current.bugs, ...workflow.bugs },
+        contextEngine: { enabled: false, ...current.contextEngine, ...workflow.contextEngine },
       };
 
       await settingsService.updateProjectSettings(projectPath, {
