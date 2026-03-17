@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 628
-  referenced: 197
-  successfulFeatures: 197
+  loaded: 633
+  referenced: 200
+  successfulFeatures: 200
 ---
 <!-- domain: API Design & Integration | GitHub GraphQL, REST endpoints, HTTP client patterns -->
 
@@ -572,3 +572,10 @@ usageStats:
 - **Rejected:** Broadcasting feedback to all open sessions would force all sessions to filter/ignore notifications not relevant to them
 - **Trade-offs:** Gained: precise session routing, better UX. Lost: feedback cannot be shared across sessions without explicit mechanism
 - **Breaking if changed:** If sessionId is not provided and sessions are required, feedback goes to null and is unreachable. Requires UI to always inject sessionId or fallback strategy
+
+### Persist toggle state via global settings API (schedulerSettings.taskOverrides) rather than dedicated scheduler endpoint (2026-03-17)
+- **Context:** Enable/disable state needs to survive server restarts and be queryable by scheduler service without introducing new API surface
+- **Why:** Reuses existing centralized settings infrastructure (PUT /api/settings/global), ensures single source of truth, reduces API proliferation, scheduler can query settings directly
+- **Rejected:** Dedicated POST /api/scheduler/tasks/{id}/enabled endpoint - introduces new API surface, requires schema coordination, scheduler would need separate query path
+- **Trade-offs:** Simpler integration but couples scheduler configuration to general settings system; harder to version/deprecate without affecting all settings
+- **Breaking if changed:** Changes to global settings API shape would affect this feature; if schedulerSettings.taskOverrides key is removed/renamed, toggle loses persistence
