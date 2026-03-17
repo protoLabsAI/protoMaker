@@ -1,5 +1,16 @@
 # @protolabsai/prompts
 
+## 0.74.1
+
+### Patch Changes
+
+- ### Bug Fixes
+  - per-project prBaseBranch override with auto-detect fallback (#2842)
+  - per-project prBaseBranch override with auto-detect fallback (#2842)
+- Updated dependencies
+  - @protolabsai/types@0.74.1
+  - @protolabsai/utils@0.74.1
+
 ## 0.74.0
 
 ### Minor Changes
