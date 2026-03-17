@@ -133,6 +133,7 @@ export function DoraTrendCharts({ projectPath }: DoraTrendChartsProps) {
                   />
                   <Tooltip
                     contentStyle={tooltipStyle}
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     formatter={
                       ((value: number | undefined) =>
                         [`${value ?? 0}h`, ''] as [string, string]) as any
@@ -188,6 +189,7 @@ export function DoraTrendCharts({ projectPath }: DoraTrendChartsProps) {
                   <YAxis {...axisProps} allowDecimals={false} />
                   <Tooltip
                     contentStyle={tooltipStyle}
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     formatter={
                       ((value: number | undefined) =>
                         [`${value ?? 0}`, ''] as [string, string]) as any

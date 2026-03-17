@@ -75,6 +75,7 @@ export function ThroughputChart({
                   borderRadius: '8px',
                   fontSize: '12px',
                 }}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 formatter={((value: number | undefined) => [value ?? 0, valueLabel]) as any}
               />
               <Bar dataKey="value" fill={barColor} radius={[4, 4, 0, 0]} />
