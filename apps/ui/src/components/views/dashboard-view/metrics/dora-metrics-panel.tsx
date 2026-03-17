@@ -67,7 +67,7 @@ function Sparkline({
               borderRadius: '6px',
               fontSize: '11px',
             }}
-            formatter={(v: unknown) => [String(v), '']}
+            formatter={((v: unknown) => [String(v), '']) as any} // eslint-disable-line @typescript-eslint/no-explicit-any
           />
           <Line
             type="monotone"

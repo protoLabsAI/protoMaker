@@ -219,7 +219,7 @@ export function FailureDonutChart({ projectPath }: FailureDonutChartProps) {
                   borderRadius: '8px',
                   fontSize: '12px',
                 }}
-                formatter={(value: number | undefined) => [value ?? 0, 'occurrences']}
+                formatter={((value: number | undefined) => [value ?? 0, 'occurrences']) as any} // eslint-disable-line @typescript-eslint/no-explicit-any
               />
               <Legend
                 iconType="circle"

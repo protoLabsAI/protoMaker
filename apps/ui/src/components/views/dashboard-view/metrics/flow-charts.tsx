@@ -119,14 +119,16 @@ export function FlowCharts({ projectPath, days = 90, wipLimit }: FlowChartsProps
                   <YAxis {...axisProps} allowDecimals={false} />
                   <Tooltip
                     contentStyle={tooltipStyle}
-                    formatter={(value: number | undefined, name: string | undefined) => [
-                      value ?? 0,
-                      name === 'in_progress'
-                        ? 'In Progress'
-                        : name
-                          ? name.charAt(0).toUpperCase() + name.slice(1)
-                          : '',
-                    ]}
+                    formatter={
+                      ((value: number | undefined, name: string | undefined) => [
+                        value ?? 0,
+                        name === 'in_progress'
+                          ? 'In Progress'
+                          : name
+                            ? name.charAt(0).toUpperCase() + name.slice(1)
+                            : '',
+                      ]) as any // eslint-disable-line @typescript-eslint/no-explicit-any
+                    }
                   />
                   <Legend
                     formatter={(value: string) => {
@@ -195,8 +197,9 @@ export function FlowCharts({ projectPath, days = 90, wipLimit }: FlowChartsProps
                   <YAxis {...axisProps} allowDecimals={false} />
                   <Tooltip
                     contentStyle={tooltipStyle}
-                    formatter={(value: number | undefined) =>
-                      [value ?? 0, 'In Progress'] as [number, string]
+                    formatter={
+                      ((value: number | undefined) =>
+                        [value ?? 0, 'In Progress'] as [number, string]) as any // eslint-disable-line @typescript-eslint/no-explicit-any
                     }
                   />
                   <ReferenceLine
