@@ -196,6 +196,12 @@ describe('CompletionDetectorService', () => {
       // callback arg as the resolved value, so pass { stdout, stderr } as that arg.
       type ExecFileCb = (err: null, result: { stdout: string; stderr: string }) => void;
 
+      // git symbolic-ref (auto-detect default branch via getEffectivePrBaseBranch) → dev
+      mockExecFile.mockImplementationOnce(
+        (_cmd: string, _args: string[], _opts: object, cb: ExecFileCb) => {
+          cb(null, { stdout: 'refs/remotes/origin/dev', stderr: '' });
+        }
+      );
       // git ls-remote → branch exists on remote
       mockExecFile.mockImplementationOnce(
         (_cmd: string, _args: string[], _opts: object, cb: ExecFileCb) => {

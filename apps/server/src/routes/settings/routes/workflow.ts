@@ -70,6 +70,7 @@ export function createUpdateWorkflowHandler(
         signalIntake: { ...current.signalIntake, ...workflow.signalIntake },
         bugs: { ...current.bugs, ...workflow.bugs },
         contextEngine: { enabled: false, ...current.contextEngine, ...workflow.contextEngine },
+        gitWorkflow: { ...current.gitWorkflow, ...workflow.gitWorkflow },
       };
 
       await settingsService.updateProjectSettings(projectPath, {
