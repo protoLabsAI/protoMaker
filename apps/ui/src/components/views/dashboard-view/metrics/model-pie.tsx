@@ -81,7 +81,9 @@ export function ModelPieChart({ data, isLoading }: ModelPieChartProps) {
                   borderRadius: '8px',
                   fontSize: '12px',
                 }}
-                formatter={((value: number | undefined) => [`$${(value ?? 0).toFixed(2)}`, 'Cost']) as any}
+                formatter={
+                  ((value: number | undefined) => [`$${(value ?? 0).toFixed(2)}`, 'Cost']) as any
+                }
               />
               <Legend
                 iconType="circle"

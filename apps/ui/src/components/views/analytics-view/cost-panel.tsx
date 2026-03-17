@@ -83,10 +83,12 @@ export function CostPanel({ costByModel, totalCost, isLoading }: CostPanelProps)
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={((value: number | undefined) => [
-                      `$${(value ?? 0).toFixed(2)}`,
-                      'Cost',
-                    ]) as any}
+                    formatter={
+                      ((value: number | undefined) => [
+                        `$${(value ?? 0).toFixed(2)}`,
+                        'Cost',
+                      ]) as any
+                    }
                     contentStyle={{
                       backgroundColor: 'var(--card)',
                       border: '1px solid var(--border)',
