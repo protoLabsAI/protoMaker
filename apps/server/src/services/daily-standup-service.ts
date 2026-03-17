@@ -1,8 +1,7 @@
 /**
  * DailyStandupService — board-wide daily standup automation.
  *
- * Runs on a 15-minute cron. Checks if ceremonies.dailyStandup.enabled is true
- * and if lastRunAt is more than 20 hours ago (or null). If due:
+ * Runs on a daily cron at 9am. Checks if ceremonies.dailyStandup.enabled is true. If so:
  *   1. Gathers all feature status changes across all projects since lastRunAt
  *   2. Runs standup-flow with board-wide context (completed, started, blocked, PRs, agents)
  *   3. Saves output as a global standup artifact in data/standups/{date}.json
@@ -28,9 +27,6 @@ const logger = createLogger('DailyStandupService');
 
 /** Cron task ID registered in SchedulerService */
 const STANDUP_TASK_ID = 'daily-standup:check';
-
-/** Minimum hours between standup runs */
-const STANDUP_INTERVAL_HOURS = 20;
 
 /** Fallback Discord #dev channel ID from environment variable */
 const ENV_DEV_CHANNEL_ID = process.env.DISCORD_CHANNEL_DEV || '';
@@ -83,7 +79,7 @@ export class DailyStandupService {
   }
 
   /**
-   * Register the 15-minute cron task in SchedulerService.
+   * Register the daily 9am cron task in SchedulerService.
    * Must be called after schedulerService is started.
    */
   async registerCronTask(): Promise<void> {
@@ -95,7 +91,7 @@ export class DailyStandupService {
     await this.schedulerService.registerTask(
       STANDUP_TASK_ID,
       'Daily Standup Check',
-      '*/15 * * * *',
+      '0 9 * * *',
       () => {
         void this.runIfDue().catch((err) =>
           logger.error('DailyStandupService: unhandled error in runIfDue:', err)
@@ -104,12 +100,11 @@ export class DailyStandupService {
       true
     );
 
-    logger.info('DailyStandupService: registered cron task (every 15 minutes)');
+    logger.info('DailyStandupService: registered cron task (daily at 9am)');
   }
 
   /**
-   * Check if standup is due and run it if so.
-   * Called every 15 minutes by the scheduler.
+   * Run the daily standup. Called once per day by the scheduler at 9am.
    */
   async runIfDue(): Promise<void> {
     if (!this.settingsService || !this.featureLoader || !this.discordBotService || !this.dataDir) {
@@ -132,20 +127,9 @@ export class DailyStandupService {
       return;
     }
 
-    const lastRunAt = dailyStandup.lastRunAt;
-    if (lastRunAt) {
-      const hoursSince = (Date.now() - new Date(lastRunAt).getTime()) / (1000 * 60 * 60);
-      if (hoursSince < STANDUP_INTERVAL_HOURS) {
-        logger.debug(
-          `DailyStandupService: last run ${hoursSince.toFixed(1)}h ago, skipping (< ${STANDUP_INTERVAL_HOURS}h)`
-        );
-        return;
-      }
-    }
-
-    logger.info('DailyStandupService: standup is due, running now');
+    logger.info('DailyStandupService: running daily standup');
     try {
-      await this.runStandup(globalSettings, lastRunAt);
+      await this.runStandup(globalSettings, dailyStandup.lastRunAt);
     } catch (err) {
       logger.error('DailyStandupService: standup run failed:', err);
     }
