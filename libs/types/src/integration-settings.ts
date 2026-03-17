@@ -62,6 +62,12 @@ export interface DiscordSettings {
   notifyOnError?: boolean;
   /** User DM configurations (maps users to Discord usernames) */
   userDMConfig?: DiscordUserDMConfig[];
+  /**
+   * Consolidated channel ID map — single source of truth for all channel IDs.
+   * Settings take priority over env vars. Env vars are used as fallback for
+   * deploy environments that configure channels without UI.
+   */
+  channels?: DiscordChannelMap;
 }
 
 /**

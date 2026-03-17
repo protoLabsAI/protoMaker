@@ -1544,7 +1544,7 @@ export function buildAvaTools(
 
     tools['send_discord_channel_message'] = makeTool({
       description:
-        'Send a message or embed to a Discord channel by channel ID. Use embed for structured notifications (errors, status updates, heartbeats). Common channels: #ava=1469195643590541353, #dev=1469080556720623699, #infra=1469109809939742814.',
+        'Send a message or embed to a Discord channel by channel ID. Use embed for structured notifications (errors, status updates, heartbeats). Channel IDs are configured in global settings (discord.channels) or env vars (DISCORD_CHANNEL_*).',
       inputSchema: z.object({
         channelId: z.string().describe('Discord channel ID'),
         content: z
@@ -1590,7 +1590,7 @@ export function buildAvaTools(
 
     tools['read_discord_channel_messages'] = makeTool({
       description:
-        'Read recent messages from a Discord channel. Common channels: #ava=1469195643590541353, #dev=1469080556720623699, #infra=1469109809939742814.',
+        'Read recent messages from a Discord channel. Channel IDs are configured in global settings (discord.channels) or env vars (DISCORD_CHANNEL_*).',
       inputSchema: z.object({
         channelId: z.string().describe('Discord channel ID'),
         limit: z.number().int().optional().describe('Number of messages to read (default: 20)'),
