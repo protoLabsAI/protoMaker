@@ -1097,19 +1097,35 @@ export class ExecuteProcessor implements StateProcessor {
       // Non-fatal: network blip should not block the agent
     }
 
-    // Determine base branch (default to 'dev')
+    // Determine base branch: feature-level → project-level → global → git auto-detect → 'dev'
+    // Per-feature gitWorkflow.prBaseBranch is critical for epic branch targeting —
+    // without it, features targeting epic/* get merged against origin/dev and conflict.
     let baseBranch = 'dev';
-    try {
-      const { stdout: upstream } = await execAsync(
-        'git rev-parse --abbrev-ref --symbolic-full-name @{u}',
-        { cwd: workDir, timeout: 5_000 }
-      );
-      const upstreamTrimmed = upstream.trim();
-      if (upstreamTrimmed && upstreamTrimmed.startsWith('origin/')) {
-        baseBranch = upstreamTrimmed.slice('origin/'.length);
+    if (feature.gitWorkflow?.prBaseBranch) {
+      baseBranch = feature.gitWorkflow.prBaseBranch;
+    } else {
+      try {
+        const { getEffectivePrBaseBranch } = await import('../lib/settings-helpers.js');
+        baseBranch = await getEffectivePrBaseBranch(
+          projectPath,
+          this.serviceContext?.settingsService ?? null,
+          '[EXECUTE][pre-flight]'
+        );
+      } catch {
+        // Fallback to git upstream tracking ref
+        try {
+          const { stdout: upstream } = await execAsync(
+            'git rev-parse --abbrev-ref --symbolic-full-name @{u}',
+            { cwd: workDir, timeout: 5_000 }
+          );
+          const upstreamTrimmed = upstream.trim();
+          if (upstreamTrimmed && upstreamTrimmed.startsWith('origin/')) {
+            baseBranch = upstreamTrimmed.slice('origin/'.length);
+          }
+        } catch {
+          /* no upstream set — use default */
+        }
       }
-    } catch {
-      /* no upstream set — use default */
     }
 
     // ── Commit .automaker/ drift before merging ───────────────────────────────
