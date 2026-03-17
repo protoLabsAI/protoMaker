@@ -161,6 +161,47 @@ async function apiCall(
   throw lastError || new Error('Unknown error during API call');
 }
 
+// ─── Discord Channel Resolution ──────────────────────────────────────────────
+
+/**
+ * Known Discord channel IDs, keyed by human-readable name.
+ * Populated from environment variables with hardcoded fallbacks for the
+ * protoLabs Discord server (guild: 1070606339363049492).
+ */
+const DISCORD_CHANNEL_MAP: Record<string, string> = {
+  ava: process.env.DISCORD_CHANNEL_AVA || '1469195643590541353',
+  infra: process.env.DISCORD_CHANNEL_INFRA || '1469109809939742814',
+  dev: process.env.DISCORD_CHANNEL_DEV || '1469080556720623699',
+  'bug-reports': process.env.DISCORD_CHANNEL_BUGS || '1477837770704814162',
+  bugs: process.env.DISCORD_CHANNEL_BUGS || '1477837770704814162',
+  'vip-lounge': process.env.DISCORD_CHANNEL_VIP || '1473561265690382418',
+  vip: process.env.DISCORD_CHANNEL_VIP || '1473561265690382418',
+  deployments: process.env.DISCORD_CHANNEL_DEPLOYMENTS || '1469049508909289752',
+  alerts: process.env.DISCORD_CHANNEL_ALERTS || '1469109811915522301',
+  suggestions: process.env.DISCORD_CHANNEL_SUGGESTIONS || '',
+  'project-planning': process.env.DISCORD_CHANNEL_PROJECT_PLANNING || '',
+  'agent-logs': process.env.DISCORD_CHANNEL_AGENT_LOGS || '',
+  'code-review': process.env.DISCORD_CHANNEL_CODE_REVIEW || '',
+};
+
+/**
+ * Resolve a Discord channel ID from either a raw snowflake ID or a
+ * human-readable channel name. Returns undefined when neither resolves.
+ */
+function resolveDiscordChannelId(
+  channelId: string | undefined,
+  channelName: string | undefined
+): string | undefined {
+  if (channelId && /^\d+$/.test(channelId)) {
+    return channelId;
+  }
+  if (channelName) {
+    const resolved = DISCORD_CHANNEL_MAP[channelName.toLowerCase().replace(/^#/, '')];
+    if (resolved) return resolved;
+  }
+  return undefined;
+}
+
 // Define all tools
 
 // Import all tool modules
@@ -187,6 +228,7 @@ import { promotionTools } from './tools/promotion-tools.js';
 import { leadEngineerTools } from './tools/lead-engineer-tools.js';
 import { knowledgeTools } from './tools/knowledge-tools.js';
 import { qaTools } from './tools/qa-tools.js';
+import { discordTools } from './tools/discord-tools.js';
 
 // Aggregate all tools
 const tools: Tool[] = [
@@ -213,6 +255,7 @@ const tools: Tool[] = [
   ...leadEngineerTools,
   ...knowledgeTools,
   ...qaTools,
+  ...discordTools,
 ];
 
 // Tool implementations
@@ -942,7 +985,59 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         complexity: args.complexity || 'medium',
       });
 
-    // Discord tools moved to project-level — not shipped in plugin
+    // Discord Channel Tools
+    case 'send_channel_message': {
+      const resolvedChannelId = resolveDiscordChannelId(
+        args.channelId as string | undefined,
+        args.channelName as string | undefined
+      );
+      if (!resolvedChannelId) {
+        return {
+          success: false,
+          error: 'Either channelId or a recognized channelName is required',
+        };
+      }
+      return apiCall('/discord/send-channel-message', {
+        channelId: resolvedChannelId,
+        content: args.content,
+      });
+    }
+
+    case 'read_channel_messages': {
+      const resolvedChannelId = resolveDiscordChannelId(
+        args.channelId as string | undefined,
+        args.channelName as string | undefined
+      );
+      if (!resolvedChannelId) {
+        return {
+          success: false,
+          error: 'Either channelId or a recognized channelName is required',
+        };
+      }
+      const limit = Math.min(Math.max(Number(args.limit) || 20, 1), 100);
+      return apiCall('/discord/read-channel-messages', {
+        channelId: resolvedChannelId,
+        limit,
+      });
+    }
+
+    case 'add_reaction': {
+      const resolvedChannelId = resolveDiscordChannelId(
+        args.channelId as string | undefined,
+        args.channelName as string | undefined
+      );
+      if (!resolvedChannelId) {
+        return {
+          success: false,
+          error: 'Either channelId or a recognized channelName is required',
+        };
+      }
+      return apiCall('/discord/add-reaction', {
+        channelId: resolvedChannelId,
+        messageId: args.messageId,
+        emoji: args.emoji,
+      });
+    }
 
     // Setup Pipeline
     case 'research_repo':

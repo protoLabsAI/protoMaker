@@ -23,7 +23,7 @@ import type { SignalDictionaryConfig } from './signal-dictionary.js';
  * the token threshold that triggers compaction. Disabled by default.
  */
 export interface ContextEngineConfig {
-  /** Enable context engine compaction and large-file interception. @default false */
+  /** Enable context engine compaction and large-file interception. @default true */
   enabled: boolean;
   /** Messages protected from compaction at the tail of context. @default 4 */
   freshTailCount?: number;
@@ -442,7 +442,7 @@ export const DEFAULT_WORKFLOW_SETTINGS: WorkflowSettings = {
   preFlightChecks: true,
   phaseTemperatures: DEFAULT_PHASE_TEMPERATURES,
   contextEngine: {
-    enabled: false,
+    enabled: true,
     freshTailCount: 4,
     contextThreshold: 25_000,
     leafMinFanout: 8,

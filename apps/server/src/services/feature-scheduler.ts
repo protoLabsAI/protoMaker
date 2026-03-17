@@ -809,6 +809,33 @@ export class FeatureScheduler {
         }
       }
 
+      // ── prMergedAt guard: features with prMergedAt set but not done should be reconciled ──
+      // Catches cases where a retry storm flipped status to 'blocked' after the PR already merged
+      // and the merged-branch lookup above missed it (branch deleted, or fell off the --limit 100).
+      const reconciledByBranch = new Set(staleViaLinkedPr.map((f) => f.id));
+      const staleViaPrMergedAt = allFeatures.filter(
+        (f) => f.prMergedAt && f.status !== 'done' && !reconciledByBranch.has(f.id)
+      );
+      for (const feature of staleViaPrMergedAt) {
+        logger.info(
+          `[loadPendingFeatures] Feature ${feature.id} ("${feature.title}") has prMergedAt="${feature.prMergedAt}" but status="${feature.status}" — reconciling to done`
+        );
+        const prevStatus = feature.status;
+        try {
+          await this.featureLoader.update(projectPath, feature.id, {
+            status: 'done',
+            statusChangeReason: 'prMergedAt set — reconciled from non-done status',
+          });
+          feature.status = 'done';
+        } catch (error) {
+          feature.status = prevStatus;
+          logger.error(
+            `[loadPendingFeatures] Failed to reconcile feature ${feature.id} to done via prMergedAt:`,
+            error
+          );
+        }
+      }
+
       // ── Dependency re-evaluation: unblock features whose deps are now satisfied ──
       const blockedWithDeps = allFeatures.filter(
         (f) => f.status === 'blocked' && f.dependencies && f.dependencies.length > 0

@@ -35,6 +35,24 @@ export class EscalateProcessor implements StateProcessor {
   }
 
   async process(ctx: StateContext): Promise<StateTransitionResult> {
+    // Guard: if the PR is already merged, skip the blocked transition entirely.
+    // A retry storm can race the reconciliation sweep and escalate AFTER prMergedAt is set.
+    if (ctx.feature.prMergedAt) {
+      logger.info(
+        `[ESCALATE] Feature ${ctx.feature.id} has prMergedAt set — PR already merged, skipping blocked transition`,
+        { prMergedAt: ctx.feature.prMergedAt, reason: ctx.escalationReason }
+      );
+      await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+        status: 'done',
+        statusChangeReason: 'PR already merged — escalation suppressed',
+      });
+      return {
+        nextState: null,
+        shouldContinue: false,
+        reason: 'PR already merged, marked as done',
+      };
+    }
+
     // Classify the failure for structured analysis before writing
     const failureAnalysis = this.failureClassifier.classify(
       ctx.escalationReason || 'Unknown escalation reason',
