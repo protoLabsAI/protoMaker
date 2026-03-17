@@ -2,7 +2,7 @@
  * Workflow Settings Panel — Configure pipeline hardening features.
  *
  * Controls goal gates, checkpointing, loop detection, supervisor,
- * retro feedback, cleanup, and signal intake behavior.
+ * signal intake behavior, context engine, and pipeline gates.
  */
 
 import { useState, useEffect } from 'react';
@@ -18,24 +18,12 @@ import type {
   PipelinePhase,
   GateMode,
   PipelineGateConfig,
-  ContextEngineConfig,
 } from '@protolabsai/types';
 import {
   DEFAULT_WORKFLOW_SETTINGS,
   DEFAULT_PIPELINE_GATES,
   PIPELINE_PHASES,
 } from '@protolabsai/types';
-
-const DEFAULT_CONTEXT_ENGINE: Required<ContextEngineConfig> = {
-  enabled: false,
-  freshTailCount: 4,
-  contextThreshold: 25_000,
-  leafMinFanout: 8,
-  condensedMinFanout: 4,
-  incrementalMaxDepth: 3,
-  leafChunkTokens: 25_000,
-  largeFileThreshold: 25_000,
-};
 
 function ToggleRow({
   label,
@@ -362,42 +350,7 @@ export function WorkflowSettingsPanel() {
         </div>
 
         <div className="py-3">
-          <SectionHeader title="Retrospective" />
-          <ToggleRow
-            label="Auto Retro"
-            description="Generate retrospectives on project completion"
-            checked={localSettings.retro.enabled}
-            onChange={(v) => update('retro', 'enabled', v)}
-          />
-        </div>
-
-        <div className="py-3">
-          <SectionHeader title="Cleanup" />
-          <ToggleRow
-            label="Auto Cleanup"
-            description="Reset stale orphaned features automatically"
-            checked={localSettings.cleanup.autoCleanupEnabled}
-            onChange={(v) => update('cleanup', 'autoCleanupEnabled', v)}
-          />
-          <NumberRow
-            label="Stale Threshold"
-            description="Hours before orphaned features are reset"
-            value={localSettings.cleanup.staleThresholdHours}
-            onChange={(v) => update('cleanup', 'staleThresholdHours', v)}
-            min={1}
-            max={24}
-            suffix="hrs"
-          />
-        </div>
-
-        <div className="py-3">
           <SectionHeader title="Signal Intake" />
-          <ToggleRow
-            label="Auto Research"
-            description="Trigger research pipeline for new signals"
-            checked={localSettings.signalIntake.autoResearch}
-            onChange={(v) => update('signalIntake', 'autoResearch', v)}
-          />
           <ToggleRow
             label="Auto-Approve PRDs"
             description="Skip manual review and auto-approve PRDs for decomposition"
@@ -411,94 +364,21 @@ export function WorkflowSettingsPanel() {
           <p className="text-xs text-muted-foreground mb-3">
             Automatic context compaction and large-file interception for long-running agents.
           </p>
-          {(() => {
-            const ce: Required<ContextEngineConfig> = {
-              ...DEFAULT_CONTEXT_ENGINE,
-              ...(localSettings.contextEngine ?? {}),
-            };
-            const updateCe = (key: keyof ContextEngineConfig, value: unknown) => {
+          <ToggleRow
+            label="Enable Context Engine"
+            description="Activate leaf compaction, condensation, and large-file interception"
+            checked={localSettings.contextEngine?.enabled ?? false}
+            onChange={(v) => {
               setLocalSettings((prev) => ({
                 ...prev,
                 contextEngine: {
-                  ...DEFAULT_CONTEXT_ENGINE,
                   ...(prev.contextEngine ?? {}),
-                  [key]: value,
+                  enabled: v,
                 },
               }));
               setIsDirty(true);
-            };
-            return (
-              <>
-                <ToggleRow
-                  label="Enable Context Engine"
-                  description="Activate leaf compaction, condensation, and large-file interception"
-                  checked={ce.enabled}
-                  onChange={(v) => updateCe('enabled', v)}
-                />
-                <NumberRow
-                  label="Fresh Tail Count"
-                  description="Messages protected from compaction at the tail of context"
-                  value={ce.freshTailCount}
-                  onChange={(v) => updateCe('freshTailCount', v)}
-                  min={1}
-                  max={32}
-                  suffix="msgs"
-                />
-                <NumberRow
-                  label="Context Threshold"
-                  description="Token count that triggers leaf compaction"
-                  value={ce.contextThreshold}
-                  onChange={(v) => updateCe('contextThreshold', v)}
-                  min={1000}
-                  max={200_000}
-                  suffix="tok"
-                />
-                <NumberRow
-                  label="Leaf Min Fanout"
-                  description="Minimum messages grouped per leaf compaction chunk"
-                  value={ce.leafMinFanout}
-                  onChange={(v) => updateCe('leafMinFanout', v)}
-                  min={2}
-                  max={64}
-                />
-                <NumberRow
-                  label="Condensed Min Fanout"
-                  description="Minimum summaries grouped per condensation step"
-                  value={ce.condensedMinFanout}
-                  onChange={(v) => updateCe('condensedMinFanout', v)}
-                  min={2}
-                  max={32}
-                />
-                <NumberRow
-                  label="Incremental Max Depth"
-                  description="Maximum depth of the condensation DAG"
-                  value={ce.incrementalMaxDepth}
-                  onChange={(v) => updateCe('incrementalMaxDepth', v)}
-                  min={1}
-                  max={10}
-                  suffix="lvls"
-                />
-                <NumberRow
-                  label="Leaf Chunk Tokens"
-                  description="Token size of each leaf compaction chunk"
-                  value={ce.leafChunkTokens}
-                  onChange={(v) => updateCe('leafChunkTokens', v)}
-                  min={1000}
-                  max={200_000}
-                  suffix="tok"
-                />
-                <NumberRow
-                  label="Large File Threshold"
-                  description="Token threshold above which file content is intercepted"
-                  value={ce.largeFileThreshold}
-                  onChange={(v) => updateCe('largeFileThreshold', v)}
-                  min={1000}
-                  max={200_000}
-                  suffix="tok"
-                />
-              </>
-            );
-          })()}
+            }}
+          />
         </div>
 
         <div className="pt-3">
