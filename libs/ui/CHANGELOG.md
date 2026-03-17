@@ -1,5 +1,21 @@
 # @protolabsai/ui
 
+## 0.75.0
+
+### Minor Changes
+
+- ### Features
+  - upgrade portfolio starter to Astro 6 with deployment docs
+  - add cross-repo data push to protolabs.studio site
+  - upgrade portfolio starter to Astro 6 with deployment docs
+  - add cross-repo data push to protolabs.studio site
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.75.0
+  - @protolabsai/utils@0.75.0
+
 ## 0.74.4
 
 ### Patch Changes
