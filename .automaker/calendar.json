@@ -41,7 +41,7 @@
     "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:auto-mode:started:2026-03-16",
     "createdAt": "2026-03-16T18:59:57.716Z",
-    "updatedAt": "2026-03-16T23:45:37.736Z"
+    "updatedAt": "2026-03-16T23:47:29.696Z"
   },
   {
     "title": "Started: Context Engine Types & Package Scaffold",
@@ -493,5 +493,41 @@
     "sourceId": "ops:feature:pr-merged:feature-1773689186221-v7nt11awz",
     "createdAt": "2026-03-16T22:49:25.187Z",
     "updatedAt": "2026-03-16T22:49:25.187Z"
+  },
+  {
+    "title": "Auto-mode started",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Autonomous feature processing started",
+    "id": "event-1773714202588-2rg642sij",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:auto-mode:started:2026-03-17",
+    "createdAt": "2026-03-17T02:23:22.586Z",
+    "updatedAt": "2026-03-17T02:28:14.695Z"
+  },
+  {
+    "title": "Ceremonies: scheduler-maintenance-cleanup",
+    "date": "2026-03-17",
+    "type": "ceremony",
+    "description": "Recurring standup and retro ceremonies for project scheduler-maintenance-cleanup",
+    "recurrence": {
+      "frequency": "daily"
+    },
+    "id": "event-1773715292411-519r2kkig",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ceremony:scheduler-maintenance-cleanup",
+    "createdAt": "2026-03-17T02:41:32.405Z",
+    "updatedAt": "2026-03-17T02:41:32.405Z"
+  },
+  {
+    "title": "Started: Migrate PRFeedbackService and ArchivalService timers",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773715316900-h0smct1lk",
+    "projectPath": "/Users/kj/dev/automaker",
+    "sourceId": "ops:feature:started:feature-1773715283958-zqdvykzzt",
+    "createdAt": "2026-03-17T02:41:56.897Z",
+    "updatedAt": "2026-03-17T02:42:46.953Z"
   }
 ]
