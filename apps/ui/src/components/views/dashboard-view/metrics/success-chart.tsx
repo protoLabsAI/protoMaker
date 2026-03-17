@@ -85,7 +85,9 @@ export function SuccessChart({ data, isLoading }: SuccessChartProps) {
                   borderRadius: '8px',
                   fontSize: '12px',
                 }}
-                formatter={(value: number | undefined) => [`${value ?? 0}%`, 'Success Rate']}
+                formatter={
+                  ((value: number | undefined) => [`${value ?? 0}%`, 'Success Rate']) as any // eslint-disable-line @typescript-eslint/no-explicit-any
+                }
               />
               <Area
                 type="monotone"

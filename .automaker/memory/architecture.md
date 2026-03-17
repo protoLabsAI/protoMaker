@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 598
-  referenced: 159
-  successfulFeatures: 159
+  loaded: 605
+  referenced: 164
+  successfulFeatures: 164
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -2207,3 +2207,110 @@ usageStats:
 - **Rejected:** JSON (more tokens for keys; Whitespace fragile in LLM); Plain text (no structure for extraction); Binary (not LLM-readable)
 - **Trade-offs:** XML is verbose in characters but token-efficient in LLM tokenization; Easier for LLM to parse structured attributes than JSON keys
 - **Breaking if changed:** Switching to JSON or plain text would increase token cost of summaries, reducing budget headroom
+
+#### [Pattern] Optional dependency injection via setter (setSchedulerService) instead of constructor injection (2026-03-17)
+- **Problem solved:** Services need SchedulerService but it may not be available at construction time; requiring it in constructor would create initialization order dependencies
+- **Why this works:** Avoids circular dependency chains and initialization order brittleness. Allows services to be created standalone and have the optional scheduler wired later by the scheduler.module.ts hub
+- **Trade-offs:** Easier: delayed binding, simpler initialization. Harder: must remember to call setSchedulerService() in scheduler.module.ts, schedulerService might remain null if wiring is forgotten
+
+### Static readonly INTERVAL_ID as service-owned contract for timer identity (e.g., 'pr-feedback:poll', 'archival:check') (2026-03-17)
+- **Context:** SchedulerService needs a unique ID to track, pause, resume, and unregister intervals; ID must match exactly in register/unregister calls
+- **Why:** Prevents string typo bugs (hardcoding 'pr-feedback:poll' in three places breaks if one is misspelled). Static constant makes ID a versioned contract between service and scheduler, enabling future refactoring
+- **Rejected:** Deriving ID dynamically or having scheduler auto-generate IDs would lose explicit control and make audit trails ambiguous
+- **Trade-offs:** Safer: no typos, explicit contracts. More coupled: service must know its own interval ID as a constant
+- **Breaking if changed:** If scheduler.listAll() or unregisterInterval() use wrong ID, timer ghost-exists in scheduler—registered but unreachable, leaking memory and causing confusion
+
+#### [Pattern] Idempotency check in start() (e.g., checking listAll() before registering) (2026-03-17)
+- **Problem solved:** start() may be called multiple times; must not double-register the interval
+- **Why this works:** Defensive: suggests start() can be called repeatedly in production without crashing. Prevents duplicate registrations that would cause multiple timers firing at once
+- **Trade-offs:** Safer: no accidental double-timers. Cost: extra listAll() call on every start(), small performance overhead but negligible for infrequent start/stop cycles
+
+#### [Pattern] Centralized scheduler service wiring in scheduler.module.ts as a hub for all scheduler-integrated services (2026-03-17)
+- **Problem solved:** Multiple services (automationService, integrityWatchdogService, prFeedbackService, archivalService, etc.) all need SchedulerService set after construction
+- **Why this works:** Single point of integration: scheduler.module.ts destructures all relevant services from container and calls setSchedulerService() on each. Makes it obvious which services are scheduler-aware and ensures none are forgotten
+- **Trade-offs:** Clearer: one place to audit scheduler integration. More coupling: scheduler.module.ts has a long list of service dependencies
+
+#### [Pattern] Singleton service auto-registers in constructor via getPRFeedbackService() global accessor, removing explicit factory initialization from core.module.ts (2026-03-17)
+- **Problem solved:** PRWatcherService was explicitly initialized in core.module.ts; after consolidation, PRFeedbackService registers itself automatically when instantiated
+- **Why this works:** Implicit registration reduces boilerplate and couples initialization to service creation, making it harder to forget. Inverse: loses explicit control over initialization order
+- **Trade-offs:** Gained: cleaner module init code. Lost: explicit visibility of service lifecycle; harder to debug initialization order issues if they arise
+
+#### [Pattern] Scheduler service acts as central registry for all intervals (via registerInterval/listAll). All services (SpecGenerationMonitor, PRFeedbackService) delegate interval lifecycle to it (2026-03-17)
+- **Problem solved:** Previously, each service managed its own timers. Test shows both services registering via scheduler and verifying via listAll()
+- **Why this works:** Central interval registry enables observability (listAll()), prevents timer leaks, and allows graceful shutdown. Each service doesn't need its own cleanup logic
+- **Trade-offs:** Gained: observability, centralized lifecycle management. Lost: services have indirect timer control via scheduler dependency
+
+#### [Gotcha] Watch registry is dynamic: addWatch() triggers ensureWatchPolling() which registers interval; removeWatch() may trigger stopWatchPolling() to deregister interval. Watches are not fire-and-forget (2026-03-17)
+- **Situation:** PRFeedbackService maintains watchRegistry with addWatch/removeWatch/isWatching, actively polls via ensureWatchPolling. Interval lifecycle is tied to watch count
+- **Root cause:** Polling all watches in one interval is more efficient than one interval per watch. Stopping the poll when no watches exist avoids wasted CPU
+- **How to avoid:** Gained: efficient resource use, auto-cleanup when last watch removed. Lost: watch state machine is implicit; removers must understand interval behavior
+
+### PRWatcherService functionality merged into PRFeedbackService; both services had overlapping poll/watch logic. watch-pr route now calls getPRFeedbackService() instead of getPRWatcherService() (2026-03-17)
+- **Context:** Two services doing similar things: PRFeedbackService generates feedback, PRWatcherService polled for changes. After consolidation, PRFeedbackService owns the watch registry
+- **Why:** Reduces duplicate polling logic, single source of truth for watched PRs, avoids two separate intervals doing similar work. Simplifies service graph
+- **Rejected:** Keeping both services = redundant code paths, potential inconsistency if they diverge, harder to reason about which service owns what
+- **Trade-offs:** Gained: simpler service graph, single poll interval. Lost: PRFeedbackService now has two concerns (feedback generation + watching), bigger class
+- **Breaking if changed:** Code importing getPRWatcherService() breaks. All 5 call sites must be updated or the feature breaks at runtime
+
+#### [Pattern] Test-file exclusion (using grep -v '.test.|.spec.|__tests__') in dead code detection is essential for correctly identifying production-unused code that may still have test coverage (2026-03-17)
+- **Problem solved:** Maintenance check modules had comprehensive test imports but zero production-code importers; including test files in importer verification would incorrectly mark dead code as 'in use'
+- **Why this works:** Tests depend on code, not vice-versa. Test coverage is orthogonal to production necessity. Conflating them prevents legitimate dead code removal.
+- **Trade-offs:** Requires understanding of test file naming conventions and building more sophisticated grep logic, but correctly distinguishes tested code from necessary code
+
+#### [Gotcha] Systematic file-by-file verification via grep revealed additional dead modules beyond initial scope (DataIntegrityCheck, StuckFeatureCheck discovered as unused alongside the 5 explicitly-listed modules) (2026-03-17)
+- **Situation:** Initial cleanup ticket identified 5 modules; comprehensive scanning uncovered 7 total dead checks, suggesting incomplete initial audit and systemic module-tracking gaps
+- **Root cause:** Manual code identification misses edge cases; systematic automated scanning catches all instances. The presence of additional undocumented dead code suggests these modules were forgotten during prior refactoring.
+- **How to avoid:** Requires 40% more verification effort but removes systemic dead code that would accumulate technical debt and future maintenance burden
+
+### Pre-deletion verification by grep across entire codebase (using both kebab-case and PascalCase naming variants) before file removal, rather than bulk delete with post-hoc build failure recovery (2026-03-17)
+- **Context:** Deleting 7 production files across a large monorepo with potential hidden cross-package dependencies; need to be certain before removal
+- **Why:** Verification before deletion is fail-safe: catches issues before irreversible deletion. Build-failure-driven discovery requires recovery steps and uncommitting changes if problems arise.
+- **Rejected:** Bulk delete followed by running build/tests to catch broken imports and fix them
+- **Trade-offs:** Higher upfront verification cost (multiple grep passes for naming variants) but eliminates need for recovery/revert workflows and commit history cleanup
+- **Breaking if changed:** Skipping pre-deletion verification of named imports (both camelCase and PascalCase) risks deleting code with hidden importers, requiring undo operations and dependency repairs
+
+#### [Gotcha] Two independent cron systems exist: SchedulerService (deterministic built-in tasks) and ReactiveSpawnerService (LLM-spawned agents). The distinction is easy to conflate. (2026-03-17)
+- **Situation:** Documentation overview table implied all cron tasks flow through spawnForCron(), but ava-staging-ping, ava-daily-board-health, and ava-pr-triage register directly with SchedulerService and bypass ReactiveSpawnerService entirely.
+- **Root cause:** Built-in tasks are deterministic (query services, format Discord embeds) and shouldn't involve LLM invocation. Calendar reminders are dynamic events that benefit from agent reasoning. Separating them allows independent rate-limiting and circuit-breaking budgets.
+- **How to avoid:** Added system complexity (two paths) but enabled predictable execution for critical infra tasks while preserving flexible agent spawning for dynamic events.
+
+### Built-in Ava recurring tasks (ava-staging-ping, ava-daily-board-health, ava-pr-triage) were refactored to use deterministic functions instead of LLM-spawned agents. Tasks query services directly and format Discord embeds in `ava-cron-tasks.ts`, registered via `registerAvaCronTasks()` after service initialization. (2026-03-17)
+- **Context:** Earlier iterations apparently attempted to use LLM agents for recurring infrastructure tasks. This created hallucination risk and cost overhead for deterministic operations that only need to query state and format output.
+- **Why:** Infrastructure health monitoring requires predictable, cost-efficient execution. Capacity heartbeats (version, uptime, board counts) and PR triage (stale PR detection) don't need reasoning—they just need reliable data aggregation.
+- **Rejected:** Keeping LLM agents for recurring tasks would introduce unpredictable latency, potential hallucinations in counts/metrics, and unnecessary token consumption for deterministic operations.
+- **Trade-offs:** Easier to reason about costs and latency; harder to evolve task logic (can't use agent reasoning). Acceptable trade-off because these tasks are infrastructure monitoring, not feature work.
+- **Breaking if changed:** If these tasks were reverted to LLM spawning, the system would lose cost predictability and introduce hallucination risk in monitoring output (e.g., board count or PR count inaccuracies).
+
+#### [Pattern] Calendar reminder integration uses an EventEmitter callback in CalendarService that triggers ReactiveSpawnerService.spawnForCron(). This is the only active caller of spawnForCron(). (2026-03-17)
+- **Problem solved:** Calendar events are dynamic, user-scheduled tasks that warrant agent involvement. Built-in cron tasks are deterministic infrastructure monitoring.
+- **Why this works:** EventEmitter decouples calendar firing from agent spawning, allowing independent evolution. Single caller pattern makes it clear that ReactiveSpawnerService is specifically for dynamic event handling.
+- **Trade-offs:** Adds a small integration point (onReminder callback wiring) but maintains clear separation of concerns and allows calendar logic to evolve independently from spawner logic.
+
+### Built-in Ava tasks fall back to server logs (logger.info) when Discord is unavailable instead of queuing or waiting. (2026-03-17)
+- **Context:** Infrastructure heartbeats and health checks need to execute reliably regardless of Discord bot status or availability.
+- **Why:** Capacity monitoring (ava-staging-ping every 30 min, ava-daily-board-health daily) must run during Discord outages to detect problems. Immediate fallback to logging is simpler and provides operational visibility without dependency on Discord connectivity.
+- **Rejected:** Could queue tasks and retry when Discord recovers—rejected because lag in health reporting during outages defeats the purpose. Could wait synchronously—rejected as blocking risk.
+- **Trade-offs:** Server logs are less discoverable than Discord embeds but are always available. Acceptable for infrastructure tasks that developers monitor via centralized logging anyway.
+- **Breaking if changed:** Changing fallback to queue-and-retry would create lag in outage detection. Removing the tasks entirely would lose capacity visibility during infrastructure problems.
+
+#### [Pattern] Board health monitoring is intentionally distributed across multiple specialized services rather than centralized in a single maintenance module: automation-service (stale-features, hourly), ava-cron-tasks (daily Discord report), and previously maintenance-module (full tier, 6h). The maintenance-module version was removed because it added no unique value. (2026-03-17)
+- **Problem solved:** System has overlapping board health checks running at different frequencies and in different operational contexts
+- **Why this works:** Distributed, context-aware systems provide clearer intent and independent evolution paths than a monolithic maintenance module. Each service runs board health in its natural context: automation runs during normal operations, ava-cron provides visibility/reporting.
+- **Trade-offs:** Code is more spread out across repos/modules, but each has clear purpose. Requires understanding multiple systems to see full picture, but easier to reason about each individual check's intent.
+
+#### [Gotcha] The full-tier maintenance sweep continues to execute on its 6-hour schedule even after all checks in that tier are removed (boardHealthCheck was full tier, resourceUsageCheck is critical tier). The scheduler doesn't conditionally skip empty tiers—it runs them with zero checks. (2026-03-17)
+- **Situation:** After removing the board-health check, the full-tier sweep is now empty but still scheduled
+- **Root cause:** Tiers are scheduler constructs (scheduling unit, frequency, isolation), not conditional execution gates. The scheduler doesn't need to know about check registration; it just iterates over registered checks (which happen to be zero for full tier).
+- **How to avoid:** Simpler scheduler logic and cleaner separation of concerns vs. wasting a tiny amount of execution time on empty sweeps (negligible performance impact)
+
+### When board health logic exists in multiple places (maintenance-module, automation-service stale-features, ava-cron-tasks), the decision was to remove the maintenance-module version rather than try to consolidate into one. This accepted distributed duplication rather than forcing centralization. (2026-03-17)
+- **Context:** Discovering that the maintenance-module full-sweep board-health check was redundant with existing automation-service and cron-task implementations
+- **Why:** Each system has different trigger context and frequency. Trying to centralize would require: (1) moving cross-system orchestration into maintenance-module, (2) refactoring automation-service to call maintenance-module instead of running inline, or (3) unifying into a third system. Removing the redundant one is simpler and leaves specialized systems alone.
+- **Rejected:** Consolidating all board health into a single authority (either as a centralized check or moving existing checks into maintenance-module)
+- **Trade-offs:** Removes code duplication but increases risk of missing a system if requirements change. Maintainer must know all three places board health can run. Easier if each system is well-documented.
+- **Breaking if changed:** If someone assumes maintenance-module is the single place to register board health checks, they might miss that automation-service and ava-cron-tasks are also doing it. If you remove one without knowing about the others, you lose coverage.
+
+#### [Pattern] Container destructuring serves as both dependency injection AND as explicit service contract documentation. Removing `featureHealthService` from the destructuring made it obviously unused, and TypeScript confirmed no other code in the module referenced it. (2026-03-17)
+- **Problem solved:** Deleting the boardHealthCheck left featureHealthService orphaned; removing it from destructuring was a clean signal of the change
+- **Why this works:** Explicit destructuring forces all dependencies to be listed at the top of the function, making dead code detection trivial. Implicit container.get() access would hide the unused service.
+- **Trade-offs:** More verbose destructuring but self-documenting and refactoring-safe. Eliminates 'hidden dependency' bugs.

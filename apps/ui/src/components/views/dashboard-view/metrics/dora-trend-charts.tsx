@@ -133,8 +133,9 @@ export function DoraTrendCharts({ projectPath }: DoraTrendChartsProps) {
                   />
                   <Tooltip
                     contentStyle={tooltipStyle}
-                    formatter={(value: number | undefined) =>
-                      [`${value ?? 0}h`, ''] as [string, string]
+                    formatter={
+                      ((value: number | undefined) =>
+                        [`${value ?? 0}h`, ''] as [string, string]) as any // eslint-disable-line @typescript-eslint/no-explicit-any
                     }
                   />
                   <Legend
@@ -187,8 +188,9 @@ export function DoraTrendCharts({ projectPath }: DoraTrendChartsProps) {
                   <YAxis {...axisProps} allowDecimals={false} />
                   <Tooltip
                     contentStyle={tooltipStyle}
-                    formatter={(value: number | undefined) =>
-                      [`${value ?? 0}`, ''] as [string, string]
+                    formatter={
+                      ((value: number | undefined) =>
+                        [`${value ?? 0}`, ''] as [string, string]) as any // eslint-disable-line @typescript-eslint/no-explicit-any
                     }
                   />
                   <Legend
