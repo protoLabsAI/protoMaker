@@ -320,3 +320,8 @@ usageStats:
 - **Problem solved:** Context-engine is pure library (no UI). Decision: what verification is sufficient?
 - **Why this works:** Compilation catches structural errors, export correctness, type mismatches. Runtime behavior tested by consumers (e.g., agent packages that import this). Avoids test duplication.
 - **Trade-offs:** Faster CI for libraries; Runtime errors in non-type-caught paths only found by consumers. Requires strong consumer integration tests.
+
+#### [Pattern] Minimal stub pattern: test creates thin object stubs (makeEvents(), makeFeatureLoader()) with only the methods the service constructor actually calls, no full mock framework (2026-03-17)
+- **Problem solved:** timer-registry-integration.test.ts constructs real PRFeedbackService with { emit, subscribe, on } stubs and { get, setEventEmitter, setIntegrityWatchdog } stubs
+- **Why this works:** Pragmatic: avoids mock framework overhead, keeps test code readable, makes it obvious what dependencies service actually uses. Stubs are just vi.fn() calls
+- **Trade-offs:** Gained: clear minimal deps, fast stubs. Lost: no automatic verification of mock call counts (but those aren't tested here anyway)
