@@ -161,7 +161,8 @@ export function TiptapEditor({ content, onUpdate, onEditorReady }: TiptapEditorP
             let popup: TippyInstance[] | null = null;
 
             return {
-              onStart: (props) => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              onStart: (props: any) => {
                 component = new ReactRenderer(SlashCommandList, {
                   props,
                   editor: props.editor,
@@ -181,7 +182,8 @@ export function TiptapEditor({ content, onUpdate, onEditorReady }: TiptapEditorP
                 });
               },
 
-              onUpdate: (props) => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              onUpdate: (props: any) => {
                 component?.updateProps(props);
                 if (props.clientRect && popup?.[0]) {
                   popup[0].setProps({
@@ -190,7 +192,8 @@ export function TiptapEditor({ content, onUpdate, onEditorReady }: TiptapEditorP
                 }
               },
 
-              onKeyDown: (props) => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              onKeyDown: (props: any) => {
                 if (props.event.key === 'Escape') {
                   popup?.[0]?.hide();
                   return true;
