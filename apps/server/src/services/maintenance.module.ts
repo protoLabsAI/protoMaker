@@ -2,8 +2,11 @@
  * Maintenance module wiring
  *
  * Starts MaintenanceOrchestrator and registers check modules:
- * - board-health (full tier, 6h): FeatureHealthService board audit with auto-fix
  * - resource-usage (critical tier, 5min): HealthMonitorService resource check
+ *
+ * Board health is handled by:
+ *   - automation-service maintenance:stale-features (hourly)
+ *   - ava-cron-tasks ava-daily-board-health (daily Discord report)
  */
 
 import { createLogger } from '@protolabsai/utils';
@@ -19,43 +22,12 @@ const logger = createLogger('Server:Wiring');
 export function register(container: ServiceContainer): void {
   const {
     maintenanceOrchestrator,
-    featureHealthService,
     healthMonitorService,
     schedulerService,
     events,
     eventHistoryService,
     autoModeService,
   } = container;
-
-  // Board health check (full tier) — replaces built-in:board-health automation
-  const boardHealthCheck: MaintenanceCheck = {
-    id: 'board-health',
-    name: 'Board Health Reconciliation',
-    tier: 'full',
-    async run(context: MaintenanceCheckContext): Promise<MaintenanceCheckResult> {
-      const t0 = Date.now();
-      let totalIssues = 0;
-      let totalFixed = 0;
-
-      for (const projectPath of context.projectPaths) {
-        try {
-          const report = await featureHealthService.audit(projectPath, true);
-          totalIssues += report.issues.length;
-          totalFixed += report.fixed.length;
-        } catch (err) {
-          logger.error(`Board health audit failed for ${projectPath}:`, err);
-        }
-      }
-
-      return {
-        checkId: 'board-health',
-        passed: true,
-        summary: `Board health: ${totalIssues} issues found, ${totalFixed} auto-fixed across ${context.projectPaths.length} projects`,
-        details: { totalIssues, totalFixed, projectCount: context.projectPaths.length },
-        durationMs: Date.now() - t0,
-      };
-    },
-  };
 
   // Resource usage check (critical tier) — replaces HealthMonitorService periodic loop
   const resourceUsageCheck: MaintenanceCheck = {
@@ -92,7 +64,6 @@ export function register(container: ServiceContainer): void {
     },
   };
 
-  maintenanceOrchestrator.register(boardHealthCheck);
   maintenanceOrchestrator.register(resourceUsageCheck);
 
   maintenanceOrchestrator.start(schedulerService, events, eventHistoryService, () => {
@@ -103,5 +74,5 @@ export function register(container: ServiceContainer): void {
     return Array.from(paths);
   });
 
-  logger.info('MaintenanceOrchestrator started with board-health and resource-usage checks');
+  logger.info('MaintenanceOrchestrator started with resource-usage check');
 }
