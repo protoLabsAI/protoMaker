@@ -19,6 +19,7 @@ import { createLogger } from '@protolabsai/utils';
 import * as secureFs from '../lib/secure-fs.js';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
+import type { SchedulerService } from './scheduler-service.js';
 import { isWorktreeLocked } from '../lib/worktree-lock.js';
 import { WORKTREE_CLEANUP_DELAY_MS, WORKTREE_DRIFT_CHECK_INTERVAL_MS } from '../config/timeouts.js';
 
@@ -54,10 +55,13 @@ export interface WorktreeHealth {
 }
 
 export class WorktreeLifecycleService {
+  static readonly INTERVAL_ID = 'worktree-lifecycle:drift-check';
+
   private readonly events: EventEmitter;
   private readonly featureLoader: FeatureLoader;
   private initialized = false;
   private driftCheckIntervalId: NodeJS.Timeout | null = null;
+  private schedulerService: SchedulerService | null = null;
   private projectsToMonitor: Set<string> = new Set();
   private getRunningFeatures?: () => Promise<Array<{ branchName?: string; projectPath: string }>>;
 
@@ -69,6 +73,10 @@ export class WorktreeLifecycleService {
     this.events = events;
     this.featureLoader = featureLoader;
     this.getRunningFeatures = getRunningFeatures;
+  }
+
+  setSchedulerService(schedulerService: SchedulerService): void {
+    this.schedulerService = schedulerService;
   }
 
   initialize(): void {
@@ -116,11 +124,13 @@ export class WorktreeLifecycleService {
    * Shutdown the service and stop periodic tasks
    */
   shutdown(): void {
-    if (this.driftCheckIntervalId) {
+    if (this.schedulerService) {
+      this.schedulerService.unregisterInterval(WorktreeLifecycleService.INTERVAL_ID);
+    } else if (this.driftCheckIntervalId) {
       clearInterval(this.driftCheckIntervalId);
       this.driftCheckIntervalId = null;
-      logger.info('Stopped periodic drift detection');
     }
+    logger.info('Stopped periodic drift detection');
   }
 
   /**
@@ -135,13 +145,21 @@ export class WorktreeLifecycleService {
    * Start periodic drift detection for all monitored projects
    */
   private startPeriodicDriftDetection(): void {
-    if (this.driftCheckIntervalId) {
-      return; // Already running
+    if (this.schedulerService) {
+      this.schedulerService.registerInterval(
+        WorktreeLifecycleService.INTERVAL_ID,
+        'Worktree Drift Detection',
+        DRIFT_CHECK_INTERVAL_MS,
+        () => this.runPeriodicDriftCheck()
+      );
+    } else {
+      if (this.driftCheckIntervalId) {
+        return; // Already running
+      }
+      this.driftCheckIntervalId = setInterval(() => {
+        void this.runPeriodicDriftCheck();
+      }, DRIFT_CHECK_INTERVAL_MS);
     }
-
-    this.driftCheckIntervalId = setInterval(() => {
-      void this.runPeriodicDriftCheck();
-    }, DRIFT_CHECK_INTERVAL_MS);
 
     logger.info(
       `Started periodic drift detection (interval: ${DRIFT_CHECK_INTERVAL_MS / 1000 / 60} minutes)`

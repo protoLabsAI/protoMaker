@@ -21,16 +21,17 @@ export function register(container: ServiceContainer): void {
   githubStateChecker.registerProject(repoRoot);
 
   // Periodic drift detection: check every 5 minutes, reconcile any drifts found
-  container.driftCheckInterval = setInterval(async () => {
-    try {
+  container.schedulerService.registerInterval(
+    'worktree-lifecycle:module-drift-check',
+    'Worktree Module Drift Detection',
+    DRIFT_CHECK_INTERVAL_MS,
+    async () => {
       const drifts = await githubStateChecker.checkAllProjects();
       for (const drift of drifts) {
         await reconciliationService.reconcile(drift);
       }
-    } catch (err) {
-      logger.warn('Drift detection cycle failed:', err);
     }
-  }, DRIFT_CHECK_INTERVAL_MS);
+  );
 
   // Prune phantom worktrees on startup
   worktreeLifecycleService.prunePhantomWorktrees(repoRoot).catch((err: unknown) => {

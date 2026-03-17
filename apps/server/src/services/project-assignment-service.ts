@@ -18,6 +18,7 @@ import type { Project, UpdateProjectInput } from '@protolabsai/types';
 import type { ProjectService } from './project-service.js';
 import type { PeerMeshService } from './peer-mesh-service.js';
 import type { EventEmitter } from '../lib/events.js';
+import type { SchedulerService } from './scheduler-service.js';
 
 const logger = createLogger('ProjectAssignmentService');
 
@@ -35,14 +36,21 @@ export interface ProjectAssignment {
 }
 
 export class ProjectAssignmentService {
+  static readonly INTERVAL_ID = 'project-assignment:failover-check';
+
   private failoverCheckInterval: ReturnType<typeof setInterval> | null = null;
   private failoverProjectPath: string | null = null;
+  private schedulerService: SchedulerService | null = null;
 
   constructor(
     private readonly projectService: ProjectService,
     private readonly crdtSyncService: PeerMeshService,
     private readonly eventEmitter?: EventEmitter
   ) {}
+
+  setSchedulerService(schedulerService: SchedulerService): void {
+    this.schedulerService = schedulerService;
+  }
 
   // ─── Core Assignment Operations ─────────────────────────────────────────
 
@@ -261,11 +269,23 @@ export class ProjectAssignmentService {
     this.stopPeriodicFailoverCheck();
 
     this.failoverProjectPath = projectPath;
-    this.failoverCheckInterval = setInterval(() => {
-      this.reassignOrphanedProjects(projectPath).catch((err) => {
-        logger.error('[ASSIGN] Periodic failover check failed:', err);
-      });
-    }, FAILOVER_CHECK_INTERVAL_MS);
+
+    if (this.schedulerService) {
+      this.schedulerService.registerInterval(
+        ProjectAssignmentService.INTERVAL_ID,
+        'Project Assignment Failover Check',
+        FAILOVER_CHECK_INTERVAL_MS,
+        async () => {
+          await this.reassignOrphanedProjects(projectPath);
+        }
+      );
+    } else {
+      this.failoverCheckInterval = setInterval(() => {
+        this.reassignOrphanedProjects(projectPath).catch((err) => {
+          logger.error('[ASSIGN] Periodic failover check failed:', err);
+        });
+      }, FAILOVER_CHECK_INTERVAL_MS);
+    }
 
     logger.info(
       `[ASSIGN] Periodic failover check started (interval=${FAILOVER_CHECK_INTERVAL_MS}ms, projectPath="${projectPath}")`
@@ -277,7 +297,9 @@ export class ProjectAssignmentService {
    * Safe to call even if the check was never started.
    */
   stopPeriodicFailoverCheck(): void {
-    if (this.failoverCheckInterval !== null) {
+    if (this.schedulerService) {
+      this.schedulerService.unregisterInterval(ProjectAssignmentService.INTERVAL_ID);
+    } else if (this.failoverCheckInterval !== null) {
       clearInterval(this.failoverCheckInterval);
       this.failoverCheckInterval = null;
       logger.info('[ASSIGN] Periodic failover check stopped');

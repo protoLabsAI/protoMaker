@@ -32,6 +32,8 @@ export function register(container: ServiceContainer): void {
   healthMonitorService.setSchedulerService(schedulerService);
   specGenerationMonitor.setSchedulerService(schedulerService);
   leadEngineerService.setSchedulerService(schedulerService);
+  container.worktreeLifecycleService.setSchedulerService(schedulerService);
+  container.projectAssignmentService.setSchedulerService(schedulerService);
   const prWatcher = getPRWatcherService();
   if (prWatcher) {
     prWatcher.setSchedulerService(schedulerService);
