@@ -77,7 +77,7 @@ export function CostChart({ data, isLoading }: CostChartProps) {
                   borderRadius: '8px',
                   fontSize: '12px',
                 }}
-                formatter={(value: number | undefined) => [`$${(value ?? 0).toFixed(2)}`, 'Cost']}
+                formatter={((value: number | undefined) => [`$${(value ?? 0).toFixed(2)}`, 'Cost']) as any}
               />
               <Area
                 type="monotone"

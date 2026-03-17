@@ -172,9 +172,9 @@ export function StageBreakdownChart({ projectPath }: StageBreakdownChartProps) {
                 />
                 <Tooltip
                   contentStyle={tooltipStyle}
-                  formatter={(value: number | undefined, name: string | undefined) =>
+                  formatter={((value: number | undefined, name: string | undefined) =>
                     [`${value ?? 0}h`, stageLabels[name ?? ''] ?? name ?? ''] as [string, string]
-                  }
+                  ) as any}
                 />
                 <Legend
                   formatter={(value: string) => stageLabels[value] ?? value}

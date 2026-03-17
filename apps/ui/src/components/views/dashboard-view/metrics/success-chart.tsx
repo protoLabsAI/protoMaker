@@ -85,7 +85,7 @@ export function SuccessChart({ data, isLoading }: SuccessChartProps) {
                   borderRadius: '8px',
                   fontSize: '12px',
                 }}
-                formatter={(value: number | undefined) => [`${value ?? 0}%`, 'Success Rate']}
+                formatter={((value: number | undefined) => [`${value ?? 0}%`, 'Success Rate']) as any}
               />
               <Area
                 type="monotone"
