@@ -1,0 +1,10 @@
+# Example Codex configuration for protoLabs Studio.
+# Copy relevant sections into ~/.codex/config.toml and adjust secrets/paths.
+
+[mcp_servers.protolabs]
+command = "bash"
+args = ["/absolute/path/to/protoMaker/packages/mcp-server/plugins/automaker/hooks/start-mcp.sh"]
+env = { AUTOMAKER_ROOT = "/absolute/path/to/protoMaker", AUTOMAKER_API_URL = "http://localhost:3008", AUTOMAKER_API_KEY = "YOUR_AUTOMAKER_API_KEY", GH_TOKEN = "YOUR_GH_TOKEN" }
+startup_timeout_sec = 20
+tool_timeout_sec = 120
+enabled = true

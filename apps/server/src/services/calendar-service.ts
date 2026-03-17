@@ -88,6 +88,16 @@ export class CalendarService {
   }
 
   /**
+   * Persist calendar events without machine-specific project paths.
+   * The projectPath is restored from the active project context on read.
+   */
+  private stripPersistedProjectPath(
+    events: CalendarEvent[]
+  ): Array<Omit<CalendarEvent, 'projectPath'>> {
+    return events.map(({ projectPath: _projectPath, ...event }) => event);
+  }
+
+  /**
    * Read calendar events from calendar.json
    */
   private async readCalendarFile(projectPath: string): Promise<CalendarEvent[]> {
@@ -104,7 +114,10 @@ export class CalendarService {
       autoRestore: true,
     });
 
-    return result.data || [];
+    return (result.data || []).map((event) => ({
+      ...event,
+      projectPath,
+    }));
   }
 
   /**
@@ -112,7 +125,7 @@ export class CalendarService {
    */
   private async writeCalendarFile(projectPath: string, events: CalendarEvent[]): Promise<void> {
     const calendarPath = this.getCalendarPath(projectPath);
-    await atomicWriteJson(calendarPath, events, {
+    await atomicWriteJson(calendarPath, this.stripPersistedProjectPath(events), {
       backupCount: 3,
     });
   }
