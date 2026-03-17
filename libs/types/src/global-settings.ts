@@ -197,8 +197,6 @@ export interface FeatureFlags {
   designs: boolean;
   /** Spec editor in sidebar Tools section */
   specEditor: boolean;
-  /** System View — network/dependency graph view in the project sidebar */
-  systemView: boolean;
   /**
    * User Presence Detection — enables sensor-driven presence awareness.
    * Built-in sensors: tab visibility, user activity (idle/afk), connectivity.
@@ -223,7 +221,6 @@ export interface FeatureFlags {
 export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   designs: false,
   specEditor: false,
-  systemView: false,
   userPresenceDetection: false,
   reactorEnabled: false,
   hitlForms: false,

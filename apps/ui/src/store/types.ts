@@ -222,7 +222,6 @@ export interface KeyboardShortcuts {
   terminal: string;
   notes: string;
   docs: string;
-  systemView: string;
   inbox: string;
   fileEditor: string;
   designs: string;
@@ -265,7 +264,6 @@ export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
   terminal: 'Cmd+`',
   notes: 'C',
   docs: 'Cmd+D',
-  systemView: 'V',
   inbox: 'B',
   fileEditor: 'E',
   designs: 'Shift+D',

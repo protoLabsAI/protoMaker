@@ -18,7 +18,6 @@ import type { EventStreamBuffer } from '../../lib/event-stream-buffer.js';
 import type { ContentFlowService } from '../../services/content-flow-service.js';
 import type { SignalIntakeService } from '../../services/signal-intake-service.js';
 import type { GitWorkflowService } from '../../services/git-workflow-service.js';
-import { getAllGraphs, getGraph } from '../../lib/graph-registry.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { EventEmitter } from '../../lib/events.js';
 import type { GTMAuthorityAgent } from '../../services/authority-agents/gtm-agent.js';
@@ -350,52 +349,6 @@ export function createEngineRoutes(
     } catch (error) {
       logger.error('Failed to query event history:', error);
       res.status(500).json({ success: false, error: 'Failed to query event history' });
-    }
-  });
-
-  /**
-   * POST /api/engine/flows
-   * Returns all LangGraph topology definitions and execution state.
-   */
-  router.post('/flows', (_req: Request, res: Response) => {
-    try {
-      const { graphId } = (_req.body ?? {}) as { graphId?: string };
-
-      // If specific graph requested, return just that one
-      if (graphId) {
-        const graph = getGraph(graphId);
-        if (!graph) {
-          res.status(404).json({
-            success: false,
-            error: `Graph not found: ${graphId}`,
-          });
-          return;
-        }
-
-        res.json({
-          success: true,
-          graph,
-        });
-        return;
-      }
-
-      // Return all graphs with execution state
-      const graphs = getAllGraphs();
-      const executionState = contentFlowService ? contentFlowService.getExecutionState() : null;
-
-      res.json({
-        success: true,
-        graphs,
-        executionState,
-        totalGraphs: graphs.length,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (error) {
-      logger.error('Failed to get flow definitions:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to get flow definitions',
-      });
     }
   });
 
