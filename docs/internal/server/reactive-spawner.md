@@ -6,11 +6,13 @@ Trigger-based agent spawning with rate limiting, deduplication, and circuit brea
 
 `ReactiveSpawnerService` spawns Ava agents in response to three trigger categories:
 
-| Category  | Method                         | Description                                 |
-| --------- | ------------------------------ | ------------------------------------------- |
-| `message` | `spawnForMessage(msg)`         | React to an incoming `AvaChatMessage`       |
-| `error`   | `spawnForError(ctx)`           | Investigate and remediate an `ErrorContext` |
-| `cron`    | `spawnForCron(taskName, desc)` | Execute a scheduled task                    |
+| Category  | Method                         | Description                                            |
+| --------- | ------------------------------ | ------------------------------------------------------ |
+| `message` | `spawnForMessage(msg)`         | React to an incoming `AvaChatMessage`                  |
+| `error`   | `spawnForError(ctx)`           | Investigate and remediate an `ErrorContext`            |
+| `cron`    | `spawnForCron(taskName, desc)` | Spawn an agent for a dynamic event (calendar reminder) |
+
+> **Note:** `spawnForCron()` is only used for dynamic, event-triggered spawning (e.g. calendar reminders). The built-in Ava recurring tasks (`ava-staging-ping`, `ava-daily-board-health`, `ava-pr-triage`) are registered directly with `SchedulerService` via `registerAvaCronTasks()` and do **not** go through `ReactiveSpawnerService`.
 
 ## Budget Controls
 
@@ -115,7 +117,13 @@ All `spawnForError` calls produce a prompt that includes:
 
 ## Cron-Trigger Patterns
 
-Three built-in Ava cron tasks are registered via `registerAvaCronTasks()`. These are **deterministic** — they query services directly and format Discord embeds. No LLM calls.
+There are two distinct cron-related systems. They are independent — one runs deterministic code
+directly in `SchedulerService`, the other spawns LLM agents via `ReactiveSpawnerService`.
+
+### Built-in Ava Tasks (deterministic, no LLM)
+
+Three built-in Ava cron tasks are registered via `registerAvaCronTasks()`. These bypass
+`ReactiveSpawnerService` entirely — they query services directly and format Discord embeds.
 
 **File:** `apps/server/src/services/ava-cron-tasks.ts`
 **Registered in:** `apps/server/src/server/services.ts` after services are initialized.
@@ -126,11 +134,15 @@ Three built-in Ava cron tasks are registered via `registerAvaCronTasks()`. These
 | `ava-daily-board-health` | `0 9 * * *`    | Board summary with blocked features (with reasons) and stale (>24h) |
 | `ava-pr-triage`          | `0 */4 * * *`  | Open PR count via `gh pr list`, flags stale PRs (>7 days no update) |
 
-### Calendar Reminder Integration
+All three tasks are registered with `schedulerService.registerTask()` and run even when Discord
+is unavailable (output falls back to server logs via `logger.info`).
+
+### Calendar Reminder Integration (LLM-spawned)
 
 `CalendarService` exposes an `onReminder(callback)` method backed by a Node.js `EventEmitter`.
 When a calendar event is due (fired via `calendarService.emitReminder(payload)`), the wiring
-in `services.ts` calls `reactiveSpawnerService.spawnForCron(title, description)` automatically.
+in `services.ts` calls `reactiveSpawnerService.spawnForCron(title, description)` to spawn a
+one-time Ava agent for the event.
 
 ```ts
 calendarService.onReminder((payload) => {
@@ -138,8 +150,8 @@ calendarService.onReminder((payload) => {
 });
 ```
 
-This connects one-time calendar job events to the same cron rate-limiting and circuit-breaking
-budget controls as the recurring tasks above.
+This is the **only** active caller of `spawnForCron()`. Calendar-triggered agents go through the
+same rate-limiting, deduplication, and circuit-breaking controls as message/error spawns.
 
 ## Circuit Breaker Behavior
 
