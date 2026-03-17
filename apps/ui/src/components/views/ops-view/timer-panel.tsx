@@ -17,7 +17,7 @@ import {
   AlertTriangle,
   RefreshCw,
 } from 'lucide-react';
-import { Badge } from '@protolabsai/ui/atoms';
+import { Badge, Switch } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useTimerStatus } from './use-timer-status';
@@ -74,20 +74,30 @@ function formatIntervalMs(ms: number): string {
 
 interface TimerRowProps {
   timer: TimerRegistryEntry;
+  persistentEnabled: boolean;
   onPause: (id: string) => Promise<void>;
   onResume: (id: string) => Promise<void>;
+  onToggleEnabled: (id: string, enabled: boolean) => Promise<void>;
   isMutating: boolean;
 }
 
-function TimerRow({ timer, onPause, onResume, isMutating }: TimerRowProps) {
+function TimerRow({
+  timer,
+  persistentEnabled,
+  onPause,
+  onResume,
+  onToggleEnabled,
+  isMutating,
+}: TimerRowProps) {
   const hasFailures = timer.failureCount > 0;
 
   return (
     <div
       className={cn(
-        'grid grid-cols-[1fr_80px_80px_100px_100px_60px_60px_40px] items-center gap-2 px-3 py-2 text-xs',
+        'grid grid-cols-[1fr_80px_80px_100px_100px_60px_60px_50px_40px] items-center gap-2 px-3 py-2 text-xs',
         'border-b border-border/30 last:border-b-0',
-        'hover:bg-accent/30 transition-colors'
+        'hover:bg-accent/30 transition-colors',
+        !persistentEnabled && 'opacity-50'
       )}
     >
       {/* Name */}
@@ -133,6 +143,16 @@ function TimerRow({ timer, onPause, onResume, isMutating }: TimerRowProps) {
       {/* Executions */}
       <div className="text-muted-foreground tabular-nums">{timer.executionCount}</div>
 
+      {/* Persistent Enable/Disable */}
+      <div>
+        <Switch
+          checked={persistentEnabled}
+          onCheckedChange={(checked) => onToggleEnabled(timer.id, checked)}
+          disabled={isMutating}
+          aria-label={persistentEnabled ? `Disable ${timer.name}` : `Enable ${timer.name}`}
+        />
+      </div>
+
       {/* Action */}
       <div>
         <button
@@ -155,16 +175,20 @@ function TimerRow({ timer, onPause, onResume, isMutating }: TimerRowProps) {
 interface CategorySectionProps {
   category: TimerCategory;
   timers: TimerRegistryEntry[];
+  taskOverrides: Record<string, { enabled?: boolean; cronExpression?: string }>;
   onPause: (id: string) => Promise<void>;
   onResume: (id: string) => Promise<void>;
+  onToggleEnabled: (id: string, enabled: boolean) => Promise<void>;
   isMutating: boolean;
 }
 
 function CategorySection({
   category,
   timers,
+  taskOverrides,
   onPause,
   onResume,
+  onToggleEnabled,
   isMutating,
 }: CategorySectionProps) {
   const [expanded, setExpanded] = useState(true);
@@ -206,7 +230,7 @@ function CategorySection({
       {expanded && (
         <div>
           {/* Column headers */}
-          <div className="grid grid-cols-[1fr_80px_80px_100px_100px_60px_60px_40px] gap-2 px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/30 bg-accent/10">
+          <div className="grid grid-cols-[1fr_80px_80px_100px_100px_60px_60px_50px_40px] gap-2 px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/30 bg-accent/10">
             <div>Name</div>
             <div>Schedule</div>
             <div>Status</div>
@@ -214,14 +238,17 @@ function CategorySection({
             <div>Next Run</div>
             <div>Fails</div>
             <div>Runs</div>
+            <div>On</div>
             <div />
           </div>
           {timers.map((timer) => (
             <TimerRow
               key={timer.id}
               timer={timer}
+              persistentEnabled={taskOverrides[timer.id]?.enabled ?? true}
               onPause={onPause}
               onResume={onResume}
+              onToggleEnabled={onToggleEnabled}
               isMutating={isMutating}
             />
           ))}
@@ -238,6 +265,7 @@ function CategorySection({
 export function TimerPanel() {
   const {
     timers,
+    taskOverrides,
     isLoading,
     isMutating,
     error,
@@ -246,6 +274,7 @@ export function TimerPanel() {
     resumeTimer,
     pauseAll,
     resumeAll,
+    setTaskEnabled,
     timersByCategory,
   } = useTimerStatus();
 
@@ -290,6 +319,18 @@ export function TimerPanel() {
       toast.error(err instanceof Error ? err.message : 'Failed to resume all timers');
     }
   }, [resumeAll]);
+
+  const handleToggleEnabled = useCallback(
+    async (id: string, enabled: boolean) => {
+      try {
+        await setTaskEnabled(id, enabled);
+        toast.success(enabled ? 'Task enabled' : 'Task disabled');
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to update task setting');
+      }
+    },
+    [setTaskEnabled]
+  );
 
   if (error) {
     return (
@@ -392,8 +433,10 @@ export function TimerPanel() {
               key={category}
               category={category}
               timers={categoryTimers}
+              taskOverrides={taskOverrides}
               onPause={handlePause}
               onResume={handleResume}
+              onToggleEnabled={handleToggleEnabled}
               isMutating={isMutating}
             />
           );
