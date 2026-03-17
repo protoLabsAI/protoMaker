@@ -14,10 +14,10 @@ Remove duplicate board health checks and consolidate PR monitoring.
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-remove-duplicate-board-health-from-maintenance-module.md](./phase-01-remove-duplicate-board-health-from-maintenance-module.md) | 0.5 weeks | None | TBD |
-| 2 | [phase-02-consolidate-pr-watcher-into-pr-feedback-service.md](./phase-02-consolidate-pr-watcher-into-pr-feedback-service.md) | 2 weeks | None | TBD |
+| Phase | File                                                                                                                                     | Duration  | Dependencies | Owner |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------- | ------------ | ----- |
+| 1     | [phase-01-remove-duplicate-board-health-from-maintenance-module.md](./phase-01-remove-duplicate-board-health-from-maintenance-module.md) | 0.5 weeks | None         | TBD   |
+| 2     | [phase-02-consolidate-pr-watcher-into-pr-feedback-service.md](./phase-02-consolidate-pr-watcher-into-pr-feedback-service.md)             | 2 weeks   | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M3 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

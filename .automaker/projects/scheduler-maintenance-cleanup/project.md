@@ -14,7 +14,7 @@ The server runs 38 concurrent recurring timers across three registration pattern
 
 ### Problem
 
-1) 15 raw setInterval timers are invisible to operators — no pause/resume, no metrics, no Ops Dashboard visibility. 2) 5 dead maintenance check modules in services/maintenance/checks/ create confusion — they overlap with automation-service tasks but are never registered. 3) Board health duplication across ava-cron-tasks, maintenance-orchestrator, and automation-service wastes compute and creates conflicting results. 4) PR monitoring fragmented across pr-watcher, pr-feedback, ava-pr-triage, auto-merge, and auto-rebase services. 5) daily-standup:check polls every 15 minutes to check if 20 hours passed — should be a single daily cron.
+1. 15 raw setInterval timers are invisible to operators — no pause/resume, no metrics, no Ops Dashboard visibility. 2) 5 dead maintenance check modules in services/maintenance/checks/ create confusion — they overlap with automation-service tasks but are never registered. 3) Board health duplication across ava-cron-tasks, maintenance-orchestrator, and automation-service wastes compute and creates conflicting results. 4) PR monitoring fragmented across pr-watcher, pr-feedback, ava-pr-triage, auto-merge, and auto-rebase services. 5) daily-standup:check polls every 15 minutes to check if 20 hours passed — should be a single daily cron.
 
 ### Approach
 

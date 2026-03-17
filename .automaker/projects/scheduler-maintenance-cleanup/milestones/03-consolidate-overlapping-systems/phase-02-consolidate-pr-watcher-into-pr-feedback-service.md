@@ -16,11 +16,13 @@ Merge pr-watcher-service.ts functionality into pr-feedback-service.ts. Both poll
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/pr-feedback-service.ts`
 - [ ] `apps/server/src/services/pr-watcher-service.ts`
 - [ ] `apps/server/src/server/services.ts`
 
 ### Verification
+
 - [ ] pr-watcher-service.ts deleted
 - [ ] All PR watching functionality preserved in pr-feedback-service
 - [ ] All importers updated

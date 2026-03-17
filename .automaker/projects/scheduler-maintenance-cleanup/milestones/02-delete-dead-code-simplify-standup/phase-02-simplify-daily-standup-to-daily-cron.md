@@ -9,17 +9,19 @@
 
 ## Overview
 
-Change daily-standup:check from polling every 15 minutes (*/15 * * * *) with a 20-hour check to a single daily cron (0 9 * * *). Remove the 'has 20 hours passed since last standup' conditional logic — the cron schedule itself ensures daily cadence. Keep the standup flow execution unchanged.
+Change daily-standup:check from polling every 15 minutes (_/15 _ \* \* _) with a 20-hour check to a single daily cron (0 9 _ \* \*). Remove the 'has 20 hours passed since last standup' conditional logic — the cron schedule itself ensures daily cadence. Keep the standup flow execution unchanged.
 
 ---
 
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/daily-standup-service.ts`
 
 ### Verification
-- [ ] Cron changed from */15 to 0 9 * * * (daily at 9am)
+
+- [ ] Cron changed from _/15 to 0 9 _ \* \* (daily at 9am)
 - [ ] 20-hour elapsed check removed
 - [ ] Standup flow execution unchanged
 - [ ] Server tests pass

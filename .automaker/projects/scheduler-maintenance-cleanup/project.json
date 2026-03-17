@@ -90,9 +90,7 @@
           "name": "simplify-daily-standup-to-daily-cron",
           "title": "Simplify daily standup to daily cron",
           "description": "Change daily-standup:check from polling every 15 minutes (*/15 * * * *) with a 20-hour check to a single daily cron (0 9 * * *). Remove the 'has 20 hours passed since last standup' conditional logic — the cron schedule itself ensures daily cadence. Keep the standup flow execution unchanged.",
-          "filesToModify": [
-            "apps/server/src/services/daily-standup-service.ts"
-          ],
+          "filesToModify": ["apps/server/src/services/daily-standup-service.ts"],
           "acceptanceCriteria": [
             "Cron changed from */15 to 0 9 * * * (daily at 9am)",
             "20-hour elapsed check removed",
@@ -117,9 +115,7 @@
           "name": "remove-duplicate-board-health-from-maintenance-module",
           "title": "Remove duplicate board-health from maintenance module",
           "description": "Remove the board-health check from maintenance.module.ts (the 6h full-sweep tier). Board health is already handled by automation-service maintenance:stale-features (hourly) and ava-cron-tasks ava-daily-board-health (daily Discord report). The maintenance.module version adds no unique value. Keep the resource-usage check (critical tier) — that one is unique.",
-          "filesToModify": [
-            "apps/server/src/services/maintenance.module.ts"
-          ],
+          "filesToModify": ["apps/server/src/services/maintenance.module.ts"],
           "acceptanceCriteria": [
             "board-health check removed from maintenance.module.ts",
             "resource-usage check preserved (critical tier)",

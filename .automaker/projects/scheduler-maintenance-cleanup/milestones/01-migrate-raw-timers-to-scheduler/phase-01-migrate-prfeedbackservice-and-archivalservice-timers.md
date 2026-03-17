@@ -16,10 +16,12 @@ Migrate PRFeedbackService (60s poll at pr-feedback-service.ts:212) and ArchivalS
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/pr-feedback-service.ts`
 - [ ] `apps/server/src/services/archival-service.ts`
 
 ### Verification
+
 - [ ] PRFeedbackService timer visible in Ops Dashboard at /api/ops/timers
 - [ ] ArchivalService timer visible in Ops Dashboard
 - [ ] Both timers pause/resume correctly via scheduler

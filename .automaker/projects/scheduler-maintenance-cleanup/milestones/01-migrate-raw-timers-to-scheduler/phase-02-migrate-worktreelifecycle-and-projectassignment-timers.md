@@ -16,11 +16,13 @@ Migrate WorktreeLifecycleModule (5min drift at worktree-lifecycle.module.ts:24),
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/worktree-lifecycle.module.ts`
 - [ ] `apps/server/src/services/worktree-lifecycle-service.ts`
 - [ ] `apps/server/src/services/project-assignment-service.ts`
 
 ### Verification
+
 - [ ] All 3 timers visible in Ops Dashboard
 - [ ] Drift check behavior unchanged
 - [ ] Failover detection behavior unchanged

@@ -14,10 +14,10 @@ Remove dead maintenance check modules and simplify the daily standup cron.
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-delete-dead-maintenance-check-modules.md](./phase-01-delete-dead-maintenance-check-modules.md) | 0.5 weeks | None | TBD |
-| 2 | [phase-02-simplify-daily-standup-to-daily-cron.md](./phase-02-simplify-daily-standup-to-daily-cron.md) | 0.5 weeks | None | TBD |
+| Phase | File                                                                                                     | Duration  | Dependencies | Owner |
+| ----- | -------------------------------------------------------------------------------------------------------- | --------- | ------------ | ----- |
+| 1     | [phase-01-delete-dead-maintenance-check-modules.md](./phase-01-delete-dead-maintenance-check-modules.md) | 0.5 weeks | None         | TBD   |
+| 2     | [phase-02-simplify-daily-standup-to-daily-cron.md](./phase-02-simplify-daily-standup-to-daily-cron.md)   | 0.5 weeks | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M2 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

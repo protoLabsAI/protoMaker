@@ -14,10 +14,10 @@ Migrate the top 5 long-lived raw setInterval timers to schedulerService.register
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-migrate-prfeedbackservice-and-archivalservice-timers.md](./phase-01-migrate-prfeedbackservice-and-archivalservice-timers.md) | 1 week | None | TBD |
-| 2 | [phase-02-migrate-worktreelifecycle-and-projectassignment-timers.md](./phase-02-migrate-worktreelifecycle-and-projectassignment-timers.md) | 1 week | None | TBD |
+| Phase | File                                                                                                                                       | Duration | Dependencies | Owner |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------- | ------------ | ----- |
+| 1     | [phase-01-migrate-prfeedbackservice-and-archivalservice-timers.md](./phase-01-migrate-prfeedbackservice-and-archivalservice-timers.md)     | 1 week   | None         | TBD   |
+| 2     | [phase-02-migrate-worktreelifecycle-and-projectassignment-timers.md](./phase-02-migrate-worktreelifecycle-and-projectassignment-timers.md) | 1 week   | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M1 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

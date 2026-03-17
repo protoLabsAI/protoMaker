@@ -16,6 +16,7 @@ Delete 5 unregistered maintenance check module files from services/maintenance/c
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/maintenance/checks/dangling-dependency-check.ts`
 - [ ] `apps/server/src/services/maintenance/checks/epic-completion-check.ts`
 - [ ] `apps/server/src/services/maintenance/checks/memory-pressure-check.ts`
@@ -25,6 +26,7 @@ Delete 5 unregistered maintenance check module files from services/maintenance/c
 - [ ] `apps/server/src/services/maintenance/checks/stuck-feature-check.ts`
 
 ### Verification
+
 - [ ] All dead check module files deleted
 - [ ] No broken imports remain (typecheck passes)
 - [ ] No test files reference deleted modules (or tests updated)

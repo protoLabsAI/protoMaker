@@ -16,9 +16,11 @@ Remove the board-health check from maintenance.module.ts (the 6h full-sweep tier
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/maintenance.module.ts`
 
 ### Verification
+
 - [ ] board-health check removed from maintenance.module.ts
 - [ ] resource-usage check preserved (critical tier)
 - [ ] maintenance:sweep:full still runs but only resource-usage
