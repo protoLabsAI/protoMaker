@@ -2,9 +2,15 @@
 
 Consolidate 38 concurrent recurring timers into a clean, observable system. Migrate raw setInterval timers to the scheduler, delete dead code, simplify duplicated tasks, and ensure all background operations are visible in the Ops Dashboard.
 
-**Status:** active
+**Status:** completed
 **Created:** 2026-03-17T02:40:42.154Z
-**Updated:** 2026-03-17T02:41:57.461Z
+**Updated:** 2026-03-17T04:21:20.924Z
+
+## Research Summary
+
+The Automaker server runs approximately **35 active `setInterval` timers** across 20+ service files, but only a fraction are managed through the central `SchedulerService`. The scheduler itself is well-architected — a singleton with dual timer models (cron + interval), persistence, metrics, and Ops Dashboard integration [1][2]. However, the majority of background timers are **self-managed** by individual services, invisible to the Ops Dashboard, and inconsistent in their cleanup behavior. Five module-level timers have **no cleanup path at all** and will leak on hot-reload or test teardown. No actual dead code was found, but several comments reference deprecated systems (Board Janitor, PR Maintainer crew) that should be updated. The existing test suite covers 122+ cases across 11 files, providing a solid safety net for migration work.
+
+---
 
 ## PRD
 
@@ -34,7 +40,7 @@ Must not change runtime behavior — only registration pattern changes for timer
 
 Migrate the top 5 long-lived raw setInterval timers to schedulerService.registerInterval() so they appear in the Ops Dashboard.
 
-**Status:** pending
+**Status:** completed
 
 #### Phases
 
@@ -45,7 +51,7 @@ Migrate the top 5 long-lived raw setInterval timers to schedulerService.register
 
 Remove dead maintenance check modules and simplify the daily standup cron.
 
-**Status:** pending
+**Status:** completed
 
 #### Phases
 
@@ -56,7 +62,7 @@ Remove dead maintenance check modules and simplify the daily standup cron.
 
 Remove duplicate board health checks and consolidate PR monitoring.
 
-**Status:** pending
+**Status:** completed
 
 #### Phases
 
