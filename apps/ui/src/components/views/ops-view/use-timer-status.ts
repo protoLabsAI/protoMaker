@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { apiGet, apiPost } from '@/lib/api-fetch';
+import { apiGet, apiPost, apiPut } from '@/lib/api-fetch';
 import type { TimerRegistryEntry, TimerCategory } from '@protolabsai/types';
 
 interface TimersResponse {
@@ -22,8 +22,18 @@ interface TimerMutationResponse {
   resumedCount?: number;
 }
 
+interface GlobalSettingsResponse {
+  success: boolean;
+  settings?: {
+    schedulerSettings?: {
+      taskOverrides?: Record<string, { enabled?: boolean; cronExpression?: string }>;
+    };
+  };
+}
+
 interface UseTimerStatusResult {
   timers: TimerRegistryEntry[];
+  taskOverrides: Record<string, { enabled?: boolean; cronExpression?: string }>;
   isLoading: boolean;
   isMutating: boolean;
   error: string | null;
@@ -32,6 +42,7 @@ interface UseTimerStatusResult {
   resumeTimer: (id: string) => Promise<boolean>;
   pauseAll: () => Promise<boolean>;
   resumeAll: () => Promise<boolean>;
+  setTaskEnabled: (id: string, enabled: boolean) => Promise<boolean>;
   timersByCategory: Map<TimerCategory, TimerRegistryEntry[]>;
 }
 
@@ -55,6 +66,9 @@ function groupByCategory(timers: TimerRegistryEntry[]): Map<TimerCategory, Timer
 
 export function useTimerStatus(): UseTimerStatusResult {
   const [timers, setTimers] = useState<TimerRegistryEntry[]>([]);
+  const [taskOverrides, setTaskOverrides] = useState<
+    Record<string, { enabled?: boolean; cronExpression?: string }>
+  >({});
   const [isLoading, setIsLoading] = useState(false);
   const [isMutating, setIsMutating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,13 +95,25 @@ export function useTimerStatus(): UseTimerStatusResult {
     }
   }, []);
 
+  const fetchTaskOverrides = useCallback(async () => {
+    try {
+      const result = await apiGet<GlobalSettingsResponse>('/api/settings/global');
+      if (result.success && result.settings?.schedulerSettings?.taskOverrides) {
+        setTaskOverrides(result.settings.schedulerSettings.taskOverrides);
+      }
+    } catch {
+      // Non-fatal: overrides default to empty (all tasks enabled)
+    }
+  }, []);
+
   useEffect(() => {
     fetchTimers();
+    fetchTaskOverrides();
     intervalRef.current = setInterval(fetchTimers, REFRESH_INTERVAL_MS);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [fetchTimers]);
+  }, [fetchTimers, fetchTaskOverrides]);
 
   const pauseTimer = useCallback(
     async (id: string): Promise<boolean> => {
@@ -151,10 +177,37 @@ export function useTimerStatus(): UseTimerStatusResult {
     }
   }, [fetchTimers]);
 
+  const setTaskEnabled = useCallback(
+    async (id: string, enabled: boolean): Promise<boolean> => {
+      const prevOverrides = taskOverrides;
+      const newOverrides = {
+        ...taskOverrides,
+        [id]: { ...taskOverrides[id], enabled },
+      };
+      // Optimistic update
+      setTaskOverrides(newOverrides);
+      try {
+        const result = await apiPut<{ success: boolean; error?: string }>('/api/settings/global', {
+          schedulerSettings: { taskOverrides: newOverrides },
+        });
+        if (result.success) {
+          return true;
+        }
+        throw new Error(result.error ?? 'Failed to update task setting');
+      } catch (err) {
+        // Revert on failure
+        setTaskOverrides(prevOverrides);
+        throw err;
+      }
+    },
+    [taskOverrides]
+  );
+
   const timersByCategory = groupByCategory(timers);
 
   return {
     timers,
+    taskOverrides,
     isLoading,
     isMutating,
     error,
@@ -163,6 +216,7 @@ export function useTimerStatus(): UseTimerStatusResult {
     resumeTimer,
     pauseAll,
     resumeAll,
+    setTaskEnabled,
     timersByCategory,
   };
 }
