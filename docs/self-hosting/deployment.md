@@ -300,11 +300,10 @@ sudo systemctl disable automaker
 
 ### Monitoring (Grafana)
 
-| Variable                | Default   | Description                                       |
-| ----------------------- | --------- | ------------------------------------------------- |
-| `GF_ADMIN_USER`         | `admin`   | Grafana admin username (override in staging/prod) |
-| `GF_ADMIN_PASSWORD`     | `admin`   | Grafana admin password (override in staging/prod) |
-| `DISCORD_WEBHOOK_INFRA` | _(empty)_ | Discord webhook URL for infrastructure alerts     |
+| Variable            | Default | Description                                       |
+| ------------------- | ------- | ------------------------------------------------- |
+| `GF_ADMIN_USER`     | `admin` | Grafana admin username (override in staging/prod) |
+| `GF_ADMIN_PASSWORD` | `admin` | Grafana admin password (override in staging/prod) |
 
 Set these in your `.env` file to override the defaults for staging/production deployments:
 
