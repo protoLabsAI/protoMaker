@@ -1,5 +1,16 @@
 # @protolabsai/prompts
 
+## 0.74.3
+
+### Patch Changes
+
+- ### Refactors
+  - replace Astro/Starlight docs starter with VitePress
+  - replace Astro/Starlight docs starter with VitePress
+- Updated dependencies
+  - @protolabsai/types@0.74.3
+  - @protolabsai/utils@0.74.3
+
 ## 0.74.2
 
 ### Patch Changes
