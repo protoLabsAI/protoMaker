@@ -325,3 +325,8 @@ usageStats:
 - **Problem solved:** timer-registry-integration.test.ts constructs real PRFeedbackService with { emit, subscribe, on } stubs and { get, setEventEmitter, setIntegrityWatchdog } stubs
 - **Why this works:** Pragmatic: avoids mock framework overhead, keeps test code readable, makes it obvious what dependencies service actually uses. Stubs are just vi.fn() calls
 - **Trade-offs:** Gained: clear minimal deps, fast stubs. Lost: no automatic verification of mock call counts (but those aren't tested here anyway)
+
+#### [Pattern] Temporary verification test to document exact migration behavior, then delete after passing. Tests capture the 'contract' of late wiring: (1) migration works, (2) no double-registration in normal path. (2026-03-17)
+- **Problem solved:** Fix modifies hidden initialization paths in two services. Hard to see whether migration actually fires or whether normal path stays clean without explicit tests.
+- **Why this works:** Temporary tests are cheap documentation. They verify the fix works AND document the two paths (late vs normal). Deleting afterward keeps test suite clean—test's job was teaching, not regression prevention.
+- **Trade-offs:** Write + run + delete takes time, but reveals bugs (e.g., forgot idempotency guard) immediately. No test debt—tests are gone after verification.

@@ -183,3 +183,21 @@ usageStats:
 - **Rejected:** Using any type would bypass checks. CSS modules would require build step.
 - **Trade-offs:** Gains: type safety, compile-time validation. Loses: more verbose style definitions.
 - **Breaking if changed:** If type safety is removed (any types allowed), catch typos in style properties later at runtime.
+
+
+#### [Pattern] Optimistic UI updates with revert-on-failure error handling for toggle state (2026-03-17)
+- **Problem solved:** Toggle state must update immediately to feel responsive (200ms+ network latency is perceptible), but must revert if API fails
+- **Why this works:** Modern UX pattern: assume success most of the time, immediate feedback is better than waiting for network. Error toast provides feedback if revert occurs. Reduces perceived latency by 200-500ms
+- **Trade-offs:** Snappier UX but momentary inconsistency on failures; requires careful error handling to avoid cascading state mismatches
+
+#### [Gotcha] Hardcoded grid column layout (1fr_80px_80px_100px_100px_60px_60px_50px_40px) is brittle coordination point (2026-03-17)
+- **Situation:** Adding 50px toggle column required manual grid-cols string update from 8 to 9 columns
+- **Root cause:** CSS Grid column definitions are coupled to component structure and layout assumptions; any future column additions or width changes break this
+- **How to avoid:** Predictable layout vs manual coordination; would benefit from refactoring to either CSS variables or layout abstraction component
+
+### Indicate disabled tasks with opacity-50 dimming rather than hiding or moving to separate section (2026-03-17)
+- **Context:** Disabled tasks needed visual distinction to show they won't execute despite being in the list
+- **Why:** Low-impact visual change that preserves layout and discoverability; users can still see disabled task exists and re-enable if needed; avoids confusion of separate lists
+- **Rejected:** Hide disabled tasks (less visual clutter but user forgets they exist); Gray out with text color (less noticeable); Move to separate disabled section (breaks mental model)
+- **Trade-offs:** Cleaner UI but relies on visual literacy; opacity alone might not suffice for accessibility (needed aria-label which was added)
+- **Breaking if changed:** If opacity styling is removed, disabled state becomes invisible to users; if applied to wrong elements, could dim too much or too little
