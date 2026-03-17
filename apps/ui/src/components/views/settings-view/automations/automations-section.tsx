@@ -305,6 +305,7 @@ export function AutomationsSection() {
       trigger = { type: 'cron', expression: data.cronExpression };
     } else if (data.triggerType === 'event') {
       // Cast is safe: user can enter any event type string; server validates
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       trigger = { type: 'event', eventType: data.eventType as any };
     } else {
       trigger = { type: 'webhook', path: data.webhookPath };

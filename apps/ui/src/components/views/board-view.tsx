@@ -283,6 +283,7 @@ export function BoardView() {
 
     const unsubscribers = [
       // PRD generated - show notification with action to review
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (api as any).subscribeToEvent('ideation:prd-generated', (payload: unknown) => {
         const p = payload as Record<string, unknown>;
         if (p.projectPath !== currentProject.path) return;
@@ -307,6 +308,7 @@ export function BoardView() {
       }),
 
       // PRD approved - show success notification
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (api as any).subscribeToEvent('ideation:prd-approved', (payload: unknown) => {
         const p = payload as Record<string, unknown>;
         if (p.projectPath !== currentProject.path) return;
@@ -315,6 +317,7 @@ export function BoardView() {
       }),
 
       // PRD rejected - show info notification
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (api as any).subscribeToEvent('ideation:prd-rejected', (payload: unknown) => {
         const p = payload as Record<string, unknown>;
         if (p.projectPath !== currentProject.path) return;
