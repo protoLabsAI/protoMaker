@@ -119,6 +119,7 @@ export function FlowCharts({ projectPath, days = 90, wipLimit }: FlowChartsProps
                   <YAxis {...axisProps} allowDecimals={false} />
                   <Tooltip
                     contentStyle={tooltipStyle}
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     formatter={
                       ((value: number | undefined, name: string | undefined) => [
                         value ?? 0,
@@ -197,6 +198,7 @@ export function FlowCharts({ projectPath, days = 90, wipLimit }: FlowChartsProps
                   <YAxis {...axisProps} allowDecimals={false} />
                   <Tooltip
                     contentStyle={tooltipStyle}
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     formatter={
                       ((value: number | undefined) =>
                         [value ?? 0, 'In Progress'] as [number, string]) as any

@@ -85,6 +85,7 @@ export function SuccessChart({ data, isLoading }: SuccessChartProps) {
                   borderRadius: '8px',
                   fontSize: '12px',
                 }}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 formatter={
                   ((value: number | undefined) => [`${value ?? 0}%`, 'Success Rate']) as any
                 }
