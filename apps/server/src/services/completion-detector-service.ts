@@ -20,6 +20,7 @@ import type { FeatureLoader } from './feature-loader.js';
 import type { ProjectService } from './project-service.js';
 import type { SettingsService } from './settings-service.js';
 import type { Feature, Milestone } from '@protolabsai/types';
+import { getEffectivePrBaseBranch } from '../lib/settings-helpers.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -382,16 +383,12 @@ export class CompletionDetectorService {
   ): Promise<{ prNumber: number; prUrl: string } | null> {
     const epicBranch = epic.branchName!;
 
-    // Resolve the base branch from settings (default: dev)
-    let baseBranch = 'dev';
-    if (this.settingsService) {
-      try {
-        const settings = await this.settingsService.getGlobalSettings();
-        baseBranch = settings.gitWorkflow?.prBaseBranch ?? 'dev';
-      } catch {
-        // fall back to dev
-      }
-    }
+    // Resolve the base branch: project settings > global settings > auto-detect > default
+    const baseBranch = await getEffectivePrBaseBranch(
+      projectPath,
+      this.settingsService,
+      '[CompletionDetector]'
+    );
 
     try {
       // Check if an open PR from this epic branch already exists

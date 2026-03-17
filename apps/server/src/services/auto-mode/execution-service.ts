@@ -15,7 +15,7 @@ import * as v8 from 'node:v8';
 import { ProviderFactory } from '../../providers/provider-factory.js';
 import { simpleQuery } from '../../providers/simple-query-service.js';
 import { StreamObserver } from '../stream-observer-service.js';
-import { getWorkflowSettings } from '../../lib/settings-helpers.js';
+import { getWorkflowSettings, getEffectivePrBaseBranch } from '../../lib/settings-helpers.js';
 import { setFeatureContext } from '@protolabsai/error-tracking';
 import { LoopDetectedError } from '../auto-mode-service.js';
 
@@ -882,16 +882,12 @@ export class ExecutionService {
       // so that stranded work is committed and a PR is created if the agent
       // completed implementation but failed to run its own git workflow step.
       if (worktreePath) {
-        // Resolve prBaseBranch from settings for recovery PR target
-        let recoveryBaseBranch: string | undefined;
-        if (this.settingsService) {
-          try {
-            const settings = await this.settingsService.getGlobalSettings();
-            recoveryBaseBranch = settings.gitWorkflow?.prBaseBranch;
-          } catch {
-            /* use default */
-          }
-        }
+        // Resolve prBaseBranch from project settings, then global, then auto-detect
+        const recoveryBaseBranch = await getEffectivePrBaseBranch(
+          projectPath,
+          this.settingsService,
+          '[PostAgentHook]'
+        );
         const recoveryResult = await checkAndRecoverUncommittedWork(
           feature,
           workDir,
@@ -1069,6 +1065,10 @@ export class ExecutionService {
             }
           }
 
+          // Resolve per-project prBaseBranch override
+          const projectSettings = await this.settingsService.getProjectSettings(projectPath);
+          const projectPrBaseBranch = projectSettings.workflow?.gitWorkflow?.prBaseBranch;
+
           gitWorkflowResult = await gitWorkflowService.runPostCompletionWorkflow(
             projectPath,
             featureId,
@@ -1076,7 +1076,8 @@ export class ExecutionService {
             workDir,
             settings,
             epicBranchName,
-            this.events
+            this.events,
+            projectPrBaseBranch
           );
           if (gitWorkflowResult) {
             // Check if git workflow encountered conflicts
@@ -1560,12 +1561,9 @@ export class ExecutionService {
         abortController,
         getAutoLoopRunning: () => this.callbacks.getAutoLoopRunning(),
         saveExecutionState: (p) => this.callbacks.saveExecutionState(p),
-        getRecoveryBaseBranch: this.settingsService
-          ? async () => {
-              const settings = await this.settingsService!.getGlobalSettings();
-              return settings.gitWorkflow?.prBaseBranch;
-            }
-          : undefined,
+        getRecoveryBaseBranch: async () => {
+          return getEffectivePrBaseBranch(projectPath, this.settingsService, '[PostExecution]');
+        },
         updateFeatureStatus: (p, id, status) => this.callbacks.updateFeatureStatus(p, id, status),
         emitEvent: (eventType, data) => this.typedEventBus.emitAutoModeEvent(eventType, data),
       });
