@@ -405,6 +405,16 @@ export interface WorkflowSettings {
    * @default { enabled: false }
    */
   contextEngine?: ContextEngineConfig;
+  /**
+   * Per-project git workflow overrides.
+   * When set, these values take precedence over the global gitWorkflow settings
+   * in data/settings.json. Projects that use a different default branch (e.g. `main`
+   * instead of `dev`) can set `prBaseBranch` here without affecting other projects.
+   */
+  gitWorkflow?: {
+    /** Base branch for PR creation (overrides global gitWorkflow.prBaseBranch) */
+    prBaseBranch?: string;
+  };
 }
 
 /** Default workflow settings */
