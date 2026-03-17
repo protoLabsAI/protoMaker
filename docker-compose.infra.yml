@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: automaker-infra-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-automaker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-automaker}
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres-infra-data:/var/lib/postgresql/data
+      - ./infra/postgres/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
+    ports:
+      - '5433:5432'
+    networks:
+      - automaker-infra
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-automaker}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  langfuse:
+    image: langfuse/langfuse:2
+    container_name: automaker-langfuse
+    restart: unless-stopped
+    ports:
+      - '3012:3000'
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-automaker}:${POSTGRES_PASSWORD:-automaker}@postgres:5432/langfuse
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-changeme-langfuse-secret}
+      SALT: ${LANGFUSE_SALT:-changeme-langfuse-salt}
+      NEXTAUTH_URL: http://localhost:3012
+      TELEMETRY_ENABLED: ${LANGFUSE_TELEMETRY_ENABLED:-false}
+      LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: ${LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES:-false}
+    networks:
+      - automaker-infra
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'wget --quiet --tries=1 --spider http://localhost:3000/api/public/health || exit 1',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    container_name: automaker-umami
+    restart: unless-stopped
+    ports:
+      - '3013:3000'
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-automaker}:${POSTGRES_PASSWORD:-automaker}@postgres:5432/umami
+      DATABASE_TYPE: postgresql
+      APP_SECRET: ${UMAMI_APP_SECRET:-changeme-umami-secret}
+    networks:
+      - automaker-infra
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'wget --quiet --tries=1 --spider http://localhost:3000/api/heartbeat || exit 1',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+networks:
+  automaker-infra:
+    name: automaker-infra
+    driver: bridge
+
+volumes:
+  postgres-infra-data:
+    name: automaker-infra-postgres-data
