@@ -1,5 +1,19 @@
 # @protolabsai/flows
 
+## 0.71.1
+
+### Patch Changes
+
+- ### Bug Fixes
+  - strip dead workflow settings from UI (retro, cleanup, autoResearch, context engine sub-fields)
+  - strip dead workflow settings from UI (retro, cleanup, autoResearch, context engine sub-fields)
+- Updated dependencies
+  - @protolabsai/types@0.71.1
+  - @protolabsai/utils@0.71.1
+  - @protolabsai/prompts@0.71.1
+  - @protolabsai/model-resolver@0.71.1
+  - @protolabsai/observability@0.71.1
+
 ## 0.71.0
 
 ### Minor Changes
