@@ -4,12 +4,13 @@
  *
  * Includes:
  * - <head> with SEO meta tags and Open Graph
- * - Geist font loading via Fontsource CDN
- * - <ViewTransitions /> for smooth page-to-page animations
+ * - Geist font loading via Google Fonts CDN
+ * - <ClientRouter /> for smooth page-to-page animations (Astro 6)
  * - Accessible skip-to-content link
  * - Sticky Nav and Footer
+ * - Scroll-triggered fade-in animations via IntersectionObserver
  */
-import { ViewTransitions } from 'astro:transitions';
+import { ClientRouter } from 'astro:transitions';
 import { getCollection } from 'astro:content';
 import '@/styles/global.css';
 
@@ -71,13 +72,15 @@ const canonicalUrl = new URL(Astro.url.pathname, config.siteUrl);
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
     <!-- Geist fonts via CDN -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap"
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400;500;600&display=swap"
     />
 
-    <!-- Smooth page transitions (View Transitions API) -->
-    <ViewTransitions />
+    <!-- Smooth page transitions (Astro Client Router) -->
+    <ClientRouter />
   </head>
 
   <body class={bodyClass}>
@@ -212,5 +215,36 @@ const canonicalUrl = new URL(Astro.url.pathname, config.siteUrl);
         </div>
       </div>
     </footer>
+
+    <!-- Scroll-triggered fade-in animations -->
+    <script is:inline>
+      (function () {
+        function initFadeSections() {
+          var sections = document.querySelectorAll('.fade-section:not(.visible)');
+          if (!sections.length) return;
+          if (!('IntersectionObserver' in window)) {
+            sections.forEach(function (s) { s.classList.add('visible'); });
+            return;
+          }
+          var observer = new IntersectionObserver(
+            function (entries) {
+              entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                  entry.target.classList.add('visible');
+                  observer.unobserve(entry.target);
+                }
+              });
+            },
+            { threshold: 0.15, rootMargin: '0px 0px -40px 0px' },
+          );
+          sections.forEach(function (s) { observer.observe(s); });
+        }
+        // Run immediately (script is at end of body, DOM is ready)
+        initFadeSections();
+        // Also listen for View Transition navigations and DOMContentLoaded as fallbacks
+        document.addEventListener('astro:page-load', initFadeSections);
+        document.addEventListener('DOMContentLoaded', initFadeSections);
+      })();
+    </script>
   </body>
 </html>
