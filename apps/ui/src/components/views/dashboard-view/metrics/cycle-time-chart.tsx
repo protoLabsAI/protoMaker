@@ -62,7 +62,7 @@ export function CycleTimeChart({ data, isLoading }: CycleTimeChartProps) {
                   borderRadius: '8px',
                   fontSize: '12px',
                 }}
-                formatter={(value: number | undefined) => [value ?? 0, 'Features']}
+                formatter={((value: number | undefined) => [value ?? 0, 'Features']) as any} // eslint-disable-line @typescript-eslint/no-explicit-any
               />
               <Bar dataKey="count" fill={colors.chart1} radius={[4, 4, 0, 0]} />
             </BarChart>
