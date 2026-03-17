@@ -41,6 +41,7 @@ import {
   PR_FEEDBACK_CI_MAX_WAIT_MS,
   PR_FEEDBACK_MISSING_CI_CHECK_THRESHOLD_MS,
 } from '../config/timeouts.js';
+import type { SchedulerService } from './scheduler-service.js';
 
 const logger = createLogger('PRFeedbackRemediation');
 
@@ -103,6 +104,9 @@ export class PRFeedbackService {
   private trackedPRs = new Map<string, TrackedPR>();
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private initialized = false;
+  private schedulerService: SchedulerService | null = null;
+
+  private static readonly INTERVAL_ID = 'pr-feedback:poll';
 
   /** Features currently under remediation - prevents concurrent remediation */
   private remediatingFeatures = new Set<string>();
@@ -126,6 +130,10 @@ export class PRFeedbackService {
 
   setAutoModeService(service: AutoModeService): void {
     this.autoModeService = service;
+  }
+
+  setSchedulerService(schedulerService: SchedulerService): void {
+    this.schedulerService = schedulerService;
   }
 
   setLeadEngineerService(service: { isFeatureActive(featureId: string): boolean }): void {
@@ -209,15 +217,26 @@ export class PRFeedbackService {
       }
     });
 
-    this.pollTimer = setInterval(() => {
-      void this.pollAllPRs();
-    }, POLL_INTERVAL_MS);
+    if (this.schedulerService) {
+      this.schedulerService.registerInterval(
+        PRFeedbackService.INTERVAL_ID,
+        'PR Feedback Poll',
+        POLL_INTERVAL_MS,
+        () => this.pollAllPRs()
+      );
+    } else {
+      this.pollTimer = setInterval(() => {
+        void this.pollAllPRs();
+      }, POLL_INTERVAL_MS);
+    }
 
     logger.info('PR Feedback Service initialized (webhook + poll)');
   }
 
   stop(): void {
-    if (this.pollTimer) {
+    if (this.schedulerService) {
+      this.schedulerService.unregisterInterval(PRFeedbackService.INTERVAL_ID);
+    } else if (this.pollTimer) {
       clearInterval(this.pollTimer);
       this.pollTimer = null;
     }
