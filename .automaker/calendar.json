@@ -5,7 +5,6 @@
     "type": "ceremony",
     "description": "Recurring standup and retro ceremonies for project pipeline-autonomy-hardening",
     "id": "event-1773514908133-btbqblnts",
-    "projectPath": "/home/josh/dev/ava",
     "sourceId": "ceremony:pipeline-autonomy-hardening",
     "createdAt": "2026-03-14T19:01:48.131Z",
     "updatedAt": "2026-03-14T19:01:48.131Z"
@@ -16,7 +15,6 @@
     "type": "ceremony",
     "description": "Recurring standup and retro ceremonies for project pipeline-cleanup-system-view-simplification",
     "id": "event-1773525351040-2mawqb724",
-    "projectPath": "/home/josh/dev/ava",
     "sourceId": "ceremony:pipeline-cleanup-system-view-simplification",
     "createdAt": "2026-03-14T21:55:51.040Z",
     "updatedAt": "2026-03-14T21:55:51.040Z"
@@ -27,7 +25,6 @@
     "type": "ceremony",
     "description": "Recurring standup and retro ceremonies for project unified-operations-control-plane",
     "id": "event-1773612410605-ugmub9gdf",
-    "projectPath": "/home/josh/dev/ava",
     "sourceId": "ceremony:unified-operations-control-plane",
     "createdAt": "2026-03-15T22:06:50.605Z",
     "updatedAt": "2026-03-15T22:06:50.605Z"
@@ -38,7 +35,6 @@
     "type": "ops",
     "description": "Autonomous feature processing started",
     "id": "event-1773687597716-j8x1kknoo",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:auto-mode:started:2026-03-16",
     "createdAt": "2026-03-16T18:59:57.716Z",
     "updatedAt": "2026-03-16T23:47:29.696Z"
@@ -49,7 +45,6 @@
     "type": "ops",
     "description": "Feature implementation started",
     "id": "event-1773689218349-0jrsnvbyu",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773689186212-sfxiypdkk",
     "createdAt": "2026-03-16T19:26:58.347Z",
     "updatedAt": "2026-03-16T19:26:58.347Z"
@@ -60,7 +55,6 @@
     "type": "ops",
     "description": "Feature PR merged",
     "id": "event-1773689630507-l8fhxivrt",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:pr-merged:feature-1773689186212-sfxiypdkk",
     "createdAt": "2026-03-16T19:33:50.505Z",
     "updatedAt": "2026-03-16T19:33:50.505Z"
@@ -71,7 +65,6 @@
     "type": "ops",
     "description": "Feature implementation started",
     "id": "event-1773689659155-k3b5g64di",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773689186213-7sc471zcd",
     "createdAt": "2026-03-16T19:34:19.144Z",
     "updatedAt": "2026-03-16T19:34:19.144Z"
@@ -82,7 +75,6 @@
     "type": "ops",
     "description": "Feature PR merged",
     "id": "event-1773690244638-ffy1v6byk",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:pr-merged:feature-1773689186213-7sc471zcd",
     "createdAt": "2026-03-16T19:44:04.635Z",
     "updatedAt": "2026-03-16T19:44:04.635Z"
@@ -93,7 +85,6 @@
     "type": "ops",
     "description": "Feature implementation completed",
     "id": "event-1773690244644-oad6hdg5r",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:completed:feature-1773689186213-7sc471zcd",
     "createdAt": "2026-03-16T19:44:04.644Z",
     "updatedAt": "2026-03-16T19:44:04.644Z"
@@ -104,7 +95,6 @@
     "type": "ops",
     "description": "Feature implementation started",
     "id": "event-1773690253444-uubum4yy1",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773689186214-4ogkm5mzm",
     "createdAt": "2026-03-16T19:44:13.442Z",
     "updatedAt": "2026-03-16T19:44:13.442Z"
@@ -115,7 +105,6 @@
     "type": "ops",
     "description": "Feature implementation started",
     "id": "event-1773690856189-j5iru0ctv",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773689186219-hamerd650",
     "createdAt": "2026-03-16T19:54:16.186Z",
     "updatedAt": "2026-03-16T19:54:16.186Z"
@@ -126,7 +115,6 @@
     "type": "ops",
     "description": "Feature PR merged",
     "id": "event-1773691300515-d7eov74cx",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:pr-merged:feature-1773689186219-hamerd650",
     "createdAt": "2026-03-16T20:01:40.514Z",
     "updatedAt": "2026-03-16T20:01:40.514Z"
@@ -137,7 +125,6 @@
     "type": "ops",
     "description": "Feature implementation started",
     "id": "event-1773691326672-wxkgdfc6m",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773689186222-7bkkkrlq8",
     "createdAt": "2026-03-16T20:02:06.645Z",
     "updatedAt": "2026-03-16T20:02:06.645Z"
@@ -148,7 +135,6 @@
     "type": "ops",
     "description": "Feature PR merged",
     "id": "event-1773691556779-3ztmqvls6",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:pr-merged:feature-1773689186222-7bkkkrlq8",
     "createdAt": "2026-03-16T20:05:56.777Z",
     "updatedAt": "2026-03-16T20:05:56.777Z"
@@ -159,7 +145,6 @@
     "type": "ops",
     "description": "Feature implementation completed",
     "id": "event-1773691556787-7hdyxa7c8",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:completed:feature-1773689186222-7bkkkrlq8",
     "createdAt": "2026-03-16T20:05:56.786Z",
     "updatedAt": "2026-03-16T20:05:56.786Z"
@@ -170,7 +155,6 @@
     "type": "ops",
     "description": "Feature implementation started",
     "id": "event-1773691579094-asx82gg5y",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773689186223-9c7b20786",
     "createdAt": "2026-03-16T20:06:19.092Z",
     "updatedAt": "2026-03-16T20:06:19.092Z"
@@ -181,7 +165,6 @@
     "type": "ops",
     "description": "Feature PR merged",
     "id": "event-1773692491823-pniln14ru",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:pr-merged:feature-1773689186223-9c7b20786",
     "createdAt": "2026-03-16T20:21:31.821Z",
     "updatedAt": "2026-03-16T20:21:31.821Z"
@@ -192,7 +175,6 @@
     "type": "ops",
     "description": "Feature implementation completed",
     "id": "event-1773692491829-3kjypdkwv",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:completed:feature-1773689186223-9c7b20786",
     "createdAt": "2026-03-16T20:21:31.827Z",
     "updatedAt": "2026-03-16T20:21:31.827Z"
@@ -203,7 +185,6 @@
     "type": "ops",
     "description": "Feature implementation started",
     "id": "event-1773692516696-7x04f7iug",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773689186224-l6fic6a5y",
     "createdAt": "2026-03-16T20:21:56.694Z",
     "updatedAt": "2026-03-16T20:21:56.694Z"
@@ -214,7 +195,6 @@
     "type": "ops",
     "description": "Feature PR merged",
     "id": "event-1773692822826-dfe18o154",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:pr-merged:feature-1773689186224-l6fic6a5y",
     "createdAt": "2026-03-16T20:27:02.824Z",
     "updatedAt": "2026-03-16T20:27:02.824Z"
@@ -225,7 +205,6 @@
     "type": "ops",
     "description": "Feature implementation completed",
     "id": "event-1773692822834-upxgjnfrf",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:completed:feature-1773689186224-l6fic6a5y",
     "createdAt": "2026-03-16T20:27:02.833Z",
     "updatedAt": "2026-03-16T20:27:02.833Z"
@@ -236,7 +215,6 @@
     "type": "ops",
     "description": "Feature implementation started",
     "id": "event-1773692830986-eg9dmgnfl",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773689186225-99uza6qr7",
     "createdAt": "2026-03-16T20:27:10.983Z",
     "updatedAt": "2026-03-16T20:27:50.245Z"
@@ -247,7 +225,6 @@
     "type": "ops",
     "description": "Feature PR merged",
     "id": "event-1773693095620-lqhq1u5dm",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:pr-merged:feature-1773689186221-dnmxq8tm3",
     "createdAt": "2026-03-16T20:31:35.608Z",
     "updatedAt": "2026-03-16T20:31:35.608Z"
@@ -258,7 +235,6 @@
     "type": "ops",
     "description": "Feature PR merged",
     "id": "event-1773693461090-xhq4oh4n7",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:pr-merged:feature-1773468551387-nimrhw1og",
     "createdAt": "2026-03-16T20:37:41.087Z",
     "updatedAt": "2026-03-16T20:37:41.087Z"
@@ -269,7 +245,6 @@
     "type": "ops",
     "description": "Feature implementation started",
     "id": "event-1773694000262-z1kir1i7a",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773693096052-fn9g87hvd",
     "createdAt": "2026-03-16T20:46:40.258Z",
     "updatedAt": "2026-03-16T20:46:40.258Z"
@@ -280,7 +255,6 @@
     "type": "ops",
     "description": "Feature PR merged",
     "id": "event-1773694471721-ykua082gp",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:pr-merged:feature-1773693096052-fn9g87hvd",
     "createdAt": "2026-03-16T20:54:31.718Z",
     "updatedAt": "2026-03-16T20:54:31.718Z"
@@ -291,7 +265,6 @@
     "type": "ops",
     "description": "Feature implementation completed",
     "id": "event-1773694471728-zzp5y7vqz",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:completed:feature-1773693096052-fn9g87hvd",
     "createdAt": "2026-03-16T20:54:31.727Z",
     "updatedAt": "2026-03-16T20:54:31.727Z"
@@ -302,7 +275,6 @@
     "type": "ops",
     "description": "Feature implementation started",
     "id": "event-1773694911574-zk6bugo98",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773689186215-1q5hm2ott",
     "createdAt": "2026-03-16T21:01:51.572Z",
     "updatedAt": "2026-03-16T21:08:49.323Z"
@@ -313,7 +285,6 @@
     "type": "ops",
     "description": "Feature implementation started",
     "id": "event-1773695080455-2i799b205",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773695049401-q699unnqb",
     "createdAt": "2026-03-16T21:04:40.453Z",
     "updatedAt": "2026-03-16T21:04:40.453Z"
@@ -324,7 +295,6 @@
     "type": "ops",
     "description": "Feature PR merged",
     "id": "event-1773695734410-wnfb4lxe9",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:pr-merged:feature-1773689186215-1q5hm2ott",
     "createdAt": "2026-03-16T21:15:34.406Z",
     "updatedAt": "2026-03-16T21:17:07.299Z"
@@ -335,7 +305,6 @@
     "type": "ops",
     "description": "Feature implementation completed",
     "id": "event-1773695734419-ffsjve8j7",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:completed:feature-1773689186215-1q5hm2ott",
     "createdAt": "2026-03-16T21:15:34.419Z",
     "updatedAt": "2026-03-16T21:15:34.419Z"
@@ -346,7 +315,6 @@
     "type": "ops",
     "description": "Feature implementation started",
     "id": "event-1773695831032-bc199m65w",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773689186216-ig1sclg11",
     "createdAt": "2026-03-16T21:17:11.030Z",
     "updatedAt": "2026-03-16T21:17:11.030Z"
@@ -357,7 +325,6 @@
     "type": "ops",
     "description": "Feature implementation completed",
     "id": "event-1773696194610-dzq92z3ko",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:completed:feature-1773689186216-ig1sclg11",
     "createdAt": "2026-03-16T21:23:14.607Z",
     "updatedAt": "2026-03-16T21:23:14.607Z"
@@ -368,7 +335,6 @@
     "type": "ops",
     "description": "Feature implementation started",
     "id": "event-1773696197241-56qstajm4",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773689186216-sdwdztkbj",
     "createdAt": "2026-03-16T21:23:17.238Z",
     "updatedAt": "2026-03-16T21:23:17.238Z"
@@ -379,7 +345,6 @@
     "type": "ops",
     "description": "Feature PR merged",
     "id": "event-1773696377824-xlpxr5a60",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:pr-merged:feature-1773689186216-ig1sclg11",
     "createdAt": "2026-03-16T21:26:17.805Z",
     "updatedAt": "2026-03-16T21:26:17.805Z"
@@ -390,7 +355,6 @@
     "type": "ops",
     "description": "Feature PR merged",
     "id": "event-1773696432741-f4xfkfack",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:pr-merged:feature-1773689186216-sdwdztkbj",
     "createdAt": "2026-03-16T21:27:12.739Z",
     "updatedAt": "2026-03-16T21:55:56.271Z"
@@ -401,7 +365,6 @@
     "type": "ops",
     "description": "Feature implementation started",
     "id": "event-1773696782224-euz36h2e4",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773689186218-k8vhlx0po",
     "createdAt": "2026-03-16T21:33:02.214Z",
     "updatedAt": "2026-03-16T21:33:02.214Z"
@@ -412,7 +375,6 @@
     "type": "ops",
     "description": "Feature PR merged",
     "id": "event-1773697849417-xi6yo5poh",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:pr-merged:feature-1773689186218-k8vhlx0po",
     "createdAt": "2026-03-16T21:50:49.415Z",
     "updatedAt": "2026-03-16T21:52:17.825Z"
@@ -423,7 +385,6 @@
     "type": "ops",
     "description": "Feature implementation completed",
     "id": "event-1773698148178-3l0b5l7kn",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:completed:feature-1773689186216-sdwdztkbj",
     "createdAt": "2026-03-16T21:55:48.177Z",
     "updatedAt": "2026-03-16T21:55:48.177Z"
@@ -434,7 +395,6 @@
     "type": "ops",
     "description": "Feature implementation started",
     "id": "event-1773698161116-0unosjc45",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773689186220-t3hv64wzd",
     "createdAt": "2026-03-16T21:56:01.113Z",
     "updatedAt": "2026-03-16T21:56:01.113Z"
@@ -445,7 +405,6 @@
     "type": "ops",
     "description": "Feature PR merged",
     "id": "event-1773699750272-zb2xsfqti",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:pr-merged:feature-1773689186217-p98tv4d52",
     "createdAt": "2026-03-16T22:22:30.257Z",
     "updatedAt": "2026-03-16T22:22:30.257Z"
@@ -456,7 +415,6 @@
     "type": "ops",
     "description": "Feature implementation completed",
     "id": "event-1773700161394-khx17ps52",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:completed:feature-1773689186220-t3hv64wzd",
     "createdAt": "2026-03-16T22:29:21.391Z",
     "updatedAt": "2026-03-16T22:29:21.391Z"
@@ -467,7 +425,6 @@
     "type": "ops",
     "description": "Feature implementation started",
     "id": "event-1773700632965-23mnrp7vt",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773689186221-v7nt11awz",
     "createdAt": "2026-03-16T22:37:12.950Z",
     "updatedAt": "2026-03-16T22:37:12.950Z"
@@ -478,7 +435,6 @@
     "type": "ops",
     "description": "Feature implementation completed",
     "id": "event-1773701216278-8wgo0sd40",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:completed:feature-1773689186221-v7nt11awz",
     "createdAt": "2026-03-16T22:46:56.275Z",
     "updatedAt": "2026-03-16T22:46:56.275Z"
@@ -489,7 +445,6 @@
     "type": "ops",
     "description": "Feature PR merged",
     "id": "event-1773701365205-lqfp6f7ah",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:pr-merged:feature-1773689186221-v7nt11awz",
     "createdAt": "2026-03-16T22:49:25.187Z",
     "updatedAt": "2026-03-16T22:49:25.187Z"
@@ -500,10 +455,9 @@
     "type": "ops",
     "description": "Autonomous feature processing started",
     "id": "event-1773714202588-2rg642sij",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:auto-mode:started:2026-03-17",
     "createdAt": "2026-03-17T02:23:22.586Z",
-    "updatedAt": "2026-03-17T08:57:39.899Z"
+    "updatedAt": "2026-03-17T20:58:07.482Z"
   },
   {
     "title": "Started: Migrate PRFeedbackService and ArchivalService timers",
@@ -511,7 +465,6 @@
     "type": "ops",
     "description": "Feature implementation started",
     "id": "event-1773715316900-h0smct1lk",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773715283958-zqdvykzzt",
     "createdAt": "2026-03-17T02:41:56.897Z",
     "updatedAt": "2026-03-17T02:44:36.064Z"
@@ -522,7 +475,6 @@
     "type": "ops",
     "description": "Feature PR merged",
     "id": "event-1773715801145-g0yq4fkwc",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:pr-merged:feature-1773715283958-zqdvykzzt",
     "createdAt": "2026-03-17T02:50:01.143Z",
     "updatedAt": "2026-03-17T02:50:01.143Z"
@@ -533,7 +485,6 @@
     "type": "ops",
     "description": "Feature implementation started",
     "id": "event-1773715804188-zrtaady54",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773715283959-8zliacgj1",
     "createdAt": "2026-03-17T02:50:04.185Z",
     "updatedAt": "2026-03-17T02:50:04.185Z"
@@ -544,7 +495,6 @@
     "type": "ops",
     "description": "Feature implementation started",
     "id": "event-1773715807348-69q9nos6e",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773715283964-4wi628l56",
     "createdAt": "2026-03-17T02:50:07.346Z",
     "updatedAt": "2026-03-17T02:50:07.346Z"
@@ -555,7 +505,6 @@
     "type": "ops",
     "description": "Feature implementation completed",
     "id": "event-1773716317356-yla3cmwip",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:completed:feature-1773715283959-8zliacgj1",
     "createdAt": "2026-03-17T02:58:37.353Z",
     "updatedAt": "2026-03-17T02:58:37.353Z"
@@ -566,7 +515,6 @@
     "type": "ops",
     "description": "Feature PR merged",
     "id": "event-1773716460134-fsz25h6sf",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:pr-merged:feature-1773715283964-4wi628l56",
     "createdAt": "2026-03-17T03:01:00.131Z",
     "updatedAt": "2026-03-17T03:01:00.131Z"
@@ -577,7 +525,6 @@
     "type": "ops",
     "description": "Feature implementation completed",
     "id": "event-1773716460141-kpni5oyp5",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:completed:feature-1773715283964-4wi628l56",
     "createdAt": "2026-03-17T03:01:00.141Z",
     "updatedAt": "2026-03-17T03:01:00.141Z"
@@ -588,7 +535,6 @@
     "type": "ops",
     "description": "Feature implementation started",
     "id": "event-1773720222274-m2f4yybsc",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773715283961-thf5kyz1k",
     "createdAt": "2026-03-17T04:03:42.271Z",
     "updatedAt": "2026-03-17T04:03:42.271Z"
@@ -599,7 +545,6 @@
     "type": "ops",
     "description": "Feature PR merged",
     "id": "event-1773720423222-p9k6vlonc",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:pr-merged:feature-1773715283961-thf5kyz1k",
     "createdAt": "2026-03-17T04:07:03.220Z",
     "updatedAt": "2026-03-17T04:07:03.220Z"
@@ -610,7 +555,6 @@
     "type": "ops",
     "description": "Feature implementation completed",
     "id": "event-1773720423229-hiaz35qlc",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:completed:feature-1773715283961-thf5kyz1k",
     "createdAt": "2026-03-17T04:07:03.228Z",
     "updatedAt": "2026-03-17T04:07:03.228Z"
@@ -621,7 +565,6 @@
     "type": "ops",
     "description": "Feature implementation started",
     "id": "event-1773720426567-kpsv6h6x3",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773715283962-22il7h283",
     "createdAt": "2026-03-17T04:07:06.565Z",
     "updatedAt": "2026-03-17T04:07:06.565Z"
@@ -632,7 +575,6 @@
     "type": "ops",
     "description": "Feature implementation completed",
     "id": "event-1773720617248-1gig970ts",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:completed:feature-1773715283962-22il7h283",
     "createdAt": "2026-03-17T04:10:17.246Z",
     "updatedAt": "2026-03-17T04:10:17.246Z"
@@ -643,7 +585,6 @@
     "type": "ops",
     "description": "Feature implementation started",
     "id": "event-1773720620118-ctzxri022",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773720225283-lz2a45por",
     "createdAt": "2026-03-17T04:10:20.116Z",
     "updatedAt": "2026-03-17T04:10:20.116Z"
@@ -654,7 +595,6 @@
     "type": "ops",
     "description": "Feature PR merged",
     "id": "event-1773720875470-cwc4fdubp",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:pr-merged:feature-1773720225283-lz2a45por",
     "createdAt": "2026-03-17T04:14:35.468Z",
     "updatedAt": "2026-03-17T04:14:35.468Z"
@@ -665,7 +605,6 @@
     "type": "ops",
     "description": "Feature implementation started",
     "id": "event-1773720914496-la0bvzfvk",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:started:feature-1773715283963-r1gv80ibx",
     "createdAt": "2026-03-17T04:15:14.494Z",
     "updatedAt": "2026-03-17T04:15:14.494Z"
@@ -676,188 +615,28 @@
     "type": "ops",
     "description": "Feature PR merged",
     "id": "event-1773721093730-nz8wktdjm",
-    "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:feature:pr-merged:feature-1773715283963-r1gv80ibx",
     "createdAt": "2026-03-17T04:18:13.721Z",
     "updatedAt": "2026-03-17T04:18:13.721Z"
   },
   {
-    "title": "Merged: Bug: Blocked feature with merged PR not reconciled to done",
+    "title": "Started: Bug: Timer migration wiring order — scheduler registration never fires",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773733673121-wbp2kdawx",
+    "sourceId": "ops:feature:started:feature-1773733641068-tutcrz681",
+    "createdAt": "2026-03-17T07:47:53.108Z",
+    "updatedAt": "2026-03-17T07:47:53.108Z"
+  },
+  {
+    "title": "Merged: feature-1773733641068-tutcrz681",
     "date": "2026-03-17",
     "type": "ops",
     "description": "Feature PR merged",
-    "id": "event-1773724111397-t45yl9dad",
-    "projectPath": "/home/josh/dev/ava",
-    "sourceId": "ops:feature:pr-merged:feature-1773715820838-xza14lxns",
-    "createdAt": "2026-03-17T05:08:31.358Z",
-    "updatedAt": "2026-03-17T05:08:31.358Z"
-  },
-  {
-    "title": "Merged: Add Discord channel message tools to MCP server",
-    "date": "2026-03-17",
-    "type": "ops",
-    "description": "Feature PR merged",
-    "id": "event-1773724111690-gcqa00ko4",
-    "projectPath": "/home/josh/dev/ava",
-    "sourceId": "ops:feature:pr-merged:feature-1773716725298-qkyjrc2hc",
-    "createdAt": "2026-03-17T05:08:31.672Z",
-    "updatedAt": "2026-03-17T05:08:31.672Z"
-  },
-  {
-    "title": "Completed: Discord Integration Consolidation",
-    "date": "2026-03-17",
-    "type": "ops",
-    "description": "Feature implementation completed",
-    "id": "event-1773724111963-gip8p7vlf",
-    "projectPath": "/home/josh/dev/ava",
-    "sourceId": "ops:feature:completed:feature-1773716643194-goakj86jd",
-    "createdAt": "2026-03-17T05:08:31.961Z",
-    "updatedAt": "2026-03-17T05:08:31.961Z"
-  },
-  {
-    "title": "Ceremonies: infrastructure-as-code-observability-deploy-stack",
-    "date": "2026-03-17",
-    "type": "ceremony",
-    "description": "Recurring standup and retro ceremonies for project infrastructure-as-code-observability-deploy-stack",
-    "recurrence": {
-      "frequency": "daily"
-    },
-    "id": "event-1773733495119-dk4nu6jil",
-    "projectPath": "/home/josh/dev/ava",
-    "sourceId": "ceremony:infrastructure-as-code-observability-deploy-stack",
-    "createdAt": "2026-03-17T07:44:55.119Z",
-    "updatedAt": "2026-03-17T07:44:55.119Z"
-  },
-  {
-    "title": "Started: Add scheduler task enable/disable toggles to Ops Dashboard",
-    "date": "2026-03-17",
-    "type": "ops",
-    "description": "Feature implementation started",
-    "id": "event-1773733511883-pvo6u5i06",
-    "projectPath": "/home/josh/dev/ava",
-    "sourceId": "ops:feature:started:feature-1773725715836-vh5m1slcj",
-    "createdAt": "2026-03-17T07:45:11.868Z",
-    "updatedAt": "2026-03-17T07:45:11.868Z"
-  },
-  {
-    "title": "Started: Infra compose with Postgres, Langfuse, and Umami",
-    "date": "2026-03-17",
-    "type": "ops",
-    "description": "Feature implementation started",
-    "id": "event-1773733517722-dkbwlccjd",
-    "projectPath": "/home/josh/dev/ava",
-    "sourceId": "ops:feature:started:feature-1773733486733-myorv0jiq",
-    "createdAt": "2026-03-17T07:45:17.715Z",
-    "updatedAt": "2026-03-17T07:45:17.715Z"
-  },
-  {
-    "title": "Completed: Infra compose with Postgres, Langfuse, and Umami",
-    "date": "2026-03-17",
-    "type": "ops",
-    "description": "Feature implementation completed",
-    "id": "event-1773733590165-wf5vssean",
-    "projectPath": "/home/josh/dev/ava",
-    "sourceId": "ops:feature:completed:feature-1773733486733-myorv0jiq",
-    "createdAt": "2026-03-17T07:46:30.158Z",
-    "updatedAt": "2026-03-17T07:46:30.158Z"
-  },
-  {
-    "title": "Started: Add Grafana, Prometheus, Loki, and Promtail",
-    "date": "2026-03-17",
-    "type": "ops",
-    "description": "Feature implementation started",
-    "id": "event-1773733704951-chiswbs1c",
-    "projectPath": "/home/josh/dev/ava",
-    "sourceId": "ops:feature:started:feature-1773733486734-xjbiakv8l",
-    "createdAt": "2026-03-17T07:48:24.942Z",
-    "updatedAt": "2026-03-17T07:48:24.942Z"
-  },
-  {
-    "title": "Merged: feature-1773733486734-xjbiakv8l",
-    "date": "2026-03-17",
-    "type": "ops",
-    "description": "Feature PR merged",
-    "id": "event-1773733843717-g8lwg2vox",
-    "projectPath": "/home/josh/dev/ava",
-    "sourceId": "ops:feature:pr-merged:feature-1773733486734-xjbiakv8l",
-    "createdAt": "2026-03-17T07:50:43.713Z",
-    "updatedAt": "2026-03-17T07:50:43.713Z"
-  },
-  {
-    "title": "Started: Delete old compose files and configs",
-    "date": "2026-03-17",
-    "type": "ops",
-    "description": "Feature implementation started",
-    "id": "event-1773733848581-bqd4bada9",
-    "projectPath": "/home/josh/dev/ava",
-    "sourceId": "ops:feature:started:feature-1773733486736-g7kio3rw5",
-    "createdAt": "2026-03-17T07:50:48.568Z",
-    "updatedAt": "2026-03-17T07:50:48.568Z"
-  },
-  {
-    "title": "Merged: feature-1773725715836-vh5m1slcj",
-    "date": "2026-03-17",
-    "type": "ops",
-    "description": "Feature PR merged",
-    "id": "event-1773733865923-s6xgrv01p",
-    "projectPath": "/home/josh/dev/ava",
-    "sourceId": "ops:feature:pr-merged:feature-1773725715836-vh5m1slcj",
-    "createdAt": "2026-03-17T07:51:05.920Z",
-    "updatedAt": "2026-03-17T07:51:05.920Z"
-  },
-  {
-    "title": "Merged: feature-1773733486736-g7kio3rw5",
-    "date": "2026-03-17",
-    "type": "ops",
-    "description": "Feature PR merged",
-    "id": "event-1773734110289-z2yswmzgh",
-    "projectPath": "/home/josh/dev/ava",
-    "sourceId": "ops:feature:pr-merged:feature-1773733486736-g7kio3rw5",
-    "createdAt": "2026-03-17T07:55:10.285Z",
-    "updatedAt": "2026-03-17T07:55:10.285Z"
-  },
-  {
-    "title": "Completed: Delete old compose files and configs",
-    "date": "2026-03-17",
-    "type": "ops",
-    "description": "Feature implementation completed",
-    "id": "event-1773734110295-eblgwo56r",
-    "projectPath": "/home/josh/dev/ava",
-    "sourceId": "ops:feature:completed:feature-1773733486736-g7kio3rw5",
-    "createdAt": "2026-03-17T07:55:10.294Z",
-    "updatedAt": "2026-03-17T07:55:10.294Z"
-  },
-  {
-    "title": "Started: Fix deploy-staging.yml rebuild step",
-    "date": "2026-03-17",
-    "type": "ops",
-    "description": "Feature implementation started",
-    "id": "event-1773734119783-e69r3twrh",
-    "projectPath": "/home/josh/dev/ava",
-    "sourceId": "ops:feature:started:feature-1773733486738-39ac0r610",
-    "createdAt": "2026-03-17T07:55:19.775Z",
-    "updatedAt": "2026-03-17T07:55:19.775Z"
-  },
-  {
-    "title": "Started: Fix deploy-staging.yml rebuild step",
-    "date": "2026-03-17",
-    "type": "ops",
-    "description": "Feature implementation started",
-    "id": "event-1773737879161-6j4kl8maj",
-    "projectPath": "/home/josh/dev/ava",
-    "sourceId": "ops:feature:started:feature-1773737848028-mlt6oker9",
-    "createdAt": "2026-03-17T08:57:59.147Z",
-    "updatedAt": "2026-03-17T08:57:59.147Z"
-  },
-  {
-    "title": "Started: Bug: gitWorkflow.prBaseBranch is global, not per-project",
-    "date": "2026-03-17",
-    "type": "ops",
-    "description": "Feature implementation started",
-    "id": "event-1773738973601-xtf4e1av4",
-    "projectPath": "/home/josh/dev/ava",
-    "sourceId": "ops:feature:started:feature-1773738940929-gwi3mymz4",
-    "createdAt": "2026-03-17T09:16:13.592Z",
-    "updatedAt": "2026-03-17T09:16:13.592Z"
+    "id": "event-1773734027399-otk7r7buw",
+    "sourceId": "ops:feature:pr-merged:feature-1773733641068-tutcrz681",
+    "createdAt": "2026-03-17T07:53:47.397Z",
+    "updatedAt": "2026-03-17T07:53:47.397Z"
   }
 ]

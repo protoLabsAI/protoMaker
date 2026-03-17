@@ -162,6 +162,10 @@ data/credentials.json
 data/
 !site/data/
 .codex/
+!.codex/
+!.codex/config.toml.example
+!.codex/skills/
+!.codex/skills/**
 packages/mcp-server/plugins/automaker/.env
 
 # Plugin metadata files

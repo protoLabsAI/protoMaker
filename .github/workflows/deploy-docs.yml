@@ -43,8 +43,8 @@ jobs:
 
       - name: Build docs
         run: |
-          npm install vitepress@1.6.4
-          npx vitepress build docs
+          npm ci --ignore-scripts
+          npm run docs:build
 
       - name: Deploy to Cloudflare Pages
         id: deploy

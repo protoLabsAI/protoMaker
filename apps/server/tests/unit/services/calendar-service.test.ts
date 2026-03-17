@@ -52,17 +52,16 @@ describe('calendar-service.ts', () => {
   describe('listEvents', () => {
     it('should merge features and custom events correctly', async () => {
       // Setup custom events
-      const customEvents: CalendarEvent[] = [
+      const customEvents = [
         {
           id: 'custom-1',
           title: 'Custom Event',
           date: '2026-03-01',
           type: 'custom',
-          projectPath,
           createdAt: '2026-02-24T00:00:00Z',
           updatedAt: '2026-02-24T00:00:00Z',
         },
-      ];
+      ] as CalendarEvent[];
       vi.mocked(secureFs.access).mockResolvedValue(undefined);
       vi.mocked(readJsonWithRecovery).mockResolvedValue({
         data: customEvents,
@@ -94,7 +93,7 @@ describe('calendar-service.ts', () => {
       expect(events).toHaveLength(2);
 
       // Check custom event
-      expect(events.find((e) => e.id === 'custom-1')).toBeDefined();
+      expect(events.find((e) => e.id === 'custom-1')).toMatchObject({ projectPath });
 
       // Check feature event
       const featureEvent = events.find((e) => e.id === 'feature-feature-1');
@@ -108,13 +107,12 @@ describe('calendar-service.ts', () => {
     });
 
     it('should filter events by date range', async () => {
-      const customEvents: CalendarEvent[] = [
+      const customEvents = [
         {
           id: 'event-1',
           title: 'Event 1',
           date: '2026-03-01',
           type: 'custom',
-          projectPath,
           createdAt: '2026-02-24T00:00:00Z',
           updatedAt: '2026-02-24T00:00:00Z',
         },
@@ -123,11 +121,10 @@ describe('calendar-service.ts', () => {
           title: 'Event 2',
           date: '2026-03-15',
           type: 'custom',
-          projectPath,
           createdAt: '2026-02-24T00:00:00Z',
           updatedAt: '2026-02-24T00:00:00Z',
         },
-      ];
+      ] as CalendarEvent[];
       vi.mocked(secureFs.access).mockResolvedValue(undefined);
       vi.mocked(readJsonWithRecovery).mockResolvedValue({
         data: customEvents,
@@ -145,17 +142,16 @@ describe('calendar-service.ts', () => {
     });
 
     it('should filter events by type', async () => {
-      const customEvents: CalendarEvent[] = [
+      const customEvents = [
         {
           id: 'event-1',
           title: 'Event 1',
           date: '2026-03-01',
           type: 'custom',
-          projectPath,
           createdAt: '2026-02-24T00:00:00Z',
           updatedAt: '2026-02-24T00:00:00Z',
         },
-      ];
+      ] as CalendarEvent[];
       vi.mocked(secureFs.access).mockResolvedValue(undefined);
       vi.mocked(readJsonWithRecovery).mockResolvedValue({
         data: customEvents,
@@ -241,6 +237,11 @@ describe('calendar-service.ts', () => {
         ]),
         expect.any(Object)
       );
+
+      const writtenEvents = vi.mocked(atomicWriteJson).mock.calls[0][1] as Array<
+        Partial<CalendarEvent>
+      >;
+      expect(writtenEvents[0]).not.toHaveProperty('projectPath');
     });
 
     it('should append to existing events', async () => {
@@ -266,7 +267,6 @@ describe('calendar-service.ts', () => {
         title: 'New Event',
         date: '2026-03-15',
         type: 'custom',
-        projectPath,
       });
 
       // Should write both events
@@ -295,7 +295,6 @@ describe('calendar-service.ts', () => {
         title: 'Google Event',
         date: '2026-03-15',
         type: 'google',
-        projectPath,
       });
 
       expect(result.created).toBe(true);
@@ -328,7 +327,6 @@ describe('calendar-service.ts', () => {
         title: 'Updated Title',
         date: '2026-03-15',
         type: 'google',
-        projectPath,
       });
 
       expect(result.created).toBe(false);
@@ -364,7 +362,6 @@ describe('calendar-service.ts', () => {
         title: 'Updated Title',
         date: '2026-03-15',
         type: 'google',
-        projectPath,
       });
 
       expect(result.event.createdAt).toBe(originalCreatedAt);
@@ -398,6 +395,31 @@ describe('calendar-service.ts', () => {
       expect(updated.title).toBe('Updated Title');
       expect(updated.date).toBe('2026-03-01'); // Unchanged
       expect(updated.createdAt).toBe('2026-02-24T00:00:00Z'); // Preserved
+    });
+
+    it('should hydrate projectPath for persisted events missing it', async () => {
+      vi.mocked(secureFs.access).mockResolvedValue(undefined);
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: [
+          {
+            id: 'event-no-path',
+            title: 'Persisted Without Path',
+            date: '2026-03-20',
+            type: 'custom',
+            createdAt: '2026-02-24T00:00:00Z',
+            updatedAt: '2026-02-24T00:00:00Z',
+          } as CalendarEvent,
+        ],
+        recovered: false,
+        source: 'main',
+      });
+
+      const events = await service.listEvents(projectPath);
+
+      expect(events[0]).toMatchObject({
+        id: 'event-no-path',
+        projectPath,
+      });
     });
 
     it('should throw error if event not found', async () => {
