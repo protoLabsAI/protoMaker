@@ -39,7 +39,7 @@ import type { HealthMonitorService } from '../../services/health-monitor-service
 import type { CeremonyService } from '../../services/ceremony-service.js';
 import type { ToolProgressEmitter } from './tool-progress.js';
 import { githubMergeService } from '../../services/github-merge-service.js';
-import { getPRWatcherService } from '../../services/pr-watcher-service.js';
+import { getPRFeedbackService } from '../../services/pr-feedback-service.js';
 import { getEventHistoryService } from '../../services/event-history-service.js';
 import { getBriefingCursorService } from '../../services/briefing-cursor-service.js';
 import { queryPm } from '../project-pm/pm-agent.js';
@@ -996,7 +996,7 @@ export function buildAvaTools(
         prNumber: z.number().int().describe('PR number to watch'),
       }),
       execute: async ({ prNumber }) => {
-        const watcher = getPRWatcherService();
+        const watcher = getPRFeedbackService();
         if (!watcher) {
           return { error: 'PR watcher service unavailable' };
         }

@@ -40,9 +40,33 @@ import {
   PR_FEEDBACK_CI_POLL_INTERVAL_MS,
   PR_FEEDBACK_CI_MAX_WAIT_MS,
   PR_FEEDBACK_MISSING_CI_CHECK_THRESHOLD_MS,
+  PR_WATCHER_POLL_INTERVAL_MS,
+  PR_WATCHER_TIMEOUT_MS,
 } from '../config/timeouts.js';
+import { githubMergeService } from './github-merge-service.js';
+import type { SchedulerService } from './scheduler-service.js';
 
 const logger = createLogger('PRFeedbackRemediation');
+
+// ── PR Watch (merged from PRWatcherService) ────────────────────────────────
+
+/** A single entry in the PR watch registry */
+interface WatchEntry {
+  /** The chat session ID that initiated the watch (used to route the notification) */
+  sessionId?: string;
+  /** Project path for gh CLI calls */
+  projectPath: string;
+  /** Epoch ms when the watch was registered */
+  watchedSince: number;
+  /** Last observed CI status string (null = never checked) */
+  lastStatus: string | null;
+}
+
+/** Default polling interval for PR watch (30s) */
+const WATCH_POLL_INTERVAL_MS = PR_WATCHER_POLL_INTERVAL_MS;
+
+/** Auto-expire watches after 30 minutes */
+const WATCH_TIMEOUT_MS = PR_WATCHER_TIMEOUT_MS;
 
 /** Persisted format for a single tracked PR entry */
 interface PersistedPREntry {
@@ -116,12 +140,21 @@ export class PRFeedbackService {
   private readonly feedbackAggregator: FeedbackAggregator;
   private readonly threadResolver: ThreadResolver;
 
+  // ── PR Watch registry (merged from PRWatcherService) ──────────────────────
+  private readonly watchRegistry: Map<number, WatchEntry> = new Map();
+  private watchPollTimer: ReturnType<typeof setInterval> | null = null;
+  private schedulerService: SchedulerService | null = null;
+
+  private static readonly WATCH_INTERVAL_ID = 'pr-watcher:poll';
+
   constructor(events: EventEmitter, featureLoader: FeatureLoader, dataDir: string) {
     this.events = events;
     this.featureLoader = featureLoader;
     this.prTrackingPath = path.join(dataDir, 'pr-tracking.json');
     this.feedbackAggregator = new FeedbackAggregator(featureLoader);
     this.threadResolver = new ThreadResolver(events, featureLoader);
+    // Register singleton so consumers can call getPRFeedbackService() without args
+    _instance = this;
   }
 
   setAutoModeService(service: AutoModeService): void {
@@ -130,6 +163,10 @@ export class PRFeedbackService {
 
   setLeadEngineerService(service: { isFeatureActive(featureId: string): boolean }): void {
     this.leadEngineerService = service;
+  }
+
+  setSchedulerService(schedulerService: SchedulerService): void {
+    this.schedulerService = schedulerService;
   }
 
   initialize(): void {
@@ -226,6 +263,142 @@ export class PRFeedbackService {
     this.collectedDecisions.clear();
     this.alertedMissingChecks.clear();
     this.initialized = false;
+    this.stopWatchPolling();
+    this.watchRegistry.clear();
+  }
+
+  // ── PR Watch API (merged from PRWatcherService) ───────────────────────────
+
+  /**
+   * Register a PR to watch for CI resolution.
+   * Starts the watch polling loop if not already running.
+   */
+  addWatch(prNumber: number, projectPath: string, sessionId?: string): void {
+    if (this.watchRegistry.has(prNumber)) {
+      logger.debug(`PR #${prNumber} already being watched — updating entry`);
+    } else {
+      logger.info(`Watching PR #${prNumber} (session: ${sessionId ?? 'broadcast'})`);
+    }
+
+    this.watchRegistry.set(prNumber, {
+      sessionId,
+      projectPath,
+      watchedSince: Date.now(),
+      lastStatus: null,
+    });
+
+    this.events.emit('pr:watch-added', {
+      prNumber,
+      projectPath,
+      sessionId,
+    });
+
+    this.ensureWatchPolling();
+  }
+
+  /**
+   * Remove a PR from the watch registry (stops watch polling if registry becomes empty).
+   */
+  removeWatch(prNumber: number): void {
+    this.watchRegistry.delete(prNumber);
+    if (this.watchRegistry.size === 0) {
+      this.stopWatchPolling();
+    }
+  }
+
+  /** Returns true if the PR is currently being watched. */
+  isWatching(prNumber: number): boolean {
+    return this.watchRegistry.has(prNumber);
+  }
+
+  /**
+   * Immediately check a specific PR (called from the GitHub webhook handler
+   * when a `check_run` completed event arrives — faster than waiting for poll).
+   */
+  async triggerCheck(prNumber: number): Promise<void> {
+    const entry = this.watchRegistry.get(prNumber);
+    if (!entry) return;
+    await this.checkWatchedPR(prNumber, entry);
+  }
+
+  /** Stop the watch polling loop (e.g. for graceful shutdown). */
+  stopWatchPolling(): void {
+    if (this.schedulerService) {
+      this.schedulerService.unregisterInterval(PRFeedbackService.WATCH_INTERVAL_ID);
+    } else if (this.watchPollTimer) {
+      clearInterval(this.watchPollTimer);
+      this.watchPollTimer = null;
+    }
+  }
+
+  // ── PR Watch private helpers ──────────────────────────────────────────────
+
+  private ensureWatchPolling(): void {
+    if (this.schedulerService) {
+      const existing = this.schedulerService
+        .listAll()
+        .find((e) => e.id === PRFeedbackService.WATCH_INTERVAL_ID);
+      if (existing) return;
+      logger.debug(`Starting PR watch polling via scheduler (interval: ${WATCH_POLL_INTERVAL_MS}ms)`);
+      this.schedulerService.registerInterval(
+        PRFeedbackService.WATCH_INTERVAL_ID,
+        'PR Watcher Poll',
+        WATCH_POLL_INTERVAL_MS,
+        () => this.pollAllWatched()
+      );
+    } else {
+      if (this.watchPollTimer) return;
+      logger.debug(`Starting PR watch polling (interval: ${WATCH_POLL_INTERVAL_MS}ms)`);
+      this.watchPollTimer = setInterval(() => {
+        void this.pollAllWatched();
+      }, WATCH_POLL_INTERVAL_MS);
+    }
+  }
+
+  private async pollAllWatched(): Promise<void> {
+    const now = Date.now();
+    for (const [prNumber, entry] of this.watchRegistry) {
+      if (now - entry.watchedSince > WATCH_TIMEOUT_MS) {
+        logger.info(
+          `PR #${prNumber} watch timed out after ${WATCH_TIMEOUT_MS / 60_000}min — removing`
+        );
+        this.removeWatch(prNumber);
+        continue;
+      }
+      await this.checkWatchedPR(prNumber, entry);
+    }
+  }
+
+  private async checkWatchedPR(prNumber: number, entry: WatchEntry): Promise<void> {
+    try {
+      const status = await githubMergeService.checkPRStatus(entry.projectPath, prNumber);
+
+      const resolved = status.allChecksPassed || status.failedCount > 0;
+      if (!resolved) {
+        logger.debug(
+          `PR #${prNumber}: ${status.passedCount} passed, ${status.failedCount} failed, ${status.pendingCount} pending`
+        );
+        return;
+      }
+
+      const outcome: 'passed' | 'failed' = status.allChecksPassed ? 'passed' : 'failed';
+      const checks = status.failedChecks.map((name) => ({ name, conclusion: 'failure' }));
+
+      logger.info(`PR #${prNumber} CI resolved: ${outcome}`);
+
+      this.events.emit('pr:watch-resolved', {
+        prNumber,
+        projectPath: entry.projectPath,
+        sessionId: entry.sessionId,
+        status: outcome,
+        checks,
+        timestamp: new Date().toISOString(),
+      });
+
+      this.removeWatch(prNumber);
+    } catch (err) {
+      logger.warn(`Error checking PR #${prNumber}: ${err}`);
+    }
   }
 
   /**
@@ -1444,4 +1617,19 @@ export class PRFeedbackService {
       logger.error('Failed to load PR tracking state from disk:', error);
     }
   }
+}
+
+// ── Module-level singleton ─────────────────────────────────────────────────
+// Set in the constructor so any code that calls getPRFeedbackService() after
+// the service is constructed (e.g. from webhook handlers, Ava tools) always
+// gets the same instance without needing to pass constructor args.
+
+let _instance: PRFeedbackService | null = null;
+
+/**
+ * Get the shared PRFeedbackService singleton.
+ * Returns null if the service has not been constructed yet.
+ */
+export function getPRFeedbackService(): PRFeedbackService | null {
+  return _instance;
 }

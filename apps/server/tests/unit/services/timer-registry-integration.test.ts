@@ -1,7 +1,7 @@
 /**
  * Integration test: Timer Registry - interval registration on startup
  *
- * Verifies that SpecGenerationMonitor and PRWatcherService register their
+ * Verifies that SpecGenerationMonitor and PRFeedbackService register their
  * intervals via schedulerService.registerInterval() so that
  * schedulerService.listAll() reflects the timers.
  *
@@ -12,13 +12,20 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { SchedulerService } from '../../../src/services/scheduler-service.js';
 import { SpecGenerationMonitor } from '../../../src/services/spec-generation-monitor.js';
-import { PRWatcherService } from '../../../src/services/pr-watcher-service.js';
+import { PRFeedbackService } from '../../../src/services/pr-feedback-service.js';
 
 // Minimal stub EventEmitter
 const makeEvents = () => ({
   emit: vi.fn(),
   subscribe: vi.fn(),
   on: vi.fn(),
+});
+
+// Minimal stub FeatureLoader (only methods PRFeedbackService constructor touches)
+const makeFeatureLoader = () => ({
+  get: vi.fn(),
+  setEventEmitter: vi.fn(),
+  setIntegrityWatchdog: vi.fn(),
 });
 
 describe('Timer Registry: interval registration', () => {
@@ -55,12 +62,12 @@ describe('Timer Registry: interval registration', () => {
     ).toBeUndefined();
   });
 
-  it('PRWatcherService registers its interval when addWatch() is called', () => {
+  it('PRFeedbackService registers its watch interval when addWatch() is called', () => {
     const events = makeEvents();
-    const svc = new PRWatcherService(events as never, 30_000, 30 * 60_000);
+    const svc = new PRFeedbackService(events as never, makeFeatureLoader() as never, '/tmp/test');
     svc.setSchedulerService(scheduler);
 
-    // addWatch triggers ensurePolling -> registerInterval
+    // addWatch triggers ensureWatchPolling -> registerInterval
     svc.addWatch(42, '/some/project', 'session-1');
 
     const entries = scheduler.listAll();
@@ -68,7 +75,7 @@ describe('Timer Registry: interval registration', () => {
     expect(found).toBeDefined();
     expect(found?.type).toBe('interval');
 
-    svc.stopPolling();
+    svc.stopWatchPolling();
     expect(scheduler.listAll().find((e) => e.id === 'pr-watcher:poll')).toBeUndefined();
   });
 
@@ -79,7 +86,11 @@ describe('Timer Registry: interval registration', () => {
     specSvc.setSchedulerService(scheduler);
     specSvc.startMonitoring();
 
-    const prSvc = new PRWatcherService(events as never, 30_000, 30 * 60_000);
+    const prSvc = new PRFeedbackService(
+      events as never,
+      makeFeatureLoader() as never,
+      '/tmp/test'
+    );
     prSvc.setSchedulerService(scheduler);
     prSvc.addWatch(99, '/project', 'session-x');
 
@@ -90,6 +101,6 @@ describe('Timer Registry: interval registration', () => {
     expect(ids).toContain('pr-watcher:poll');
 
     specSvc.stopMonitoring();
-    prSvc.stopPolling();
+    prSvc.stopWatchPolling();
   });
 });

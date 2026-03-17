@@ -20,7 +20,7 @@ import type {
 } from '@protolabsai/types';
 import type { SettingsService } from '../../../services/settings-service.js';
 import type { EventEmitter } from '../../../lib/events.js';
-import { getPRWatcherService } from '../../../services/pr-watcher-service.js';
+import { getPRFeedbackService } from '../../../services/pr-feedback-service.js';
 import { projectPathSchema } from '../../../lib/validation.js';
 import { verifySingleSecret } from '../../../lib/webhook-signature.js';
 
@@ -245,7 +245,7 @@ async function handleCheckRunEvent(
   const prs = check_run.pull_requests ?? [];
   if (prs.length === 0) return;
 
-  const watcher = getPRWatcherService();
+  const watcher = getPRFeedbackService();
   if (!watcher) return;
 
   for (const pr of prs) {

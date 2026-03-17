@@ -1,7 +1,7 @@
 import { createLogger } from '@protolabsai/utils';
 
 import type { ServiceContainer } from '../server/services.js';
-import { getPRWatcherService } from './pr-watcher-service.js';
+import { getPRFeedbackService } from './pr-feedback-service.js';
 
 const logger = createLogger('Server:Wiring');
 
@@ -32,9 +32,9 @@ export function register(container: ServiceContainer): void {
   healthMonitorService.setSchedulerService(schedulerService);
   specGenerationMonitor.setSchedulerService(schedulerService);
   leadEngineerService.setSchedulerService(schedulerService);
-  const prWatcher = getPRWatcherService();
-  if (prWatcher) {
-    prWatcher.setSchedulerService(schedulerService);
+  const prFeedback = getPRFeedbackService();
+  if (prFeedback) {
+    prFeedback.setSchedulerService(schedulerService);
   }
 
   // Scheduler Service initialization and task registration via AutomationService
