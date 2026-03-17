@@ -44,6 +44,7 @@ jobs:
       - name: Build docs
         run: |
           npm ci --ignore-scripts
+          npm install --ignore-scripts --no-save @rollup/rollup-linux-x64-gnu@$(node -p "require('./node_modules/rollup/package.json').version")
           npm run docs:build
 
       - name: Deploy to Cloudflare Pages
