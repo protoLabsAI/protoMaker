@@ -503,7 +503,7 @@
     "projectPath": "/Users/kj/dev/automaker",
     "sourceId": "ops:auto-mode:started:2026-03-17",
     "createdAt": "2026-03-17T02:23:22.586Z",
-    "updatedAt": "2026-03-17T07:44:43.261Z"
+    "updatedAt": "2026-03-17T08:57:39.899Z"
   },
   {
     "title": "Started: Migrate PRFeedbackService and ArchivalService timers",
@@ -682,25 +682,182 @@
     "updatedAt": "2026-03-17T04:18:13.721Z"
   },
   {
-    "title": "Started: Bug: Timer migration wiring order — scheduler registration never fires",
-    "date": "2026-03-17",
-    "type": "ops",
-    "description": "Feature implementation started",
-    "id": "event-1773733673121-wbp2kdawx",
-    "projectPath": "/Users/kj/dev/automaker",
-    "sourceId": "ops:feature:started:feature-1773733641068-tutcrz681",
-    "createdAt": "2026-03-17T07:47:53.108Z",
-    "updatedAt": "2026-03-17T07:47:53.108Z"
-  },
-  {
-    "title": "Merged: feature-1773733641068-tutcrz681",
+    "title": "Merged: Bug: Blocked feature with merged PR not reconciled to done",
     "date": "2026-03-17",
     "type": "ops",
     "description": "Feature PR merged",
-    "id": "event-1773734027399-otk7r7buw",
-    "projectPath": "/Users/kj/dev/automaker",
-    "sourceId": "ops:feature:pr-merged:feature-1773733641068-tutcrz681",
-    "createdAt": "2026-03-17T07:53:47.397Z",
-    "updatedAt": "2026-03-17T07:53:47.397Z"
+    "id": "event-1773724111397-t45yl9dad",
+    "projectPath": "/home/josh/dev/ava",
+    "sourceId": "ops:feature:pr-merged:feature-1773715820838-xza14lxns",
+    "createdAt": "2026-03-17T05:08:31.358Z",
+    "updatedAt": "2026-03-17T05:08:31.358Z"
+  },
+  {
+    "title": "Merged: Add Discord channel message tools to MCP server",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773724111690-gcqa00ko4",
+    "projectPath": "/home/josh/dev/ava",
+    "sourceId": "ops:feature:pr-merged:feature-1773716725298-qkyjrc2hc",
+    "createdAt": "2026-03-17T05:08:31.672Z",
+    "updatedAt": "2026-03-17T05:08:31.672Z"
+  },
+  {
+    "title": "Completed: Discord Integration Consolidation",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature implementation completed",
+    "id": "event-1773724111963-gip8p7vlf",
+    "projectPath": "/home/josh/dev/ava",
+    "sourceId": "ops:feature:completed:feature-1773716643194-goakj86jd",
+    "createdAt": "2026-03-17T05:08:31.961Z",
+    "updatedAt": "2026-03-17T05:08:31.961Z"
+  },
+  {
+    "title": "Ceremonies: infrastructure-as-code-observability-deploy-stack",
+    "date": "2026-03-17",
+    "type": "ceremony",
+    "description": "Recurring standup and retro ceremonies for project infrastructure-as-code-observability-deploy-stack",
+    "recurrence": {
+      "frequency": "daily"
+    },
+    "id": "event-1773733495119-dk4nu6jil",
+    "projectPath": "/home/josh/dev/ava",
+    "sourceId": "ceremony:infrastructure-as-code-observability-deploy-stack",
+    "createdAt": "2026-03-17T07:44:55.119Z",
+    "updatedAt": "2026-03-17T07:44:55.119Z"
+  },
+  {
+    "title": "Started: Add scheduler task enable/disable toggles to Ops Dashboard",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773733511883-pvo6u5i06",
+    "projectPath": "/home/josh/dev/ava",
+    "sourceId": "ops:feature:started:feature-1773725715836-vh5m1slcj",
+    "createdAt": "2026-03-17T07:45:11.868Z",
+    "updatedAt": "2026-03-17T07:45:11.868Z"
+  },
+  {
+    "title": "Started: Infra compose with Postgres, Langfuse, and Umami",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773733517722-dkbwlccjd",
+    "projectPath": "/home/josh/dev/ava",
+    "sourceId": "ops:feature:started:feature-1773733486733-myorv0jiq",
+    "createdAt": "2026-03-17T07:45:17.715Z",
+    "updatedAt": "2026-03-17T07:45:17.715Z"
+  },
+  {
+    "title": "Completed: Infra compose with Postgres, Langfuse, and Umami",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature implementation completed",
+    "id": "event-1773733590165-wf5vssean",
+    "projectPath": "/home/josh/dev/ava",
+    "sourceId": "ops:feature:completed:feature-1773733486733-myorv0jiq",
+    "createdAt": "2026-03-17T07:46:30.158Z",
+    "updatedAt": "2026-03-17T07:46:30.158Z"
+  },
+  {
+    "title": "Started: Add Grafana, Prometheus, Loki, and Promtail",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773733704951-chiswbs1c",
+    "projectPath": "/home/josh/dev/ava",
+    "sourceId": "ops:feature:started:feature-1773733486734-xjbiakv8l",
+    "createdAt": "2026-03-17T07:48:24.942Z",
+    "updatedAt": "2026-03-17T07:48:24.942Z"
+  },
+  {
+    "title": "Merged: feature-1773733486734-xjbiakv8l",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773733843717-g8lwg2vox",
+    "projectPath": "/home/josh/dev/ava",
+    "sourceId": "ops:feature:pr-merged:feature-1773733486734-xjbiakv8l",
+    "createdAt": "2026-03-17T07:50:43.713Z",
+    "updatedAt": "2026-03-17T07:50:43.713Z"
+  },
+  {
+    "title": "Started: Delete old compose files and configs",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773733848581-bqd4bada9",
+    "projectPath": "/home/josh/dev/ava",
+    "sourceId": "ops:feature:started:feature-1773733486736-g7kio3rw5",
+    "createdAt": "2026-03-17T07:50:48.568Z",
+    "updatedAt": "2026-03-17T07:50:48.568Z"
+  },
+  {
+    "title": "Merged: feature-1773725715836-vh5m1slcj",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773733865923-s6xgrv01p",
+    "projectPath": "/home/josh/dev/ava",
+    "sourceId": "ops:feature:pr-merged:feature-1773725715836-vh5m1slcj",
+    "createdAt": "2026-03-17T07:51:05.920Z",
+    "updatedAt": "2026-03-17T07:51:05.920Z"
+  },
+  {
+    "title": "Merged: feature-1773733486736-g7kio3rw5",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature PR merged",
+    "id": "event-1773734110289-z2yswmzgh",
+    "projectPath": "/home/josh/dev/ava",
+    "sourceId": "ops:feature:pr-merged:feature-1773733486736-g7kio3rw5",
+    "createdAt": "2026-03-17T07:55:10.285Z",
+    "updatedAt": "2026-03-17T07:55:10.285Z"
+  },
+  {
+    "title": "Completed: Delete old compose files and configs",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature implementation completed",
+    "id": "event-1773734110295-eblgwo56r",
+    "projectPath": "/home/josh/dev/ava",
+    "sourceId": "ops:feature:completed:feature-1773733486736-g7kio3rw5",
+    "createdAt": "2026-03-17T07:55:10.294Z",
+    "updatedAt": "2026-03-17T07:55:10.294Z"
+  },
+  {
+    "title": "Started: Fix deploy-staging.yml rebuild step",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773734119783-e69r3twrh",
+    "projectPath": "/home/josh/dev/ava",
+    "sourceId": "ops:feature:started:feature-1773733486738-39ac0r610",
+    "createdAt": "2026-03-17T07:55:19.775Z",
+    "updatedAt": "2026-03-17T07:55:19.775Z"
+  },
+  {
+    "title": "Started: Fix deploy-staging.yml rebuild step",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773737879161-6j4kl8maj",
+    "projectPath": "/home/josh/dev/ava",
+    "sourceId": "ops:feature:started:feature-1773737848028-mlt6oker9",
+    "createdAt": "2026-03-17T08:57:59.147Z",
+    "updatedAt": "2026-03-17T08:57:59.147Z"
+  },
+  {
+    "title": "Started: Bug: gitWorkflow.prBaseBranch is global, not per-project",
+    "date": "2026-03-17",
+    "type": "ops",
+    "description": "Feature implementation started",
+    "id": "event-1773738973601-xtf4e1av4",
+    "projectPath": "/home/josh/dev/ava",
+    "sourceId": "ops:feature:started:feature-1773738940929-gwi3mymz4",
+    "createdAt": "2026-03-17T09:16:13.592Z",
+    "updatedAt": "2026-03-17T09:16:13.592Z"
   }
 ]

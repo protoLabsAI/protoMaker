@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 607
-  referenced: 165
-  successfulFeatures: 165
+  loaded: 611
+  referenced: 167
+  successfulFeatures: 167
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -2315,24 +2315,65 @@ usageStats:
 - **Why this works:** Explicit destructuring forces all dependencies to be listed at the top of the function, making dead code detection trivial. Implicit container.get() access would hide the unused service.
 - **Trade-offs:** More verbose destructuring but self-documenting and refactoring-safe. Eliminates 'hidden dependency' bugs.
 
-#### [Pattern] Late-binding dependency migration: When a service initializes before its dependency (SchedulerService) is available, it runs in degraded mode (raw setInterval). When the dependency arrives via setter, the service detects already-running work and migrates it instead of discarding it. (2026-03-17)
-- **Problem solved:** PRFeedbackService.initialize() and ArchivalService.start() run before SchedulerService is wired (wiring.ts: registerLeadEngineer at line 39, registerScheduler at line 42). Services need to poll/archive immediately, can't wait for scheduler.
-- **Why this works:** Avoids reordering complex initialization sequences which would cascade to other services. Allows services to start work immediately while maintaining scheduler integration once available.
-- **Trade-offs:** setSchedulerService() gains migration logic (+12-17 LOC per service), but initialization sequence remains unchanged and services never block on missing dependencies. Cost: small, isolated, one-time check.
+#### [Gotcha] Loki v3 requires `allow_structured_metadata: false` in limits_config when using v13 schema to prevent initialization failures (2026-03-17)
+- **Situation:** Setting up Loki 3.0.0 with schema v13 without this flag causes compatibility errors or deprecation warnings
+- **Root cause:** Loki v3 changed structured metadata handling; the v13 schema requires explicit opt-out to maintain backward compatibility with the new version
+- **How to avoid:** Requires additional explicit configuration, but ensures version-schema compatibility across v3 upgrades
 
-#### [Gotcha] Idempotency guard in ArchivalService.start() (listAll().find(id)) is critical. When scheduler wiring happens early (normal path), start() must detect the already-scheduled interval and skip re-registration, preventing double-polling. (2026-03-17)
-- **Situation:** Two initialization paths exist: (1) setSchedulerService before start() [normal], (2) start() before setSchedulerService [late wiring]. Both must avoid registering twice.
-- **Root cause:** start() can't know which path it's on. The guard is simple—check if scheduler already has the work—but if missing, the normal path (most common) silently double-registers.
-- **How to avoid:** One listAll() query per start(), minimal cost. Makes start() inherently idempotent regardless of wiring order.
+#### [Gotcha] Linux containers require `extra_hosts: 'host.docker.internal:host-gateway'` to resolve localhost to the Docker host, unlike macOS/Windows Docker Desktop (2026-03-17)
+- **Situation:** Prometheus container cannot reach localhost:3008 (host application) without explicit host gateway mapping on Linux
+- **Root cause:** Docker Desktop (macOS/Windows) automatically maps host.docker.internal, but Linux Docker daemon does not; explicit host-gateway alias is required
+- **How to avoid:** Requires platform-aware compose configuration; enables Linux Docker support but adds macOS/Windows complexity
 
-### Migration condition is explicitly `if (timer != null)` — only migrate if raw timer was actually started. Don't unconditionally try to migrate in every setSchedulerService() call. (2026-03-17)
-- **Context:** setSchedulerService() is called once, but could theoretically be called multiple times. Must distinguish: (1) late arrival (raw timer exists, migrate), vs (2) early arrival (no raw timer, nothing to migrate).
-- **Why:** Prevents interference with normal wiring path. If scheduler arrives early, there's no raw timer to migrate—calling clear/register on null would fail or cause undefined behavior.
-- **Rejected:** Always attempt migration—simpler code, but fails when scheduler is wired before initialize()/start(). Breaks normal initialization path.
-- **Trade-offs:** One null check, clearer intent. Cost: negligible.
-- **Breaking if changed:** If removed: early wiring path tries to clear/unregister a non-existent raw timer, likely crashes or logs spurious errors. Migration becomes non-idempotent.
+#### [Pattern] Service startup ordering combines `depends_on: condition: service_healthy` with comprehensive healthchecks (port probes, timeouts, retries, start_period delays) (2026-03-17)
+- **Problem solved:** Ensuring Prometheus/Loki fully initialize before Grafana connects; Loki ready before Promtail begins log shipping
+- **Why this works:** Container process starting ≠ service readiness; healthchecks provide real initialization verification. Start periods account for service startup latency
+- **Trade-offs:** Requires complete healthcheck configuration, but prevents race condition failures and ensures reliable startup sequencing
 
-#### [Pattern] Callback function is decoupled from execution mechanism. Same callback works with raw setInterval and SchedulerService.registerInterval—service doesn't need two versions or wrapper logic. (2026-03-17)
-- **Problem solved:** PRFeedbackService has a poll callback. ArchivalService has a check callback. Both need to work with either setInterval or SchedulerService.
-- **Why this works:** Reduces code duplication. Migration is just 'clear raw timer, register same callback with scheduler'—no callback surgery needed.
-- **Trade-offs:** Callback can't assume it has a raw NodeJS.Timeout handle or scheduler interval ID. Simpler: it's just a function that does work.
+#### [Gotcha] Grafana datasource provisioning requires exact mount path `/etc/grafana/provisioning/datasources/datasources.yml` to auto-load during startup (2026-03-17)
+- **Situation:** Pre-provisioning Prometheus and Loki datasources so users have working monitoring without manual Grafana UI configuration
+- **Root cause:** Grafana's provisioning system scans hardcoded directory paths during initialization; non-standard mount locations are completely ignored with no warnings
+- **How to avoid:** Requires knowledge of Grafana's internal path conventions and provisioning system, but enables fully reproducible datasource setup
+
+#### [Pattern] Promtail discovers containers via Docker socket using relabel_configs to extract metadata labels (container name, log stream, service name) before pushing to Loki (2026-03-17)
+- **Problem solved:** Automatically organize and tag logs by container/service for queryable log filtering without per-service configuration
+- **Why this works:** This pattern eliminates manual per-service scrape config. Service discovery + dynamic relabeling provides automatic metadata enrichment at collection time
+- **Trade-offs:** Requires Docker socket mount and understanding of Docker SD + relabel syntax, but enables zero-config discovery as services scale
+
+### Loki uses filesystem storage backend with named Docker volumes instead of S3 or external object stores for local development (2026-03-17)
+- **Context:** Development environment where external cloud storage is unavailable and local testing doesn't require scalability
+- **Why:** Filesystem storage eliminates external dependencies and setup complexity for local dev; sufficient for bounded log retention in testing
+- **Rejected:** S3/GCS would require cloud credentials, bucket setup, and cost for local development when filesystem serves testing needs
+- **Trade-offs:** Simple local setup with zero external dependencies, but insufficient for production scale, multi-node deployments, or long-term retention
+- **Breaking if changed:** Migrating to production object storage requires manual data migration (logs cannot be transferred between backends); production must use S3 or equivalent cloud storage
+
+### Separate persistent enable/disable toggle from runtime pause/resume functionality (2026-03-17)
+- **Context:** Ops Dashboard needed task enable/disable controls that persist across server restarts while maintaining existing pause/resume runtime-only controls
+- **Why:** Different semantic intent and persistence model: enable/disable is persistent configuration (stored in schedulerSettings.taskOverrides), pause/resume is ephemeral runtime state. Prevents confusion between 'task is paused now' vs 'task should never run'
+- **Rejected:** Single unified toggle for both pause and enabled state - would conflate configuration and runtime state, making persistence semantics unclear
+- **Trade-offs:** More UI controls (two per timer) but clearer intent; enabled state survives server restarts while pause/resume does not
+- **Breaking if changed:** Code assuming pause/resume is the only way to disable task execution; settings without taskOverrides key would default enabled state
+
+#### [Gotcha] Service configurations embedded inline in docker-compose files via Docker configs: blocks hide actual configuration complexity and make it invisible to separate inspection/versioning tools (2026-03-17)
+- **Situation:** docker-compose.observability.yml embedded Grafana Alloy, Tempo, Loki, Mimir configurations inline instead of separate files; deleting the compose file removed all configuration definitions
+- **Root cause:** Inline embedding keeps single-purpose stacks self-contained but obscures the actual service complexity
+- **How to avoid:** Inline: simpler single-file deployment but configs are invisible to external tools; separate: more modular but requires additional file management
+
+### Selective file retention based on cross-compose dependency analysis - retained root prometheus.yml even when deleting its primary compose stack (docker-compose.monitoring.yml) because it's still referenced by docker-compose.prod.yml (2026-03-17)
+- **Context:** Deletion could break unrelated prod deployment if dependency wasn't discovered and tracked across multiple compose files
+- **Why:** Prevents silent breakage of prod deployments by catching shared dependencies between local and production stacks
+- **Rejected:** Batch deletion of all monitoring-related files without checking external references
+- **Trade-offs:** Requires careful dependency tracing upfront; eliminates subtle failures downstream
+- **Breaking if changed:** If prometheus.yml is deleted, docker-compose.prod.yml breaks - prod cannot start. Requires understanding the dependency graph across all compose files
+
+### Removing entire local observability stack (Alloy, Tempo, Mimir, Loki, Grafana services) from development workflow without replacement in unified docker-compose.infra.yml (2026-03-17)
+- **Context:** Deleted docker-compose.observability.yml provided complete OTel pipeline for local tracing and metrics; no equivalent services documented in replacement unified stack
+- **Why:** Intentional shift away from that observability approach, or unified infra deliberately excludes local observability services
+- **Rejected:** Migrating OTel services into docker-compose.infra.yml for continuity
+- **Trade-offs:** Simpler local stack management but removes local observability/tracing visibility during development
+- **Breaking if changed:** Developers lose local Tempo tracing backend, Mimir metrics storage, and Grafana dashboards - cannot debug observability issues locally without reconstructing entire stack from scratch
+
+#### [Pattern] Documentation updates bundled with file deletions as part of same commit to prevent orphaned references and keep docs-to-infrastructure parity (2026-03-17)
+- **Problem solved:** Updated docs/self-hosting/observability.md to remove Local OTel Stack section and replace with reference to docker-compose.infra.yml instead of leaving obsolete instructions
+- **Why this works:** Stale documentation pointing to deleted resources wastes developer time debugging non-existent features and creates false mental models of available infrastructure
+- **Trade-offs:** Requires coordination between deletion and documentation but prevents documentation-reality divergence

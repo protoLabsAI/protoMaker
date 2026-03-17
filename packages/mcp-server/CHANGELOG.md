@@ -1,5 +1,14 @@
 # @protolabsai/mcp-server
 
+## 0.74.4
+
+### Patch Changes
+
+- ### Bug Fixes
+  - prevent ghost agents and deadlocked auto-mode after stop/restart
+- Updated dependencies
+  - @protolabsai/tools@0.74.4
+
 ## 0.74.3
 
 ### Patch Changes

@@ -1,5 +1,18 @@
 # @protolabsai/flows
 
+## 0.74.4
+
+### Patch Changes
+
+- ### Bug Fixes
+  - prevent ghost agents and deadlocked auto-mode after stop/restart
+- Updated dependencies
+  - @protolabsai/types@0.74.4
+  - @protolabsai/utils@0.74.4
+  - @protolabsai/prompts@0.74.4
+  - @protolabsai/model-resolver@0.74.4
+  - @protolabsai/observability@0.74.4
+
 ## 0.74.3
 
 ### Patch Changes

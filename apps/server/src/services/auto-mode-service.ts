@@ -882,6 +882,23 @@ export class AutoModeService {
 
     const wasRunning = stoppedState.isRunning || stoppedState.isPaused;
 
+    // Abort running features for this project to prevent ghost agents
+    for (const [featureId, running] of this.runningFeatures) {
+      if (running.projectPath === projectPath) {
+        running.abortController.abort();
+        this.runningFeatures.delete(featureId);
+        logger.info(`Aborted running feature ${featureId} during auto-loop stop`);
+      }
+    }
+
+    // Release all concurrency leases for this project
+    const releasedLeases = this.concurrencyManager.releaseAllForProject(projectPath);
+    if (releasedLeases.length > 0) {
+      logger.info(
+        `Released ${releasedLeases.length} concurrency lease(s) during auto-loop stop: ${releasedLeases.join(', ')}`
+      );
+    }
+
     // Clear retry timers for features in this project to prevent zombie restarts
     for (const [featureId, timer] of this.retryTimers) {
       const running = this.runningFeatures.get(featureId);
@@ -891,6 +908,9 @@ export class AutoModeService {
         logger.info(`Cancelled retry timer for feature ${featureId} during auto-loop stop`);
       }
     }
+
+    // Allow resumeInterruptedFeatures to re-check this project on restart
+    this.resumeCheckedProjects.delete(projectPath);
 
     // Stop work intake tick loop
     this.workIntakeService?.stop();
@@ -3360,6 +3380,19 @@ You can use the Read tool to view these images at any time during implementation
     // Clean up any stale running features from previous session
     this.cleanupStaleRunningFeatures();
 
+    // Check if execution state exists — its presence indicates a server crash
+    // (the file is deleted on clean stop). If absent, stale in_progress features
+    // should be reset to backlog, NOT resumed, to prevent ghost agents.
+    const statePath = getExecutionStatePath(projectPath);
+    let wasServerCrash = false;
+    try {
+      await secureFs.access(statePath);
+      wasServerCrash = true;
+      logger.info('Execution state file found — server likely crashed, will resume features');
+    } catch {
+      logger.info('No execution state file — auto-mode was cleanly stopped');
+    }
+
     // Load all features and find those that were interrupted
     const featuresDir = getFeaturesDir(projectPath);
 
@@ -3387,6 +3420,16 @@ You can use the Read tool to view these images at any time during implementation
 
           // Check if feature was interrupted (in_progress or interrupted)
           if (feature.status === 'in_progress' || feature.status === 'interrupted') {
+            if (!wasServerCrash) {
+              // Clean stop: reset stale in_progress features to backlog
+              logger.info(
+                `Resetting stale feature ${feature.id} (${feature.title}) from ${feature.status} to backlog (clean stop)`
+              );
+              await this.updateFeatureStatus(projectPath, feature.id, 'backlog');
+              continue;
+            }
+
+            // Server crash: collect for resumption
             // Verify it has existing context (agent-output.md)
             const featureDir = getFeatureDir(projectPath, feature.id);
             const contextPath = path.join(featureDir, 'agent-output.md');

@@ -126,6 +126,23 @@ export class ConcurrencyManager {
   }
 
   /**
+   * Force-release all leases for the given project.
+   *
+   * Used by `stopAutoLoopForProject` to clean up concurrency slots when
+   * auto-mode is explicitly stopped. Returns the featureIds that were released.
+   */
+  releaseAllForProject(projectPath: string): string[] {
+    const released: string[] = [];
+    for (const [featureId, lease] of this.leases) {
+      if (lease.projectPath === projectPath) {
+        this.leases.delete(featureId);
+        released.push(featureId);
+      }
+    }
+    return released;
+  }
+
+  /**
    * Release all leases older than `maxAgeMs` milliseconds.
    *
    * Returns the featureIds of leases that were forcefully released.
