@@ -83,6 +83,7 @@ export function CostPanel({ costByModel, totalCost, isLoading }: CostPanelProps)
                     ))}
                   </Pie>
                   <Tooltip
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     formatter={
                       ((value: number | undefined) => [
                         `$${(value ?? 0).toFixed(2)}`,

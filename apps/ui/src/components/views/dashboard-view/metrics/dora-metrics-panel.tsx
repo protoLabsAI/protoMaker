@@ -67,6 +67,7 @@ function Sparkline({
               borderRadius: '6px',
               fontSize: '11px',
             }}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             formatter={((v: unknown) => [String(v), '']) as any}
           />
           <Line
