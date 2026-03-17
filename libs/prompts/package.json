@@ -1,6 +1,6 @@
 {
   "name": "@protolabsai/prompts",
-  "version": "0.74.3",
+  "version": "0.74.4",
   "type": "module",
   "description": "AI prompt templates for AutoMaker",
   "main": "dist/index.js",
@@ -26,8 +26,8 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@protolabsai/types": "^0.74.3",
-    "@protolabsai/utils": "^0.74.3"
+    "@protolabsai/types": "^0.74.4",
+    "@protolabsai/utils": "^0.74.4"
   },
   "devDependencies": {
     "@types/node": "22.19.3",
