@@ -141,11 +141,12 @@ Design your handler to fail fast and provide clear error messages. The scheduler
 
 ## Key Files
 
-| File                                            | Role                                      |
-| ----------------------------------------------- | ----------------------------------------- |
-| `apps/server/src/services/scheduler-service.ts` | Timer registry, cron parsing, persistence |
-| `apps/server/src/services/scheduler.module.ts`  | Wiring: registers built-in timers         |
-| `apps/server/src/services/maintenance-tasks.ts` | Maintenance task handlers                 |
+| File                                            | Role                                                                            |
+| ----------------------------------------------- | ------------------------------------------------------------------------------- |
+| `apps/server/src/services/scheduler-service.ts` | Timer registry, cron parsing, persistence                                       |
+| `apps/server/src/services/scheduler.module.ts`  | Wiring: registers built-in timers                                               |
+| `apps/server/src/services/maintenance-tasks.ts` | Maintenance task handlers                                                       |
+| `apps/server/src/services/ava-cron-tasks.ts`    | Ava heartbeat tasks (staging ping, board health, PR triage, adaptive heartbeat) |
 
 ## Next Steps
 

@@ -560,6 +560,14 @@ export interface Feature {
   killConditions?: string[];
 
   /**
+   * Readiness score (0-100) computed by FeatureReadinessCheck.
+   * Measures how well-specified a backlog feature is across four dimensions:
+   * description quality, acceptance criteria, filesToModify, and dependency completeness.
+   * Features below the configurable threshold generate maintenance issues with auto-fix.
+   */
+  readinessScore?: number;
+
+  /**
    * Hypothesis framing this feature as an experiment.
    * Captures the assumption being tested and the expected outcome.
    */

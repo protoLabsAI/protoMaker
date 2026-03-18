@@ -369,11 +369,14 @@ Eight scheduled tasks run alongside the main loop.
 
 ### Ava Cron Tasks
 
-| Task                   | Cron           | Description                                                      |
-| ---------------------- | -------------- | ---------------------------------------------------------------- |
-| ava-daily-board-health | `0 9 * * *`    | Daily 9 AM -- check stale features, blocked agents, failing CI   |
-| ava-pr-triage          | `0 */4 * * *`  | Every 4 hours -- scan CodeRabbit threads, CI failures, conflicts |
-| ava-staging-ping       | `*/30 * * * *` | Every 30 min -- heartbeat to Ava Channel, report if quiet >2h    |
+| Task                   | Cron / Interval            | Description                                                                       |
+| ---------------------- | -------------------------- | --------------------------------------------------------------------------------- |
+| ava-daily-board-health | `0 9 * * *`                | Daily 9 AM -- check stale features, blocked agents, failing CI                    |
+| ava-pr-triage          | `0 */4 * * *`              | Every 4 hours -- scan CodeRabbit threads, CI failures, conflicts                  |
+| ava-staging-ping       | `*/30 * * * *`             | Every 30 min -- heartbeat to Ava Channel, report if quiet >2h                     |
+| ava-adaptive-heartbeat | Configurable (default 30m) | Opt-in -- reads HEARTBEAT.md, runs Haiku call, routes alerts via EscalationRouter |
+
+`ava-adaptive-heartbeat` is registered as an interval timer (not a cron task) and is only active when `workflowSettings.heartbeat.enabled` is `true`. Agents can rewrite `.automaker/HEARTBEAT.md` to change what the heartbeat monitors.
 
 ---
 

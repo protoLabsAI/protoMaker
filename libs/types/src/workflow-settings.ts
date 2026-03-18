@@ -486,6 +486,14 @@ export interface WorkflowSettings {
      * @default 30
      */
     stuckPrThresholdMinutes?: number;
+    /**
+     * Minimum readiness score (0-100) a backlog feature must achieve before it is
+     * considered well-specified enough for agent execution. Features below this
+     * threshold generate auto-fixable maintenance issues whose fix enriches the
+     * description using an enhancement model.
+     * @default 60
+     */
+    readinessScoreThreshold?: number;
   };
 }
 
