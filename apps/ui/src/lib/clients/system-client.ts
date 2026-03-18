@@ -375,14 +375,56 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
       initiate: (
         projectPath: string,
         title: string,
-        ideaDescription: string
+        ideaDescription: string,
+        options?: {
+          color?: string;
+          priority?: string;
+          description?: string;
+          researchOnCreate?: boolean;
+        }
       ): Promise<{
         success: boolean;
         duplicates?: Array<{ id: string; name: string; url: string }>;
         localSlug?: string;
         hasDuplicates?: boolean;
         error?: string;
-      }> => this.post('/api/projects/lifecycle/initiate', { projectPath, title, ideaDescription }),
+      }> =>
+        this.post('/api/projects/lifecycle/initiate', {
+          projectPath,
+          title,
+          ideaDescription,
+          ...options,
+        }),
+      generatePrd: (
+        projectPath: string,
+        projectSlug: string,
+        additionalContext?: string
+      ): Promise<{
+        success: boolean;
+        prd?: {
+          situation: string;
+          problem: string;
+          approach: string;
+          results: string;
+          constraints: string;
+        };
+        error?: string;
+      }> =>
+        this.post('/api/projects/lifecycle/generate-prd', {
+          projectPath,
+          projectSlug,
+          additionalContext,
+        }),
+      saveMilestones: (
+        projectPath: string,
+        projectSlug: string,
+        milestones: unknown[]
+      ): Promise<{ success: boolean; milestonesCount?: number; error?: string }> =>
+        this.post('/api/projects/lifecycle/save-milestones', {
+          projectPath,
+          projectSlug,
+          milestones,
+        }),
       createProject: (
         projectPath: string,
         project: { slug?: string; title: string; goal: string; color?: string; priority?: string }
