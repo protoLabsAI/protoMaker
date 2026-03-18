@@ -1,5 +1,16 @@
 # @protolabsai/mcp-server
 
+## 0.77.3
+
+### Patch Changes
+
+- ### Refactors
+  - Adaptive heartbeat: agent-writable HEARTBEAT.md per project
+  - Adaptive heartbeat: agent-writable HEARTBEAT.md per project
+  - Adaptive heartbeat: agent-writable HEARTBEAT.md per project
+- Updated dependencies
+  - @protolabsai/tools@0.77.3
+
 ## 0.77.2
 
 ### Patch Changes

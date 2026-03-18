@@ -1,5 +1,20 @@
 # @protolabsai/flows
 
+## 0.77.3
+
+### Patch Changes
+
+- ### Refactors
+  - Adaptive heartbeat: agent-writable HEARTBEAT.md per project
+  - Adaptive heartbeat: agent-writable HEARTBEAT.md per project
+  - Adaptive heartbeat: agent-writable HEARTBEAT.md per project
+- Updated dependencies
+  - @protolabsai/types@0.77.3
+  - @protolabsai/utils@0.77.3
+  - @protolabsai/prompts@0.77.3
+  - @protolabsai/model-resolver@0.77.3
+  - @protolabsai/observability@0.77.3
+
 ## 0.77.2
 
 ### Patch Changes
