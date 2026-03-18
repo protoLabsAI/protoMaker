@@ -6,10 +6,15 @@
  */
 
 import { exec } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { promisify } from 'node:util';
 import { createLogger } from '@protolabsai/utils';
 import type { EventType, PRMergeStrategy } from '@protolabsai/types';
 import { resolveMergeStrategy } from '../lib/merge-strategy.js';
+import {
+  parsePROwnershipWatermark,
+  buildPROwnershipWatermark,
+} from '../routes/github/utils/pr-ownership.js';
 import type {
   ProcessorServiceContext,
   StateContext,
@@ -143,6 +148,9 @@ export class ReviewProcessor implements StateProcessor {
         reason: ctx.escalationReason,
       };
     }
+
+    // Normalize PR: patch ownership watermark and enable auto-merge if missing
+    await this.normalizePR(ctx);
 
     // Query PRFeedbackService for tracked PR state (falls back to gh CLI)
     const reviewState = await this.getPRReviewState(ctx);
@@ -291,6 +299,115 @@ export class ReviewProcessor implements StateProcessor {
     this.reviewStartedAt.delete(ctx.feature.id);
   }
 
+  /**
+   * Reconcile a PR into the expected managed state regardless of how it was created.
+   *
+   * 1. Appends the ownership watermark to the PR body if it is missing.
+   * 2. Enables auto-merge if it is not already enabled.
+   *
+   * This is idempotent — running it multiple times on the same PR is safe.
+   */
+  private async normalizePR(ctx: StateContext): Promise<void> {
+    if (!ctx.prNumber) return;
+
+    // Fetch current PR body and auto-merge status in one call
+    let body = '';
+    let autoMergeEnabled = false;
+    try {
+      const { stdout } = await execAsync(
+        `gh pr view ${ctx.prNumber} --json body,autoMergeRequest --jq '{body: .body, autoMerge: (.autoMergeRequest != null)}'`,
+        { cwd: ctx.projectPath, timeout: 15000 }
+      );
+      const data = JSON.parse(stdout.trim()) as { body: string; autoMerge: boolean };
+      body = data.body ?? '';
+      autoMergeEnabled = data.autoMerge ?? false;
+    } catch (err) {
+      logger.warn('[REVIEW] normalizePR: failed to fetch PR body/auto-merge status:', err);
+      return;
+    }
+
+    // 1. Patch ownership watermark if absent
+    const ownership = parsePROwnershipWatermark(body);
+    if (!ownership.instanceId) {
+      try {
+        let instanceId = `transient-${randomUUID().slice(0, 8)}`;
+        let teamId = '';
+        if (this.serviceContext.settingsService) {
+          const globalSettings = await this.serviceContext.settingsService.getGlobalSettings();
+          instanceId = globalSettings.instanceId ?? instanceId;
+          teamId = globalSettings.teamId ?? '';
+        }
+        const watermark = buildPROwnershipWatermark(instanceId, teamId);
+        const patchedBody = body ? `${body}\n\n${watermark}` : watermark;
+        // Write body via a temp file to avoid shell quoting issues with PR body content
+        const { writeFileSync, unlinkSync } = await import('node:fs');
+        const tmpFile = `/tmp/pr-body-${ctx.prNumber}-${Date.now()}.txt`;
+        writeFileSync(tmpFile, patchedBody, 'utf8');
+        try {
+          await execAsync(`gh pr edit ${ctx.prNumber} --body-file "${tmpFile}"`, {
+            cwd: ctx.projectPath,
+            timeout: 15000,
+          });
+        } finally {
+          try {
+            unlinkSync(tmpFile);
+          } catch {
+            /* ignore */
+          }
+        }
+        logger.info(
+          `[REVIEW] normalizePR: patched ownership watermark on PR #${ctx.prNumber} (instance=${instanceId})`
+        );
+      } catch (err) {
+        logger.warn('[REVIEW] normalizePR: failed to patch PR ownership watermark:', err);
+      }
+    }
+
+    // 2. Enable auto-merge if not already enabled
+    if (!autoMergeEnabled) {
+      try {
+        const mergeFlag = await this.resolveNormalizeMergeFlag(ctx);
+        await execAsync(`gh pr merge ${ctx.prNumber} --auto ${mergeFlag}`, {
+          cwd: ctx.projectPath,
+          timeout: 30000,
+        });
+        logger.info(
+          `[REVIEW] normalizePR: enabled auto-merge on PR #${ctx.prNumber} (${mergeFlag})`
+        );
+      } catch (err) {
+        logger.warn('[REVIEW] normalizePR: failed to enable auto-merge:', err);
+      }
+    }
+  }
+
+  /**
+   * Resolve merge flag for normalization (same logic as MergeProcessor.resolveMergeFlag).
+   * Promotion PRs always use --merge. Feature PRs use the configured prMergeStrategy.
+   */
+  private async resolveNormalizeMergeFlag(ctx: StateContext): Promise<string> {
+    if (ctx.prNumber) {
+      const baseBranchFlag = await resolveMergeStrategy(ctx.prNumber, ctx.projectPath);
+      if (baseBranchFlag === '--merge') return '--merge';
+    }
+
+    let strategy: PRMergeStrategy = 'squash';
+    if (this.serviceContext.settingsService) {
+      try {
+        const globalSettings = await this.serviceContext.settingsService.getGlobalSettings();
+        strategy = globalSettings.gitWorkflow?.prMergeStrategy ?? 'squash';
+      } catch (err) {
+        logger.warn('[REVIEW] normalizePR: failed to read merge strategy from settings:', err);
+      }
+    }
+
+    const flagMap: Record<PRMergeStrategy, string> = {
+      squash: '--squash',
+      merge: '--merge',
+      rebase: '--rebase',
+    };
+    return flagMap[strategy] ?? '--squash';
+  }
+
   private async getPRReviewState(ctx: StateContext): Promise<string> {
     const trackedPR = this.getTrackedPR(ctx);
     if (trackedPR?.reviewState) return trackedPR.reviewState;
@@ -309,7 +426,18 @@ export class ReviewProcessor implements StateProcessor {
       if (data.decision === 'APPROVED') return 'approved';
       if (data.decision === 'CHANGES_REQUESTED') return 'changes_requested';
 
-      // Separate CodeRabbit checks from real CI checks.
+      // Read soft checks from settings (failures logged but don't block approval)
+      let softChecks: string[] = [];
+      if (this.serviceContext.settingsService) {
+        try {
+          const globalSettings = await this.serviceContext.settingsService.getGlobalSettings();
+          softChecks = globalSettings.gitWorkflow?.softChecks ?? [];
+        } catch {
+          // Settings unavailable — all checks treated as hard
+        }
+      }
+
+      // Separate CodeRabbit checks and soft checks from real CI checks.
       // CodeRabbit rate-limit sets commit status to FAILURE, but this is transient
       // and should not block the approval flow.
       const checks = (data.checks || []) as Array<{ name: string; conclusion: string }>;
@@ -318,11 +446,13 @@ export class ReviewProcessor implements StateProcessor {
           c.name?.toLowerCase().includes('coderabbit') ||
           c.name?.toLowerCase().includes('code-rabbit')
       );
-      const ciChecks = checks.filter(
-        (c) =>
-          !c.name?.toLowerCase().includes('coderabbit') &&
-          !c.name?.toLowerCase().includes('code-rabbit')
-      );
+      const ciChecks = checks.filter((c) => {
+        const nameLower = c.name?.toLowerCase() ?? '';
+        if (nameLower.includes('coderabbit') || nameLower.includes('code-rabbit')) return false;
+        // Exclude soft checks from blocking CI evaluation
+        if (softChecks.some((soft) => nameLower.includes(soft.toLowerCase()))) return false;
+        return true;
+      });
 
       // Log transient CodeRabbit failures so operators can diagnose
       const codeRabbitFailures = codeRabbitChecks.filter(
@@ -338,8 +468,23 @@ export class ReviewProcessor implements StateProcessor {
         );
       }
 
+      // Log soft check failures for visibility
+      const softCheckFailures = checks.filter(
+        (c) =>
+          !codeRabbitChecks.includes(c) &&
+          !ciChecks.includes(c) &&
+          c.conclusion &&
+          c.conclusion !== 'SUCCESS'
+      );
+      if (softCheckFailures.length > 0) {
+        logger.info(`[REVIEW] Soft check(s) failed — not blocking approval`, {
+          prNumber: ctx.prNumber,
+          softChecks: softCheckFailures.map((c) => `${c.name}=${c.conclusion}`),
+        });
+      }
+
       // Require at least one human APPROVED review — CI passing alone is not sufficient.
-      // Only real CI checks (non-CodeRabbit) block approval.
+      // Only real CI checks (non-CodeRabbit, non-soft) block approval.
       const approvedCount = (data.approvedCount as number) ?? 0;
       if (
         approvedCount > 0 &&
