@@ -451,6 +451,14 @@ export interface WorkflowSettings {
    */
   heartbeat?: HeartbeatSettings;
   /**
+   * Milliseconds to wait between agent dispatches when multiple features are ready.
+   * Prevents thundering-herd startup (API rate limits, disk I/O contention).
+   * No stagger is applied when only one feature is ready to dispatch.
+   * Set to 0 to disable staggering.
+   * @default 15000
+   */
+  agentStartStaggerMs?: number;
+  /**
    * Maintenance check configuration.
    * Controls thresholds and behavior for automated board health checks.
    */
