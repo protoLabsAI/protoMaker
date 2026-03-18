@@ -15,7 +15,7 @@ import { freemem, totalmem, cpus, loadavg } from 'node:os';
 import { ProviderFactory } from '../providers/provider-factory.js';
 import { simpleQuery } from '../providers/simple-query-service.js';
 import { StreamObserver } from './stream-observer-service.js';
-import { getWorkflowSettings } from '../lib/settings-helpers.js';
+import { getWorkflowSettings, getEffectivePrBaseBranch } from '../lib/settings-helpers.js';
 import { setFeatureContext } from '@protolabsai/error-tracking';
 
 /**
@@ -2907,9 +2907,14 @@ Format your response as a structured markdown document.`;
         });
       } else {
         // Determine base branch: use epic branch if feature belongs to an epic,
-        // otherwise use origin/dev as the canonical base (never HEAD which would
-        // inherit whatever branch is currently checked out in the main repo).
-        let baseBranch = 'origin/dev';
+        // otherwise use the project's configured prBaseBranch as the canonical base
+        // (never HEAD which would inherit whatever branch is currently checked out in the main repo).
+        const resolvedPrBaseBranch = await getEffectivePrBaseBranch(
+          projectPath,
+          this.settingsService,
+          '[createWorktreeForBranch]'
+        );
+        let baseBranch = `origin/${resolvedPrBaseBranch}`;
         if (feature?.epicId && !feature.isEpic) {
           try {
             const epicFeature = await this.featureLoader.get(projectPath, feature.epicId);
