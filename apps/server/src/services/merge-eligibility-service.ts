@@ -140,19 +140,26 @@ export class MergeEligibilityService {
 
   /**
    * Check if CI/CD checks are passing
+   *
+   * @param prDetails - PR details from GitHub
+   * @param softChecks - Check names that should not block merge (case-insensitive substring match)
    */
-  private checkCIPassing(prDetails: PRDetails): PRCheckStatus {
+  private checkCIPassing(prDetails: PRDetails, softChecks: string[] = []): PRCheckStatus {
     const checkType: AutoMergeCheckType = 'ci_passing';
+
+    const isSoftCheck = (name: string) =>
+      softChecks.some((soft) => name.toLowerCase().includes(soft.toLowerCase()));
 
     // Check status check rollup
     if (prDetails.statusCheckRollup) {
       const failedChecks = prDetails.statusCheckRollup.filter(
         (check) =>
-          check.state === 'FAILURE' ||
-          check.state === 'ERROR' ||
-          check.conclusion === 'FAILURE' ||
-          check.conclusion === 'TIMED_OUT' ||
-          check.conclusion === 'CANCELLED'
+          !isSoftCheck(check.context ?? '') &&
+          (check.state === 'FAILURE' ||
+            check.state === 'ERROR' ||
+            check.conclusion === 'FAILURE' ||
+            check.conclusion === 'TIMED_OUT' ||
+            check.conclusion === 'CANCELLED')
       );
 
       if (failedChecks.length > 0) {
@@ -184,10 +191,11 @@ export class MergeEligibilityService {
       if (contexts && contexts.length > 0) {
         const failedContexts = contexts.filter(
           (ctx) =>
-            ctx.state === 'FAILURE' ||
-            ctx.state === 'ERROR' ||
-            ctx.conclusion === 'FAILURE' ||
-            ctx.conclusion === 'TIMED_OUT'
+            !isSoftCheck(ctx.context ?? '') &&
+            (ctx.state === 'FAILURE' ||
+              ctx.state === 'ERROR' ||
+              ctx.conclusion === 'FAILURE' ||
+              ctx.conclusion === 'TIMED_OUT')
         );
 
         if (failedContexts.length > 0) {
@@ -348,7 +356,8 @@ export class MergeEligibilityService {
     workDir: string,
     prNumber: number,
     settings: AutoMergeSettings = DEFAULT_AUTO_MERGE_SETTINGS,
-    repo?: string
+    repo?: string,
+    softChecks: string[] = []
   ): Promise<MergeEligibilityResult> {
     // Check if gh CLI is available
     const ghAvailable = await this.isGhCliAvailable();
@@ -405,7 +414,7 @@ export class MergeEligibilityService {
 
       switch (checkType) {
         case 'ci_passing':
-          checkResult = this.checkCIPassing(prDetails);
+          checkResult = this.checkCIPassing(prDetails, softChecks);
           break;
         case 'reviews_approved':
           checkResult = this.checkReviewsApproved(prDetails, minApprovals);
