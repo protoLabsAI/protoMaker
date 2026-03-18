@@ -309,8 +309,14 @@ export class PRStatusChecker {
 
   /**
    * Fetch only failed CI check runs for a commit SHA, with output details.
+   * When ciProvider is 'github-actions' (default), fetches GHA job logs as a
+   * fallback for checks where the API output is insufficient.
    */
-  async fetchFailedChecks(pr: TrackedPR, headSha: string): Promise<FailedCheck[]> {
+  async fetchFailedChecks(
+    pr: TrackedPR,
+    headSha: string,
+    ciProvider: string = 'github-actions'
+  ): Promise<FailedCheck[]> {
     try {
       const { stdout } = await execFileAsync(
         'gh',
@@ -323,6 +329,7 @@ export class PRStatusChecker {
       );
 
       const checkRuns = JSON.parse(stdout) as Array<{
+        id: number;
         name: string;
         status: string;
         conclusion: string;
@@ -333,20 +340,124 @@ export class PRStatusChecker {
         };
       }>;
 
-      return checkRuns
-        .filter((check) => check.conclusion === 'failure')
-        .map((check) => ({
+      const failedRuns = checkRuns.filter((check) => check.conclusion === 'failure');
+      const results: FailedCheck[] = [];
+
+      for (const check of failedRuns) {
+        const apiOutput = [check.output?.title, check.output?.summary, check.output?.text]
+          .filter(Boolean)
+          .join('\n')
+          .slice(0, 1000);
+
+        // Use GHA job logs as fallback when check run API output is insufficient
+        let output = apiOutput;
+        if ((!output || output.trim().length < 50) && ciProvider === 'github-actions') {
+          const jobLogs = await this.fetchJobLogs(pr, check.id, ciProvider);
+          if (jobLogs) {
+            output = jobLogs;
+          }
+        }
+
+        results.push({
           name: check.name,
           conclusion: check.conclusion,
-          output: [check.output?.title, check.output?.summary, check.output?.text]
-            .filter(Boolean)
-            .join('\n')
-            .slice(0, 1000),
-        }));
+          output,
+        });
+      }
+
+      return results;
     } catch (error) {
       logger.debug(`Failed to fetch failed checks for ${headSha}: ${error}`);
       return [];
     }
+  }
+
+  /**
+   * Fetch GitHub Actions job logs for a specific check run (job ID).
+   * Parses the GHA log format (##[group] / ##[endgroup] / ##[error] markers),
+   * finds the failing step, and returns the last 200 lines of that step.
+   * Returns null for non-GHA providers or on fetch failure.
+   */
+  async fetchJobLogs(
+    pr: TrackedPR,
+    checkRunId: number,
+    ciProvider: string = 'github-actions'
+  ): Promise<string | null> {
+    if (ciProvider !== 'github-actions') {
+      return null;
+    }
+
+    try {
+      const { stdout } = await execFileAsync(
+        'gh',
+        ['api', `repos/{owner}/{repo}/actions/jobs/${checkRunId}/logs`],
+        {
+          cwd: pr.projectPath,
+          timeout: 30_000,
+          encoding: 'utf-8',
+          maxBuffer: 10 * 1024 * 1024, // 10 MB — GHA logs can be large
+        }
+      );
+
+      return this.parseGHAJobLogs(stdout);
+    } catch (error) {
+      logger.debug(`Failed to fetch job logs for check run ${checkRunId}: ${error}`);
+      return null;
+    }
+  }
+
+  /**
+   * Parse GitHub Actions log format to extract the failing step output.
+   *
+   * GHA log lines look like: "2024-01-01T00:00:00.0000000Z ##[group]Step name"
+   * Groups are delimited by ##[group] / ##[endgroup]. Errors appear as ##[error].
+   *
+   * Strategy:
+   * 1. Find the last group (step) that contains a ##[error] line.
+   * 2. Return the last 200 lines of that step's content.
+   * 3. If no step with errors is found, return the last 200 lines of all content.
+   */
+  private parseGHAJobLogs(rawLogs: string): string {
+    const lines = rawLogs.split('\n');
+
+    // Strip the ISO timestamp prefix from a log line to get the raw content.
+    const getContent = (line: string): string =>
+      line.replace(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z /, '');
+
+    let currentGroupStart = -1;
+    let failingGroupStart = -1;
+    let failingGroupEnd = -1;
+
+    for (let i = 0; i < lines.length; i++) {
+      const content = getContent(lines[i]);
+
+      if (content.startsWith('##[group]')) {
+        currentGroupStart = i;
+      } else if (content.startsWith('##[endgroup]')) {
+        currentGroupStart = -1;
+      } else if (content.startsWith('##[error]')) {
+        // Mark the enclosing group as the failing step, or use a local window.
+        if (currentGroupStart >= 0) {
+          failingGroupStart = currentGroupStart;
+          failingGroupEnd = i;
+        } else {
+          // Error outside a group — capture a window around it
+          failingGroupStart = Math.max(0, i - 10);
+          failingGroupEnd = i;
+        }
+      }
+    }
+
+    let relevantLines: string[];
+    if (failingGroupStart >= 0) {
+      const end = failingGroupEnd >= 0 ? failingGroupEnd + 1 : lines.length;
+      relevantLines = lines.slice(failingGroupStart, end);
+    } else {
+      relevantLines = lines;
+    }
+
+    // Truncate to last 200 lines of the relevant section
+    return relevantLines.slice(-200).join('\n');
   }
 
   private async getRemoteUrl(projectPath: string): Promise<string> {

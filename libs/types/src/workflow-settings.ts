@@ -499,7 +499,6 @@ export interface WorkflowSettings {
    */
   agentStartStaggerMs?: number;
   /**
-<<<<<<< HEAD
    * When true, the readiness gate in FeatureScheduler.loadPendingFeatures() is bypassed
    * and all features with satisfied dependencies are dispatched regardless of readinessScore.
    * Intended for debugging and projects that have not yet enabled readiness scoring.
@@ -515,8 +514,14 @@ export interface WorkflowSettings {
    */
   readinessThreshold?: number;
   /**
-=======
->>>>>>> origin/dev
+   * CI provider for this project. Used to determine which log-fetching
+   * strategy to use when diagnosing failing checks.
+   * - 'github-actions': Use GitHub Actions job log API (default)
+   * - 'other': Skip GHA log fetching, use check run output only
+   * @default 'github-actions'
+   */
+  ciProvider?: 'github-actions' | 'other';
+  /**
    * Maintenance check configuration.
    * Controls thresholds and behavior for automated board health checks.
    */
