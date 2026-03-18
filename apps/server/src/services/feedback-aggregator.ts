@@ -8,6 +8,7 @@
  */
 
 import { createLogger } from '@protolabsai/utils';
+import type { ClassifiedCIFailure } from '@protolabsai/types';
 import type { FeatureLoader } from './feature-loader.js';
 import type { PRReviewInfo, ThreadFeedbackItem } from './pr-status-checker.js';
 
@@ -156,28 +157,40 @@ This is iteration ${iterationCount} of the review cycle. Be judicious - not all 
 
   /**
    * Build a continuation prompt for fixing CI failures.
+   * Only actionable failures are included; infra/flaky failures are noted separately.
    */
   async buildCIFixPrompt(
     prNumber: number,
     iteration: number,
-    failedChecks: Array<{ name: string; conclusion: string; output: string }>,
+    failedChecks: ClassifiedCIFailure[],
     featureId: string,
     projectPath: string
   ): Promise<string> {
     const previousContext = await this.loadPreviousContext(projectPath, featureId, iteration);
 
+    const actionable = failedChecks.filter((c) => c.failureClass === 'actionable');
+    const skipped = failedChecks.filter((c) => c.failureClass !== 'actionable');
+
     const checksDetails =
-      failedChecks.length > 0
-        ? failedChecks
-            .map((check) => `### ${check.name}\n**Status:** ${check.conclusion}\n\n${check.output}`)
+      actionable.length > 0
+        ? actionable
+            .map(
+              (check) =>
+                `### ${check.name}\n**Status:** ${check.conclusion}\n**Class:** ${check.failureClass}\n\n${check.output}`
+            )
             .join('\n\n')
         : 'Check details not available. Run CI checks locally to debug.';
+
+    const skippedSection =
+      skipped.length > 0
+        ? `\n\n**Note:** The following failures were classified as non-actionable and skipped:\n${skipped.map((c) => `- \`${c.name}\` (${c.failureClass})`).join('\n')}`
+        : '';
 
     return `${previousContext}## CI Failure - Fix Required (Iteration ${iteration})
 
 Your pull request #${prNumber} has CI check failures. Please fix the following issues:
 
-${checksDetails}
+${checksDetails}${skippedSection}
 
 **Important Instructions:**
 - Fix only the CI failures mentioned above
