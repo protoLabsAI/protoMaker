@@ -451,6 +451,18 @@ export interface WorkflowSettings {
    */
   heartbeat?: HeartbeatSettings;
   /**
+   * Trajectory injection configuration.
+   * When enabled, relevant past trajectories are injected into agent prompts
+   * as a "Lessons from Similar Features" section. Omitting this field defaults
+   * to enabled with a 2000-token limit.
+   */
+  trajectoryInjection?: {
+    /** Whether trajectory injection is enabled (default: true) */
+    enabled: boolean;
+    /** Maximum tokens for the trajectory context section (default: 2000) */
+    maxTokens: number;
+  };
+  /**
    * Maintenance check configuration.
    * Controls thresholds and behavior for automated board health checks.
    */

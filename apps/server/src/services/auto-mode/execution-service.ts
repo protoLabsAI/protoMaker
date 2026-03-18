@@ -87,6 +87,7 @@ import { getAgentManifestService } from '../agent-manifest-service.js';
 
 import { TypedEventBus } from './typed-event-bus.js';
 import { PostExecutionMiddleware } from './post-execution-middleware.js';
+import { TrajectoryQueryService } from '../trajectory-query-service.js';
 import type {
   RunningFeature,
   ParsedTask,
@@ -265,6 +266,7 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
 export class ExecutionService {
   private readonly typedEventBus: TypedEventBus;
   private readonly postExecutionMiddleware: PostExecutionMiddleware;
+  private readonly trajectoryQueryService = new TrajectoryQueryService();
 
   constructor(
     private readonly events: EventEmitter,
@@ -715,10 +717,20 @@ export class ExecutionService {
       } else {
         // Normal flow: build prompt with planning phase
         // Context files are passed as the CONTEXT section in the PromptBuilder
+
+        // Query relevant past trajectories for injection (respects trajectoryInjection setting)
+        let trajectoryContext: string | undefined;
+        const trajectoryConfig = workflowSettings.trajectoryInjection;
+        if (trajectoryConfig?.enabled !== false) {
+          const maxTokens = trajectoryConfig?.maxTokens ?? 2000;
+          trajectoryContext = await this.buildTrajectoryContext(projectPath, feature, maxTokens);
+        }
+
         const featurePrompt = this.buildFeaturePrompt(
           feature,
           prompts.taskExecution,
-          combinedSystemPrompt || undefined
+          combinedSystemPrompt || undefined,
+          trajectoryContext
         );
         const planningPrefix = await this.getPlanningPromptPrefix(feature);
         prompt = planningPrefix + featurePrompt;
@@ -3088,7 +3100,8 @@ After generating the revised spec, output:
       implementationInstructions: string;
       playwrightVerificationInstructions: string;
     },
-    contextContent?: string
+    contextContent?: string,
+    trajectoryContext?: string
   ): string {
     const title = extractTitleFromDescription(feature.description);
 
@@ -3130,6 +3143,11 @@ After generating the revised spec, output:
       );
     }
 
+    // TRAJECTORY_CONTEXT section — lessons from similar past executions (all phases)
+    if (trajectoryContext) {
+      builder.addSection('TRAJECTORY_CONTEXT', trajectoryContext);
+    }
+
     // CODING_STANDARDS section — implementation instructions (EXECUTE phase only)
     builder.addSection('CODING_STANDARDS', `\n${taskExecutionPrompts.implementationInstructions}`, [
       'EXECUTE',
@@ -3145,6 +3163,64 @@ After generating the revised spec, output:
     }
 
     return builder.build();
+  }
+
+  /**
+   * Query TrajectoryQueryService and format results as a concise "Lessons from Similar Features"
+   * section. Returns undefined when no relevant trajectories are found or on error.
+   * Truncates to maxTokens (approximated as maxTokens * 4 characters).
+   */
+  private async buildTrajectoryContext(
+    projectPath: string,
+    feature: Feature,
+    maxTokens: number
+  ): Promise<string | undefined> {
+    try {
+      const results = await this.trajectoryQueryService.findSimilar({
+        projectPath,
+        domain: feature.domain as import('@protolabsai/types').TrajectoryDomain | undefined,
+        complexity: feature.complexity as
+          | 'small'
+          | 'medium'
+          | 'large'
+          | 'architectural'
+          | undefined,
+        filesToModify: feature.filesToModify,
+        title: feature.title ?? '',
+        description: feature.description ?? '',
+      });
+
+      if (results.length === 0) return undefined;
+
+      const lines: string[] = ['## Lessons from Similar Features\n'];
+      for (let i = 0; i < results.length; i++) {
+        const r = results[i];
+        lines.push(`### ${i + 1}. ${r.featureTitle} (complexity: ${r.complexity})`);
+        lines.push(`- **Execution Summary:** ${r.executionSummary}`);
+        if (r.escalationReason) {
+          lines.push(`- **Escalation/Failure:** ${r.escalationReason}`);
+        }
+        lines.push('');
+      }
+
+      let section = lines.join('\n');
+
+      // Enforce max tokens via character approximation (4 chars ≈ 1 token)
+      const maxChars = maxTokens * 4;
+      if (section.length > maxChars) {
+        section = section.slice(0, maxChars);
+        // Trim to last complete line to avoid cutting mid-sentence
+        const lastNewline = section.lastIndexOf('\n');
+        if (lastNewline > 0) {
+          section = section.slice(0, lastNewline);
+        }
+      }
+
+      return section;
+    } catch (err) {
+      logger.warn('[ExecutionService] Failed to build trajectory context:', err);
+      return undefined;
+    }
   }
 
   /**

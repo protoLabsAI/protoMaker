@@ -24,6 +24,7 @@ export enum SectionName {
   TESTING = 'TESTING',
   COMMIT_RULES = 'COMMIT_RULES',
   COMMUNICATION = 'COMMUNICATION',
+  TRAJECTORY_CONTEXT = 'TRAJECTORY_CONTEXT',
 }
 
 /** Options for a prompt section */
