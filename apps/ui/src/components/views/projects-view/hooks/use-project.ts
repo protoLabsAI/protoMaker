@@ -135,7 +135,12 @@ export function useCreateProject() {
       const api = getHttpApiClient();
       // Use description as ideaDescription; fall back to goal if not provided
       const ideaDescription = data.description?.trim() || data.goal.trim();
-      const result = await api.lifecycle.initiate(projectPath, data.title, ideaDescription);
+      const result = await api.lifecycle.initiate(projectPath, data.title, ideaDescription, {
+        color: data.color,
+        priority: data.priority,
+        description: data.description,
+        researchOnCreate: data.researchOnCreate,
+      });
 
       return result;
     },
@@ -144,7 +149,7 @@ export function useCreateProject() {
         description: `Created "${variables.title}"`,
       });
       if (variables.researchOnCreate) {
-        toast.info('Research started — findings will appear in the Research tab');
+        toast.info('Research started — findings will appear in the Research step');
       }
       queryClient.invalidateQueries({ queryKey: ['projects-list', projectPath] });
       if (result.localSlug) {
@@ -155,6 +160,36 @@ export function useCreateProject() {
       toast.error(
         `Failed to create project: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
+    },
+  });
+}
+
+export function useGeneratePrd(projectSlug: string) {
+  const projectPath = useAppStore((s) => s.currentProject?.path) ?? '';
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (additionalContext?: string) => {
+      const api = getHttpApiClient();
+      return api.lifecycle.generatePrd(projectPath, projectSlug, additionalContext);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-detail', projectPath, projectSlug] });
+    },
+  });
+}
+
+export function useSaveMilestones(projectSlug: string) {
+  const projectPath = useAppStore((s) => s.currentProject?.path) ?? '';
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (milestones: unknown[]) => {
+      const api = getHttpApiClient();
+      return api.lifecycle.saveMilestones(projectPath, projectSlug, milestones);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-detail', projectPath, projectSlug] });
     },
   });
 }

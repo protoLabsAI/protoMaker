@@ -1,35 +1,9 @@
-import { useState, lazy, Suspense } from 'react';
 import { Outlet, useChildMatches } from '@tanstack/react-router';
-import { FolderKanban, BarChart3, CircleDot } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
-import { Spinner } from '@protolabsai/ui/atoms';
-import { ProjectsList } from './projects-list';
-import { ProjectMetricsTab } from '../dashboard-view/metrics/project-tab';
-import { TimeRangeSelector, type TimeRange } from '../dashboard-view/metrics/time-range';
-
-const GitHubIssuesView = lazy(() =>
-  import('../github-issues-view').then((m) => ({ default: m.GitHubIssuesView }))
-);
-
-type ProjectsTab = 'plans' | 'issues' | 'metrics';
-
-const tabBtnClass =
-  'inline-flex h-[calc(100%-1px)] items-center justify-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
-
-function toggleBtnClass(active: boolean) {
-  return cn(
-    tabBtnClass,
-    active
-      ? 'bg-primary text-primary-foreground shadow-md'
-      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-  );
-}
+import { ProjectDashboard } from './project-dashboard';
 
 export function ProjectsView() {
   const projectPath = useAppStore((s) => s.currentProject?.path);
-  const [activeTab, setActiveTab] = useState<ProjectsTab>('plans');
-  const [timeRange, setTimeRange] = useState<TimeRange>('30d');
   const childMatches = useChildMatches();
 
   if (!projectPath) {
@@ -40,70 +14,10 @@ export function ProjectsView() {
     );
   }
 
+  // Child routes (slug, new) render via Outlet
   if (childMatches.length > 0) {
     return <Outlet />;
   }
 
-  return (
-    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-      <div className="shrink-0 px-4 py-2 flex items-center gap-3">
-        <div
-          className="inline-flex h-8 items-center rounded-md bg-muted p-[3px] border border-border"
-          role="tablist"
-          aria-label="Project management view"
-        >
-          <button
-            role="tab"
-            aria-selected={activeTab === 'plans'}
-            onClick={() => setActiveTab('plans')}
-            className={toggleBtnClass(activeTab === 'plans')}
-          >
-            <FolderKanban className="w-4 h-4" />
-          </button>
-          <button
-            role="tab"
-            aria-selected={activeTab === 'issues'}
-            onClick={() => setActiveTab('issues')}
-            className={toggleBtnClass(activeTab === 'issues')}
-          >
-            <CircleDot className="w-4 h-4" />
-          </button>
-          <button
-            role="tab"
-            aria-selected={activeTab === 'metrics'}
-            onClick={() => setActiveTab('metrics')}
-            className={toggleBtnClass(activeTab === 'metrics')}
-          >
-            <BarChart3 className="w-4 h-4" />
-          </button>
-        </div>
-        {activeTab === 'metrics' && (
-          <>
-            <div className="flex-1" />
-            <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
-          </>
-        )}
-      </div>
-
-      {activeTab === 'plans' && <ProjectsList />}
-      {activeTab === 'issues' && (
-        <Suspense
-          fallback={
-            <div className="flex-1 flex items-center justify-center">
-              <Spinner size="lg" />
-            </div>
-          }
-        >
-          <GitHubIssuesView />
-        </Suspense>
-      )}
-      {activeTab === 'metrics' && (
-        <div className="flex-1 overflow-y-auto px-4 py-2 sm:px-8 sm:py-2">
-          <div className="max-w-6xl mx-auto">
-            <ProjectMetricsTab projectPath={projectPath} timeRange={timeRange} />
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  return <ProjectDashboard />;
 }
