@@ -459,6 +459,21 @@ export interface WorkflowSettings {
    */
   agentStartStaggerMs?: number;
   /**
+   * When true, the readiness gate in FeatureScheduler.loadPendingFeatures() is bypassed
+   * and all features with satisfied dependencies are dispatched regardless of readinessScore.
+   * Intended for debugging and projects that have not yet enabled readiness scoring.
+   * @default false
+   */
+  skipReadinessGate?: boolean;
+  /**
+   * Minimum readinessScore (0–1) a feature must have to pass the pre-dispatch readiness gate.
+   * Features with a readinessScore below this value are filtered out and emit a
+   * feature:readiness:below-threshold event so the maintenance system can enrich them on the
+   * next sweep. Features without a readinessScore (undefined) always pass the gate.
+   * @default 0.5
+   */
+  readinessThreshold?: number;
+  /**
    * Maintenance check configuration.
    * Controls thresholds and behavior for automated board health checks.
    */

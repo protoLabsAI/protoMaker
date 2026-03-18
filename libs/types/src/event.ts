@@ -270,6 +270,8 @@ export type EventType =
   // Feature archival events (board cleanup)
   | 'feature:archived'
   | 'archival:cycle-completed'
+  // Readiness gate events (pre-dispatch scheduler filtering)
+  | 'feature:readiness:below-threshold'
   // GitHub PR state change events (emitted by GitHubStateChecker)
   | 'github:pr:review-submitted'
   | 'github:pr:checks-updated'

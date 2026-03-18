@@ -1249,10 +1249,45 @@ export class FeatureScheduler {
         return (downstreamImpact.get(b.id) ?? 0) - (downstreamImpact.get(a.id) ?? 0);
       });
 
+      // ── Readiness gate ──
+      // Filter out features whose readiness score is below the configured threshold.
+      // Features without a score (undefined) pass unconditionally — gate only applies
+      // when readiness scoring is active. Bypassed when skipReadinessGate is true.
+      const { skipReadinessGate, readinessThreshold } =
+        await this.getReadinessGateSettings(projectPath);
+
+      let gatedFeatures = readyFeatures;
+      if (!skipReadinessGate) {
+        const below: Feature[] = [];
+        gatedFeatures = readyFeatures.filter((f) => {
+          if (f.readinessScore === undefined) return true;
+          if (f.readinessScore >= readinessThreshold) return true;
+          below.push(f);
+          return false;
+        });
+        for (const f of below) {
+          logger.info(
+            `[loadPendingFeatures] Feature ${f.id} readinessScore=${f.readinessScore} below threshold=${readinessThreshold} — deferring`
+          );
+          this.events.emit('feature:readiness:below-threshold' as EventType, {
+            featureId: f.id,
+            featureTitle: f.title,
+            readinessScore: f.readinessScore,
+            threshold: readinessThreshold,
+            projectPath,
+          });
+        }
+        if (below.length > 0) {
+          logger.info(
+            `[loadPendingFeatures] Readiness gate: ${below.length} feature(s) deferred, ${gatedFeatures.length} remaining`
+          );
+        }
+      }
+
       // ── Project affinity filtering and sorting ──
       // Only applied when instance identity is configured (multi-instance deployments).
       // Single-instance setups with no proto.config.yaml identity pass through unmodified.
-      let affinityFilteredFeatures = readyFeatures;
+      let affinityFilteredFeatures = gatedFeatures;
       if (this.instanceId && this.getAssignedProjectSlugs) {
         try {
           const assignedSlugs = await this.getAssignedProjectSlugs(projectPath);
@@ -1267,8 +1302,8 @@ export class FeatureScheduler {
             return 2;
           };
 
-          const beforeCount = readyFeatures.length;
-          affinityFilteredFeatures = readyFeatures.filter((f) => {
+          const beforeCount = gatedFeatures.length;
+          affinityFilteredFeatures = gatedFeatures.filter((f) => {
             const tier = affinityTier(f);
             if (tier === 2 && !this.overflowEnabled) {
               logger.debug(
@@ -1297,7 +1332,7 @@ export class FeatureScheduler {
             '[loadPendingFeatures] Affinity filtering failed, using unfiltered list:',
             err
           );
-          affinityFilteredFeatures = readyFeatures;
+          affinityFilteredFeatures = gatedFeatures;
         }
       }
 
@@ -1363,6 +1398,31 @@ export class FeatureScheduler {
       return workflow?.agentStartStaggerMs ?? DEFAULT_STAGGER_MS;
     } catch {
       return DEFAULT_STAGGER_MS;
+    }
+  }
+
+  /**
+   * Read readiness gate settings from project workflow settings.
+   * Returns skipReadinessGate (default: false) and readinessThreshold (default: 0.5).
+   */
+  private async getReadinessGateSettings(
+    projectPath: string
+  ): Promise<{ skipReadinessGate: boolean; readinessThreshold: number }> {
+    const DEFAULT_THRESHOLD = 0.5;
+    try {
+      if (!this.settingsService)
+        return { skipReadinessGate: false, readinessThreshold: DEFAULT_THRESHOLD };
+      const projectSettings = await this.settingsService.getProjectSettings(projectPath);
+      const workflow = projectSettings.workflow as typeof projectSettings.workflow & {
+        skipReadinessGate?: boolean;
+        readinessThreshold?: number;
+      };
+      return {
+        skipReadinessGate: workflow?.skipReadinessGate ?? false,
+        readinessThreshold: workflow?.readinessThreshold ?? DEFAULT_THRESHOLD,
+      };
+    } catch {
+      return { skipReadinessGate: false, readinessThreshold: DEFAULT_THRESHOLD };
     }
   }
 
