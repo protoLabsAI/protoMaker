@@ -459,6 +459,7 @@ export interface WorkflowSettings {
    */
   agentStartStaggerMs?: number;
   /**
+<<<<<<< HEAD
    * When true, the readiness gate in FeatureScheduler.loadPendingFeatures() is bypassed
    * and all features with satisfied dependencies are dispatched regardless of readinessScore.
    * Intended for debugging and projects that have not yet enabled readiness scoring.
@@ -474,6 +475,8 @@ export interface WorkflowSettings {
    */
   readinessThreshold?: number;
   /**
+=======
+>>>>>>> origin/dev
    * Maintenance check configuration.
    * Controls thresholds and behavior for automated board health checks.
    */
@@ -485,6 +488,14 @@ export interface WorkflowSettings {
      * @default 30
      */
     stuckPrThresholdMinutes?: number;
+    /**
+     * Minimum readiness score (0-100) a backlog feature must achieve before it is
+     * considered well-specified enough for agent execution. Features below this
+     * threshold generate auto-fixable maintenance issues whose fix enriches the
+     * description using an enhancement model.
+     * @default 60
+     */
+    readinessScoreThreshold?: number;
   };
 }
 
