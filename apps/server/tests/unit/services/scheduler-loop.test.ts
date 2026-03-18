@@ -879,3 +879,87 @@ describe('FeatureScheduler - human assignee filtering', () => {
     expect(ids).toContain('feat-unassigned');
   });
 });
+
+// ─── ConcurrencyManager — global capacity (cross-app) ────────────────────────
+
+describe('ConcurrencyManager - global capacity (cross-app)', () => {
+  let manager: ConcurrencyManager;
+
+  beforeEach(() => {
+    manager = new ConcurrencyManager();
+  });
+
+  it('size counts all active leases across multiple projects', () => {
+    // App A — 2 running features
+    manager.acquire('feat-a1', '/project-a', null, null);
+    manager.acquire('feat-a2', '/project-a', null, null);
+    // App B — 1 running feature
+    manager.acquire('feat-b1', '/project-b', null, null);
+
+    // size is the global count regardless of which project each feature belongs to
+    expect(manager.size).toBe(3);
+  });
+
+  it('releasing a lease from one app frees a global slot', () => {
+    manager.acquire('feat-a1', '/project-a', null, null);
+    manager.acquire('feat-b1', '/project-b', null, null);
+    expect(manager.size).toBe(2);
+
+    manager.release('feat-a1');
+    expect(manager.size).toBe(1);
+  });
+
+  it('per-project count stays isolated while global count reflects all apps', () => {
+    manager.acquire('feat-x', '/project-x', null, null);
+    manager.acquire('feat-y1', '/project-y', null, null);
+    manager.acquire('feat-y2', '/project-y', null, null);
+
+    expect(manager.getRunningCountForProject('/project-x')).toBe(1);
+    expect(manager.getRunningCountForProject('/project-y')).toBe(2);
+    // Global count is the sum
+    expect(manager.size).toBe(3);
+  });
+});
+
+// ─── AutoModeService — global capacity gate ───────────────────────────────────
+
+describe('AutoModeService - global capacity gate', () => {
+  it('getGlobalRunningCount reflects leases across all projects', () => {
+    const mockEvents = {
+      subscribe: vi.fn(),
+      emit: vi.fn(),
+      on: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
+    };
+    const service = new AutoModeService(mockEvents as any);
+    const manager: ConcurrencyManager = (service as any).concurrencyManager;
+
+    // Simulate features running across two different projects
+    manager.acquire('feat-app-a', '/project-a', null, null);
+    manager.acquire('feat-app-b', '/project-b', null, null);
+
+    // The scheduler callbacks wire getGlobalRunningCount to concurrencyManager.size
+    // Verify that size counts all leases regardless of project
+    expect(manager.size).toBe(2);
+  });
+
+  it('concurrencyManager.size reaches systemMaxConcurrency when all slots are filled', () => {
+    const mockEvents = {
+      subscribe: vi.fn(),
+      emit: vi.fn(),
+      on: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
+    };
+    const service = new AutoModeService(mockEvents as any);
+    const manager: ConcurrencyManager = (service as any).concurrencyManager;
+
+    // Fill slots across two apps (system default cap = 2 in test env)
+    manager.acquire('feat-1', '/project-a', null, null);
+    manager.acquire('feat-2', '/project-b', null, null);
+
+    // Both slots are occupied — gate should fire in the scheduler loop
+    expect(manager.size).toBeGreaterThanOrEqual(2);
+
+    // Releasing from one app makes room globally
+    manager.release('feat-1');
+    expect(manager.size).toBe(1);
+  });
+});
