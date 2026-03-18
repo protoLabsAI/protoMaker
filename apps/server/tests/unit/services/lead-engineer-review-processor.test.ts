@@ -23,13 +23,15 @@ const { mockExecAsync } = vi.hoisted(() => ({
 }));
 
 // Mock child_process + util so `execAsync` in the source module uses our mock.
-vi.mock('node:child_process', () => ({
-  exec: vi.fn(),
-}));
+vi.mock('node:child_process', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:child_process')>();
+  return { ...actual, exec: vi.fn() };
+});
 
-vi.mock('node:util', () => ({
-  promisify: () => mockExecAsync,
-}));
+vi.mock('node:util', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:util')>();
+  return { ...actual, promisify: () => mockExecAsync };
+});
 
 import { ReviewProcessor } from '../../../src/services/lead-engineer-review-merge-processors.js';
 import type {

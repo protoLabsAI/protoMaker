@@ -26,7 +26,8 @@ const mockLogger = vi.hoisted(() => ({
 
 const mockExecAsync = vi.hoisted(() => vi.fn(async () => ({ stdout: '', stderr: '' })));
 
-vi.mock('child_process', () => {
+vi.mock('child_process', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('child_process')>();
   const execFn = vi.fn();
   (execFn as any)[Symbol.for('nodejs.util.promisify.custom')] = mockExecAsync;
   const execFileFn = vi.fn();
@@ -34,7 +35,7 @@ vi.mock('child_process', () => {
     stdout: '',
     stderr: '',
   }));
-  return { exec: execFn, execFile: execFileFn };
+  return { ...actual, exec: execFn, execFile: execFileFn };
 });
 
 const mockGetEffectivePrBaseBranch = vi.hoisted(() => vi.fn(async () => 'dev'));
