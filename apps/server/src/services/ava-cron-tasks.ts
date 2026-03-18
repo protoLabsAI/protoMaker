@@ -12,12 +12,27 @@
  */
 
 import { execSync } from 'child_process';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+
 import { createLogger } from '@protolabsai/utils';
-import type { Feature } from '@protolabsai/types';
+import type { Feature, EscalationSignal } from '@protolabsai/types';
+import { EscalationSeverity, EscalationSource } from '@protolabsai/types';
+import { resolveModelString } from '@protolabsai/model-resolver';
+import { generateText } from 'ai';
+
 import type { SchedulerService } from './scheduler-service.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { DiscordBotService } from './discord-bot-service.js';
+import type { EscalationRouter } from './escalation-router.js';
+import type { SettingsService } from './settings-service.js';
+import { getWorkflowSettings } from '../lib/settings-helpers.js';
+import { getAnthropicModel } from '../lib/ai-provider.js';
+import {
+  generateHeartbeatPrompt,
+  parseHeartbeatResponse,
+} from '../lib/prompts/heartbeat-prompt.js';
 import { getVersion } from '../lib/version.js';
 
 const logger = createLogger('AvaCronTasks');
@@ -33,6 +48,10 @@ export interface AvaCronTaskDeps {
   featureLoader: FeatureLoader;
   autoModeService: AutoModeService;
   discordBotService: DiscordBotService;
+  /** Optional — required for adaptive heartbeat task */
+  settingsService?: SettingsService | null;
+  /** Optional — required for adaptive heartbeat alert routing */
+  escalationRouter?: EscalationRouter | null;
 }
 
 /**
@@ -326,6 +345,151 @@ async function handlePrTriage(deps: AvaCronTaskDeps): Promise<void> {
   });
 }
 
+/**
+ * Adaptive Heartbeat — reads HEARTBEAT.md, runs an isolated Haiku call (~3K tokens),
+ * and routes any alerts through the EscalationRouter. HEARTBEAT_OK suppresses delivery.
+ *
+ * Skips if HEARTBEAT.md is missing or empty.
+ */
+async function handleAdaptiveHeartbeat(deps: AvaCronTaskDeps): Promise<void> {
+  const { featureLoader, projectPath, escalationRouter } = deps;
+
+  // Read HEARTBEAT.md from .automaker/
+  const heartbeatMdPath = join(projectPath, '.automaker', 'HEARTBEAT.md');
+  let heartbeatMd: string;
+  try {
+    heartbeatMd = await readFile(heartbeatMdPath, 'utf-8');
+  } catch {
+    logger.debug('[ava-adaptive-heartbeat] HEARTBEAT.md not found, skipping');
+    return;
+  }
+
+  if (!heartbeatMd.trim()) {
+    logger.debug('[ava-adaptive-heartbeat] HEARTBEAT.md is empty, skipping');
+    return;
+  }
+
+  // Gather board summary
+  let features: Feature[];
+  try {
+    features = await featureLoader.getAll(projectPath);
+  } catch (err) {
+    logger.error('[ava-adaptive-heartbeat] Failed to load features', err);
+    features = [];
+  }
+
+  const byStatus: Record<string, number> = {};
+  const staleFeatures: Array<{
+    id: string;
+    title: string;
+    status: string;
+    daysSinceUpdate: number;
+  }> = [];
+  const failedPRs: Array<{ id: string; title: string; prNumber?: number }> = [];
+  const now = Date.now();
+  const STALE_MS = 7 * 24 * 60 * 60 * 1000;
+
+  for (const f of features) {
+    const s = f.status || 'backlog';
+    byStatus[s] = (byStatus[s] || 0) + 1;
+
+    if (s === 'in_progress' || s === 'review') {
+      const lastUpdate = f.updatedAt
+        ? typeof f.updatedAt === 'number'
+          ? f.updatedAt
+          : new Date(f.updatedAt).getTime()
+        : 0;
+      if (lastUpdate > 0 && now - lastUpdate > STALE_MS) {
+        staleFeatures.push({
+          id: f.id,
+          title: f.title || f.id,
+          status: s,
+          daysSinceUpdate: Math.floor((now - lastUpdate) / (24 * 60 * 60 * 1000)),
+        });
+      }
+    }
+
+    if (s === 'review' && f.prNumber) {
+      failedPRs.push({ id: f.id, title: f.title || f.id, prNumber: f.prNumber });
+    }
+  }
+
+  const prompt = generateHeartbeatPrompt({
+    total: features.length,
+    byStatus,
+    blockedCount: byStatus['blocked'] ?? 0,
+    inProgressCount: byStatus['in_progress'] ?? 0,
+    staleFeatures,
+    failedPRs,
+    heartbeatMd,
+  });
+
+  // Resolve model — deps.settingsService provides workflow settings
+  const workflowSettings = await getWorkflowSettings(projectPath, deps.settingsService);
+  const modelAlias = workflowSettings.heartbeat?.model ?? 'haiku';
+  const modelId = resolveModelString(modelAlias);
+
+  let responseText: string;
+  try {
+    const model = await getAnthropicModel(modelId);
+    const result = await generateText({
+      model,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    responseText = result.text;
+  } catch (err) {
+    logger.error('[ava-adaptive-heartbeat] LLM call failed', err);
+    return;
+  }
+
+  const parsed = parseHeartbeatResponse(responseText);
+
+  if (parsed.status === 'ok') {
+    logger.debug('[ava-adaptive-heartbeat] HEARTBEAT_OK — no issues detected');
+    return;
+  }
+
+  // Route alerts through EscalationRouter
+  if (!escalationRouter) {
+    logger.warn(
+      '[ava-adaptive-heartbeat] Alerts detected but no escalationRouter available — logging only'
+    );
+    logger.warn('[ava-adaptive-heartbeat] Alerts:', JSON.stringify(parsed.alerts));
+    return;
+  }
+
+  const alerts = parsed.alerts ?? [];
+  for (const alert of alerts) {
+    const severityMap: Record<string, EscalationSeverity> = {
+      critical: EscalationSeverity.critical,
+      high: EscalationSeverity.high,
+      medium: EscalationSeverity.medium,
+      low: EscalationSeverity.low,
+    };
+
+    const signal: EscalationSignal = {
+      source: EscalationSource.board_anomaly,
+      severity: severityMap[alert.severity] ?? EscalationSeverity.medium,
+      type: 'adaptive-heartbeat:alert',
+      context: {
+        title: alert.title,
+        description: alert.description,
+        projectPath,
+      },
+      deduplicationKey: `adaptive-heartbeat:${projectPath}:${alert.title}`,
+      timestamp: new Date().toISOString(),
+    };
+
+    try {
+      await escalationRouter.routeSignal(signal);
+    } catch (err) {
+      logger.error('[ava-adaptive-heartbeat] Failed to route signal', err);
+    }
+  }
+
+  logger.info(`[ava-adaptive-heartbeat] Routed ${alerts.length} alert(s) for ${projectPath}`);
+}
+
 // ---------------------------------------------------------------------------
 // Registration
 // ---------------------------------------------------------------------------
@@ -386,4 +550,28 @@ export async function registerAvaCronTasks(deps: AvaCronTaskDeps): Promise<void>
   );
 
   logger.info('[AvaCronTasks] Registered 3 deterministic cron tasks (no LLM)');
+
+  // 4. Adaptive heartbeat — opt-in per project via workflowSettings.heartbeat.enabled
+  const workflowSettings = await getWorkflowSettings(deps.projectPath, deps.settingsService);
+  const heartbeatConfig = workflowSettings.heartbeat;
+  if (heartbeatConfig?.enabled) {
+    const intervalMs = (heartbeatConfig.intervalMinutes ?? 30) * 60 * 1000;
+    schedulerService.registerInterval(
+      'ava-adaptive-heartbeat',
+      'Ava Adaptive Heartbeat',
+      intervalMs,
+      async () => {
+        logger.info('[AvaCronTasks] Running ava-adaptive-heartbeat');
+        try {
+          await handleAdaptiveHeartbeat(deps);
+        } catch (err) {
+          logger.error('[AvaCronTasks] ava-adaptive-heartbeat failed', err);
+        }
+      },
+      { enabled: true, category: 'health' }
+    );
+    logger.info(
+      `[AvaCronTasks] Registered ava-adaptive-heartbeat (every ${heartbeatConfig.intervalMinutes ?? 30}m, model: ${heartbeatConfig.model ?? 'haiku'})`
+    );
+  }
 }
