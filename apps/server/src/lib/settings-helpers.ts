@@ -801,6 +801,7 @@ export async function getWorkflowSettings(
           ...DEFAULT_WORKFLOW_SETTINGS.gitWorkflow,
           ...projectSettings.workflow.gitWorkflow,
         },
+        ciClassification: projectSettings.workflow.ciClassification,
       };
     }
     return DEFAULT_WORKFLOW_SETTINGS;

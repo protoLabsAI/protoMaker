@@ -522,6 +522,14 @@ export interface WorkflowSettings {
    */
   ciProvider?: 'github-actions' | 'other';
   /**
+   * CI failure classification configuration.
+   * Custom rules are prepended to the built-in default rule set.
+   * Allows projects to mark specific check names as flaky/infra so the
+   * PR remediation pipeline skips agent dispatch for non-fixable failures.
+   * When absent, only built-in defaults are used.
+   */
+  ciClassification?: import('./ci-failure.js').CIClassificationConfig;
+  /**
    * Maintenance check configuration.
    * Controls thresholds and behavior for automated board health checks.
    */

@@ -42,6 +42,8 @@ import {
   PR_FEEDBACK_MISSING_CI_CHECK_THRESHOLD_MS,
 } from '../config/timeouts.js';
 import type { SchedulerService } from './scheduler-service.js';
+import type { SettingsService } from './settings-service.js';
+import { getWorkflowSettings } from '../lib/settings-helpers.js';
 
 const logger = createLogger('PRFeedbackRemediation');
 
@@ -119,6 +121,7 @@ export class PRFeedbackService {
 
   private readonly feedbackAggregator: FeedbackAggregator;
   private readonly threadResolver: ThreadResolver;
+  private settingsService: SettingsService | null = null;
 
   constructor(events: EventEmitter, featureLoader: FeatureLoader, dataDir: string) {
     this.events = events;
@@ -150,6 +153,10 @@ export class PRFeedbackService {
 
   setLeadEngineerService(service: { isFeatureActive(featureId: string): boolean }): void {
     this.leadEngineerService = service;
+  }
+
+  setSettingsService(service: SettingsService): void {
+    this.settingsService = service;
   }
 
   initialize(): void {
@@ -1267,12 +1274,27 @@ export class PRFeedbackService {
         `CI failure for PR #${pr.prNumber} (feature ${featureId}): iteration ${ciIterationCount}, total cycles ${newTotalCycles}/${MAX_TOTAL_REMEDIATION_CYCLES}`
       );
 
-      const failedChecks = await prStatusChecker.fetchFailedChecks(pr, data.headSha);
+      const workflowSettings = await getWorkflowSettings(pr.projectPath, this.settingsService);
+      const classifiedChecks = await prStatusChecker.fetchFailedChecks(
+        pr,
+        data.headSha,
+        workflowSettings.ciClassification
+      );
+
+      // Check if all failures are non-agent-fixable (infra/flaky/timeout/unknown)
+      const fixableChecks = classifiedChecks.filter((c) => c.agentFixable);
+      if (classifiedChecks.length > 0 && fixableChecks.length === 0) {
+        const classes = classifiedChecks.map((c) => `${c.name} [${c.failureClass}]`).join(', ');
+        logger.info(
+          `Skipping CI remediation for PR #${pr.prNumber}: all failures are non-agent-fixable (${classes})`
+        );
+        return;
+      }
 
       const continuationPrompt = await this.feedbackAggregator.buildCIFixPrompt(
         pr.prNumber,
         ciIterationCount,
-        failedChecks,
+        classifiedChecks,
         featureId,
         pr.projectPath
       );
