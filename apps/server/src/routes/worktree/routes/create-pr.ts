@@ -17,6 +17,7 @@ import { createLogger } from '@protolabsai/utils';
 import { validatePRState } from '@protolabsai/types';
 import { buildPROwnershipWatermark } from '../../github/utils/pr-ownership.js';
 import type { SettingsService } from '../../../services/settings-service.js';
+import { getEffectivePrBaseBranch } from '../../../lib/settings-helpers.js';
 
 const logger = createLogger('CreatePR');
 
@@ -145,7 +146,12 @@ export function createCreatePRHandler(settingsService?: SettingsService) {
       }
 
       // Create PR using gh CLI or provide browser fallback
-      const base = baseBranch || 'main';
+      // If baseBranch is not supplied by the caller, resolve it from project settings
+      // (workflow.gitWorkflow.prBaseBranch) so agent-created PRs target the configured
+      // integration branch (e.g. 'dev') rather than defaulting to 'main'.
+      const base =
+        baseBranch ||
+        (await getEffectivePrBaseBranch(effectiveProjectPath, settingsService, '[CreatePR]'));
       const title = prTitle || branchName;
       const rawBody = prBody || `Changes from branch ${branchName}`;
 
