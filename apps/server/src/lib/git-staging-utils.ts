@@ -10,18 +10,33 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 
 /**
- * Builds a git add command that stages all changes except .automaker/,
- * then re-includes .automaker/memory/ and .automaker/skills/ only if those
- * directories exist in the working tree. This prevents a fatal pathspec error
- * when a directory is absent (e.g. in a fresh worktree).
+ * Default directories to exclude from `git add`.
+ * Prevents worktree `.git` files and internal automaker directories from
+ * being staged as broken submodules (causing CI failures on Cloudflare Pages etc.)
  */
-export function buildGitAddCommand(workDir: string): string {
-  const parts = ["git add -A -- ':!.automaker/'"];
-  if (existsSync(join(workDir, '.automaker/memory'))) {
-    parts.push("'.automaker/memory/'");
+export const DEFAULT_STAGING_EXCLUSIONS = ['.automaker/', '.claude/worktrees/', '.worktrees/'];
+
+/**
+ * Builds a git add command that stages all changes except the directories in
+ * `excludeFromStaging`, then re-includes `.automaker/memory/` and
+ * `.automaker/skills/` only if `.automaker/` is excluded and those directories
+ * exist in the working tree. This prevents a fatal pathspec error when a
+ * directory is absent (e.g. in a fresh worktree).
+ */
+export function buildGitAddCommand(workDir: string, excludeFromStaging?: string[]): string {
+  const exclusions = excludeFromStaging ?? DEFAULT_STAGING_EXCLUSIONS;
+  const exclusionPathspecs = exclusions.map((dir) => `':!${dir}'`).join(' ');
+  const parts = [`git add -A -- ${exclusionPathspecs}`];
+
+  // Re-include .automaker/memory/ and .automaker/skills/ when .automaker/ is excluded
+  if (exclusions.includes('.automaker/')) {
+    if (existsSync(join(workDir, '.automaker/memory'))) {
+      parts.push("'.automaker/memory/'");
+    }
+    if (existsSync(join(workDir, '.automaker/skills'))) {
+      parts.push("'.automaker/skills/'");
+    }
   }
-  if (existsSync(join(workDir, '.automaker/skills'))) {
-    parts.push("'.automaker/skills/'");
-  }
+
   return parts.join(' ');
 }
