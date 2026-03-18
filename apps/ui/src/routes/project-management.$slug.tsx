@@ -4,7 +4,8 @@ import { useProject } from '@/components/views/projects-view/hooks/use-project';
 import { ProjectWizard } from '@/components/views/projects-view/wizard';
 import { ActiveProjectView } from '@/components/views/projects-view/wizard/active-project-view';
 
-const ACTIVE_STATUSES = ['active', 'completed', 'ongoing'];
+/** Wizard only for genuinely new projects that have no meaningful data yet */
+const WIZARD_STATUSES = ['drafting', 'researching'];
 
 function ProjectSlugRoute() {
   const { slug } = Route.useParams();
@@ -21,12 +22,22 @@ function ProjectSlugRoute() {
     );
   }
 
-  // Active/completed projects show monitoring dashboard
-  if (project && ACTIVE_STATUSES.includes(project.status ?? '')) {
+  // New/drafting projects with no PRD or milestones get the wizard
+  const isNewProject =
+    project &&
+    WIZARD_STATUSES.includes(project.status ?? '') &&
+    !project.prd &&
+    (!project.milestones || project.milestones.length === 0);
+
+  if (isNewProject) {
+    return <ProjectWizard projectSlug={slug} onBack={onBack} />;
+  }
+
+  // Everything else gets the full detail view
+  if (project) {
     return <ActiveProjectView project={project} projectSlug={slug} onBack={onBack} />;
   }
 
-  // Pipeline projects (pre-active) show the wizard
   return <ProjectWizard projectSlug={slug} onBack={onBack} />;
 }
 
