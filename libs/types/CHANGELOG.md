@@ -1,5 +1,29 @@
 # @protolabsai/types
 
+## 0.77.0
+
+### Minor Changes
+
+- ### Features
+  - redesign project management UI with wizard-based flow (#2870)
+  - redesign project management UI with wizard-based flow (#2870)
+
+  ### Refactors
+  - Bug: Feature PRs target wrong branch on multi-project setups (#2871)
+  - Stuck PR detection maintenance check (#2872)
+  - Configurable soft CI checks for merge gate (#2869)
+  - Harden setuplab to add worktree dirs to .gitignore (#2868)
+  - PR reconciliation layer in REVIEW processor (#2867)
+  - Bug: Epics don't auto-complete when no epic branch exists (#2866)
+  - Expand git add pathspec to exclude worktree directories (#2865)
+  - Bug: Feature PRs target wrong branch on multi-project setups (#2871)
+  - Stuck PR detection maintenance check (#2872)
+  - Configurable soft CI checks for merge gate (#2869)
+  - Harden setuplab to add worktree dirs to .gitignore (#2868)
+  - PR reconciliation layer in REVIEW processor (#2867)
+  - Bug: Epics don't auto-complete when no epic branch exists (#2866)
+  - Expand git add pathspec to exclude worktree directories (#2865)
+
 ## 0.76.0
 
 ### Minor Changes
