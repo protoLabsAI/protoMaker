@@ -161,6 +161,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     todoService,
     schedulerService,
     eventRouterService,
+    pipelineCheckpointService,
   } = services;
 
   // Run stale validation cleanup every hour to prevent memory leaks from crashed validations
@@ -247,7 +248,8 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
       settingsService,
       events,
       authorityService,
-      featureHealthService
+      featureHealthService,
+      pipelineCheckpointService
     )
   );
   app.post(
