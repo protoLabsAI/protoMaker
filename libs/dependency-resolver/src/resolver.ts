@@ -12,6 +12,7 @@ export interface DependencyResolutionResult {
   circularDependencies: string[][]; // Groups of IDs forming cycles
   missingDependencies: Map<string, string[]>; // featureId -> missing dep IDs
   blockedFeatures: Map<string, string[]>; // featureId -> blocking dep IDs (incomplete dependencies)
+  downstreamImpact: Map<string, number>; // featureId -> transitiveDescendantCount
 }
 
 /**
