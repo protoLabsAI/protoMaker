@@ -258,6 +258,8 @@ export class GitWorkflowService {
         featureOverride.excludeFromStaging ??
         global.excludeFromStaging ??
         DEFAULT_GIT_WORKFLOW_SETTINGS.excludeFromStaging,
+      softChecks:
+        featureOverride.softChecks ?? global.softChecks ?? DEFAULT_GIT_WORKFLOW_SETTINGS.softChecks,
     };
   }
 
