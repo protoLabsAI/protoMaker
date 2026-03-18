@@ -196,6 +196,33 @@ export interface AgentConfig {
 // ============================================================================
 
 /**
+ * HeartbeatSettings — Per-project opt-in adaptive heartbeat configuration.
+ *
+ * When enabled, reads `.automaker/HEARTBEAT.md` on a configurable interval,
+ * runs a lightweight LLM call (Haiku by default), and routes alerts through
+ * the EscalationRouter. Agents and Ava can rewrite HEARTBEAT.md to change
+ * what future heartbeats watch for (self-programming pattern).
+ */
+export interface HeartbeatSettings {
+  /** Whether the adaptive heartbeat is enabled (default: false — opt-in) */
+  enabled: boolean;
+  /** Interval in minutes between heartbeat runs (default: 30) */
+  intervalMinutes: number;
+  /** Model alias to use for the heartbeat LLM call (default: 'haiku') */
+  model: string;
+  /** Target for routing alerts — only 'escalation-router' is supported (default: 'escalation-router') */
+  target: 'escalation-router';
+}
+
+/** Default heartbeat settings — disabled by default */
+export const DEFAULT_HEARTBEAT_SETTINGS: HeartbeatSettings = {
+  enabled: false,
+  intervalMinutes: 30,
+  model: 'haiku',
+  target: 'escalation-router',
+};
+
+/**
  * WorkflowSettings — Configuration for pipeline hardening features.
  * Controls goal gates, checkpointing, loop detection, supervisor,
  * retro feedback, cleanup, and signal intake behavior.
@@ -415,6 +442,14 @@ export interface WorkflowSettings {
     /** Base branch for PR creation (overrides global gitWorkflow.prBaseBranch) */
     prBaseBranch?: string;
   };
+  /**
+   * Adaptive heartbeat configuration.
+   * When enabled, reads `.automaker/HEARTBEAT.md` on a configurable interval
+   * and runs a lightweight LLM call to detect issues. Agents can rewrite
+   * HEARTBEAT.md to self-program what future heartbeats monitor.
+   * @see HeartbeatSettings
+   */
+  heartbeat?: HeartbeatSettings;
   /**
    * Maintenance check configuration.
    * Controls thresholds and behavior for automated board health checks.

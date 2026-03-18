@@ -25,16 +25,26 @@ export interface HeartbeatPromptData {
     prNumber?: number;
     prUrl?: string;
   }>;
+  /**
+   * Optional HEARTBEAT.md content injected by the adaptive heartbeat scheduler.
+   * When present, the prompt includes the watchlist from HEARTBEAT.md so the LLM
+   * evaluates the board against project-specific criteria rather than defaults only.
+   */
+  heartbeatMd?: string;
 }
 
 /**
  * Generate heartbeat evaluation prompt for Ava
  */
 export function generateHeartbeatPrompt(data: HeartbeatPromptData): string {
+  const heartbeatMdSection = data.heartbeatMd
+    ? `\n## Project Watchlist (HEARTBEAT.md)\n\nThe following watchlist was configured by the project team. Evaluate the board against these specific criteria in addition to the standard checks below.\n\n${data.heartbeatMd}\n`
+    : '';
+
   return `# Ava Heartbeat Check
 
 You are AVA, the Autonomous Virtual Agency for Automaker. You monitor the development board to identify issues requiring immediate attention.
-
+${heartbeatMdSection}
 ## Current Board State
 
 **Total Features:** ${data.total}
