@@ -463,6 +463,14 @@ export interface WorkflowSettings {
     model?: string;
   };
   /**
+   * Milliseconds to wait between agent dispatches when multiple features are ready.
+   * Prevents thundering-herd startup (API rate limits, disk I/O contention).
+   * No stagger is applied when only one feature is ready to dispatch.
+   * Set to 0 to disable staggering.
+   * @default 15000
+   */
+  agentStartStaggerMs?: number;
+  /**
    * Maintenance check configuration.
    * Controls thresholds and behavior for automated board health checks.
    */
@@ -474,6 +482,14 @@ export interface WorkflowSettings {
      * @default 30
      */
     stuckPrThresholdMinutes?: number;
+    /**
+     * Minimum readiness score (0-100) a backlog feature must achieve before it is
+     * considered well-specified enough for agent execution. Features below this
+     * threshold generate auto-fixable maintenance issues whose fix enriches the
+     * description using an enhancement model.
+     * @default 60
+     */
+    readinessScoreThreshold?: number;
   };
 }
 

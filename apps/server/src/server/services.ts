@@ -75,6 +75,7 @@ import { HeadsdownService } from '../services/headsdown-service.js';
 import { AgentDiscordRouter } from '../services/agent-discord-router.js';
 import { FactStoreService } from '../services/fact-store-service.js';
 import { TrajectoryStoreService } from '../services/trajectory-store-service.js';
+import { TrajectoryQueryService } from '../services/trajectory-query-service.js';
 import { LeadHandoffService } from '../services/lead-handoff-service.js';
 import { ChannelRouter } from '../services/channel-router.js';
 import { NotificationRouter } from '../services/notification-router.js';
@@ -244,6 +245,7 @@ export interface ServiceContainer {
   pipelineCheckpointService: PipelineCheckpointService;
   factStoreService: FactStoreService;
   trajectoryStoreService: TrajectoryStoreService;
+  trajectoryQueryService: TrajectoryQueryService;
   leadHandoffService: LeadHandoffService;
 
   // PR & worktree lifecycle
@@ -562,6 +564,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
 
   // Trajectory Store Service — persists verified trajectories and feeds Langfuse datasets
   const trajectoryStoreService = new TrajectoryStoreService();
+
+  // Trajectory Query Service — finds relevant past trajectories by multi-signal similarity
+  const trajectoryQueryService = new TrajectoryQueryService();
 
   // Lead Handoff Service — stores phase transition snapshots for LE continuity
   const leadHandoffService = new LeadHandoffService();
@@ -948,6 +953,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     pipelineCheckpointService,
     factStoreService,
     trajectoryStoreService,
+    trajectoryQueryService,
     leadHandoffService,
     prFeedbackService,
     worktreeLifecycleService,

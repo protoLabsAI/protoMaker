@@ -287,6 +287,48 @@ export const DEFAULT_WORKFLOW_SETTINGS: WorkflowSettings = {
 
 ---
 
+## Adaptive Heartbeat
+
+Per-project opt-in heartbeat that reads a HEARTBEAT.md file and routes alerts via the EscalationRouter.
+
+```typescript
+interface HeartbeatSettings {
+  enabled: boolean; // Enable adaptive heartbeat. Default: false (opt-in)
+  intervalMinutes: number; // Interval between runs in minutes. Default: 30
+  model: string; // Model alias for the LLM call. Default: 'haiku'
+  target: 'escalation-router'; // Alert routing target. Only 'escalation-router' is supported.
+}
+
+interface WorkflowSettings {
+  heartbeat?: HeartbeatSettings;
+}
+```
+
+When enabled, the server registers an interval timer (`ava-adaptive-heartbeat`) that:
+
+1. Reads `.automaker/HEARTBEAT.md` from the project root. Skips if the file is absent or empty.
+2. Gathers a board snapshot (feature counts by status, stale features, open review PRs).
+3. Runs a lightweight LLM call (Haiku by default) using `generateHeartbeatPrompt`.
+4. If the model returns `HEARTBEAT_OK`, no action is taken.
+5. If alerts are present, each one is routed through `EscalationRouter` as a `board_anomaly` signal.
+
+Agents and Ava can rewrite `HEARTBEAT.md` to change what future heartbeats monitor — this is the self-programming pattern.
+
+**Example `.automaker/settings.json`:**
+
+```json
+{
+  "heartbeat": {
+    "enabled": true,
+    "intervalMinutes": 30,
+    "model": "haiku",
+    "target": "escalation-router"
+  }
+}
+```
+
+---
+
 ## Related Documentation
 
 - [Agent Manifests](../guides/agent-manifests.md) — per-role model and prompt overrides
