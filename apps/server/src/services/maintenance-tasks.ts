@@ -788,10 +788,19 @@ async function autoMergeEligiblePRs(
         totalChecked++;
 
         // Check merge eligibility using MergeEligibilityService
+        let softChecks: string[] = [];
+        try {
+          const globalSettings = await settingsService.getGlobalSettings();
+          softChecks = globalSettings.gitWorkflow?.softChecks ?? [];
+        } catch {
+          // Settings unavailable — all checks treated as hard
+        }
         const eligibilityResult = await mergeEligibilityService.evaluatePR(
           projectPath,
           feature.prNumber,
-          autoMergeSettings
+          autoMergeSettings,
+          undefined,
+          softChecks
         );
 
         logger.info(

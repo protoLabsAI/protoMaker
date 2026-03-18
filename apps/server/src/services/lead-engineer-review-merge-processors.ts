@@ -426,7 +426,18 @@ export class ReviewProcessor implements StateProcessor {
       if (data.decision === 'APPROVED') return 'approved';
       if (data.decision === 'CHANGES_REQUESTED') return 'changes_requested';
 
-      // Separate CodeRabbit checks from real CI checks.
+      // Read soft checks from settings (failures logged but don't block approval)
+      let softChecks: string[] = [];
+      if (this.serviceContext.settingsService) {
+        try {
+          const globalSettings = await this.serviceContext.settingsService.getGlobalSettings();
+          softChecks = globalSettings.gitWorkflow?.softChecks ?? [];
+        } catch {
+          // Settings unavailable — all checks treated as hard
+        }
+      }
+
+      // Separate CodeRabbit checks and soft checks from real CI checks.
       // CodeRabbit rate-limit sets commit status to FAILURE, but this is transient
       // and should not block the approval flow.
       const checks = (data.checks || []) as Array<{ name: string; conclusion: string }>;
@@ -435,11 +446,13 @@ export class ReviewProcessor implements StateProcessor {
           c.name?.toLowerCase().includes('coderabbit') ||
           c.name?.toLowerCase().includes('code-rabbit')
       );
-      const ciChecks = checks.filter(
-        (c) =>
-          !c.name?.toLowerCase().includes('coderabbit') &&
-          !c.name?.toLowerCase().includes('code-rabbit')
-      );
+      const ciChecks = checks.filter((c) => {
+        const nameLower = c.name?.toLowerCase() ?? '';
+        if (nameLower.includes('coderabbit') || nameLower.includes('code-rabbit')) return false;
+        // Exclude soft checks from blocking CI evaluation
+        if (softChecks.some((soft) => nameLower.includes(soft.toLowerCase()))) return false;
+        return true;
+      });
 
       // Log transient CodeRabbit failures so operators can diagnose
       const codeRabbitFailures = codeRabbitChecks.filter(
@@ -455,8 +468,23 @@ export class ReviewProcessor implements StateProcessor {
         );
       }
 
+      // Log soft check failures for visibility
+      const softCheckFailures = checks.filter(
+        (c) =>
+          !codeRabbitChecks.includes(c) &&
+          !ciChecks.includes(c) &&
+          c.conclusion &&
+          c.conclusion !== 'SUCCESS'
+      );
+      if (softCheckFailures.length > 0) {
+        logger.info(`[REVIEW] Soft check(s) failed — not blocking approval`, {
+          prNumber: ctx.prNumber,
+          softChecks: softCheckFailures.map((c) => `${c.name}=${c.conclusion}`),
+        });
+      }
+
       // Require at least one human APPROVED review — CI passing alone is not sufficient.
-      // Only real CI checks (non-CodeRabbit) block approval.
+      // Only real CI checks (non-CodeRabbit, non-soft) block approval.
       const approvedCount = (data.approvedCount as number) ?? 0;
       if (
         approvedCount > 0 &&

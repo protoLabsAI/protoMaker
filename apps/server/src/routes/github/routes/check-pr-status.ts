@@ -56,8 +56,19 @@ export function createCheckPRStatusHandler(settingsService?: SettingsService) {
 
       logger.info(`Checking PR #${prNumber} CI status`);
 
+      // Read soft checks from project settings
+      let softChecks: string[] = [];
+      if (settingsService) {
+        try {
+          const globalSettings = await settingsService.getGlobalSettings();
+          softChecks = globalSettings.gitWorkflow?.softChecks ?? [];
+        } catch {
+          // Settings unavailable — all checks treated as hard
+        }
+      }
+
       // Get PR check status
-      const checkStatus = await githubMergeService.checkPRStatus(projectPath, prNumber);
+      const checkStatus = await githubMergeService.checkPRStatus(projectPath, prNumber, softChecks);
 
       logger.info(
         `PR #${prNumber} status: ${checkStatus.passedCount} passed, ${checkStatus.failedCount} failed, ${checkStatus.pendingCount} pending`

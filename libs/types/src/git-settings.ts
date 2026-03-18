@@ -55,6 +55,13 @@ export interface GitWorkflowSettings {
    * Default: [".automaker/", ".claude/worktrees/", ".worktrees/"]
    */
   excludeFromStaging?: string[];
+  /**
+   * CI check names that should NOT block the merge gate.
+   * Failures from these checks are logged but do not prevent auto-merge.
+   * Matching is case-insensitive substring. Example: ["Cloudflare Pages", "codecov/patch"]
+   * Default: [] (all checks are hard — opt-in to soft classification)
+   */
+  softChecks?: string[];
 }
 
 /**
@@ -71,6 +78,7 @@ export const DEFAULT_GIT_WORKFLOW_SETTINGS: Required<GitWorkflowSettings> = {
   maxPRLinesChanged: 500,
   maxPRFilesTouched: 20,
   excludeFromStaging: ['.automaker/', '.claude/worktrees/', '.worktrees/'],
+  softChecks: [],
 };
 
 /**

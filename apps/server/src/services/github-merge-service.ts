@@ -33,16 +33,18 @@ async function isGhCliAvailable(): Promise<boolean> {
  * PR check status information
  */
 interface PRCheckStatus {
-  /** Whether all required checks have passed */
+  /** Whether all required checks have passed (soft check failures are excluded) */
   allChecksPassed: boolean;
   /** Number of checks that passed */
   passedCount: number;
-  /** Number of checks that failed */
+  /** Number of hard checks that failed (soft check failures are excluded) */
   failedCount: number;
   /** Number of checks still pending */
   pendingCount: number;
-  /** List of failed check names */
+  /** List of hard check names that failed */
   failedChecks: string[];
+  /** List of soft check names that failed (logged but do not block merge) */
+  softFailedChecks: string[];
 }
 
 /**
@@ -68,8 +70,16 @@ export interface PRMergeResult {
 export class GitHubMergeService {
   /**
    * Check the status of CI checks for a PR
+   *
+   * @param workDir - Working directory (worktree or project path)
+   * @param prNumber - PR number to check
+   * @param softChecks - Check names that should not block the merge gate (case-insensitive substring match)
    */
-  async checkPRStatus(workDir: string, prNumber: number): Promise<PRCheckStatus> {
+  async checkPRStatus(
+    workDir: string,
+    prNumber: number,
+    softChecks: string[] = []
+  ): Promise<PRCheckStatus> {
     try {
       // Use gh CLI to get PR check status
       const { stdout } = await execAsync(`gh pr view ${prNumber} --json statusCheckRollup`, {
@@ -84,19 +94,21 @@ export class GitHubMergeService {
       let failedCount = 0;
       let pendingCount = 0;
       const failedChecks: string[] = [];
+      const softFailedChecks: string[] = [];
 
       for (const check of checks) {
         const status = check.status?.toLowerCase();
         const conclusion = check.conclusion?.toLowerCase();
+        const checkName = check.name ?? check.context ?? '';
+        const checkIdentifier = checkName.toLowerCase();
 
         if (status === 'completed') {
           // Detect CodeRabbit FAILURE — treat as transient pending rather than a hard failure.
           // CodeRabbit commonly sets commit status to FAILURE when rate-limited by simultaneous
           // batch PRs. Counting it as a real failure would block merge unnecessarily.
-          const checkIdentifier = (check.name ?? check.context ?? '').toLowerCase();
           if (checkIdentifier.includes('coderabbit') && conclusion === 'failure') {
             logger.warn(
-              `[CodeRabbit] FAILURE status on '${check.name ?? check.context}' — ` +
+              `[CodeRabbit] FAILURE status on '${checkName}' — ` +
                 `treating as transient pending (possible rate-limit). Will not count as hard failure.`
             );
             pendingCount++;
@@ -106,8 +118,19 @@ export class GitHubMergeService {
           if (conclusion === 'success' || conclusion === 'neutral' || conclusion === 'skipped') {
             passedCount++;
           } else {
-            failedCount++;
-            failedChecks.push(check.name || 'Unknown check');
+            // Check if this is a soft check (failure should not block merge)
+            const isSoftCheck = softChecks.some((soft) =>
+              checkIdentifier.includes(soft.toLowerCase())
+            );
+            if (isSoftCheck) {
+              logger.info(
+                `[SoftCheck] '${checkName}' failed but is classified as a soft check — not blocking merge`
+              );
+              softFailedChecks.push(checkName || 'Unknown check');
+            } else {
+              failedCount++;
+              failedChecks.push(checkName || 'Unknown check');
+            }
           }
         } else {
           pendingCount++;
@@ -122,6 +145,7 @@ export class GitHubMergeService {
         failedCount,
         pendingCount,
         failedChecks,
+        softFailedChecks,
       };
     } catch (error) {
       logger.error(`Failed to check PR status: ${error}`);
@@ -132,6 +156,7 @@ export class GitHubMergeService {
         failedCount: 0,
         pendingCount: 0,
         failedChecks: [],
+        softFailedChecks: [],
       };
     }
   }
