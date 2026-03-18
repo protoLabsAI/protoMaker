@@ -499,7 +499,6 @@ export interface WorkflowSettings {
    */
   agentStartStaggerMs?: number;
   /**
-<<<<<<< HEAD
    * When true, the readiness gate in FeatureScheduler.loadPendingFeatures() is bypassed
    * and all features with satisfied dependencies are dispatched regardless of readinessScore.
    * Intended for debugging and projects that have not yet enabled readiness scoring.
@@ -515,8 +514,19 @@ export interface WorkflowSettings {
    */
   readinessThreshold?: number;
   /**
-=======
->>>>>>> origin/dev
+   * CI failure classification overrides.
+   * Maps CIFailureClass values to arrays of regex pattern strings.
+   * Project-defined patterns are prepended before the default patterns and
+   * given full confidence (1.0). Invalid regex strings are silently skipped.
+   *
+   * Supported class keys: 'lint' | 'format' | 'typecheck' | 'test' |
+   *   'build' | 'audit' | 'deploy' | 'coderabbit' | 'unknown'
+   *
+   * @example
+   * { "test": ["^my-custom-test-check$"], "build": ["vite-build-step"] }
+   */
+  ciClassification?: Record<string, string[]>;
+  /**
    * Maintenance check configuration.
    * Controls thresholds and behavior for automated board health checks.
    */
