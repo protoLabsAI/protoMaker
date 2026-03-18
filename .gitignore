@@ -195,3 +195,5 @@ test/fixtures/**/.automaker/projects/
 test/fixtures/**/.automaker/knowledge.db
 test/fixtures/**/.automaker/knowledge.db-shm
 test/fixtures/**/.automaker/knowledge.db-wal
+.automaker/calendar.json
+.automaker/calendar.json.bak*
