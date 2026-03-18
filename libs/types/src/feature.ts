@@ -484,6 +484,13 @@ export interface Feature {
    */
   createdByInstance?: string;
 
+  /**
+   * Computed downstream impact score: number of features that transitively depend on this one.
+   * Not persisted — set at runtime by the dependency resolver after topological sort.
+   * Used by FeatureScheduler as a secondary sort key within the same priority tier.
+   */
+  downstreamImpact?: number;
+
   // Signal provenance — tracks which channel originated this feature
   /**
    * The channel that originated this feature (e.g. 'discord', 'github', 'ui').
