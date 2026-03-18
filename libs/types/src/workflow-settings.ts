@@ -451,6 +451,22 @@ export interface WorkflowSettings {
    */
   heartbeat?: HeartbeatSettings;
   /**
+   * Pattern mining configuration.
+   * When enabled, runs daily to mine execution trajectories for recurring patterns
+   * and writes learned patterns to .automaker/context/learned-patterns.md,
+   * which is auto-loaded into agent prompts via loadContextFiles().
+   * Confidence decays 50% for patterns not reinforced in 90 days.
+   * Patterns below 0.2 confidence are pruned.
+   */
+  patternMining?: {
+    /** Whether pattern mining is enabled (default: true) */
+    enabled: boolean;
+    /** Minimum confidence threshold for writing patterns to context file (default: 0.5) */
+    confidenceThreshold?: number;
+    /** Minimum sample size for a pattern to be considered (default: 3) */
+    minSampleSize?: number;
+  };
+  /**
    * Milliseconds to wait between agent dispatches when multiple features are ready.
    * Prevents thundering-herd startup (API rate limits, disk I/O contention).
    * No stagger is applied when only one feature is ready to dispatch.

@@ -21,6 +21,7 @@ import { EscalationSeverity, EscalationSource } from '@protolabsai/types';
 import { resolveModelString } from '@protolabsai/model-resolver';
 
 import type { SchedulerService } from './scheduler-service.js';
+import { TrajectoryPatternMiner } from './trajectory-pattern-miner.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { DiscordBotService } from './discord-bot-service.js';
@@ -553,8 +554,32 @@ export async function registerAvaCronTasks(deps: AvaCronTaskDeps): Promise<void>
 
   logger.info('[AvaCronTasks] Registered 3 deterministic cron tasks (no LLM)');
 
-  // 4. Adaptive heartbeat — opt-in per project via workflowSettings.heartbeat.enabled
+  // Load workflow settings once for the remaining opt-in tasks
   const workflowSettings = await getWorkflowSettings(deps.projectPath, deps.settingsService);
+
+  // 4. Pattern mining — opt-in per project, enabled by default
+  const patternMiningEnabled = workflowSettings.patternMining?.enabled ?? true;
+  if (patternMiningEnabled) {
+    const DAILY_MS = 24 * 60 * 60 * 1000;
+    schedulerService.registerInterval(
+      'ava-pattern-mining',
+      'Ava Trajectory Pattern Mining',
+      DAILY_MS,
+      async () => {
+        logger.info('[AvaCronTasks] Running ava-pattern-mining');
+        try {
+          const miner = new TrajectoryPatternMiner();
+          await miner.mine(deps.projectPath);
+        } catch (err) {
+          logger.error('[AvaCronTasks] ava-pattern-mining failed', err);
+        }
+      },
+      { enabled: true, category: 'maintenance' }
+    );
+    logger.info('[AvaCronTasks] Registered ava-pattern-mining (daily)');
+  }
+
+  // 5. Adaptive heartbeat — opt-in per project via workflowSettings.heartbeat.enabled
   const heartbeatConfig = workflowSettings.heartbeat;
   if (heartbeatConfig?.enabled) {
     const intervalMs = (heartbeatConfig.intervalMinutes ?? 30) * 60 * 1000;
