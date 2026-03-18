@@ -238,6 +238,9 @@ export function ActiveProjectView({ project, projectSlug, onBack }: ActiveProjec
             )}
             {project.health && <HealthIndicator health={project.health as ProjectHealth} />}
           </div>
+          {project.goal && (
+            <p className="text-xs text-muted-foreground truncate mt-0.5">{project.goal}</p>
+          )}
         </div>
 
         <Button
