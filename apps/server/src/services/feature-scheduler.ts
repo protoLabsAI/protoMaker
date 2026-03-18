@@ -1117,7 +1117,8 @@ export class FeatureScheduler {
       }
 
       // Apply dependency-aware ordering
-      const { orderedFeatures, missingDependencies } = resolveDependencies(pendingFeatures);
+      const { orderedFeatures, missingDependencies, downstreamImpact } =
+        resolveDependencies(pendingFeatures);
 
       // Remove TRULY missing dependencies
       if (missingDependencies.size > 0) {
@@ -1216,9 +1217,16 @@ export class FeatureScheduler {
         );
       }
 
-      // Sort by priority (lower number = higher priority, picked up first)
+      // Sort by priority (lower number = higher priority, picked up first).
+      // Within the same priority tier, use downstreamImpact as secondary key
+      // so features that unblock the most downstream work are scheduled first.
       const priorityOrder = (p?: number | null): number => (p === 0 || p == null ? 3 : p);
-      readyFeatures.sort((a, b) => priorityOrder(a.priority) - priorityOrder(b.priority));
+      readyFeatures.sort((a, b) => {
+        const priorityDiff = priorityOrder(a.priority) - priorityOrder(b.priority);
+        if (priorityDiff !== 0) return priorityDiff;
+        // Higher downstreamImpact = more critical = earlier in queue (descending)
+        return (downstreamImpact.get(b.id) ?? 0) - (downstreamImpact.get(a.id) ?? 0);
+      });
 
       // ── Project affinity filtering and sorting ──
       // Only applied when instance identity is configured (multi-instance deployments).

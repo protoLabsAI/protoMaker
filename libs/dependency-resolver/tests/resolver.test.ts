@@ -213,6 +213,80 @@ describe('resolver.ts', () => {
       expect(result.circularDependencies).toEqual([]);
       expect(result.missingDependencies.size).toBe(0);
       expect(result.blockedFeatures.size).toBe(0);
+      expect(result.downstreamImpact.size).toBe(0);
+    });
+
+    describe('downstreamImpact', () => {
+      it('diamond graph: bottleneck (A) has highest impact', () => {
+        //     A
+        //    / \
+        //   B   C
+        //    \ /
+        //     D
+        // A is the bottleneck — B, C, D all depend on it transitively
+        const features = [
+          createFeature('A'),
+          createFeature('B', { dependencies: ['A'] }),
+          createFeature('C', { dependencies: ['A'] }),
+          createFeature('D', { dependencies: ['B', 'C'] }),
+        ];
+
+        const result = resolveDependencies(features);
+
+        // A has 3 transitive descendants: B, C, D
+        expect(result.downstreamImpact.get('A')).toBe(3);
+        // B has 1 transitive descendant: D
+        expect(result.downstreamImpact.get('B')).toBe(1);
+        // C has 1 transitive descendant: D
+        expect(result.downstreamImpact.get('C')).toBe(1);
+        // D has 0 descendants (leaf)
+        expect(result.downstreamImpact.get('D')).toBe(0);
+
+        // A should have the highest impact
+        const aImpact = result.downstreamImpact.get('A')!;
+        for (const [id, impact] of result.downstreamImpact) {
+          if (id !== 'A') {
+            expect(aImpact).toBeGreaterThan(impact);
+          }
+        }
+      });
+
+      it('linear chain: first node has highest impact, last has 0', () => {
+        // A <- B <- C <- D
+        const features = [
+          createFeature('A'),
+          createFeature('B', { dependencies: ['A'] }),
+          createFeature('C', { dependencies: ['B'] }),
+          createFeature('D', { dependencies: ['C'] }),
+        ];
+
+        const result = resolveDependencies(features);
+
+        expect(result.downstreamImpact.get('A')).toBe(3);
+        expect(result.downstreamImpact.get('B')).toBe(2);
+        expect(result.downstreamImpact.get('C')).toBe(1);
+        expect(result.downstreamImpact.get('D')).toBe(0);
+      });
+
+      it('features with no dependencies all have impact 0', () => {
+        const features = [createFeature('A'), createFeature('B'), createFeature('C')];
+
+        const result = resolveDependencies(features);
+
+        expect(result.downstreamImpact.get('A')).toBe(0);
+        expect(result.downstreamImpact.get('B')).toBe(0);
+        expect(result.downstreamImpact.get('C')).toBe(0);
+      });
+
+      it('downstreamImpact map is populated for all features', () => {
+        const features = [createFeature('A'), createFeature('B', { dependencies: ['A'] })];
+
+        const result = resolveDependencies(features);
+
+        expect(result.downstreamImpact.get('A')).toBe(1);
+        expect(result.downstreamImpact.get('B')).toBe(0);
+        expect(result.downstreamImpact.size).toBe(2);
+      });
     });
 
     it('should handle features with both missing and existing dependencies', () => {

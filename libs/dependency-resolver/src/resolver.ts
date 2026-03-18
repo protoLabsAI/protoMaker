@@ -131,11 +131,32 @@ export function resolveDependencies(features: Feature[]): DependencyResolutionRe
     orderedFeatures.push(...remaining);
   }
 
+  // Compute transitiveDescendantCount for each feature via BFS from each node.
+  // adjacencyList maps depId -> [dependentIds], so we traverse it to count reachable descendants.
+  const downstreamImpact = new Map<string, number>();
+  for (const feature of features) {
+    let count = 0;
+    const visited = new Set<string>();
+    const queue: string[] = [feature.id];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      for (const dependentId of adjacencyList.get(current) || []) {
+        if (!visited.has(dependentId)) {
+          visited.add(dependentId);
+          count++;
+          queue.push(dependentId);
+        }
+      }
+    }
+    downstreamImpact.set(feature.id, count);
+  }
+
   return {
     orderedFeatures,
     circularDependencies,
     missingDependencies,
     blockedFeatures,
+    downstreamImpact,
   };
 }
 
