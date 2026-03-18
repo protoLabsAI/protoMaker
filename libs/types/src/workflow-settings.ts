@@ -463,6 +463,18 @@ export interface WorkflowSettings {
     model?: string;
   };
   /**
+   * Trajectory injection configuration.
+   * When enabled, relevant past trajectories are injected into agent prompts
+   * as a "Lessons from Similar Features" section. Omitting this field defaults
+   * to enabled with a 2000-token limit.
+   */
+  trajectoryInjection?: {
+    /** Whether trajectory injection is enabled (default: true) */
+    enabled: boolean;
+    /** Maximum tokens for the trajectory context section (default: 2000) */
+    maxTokens: number;
+  };
+  /**
    * Milliseconds to wait between agent dispatches when multiple features are ready.
    * Prevents thundering-herd startup (API rate limits, disk I/O contention).
    * No stagger is applied when only one feature is ready to dispatch.
