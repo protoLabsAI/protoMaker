@@ -4,15 +4,21 @@
  * Starts MaintenanceOrchestrator and registers check modules:
  * - board-health (full tier, 6h): FeatureHealthService board audit with auto-fix
  * - resource-usage (critical tier, 5min): HealthMonitorService resource check
+ * - feature-readiness (full tier, 6h): Scores backlog features and enriches thin descriptions
  */
 
 import { createLogger } from '@protolabsai/utils';
+import { resolveModelString } from '@protolabsai/model-resolver';
+import { CLAUDE_MODEL_MAP } from '@protolabsai/types';
 import type {
   MaintenanceCheck,
   MaintenanceCheckContext,
   MaintenanceCheckResult,
 } from '@protolabsai/types';
 import type { ServiceContainer } from '../server/services.js';
+import { getWorkflowSettings } from '../lib/settings-helpers.js';
+import { FeatureReadinessCheck } from './maintenance/checks/feature-readiness-check.js';
+import { simpleQuery } from '../providers/simple-query-service.js';
 
 const logger = createLogger('Server:Wiring');
 
@@ -92,8 +98,89 @@ export function register(container: ServiceContainer): void {
     },
   };
 
+  // Feature readiness check (full tier) — scores backlog features and enriches thin descriptions
+  const { featureLoader, settingsService } = container;
+
+  const enhancementModel = {
+    async enhance(prompt: string): Promise<string> {
+      const model = resolveModelString('haiku', CLAUDE_MODEL_MAP.haiku);
+      const result = await simpleQuery({
+        prompt,
+        model,
+        cwd: process.cwd(),
+        maxTurns: 1,
+        allowedTools: [],
+        readOnly: true,
+      });
+      return result.text;
+    },
+  };
+
+  const contextLoader = {
+    async load(projectPath: string): Promise<string> {
+      const { loadContextFiles } = await import('@protolabsai/utils');
+      const ctx = await loadContextFiles({
+        projectPath,
+        includeMemory: false,
+        initializeMemory: false,
+      });
+      return ctx.formattedPrompt ?? '';
+    },
+  };
+
+  const featureReadinessCheck: MaintenanceCheck = {
+    id: 'feature-readiness',
+    name: 'Feature Readiness Gate',
+    tier: 'full',
+    async run(context: MaintenanceCheckContext): Promise<MaintenanceCheckResult> {
+      const t0 = Date.now();
+      let totalIssues = 0;
+      let totalFixed = 0;
+
+      for (const projectPath of context.projectPaths) {
+        try {
+          // Resolve per-project threshold from workflow settings
+          const ws = await getWorkflowSettings(projectPath, settingsService);
+          const threshold = ws.maintenance?.readinessScoreThreshold ?? 60;
+
+          const check = new FeatureReadinessCheck(
+            featureLoader,
+            enhancementModel,
+            contextLoader,
+            undefined,
+            threshold
+          );
+          const issues = await check.run(projectPath);
+          totalIssues += issues.length;
+
+          for (const issue of issues) {
+            if (issue.autoFixable) {
+              try {
+                await check.fix(projectPath, issue);
+                totalFixed++;
+              } catch (err) {
+                logger.error(`Feature readiness fix failed for ${issue.featureId}:`, err);
+              }
+            }
+          }
+        } catch (err) {
+          logger.error(`Feature readiness check failed for ${projectPath}:`, err);
+        }
+      }
+
+      return {
+        checkId: 'feature-readiness',
+        passed: true,
+        summary: `Feature readiness: ${totalIssues} under-specified features found, ${totalFixed} enriched across ${context.projectPaths.length} projects`,
+        details: { totalIssues, totalFixed, projectCount: context.projectPaths.length },
+        durationMs: Date.now() - t0,
+      };
+    },
+  };
+
   maintenanceOrchestrator.register(boardHealthCheck);
   maintenanceOrchestrator.register(resourceUsageCheck);
+  maintenanceOrchestrator.register(featureReadinessCheck);
 
   maintenanceOrchestrator.start(schedulerService, events, eventHistoryService, () => {
     const paths = new Set<string>();
@@ -103,5 +190,7 @@ export function register(container: ServiceContainer): void {
     return Array.from(paths);
   });
 
-  logger.info('MaintenanceOrchestrator started with board-health and resource-usage checks');
+  logger.info(
+    'MaintenanceOrchestrator started with board-health, resource-usage, and feature-readiness checks'
+  );
 }
