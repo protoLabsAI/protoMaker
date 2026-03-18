@@ -491,14 +491,6 @@ export interface Feature {
    */
   downstreamImpact?: number;
 
-  /**
-   * Readiness score for this feature (0–1). Computed by the maintenance enrichment system.
-   * When present, FeatureScheduler filters out features below the configured readinessThreshold
-   * (default 0.5) before dispatch. Features without a score pass the gate unconditionally.
-   * Persisted to feature.json after enrichment.
-   */
-  readinessScore?: number;
-
   // Signal provenance — tracks which channel originated this feature
   /**
    * The channel that originated this feature (e.g. 'discord', 'github', 'ui').
