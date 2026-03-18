@@ -6,6 +6,8 @@
  */
 
 import { secureFs } from '@protolabsai/platform';
+import fs from 'fs/promises';
+import fsConstants from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { createLogger } from './logger.js';
@@ -15,6 +17,33 @@ const logger = createLogger('AtomicWriter');
 
 /** Default maximum number of backup files to keep for crash recovery */
 export const DEFAULT_BACKUP_COUNT = 3;
+
+/**
+ * Fsync a file to ensure its data is flushed to persistent storage.
+ * Opens the file read-only, calls fsync, then closes the handle.
+ */
+async function fsyncFile(filePath: string): Promise<void> {
+  const handle = await fs.open(filePath, 'r');
+  try {
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
+}
+
+/**
+ * Fsync a directory to ensure its directory entries are durable.
+ * Required after rename() to guarantee the new directory entry survives a crash.
+ * On Linux, fs.open on a directory with O_RDONLY works correctly.
+ */
+async function fsyncDir(dirPath: string): Promise<void> {
+  const handle = await fs.open(dirPath, fsConstants.constants.O_RDONLY);
+  try {
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
+}
 
 /**
  * Cooldown period (ms) during which repeated missing-file warnings are suppressed.
@@ -162,7 +191,19 @@ export async function atomicWriteJson<T>(
     }
 
     await secureFs.writeFile(tempPath, content, 'utf-8');
+    // Fsync for durability: ensure data survives crashes.
+    // Best-effort — tmpfs/test environments may not support fsync.
+    try {
+      await fsyncFile(tempPath);
+    } catch {
+      // fsync on temp file failed (e.g., tmpfs) — continue with rename
+    }
     await secureFs.rename(tempPath, resolvedPath);
+    try {
+      await fsyncDir(path.dirname(resolvedPath));
+    } catch {
+      // fsync on directory failed — write succeeded, durability not guaranteed
+    }
   } catch (error) {
     // Clean up temp file if it exists
     try {
