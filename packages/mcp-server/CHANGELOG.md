@@ -1,5 +1,15 @@
 # @protolabsai/mcp-server
 
+## 0.77.1
+
+### Patch Changes
+
+- ### Bug Fixes
+  - restore full tabbed content to active project view (#2878)
+  - restore full tabbed content to active project view (#2878)
+- Updated dependencies
+  - @protolabsai/tools@0.77.1
+
 ## 0.77.0
 
 ### Minor Changes

@@ -1,5 +1,13 @@
 # @protolabsai/types
 
+## 0.77.1
+
+### Patch Changes
+
+- ### Bug Fixes
+  - restore full tabbed content to active project view (#2878)
+  - restore full tabbed content to active project view (#2878)
+
 ## 0.77.0
 
 ### Minor Changes
