@@ -16,6 +16,7 @@ import type { AuthorityService } from '../../../services/authority-service.js';
 import type { SettingsService } from '../../../services/settings-service.js';
 import type { FeatureHealthService } from '../../../services/feature-health-service.js';
 import type { EventEmitter } from '../../../lib/events.js';
+import type { PipelineCheckpointService } from '../../../services/pipeline-checkpoint-service.js';
 import { getErrorMessage, logError } from '../common.js';
 import { createLogger } from '@protolabsai/utils';
 
@@ -45,7 +46,8 @@ export function createUpdateHandler(
   settingsService?: SettingsService,
   authorityService?: AuthorityService,
   healthService?: FeatureHealthService,
-  events?: EventEmitter
+  events?: EventEmitter,
+  checkpointService?: PipelineCheckpointService
 ) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
@@ -146,6 +148,19 @@ export function createUpdateHandler(
         enhancementMode,
         preEnhancementDescription
       );
+
+      // Clear pipeline checkpoint when resetting a feature to backlog.
+      // Without this, auto-mode would resume from the stale checkpoint (e.g. ESCALATE)
+      // and immediately re-block the feature instead of starting fresh from PREPARE.
+      if (newStatus === 'backlog' && previousStatus !== 'backlog' && checkpointService) {
+        try {
+          await checkpointService.delete(projectPath, featureId);
+          logger.info(`Cleared pipeline checkpoint for ${featureId} on reset to backlog`);
+        } catch (checkpointError) {
+          // Non-critical — log but don't fail the update
+          logger.error(`Failed to clear pipeline checkpoint for ${featureId}:`, checkpointError);
+        }
+      }
 
       // Trigger sync to app_spec.txt when status changes to done
       if (newStatus && SYNC_TRIGGER_STATUSES.includes(newStatus) && previousStatus !== newStatus) {
