@@ -19,7 +19,6 @@ import { createLogger } from '@protolabsai/utils';
 import type { Feature, EscalationSignal } from '@protolabsai/types';
 import { EscalationSeverity, EscalationSource } from '@protolabsai/types';
 import { resolveModelString } from '@protolabsai/model-resolver';
-import { generateText } from 'ai';
 
 import type { SchedulerService } from './scheduler-service.js';
 import type { FeatureLoader } from './feature-loader.js';
@@ -28,7 +27,7 @@ import type { DiscordBotService } from './discord-bot-service.js';
 import type { EscalationRouter } from './escalation-router.js';
 import type { SettingsService } from './settings-service.js';
 import { getWorkflowSettings } from '../lib/settings-helpers.js';
-import { getAnthropicModel } from '../lib/ai-provider.js';
+import { simpleQuery } from '../providers/simple-query-service.js';
 import {
   generateHeartbeatPrompt,
   parseHeartbeatResponse,
@@ -351,7 +350,7 @@ async function handlePrTriage(deps: AvaCronTaskDeps): Promise<void> {
  *
  * Skips if HEARTBEAT.md is missing or empty.
  */
-async function handleAdaptiveHeartbeat(deps: AvaCronTaskDeps): Promise<void> {
+export async function handleAdaptiveHeartbeat(deps: AvaCronTaskDeps): Promise<void> {
   const { featureLoader, projectPath, escalationRouter } = deps;
 
   // Read HEARTBEAT.md from .automaker/
@@ -385,7 +384,7 @@ async function handleAdaptiveHeartbeat(deps: AvaCronTaskDeps): Promise<void> {
     status: string;
     daysSinceUpdate: number;
   }> = [];
-  const failedPRs: Array<{ id: string; title: string; prNumber?: number }> = [];
+  const reviewPRs: Array<{ id: string; title: string; prNumber?: number }> = [];
   const now = Date.now();
   const STALE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -410,7 +409,7 @@ async function handleAdaptiveHeartbeat(deps: AvaCronTaskDeps): Promise<void> {
     }
 
     if (s === 'review' && f.prNumber) {
-      failedPRs.push({ id: f.id, title: f.title || f.id, prNumber: f.prNumber });
+      reviewPRs.push({ id: f.id, title: f.title || f.id, prNumber: f.prNumber });
     }
   }
 
@@ -420,7 +419,7 @@ async function handleAdaptiveHeartbeat(deps: AvaCronTaskDeps): Promise<void> {
     blockedCount: byStatus['blocked'] ?? 0,
     inProgressCount: byStatus['in_progress'] ?? 0,
     staleFeatures,
-    failedPRs,
+    failedPRs: reviewPRs,
     heartbeatMd,
   });
 
@@ -431,10 +430,13 @@ async function handleAdaptiveHeartbeat(deps: AvaCronTaskDeps): Promise<void> {
 
   let responseText: string;
   try {
-    const model = await getAnthropicModel(modelId);
-    const result = await generateText({
-      model,
-      messages: [{ role: 'user', content: prompt }],
+    const result = await simpleQuery({
+      prompt,
+      model: modelId,
+      cwd: projectPath,
+      maxTurns: 1,
+      allowedTools: [],
+      traceContext: { agentRole: 'adaptive-heartbeat' },
     });
     responseText = result.text;
   } catch (err) {

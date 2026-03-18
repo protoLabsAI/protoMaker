@@ -766,6 +766,8 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     featureLoader,
     autoModeService,
     discordBotService,
+    settingsService,
+    escalationRouter,
   });
 
   // Subscribe to calendar:reminder events and forward to ReactiveSpawner
