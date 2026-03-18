@@ -1,5 +1,15 @@
 # @protolabsai/mcp-server
 
+## 0.77.2
+
+### Patch Changes
+
+- ### Bug Fixes
+  - rebuild project detail view with Linear-style layout (#2883)
+  - rebuild project detail view with Linear-style layout (#2883)
+- Updated dependencies
+  - @protolabsai/tools@0.77.2
+
 ## 0.77.1
 
 ### Patch Changes
