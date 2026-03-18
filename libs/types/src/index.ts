@@ -6,6 +6,13 @@
 // Agent definition factory context types
 export type { AgentDefinitionContext, WorldStateSlice } from './agent.js';
 
+// CI failure classification types
+export type {
+  CIFailureClass,
+  ClassifiedCIFailure,
+  CIClassificationSettings,
+} from './ci-reaction.js';
+
 // Chat / slash command types
 export type { SlashCommand, SlashCommandSource, SlashCommandSummary } from './chat.js';
 
