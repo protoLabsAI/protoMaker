@@ -1,5 +1,18 @@
 # @protolabsai/types
 
+## 0.77.4
+
+### Patch Changes
+
+- ### Bug Fixes
+  - show project goal in detail view header (#2892)
+  - show project goal in detail view header (#2892)
+
+  ### Refactors
+  - Fix: Adaptive heartbeat wiring, observability, and tests
+  - Fix: Adaptive heartbeat wiring, observability, and tests
+  - Fix: Adaptive heartbeat wiring, observability, and tests
+
 ## 0.77.3
 
 ### Patch Changes

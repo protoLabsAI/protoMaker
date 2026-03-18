@@ -1,5 +1,25 @@
 # @protolabsai/flows
 
+## 0.77.4
+
+### Patch Changes
+
+- ### Bug Fixes
+  - show project goal in detail view header (#2892)
+  - show project goal in detail view header (#2892)
+
+  ### Refactors
+  - Fix: Adaptive heartbeat wiring, observability, and tests
+  - Fix: Adaptive heartbeat wiring, observability, and tests
+  - Fix: Adaptive heartbeat wiring, observability, and tests
+
+- Updated dependencies
+  - @protolabsai/types@0.77.4
+  - @protolabsai/utils@0.77.4
+  - @protolabsai/prompts@0.77.4
+  - @protolabsai/model-resolver@0.77.4
+  - @protolabsai/observability@0.77.4
+
 ## 0.77.3
 
 ### Patch Changes
