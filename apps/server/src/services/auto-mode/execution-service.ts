@@ -774,7 +774,14 @@ export class ExecutionService {
       // Persist the resolved model to the feature JSON so the UI can display it
       await this.featureLoader.update(projectPath, featureId, { model: modelResult.model });
 
-      // Merge branch with origin/dev before agent execution
+      // Resolve the effective base branch for this project (project setting → auto-detect → 'dev')
+      const preFlightBaseBranch = await getEffectivePrBaseBranch(
+        projectPath,
+        this.settingsService,
+        '[PreFlight]'
+      );
+
+      // Merge branch with the project's base branch before agent execution
       // Uses merge instead of rebase to handle concurrent .automaker/ modifications gracefully
       if (branchName && useWorktrees) {
         logger.info(`Syncing branch ${branchName} before agent execution...`);
@@ -784,16 +791,53 @@ export class ExecutionService {
           message: `Syncing branch ${branchName} with parent...`,
         });
 
+        // Validate that the resolved base branch exists on remote before attempting merge
         try {
-          await execAsync('git fetch origin', { cwd: workDir, timeout: 30000 });
+          await execAsync(`git fetch origin`, { cwd: workDir, timeout: 30000 });
+          const { stdout: lsOutput } = await execAsync(
+            `git ls-remote --heads origin ${preFlightBaseBranch}`,
+            { cwd: workDir, timeout: 10000 }
+          );
+          if (!lsOutput.trim()) {
+            const missingBranchReason =
+              `Pre-flight check failed: base branch "origin/${preFlightBaseBranch}" does not exist on remote. ` +
+              `Configure workflow.gitWorkflow.prBaseBranch in .automaker/settings.json to match the project's default branch.`;
+            logger.error(`[PreFlight] ${missingBranchReason}`);
+            this.typedEventBus.emitAutoModeEvent('sync_warning', {
+              featureId,
+              branchName,
+              message: missingBranchReason,
+              warning: true,
+            });
+            await this.featureLoader.update(projectPath, featureId, {
+              status: 'blocked',
+              statusChangeReason: missingBranchReason,
+            });
+            this.events.emit('feature:error', {
+              projectPath,
+              featureId,
+              error: missingBranchReason,
+              projectSlug: feature?.projectSlug,
+            });
+            return;
+          }
+        } catch (fetchError) {
+          logger.warn(
+            `[PreFlight] git fetch failed: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}. Continuing.`
+          );
+        }
 
-          await execAsync('git merge origin/dev', { cwd: workDir, timeout: 60000 });
-          logger.info(`Branch ${branchName} merged with origin/dev`);
+        try {
+          await execAsync(`git merge origin/${preFlightBaseBranch}`, {
+            cwd: workDir,
+            timeout: 60000,
+          });
+          logger.info(`Branch ${branchName} merged with origin/${preFlightBaseBranch}`);
 
           this.typedEventBus.emitAutoModeEvent('sync_completed', {
             featureId,
             branchName,
-            message: 'Branch merged with origin/dev',
+            message: `Branch merged with origin/${preFlightBaseBranch}`,
           });
         } catch (mergeError) {
           const mergeMsg = mergeError instanceof Error ? mergeError.message : String(mergeError);
@@ -824,7 +868,7 @@ export class ExecutionService {
                 ? ` Conflicting files: ${conflictingFiles.join(', ')}.`
                 : '';
             const reason =
-              `Pre-flight merge with origin/dev has conflicts — branch "${branchName}" must be manually merged before the agent can proceed.${fileList} ` +
+              `Pre-flight merge with origin/${preFlightBaseBranch} has conflicts — branch "${branchName}" must be manually merged before the agent can proceed.${fileList} ` +
               `Blocking feature to prevent repeated merge_conflict failures.`;
             this.typedEventBus.emitAutoModeEvent('sync_warning', {
               featureId,
