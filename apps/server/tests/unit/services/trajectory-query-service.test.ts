@@ -55,53 +55,56 @@ function setupFsMock(config: {
     featureJsons = {},
   } = config;
 
-  vi.doMock('node:fs/promises', (): Partial<FsPromises> => ({
-    readdir: vi.fn((dirPath: unknown, opts?: unknown) => {
-      const p = dirPath as string;
-      // Top-level trajectory dir → feature dirs
-      if (p.endsWith('trajectory')) {
-        if (opts && typeof opts === 'object' && 'withFileTypes' in opts) {
-          return Promise.resolve(
-            trajectoryFeatureIds.map((id) => ({
-              name: id,
-              isDirectory: () => true,
-              isFile: () => false,
-            }))
-          ) as ReturnType<FsPromises['readdir']>;
+  vi.doMock(
+    'node:fs/promises',
+    (): Partial<FsPromises> => ({
+      readdir: vi.fn((dirPath: unknown, opts?: unknown) => {
+        const p = dirPath as string;
+        // Top-level trajectory dir → feature dirs
+        if (p.endsWith('trajectory')) {
+          if (opts && typeof opts === 'object' && 'withFileTypes' in opts) {
+            return Promise.resolve(
+              trajectoryFeatureIds.map((id) => ({
+                name: id,
+                isDirectory: () => true,
+                isFile: () => false,
+              }))
+            ) as ReturnType<FsPromises['readdir']>;
+          }
+          return Promise.resolve(trajectoryFeatureIds) as ReturnType<FsPromises['readdir']>;
         }
-        return Promise.resolve(trajectoryFeatureIds) as ReturnType<FsPromises['readdir']>;
-      }
-      // Feature trajectory dir → attempt files
-      for (const featureId of trajectoryFeatureIds) {
-        if (p.endsWith(`trajectory/${featureId}`)) {
-          return Promise.resolve(
-            trajectoryFiles[featureId] ?? []
-          ) as ReturnType<FsPromises['readdir']>;
-        }
-      }
-      return Promise.resolve([]) as ReturnType<FsPromises['readdir']>;
-    }),
-    readFile: vi.fn((filePath: unknown) => {
-      const p = filePath as string;
-      // Attempt files
-      for (const featureId of trajectoryFeatureIds) {
-        const attempts = trajectoryContents[featureId] ?? [];
-        for (const attempt of attempts) {
-          if (p.includes(`trajectory/${featureId}/attempt-${attempt.attemptNumber}.json`)) {
-            return Promise.resolve(JSON.stringify(attempt));
+        // Feature trajectory dir → attempt files
+        for (const featureId of trajectoryFeatureIds) {
+          if (p.endsWith(`trajectory/${featureId}`)) {
+            return Promise.resolve(trajectoryFiles[featureId] ?? []) as ReturnType<
+              FsPromises['readdir']
+            >;
           }
         }
-      }
-      // Feature JSON files
-      for (const [featureId, json] of Object.entries(featureJsons)) {
-        if (p.includes(`features/${featureId}/feature.json`)) {
-          if (json === null) return Promise.reject(new Error('ENOENT'));
-          return Promise.resolve(JSON.stringify(json));
+        return Promise.resolve([]) as ReturnType<FsPromises['readdir']>;
+      }),
+      readFile: vi.fn((filePath: unknown) => {
+        const p = filePath as string;
+        // Attempt files
+        for (const featureId of trajectoryFeatureIds) {
+          const attempts = trajectoryContents[featureId] ?? [];
+          for (const attempt of attempts) {
+            if (p.includes(`trajectory/${featureId}/attempt-${attempt.attemptNumber}.json`)) {
+              return Promise.resolve(JSON.stringify(attempt));
+            }
+          }
         }
-      }
-      return Promise.reject(new Error(`ENOENT: no such file: ${p}`));
-    }),
-  }));
+        // Feature JSON files
+        for (const [featureId, json] of Object.entries(featureJsons)) {
+          if (p.includes(`features/${featureId}/feature.json`)) {
+            if (json === null) return Promise.reject(new Error('ENOENT'));
+            return Promise.resolve(JSON.stringify(json));
+          }
+        }
+        return Promise.reject(new Error(`ENOENT: no such file: ${p}`));
+      }),
+    })
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -120,10 +123,13 @@ describe('TrajectoryQueryService', () => {
   // ---- Empty store --------------------------------------------------------
 
   it('returns empty array when trajectory directory does not exist', async () => {
-    vi.doMock('node:fs/promises', (): Partial<FsPromises> => ({
-      readdir: vi.fn().mockRejectedValue(new Error('ENOENT')),
-      readFile: vi.fn().mockRejectedValue(new Error('ENOENT')),
-    }));
+    vi.doMock(
+      'node:fs/promises',
+      (): Partial<FsPromises> => ({
+        readdir: vi.fn().mockRejectedValue(new Error('ENOENT')),
+        readFile: vi.fn().mockRejectedValue(new Error('ENOENT')),
+      })
+    );
     const svc = new TrajectoryQueryService();
     const results = await svc.findSimilar({ projectPath: '/test/project' });
     expect(results).toEqual([]);
@@ -149,7 +155,11 @@ describe('TrajectoryQueryService', () => {
   // ---- Domain matching ---------------------------------------------------
 
   it('boosts score for exact domain match', async () => {
-    const trajectory = makeTrajectory({ featureId: 'feature-abc', domain: 'backend', verified: true });
+    const trajectory = makeTrajectory({
+      featureId: 'feature-abc',
+      domain: 'backend',
+      verified: true,
+    });
     setupFsMock({
       trajectoryFeatureIds: ['feature-abc'],
       trajectoryFiles: { 'feature-abc': ['attempt-1.json'] },
@@ -228,7 +238,7 @@ describe('TrajectoryQueryService', () => {
     const results = await svc.findSimilar({
       projectPath: '/test/project',
       filesToModify: [
-        'apps/server/src/routes/user.ts',    // overlap
+        'apps/server/src/routes/user.ts', // overlap
         'apps/server/src/services/user-service.ts', // overlap
         'apps/server/src/services/other.ts', // no overlap
       ],
@@ -279,7 +289,10 @@ describe('TrajectoryQueryService', () => {
       trajectoryContents: { 'feature-abc': [trajectory] },
       featureJsons: {
         'feature-abc': makeFeatureJson({
-          filesToModify: ['apps/server/src/routes/user.ts', 'apps/server/src/services/user-service.ts'],
+          filesToModify: [
+            'apps/server/src/routes/user.ts',
+            'apps/server/src/services/user-service.ts',
+          ],
         }),
       },
     });
@@ -327,7 +340,12 @@ describe('TrajectoryQueryService', () => {
     const trajectoryContents = Object.fromEntries(
       ids.map((id) => [
         id,
-        [makeTrajectory({ featureId: id, domain: id.startsWith('f-backend') ? 'backend' : 'frontend' })],
+        [
+          makeTrajectory({
+            featureId: id,
+            domain: id.startsWith('f-backend') ? 'backend' : 'frontend',
+          }),
+        ],
       ])
     );
     const featureJsons = Object.fromEntries(
@@ -431,9 +449,7 @@ describe('TrajectoryQueryService', () => {
     const trajectoryContents = Object.fromEntries(
       ids.map((id) => [id, [makeTrajectory({ featureId: id })]])
     );
-    const featureJsons = Object.fromEntries(
-      ids.map((id) => [id, makeFeatureJson({ title: id })])
-    );
+    const featureJsons = Object.fromEntries(ids.map((id) => [id, makeFeatureJson({ title: id })]));
 
     setupFsMock({ trajectoryFeatureIds: ids, trajectoryFiles, trajectoryContents, featureJsons });
     const svc = new TrajectoryQueryService();
