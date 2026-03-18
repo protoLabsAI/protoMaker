@@ -499,7 +499,6 @@ export interface WorkflowSettings {
    */
   agentStartStaggerMs?: number;
   /**
-<<<<<<< HEAD
    * When true, the readiness gate in FeatureScheduler.loadPendingFeatures() is bypassed
    * and all features with satisfied dependencies are dispatched regardless of readinessScore.
    * Intended for debugging and projects that have not yet enabled readiness scoring.
@@ -515,8 +514,14 @@ export interface WorkflowSettings {
    */
   readinessThreshold?: number;
   /**
-=======
->>>>>>> origin/dev
+   * CI failure classification configuration.
+   * Custom rules are prepended to the built-in default rule set.
+   * Allows projects to mark specific check names as flaky/infra so the
+   * PR remediation pipeline skips agent dispatch for non-fixable failures.
+   * When absent, only built-in defaults are used.
+   */
+  ciClassification?: import('./ci-failure.js').CIClassificationConfig;
+  /**
    * Maintenance check configuration.
    * Controls thresholds and behavior for automated board health checks.
    */
