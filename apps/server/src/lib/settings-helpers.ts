@@ -815,9 +815,13 @@ export async function getWorkflowSettings(
  *
  * Resolution order:
  *   1. Per-project workflow.gitWorkflow.prBaseBranch (from .automaker/settings.json)
- *   2. Global gitWorkflow.prBaseBranch (from data/settings.json)
- *   3. Auto-detect from remote HEAD via `git symbolic-ref refs/remotes/origin/HEAD`
- *   4. DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch ('dev')
+ *   2. Auto-detect from remote HEAD via `git symbolic-ref refs/remotes/origin/HEAD`
+ *   3. DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch ('dev')
+ *
+ * Global settings are intentionally excluded from the fallback chain. The global
+ * gitWorkflow.prBaseBranch belongs to the automaker project itself and must not
+ * bleed into other projects with a different default branch (e.g. mythxengine uses
+ * 'main', not 'dev').
  *
  * @param projectPath - Absolute path to the project (used for project settings + git detection)
  * @param settingsService - Settings service instance
@@ -838,20 +842,14 @@ export async function getEffectivePrBaseBranch(
         logger.debug(`${logPrefix} Using project-level prBaseBranch: ${projectBranch}`);
         return projectBranch;
       }
-
-      // 2. Fall back to global settings
-      const globalSettings = await settingsService.getGlobalSettings();
-      const globalBranch = globalSettings.gitWorkflow?.prBaseBranch;
-      if (globalBranch) {
-        logger.debug(`${logPrefix} Using global prBaseBranch: ${globalBranch}`);
-        return globalBranch;
-      }
+      // NOTE: Intentionally skip global settings — global prBaseBranch belongs to the
+      // automaker project and must not bleed into other projects with a different branch.
     } catch (err) {
       logger.warn(`${logPrefix} Failed to read settings for prBaseBranch:`, err);
     }
   }
 
-  // 3. Auto-detect from remote HEAD
+  // 2. Auto-detect from remote HEAD
   try {
     const { stdout } = await execFileAsync('git', ['symbolic-ref', 'refs/remotes/origin/HEAD'], {
       cwd: projectPath,
@@ -868,6 +866,6 @@ export async function getEffectivePrBaseBranch(
     // origin/HEAD not set or git not available — fall through to default
   }
 
-  // 4. Final fallback
+  // 3. Final fallback
   return DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch;
 }

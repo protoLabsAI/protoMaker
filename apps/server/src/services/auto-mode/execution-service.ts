@@ -1065,9 +1065,12 @@ export class ExecutionService {
             }
           }
 
-          // Resolve per-project prBaseBranch override
-          const projectSettings = await this.settingsService.getProjectSettings(projectPath);
-          const projectPrBaseBranch = projectSettings.workflow?.gitWorkflow?.prBaseBranch;
+          // Resolve per-project prBaseBranch: project settings → auto-detect (never global)
+          const projectPrBaseBranch = await getEffectivePrBaseBranch(
+            projectPath,
+            this.settingsService,
+            '[PostCompletion]'
+          );
 
           gitWorkflowResult = await gitWorkflowService.runPostCompletionWorkflow(
             projectPath,

@@ -2,11 +2,16 @@ import type { RequestHandler } from 'express';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { createLogger } from '@protolabsai/utils';
 import { ensureAutomakerDir, writeProtoConfig, type ProtoConfig } from '@protolabsai/platform';
 import { SettingsService } from '../../../services/settings-service.js';
-import type { RepoResearchResult } from '@protolabsai/types';
+import type { RepoResearchResult, ProjectSettings } from '@protolabsai/types';
+import { DEFAULT_GIT_WORKFLOW_SETTINGS } from '@protolabsai/types';
 import { generateSpecMd, researchRepo } from '../../../services/repo-research-service.js';
+
+const execFileAsync = promisify(execFile);
 
 const logger = createLogger('setup:project');
 
@@ -184,7 +189,92 @@ export function createSetupProjectHandler(
         filesCreated.push('spec.md');
       }
 
-      // 4. Add project to Automaker settings if not already present
+      // 3e. Append worktree patterns to .gitignore (idempotent)
+      try {
+        const globalSettings = await settingsService.getGlobalSettings();
+        const excludeFromStaging =
+          globalSettings.gitWorkflow?.excludeFromStaging ??
+          DEFAULT_GIT_WORKFLOW_SETTINGS.excludeFromStaging;
+
+        const gitignorePath = path.join(realPath, '.gitignore');
+        let existingContent = '';
+        try {
+          existingContent = await fs.readFile(gitignorePath, 'utf-8');
+        } catch {
+          // File doesn't exist yet — will be created
+        }
+
+        const existingLines = existingContent.split('\n');
+        const patternsToAdd = excludeFromStaging.filter(
+          (pattern) => !existingLines.some((line) => line.trim() === pattern.trim())
+        );
+
+        if (patternsToAdd.length > 0) {
+          const separator =
+            existingContent.length > 0 && !existingContent.endsWith('\n') ? '\n' : '';
+          const addition =
+            (existingContent.length === 0 ? '' : separator) +
+            '# Worktree directories (managed by protoLabs Studio)\n' +
+            patternsToAdd.join('\n') +
+            '\n';
+          await fs.writeFile(gitignorePath, existingContent + addition, 'utf-8');
+          filesCreated.push('.gitignore (updated with worktree patterns)');
+        } else {
+          filesCreated.push('.gitignore (worktree patterns already present)');
+        }
+      } catch (error) {
+        logger.warn('Failed to update .gitignore with worktree patterns', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        // Don't fail the whole operation if .gitignore update fails
+      }
+
+      // 4. Detect and persist the repo's default branch as prBaseBranch.
+      //    Resolution: research.git.defaultBranch → git symbolic-ref → skip (auto-detect at runtime).
+      //    This ensures feature PRs target the correct branch for this project, not the global default.
+      try {
+        let detectedBranch: string | undefined = research?.git?.defaultBranch;
+
+        if (!detectedBranch) {
+          try {
+            const { stdout } = await execFileAsync(
+              'git',
+              ['symbolic-ref', 'refs/remotes/origin/HEAD'],
+              { cwd: realPath, timeout: 5000, encoding: 'utf-8' }
+            );
+            const ref = stdout.trim(); // e.g., refs/remotes/origin/main
+            const branch = ref.replace('refs/remotes/origin/', '');
+            if (branch) detectedBranch = branch;
+          } catch {
+            // origin/HEAD not configured — leave unset; runtime auto-detect will handle it
+          }
+        }
+
+        if (detectedBranch) {
+          const existingSettings = await settingsService.getProjectSettings(realPath);
+          await settingsService.updateProjectSettings(realPath, {
+            workflow: {
+              ...existingSettings.workflow,
+              gitWorkflow: {
+                ...existingSettings.workflow?.gitWorkflow,
+                prBaseBranch: detectedBranch,
+              },
+            } as ProjectSettings['workflow'],
+          });
+          logger.info('Wrote prBaseBranch to project settings', {
+            projectPath: realPath,
+            prBaseBranch: detectedBranch,
+          });
+          filesCreated.push(`.automaker/settings.json (prBaseBranch: ${detectedBranch})`);
+        }
+      } catch (error) {
+        logger.warn('Failed to write prBaseBranch to project settings', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        // Non-fatal — runtime auto-detect in getEffectivePrBaseBranch will still work
+      }
+
+      // 5. Add project to Automaker settings if not already present
       let projectAdded = false;
 
       try {

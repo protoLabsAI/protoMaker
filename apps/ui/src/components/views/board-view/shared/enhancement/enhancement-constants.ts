@@ -1,5 +1,9 @@
-/** Enhancement mode options for AI-powered prompt improvement */
-export type EnhancementMode = 'improve' | 'technical' | 'simplify' | 'acceptance' | 'ux-reviewer';
+// Board-view uses only core EnhancementMode, not the extended project-wizard modes.
+// Re-export the type from @protolabsai/types and the labels from shared (they're a superset but
+// the core modes are all present).
+export type { EnhancementMode } from '@protolabsai/types';
+
+import type { EnhancementMode } from '@protolabsai/types';
 
 /** Labels for enhancement modes displayed in the UI */
 export const ENHANCEMENT_MODE_LABELS: Record<EnhancementMode, string> = {

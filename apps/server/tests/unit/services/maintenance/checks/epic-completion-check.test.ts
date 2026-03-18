@@ -60,7 +60,7 @@ describe('EpicCompletionCheck', () => {
     expect(issues[0].autoFixable).toBe(true);
   });
 
-  it('marks git-backed epics as NOT auto-fixable', async () => {
+  it('marks git-backed epics as auto-fixable when all children done', async () => {
     mockFeatureLoader.getAll.mockResolvedValue([
       makeFeature({ id: 'epic-1', isEpic: true, status: 'in_progress', branchName: 'epic/test' }),
       makeFeature({ id: 'c1', epicId: 'epic-1', status: 'done' }),
@@ -68,8 +68,7 @@ describe('EpicCompletionCheck', () => {
 
     const issues = await check.run('/project');
 
-    expect(issues[0].autoFixable).toBe(false);
-    expect(issues[0].fixDescription).toContain('CompletionDetectorService');
+    expect(issues[0].autoFixable).toBe(true);
   });
 
   it('fix sets non-git epic to done', async () => {
@@ -86,7 +85,7 @@ describe('EpicCompletionCheck', () => {
     });
   });
 
-  it('fix skips git-backed epics', async () => {
+  it('fix sets git-backed epic to done when branch not on remote', async () => {
     mockFeatureLoader.getAll.mockResolvedValue([
       makeFeature({ id: 'epic-1', isEpic: true, status: 'in_progress', branchName: 'epic/test' }),
       makeFeature({ id: 'c1', epicId: 'epic-1', status: 'done' }),
@@ -95,7 +94,9 @@ describe('EpicCompletionCheck', () => {
     const issues = await check.run('/project');
     await check.fix!('/project', issues[0]);
 
-    expect(mockFeatureLoader.update).not.toHaveBeenCalled();
+    expect(mockFeatureLoader.update).toHaveBeenCalledWith('/project', 'epic-1', {
+      status: 'done',
+    });
   });
 
   it('returns empty array when featureLoader throws', async () => {

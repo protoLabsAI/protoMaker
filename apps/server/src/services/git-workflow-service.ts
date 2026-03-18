@@ -254,6 +254,12 @@ export class GitWorkflowService {
         featureOverride.maxPRFilesTouched ??
         global.maxPRFilesTouched ??
         DEFAULT_GIT_WORKFLOW_SETTINGS.maxPRFilesTouched,
+      excludeFromStaging:
+        featureOverride.excludeFromStaging ??
+        global.excludeFromStaging ??
+        DEFAULT_GIT_WORKFLOW_SETTINGS.excludeFromStaging,
+      softChecks:
+        featureOverride.softChecks ?? global.softChecks ?? DEFAULT_GIT_WORKFLOW_SETTINGS.softChecks,
     };
   }
 
@@ -437,7 +443,12 @@ export class GitWorkflowService {
     try {
       // Step 1: Commit changes
       let commitHash: string | null;
-      commitHash = await this.commitChanges(workDir, feature, projectPath);
+      commitHash = await this.commitChanges(
+        workDir,
+        feature,
+        projectPath,
+        gitSettings.excludeFromStaging
+      );
 
       if (!commitHash) {
         // Agent may have already committed. Check for unpushed commits before bailing out.
@@ -464,7 +475,8 @@ export class GitWorkflowService {
             workDir,
             branchName,
             prBaseBranch,
-            projectPath
+            projectPath,
+            gitSettings.excludeFromStaging
           );
           const { stdout: headAfterFmt } = await execAsync('git rev-parse --short HEAD', {
             cwd: workDir,
@@ -476,7 +488,7 @@ export class GitWorkflowService {
           logger.info(
             `No uncommitted changes but found unpushed commits for feature ${featureId}, continuing pipeline`
           );
-          await this.formatAndAmendLastCommit(workDir, projectPath);
+          await this.formatAndAmendLastCommit(workDir, projectPath, gitSettings.excludeFromStaging);
           commitHash = unpushedHash;
         }
       }
@@ -1082,7 +1094,8 @@ export class GitWorkflowService {
   private async commitChanges(
     workDir: string,
     feature: Feature,
-    projectPath: string
+    projectPath: string,
+    excludeFromStaging?: string[]
   ): Promise<string | null> {
     // Check for changes - include untracked files explicitly
     const { stdout: status } = await execAsync('git status --porcelain --untracked-files=all', {
@@ -1100,8 +1113,11 @@ export class GitWorkflowService {
     const title = feature.title || extractTitleFromDescription(feature.description);
     const commitMessage = `feat: ${title}\n\nImplemented by Automaker auto-mode\nFeature ID: ${feature.id}`;
 
-    // Stage all changes - exclude .automaker/ except memory/ and skills/ (if they exist).
-    await execAsync(buildGitAddCommand(workDir), { cwd: workDir, env: execEnv });
+    // Stage all changes - exclude configured directories (worktrees, .automaker/ except memory/ and skills/).
+    await execAsync(buildGitAddCommand(workDir, excludeFromStaging), {
+      cwd: workDir,
+      env: execEnv,
+    });
 
     // Auto-format staged files before committing (matches CI prettier behavior)
     try {
@@ -1120,7 +1136,10 @@ export class GitWorkflowService {
           }
         );
         // Re-stage after formatting
-        await execAsync(buildGitAddCommand(workDir), { cwd: workDir, env: execEnv });
+        await execAsync(buildGitAddCommand(workDir, excludeFromStaging), {
+          cwd: workDir,
+          env: execEnv,
+        });
         logger.debug(`Auto-formatted ${files.length} staged files`);
       }
     } catch (fmtError) {
@@ -1306,7 +1325,11 @@ export class GitWorkflowService {
    * Run prettier on all changed files and amend the last commit.
    * Used when the agent committed without formatting.
    */
-  private async formatAndAmendLastCommit(workDir: string, projectPath: string): Promise<void> {
+  private async formatAndAmendLastCommit(
+    workDir: string,
+    projectPath: string,
+    excludeFromStaging?: string[]
+  ): Promise<void> {
     try {
       // Get files changed in the last commit
       const { stdout: changedFiles } = await execAsync(
@@ -1331,7 +1354,10 @@ export class GitWorkflowService {
       if (!status.trim()) return; // No formatting changes needed
 
       // Stage and amend
-      await execAsync(buildGitAddCommand(workDir), { cwd: workDir, env: execEnv });
+      await execAsync(buildGitAddCommand(workDir, excludeFromStaging), {
+        cwd: workDir,
+        env: execEnv,
+      });
       await execAsync('git commit --no-verify --amend --no-edit', { cwd: workDir, env: execEnv });
       logger.info(`Formatted and amended last commit (${files.length} files checked)`);
     } catch (error) {
@@ -1381,7 +1407,8 @@ export class GitWorkflowService {
     workDir: string,
     branchName: string,
     prBaseBranch: string,
-    projectPath: string
+    projectPath: string,
+    excludeFromStaging?: string[]
   ): Promise<void> {
     try {
       // Make sure local branch tracks the remote commits
@@ -1421,7 +1448,10 @@ export class GitWorkflowService {
       }
 
       // Stage and push a new commit (cannot amend — already on remote)
-      await execAsync(buildGitAddCommand(workDir), { cwd: workDir, env: execEnv });
+      await execAsync(buildGitAddCommand(workDir, excludeFromStaging), {
+        cwd: workDir,
+        env: execEnv,
+      });
       await execAsync('git commit --no-verify -m "fix(format): prettier on agent-created files"', {
         cwd: workDir,
         env: execEnv,

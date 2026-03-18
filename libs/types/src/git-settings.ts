@@ -49,6 +49,19 @@ export interface GitWorkflowSettings {
    * Set to 0 to disable the check. (default: 20)
    */
   maxPRFilesTouched?: number;
+  /**
+   * Directories to exclude from `git add` during staging.
+   * Prevents worktree `.git` files and internal directories from being staged as broken submodules.
+   * Default: [".automaker/", ".claude/worktrees/", ".worktrees/"]
+   */
+  excludeFromStaging?: string[];
+  /**
+   * CI check names that should NOT block the merge gate.
+   * Failures from these checks are logged but do not prevent auto-merge.
+   * Matching is case-insensitive substring. Example: ["Cloudflare Pages", "codecov/patch"]
+   * Default: [] (all checks are hard — opt-in to soft classification)
+   */
+  softChecks?: string[];
 }
 
 /**
@@ -64,6 +77,8 @@ export const DEFAULT_GIT_WORKFLOW_SETTINGS: Required<GitWorkflowSettings> = {
   prBaseBranch: 'dev',
   maxPRLinesChanged: 500,
   maxPRFilesTouched: 20,
+  excludeFromStaging: ['.automaker/', '.claude/worktrees/', '.worktrees/'],
+  softChecks: [],
 };
 
 /**

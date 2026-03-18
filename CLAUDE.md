@@ -12,6 +12,16 @@ This is a greenfield codebase. We are building the future, not maintaining the p
 - **No shortcuts.** Do it right the first time. If that means touching 10 files to propagate a type change, touch 10 files.
 - **Do things correctly or not at all.** Every line of code should be production-quality from day one.
 
+## Philosophy: Platform-First Architecture
+
+protoLabs Studio is a **platform for building apps**, not just our internal tool. Every architectural decision must account for the fact that other teams will use this to build their own projects with their own workflows, CI providers, branch strategies, and hosting setups.
+
+- **Never hardcode workflow-specific values.** File paths, branch names, CI check names, channel IDs, and hosting providers must come from settings or configuration — never from string literals in business logic. If you're typing a specific value that only applies to our setup, it belongs in a config file, not in code.
+- **Be opinionated with defaults, flexible with overrides.** Ship sensible defaults (e.g., `prBaseBranch: "dev"`, `prMergeStrategy: "squash"`) but always expose them as configurable settings. The default experience should "just work" but never lock users into our conventions.
+- **Settings are the contract with users.** When adding new behavior, ask: "Would a team using a different CI provider / branch strategy / hosting setup need to change this?" If yes, make it a setting. Refer to `DEFAULT_GIT_WORKFLOW_SETTINGS` and `DEFAULT_FEATURE_FLAGS` as canonical examples.
+- **Validate at boundaries, trust internally.** Check user-provided config at load time, then pass validated values through the system. Don't scatter defensive checks for "what if this setting is missing" deep in business logic.
+- **New features must work for any project.** Before implementing, verify the solution doesn't assume our repo structure, our GitHub org, our CI checks, or our Discord server. If it does, parameterize it.
+
 ## Planning & Approach
 
 - When creating plans, start with the minimal viable scope. Do NOT propose multi-phase plans unless explicitly asked. Default to the smallest, lowest-risk approach first.
