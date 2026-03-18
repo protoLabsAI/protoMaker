@@ -415,6 +415,19 @@ export interface WorkflowSettings {
     /** Base branch for PR creation (overrides global gitWorkflow.prBaseBranch) */
     prBaseBranch?: string;
   };
+  /**
+   * Maintenance check configuration.
+   * Controls thresholds and behavior for automated board health checks.
+   */
+  maintenance?: {
+    /**
+     * Minutes a PR can remain in review without auto-merge enabled before the stuck-PR
+     * maintenance check triggers and attempts to enable auto-merge.
+     * Set higher for projects with slow CI pipelines where 30 minutes in review is normal.
+     * @default 30
+     */
+    stuckPrThresholdMinutes?: number;
+  };
 }
 
 /** Default workflow settings */
