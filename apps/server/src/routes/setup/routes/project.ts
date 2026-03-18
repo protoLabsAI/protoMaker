@@ -6,6 +6,7 @@ import { createLogger } from '@protolabsai/utils';
 import { ensureAutomakerDir, writeProtoConfig, type ProtoConfig } from '@protolabsai/platform';
 import { SettingsService } from '../../../services/settings-service.js';
 import type { RepoResearchResult } from '@protolabsai/types';
+import { DEFAULT_GIT_WORKFLOW_SETTINGS } from '@protolabsai/types';
 import { generateSpecMd, researchRepo } from '../../../services/repo-research-service.js';
 
 const logger = createLogger('setup:project');
@@ -182,6 +183,46 @@ export function createSetupProjectHandler(
         const specMdContent = await generateSpecMd(realPath, researchData);
         await fs.writeFile(specMdPath, specMdContent, 'utf-8');
         filesCreated.push('spec.md');
+      }
+
+      // 3e. Append worktree patterns to .gitignore (idempotent)
+      try {
+        const globalSettings = await settingsService.getGlobalSettings();
+        const excludeFromStaging =
+          globalSettings.gitWorkflow?.excludeFromStaging ??
+          DEFAULT_GIT_WORKFLOW_SETTINGS.excludeFromStaging;
+
+        const gitignorePath = path.join(realPath, '.gitignore');
+        let existingContent = '';
+        try {
+          existingContent = await fs.readFile(gitignorePath, 'utf-8');
+        } catch {
+          // File doesn't exist yet — will be created
+        }
+
+        const existingLines = existingContent.split('\n');
+        const patternsToAdd = excludeFromStaging.filter(
+          (pattern) => !existingLines.some((line) => line.trim() === pattern.trim())
+        );
+
+        if (patternsToAdd.length > 0) {
+          const separator =
+            existingContent.length > 0 && !existingContent.endsWith('\n') ? '\n' : '';
+          const addition =
+            (existingContent.length === 0 ? '' : separator) +
+            '# Worktree directories (managed by protoLabs Studio)\n' +
+            patternsToAdd.join('\n') +
+            '\n';
+          await fs.writeFile(gitignorePath, existingContent + addition, 'utf-8');
+          filesCreated.push('.gitignore (updated with worktree patterns)');
+        } else {
+          filesCreated.push('.gitignore (worktree patterns already present)');
+        }
+      } catch (error) {
+        logger.warn('Failed to update .gitignore with worktree patterns', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        // Don't fail the whole operation if .gitignore update fails
       }
 
       // 4. Add project to Automaker settings if not already present
