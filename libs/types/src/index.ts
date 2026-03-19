@@ -233,6 +233,15 @@ export type {
 } from './failure.js';
 export { DEFAULT_RECOVERY_CONFIG } from './failure.js';
 
+// CI failure classification types
+export type {
+  CIFailureClass,
+  ClassifiedCIFailure,
+  CIClassificationRule,
+  CIClassificationConfig,
+} from './ci-failure.js';
+export { CI_FAILURE_CLASS_FIXABLE } from './ci-failure.js';
+
 // Image types
 export type { ImageData, ImageContentBlock } from './image.js';
 

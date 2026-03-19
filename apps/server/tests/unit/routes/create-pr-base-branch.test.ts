@@ -99,9 +99,9 @@ describe('PR base branch resolution (getEffectivePrBaseBranch)', () => {
     expect(result).toBe(DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch);
   });
 
-  it('default prBaseBranch is "dev" (not "main")', () => {
-    // Regression guard: confirms the system default is 'dev', not 'main'
-    expect(DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch).toBe('dev');
+  it('default prBaseBranch is "main" (universal default)', () => {
+    // Platform default is main. Projects using dev/staging/main opt in via per-project settings.
+    expect(DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch).toBe('main');
   });
 });
 

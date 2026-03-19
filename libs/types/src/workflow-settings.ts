@@ -6,6 +6,7 @@
  */
 
 import type { PhaseModelEntry } from './agent-settings.js';
+import type { CIClassificationConfig } from './ci-failure.js';
 import type { DeviationRule } from './lead-engineer.js';
 import type { PipelineGateConfig } from './pipeline-phase.js';
 import type { RiskLevel } from './policy.js';
@@ -521,6 +522,14 @@ export interface WorkflowSettings {
    * @default 'github-actions'
    */
   ciProvider?: 'github-actions' | 'other';
+  /**
+   * CI failure classification configuration.
+   * Custom rules are prepended to the built-in default rule set.
+   * Allows projects to mark specific check names as flaky/infra so the
+   * PR remediation pipeline skips agent dispatch for non-fixable failures.
+   * When absent, only built-in defaults are used.
+   */
+  ciClassification?: CIClassificationConfig;
   /**
    * Maintenance check configuration.
    * Controls thresholds and behavior for automated board health checks.
