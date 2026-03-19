@@ -1,5 +1,256 @@
 # @protolabsai/utils
 
+## 0.77.6
+
+### Patch Changes
+
+- ### Bug Fixes
+  - restore Plans/Issues/Metrics tabs on project management view (#2918)
+  - restore Plans/Issues/Metrics tabs on project management view (#2918)
+
+  ### Refactors
+  - Job log fetcher implementation
+  - Job log fetcher implementation
+  - Job log fetcher implementation
+
+- Updated dependencies
+  - @protolabsai/types@0.77.6
+  - @protolabsai/platform@0.77.6
+
+## 0.77.5
+
+### Patch Changes
+
+- ### Bug Fixes
+  - use importOriginal in vi.mock for child_process to prevent test pollution
+  - remove duplicate readinessScore field in feature.ts
+  - resolve conflict + format pattern mining files
+  - resolve merge conflict with dev (trajectory injection + pattern mining)
+  - resolve merge conflict with dev (trajectory injection + fresh-eyes)
+  - resolve merge conflict with dev (keep both sides)
+  - resolve merge conflict with dev (keep both sides)
+  - resolve merge conflict with dev (keep both sides)
+  - resolve merge conflict in workflow-settings.ts (keep both trajectory injection + stagger settings)
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - use importOriginal in vi.mock for child_process to prevent test pollution
+  - remove duplicate readinessScore field in feature.ts
+  - resolve merge conflict with dev (keep both sides)
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - remove duplicate readinessScore field in feature.ts
+  - resolve conflict + format pattern mining files
+  - resolve merge conflict with dev (trajectory injection + pattern mining)
+  - resolve merge conflict with dev (keep both sides)
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - resolve merge conflict with dev (trajectory injection + fresh-eyes)
+  - resolve merge conflict with dev (keep both sides)
+  - resolve merge conflict in workflow-settings.ts (keep both trajectory injection + stagger settings)
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - resolve conflict + format pattern mining files
+  - resolve merge conflict with dev (trajectory injection + fresh-eyes)
+  - resolve merge conflict with dev (keep both sides)
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - resolve merge conflict with dev (trajectory injection + fresh-eyes)
+  - resolve merge conflict with dev (keep both sides)
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - resolve merge conflict with dev (trajectory injection + pattern mining)
+  - resolve merge conflict in workflow-settings.ts (keep both trajectory injection + stagger settings)
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - resolve merge conflict with dev (trajectory injection + fresh-eyes)
+  - resolve merge conflict in workflow-settings.ts (keep both trajectory injection + stagger settings)
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - resolve merge conflict in workflow-settings.ts (keep both trajectory injection + stagger settings)
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - resolve merge conflict with dev (keep both sides)
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - resolve merge conflict with dev (keep both sides)
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - resolve merge conflict with dev (keep both sides)
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - resolve merge conflict in workflow-settings.ts (keep both trajectory injection + stagger settings)
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+  - add fsync to atomicWriteJson to prevent feature loss on crash
+
+  ### Refactors
+  - Bug: Worktree creation hardcodes origin/dev, breaks projects without dev
+  - Bug: LeadEngineer checkpoint prevents feature retry after worktree clean
+  - Trajectory pattern mining maintenance task
+  - Configurable agent start staggering
+  - Trajectory similarity query service
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Pre-dispatch readiness gate in scheduler
+  - Configurable agent start staggering
+  - Trajectory similarity query service
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Update docs after: Agent Learning Flywheel
+  - Configurable agent start staggering
+  - Trajectory similarity query service
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Inject trajectory context into agent prompt
+  - Trajectory similarity query service
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Fresh-eyes semantic review in REVIEW processor
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Feature readiness scoring maintenance check
+  - Configurable agent start staggering
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Trajectory similarity query service
+  - Bug: LeadEngineer checkpoint prevents feature retry after worktree clean
+  - Bug: Worktree creation hardcodes origin/dev, breaks projects without dev
+  - Bug: Worktree creation hardcodes origin/dev, breaks projects without dev
+  - Bug: LeadEngineer checkpoint prevents feature retry after worktree clean
+  - Pre-dispatch readiness gate in scheduler
+  - Configurable agent start staggering
+  - Trajectory similarity query service
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Trajectory pattern mining maintenance task
+  - Configurable agent start staggering
+  - Trajectory similarity query service
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Inject trajectory context into agent prompt
+  - Trajectory similarity query service
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Fresh-eyes semantic review in REVIEW processor
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Fresh-eyes semantic review in REVIEW processor
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Fresh-eyes semantic review in REVIEW processor
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Inject trajectory context into agent prompt
+  - Trajectory similarity query service
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Inject trajectory context into agent prompt
+  - Trajectory similarity query service
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Inject trajectory context into agent prompt
+  - Trajectory similarity query service
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Update docs after: Agent Learning Flywheel
+  - Configurable agent start staggering
+  - Trajectory similarity query service
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Feature readiness scoring maintenance check
+  - Configurable agent start staggering
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Trajectory similarity query service
+  - Update docs after: Agent Learning Flywheel
+  - Configurable agent start staggering
+  - Trajectory similarity query service
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Feature readiness scoring maintenance check
+  - Configurable agent start staggering
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Trajectory similarity query service
+  - Update docs after: Agent Learning Flywheel
+  - Configurable agent start staggering
+  - Trajectory similarity query service
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Feature readiness scoring maintenance check
+  - Configurable agent start staggering
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Trajectory similarity query service
+  - Update docs after: Agent Learning Flywheel
+  - Configurable agent start staggering
+  - Trajectory similarity query service
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Feature readiness scoring maintenance check
+  - Configurable agent start staggering
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Trajectory similarity query service
+  - Update docs after: Agent Learning Flywheel
+  - Configurable agent start staggering
+  - Trajectory similarity query service
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Trajectory pattern mining maintenance task
+  - Configurable agent start staggering
+  - Trajectory similarity query service
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Feature readiness scoring maintenance check
+  - Pre-dispatch readiness gate in scheduler
+  - Configurable agent start staggering
+  - Trajectory similarity query service
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Update docs after: Agent Learning Flywheel
+  - Configurable agent start staggering
+  - Trajectory similarity query service
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Inject trajectory context into agent prompt
+  - Trajectory similarity query service
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Fresh-eyes semantic review in REVIEW processor
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Feature readiness scoring maintenance check
+  - Configurable agent start staggering
+  - Configurable agent start staggering
+  - Trajectory similarity query service
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Downstream impact scoring in dependency resolver
+  - Trajectory similarity query service
+
+- Updated dependencies
+  - @protolabsai/types@0.77.5
+  - @protolabsai/platform@0.77.5
+
 ## 0.77.4
 
 ### Patch Changes

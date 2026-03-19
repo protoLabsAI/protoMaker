@@ -1,6 +1,6 @@
 {
   "name": "@protolabsai/types",
-  "version": "0.77.4",
+  "version": "0.77.6",
   "type": "module",
   "description": "Shared type definitions for AutoMaker",
   "main": "dist/index.js",

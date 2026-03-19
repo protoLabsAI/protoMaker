@@ -18,12 +18,13 @@ const mockLogger = vi.hoisted(() => ({
 // We attach it via util.promisify.custom so promisify(exec) returns it directly.
 const mockExecAsync = vi.hoisted(() => vi.fn(async () => ({ stdout: '', stderr: '' })));
 
-vi.mock('child_process', () => {
+vi.mock('child_process', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('child_process')>();
   const execFn = vi.fn();
   // util.promisify checks for Symbol.for('nodejs.util.promisify.custom')
   // and uses it directly instead of wrapping the callback-style function.
   (execFn as any)[Symbol.for('nodejs.util.promisify.custom')] = mockExecAsync;
-  return { exec: execFn };
+  return { ...actual, exec: execFn };
 });
 
 // ---------------------------------------------------------------------------
