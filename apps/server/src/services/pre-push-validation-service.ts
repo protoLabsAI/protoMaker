@@ -5,7 +5,13 @@
  * Full implementation in M5: Pre-Push Validation.
  */
 
-import type { PrePushValidation } from '@protolabsai/types';
+/** Configuration for pre-push validation checks */
+interface PrePushValidation {
+  enabled?: boolean;
+  checks?: string[];
+  failAction?: 'block' | 'warn';
+  timeout?: number;
+}
 
 export interface CheckResult {
   check: 'format' | 'typecheck';
