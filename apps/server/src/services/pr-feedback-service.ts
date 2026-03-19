@@ -1351,17 +1351,6 @@ export class PRFeedbackService {
         pr.projectPath
       );
 
-      await this.featureLoader.update(pr.projectPath, featureId, {
-        status: 'backlog',
-        workItemState: 'in_progress',
-        ciIterationCount,
-        ciRemediationCount: newCiRemediationCount,
-        // Keep legacy field in sync for backward compatibility
-        remediationCycleCount: newTotalCycles,
-        lastCheckSuiteId: data.checkSuiteId,
-        error: undefined,
-      });
-
       if (this.autoModeService) {
         if (this.leadEngineerService?.isFeatureActive(featureId)) {
           logger.info(
@@ -1369,6 +1358,42 @@ export class PRFeedbackService {
           );
           return;
         }
+
+        // If the agent is already running, inject the CI failure as a message
+        // instead of restarting — saves $2-5 and 3-5 min per CI failure.
+        if (this.autoModeService.isAgentRunning(featureId)) {
+          const injected = await this.autoModeService.sendCIFailureToAgent(
+            featureId,
+            continuationPrompt
+          );
+          if (injected) {
+            const currentCiInjections = (feature.ciInjectionCount as number | undefined) ?? 0;
+            await this.featureLoader.update(pr.projectPath, featureId, {
+              ciIterationCount,
+              ciRemediationCount: newCiRemediationCount,
+              remediationCycleCount: newTotalCycles,
+              lastCheckSuiteId: data.checkSuiteId,
+              ciInjectionCount: currentCiInjections + 1,
+              error: undefined,
+            });
+            logger.info(
+              `CI failure injected into running agent for ${featureId} (iteration ${ciIterationCount}, injection #${currentCiInjections + 1})`
+            );
+            return;
+          }
+        }
+
+        // Agent not running — fall through to existing restart logic
+        await this.featureLoader.update(pr.projectPath, featureId, {
+          status: 'backlog',
+          workItemState: 'in_progress',
+          ciIterationCount,
+          ciRemediationCount: newCiRemediationCount,
+          // Keep legacy field in sync for backward compatibility
+          remediationCycleCount: newTotalCycles,
+          lastCheckSuiteId: data.checkSuiteId,
+          error: undefined,
+        });
 
         void this.autoModeService.executeFeature(pr.projectPath, featureId, true, true, undefined, {
           continuationPrompt,
@@ -1381,6 +1406,15 @@ export class PRFeedbackService {
           `Restarted agent for ${featureId} to fix CI failures (iteration ${ciIterationCount})`
         );
       } else {
+        await this.featureLoader.update(pr.projectPath, featureId, {
+          status: 'backlog',
+          workItemState: 'in_progress',
+          ciIterationCount,
+          ciRemediationCount: newCiRemediationCount,
+          remediationCycleCount: newTotalCycles,
+          lastCheckSuiteId: data.checkSuiteId,
+          error: undefined,
+        });
         logger.warn(`AutoModeService not available, cannot restart agent for CI fix`);
       }
     } catch (error) {
