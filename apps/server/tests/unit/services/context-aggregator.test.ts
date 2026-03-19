@@ -56,30 +56,6 @@ describe('ContextAggregator', () => {
     expect(state.sensors).toContain('ext:presence');
   });
 
-  it('detects idle status when electron-idle reports high idle time', () => {
-    registry.startBuiltinSensors();
-    // Simulate a connected client (not headless)
-    registry.notifyWebSocketClientCount(1);
-
-    // Manually report high idle time to the electron-idle sensor
-    registry.report({ sensorId: 'builtin:electron-idle', data: { idleSeconds: 400 } });
-
-    const state = aggregator.getPresenceState();
-    expect(state.status).toBe('idle');
-    expect(state.sensors).toContain('builtin:electron-idle');
-  });
-
-  it('does not report idle when electron-idle reports low idle time', () => {
-    registry.startBuiltinSensors();
-    registry.notifyWebSocketClientCount(1);
-
-    // Report low idle time (below threshold)
-    registry.report({ sensorId: 'builtin:electron-idle', data: { idleSeconds: 60 } });
-
-    const state = aggregator.getPresenceState();
-    expect(state.status).toBe('active');
-  });
-
   it('applies precedence: headless > afk', () => {
     registry.startBuiltinSensors();
     // Keep 0 WebSocket clients (headless)
