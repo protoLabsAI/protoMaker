@@ -227,8 +227,10 @@ export interface DiscordIntegrationConfig {
   enabled: boolean;
   /** Discord server (guild) ID */
   serverId?: string;
-  /** Discord channel ID for project updates */
+  /** Discord channel ID for project updates (completions, threads) */
   channelId?: string;
+  /** Discord channel ID for error/failure notifications. Falls back to channelId. */
+  errorChannelId?: string;
   /** Create Discord thread when agent starts working on feature (default: true) */
   createThreadsForAgents?: boolean;
   /** Post notification when feature completes successfully (default: true) */
