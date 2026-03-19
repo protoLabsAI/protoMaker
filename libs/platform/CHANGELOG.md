@@ -1,5 +1,20 @@
 # @protolabsai/platform
 
+## 0.79.1
+
+### Patch Changes
+
+- ### Bug Fixes
+  - remove electron-idle sensor tests (#2947)
+  - remove electron-idle sensor tests (#2947)
+
+  ### Refactors
+  - remove Electron — web-only from here on (#2946)
+  - remove Electron — web-only from here on (#2946)
+
+- Updated dependencies
+  - @protolabsai/types@0.79.1
+
 ## 0.79.0
 
 ### Minor Changes
