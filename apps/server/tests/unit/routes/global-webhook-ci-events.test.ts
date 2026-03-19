@@ -315,6 +315,24 @@ describe('Global webhook route — CI events', () => {
       expect(mockTriggerCheck).not.toHaveBeenCalled();
     });
 
+    it('passes events emitter to getPRWatcherService so it can instantiate on a fresh process (Fix 1)', async () => {
+      // Simulate a fresh process where the singleton has not been created yet —
+      // getPRWatcherService returns null when called without events.
+      // After the fix, the handler passes `events`, allowing the singleton to be created.
+      mockGetPRWatcherService.mockReturnValueOnce(null);
+
+      const handler = createGitHubWebhookHandler(events as any, settingsService as any);
+      const { req, res } = createMockExpressContext();
+
+      req.headers = { 'x-github-event': 'check_run' };
+      req.body = makeCheckRunPayload();
+
+      await handler(req as Request, res as Response);
+
+      // Verify getPRWatcherService was called with the events argument
+      expect(mockGetPRWatcherService).toHaveBeenCalledWith(events);
+    });
+
     it('returns 200 with success for check_run events', async () => {
       const handler = createGitHubWebhookHandler(events as any, settingsService as any);
       const { req, res } = createMockExpressContext();

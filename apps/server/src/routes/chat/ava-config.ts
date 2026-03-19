@@ -62,7 +62,7 @@ export interface AvaConfig {
 /**
  * Default configuration used when no per-project config file exists.
  *
- * Enabled by default (~20 tools): briefing, health, notes, discord,
+ * Enabled by default (8 tool groups): briefing, health, notes, discord,
  * metrics, settings, delegation, boardRead.
  *
  * Disabled by default (project-tactical): boardWrite, agentControl, autoMode,
