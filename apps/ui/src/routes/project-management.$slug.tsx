@@ -26,6 +26,7 @@ function ProjectSlugRoute() {
   // Ongoing projects (e.g. Bugs) skip the wizard — they're persistent containers.
   const isNewProject =
     project &&
+    !project.ongoing &&
     project.status !== 'ongoing' &&
     project.type !== 'ongoing' &&
     WIZARD_STATUSES.includes(project.status ?? '') &&
