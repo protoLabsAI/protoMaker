@@ -41,7 +41,9 @@ describe('CIFailureClassifierService', () => {
     });
 
     it('classifies ENOTFOUND network error as infra', () => {
-      const result = classifier.classify(makeCheck('install', 'Error: getaddrinfo ENOTFOUND registry.npmjs.org'));
+      const result = classifier.classify(
+        makeCheck('install', 'Error: getaddrinfo ENOTFOUND registry.npmjs.org')
+      );
       expect(result.failureClass).toBe('infra');
       expect(result.isAgentFixable).toBe(false);
     });
@@ -89,7 +91,9 @@ describe('CIFailureClassifierService', () => {
 
   describe('code_error classification', () => {
     it('classifies TypeScript error output as code_error', () => {
-      const result = classifier.classify(makeCheck('build', 'error TS2345: Type string is not assignable'));
+      const result = classifier.classify(
+        makeCheck('build', 'error TS2345: Type string is not assignable')
+      );
       expect(result.failureClass).toBe('code_error');
       expect(result.isAgentFixable).toBe(true);
     });
