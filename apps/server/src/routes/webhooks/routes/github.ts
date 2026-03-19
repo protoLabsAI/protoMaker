@@ -236,7 +236,10 @@ async function handleGlobalCheckSuiteEvent(
  * Mirrors handleCheckRunEvent from the per-project route. Uses PRWatcherService
  * to trigger fast-path checks for watched PRs.
  */
-async function handleGlobalCheckRunEvent(payload: GitHubCheckRunWebhookPayload): Promise<void> {
+async function handleGlobalCheckRunEvent(
+  payload: GitHubCheckRunWebhookPayload,
+  events: EventEmitter
+): Promise<void> {
   const { action, check_run } = payload;
 
   // Only react to completed check runs
@@ -245,7 +248,7 @@ async function handleGlobalCheckRunEvent(payload: GitHubCheckRunWebhookPayload):
   const prs = check_run.pull_requests ?? [];
   if (prs.length === 0) return;
 
-  const watcher = getPRWatcherService();
+  const watcher = getPRWatcherService(events);
   if (!watcher) return;
 
   for (const pr of prs) {
@@ -321,7 +324,7 @@ export function createGitHubWebhookHandler(events: EventEmitter, settingsService
 
       // Handle check_run events — fast-path PRWatcher trigger
       if (eventType === 'check_run') {
-        await handleGlobalCheckRunEvent(req.body as GitHubCheckRunWebhookPayload);
+        await handleGlobalCheckRunEvent(req.body as GitHubCheckRunWebhookPayload, events);
         res.json({ success: true, message: 'check_run event processed' });
         return;
       }

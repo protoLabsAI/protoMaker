@@ -81,9 +81,6 @@ const POLL_INTERVAL_MS = PR_FEEDBACK_POLL_INTERVAL_MS;
 /** Max iterations before escalating to CTO - prevents infinite feedback loops */
 const MAX_PR_ITERATIONS = 2;
 
-/** Max total remediation cycles (feedback + CI combined) before blocking */
-const MAX_TOTAL_REMEDIATION_CYCLES = 4;
-
 /** How often to poll for CI check status (60s) */
 const CI_POLL_INTERVAL_MS = PR_FEEDBACK_CI_POLL_INTERVAL_MS;
 
@@ -1361,9 +1358,10 @@ export class PRFeedbackService {
 
         // If the agent is already running, inject the CI failure as a message
         // instead of restarting — saves $2-5 and 3-5 min per CI failure.
-        if (this.autoModeService.isAgentRunning(featureId)) {
+        if (this.autoModeService.isAgentRunning(featureId, pr.projectPath)) {
           const injected = await this.autoModeService.sendCIFailureToAgent(
             featureId,
+            pr.projectPath,
             continuationPrompt
           );
           if (injected) {

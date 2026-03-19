@@ -400,4 +400,125 @@ describe('auto-mode-service.ts', () => {
       expect(duration).toBeLessThan(40);
     });
   });
+
+  describe('isAgentRunning - cross-project isolation (Fix 2)', () => {
+    // Helper to inject a running feature entry directly
+    const addRunningFeature = (
+      svc: AutoModeService,
+      featureId: string,
+      projectPath: string
+    ): void => {
+      const runningFeaturesMap = (svc as any).runningFeatures as Map<
+        string,
+        { featureId: string; projectPath: string; abortController: AbortController }
+      >;
+      runningFeaturesMap.set(featureId, {
+        featureId,
+        projectPath,
+        abortController: new AbortController(),
+      });
+    };
+
+    it('should return true when featureId and projectPath both match', () => {
+      addRunningFeature(service, 'feat-1', '/project/alpha');
+
+      expect(service.isAgentRunning('feat-1', '/project/alpha')).toBe(true);
+    });
+
+    it('should return false when featureId matches but projectPath differs (cross-project collision)', () => {
+      addRunningFeature(service, 'feat-1', '/project/alpha');
+
+      expect(service.isAgentRunning('feat-1', '/project/beta')).toBe(false);
+    });
+
+    it('should return false when featureId does not exist', () => {
+      expect(service.isAgentRunning('nonexistent', '/project/alpha')).toBe(false);
+    });
+  });
+
+  describe('sendCIFailureToAgent - cross-project isolation (Fix 2)', () => {
+    const addRunningFeature = (
+      svc: AutoModeService,
+      featureId: string,
+      projectPath: string
+    ): void => {
+      const runningFeaturesMap = (svc as any).runningFeatures as Map<
+        string,
+        { featureId: string; projectPath: string; abortController: AbortController }
+      >;
+      runningFeaturesMap.set(featureId, {
+        featureId,
+        projectPath,
+        abortController: new AbortController(),
+      });
+    };
+
+    const getPendingInjections = (svc: AutoModeService): Map<string, string> =>
+      (svc as any).pendingCIInjections as Map<string, string>;
+
+    it('should queue injection when featureId and projectPath both match', async () => {
+      addRunningFeature(service, 'feat-1', '/project/alpha');
+
+      const result = await service.sendCIFailureToAgent('feat-1', '/project/alpha', 'CI failed');
+
+      expect(result).toBe(true);
+      expect(getPendingInjections(service).get('feat-1')).toBe('CI failed');
+    });
+
+    it('should reject injection when projectPath differs (cross-project protection)', async () => {
+      addRunningFeature(service, 'feat-1', '/project/alpha');
+
+      const result = await service.sendCIFailureToAgent('feat-1', '/project/beta', 'CI failed');
+
+      expect(result).toBe(false);
+      expect(getPendingInjections(service).has('feat-1')).toBe(false);
+    });
+
+    it('should return false when feature is not running', async () => {
+      const result = await service.sendCIFailureToAgent('nonexistent', '/project/alpha', 'msg');
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('pendingCIInjections teardown (Fix 3)', () => {
+    const addRunningFeature = (
+      svc: AutoModeService,
+      featureId: string,
+      projectPath: string
+    ): void => {
+      const runningFeaturesMap = (svc as any).runningFeatures as Map<
+        string,
+        { featureId: string; projectPath: string; abortController: AbortController }
+      >;
+      runningFeaturesMap.set(featureId, {
+        featureId,
+        projectPath,
+        abortController: new AbortController(),
+      });
+    };
+
+    const getPendingInjections = (svc: AutoModeService): Map<string, string> =>
+      (svc as any).pendingCIInjections as Map<string, string>;
+
+    it('should clear pendingCIInjections when stopFeature is called', async () => {
+      addRunningFeature(service, 'feat-stop', '/project/alpha');
+      getPendingInjections(service).set('feat-stop', 'stale CI message');
+
+      await service.stopFeature('feat-stop');
+
+      expect(getPendingInjections(service).has('feat-stop')).toBe(false);
+    });
+
+    it('should clear all pendingCIInjections on shutdown', async () => {
+      addRunningFeature(service, 'feat-a', '/project/alpha');
+      addRunningFeature(service, 'feat-b', '/project/beta');
+      getPendingInjections(service).set('feat-a', 'stale msg a');
+      getPendingInjections(service).set('feat-b', 'stale msg b');
+
+      await service.shutdown();
+
+      expect(getPendingInjections(service).size).toBe(0);
+    });
+  });
 });

@@ -77,7 +77,7 @@ export const DEFAULT_GIT_WORKFLOW_SETTINGS: Required<GitWorkflowSettings> = {
   prBaseBranch: 'main',
   maxPRLinesChanged: 500,
   maxPRFilesTouched: 20,
-  excludeFromStaging: ['.automaker/', '.claude/worktrees/', '.worktrees/'],
+  excludeFromStaging: [],
   softChecks: [],
 };
 
