@@ -1,5 +1,18 @@
 # @protolabsai/flows
 
+## 0.79.5
+
+### Patch Changes
+
+- ### Bug Fixes
+  - skip project wizard for ongoing projects (#2965)
+- Updated dependencies
+  - @protolabsai/types@0.79.5
+  - @protolabsai/utils@0.79.5
+  - @protolabsai/prompts@0.79.5
+  - @protolabsai/model-resolver@0.79.5
+  - @protolabsai/observability@0.79.5
+
 ## 0.79.4
 
 ### Patch Changes
