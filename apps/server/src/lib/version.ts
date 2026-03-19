@@ -23,14 +23,30 @@ export function getVersion(): string {
     return cachedVersion;
   }
 
-  try {
-    const packageJsonPath = join(__dirname, '..', '..', 'package.json');
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
-    const version = packageJson.version || '0.0.0';
-    cachedVersion = version;
-    return version;
-  } catch (error) {
-    logger.warn('Failed to read version from package.json:', error);
-    return '0.0.0';
+  // Try multiple candidate paths: the compiled output may be nested
+  // deeper than src (e.g. dist/apps/server/src/lib/ in Docker builds).
+  const candidates = [
+    join(__dirname, '..', '..', 'package.json'),
+    join(__dirname, '..', '..', '..', '..', 'package.json'),
+    join(__dirname, '..', '..', '..', '..', '..', 'package.json'),
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      const packageJson = JSON.parse(readFileSync(candidate, 'utf-8'));
+      if (packageJson.name?.includes('server') || packageJson.name?.includes('protolabs')) {
+        const version = packageJson.version || '0.0.0';
+        cachedVersion = version;
+        return version;
+      }
+    } catch {
+      // Try next candidate
+    }
   }
+
+  logger.warn(
+    'Failed to read version from package.json, tried:',
+    candidates.map((c) => ({ path: c }))
+  );
+  return '0.0.0';
 }

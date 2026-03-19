@@ -80,7 +80,10 @@ function getCommitsSince(ref) {
     }
   }
 
-  return subjects;
+  // Deduplicate: the linear log walk and the merge expansion can collect
+  // the same commit subject twice (once from the linear walk, once from
+  // expanding the merge). Remove duplicates while preserving order.
+  return [...new Set(subjects)];
 }
 
 function classifyBump(commits) {
