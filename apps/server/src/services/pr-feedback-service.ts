@@ -1269,6 +1269,64 @@ export class PRFeedbackService {
 
       const failedChecks = await prStatusChecker.fetchFailedChecks(pr, data.headSha);
 
+      // Route based on failure class — infra/flaky failures skip remediation
+      const infraChecks = failedChecks.filter((c) => c.failureClass === 'infra');
+      const flakyChecks = failedChecks.filter((c) => c.failureClass === 'flaky');
+      const actionableChecks = failedChecks.filter((c) => c.failureClass === 'actionable');
+
+      if (infraChecks.length > 0 && actionableChecks.length === 0) {
+        // All failures are infrastructure-related — escalate, do NOT remediate
+        logger.warn(
+          `PR #${pr.prNumber} has ${infraChecks.length} infra CI failure(s), escalating without remediation`
+        );
+
+        this.events.emit('authority:awaiting-approval', {
+          projectPath: pr.projectPath,
+          proposal: {
+            who: 'pr-feedback-service',
+            what: 'escalate',
+            target: featureId,
+            justification: `PR #${pr.prNumber} CI failure(s) classified as infrastructure issues: ${infraChecks.map((c) => c.name).join(', ')}`,
+            risk: 'medium',
+          },
+          decision: {
+            verdict: 'require_approval',
+            reason: `CI infra failure — not caused by code changes`,
+          },
+          blockerType: 'ci_infra_failure',
+          featureTitle: `PR #${pr.prNumber}`,
+        });
+
+        await this.featureLoader.update(pr.projectPath, featureId, {
+          lastCheckSuiteId: data.checkSuiteId,
+        });
+        return;
+      }
+
+      if (flakyChecks.length > 0 && actionableChecks.length === 0) {
+        // All failures are flaky — notify, do NOT remediate
+        logger.warn(
+          `PR #${pr.prNumber} has ${flakyChecks.length} flaky CI failure(s), notifying without remediation`
+        );
+
+        this.events.emit('pr:ci-failure', {
+          projectPath: pr.projectPath,
+          prNumber: pr.prNumber,
+          headBranch: pr.branchName,
+          headSha: data.headSha,
+          checkSuiteId: data.checkSuiteId,
+          checkSuiteUrl: data.checkSuiteUrl,
+          repository: data.repository,
+          checksUrl: data.checksUrl,
+        });
+
+        await this.featureLoader.update(pr.projectPath, featureId, {
+          lastCheckSuiteId: data.checkSuiteId,
+        });
+        return;
+      }
+
+      // At least some actionable failures — proceed with remediation
       const continuationPrompt = await this.feedbackAggregator.buildCIFixPrompt(
         pr.prNumber,
         ciIterationCount,

@@ -223,6 +223,8 @@ export type {
   RecoveryResult,
   ExecutionContext,
   RecoveryConfig,
+  CIFailureClass,
+  ClassifiedCIFailure,
 } from './failure.js';
 export { DEFAULT_RECOVERY_CONFIG } from './failure.js';
 

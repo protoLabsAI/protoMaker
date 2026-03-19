@@ -7,6 +7,30 @@
  */
 
 /**
+ * CI failure class — controls whether the system should attempt remediation
+ *
+ * - `actionable`  : Code-level failure the agent can fix (build errors, test failures, lint)
+ * - `infra`       : Infrastructure / runner failure — skip remediation, emit escalation
+ * - `flaky`       : Intermittent failure with no code change needed — skip remediation, emit notification
+ */
+export type CIFailureClass = 'actionable' | 'infra' | 'flaky';
+
+/**
+ * A single CI check failure enriched with a failure class.
+ * Returned by PRStatusChecker.fetchFailedChecks() after classifier integration.
+ */
+export interface ClassifiedCIFailure {
+  /** Name of the CI check (e.g. "build", "test", "typecheck") */
+  name: string;
+  /** GitHub check conclusion (typically "failure") */
+  conclusion: string;
+  /** Combined output text from the check run (title + summary + text) */
+  output: string;
+  /** Classified failure class — controls remediation routing */
+  failureClass: CIFailureClass;
+}
+
+/**
  * Detailed failure categories for enhanced error classification
  */
 export type FailureCategory =

@@ -25,6 +25,7 @@ import { createRollbackHandler, RollbackRequestSchema } from './routes/rollback.
 import { createHandoffHandler, HandoffRequestSchema } from './routes/handoff.js';
 import type { FeatureHealthService } from '../../services/feature-health-service.js';
 import type { TrustTierService } from '../../services/trust-tier-service.js';
+import type { PipelineCheckpointService } from '../../services/pipeline-checkpoint-service.js';
 
 export function createFeaturesRoutes(
   featureLoader: FeatureLoader,
@@ -32,7 +33,8 @@ export function createFeaturesRoutes(
   settingsService?: SettingsService,
   events?: EventEmitter,
   authorityService?: AuthorityService,
-  healthService?: FeatureHealthService
+  healthService?: FeatureHealthService,
+  checkpointService?: PipelineCheckpointService
 ): Router {
   const router = Router();
 
@@ -48,7 +50,14 @@ export function createFeaturesRoutes(
     '/update',
     validatePathParams('projectPath'),
     validateBody(UpdateRequestSchema),
-    createUpdateHandler(featureLoader, settingsService, authorityService, healthService, events)
+    createUpdateHandler(
+      featureLoader,
+      settingsService,
+      authorityService,
+      healthService,
+      events,
+      checkpointService
+    )
   );
   router.post(
     '/bulk-update',

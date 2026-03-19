@@ -8,8 +8,10 @@
  */
 
 import { createLogger } from '@protolabsai/utils';
+import type { ClassifiedCIFailure } from '@protolabsai/types';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { ciFailureClassifier } from './ci-failure-classifier.js';
 
 const execFileAsync = promisify(execFile);
 const logger = createLogger('PRStatusChecker');
@@ -309,8 +311,9 @@ export class PRStatusChecker {
 
   /**
    * Fetch only failed CI check runs for a commit SHA, with output details.
+   * Each failure is classified into one of: actionable | infra | flaky.
    */
-  async fetchFailedChecks(pr: TrackedPR, headSha: string): Promise<FailedCheck[]> {
+  async fetchFailedChecks(pr: TrackedPR, headSha: string): Promise<ClassifiedCIFailure[]> {
     try {
       const { stdout } = await execFileAsync(
         'gh',
@@ -335,14 +338,21 @@ export class PRStatusChecker {
 
       return checkRuns
         .filter((check) => check.conclusion === 'failure')
-        .map((check) => ({
-          name: check.name,
-          conclusion: check.conclusion,
-          output: [check.output?.title, check.output?.summary, check.output?.text]
+        .map((check) => {
+          const output = [check.output?.title, check.output?.summary, check.output?.text]
             .filter(Boolean)
             .join('\n')
-            .slice(0, 1000),
-        }));
+            .slice(0, 1000);
+
+          const failureClass = ciFailureClassifier.classify(check.name, output);
+
+          return {
+            name: check.name,
+            conclusion: check.conclusion,
+            output,
+            failureClass,
+          };
+        });
     } catch (error) {
       logger.debug(`Failed to fetch failed checks for ${headSha}: ${error}`);
       return [];

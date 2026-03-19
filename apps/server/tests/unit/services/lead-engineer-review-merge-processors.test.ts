@@ -18,9 +18,10 @@ vi.mock('@protolabsai/utils', () => ({
 
 // Mock node:child_process — use vi.hoisted so mockExec is available inside the factory
 const { mockExec } = vi.hoisted(() => ({ mockExec: vi.fn() }));
-vi.mock('node:child_process', () => ({
-  exec: mockExec,
-}));
+vi.mock('node:child_process', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:child_process')>();
+  return { ...actual, exec: mockExec };
+});
 
 import { MergeProcessor } from '../../../src/services/lead-engineer-review-merge-processors.js';
 import type {
