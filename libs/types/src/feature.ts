@@ -385,6 +385,12 @@ export interface Feature {
    */
   ciIterationCount?: number;
   /**
+   * Number of CI failures injected into a running agent session.
+   * Incremented each time a CI failure is delivered via message injection
+   * instead of restarting the agent. Saves $2-5 and 3-5 min per injection.
+   */
+  ciInjectionCount?: number;
+  /**
    * Last check suite ID processed for this feature.
    * Used to deduplicate CI failure events.
    */

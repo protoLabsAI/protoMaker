@@ -213,6 +213,12 @@ export class AutoModeService {
   private resumeCheckedProjects = new Set<string>();
   // Cached backlog count refreshed asynchronously on each capacity read.
   private _backlogCountCache = 0;
+  /**
+   * Pending CI failure messages to inject into running agent sessions.
+   * Keyed by featureId. Consumed by executeFeature continuation after the
+   * current agent turn completes (when isAgentRunning was true at receipt).
+   */
+  private pendingCIInjections = new Map<string, string>();
   // Memory management thresholds (configurable via env vars)
   private readonly HEAP_USAGE_STOP_NEW_AGENTS_THRESHOLD = parseFloat(
     process.env.HEAP_STOP_THRESHOLD || '0.8'
@@ -1390,6 +1396,44 @@ export class AutoModeService {
    */
   isFeatureRunning(featureId: string): boolean {
     return this.runningFeatures.has(featureId);
+  }
+
+  /**
+   * Check if an agent is currently running for a feature.
+   * Alias for isFeatureRunning — used by PRFeedbackService for CI injection logic.
+   */
+  isAgentRunning(featureId: string): boolean {
+    return this.runningFeatures.has(featureId);
+  }
+
+  /**
+   * Inject a CI failure message into the running agent session for a feature.
+   * Stores the message as a pending CI injection; the message will be used as a
+   * continuation prompt after the current agent turn completes, so the agent
+   * can fix the CI failure without a full restart.
+   *
+   * Returns true if a running session was found and the injection was queued.
+   */
+  async sendCIFailureToAgent(featureId: string, message: string): Promise<boolean> {
+    if (!this.runningFeatures.has(featureId)) {
+      return false;
+    }
+    this.pendingCIInjections.set(featureId, message);
+    logger.info(`CI failure queued for injection into running agent for feature ${featureId}`);
+    return true;
+  }
+
+  /**
+   * Consume and return a pending CI injection message for a feature (if any).
+   * Called by executeFeature after the current run completes to chain the CI fix.
+   * @internal
+   */
+  consumePendingCIInjection(featureId: string): string | undefined {
+    const message = this.pendingCIInjections.get(featureId);
+    if (message !== undefined) {
+      this.pendingCIInjections.delete(featureId);
+    }
+    return message;
   }
 
   /**
