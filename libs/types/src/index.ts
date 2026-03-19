@@ -1023,42 +1023,6 @@ export type {
   TimerRegistryMetrics,
 } from './scheduler.js';
 
-// PenFile types (vector graphics format v2.8)
-export type {
-  PenColor,
-  PenVector,
-  PenBounds,
-  PenTransform,
-  PenSolidFill,
-  PenGradientStop,
-  PenGradientFill,
-  PenImageFill,
-  PenFill,
-  PenStroke,
-  PenDropShadowEffect,
-  PenInnerShadowEffect,
-  PenBlurEffect,
-  PenEffect,
-  PenVariable,
-  PenTheme,
-  PenNodeBase,
-  PenFrame,
-  PenGroup,
-  PenRectangle,
-  PenEllipse,
-  PenLine,
-  PenPolygon,
-  PenPath,
-  PenText,
-  PenIconFont,
-  PenRef,
-  PenImage,
-  PenVectorGraphic,
-  PenInstance,
-  PenNode,
-  PenDocument,
-} from './pen.js';
-
 // Maintenance orchestrator types
 export type {
   MaintenanceCheck,

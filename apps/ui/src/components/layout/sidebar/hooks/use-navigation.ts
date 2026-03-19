@@ -8,7 +8,6 @@ import {
   Settings,
   Settings2,
   NotebookPen,
-  Palette,
   FolderOpen,
   FolderKanban,
   ListTodo,
@@ -55,14 +54,12 @@ interface UseNavigationProps {
     projectSettings: string;
     inbox: string;
     fileEditor: string;
-    designs: string;
     todo: string;
     automations: string;
     projects: string;
     chat: string;
   };
   hideSpecEditor: boolean;
-  hideDesigns: boolean;
   hideFileEditor: boolean;
   currentProject: Project | null;
   projects: Project[];
@@ -85,7 +82,6 @@ interface UseNavigationProps {
 export function useNavigation({
   shortcuts,
   hideSpecEditor,
-  hideDesigns,
   hideFileEditor,
   currentProject,
   projects,
@@ -168,15 +164,6 @@ export function useNavigation({
       shortcut: shortcuts.chat,
     });
 
-    if (!hideDesigns) {
-      projectItems.push({
-        id: 'designs',
-        label: 'Designs',
-        icon: Palette,
-        shortcut: shortcuts.designs,
-      });
-    }
-
     const sections: NavSection[] = [
       {
         label: 'Project',
@@ -230,7 +217,6 @@ export function useNavigation({
   }, [
     shortcuts,
     hideSpecEditor,
-    hideDesigns,
     hideFileEditor,
     unreadNotificationsCount,
     unreadCeremonyCount,

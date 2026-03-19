@@ -17,10 +17,6 @@ const LOG_LEVEL_OPTIONS: { value: ServerLogLevel; label: string; description: st
 ];
 
 const FEATURE_FLAG_LABELS: Record<keyof FeatureFlags, { label: string; description: string }> = {
-  designs: {
-    label: 'Designs',
-    description: 'Show the Designs (pen file) viewer in the project sidebar.',
-  },
   specEditor: {
     label: 'Spec Editor',
     description: 'Show the Spec Editor in the sidebar Tools section.',

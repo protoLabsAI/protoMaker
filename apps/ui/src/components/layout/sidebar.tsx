@@ -263,7 +263,6 @@ export function Sidebar() {
   const { navSections, navigationShortcuts } = useNavigation({
     shortcuts,
     hideSpecEditor: hideSpecEditor || !featureFlags.specEditor,
-    hideDesigns: !featureFlags.designs,
     hideFileEditor: false,
     currentProject,
     projects,

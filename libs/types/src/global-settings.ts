@@ -193,8 +193,6 @@ const DEFAULT_CODEX_ADDITIONAL_DIRS: string[] = [];
  * New features should start behind a flag until ready for general availability.
  */
 export interface FeatureFlags {
-  /** Designs/pen file viewer in project sidebar */
-  designs: boolean;
   /** Spec editor in sidebar Tools section */
   specEditor: boolean;
   /**
@@ -219,7 +217,6 @@ export interface FeatureFlags {
 
 /** Default feature flags — all off by default, opt-in per environment */
 export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
-  designs: false,
   specEditor: false,
   userPresenceDetection: false,
   reactorEnabled: false,

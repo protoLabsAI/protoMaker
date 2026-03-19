@@ -63,7 +63,6 @@ import { createWebhooksRoutes } from '../routes/webhooks/index.js';
 import { createDiscordRoutes } from '../routes/discord/index.js';
 import { createAvaRoutes } from '../routes/ava/index.js';
 import { createKnowledgeRoutes } from '../routes/knowledge/index.js';
-import { createDesignsRoutes } from '../routes/designs/index.js';
 import { createPromotionsRoutes } from '../routes/promotions/index.js';
 import { createIssuesRoutes } from '../routes/issues/index.js';
 import { createDeployRoutes } from '../routes/deploy/index.js';
@@ -397,10 +396,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     app.use('/api/knowledge', createKnowledgeRoutes(knowledgeStoreService));
     logger.info('Knowledge store routes mounted at /api/knowledge');
   }
-
-  // Designs routes (.pen file management)
-  app.use('/api/designs', createDesignsRoutes());
-  logger.info('Designs routes mounted at /api/designs');
 
   // Promotion orchestration routes
   app.use('/api/promotions', createPromotionsRoutes());
