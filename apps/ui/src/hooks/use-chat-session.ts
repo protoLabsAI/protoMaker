@@ -31,6 +31,12 @@ interface UseChatSessionOptions {
   projectPath?: string;
   /** Project ID used to scope sessions */
   projectId?: string;
+  /**
+   * Optional URL for the protoClawX Ava Engine (e.g. http://localhost:8318/api/chat).
+   * When set, chat sessions use this URL as the transport target instead of /api/chat.
+   * Both endpoints speak AI SDK Data Stream Protocol so all UI features work unchanged.
+   */
+  avaEngineUrl?: string;
 }
 
 export function useChatSession({
@@ -38,6 +44,7 @@ export function useChatSession({
   body,
   projectPath,
   projectId,
+  avaEngineUrl,
 }: UseChatSessionOptions = {}) {
   const {
     sessions,
@@ -77,20 +84,23 @@ export function useChatSession({
     [body, projectPath]
   );
 
-  // AI SDK v6 requires transport instead of api/headers/body
+  // AI SDK v6 requires transport instead of api/headers/body.
+  // When avaEngineUrl is provided, route to the protoClawX Ava Engine instead.
+  // X-Session-Id ensures session continuity on the engine side.
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
-        api: '/api/chat',
+        api: avaEngineUrl ?? '/api/chat',
         headers: {
           ...getAuthHeaders(),
           'x-model-alias': modelAlias,
           'x-effort-level': effortLevel,
+          ...(avaEngineUrl && currentSessionId ? { 'X-Session-Id': currentSessionId } : {}),
         },
         body: transportBody,
         credentials: 'include',
       }),
-    [modelAlias, effortLevel, transportBody]
+    [modelAlias, effortLevel, transportBody, avaEngineUrl, currentSessionId]
   );
 
   const { messages, sendMessage, stop, status, setMessages, error, addToolApprovalResponse } =
