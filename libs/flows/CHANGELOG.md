@@ -1,5 +1,71 @@
 # @protolabsai/flows
 
+## 0.79.0
+
+### Minor Changes
+
+- ### Features
+  - in-flight CI failure injection into running agents (M4) (#2937)
+  - webhook consolidation — CI events on both routes (M6) (#2938)
+  - pre-push validation tests and stub service (M5 TDD) (#2932)
+  - split remediation budgets — separate CI and review counters (#2931)
+  - M1 — CI Failure Classification (#2927)
+  - in-flight CI failure injection into running agents (M4) (#2937)
+  - webhook consolidation — CI events on both routes (M6) (#2938)
+  - pre-push validation tests and stub service (M5 TDD) (#2932)
+  - split remediation budgets — separate CI and review counters (#2931)
+  - M1 — CI Failure Classification (#2927)
+
+  ### Bug Fixes
+  - remove all excludeFromStaging defaults — .gitignore handles exclusion
+  - CodeRabbit findings — PRWatcher null, cross-project injection, stale queue (#2941)
+  - remove all excludeFromStaging defaults — .gitignore handles exclusion
+  - CodeRabbit findings — PRWatcher null, cross-project injection, stale queue (#2941)
+  - remove unwired pre-push-validation stub and failing tests
+  - prevent git add error when .automaker is in .gitignore (#2934)
+  - use non-excluded pattern in friction tracker tests
+  - change DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch from dev to main
+  - add per-project prBaseBranch: dev to automaker settings
+  - exclude rate_limit and transient patterns from friction tracker
+  - remove unwired pre-push-validation stub and failing tests
+  - prevent git add error when .automaker is in .gitignore (#2934)
+  - use non-excluded pattern in friction tracker tests
+  - change DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch from dev to main
+  - exclude rate_limit and transient patterns from friction tracker
+  - add per-project prBaseBranch: dev to automaker settings
+  - add RemediationBudgetEnforcer implementation and fix formatting
+  - add RemediationBudgetEnforcer implementation and fix formatting
+  - add RemediationBudgetEnforcer implementation and fix formatting
+  - exclude rate_limit and transient patterns from friction tracker
+  - restore Plans/Issues/Metrics tabs on project management view (#2918)
+  - use importOriginal in vi.mock for child_process to prevent test pollution
+  - restore Plans/Issues/Metrics tabs on project management view (#2918)
+  - use importOriginal in vi.mock for child_process to prevent test pollution
+
+  ### Refactors
+  - remove calendar system and clean up MCP server cruft
+  - remove calendar system and clean up MCP server cruft
+  - Bug: Agent PRs target main instead of dev — PR creation ignores prBaseBr
+  - Budget types and enforcement tests
+  - Budget types and enforcement tests
+  - Bug: Agent PRs target main instead of dev — PR creation ignores prBaseBr
+  - Job log fetcher implementation
+  - Bug: Worktree creation hardcodes origin/dev, breaks projects without dev
+  - Bug: LeadEngineer checkpoint prevents feature retry after worktree clean
+  - Bug: Agent PRs target main instead of dev — PR creation ignores prBaseBr
+  - Job log fetcher implementation
+  - Bug: Agent PRs target main instead of dev — PR creation ignores prBaseBr
+  - Budget types and enforcement tests
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.79.0
+  - @protolabsai/utils@0.79.0
+  - @protolabsai/prompts@0.79.0
+  - @protolabsai/model-resolver@0.79.0
+  - @protolabsai/observability@0.79.0
+
 ## 0.78.0
 
 ### Minor Changes
