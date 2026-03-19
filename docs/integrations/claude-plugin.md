@@ -71,24 +71,23 @@ That's it! You now have access to ~170 MCP tools and slash commands for managing
 
 ### What You Can Do
 
-| Command               | Description                                       |
-| --------------------- | ------------------------------------------------- |
-| `/welcome`            | User onboarding and status refresh                |
-| `/board`              | View and manage your Kanban board                 |
-| `/auto-mode`          | Start/stop autonomous feature processing          |
-| `/orchestrate`        | Manage feature dependencies                       |
-| `/context`            | Manage AI agent context files                     |
-| `/plan-project`       | Full project orchestration pipeline               |
-| `/ship`               | Stage, commit, push, create PR, auto-merge        |
-| `/headsdown`          | Deep work mode — process features autonomously    |
-| `/calendar-assistant` | Calendar and scheduling operations                |
-| `/due-diligence`      | Validate approaches with evidence-based research  |
-| `/deep-research`      | Research codebase before planning                 |
-| `/sparc-prd`          | Create a SPARC-style PRD                          |
-| `/improve-prompts`    | Analyze and improve LLM prompts                   |
-| `/ava`                | Autonomous operator with multi-project delegation |
-| `/setuplab`           | 7-phase project onboarding pipeline               |
-| `/update-plugin`      | Guided plugin version upgrade                     |
+| Command            | Description                                       |
+| ------------------ | ------------------------------------------------- |
+| `/welcome`         | User onboarding and status refresh                |
+| `/board`           | View and manage your Kanban board                 |
+| `/auto-mode`       | Start/stop autonomous feature processing          |
+| `/orchestrate`     | Manage feature dependencies                       |
+| `/context`         | Manage AI agent context files                     |
+| `/plan-project`    | Full project orchestration pipeline               |
+| `/ship`            | Stage, commit, push, create PR, auto-merge        |
+| `/headsdown`       | Deep work mode — process features autonomously    |
+| `/due-diligence`   | Validate approaches with evidence-based research  |
+| `/deep-research`   | Research codebase before planning                 |
+| `/sparc-prd`       | Create a SPARC-style PRD                          |
+| `/improve-prompts` | Analyze and improve LLM prompts                   |
+| `/ava`             | Autonomous operator with multi-project delegation |
+| `/setuplab`        | 7-phase project onboarding pipeline               |
+| `/update-plugin`   | Guided plugin version upgrade                     |
 
 See [Plugin Commands](./plugin-commands.md) for full command reference and examples.
 

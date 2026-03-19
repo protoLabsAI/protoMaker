@@ -76,7 +76,7 @@ Built-in task configuration (enabled state, cron overrides) is persisted in Glob
 ```typescript
 // libs/types/src/global-settings.ts
 export interface SchedulerSettings {
-  /** Per-task overrides. Key: task ID (e.g., "maintenance:auto-merge-prs") */
+  /** Per-task overrides. Key: task ID (e.g., "maintenance:stale-features") */
   taskOverrides: Record<
     string,
     {
@@ -105,7 +105,7 @@ The `schedulerSettings` field lives inside `data/settings.json` under the top-le
 {
   "schedulerSettings": {
     "taskOverrides": {
-      "maintenance:auto-merge-prs": { "enabled": false },
+      "maintenance:stale-features": { "enabled": false },
       "maintenance:stale-worktrees": { "cronExpression": "0 2 * * *" }
     }
   }
@@ -122,7 +122,7 @@ Before the Timer Registry, interval timers (used by monitoring services like `He
 
 | Timer type | Example consumers                                                                                                             | Schedule type              |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `cron`     | All maintenance tasks (e.g. `maintenance:auto-merge-prs`)                                                                     | 5-field cron expression    |
+| `cron`     | All maintenance tasks (e.g. `maintenance:stale-features`)                                                                     | 5-field cron expression    |
 | `interval` | `HealthMonitorService`, `DiscordMonitor`, `GitHubMonitor`, `LeadEngineerService`, `PRWatcherService`, `SpecGenerationMonitor` | Fixed millisecond interval |
 
 ### SchedulerService — Timer Registry Methods
@@ -232,12 +232,12 @@ Returns a unified list of all cron tasks and interval timers.
   "timers": [
     {
       "kind": "cron",
-      "id": "maintenance:auto-merge-prs",
-      "name": "Auto-Merge Eligible PRs",
+      "id": "maintenance:stale-features",
+      "name": "Stale Feature Detection",
       "enabled": true,
-      "cronExpression": "*/5 * * * *",
-      "nextRun": "2026-03-15T18:10:00.000Z",
-      "lastRun": "2026-03-15T18:05:01.234Z",
+      "cronExpression": "0 * * * *",
+      "nextRun": "2026-03-15T19:00:00.000Z",
+      "lastRun": "2026-03-15T18:00:01.234Z",
       "executionCount": 312,
       "failureCount": 0
     },
@@ -360,25 +360,21 @@ The following automations are seeded automatically at server startup. They appea
 
 ### Cron-Scheduled Tasks
 
-| ID                                  | Name                         | Schedule      | Branch-Aware | Description                                           |
-| ----------------------------------- | ---------------------------- | ------------- | ------------ | ----------------------------------------------------- |
-| `maintenance:data-integrity`        | Data Integrity Check         | Every 5 min   | No           | Monitors feature directory count and data consistency |
-| `maintenance:stale-features`        | Stale Feature Detection      | Hourly        | No           | Finds features stuck in running/in-progress > 2 hours |
-| `maintenance:stale-worktrees`       | Stale Worktree Auto-Cleanup  | Daily 3 AM    | Yes          | Auto-removes worktrees for merged branches            |
-| `maintenance:branch-cleanup`        | Merged Branch Auto-Cleanup   | Sunday 4 AM   | Yes          | Auto-deletes local branches already merged to target  |
-| `maintenance:board-health`          | Board Health Reconciliation  | Every 6 hours | No           | Audits and auto-fixes board state inconsistencies     |
-| `maintenance:auto-merge-prs`        | Auto-Merge Eligible PRs      | Every 5 min   | Yes          | Merges PRs targeting the integration branch           |
-| `maintenance:auto-rebase-stale-prs` | Auto-Rebase Stale PRs        | Every 30 min  | Yes          | Rebases PRs behind their base branch                  |
-| `maintenance:runner-health`         | GitHub Actions Runner Health | Every 5 min   | No           | Monitors runner health and detects stuck builds       |
+| ID                            | Name                         | Schedule      | Branch-Aware | Description                                           |
+| ----------------------------- | ---------------------------- | ------------- | ------------ | ----------------------------------------------------- |
+| `maintenance:data-integrity`  | Data Integrity Check         | Every 5 min   | No           | Monitors feature directory count and data consistency |
+| `maintenance:stale-features`  | Stale Feature Detection      | Hourly        | No           | Finds features stuck in running/in-progress > 2 hours |
+| `maintenance:stale-worktrees` | Stale Worktree Auto-Cleanup  | Daily 3 AM    | Yes          | Auto-removes worktrees for merged branches            |
+| `maintenance:branch-cleanup`  | Merged Branch Auto-Cleanup   | Sunday 4 AM   | Yes          | Auto-deletes local branches already merged to target  |
+| `maintenance:board-health`    | Board Health Reconciliation  | Every 6 hours | No           | Audits and auto-fixes board state inconsistencies     |
+| `maintenance:runner-health`   | GitHub Actions Runner Health | Every 5 min   | No           | Monitors runner health and detects stuck builds       |
 
-Conditional registration: `data-integrity` requires `IntegrityWatchdogService`, `board-health` requires `FeatureHealthService`, `auto-merge-prs` and `auto-rebase-stale-prs` require `FeatureLoader` + `SettingsService`, `runner-health` requires GitHub env vars (`GITHUB_TOKEN`, `GITHUB_REPO_OWNER`, `GITHUB_REPO_NAME`).
+Conditional registration: `data-integrity` requires `IntegrityWatchdogService`, `board-health` requires `FeatureHealthService`, `runner-health` requires GitHub env vars (`GITHUB_TOKEN`, `GITHUB_REPO_OWNER`, `GITHUB_REPO_NAME`).
 
-### Branch-Aware PR Tasks
+### Branch-Aware Tasks
 
 Tasks marked "Branch-Aware" in the table above call `resolveIntegrationBranch()` to determine the correct target branch from the project's `gitWorkflow.prBaseBranch` setting (defaults to `dev`). This means:
 
-- **`auto-merge-prs`** only merges PRs whose base branch matches the configured integration branch
-- **`auto-rebase-stale-prs`** only rebases PRs targeting the configured integration branch
 - **`stale-worktrees`** and **`branch-cleanup`** use the integration branch when determining which branches are safe to clean
 
 Tasks that don't operate on git branches (data-integrity, stale-features, board-health, runner-health) are unaffected.
@@ -387,11 +383,10 @@ The `resolveIntegrationBranch()` function reads `prBaseBranch` from `settingsSer
 
 ### Event-Triggered Tasks
 
-| ID                       | Name                           | Event                       | Description                               |
-| ------------------------ | ------------------------------ | --------------------------- | ----------------------------------------- |
-| `ceremony:standup`       | Standup Ceremony               | `feature:completed`         | Runs standup flow when a feature finishes |
-| `ceremony:retro`         | Retrospective Ceremony         | `ceremony:milestone-update` | Runs retro flow on milestone updates      |
-| `ceremony:project-retro` | Project Retrospective Ceremony | `ceremony:project-retro`    | Runs project retro flow when triggered    |
+| ID                       | Name                           | Event                       | Description                            |
+| ------------------------ | ------------------------------ | --------------------------- | -------------------------------------- |
+| `ceremony:retro`         | Retrospective Ceremony         | `ceremony:milestone-update` | Runs retro flow on milestone updates   |
+| `ceremony:project-retro` | Project Retrospective Ceremony | `ceremony:project-retro`    | Runs project retro flow when triggered |
 
 ### Startup Tasks (Non-Automation)
 
@@ -413,7 +408,7 @@ When a scheduled task throws an error during execution, SchedulerService emits a
 {
   type: 'scheduler:task-failed',
   payload: {
-    taskId: string;      // e.g., "maintenance:auto-merge-prs"
+    taskId: string;      // e.g., "maintenance:stale-worktrees"
     taskName: string;    // e.g., "Auto-Merge Eligible PRs"
     error: string;       // Error message from the thrown exception
     timestamp: string;   // ISO 8601 timestamp of when the failure occurred

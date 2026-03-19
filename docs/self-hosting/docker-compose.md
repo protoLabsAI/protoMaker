@@ -129,7 +129,6 @@ services:
       - '3007:3007'
     environment:
       - VITE_SERVER_URL=http://localhost:3008
-      - VITE_SKIP_ELECTRON=true
     volumes:
       - .:/app:cached
       - automaker-dev-node-modules:/app/node_modules
@@ -243,10 +242,10 @@ services:
 
 ### Development Volumes
 
-| Volume                       | Container Path      | Purpose                           |
-| ---------------------------- | ------------------- | --------------------------------- |
-| `automaker-dev-node-modules` | `/app/node_modules` | Container-specific dependencies   |
-| `./data`                     | `/data`             | Local data (shared with Electron) |
+| Volume                       | Container Path      | Purpose                         |
+| ---------------------------- | ------------------- | ------------------------------- |
+| `automaker-dev-node-modules` | `/app/node_modules` | Container-specific dependencies |
+| `./data`                     | `/data`             | Local data directory            |
 
 ## Usage
 

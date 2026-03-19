@@ -72,7 +72,6 @@ These map well to future Codex skills if you want explicit role activation.
 
 - `pr-maintainer`
 - `board-janitor`
-- `calendar-assistant`
 
 These may not need standalone skills immediately. Many of their behaviors can live as Ava playbooks until the workflow volume justifies separate Codex skills.
 
