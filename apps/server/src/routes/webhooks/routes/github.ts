@@ -3,6 +3,8 @@
  *
  * Handles GitHub webhook events, specifically pull_request events
  * to automatically transition features when their PRs are merged.
+ * Also handles check_suite and check_run CI events on this global route,
+ * mirroring the per-project route at /github/webhook.
  */
 
 import type { Request, Response } from 'express';
@@ -17,6 +19,11 @@ import type { EventEmitter } from '../../../lib/events.js';
 import type { SettingsService } from '../../../services/settings-service.js';
 import { FeatureLoader } from '../../../services/feature-loader.js';
 import { StagingPromotionService } from '../../../services/staging-promotion-service.js';
+import { getPRWatcherService } from '../../../services/pr-watcher-service.js';
+import type {
+  GitHubCheckSuiteWebhookPayload,
+  GitHubCheckRunWebhookPayload,
+} from '@protolabsai/types';
 
 const logger = createLogger('webhooks/github');
 
@@ -173,6 +180,86 @@ async function findFeatureByBranch(
   }
 }
 
+/**
+ * Handle check_suite completed event on the global webhook route.
+ *
+ * Mirrors handleCheckSuiteEvent from the per-project route at
+ * apps/server/src/routes/github/routes/webhook.ts. The projectPath is
+ * resolved to process.cwd() since this route is not project-scoped.
+ * Deduplication happens downstream in PRFeedbackService via lastCheckSuiteId.
+ */
+async function handleGlobalCheckSuiteEvent(
+  payload: GitHubCheckSuiteWebhookPayload,
+  events: EventEmitter
+): Promise<void> {
+  const { action, check_suite, repository } = payload;
+
+  logger.info(
+    `[global] check_suite event: ${action} on ${repository.full_name} (conclusion: ${check_suite.conclusion})`
+  );
+
+  // Only process completed check suites with failure conclusion
+  if (action !== 'completed' || check_suite.conclusion !== 'failure') {
+    return;
+  }
+
+  // Only process if there are associated PRs
+  if (!check_suite.pull_requests || check_suite.pull_requests.length === 0) {
+    logger.debug(`[global] Check suite ${check_suite.id} has no associated PRs, ignoring`);
+    return;
+  }
+
+  // Emit CI failure event for each associated PR.
+  // projectPath is left as empty string — PRFeedbackService resolves it
+  // from the tracked PR registry via prNumber.
+  for (const pr of check_suite.pull_requests) {
+    logger.info(
+      `[global] CI failure detected for PR #${pr.number} (check_suite: ${check_suite.id}, sha: ${check_suite.head_sha})`
+    );
+
+    events.emit('pr:ci-failure', {
+      projectPath: '',
+      prNumber: pr.number,
+      headBranch: pr.head.ref,
+      headSha: check_suite.head_sha,
+      checkSuiteId: check_suite.id,
+      checkSuiteUrl: check_suite.url,
+      repository: repository.full_name,
+      checksUrl: check_suite.check_runs_url,
+    });
+  }
+}
+
+/**
+ * Handle check_run completed event on the global webhook route.
+ *
+ * Mirrors handleCheckRunEvent from the per-project route. Uses PRWatcherService
+ * to trigger fast-path checks for watched PRs.
+ */
+async function handleGlobalCheckRunEvent(payload: GitHubCheckRunWebhookPayload): Promise<void> {
+  const { action, check_run } = payload;
+
+  // Only react to completed check runs
+  if (action !== 'completed') return;
+
+  const prs = check_run.pull_requests ?? [];
+  if (prs.length === 0) return;
+
+  const watcher = getPRWatcherService();
+  if (!watcher) return;
+
+  for (const pr of prs) {
+    if (watcher.isWatching(pr.number)) {
+      logger.info(
+        `[global] check_run completed for PR #${pr.number} (${check_run.name}) — triggering watcher check`
+      );
+      await watcher.triggerCheck(pr.number);
+    }
+  }
+
+  logger.debug(`[global] Processed check_run ${check_run.id} (${check_run.name})`);
+}
+
 export function createGitHubWebhookHandler(events: EventEmitter, settingsService: SettingsService) {
   const featureLoader = new FeatureLoader();
   const stagingPromotionService = new StagingPromotionService();
@@ -224,6 +311,21 @@ export function createGitHubWebhookHandler(events: EventEmitter, settingsService
 
       // Check event type
       const eventType = req.headers['x-github-event'] as string | undefined;
+
+      // Handle check_suite events — CI failure routing
+      if (eventType === 'check_suite') {
+        await handleGlobalCheckSuiteEvent(req.body as GitHubCheckSuiteWebhookPayload, events);
+        res.json({ success: true, message: 'check_suite event processed' });
+        return;
+      }
+
+      // Handle check_run events — fast-path PRWatcher trigger
+      if (eventType === 'check_run') {
+        await handleGlobalCheckRunEvent(req.body as GitHubCheckRunWebhookPayload);
+        res.json({ success: true, message: 'check_run event processed' });
+        return;
+      }
+
       if (
         eventType !== 'pull_request' &&
         eventType !== 'pull_request_review' &&
