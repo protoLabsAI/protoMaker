@@ -1,5 +1,18 @@
 # @protolabsai/types
 
+## 0.77.6
+
+### Patch Changes
+
+- ### Bug Fixes
+  - restore Plans/Issues/Metrics tabs on project management view (#2918)
+  - restore Plans/Issues/Metrics tabs on project management view (#2918)
+
+  ### Refactors
+  - Job log fetcher implementation
+  - Job log fetcher implementation
+  - Job log fetcher implementation
+
 ## 0.77.5
 
 ### Patch Changes
