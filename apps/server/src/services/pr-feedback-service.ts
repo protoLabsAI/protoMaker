@@ -44,6 +44,10 @@ import {
 import type { SchedulerService } from './scheduler-service.js';
 import type { SettingsService } from './settings-service.js';
 import { getWorkflowSettings } from '../lib/settings-helpers.js';
+import {
+  RemediationBudgetEnforcer,
+  DEFAULT_CI_REACTION_SETTINGS,
+} from './remediation-budget-enforcer.js';
 
 const logger = createLogger('PRFeedbackRemediation');
 
@@ -559,24 +563,45 @@ export class PRFeedbackService {
         const fullFeedback = [feedbackSummary, coderabbitFeedback].filter(Boolean).join('\n---\n');
 
         const feature = await this.featureLoader.get(pr.projectPath, featureId);
-        const currentTotalCycles = (feature?.remediationCycleCount as number | undefined) || 0;
-        const totalCycles = currentTotalCycles + 1;
 
+        // Resolve split remediation settings from workflow config (fall back to defaults)
+        const workflowSettingsForReview = await getWorkflowSettings(
+          pr.projectPath,
+          this.settingsService
+        );
+        const ciReactionSettings =
+          workflowSettingsForReview.ciReactionSettings ?? DEFAULT_CI_REACTION_SETTINGS;
+
+        const currentCiRemediation = (feature?.ciRemediationCount as number | undefined) ?? 0;
+        const currentReviewRemediation =
+          (feature?.reviewRemediationCount as number | undefined) ?? 0;
+        const legacyCycleCount = (feature?.remediationCycleCount as number | undefined) ?? 0;
+
+        // Check review budget via enforcer
+        const enforcer = new RemediationBudgetEnforcer(ciReactionSettings);
+        const budgetResult = enforcer.checkAndIncrement({
+          type: 'review',
+          ciRemediationCount: currentCiRemediation,
+          reviewRemediationCount: currentReviewRemediation,
+          remediationCycleCount: legacyCycleCount,
+          settings: ciReactionSettings,
+        });
+
+        // Always persist latest feedback regardless of budget outcome
         await this.featureLoader.update(pr.projectPath, featureId, {
           lastReviewFeedback: fullFeedback.slice(0, 2000),
           prIterationCount: pr.iterationCount,
-          remediationCycleCount: totalCycles,
         });
 
-        if (totalCycles >= MAX_TOTAL_REMEDIATION_CYCLES) {
+        if (!budgetResult.allowed) {
           logger.warn(
-            `PR #${pr.prNumber} for ${featureId} exceeded total remediation budget (${totalCycles}/${MAX_TOTAL_REMEDIATION_CYCLES}), blocking`
+            `PR #${pr.prNumber} for ${featureId} exceeded review remediation budget: ${budgetResult.message}`
           );
 
           await this.featureLoader.update(pr.projectPath, featureId, {
             status: 'blocked',
             workItemState: 'blocked',
-            error: `Exceeded ${MAX_TOTAL_REMEDIATION_CYCLES} total remediation cycles (feedback + CI). Escalated.`,
+            error: budgetResult.message,
           });
 
           this.events.emit('authority:awaiting-approval', {
@@ -585,10 +610,10 @@ export class PRFeedbackService {
               who: 'pr-feedback-service',
               what: 'escalate',
               target: featureId,
-              justification: `PR #${pr.prNumber} exceeded ${MAX_TOTAL_REMEDIATION_CYCLES} total remediation cycles`,
+              justification: `PR #${pr.prNumber} exceeded remediation budget (${budgetResult.exhaustedBudget}): ${budgetResult.message}`,
               risk: 'high',
             },
-            decision: { verdict: 'require_approval', reason: `Total remediation budget exceeded` },
+            decision: { verdict: 'require_approval', reason: `Remediation budget exceeded` },
             blockerType: 'remediation_budget_exceeded',
             featureTitle: `PR #${pr.prNumber}`,
           });
@@ -597,6 +622,14 @@ export class PRFeedbackService {
           void this.savePrTracking();
           return;
         }
+
+        // Budget allows — persist incremented review counter
+        await this.featureLoader.update(pr.projectPath, featureId, {
+          reviewRemediationCount: budgetResult.nextReviewRemediationCount,
+          // Keep legacy field in sync for backward compatibility
+          remediationCycleCount:
+            budgetResult.nextCiRemediationCount + budgetResult.nextReviewRemediationCount,
+        });
 
         if (pr.iterationCount > MAX_PR_ITERATIONS) {
           logger.warn('Iteration budget exhausted, escalating', {
@@ -1235,16 +1268,34 @@ export class PRFeedbackService {
 
       pr.ciMonitoring = undefined;
 
-      const currentTotalCycles = (feature.remediationCycleCount as number | undefined) || 0;
-      if (currentTotalCycles >= MAX_TOTAL_REMEDIATION_CYCLES) {
+      // Resolve split remediation settings from workflow config (fall back to defaults)
+      const workflowSettings = await getWorkflowSettings(pr.projectPath, this.settingsService);
+      const ciReactionSettings =
+        workflowSettings.ciReactionSettings ?? DEFAULT_CI_REACTION_SETTINGS;
+
+      const currentCiRemediation = (feature.ciRemediationCount as number | undefined) ?? 0;
+      const currentReviewRemediation = (feature.reviewRemediationCount as number | undefined) ?? 0;
+      const legacyCycleCount = (feature.remediationCycleCount as number | undefined) ?? 0;
+
+      // Check CI budget via enforcer
+      const ciEnforcer = new RemediationBudgetEnforcer(ciReactionSettings);
+      const ciBudgetResult = ciEnforcer.checkAndIncrement({
+        type: 'ci',
+        ciRemediationCount: currentCiRemediation,
+        reviewRemediationCount: currentReviewRemediation,
+        remediationCycleCount: legacyCycleCount,
+        settings: ciReactionSettings,
+      });
+
+      if (!ciBudgetResult.allowed) {
         logger.warn(
-          `Feature ${featureId} exceeded total remediation budget (${currentTotalCycles}/${MAX_TOTAL_REMEDIATION_CYCLES}), blocking`
+          `Feature ${featureId} exceeded CI remediation budget: ${ciBudgetResult.message}`
         );
 
         await this.featureLoader.update(pr.projectPath, featureId, {
           status: 'blocked',
           workItemState: 'blocked',
-          error: `Exceeded ${MAX_TOTAL_REMEDIATION_CYCLES} total remediation cycles (feedback + CI). Escalated.`,
+          error: ciBudgetResult.message,
         });
 
         this.events.emit('authority:awaiting-approval', {
@@ -1253,10 +1304,10 @@ export class PRFeedbackService {
             who: 'pr-feedback-service',
             what: 'escalate',
             target: featureId,
-            justification: `PR #${pr.prNumber} exceeded ${MAX_TOTAL_REMEDIATION_CYCLES} total remediation cycles (feedback + CI failures)`,
+            justification: `PR #${pr.prNumber} exceeded CI remediation budget (${ciBudgetResult.exhaustedBudget}): ${ciBudgetResult.message}`,
             risk: 'high',
           },
-          decision: { verdict: 'require_approval', reason: `Total remediation budget exceeded` },
+          decision: { verdict: 'require_approval', reason: `CI remediation budget exceeded` },
           blockerType: 'remediation_budget_exceeded',
           featureTitle: `PR #${pr.prNumber}`,
         });
@@ -1268,13 +1319,13 @@ export class PRFeedbackService {
 
       const currentCiIterations = (feature.ciIterationCount as number | undefined) || 0;
       const ciIterationCount = currentCiIterations + 1;
-      const newTotalCycles = currentTotalCycles + 1;
+      const newCiRemediationCount = ciBudgetResult.nextCiRemediationCount;
+      const newTotalCycles = newCiRemediationCount + ciBudgetResult.nextReviewRemediationCount;
 
       logger.info(
-        `CI failure for PR #${pr.prNumber} (feature ${featureId}): iteration ${ciIterationCount}, total cycles ${newTotalCycles}/${MAX_TOTAL_REMEDIATION_CYCLES}`
+        `CI failure for PR #${pr.prNumber} (feature ${featureId}): iteration ${ciIterationCount}, ci cycles ${newCiRemediationCount}/${ciReactionSettings.maxCiRemediationCycles}, total ${newTotalCycles}/${ciReactionSettings.maxTotalRemediationCycles}`
       );
 
-      const workflowSettings = await getWorkflowSettings(pr.projectPath, this.settingsService);
       const classifiedChecks = await prStatusChecker.fetchFailedChecks(
         pr,
         data.headSha,
@@ -1304,6 +1355,8 @@ export class PRFeedbackService {
         status: 'backlog',
         workItemState: 'in_progress',
         ciIterationCount,
+        ciRemediationCount: newCiRemediationCount,
+        // Keep legacy field in sync for backward compatibility
         remediationCycleCount: newTotalCycles,
         lastCheckSuiteId: data.checkSuiteId,
         error: undefined,
