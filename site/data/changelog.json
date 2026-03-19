@@ -1,21 +1,381 @@
 {
   "summary": {
-    "totalEntries": 1611,
+    "totalEntries": 1656,
     "categories": {
-      "feature": 840,
-      "improvement": 265,
-      "fix": 322,
-      "docs": 78,
+      "docs": 81,
+      "fix": 330,
+      "feature": 861,
+      "improvement": 278,
       "infrastructure": 106
     },
     "firstDate": "2026-02-04T21:35:59.000Z",
-    "latestDate": "2026-03-15T23:31:30.000Z"
+    "latestDate": "2026-03-19T06:07:27.000Z"
   },
   "months": [
     {
       "month": "2026-03",
       "label": "March 2026",
       "entries": [
+        {
+          "hash": "55dc6134",
+          "date": "2026-03-18T23:07:27-07:00",
+          "title": "Add CI Reaction Engine internal docs",
+          "prNumber": 2933,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2933",
+          "category": "docs"
+        },
+        {
+          "hash": "4a9f0151",
+          "date": "2026-03-18T23:07:08-07:00",
+          "title": "Prevent git add error when .automaker is in .gitignore",
+          "prNumber": 2934,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2934",
+          "category": "fix"
+        },
+        {
+          "hash": "a5e55f3c",
+          "date": "2026-03-18T22:47:52-07:00",
+          "title": "Pre-push validation tests and stub service (M5 TDD)",
+          "prNumber": 2932,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2932",
+          "category": "feature"
+        },
+        {
+          "hash": "899d59b0",
+          "date": "2026-03-18T22:30:56-07:00",
+          "title": "Split remediation budgets — separate CI and review counters",
+          "prNumber": 2931,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2931",
+          "category": "feature"
+        },
+        {
+          "hash": "c2fcbb1f",
+          "date": "2026-03-18T22:11:19-07:00",
+          "title": "M1 — CI Failure Classification",
+          "prNumber": 2927,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2927",
+          "category": "feature"
+        },
+        {
+          "hash": "dbaaf742",
+          "date": "2026-03-18T18:41:19-07:00",
+          "title": "Restore Plans/Issues/Metrics tabs on project management view",
+          "prNumber": 2918,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2918",
+          "category": "fix"
+        },
+        {
+          "hash": "4413fd54",
+          "date": "2026-03-18T10:19:42-07:00",
+          "title": "Show project goal in detail view header",
+          "prNumber": 2892,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2892",
+          "category": "fix"
+        },
+        {
+          "hash": "6a32604a",
+          "date": "2026-03-18T09:31:45-07:00",
+          "title": "Rebuild project detail view with Linear-style layout",
+          "prNumber": 2883,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2883",
+          "category": "fix"
+        },
+        {
+          "hash": "fecfcaf7",
+          "date": "2026-03-18T03:39:46-07:00",
+          "title": "Restore full tabbed content to active project view",
+          "prNumber": 2878,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2878",
+          "category": "fix"
+        },
+        {
+          "hash": "d1b7a9b9",
+          "date": "2026-03-18T02:27:17-07:00",
+          "title": "Redesign project management UI with wizard-based flow",
+          "prNumber": 2870,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2870",
+          "category": "feature"
+        },
+        {
+          "hash": "2651c1a3",
+          "date": "2026-03-18T02:09:01-07:00",
+          "title": "Bug: Feature PRs target wrong branch on multi-project setups",
+          "prNumber": 2871,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2871",
+          "category": "improvement"
+        },
+        {
+          "hash": "1d692894",
+          "date": "2026-03-18T01:59:03-07:00",
+          "title": "Stuck PR detection maintenance check",
+          "prNumber": 2872,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2872",
+          "category": "improvement"
+        },
+        {
+          "hash": "afa2431a",
+          "date": "2026-03-18T01:50:20-07:00",
+          "title": "Configurable soft CI checks for merge gate",
+          "prNumber": 2869,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2869",
+          "category": "improvement"
+        },
+        {
+          "hash": "b3097a41",
+          "date": "2026-03-18T01:49:09-07:00",
+          "title": "Harden setuplab to add worktree dirs to .gitignore",
+          "prNumber": 2868,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2868",
+          "category": "improvement"
+        },
+        {
+          "hash": "ebea5977",
+          "date": "2026-03-18T01:39:17-07:00",
+          "title": "PR reconciliation layer in REVIEW processor",
+          "prNumber": 2867,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2867",
+          "category": "improvement"
+        },
+        {
+          "hash": "77c5dd6b",
+          "date": "2026-03-18T01:24:15-07:00",
+          "title": "Bug: Epics don't auto-complete when no epic branch exists",
+          "prNumber": 2866,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2866",
+          "category": "improvement"
+        },
+        {
+          "hash": "a3430282",
+          "date": "2026-03-18T01:22:56-07:00",
+          "title": "Expand git add pathspec to exclude worktree directories",
+          "prNumber": 2865,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2865",
+          "category": "improvement"
+        },
+        {
+          "hash": "9a66c00e",
+          "date": "2026-03-17T08:48:35-07:00",
+          "title": "Fix deploy-staging.yml rebuild step",
+          "prNumber": 2839,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2839",
+          "category": "fix"
+        },
+        {
+          "hash": "38196d95",
+          "date": "2026-03-17T08:36:26-07:00",
+          "title": "Per-project prBaseBranch override with auto-detect fallback",
+          "prNumber": 2842,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2842",
+          "category": "fix"
+        },
+        {
+          "hash": "968f2812",
+          "date": "2026-03-17T00:53:08-07:00",
+          "title": "Add persistent enable/disable toggle to Ops Dashboard timer rows",
+          "prNumber": 2833,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2833",
+          "category": "feature"
+        },
+        {
+          "hash": "6f65ffb5",
+          "date": "2026-03-17T00:48:16-07:00",
+          "title": "Infra compose with Postgres, Langfuse, and Umami",
+          "prNumber": 2831,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2831",
+          "category": "improvement"
+        },
+        {
+          "hash": "18534a09",
+          "date": "2026-03-16T23:18:55-07:00",
+          "title": "Remove dead Discord webhook env var references",
+          "prNumber": 2817,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2817",
+          "category": "docs"
+        },
+        {
+          "hash": "8aaf1fa8",
+          "date": "2026-03-16T23:18:31-07:00",
+          "title": "Centralize Discord channel IDs into settings with env var fallback",
+          "prNumber": 2821,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2821",
+          "category": "feature"
+        },
+        {
+          "hash": "ed6752c5",
+          "date": "2026-03-16T23:18:07-07:00",
+          "title": "Delete dead discord-service.ts stub and remove all references",
+          "prNumber": 2816,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2816",
+          "category": "improvement"
+        },
+        {
+          "hash": "6446416a",
+          "date": "2026-03-16T22:07:08-07:00",
+          "title": "Add Discord settings panel to integrations section",
+          "prNumber": 2810,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2810",
+          "category": "feature"
+        },
+        {
+          "hash": "d8521be2",
+          "date": "2026-03-16T22:06:50-07:00",
+          "title": "Bug: Blocked feature with merged PR not reconciled to done",
+          "prNumber": 2818,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2818",
+          "category": "improvement"
+        },
+        {
+          "hash": "afdf43cf",
+          "date": "2026-03-16T19:50:00-07:00",
+          "title": "Migrate PRFeedbackService and ArchivalService to SchedulerService",
+          "prNumber": 2799,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2799",
+          "category": "feature"
+        },
+        {
+          "hash": "8d85de01",
+          "date": "2026-03-16T16:26:16-07:00",
+          "title": "Parameterize Ava prompt via getEngineeringBase",
+          "prNumber": 2759,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2759",
+          "category": "feature"
+        },
+        {
+          "hash": "3b11f12a",
+          "date": "2026-03-16T15:49:19-07:00",
+          "title": "Configuration & Settings Wiring",
+          "prNumber": 2784,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2784",
+          "category": "improvement"
+        },
+        {
+          "hash": "35c176a9",
+          "date": "2026-03-16T15:36:41-07:00",
+          "title": "Agent Service Integration",
+          "prNumber": 2783,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2783",
+          "category": "feature"
+        },
+        {
+          "hash": "33c163e7",
+          "date": "2026-03-16T14:57:53-07:00",
+          "title": "Context Assembler",
+          "prNumber": 2782,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2782",
+          "category": "feature"
+        },
+        {
+          "hash": "6474788a",
+          "date": "2026-03-16T14:52:43-07:00",
+          "title": "Retrieval Tools (grep, describe, expand)",
+          "prNumber": 2779,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2779",
+          "category": "feature"
+        },
+        {
+          "hash": "b16b110e",
+          "date": "2026-03-16T14:25:27-07:00",
+          "title": "Cascading Condensation",
+          "prNumber": 2776,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2776",
+          "category": "improvement"
+        },
+        {
+          "hash": "8597252c",
+          "date": "2026-03-16T14:16:43-07:00",
+          "title": "Add leaf compaction engine (depth=0 summarization)",
+          "prNumber": 2775,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2775",
+          "category": "feature"
+        },
+        {
+          "hash": "b9175de6",
+          "date": "2026-03-16T14:14:49-07:00",
+          "title": "Create public developer documentation and architecture guides",
+          "prNumber": 2774,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2774",
+          "category": "docs"
+        },
+        {
+          "hash": "b8827b27",
+          "date": "2026-03-16T14:12:03-07:00",
+          "title": "System Improvement: recurring merge_conflict failures",
+          "prNumber": 2773,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2773",
+          "category": "feature"
+        },
+        {
+          "hash": "9ae73da7",
+          "date": "2026-03-16T14:08:57-07:00",
+          "title": "Add automated post-project documentation ceremony",
+          "prNumber": 2772,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2772",
+          "category": "feature"
+        },
+        {
+          "hash": "ac13b7db",
+          "date": "2026-03-16T14:07:57-07:00",
+          "title": "[linear] Content: Everywhere all at once blog + Glyphkit Storybook relea",
+          "prNumber": 2770,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2770",
+          "category": "improvement"
+        },
+        {
+          "hash": "eaffbd36",
+          "date": "2026-03-16T14:07:17-07:00",
+          "title": "Add memory maintenance pipeline with category compaction and stale chunk pruning",
+          "prNumber": 2764,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2764",
+          "category": "feature"
+        },
+        {
+          "hash": "3c81235a",
+          "date": "2026-03-16T13:58:12-07:00",
+          "title": "Fix shell injection in CompletionDetector gh pr create",
+          "prNumber": 2757,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2757",
+          "category": "feature"
+        },
+        {
+          "hash": "235ecdf4",
+          "date": "2026-03-16T13:39:58-07:00",
+          "title": "Skip features with human assignee in auto-mode pickup",
+          "prNumber": 2750,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2750",
+          "category": "fix"
+        },
+        {
+          "hash": "d746c1bb",
+          "date": "2026-03-16T13:05:55-07:00",
+          "title": "Workflow Checkpoint Store",
+          "prNumber": 2745,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2745",
+          "category": "feature"
+        },
+        {
+          "hash": "2c800cd0",
+          "date": "2026-03-16T13:01:39-07:00",
+          "title": "Large File Interception",
+          "prNumber": 2743,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2743",
+          "category": "feature"
+        },
+        {
+          "hash": "037ae914",
+          "date": "2026-03-16T12:46:02-07:00",
+          "title": "SQLite-backed ConversationStore",
+          "prNumber": 2741,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2741",
+          "category": "feature"
+        },
+        {
+          "hash": "ea4b4b7a",
+          "date": "2026-03-16T12:02:13-07:00",
+          "title": "Add Wiring tab to Ops Dashboard with service instantiation status",
+          "prNumber": 2735,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2735",
+          "category": "feature"
+        },
         {
           "hash": "4995e213",
           "date": "2026-03-15T16:31:30-07:00",
@@ -12913,5 +13273,5 @@
       ]
     }
   ],
-  "generatedAt": "2026-03-16T06:36:46.510Z"
+  "generatedAt": "2026-03-19T06:24:54.616Z"
 }
