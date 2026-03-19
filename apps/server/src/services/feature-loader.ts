@@ -118,6 +118,24 @@ export class FeatureLoader implements FeatureStore {
       }
     }
 
+    // Migrate legacy remediationCycleCount to split budgets on read.
+    // When a feature only has the old single counter and not the new split fields,
+    // initialize ciRemediationCount and reviewRemediationCount to 0 so that
+    // the RemediationBudgetEnforcer can use the legacy count for total-cap checking
+    // via the remediationCycleCount backward-compat path.
+    if (
+      typeof normalized.remediationCycleCount === 'number' &&
+      normalized.remediationCycleCount > 0 &&
+      normalized.ciRemediationCount == null &&
+      normalized.reviewRemediationCount == null
+    ) {
+      normalized = {
+        ...normalized,
+        ciRemediationCount: 0,
+        reviewRemediationCount: 0,
+      };
+    }
+
     return normalized;
   }
 

@@ -33,9 +33,12 @@ import {
   MERGE_RETRY_DELAY_MS,
   REVIEW_POLL_DELAY_MS,
   REVIEW_PENDING_TIMEOUT_MS,
-  MAX_TOTAL_REMEDIATION_CYCLES,
   MAX_PR_ITERATIONS,
 } from './lead-engineer-types.js';
+import {
+  RemediationBudgetEnforcer,
+  DEFAULT_CI_REACTION_SETTINGS,
+} from './remediation-budget-enforcer.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('LeadEngineerService');
@@ -218,9 +221,32 @@ export class ReviewProcessor implements StateProcessor {
         };
       }
 
-      // Check remediation budget
-      if (ctx.remediationAttempts >= MAX_TOTAL_REMEDIATION_CYCLES) {
-        ctx.escalationReason = `Max remediation cycles exceeded (${MAX_TOTAL_REMEDIATION_CYCLES})`;
+      // Check remediation budget using split budget enforcer
+      const reviewWorkflowSettings = await getWorkflowSettings(
+        ctx.projectPath,
+        this.serviceContext.settingsService,
+        '[ReviewProcessor]'
+      );
+      const reviewCiReactionSettings =
+        reviewWorkflowSettings.ciReactionSettings ?? DEFAULT_CI_REACTION_SETTINGS;
+
+      // Use persisted split counters from feature, falling back to in-memory remediationAttempts
+      const persistedCiCount = (ctx.feature.ciRemediationCount as number | undefined) ?? 0;
+      const persistedReviewCount =
+        (ctx.feature.reviewRemediationCount as number | undefined) ?? ctx.remediationAttempts;
+      const legacyCount = (ctx.feature.remediationCycleCount as number | undefined) ?? 0;
+
+      const reviewEnforcer = new RemediationBudgetEnforcer(reviewCiReactionSettings);
+      const reviewBudgetResult = reviewEnforcer.checkAndIncrement({
+        type: 'review',
+        ciRemediationCount: persistedCiCount,
+        reviewRemediationCount: persistedReviewCount,
+        remediationCycleCount: legacyCount,
+        settings: reviewCiReactionSettings,
+      });
+
+      if (!reviewBudgetResult.allowed) {
+        ctx.escalationReason = reviewBudgetResult.message;
         return {
           nextState: 'ESCALATE',
           shouldContinue: true,

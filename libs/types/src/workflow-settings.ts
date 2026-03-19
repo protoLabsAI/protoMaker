@@ -7,6 +7,7 @@
 
 import type { PhaseModelEntry } from './agent-settings.js';
 import type { CIClassificationConfig } from './ci-failure.js';
+import type { CIReactionSettings } from './ci-reaction.js';
 import type { DeviationRule } from './lead-engineer.js';
 import type { PipelineGateConfig } from './pipeline-phase.js';
 import type { RiskLevel } from './policy.js';
@@ -574,6 +575,15 @@ export interface WorkflowSettings {
      */
     readinessScoreThreshold?: number;
   };
+  /**
+   * Split remediation budget configuration for CI and review cycles.
+   * Controls per-class retry limits (CI failures vs PR review feedback) and a
+   * hard cap on combined total cycles. When absent, the default split budget
+   * (2 CI + 2 review = 4 total) is used, preserving backward compatibility
+   * with the legacy MAX_TOTAL_REMEDIATION_CYCLES of 4.
+   * @see CIReactionSettings
+   */
+  ciReactionSettings?: CIReactionSettings;
 }
 
 /** Default workflow settings */
@@ -619,5 +629,10 @@ export const DEFAULT_WORKFLOW_SETTINGS: WorkflowSettings = {
     incrementalMaxDepth: 3,
     leafChunkTokens: 25_000,
     largeFileThreshold: 25_000,
+  },
+  ciReactionSettings: {
+    maxCiRemediationCycles: 2,
+    maxReviewRemediationCycles: 2,
+    maxTotalRemediationCycles: 4,
   },
 };
