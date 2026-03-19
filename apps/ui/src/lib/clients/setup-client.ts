@@ -7,7 +7,7 @@
  *   - setup             (CLI installs, auth, permissions, etc.)
  *   - setupLab          (repo research, gap analysis, proposals)
  */
-import type { ModelDefinition, ProviderStatus } from '@/types/electron';
+import type { ModelDefinition, ProviderStatus } from '@/types/api';
 import type { RepoResearchResult, GapAnalysisReport, AlignmentProposal } from '@protolabsai/types';
 import { BaseHttpClient, type Constructor } from './base-http-client';
 

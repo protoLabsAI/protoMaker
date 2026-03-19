@@ -43,6 +43,8 @@ setuplab onboards projects into the protoLabs Studio ecosystem. Each project get
 
 ## Our Gold Standard
 
+### TypeScript / Node.js
+
 | Layer            | Standard                                                                   |
 | ---------------- | -------------------------------------------------------------------------- |
 | **Monorepo**     | pnpm + Turborepo, `apps/` + `packages/` (or `libs/`)                       |
@@ -56,6 +58,26 @@ setuplab onboards projects into the protoLabs Studio ecosystem. Each project get
 | **CI/CD**        | GitHub Actions (build, test, format, audit, CodeRabbit), branch protection |
 | **Automation**   | `.automaker/` + Discord project channels                                   |
 | **Git workflow** | Squash-only, branch protection, three-branch flow                          |
+
+### Python
+
+| Layer                | Standard                                                       |
+| -------------------- | -------------------------------------------------------------- |
+| **Package config**   | `pyproject.toml` (PEP 621), no `requirements.txt`              |
+| **Linting**          | ruff (replaces black + flake8 + isort)                         |
+| **Testing**          | pytest + pytest-cov, tests outside container with mocks        |
+| **Type checking**    | Pylance in editor, no CI gate initially                        |
+| **CI/CD**            | GitHub Actions (ruff check, pytest, Docker build on main only) |
+| **Formatting**       | ruff format (replaces black)                                   |
+| **Containerization** | Dockerfile + docker-compose                                    |
+| **Automation**       | `.automaker/` + Discord project channels                       |
+| **Git workflow**     | Squash-only, branch protection, three-branch flow              |
+
+**Project type detection (gap analysis phase):**
+
+- **Python project** — presence of `.py` files, `Dockerfile`, and no `package.json` → apply Python standard
+- **TypeScript/Node.js project** — presence of `package.json` → apply TypeScript/Node.js standard
+- **Mixed** — both present → apply TypeScript standard for JS/TS layers, Python standard for Python layers; flag for human review
 
 ## Pipeline Flow
 

@@ -74,20 +74,9 @@ export const handleServerOffline = (): void => {
   notifyServerOffline();
 };
 
-/** Initialize server URL from Electron IPC. Must be called early in Electron mode. */
+/** Initialize server URL. No-op in web mode (URL comes from env or Vite proxy). */
 export const initServerUrl = async (): Promise<void> => {
-  const electron =
-    typeof window !== 'undefined'
-      ? (window.electronAPI as unknown as { getServerUrl?: () => Promise<string> } | undefined)
-      : null;
-  if (electron?.getServerUrl) {
-    try {
-      cachedServerUrl = await electron.getServerUrl();
-      logger.info('Server URL from Electron:', cachedServerUrl);
-    } catch (error) {
-      logger.warn('Failed to get server URL from Electron:', error);
-    }
-  }
+  // Server URL is resolved from VITE_SERVER_URL or Vite proxy — nothing to initialize
 };
 
 const SERVER_URL_OVERRIDE_KEY = 'automaker:serverUrlOverride';
@@ -106,8 +95,8 @@ export const getServerUrl = (): string => {
   if (typeof window !== 'undefined') {
     const envUrl = import.meta.env.VITE_SERVER_URL;
     if (envUrl) return envUrl;
-    // In web mode (not Electron), use relative URL to leverage Vite proxy
-    if (!(window as Window & { electron?: unknown }).electron) return '';
+    // Use relative URL to leverage Vite proxy
+    return '';
   }
   const hostname = import.meta.env.VITE_HOSTNAME || 'localhost';
   return `http://${hostname}:3008`;
@@ -115,7 +104,7 @@ export const getServerUrl = (): string => {
 
 export const getServerUrlSync = (): string => getServerUrl();
 
-// API key state (Electron mode only)
+// API key state (unused in web mode, kept for interface compatibility)
 let cachedApiKey: string | null = null;
 let apiKeyInitialized = false;
 let apiKeyInitPromise: Promise<void> | null = null;
@@ -170,11 +159,7 @@ export const clearSessionToken = (): void => {
 };
 
 export const isElectronMode = (): boolean => {
-  if (typeof window === 'undefined') return false;
-  const api = window.electronAPI as unknown as
-    | { isElectron?: boolean; getApiKey?: () => Promise<string | null> }
-    | undefined;
-  return api?.isElectron === true || !!api?.getApiKey;
+  return false;
 };
 
 let cachedExternalServerMode: boolean | null = null;
@@ -182,43 +167,19 @@ let cachedExternalServerMode: boolean | null = null;
 /** Check if running in external server mode (Docker API). */
 export const checkExternalServerMode = async (): Promise<boolean> => {
   if (cachedExternalServerMode !== null) return cachedExternalServerMode;
-  if (typeof window !== 'undefined') {
-    const api = window.electronAPI as unknown as
-      | { isExternalServerMode?: () => Promise<boolean> }
-      | undefined;
-    if (api?.isExternalServerMode) {
-      try {
-        cachedExternalServerMode = Boolean(await api.isExternalServerMode());
-        return cachedExternalServerMode;
-      } catch (error) {
-        logger.warn('Failed to check external server mode:', error);
-      }
-    }
-  }
   cachedExternalServerMode = false;
   return false;
 };
 
 export const isExternalServerMode = (): boolean | null => cachedExternalServerMode;
 
-/** Initialize API key and server URL for Electron mode authentication. */
+/** Initialize authentication. Web mode uses cookie-based auth. */
 export const initApiKey = async (): Promise<void> => {
   if (apiKeyInitPromise) return apiKeyInitPromise;
   if (apiKeyInitialized) return;
   apiKeyInitPromise = (async () => {
     try {
       await initServerUrl();
-      if (typeof window !== 'undefined' && window.electronAPI?.getApiKey) {
-        try {
-          cachedApiKey = await window.electronAPI.getApiKey();
-          if (cachedApiKey) {
-            logger.info('Using API key from Electron');
-            return;
-          }
-        } catch (error) {
-          logger.warn('Failed to get API key from Electron:', error);
-        }
-      }
       logger.info('Web mode - using cookie-based authentication');
     } finally {
       apiKeyInitialized = true;

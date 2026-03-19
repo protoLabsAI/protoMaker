@@ -10,7 +10,7 @@ import { useCeremonyStore } from '@/store/ceremony-store';
 import { useLoadActionableItems, useActionableItemEvents } from '@/hooks/use-actionable-items';
 import { useLoadCeremonyEntries, useCeremonyEventStream } from '@/hooks/use-ceremony-events';
 import { useKeyboardShortcuts, useKeyboardShortcutsConfig } from '@/hooks/use-keyboard-shortcuts';
-import { getElectronAPI, isElectron } from '@/lib/electron';
+import { getElectronAPI } from '@/lib/electron';
 import { initializeProject, hasAppSpec, hasAutomakerDir } from '@/lib/project-init';
 import { toast } from 'sonner';
 import { DeleteProjectDialog } from '@/components/views/settings-view/components/delete-project-dialog';
@@ -321,12 +321,7 @@ export function Sidebar() {
         )}
         data-testid="sidebar"
       >
-        <div
-          className={cn(
-            'flex-1 flex flex-col overflow-hidden',
-            isMac && isElectron() && 'pt-[10px]'
-          )}
-        >
+        <div className="flex-1 flex flex-col overflow-hidden">
           {sidebarOpen && (
             <div
               className={cn(

@@ -9,7 +9,7 @@ import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getElectronAPI } from '@/lib/electron';
 import { queryKeys } from '@/lib/query-keys';
-import type { AutoModeEvent, SpecRegenerationEvent } from '@/types/electron';
+import type { AutoModeEvent, SpecRegenerationEvent } from '@/types/api';
 import type { IssueValidationEvent } from '@protolabsai/types';
 
 /**

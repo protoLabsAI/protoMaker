@@ -5,7 +5,7 @@ import { DEFAULT_MAX_CONCURRENCY } from '@protolabsai/types';
 import { useAppStore } from '@/store/app-store';
 import { useWorktreeStore } from '@/store/worktree-store';
 import { getElectronAPI } from '@/lib/electron';
-import type { AutoModeEvent } from '@/types/electron';
+import type { AutoModeEvent } from '@/types/api';
 import type { WorktreeInfo } from '@/components/views/board-view/worktree-panel/types';
 
 const logger = createLogger('AutoMode');

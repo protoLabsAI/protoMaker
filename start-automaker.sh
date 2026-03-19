@@ -1,6 +1,6 @@
 #!/bin/bash
 # Automaker TUI Launcher - Interactive menu for launching Automaker in different modes
-# Supports: Web Browser, Desktop (Electron), Docker Dev, Electron + Docker API
+# Supports: Web Browser, Docker Dev
 # Platforms: Linux, macOS, Windows (Git Bash, WSL, MSYS2, Cygwin)
 # Features: Terminal responsiveness, history, pre-flight checks, port management
 
@@ -20,7 +20,7 @@ MENU_INNER_WIDTH=64
 LOGO_WIDTH=52
 INPUT_TIMEOUT=30
 SELECTED_OPTION=1
-MAX_OPTIONS=4
+MAX_OPTIONS=2
 
 # Platform detection (set early for cross-platform compatibility)
 IS_WINDOWS=false
@@ -111,9 +111,7 @@ USAGE:
 
 MODES:
   web              Launch in web browser (localhost:3007)
-  electron         Launch as desktop app (Electron)
   docker           Launch in Docker container (dev with live reload)
-  docker-electron  Launch Electron with Docker API backend
 
 OPTIONS:
   --help           Show this help message
@@ -128,14 +126,13 @@ EXAMPLES:
   start-automaker.sh --production # Interactive menu (production)
   start-automaker.sh web          # Launch web mode directly (dev)
   start-automaker.sh web --production  # Launch web mode (production)
-  start-automaker.sh electron     # Launch desktop app directly
   start-automaker.sh docker       # Launch Docker dev container
   start-automaker.sh --version    # Show version
 
 KEYBOARD SHORTCUTS (in menu):
   Up/Down arrows   Navigate between options
   Enter            Select highlighted option
-  1-4              Jump to and select mode
+  1-2              Jump to and select mode
   Q                Exit
 
 HISTORY:
@@ -179,7 +176,7 @@ parse_args() {
             --production)
                 PRODUCTION_MODE=true
                 ;;
-            web|electron|docker|docker-electron)
+            web|docker)
                 MODE="$1"
                 ;;
             *)
@@ -711,26 +708,20 @@ show_menu() {
     printf "╮${RESET}\n"
 
     # Menu items with selection indicator
-    local sel1="" sel2="" sel3="" sel4=""
-    local txt1="${C_MUTE}" txt2="${C_MUTE}" txt3="${C_MUTE}" txt4="${C_MUTE}"
+    local sel1="" sel2=""
+    local txt1="${C_MUTE}" txt2="${C_MUTE}"
 
     case $SELECTED_OPTION in
         1) sel1="${C_ACC}▸${RESET} ${C_PRI}"; txt1="${C_WHITE}" ;;
         2) sel2="${C_ACC}▸${RESET} ${C_PRI}"; txt2="${C_WHITE}" ;;
-        3) sel3="${C_ACC}▸${RESET} ${C_PRI}"; txt3="${C_WHITE}" ;;
-        4) sel4="${C_ACC}▸${RESET} ${C_PRI}"; txt4="${C_WHITE}" ;;
     esac
 
     # Default non-selected prefix
     [[ -z "$sel1" ]] && sel1="  ${C_MUTE}"
     [[ -z "$sel2" ]] && sel2="  ${C_MUTE}"
-    [[ -z "$sel3" ]] && sel3="  ${C_MUTE}"
-    [[ -z "$sel4" ]] && sel4="  ${C_MUTE}"
 
     printf "%s${border}${sel1}[1]${RESET} 🌐  ${txt1}Web App${RESET}           ${C_MUTE}Server + Browser (localhost:$WEB_PORT)${RESET}   ${border}\n" "$pad"
-    printf "%s${border}${sel2}[2]${RESET} 🖥   ${txt2}Electron${RESET}          ${DIM}Desktop App (embedded server)${RESET}       ${border}\n" "$pad"
-    printf "%s${border}${sel3}[3]${RESET} 🐳  ${txt3}Docker${RESET}            ${DIM}Full Stack (live reload)${RESET}            ${border}\n" "$pad"
-    printf "%s${border}${sel4}[4]${RESET} 🔗  ${txt4}Electron & Docker${RESET} ${DIM}Desktop + Docker Server${RESET}             ${border}\n" "$pad"
+    printf "%s${border}${sel2}[2]${RESET} 🐳  ${txt2}Docker${RESET}            ${DIM}Full Stack (live reload)${RESET}            ${border}\n" "$pad"
 
     printf "%s${C_GRAY}├" "$pad"
     draw_line "─" "$C_GRAY" "$MENU_INNER_WIDTH"
@@ -743,7 +734,7 @@ show_menu() {
     printf "╯${RESET}\n"
 
     echo ""
-    local footer_text="[↑↓] Navigate  [Enter] Select  [1-4] Quick Select  [Q] Exit"
+    local footer_text="[↑↓] Navigate  [Enter] Select  [1-2] Quick Select  [Q] Exit"
     local f_pad=$(( (TERM_COLS - ${#footer_text}) / 2 ))
     printf "%${f_pad}s" ""
     echo -e "${DIM}${footer_text}${RESET}"
@@ -852,7 +843,7 @@ launch_sequence() {
     echo ""
 
     # Show port checking for modes that use local ports
-    if [[ "$MODE" == "web" || "$MODE" == "electron" ]]; then
+    if [[ "$MODE" == "web" ]]; then
         kill_zombie_processes
         center_print "Checking ports ${DEFAULT_WEB_PORT} and ${DEFAULT_SERVER_PORT}..." "$C_MUTE"
         resolve_port_conflicts
@@ -1023,16 +1014,12 @@ if [ -z "$MODE" ]; then
                 [ $SELECTED_OPTION -gt $MAX_OPTIONS ] && SELECTED_OPTION=1
                 ;;
             1) SELECTED_OPTION=1; MODE="web"; break ;;
-            2) SELECTED_OPTION=2; MODE="electron"; break ;;
-            3) SELECTED_OPTION=3; MODE="docker"; break ;;
-            4) SELECTED_OPTION=4; MODE="docker-electron"; break ;;
+            2) SELECTED_OPTION=2; MODE="docker"; break ;;
             ""|$'\n'|$'\r')
                 # Enter key - select current option
                 case $SELECTED_OPTION in
                     1) MODE="web" ;;
-                    2) MODE="electron" ;;
-                    3) MODE="docker" ;;
-                    4) MODE="docker-electron" ;;
+                    2) MODE="docker" ;;
                 esac
                 break
                 ;;
@@ -1052,18 +1039,16 @@ fi
 # Validate mode
 case $MODE in
     web) MODE_NAME="Web Browser" ;;
-    electron) MODE_NAME="Desktop App" ;;
     docker) MODE_NAME="Docker Dev" ;;
-    docker-electron) MODE_NAME="Electron + Docker" ;;
     *)
         echo "${C_RED}Error:${RESET} Invalid mode '$MODE'"
-        echo "Valid modes: web, electron, docker, docker-electron"
+        echo "Valid modes: web, docker"
         exit 1
         ;;
 esac
 
 # Check Docker for Docker modes
-if [[ "$MODE" == "docker" || "$MODE" == "docker-electron" ]]; then
+if [[ "$MODE" == "docker" ]]; then
     show_cursor
     stty echo icanon 2>/dev/null || true
     if ! check_docker; then
@@ -1181,27 +1166,6 @@ case $MODE in
             npm run _dev:web
         fi
         ;;
-    electron)
-        # Set environment variables for Electron (it starts its own server)
-        export TEST_PORT="$WEB_PORT"
-        export PORT="$SERVER_PORT"
-        export VITE_SERVER_URL="http://localhost:$SERVER_PORT"
-        export CORS_ORIGIN="http://localhost:$WEB_PORT,http://127.0.0.1:$WEB_PORT"
-        export VITE_APP_MODE="2"
-
-        if [ "$PRODUCTION_MODE" = true ]; then
-            # For production electron, we'd normally use the packaged app
-            # For now, run in dev mode but with production-built packages
-            center_print "Note: For production Electron, use the packaged app" "$C_YELLOW"
-            center_print "Running with production-built packages..." "$C_MUTE"
-            echo ""
-        fi
-
-        center_print "Launching Desktop Application..." "$C_YELLOW"
-        center_print "(Electron will start its own backend server)" "$C_MUTE"
-        echo ""
-        npm run dev:electron
-        ;;
     docker)
         # Check for running Electron (user might be switching from option 4)
         check_running_electron
@@ -1264,105 +1228,5 @@ case $MODE in
                 fi
             fi
         fi
-        ;;
-    docker-electron)
-        # Check for running Electron (user might be switching from option 2)
-        check_running_electron
-
-        # Check for running containers
-        check_running_containers "docker-compose.dev-server.yml"
-        container_check=$?
-
-        echo ""
-        center_print "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" "$C_GRAY"
-        center_print "Electron + Docker API Mode" "$C_PRI"
-        center_print "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" "$C_GRAY"
-        echo ""
-        center_print "Server runs in Docker container" "$C_MUTE"
-        center_print "Electron runs locally on your machine" "$C_MUTE"
-        echo ""
-        center_print "API: http://localhost:$DEFAULT_SERVER_PORT (Docker)" "$C_GREEN"
-        echo ""
-
-        # If attaching to existing, skip the build
-        if [ $container_check -eq 2 ]; then
-            center_print "Using existing server container..." "$C_MUTE"
-        else
-            center_print "First run may take several minutes (building image + npm install)" "$C_YELLOW"
-        fi
-        echo ""
-        center_print "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" "$C_GRAY"
-        echo ""
-
-        # Start docker in background (or skip if attaching)
-        if [ $container_check -eq 2 ]; then
-            center_print "Checking if server is healthy..." "$C_MUTE"
-            DOCKER_PID=""
-        else
-            center_print "Starting Docker server container..." "$C_MUTE"
-            echo ""
-            if [ "$DOCKER_CMD" = "sg docker -c" ]; then
-                if [ -f "docker-compose.override.yml" ]; then
-                    sg docker -c "docker compose -f 'docker-compose.dev-server.yml' -f 'docker-compose.override.yml' up --build" &
-                else
-                    sg docker -c "docker compose -f 'docker-compose.dev-server.yml' up --build" &
-                fi
-            else
-                if [ -f "docker-compose.override.yml" ]; then
-                    $DOCKER_CMD compose -f docker-compose.dev-server.yml -f docker-compose.override.yml up --build &
-                else
-                    $DOCKER_CMD compose -f docker-compose.dev-server.yml up --build &
-                fi
-            fi
-            DOCKER_PID=$!
-        fi
-
-        # Wait for server to be healthy
-        echo ""
-        center_print "Waiting for server to become healthy..." "$C_YELLOW"
-        center_print "(This may take a while on first run)" "$C_MUTE"
-        echo ""
-        max_retries=180
-        server_ready=false
-        dots=""
-        for ((i=0; i<max_retries; i++)); do
-            if curl -s "http://localhost:$DEFAULT_SERVER_PORT/api/health" > /dev/null 2>&1; then
-                server_ready=true
-                break
-            fi
-            sleep 1
-            if (( i > 0 && i % 10 == 0 )); then
-                dots="${dots}."
-                center_print "Still waiting${dots}" "$C_MUTE"
-            fi
-        done
-        echo ""
-
-        if [ "$server_ready" = false ]; then
-            center_print "✗ Server container failed to become healthy" "$C_RED"
-            center_print "Check Docker logs above for errors" "$C_MUTE"
-            [ -n "$DOCKER_PID" ] && kill $DOCKER_PID 2>/dev/null || true
-            exit 1
-        fi
-
-        center_print "✓ Server is healthy!" "$C_GREEN"
-        echo ""
-        center_print "Building packages and launching Electron..." "$C_MUTE"
-        echo ""
-
-        # Build packages and launch Electron
-        npm run build:packages
-        SKIP_EMBEDDED_SERVER=true PORT=$DEFAULT_SERVER_PORT VITE_SERVER_URL="http://localhost:$DEFAULT_SERVER_PORT" VITE_APP_MODE="4" npm run _dev:electron
-
-        # Cleanup docker when electron exits
-        echo ""
-        center_print "Shutting down Docker container..." "$C_MUTE"
-        [ -n "$DOCKER_PID" ] && kill $DOCKER_PID 2>/dev/null || true
-        if [ "$DOCKER_CMD" = "sg docker -c" ]; then
-            sg docker -c "docker compose -f 'docker-compose.dev-server.yml' down" 2>/dev/null || true
-        else
-            $DOCKER_CMD compose -f docker-compose.dev-server.yml down 2>/dev/null || true
-        fi
-        center_print "Done!" "$C_GREEN"
         ;;
 esac

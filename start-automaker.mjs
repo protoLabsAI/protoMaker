@@ -147,7 +147,6 @@ function runBashScript() {
       console.error('');
       console.error('Alternatively, you can run these commands directly:');
       console.error('  npm run dev:web      - Web browser mode');
-      console.error('  npm run dev:electron - Desktop app mode');
       process.exit(1);
     }
 

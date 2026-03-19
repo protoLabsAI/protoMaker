@@ -30,10 +30,10 @@ export function DesignsTree({ projectPath }: DesignsTreeProps) {
     loadFileTree();
   }, [projectPath]);
 
-  // Check if Electron API is available
-  const isElectronMode = typeof window !== 'undefined' && window.electronAPI;
+  // Always use HTTP API in web mode
+  const isElectronMode = false;
 
-  // HTTP API fallback for web mode
+  // HTTP API for web mode
   const readDirectoryHttp = async (path: string) => {
     const response = await fetch('/api/designs/directory', {
       method: 'POST',

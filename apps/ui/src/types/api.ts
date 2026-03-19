@@ -1,15 +1,18 @@
 /**
- * Electron API type definitions
+ * API type definitions for the protoLabs Studio frontend.
+ *
+ * These types define the shape of the HTTP API client and related data structures
+ * used throughout the UI layer.
  */
 
 import type { ClaudeUsageResponse, CodexUsageResponse } from '@/store/types';
 
 export interface ImageAttachment {
-  id?: string; // Optional - may not be present in messages loaded from server
-  data: string; // base64 encoded image data
-  mimeType: string; // e.g., "image/png", "image/jpeg"
+  id?: string;
+  data: string;
+  mimeType: string;
   filename: string;
-  size?: number; // file size in bytes - optional for messages from server
+  size?: number;
 }
 
 export interface Message {
@@ -66,7 +69,7 @@ export interface SessionListItem {
   updatedAt: string;
   messageCount: number;
   isArchived: boolean;
-  isDirty?: boolean; // Indicates session has completed work that needs review
+  isDirty?: boolean;
   tags: string[];
   preview: string;
 }
@@ -587,151 +590,6 @@ export interface AutoModeAPI {
   onEvent: (callback: (event: AutoModeEvent) => void) => () => void;
 }
 
-export interface ElectronAPI {
-  // Platform info (exposed from preload)
-  platform?: 'darwin' | 'win32' | 'linux';
-  isElectron?: boolean;
-
-  ping: () => Promise<string>;
-  getApiKey?: () => Promise<string | null>;
-  quit?: () => Promise<void>;
-  openExternalLink: (url: string) => Promise<{ success: boolean; error?: string }>;
-
-  // Dialog APIs
-  openDirectory: () => Promise<{
-    canceled: boolean;
-    filePaths: string[];
-  }>;
-  openFile: (options?: unknown) => Promise<{
-    canceled: boolean;
-    filePaths: string[];
-  }>;
-
-  // File system APIs
-  readFile: (filePath: string) => Promise<{
-    success: boolean;
-    content?: string;
-    error?: string;
-  }>;
-  writeFile: (
-    filePath: string,
-    content: string
-  ) => Promise<{
-    success: boolean;
-    error?: string;
-  }>;
-  mkdir: (dirPath: string) => Promise<{
-    success: boolean;
-    error?: string;
-  }>;
-  readdir: (dirPath: string) => Promise<{
-    success: boolean;
-    entries?: Array<{
-      name: string;
-      isDirectory: boolean;
-      isFile: boolean;
-    }>;
-    error?: string;
-  }>;
-  exists: (filePath: string) => Promise<boolean>;
-  stat: (filePath: string) => Promise<{
-    success: boolean;
-    stats?: {
-      isDirectory: boolean;
-      isFile: boolean;
-      size: number;
-      mtime: Date;
-    };
-    error?: string;
-  }>;
-  deleteFile: (filePath: string) => Promise<{
-    success: boolean;
-    error?: string;
-  }>;
-
-  // App APIs
-  getPath: (name: string) => Promise<string>;
-  saveImageToTemp: (
-    data: string,
-    filename: string,
-    mimeType: string,
-    projectPath?: string
-  ) => Promise<{
-    success: boolean;
-    path?: string;
-    error?: string;
-  }>;
-
-  // Agent APIs
-  agent: AgentAPI;
-
-  // Session Management APIs
-  sessions: SessionsAPI;
-
-  // Auto Mode APIs
-  autoMode: AutoModeAPI;
-
-  // Claude CLI Detection API
-  checkClaudeCli: () => Promise<{
-    success: boolean;
-    status?: string;
-    method?: string;
-    version?: string;
-    path?: string;
-    recommendation?: string;
-    installCommands?: {
-      macos?: string;
-      windows?: string;
-      linux?: string;
-      npm?: string;
-    };
-    error?: string;
-  }>;
-
-  // Model Management APIs
-  model: {
-    // Get all available models from all providers
-    getAvailable: () => Promise<{
-      success: boolean;
-      models?: ModelDefinition[];
-      error?: string;
-    }>;
-
-    // Check all provider installation status
-    checkProviders: () => Promise<{
-      success: boolean;
-      providers?: Record<string, ProviderStatus>;
-      error?: string;
-    }>;
-  };
-
-  // OpenAI API
-  testOpenAIConnection: (apiKey?: string) => Promise<{
-    success: boolean;
-    message?: string;
-    error?: string;
-  }>;
-
-  // Claude Usage API
-  claude: {
-    getUsage: () => Promise<ClaudeUsageResponse>;
-  };
-
-  // Codex Usage API
-  codex: {
-    getUsage: () => Promise<CodexUsageResponse>;
-  };
-
-  // Worktree Management APIs
-  worktree: WorktreeAPI;
-
-  // Git Operations APIs (for non-worktree operations)
-  git: GitAPI;
-
-  // Spec Regeneration APIs
-  specRegeneration: SpecRegenerationAPI;
-}
-
 export interface WorktreeInfo {
   worktreePath: string;
   branchName: string;
@@ -770,7 +628,6 @@ export interface FileDiffResult {
 }
 
 export interface WorktreeAPI {
-  // Merge worktree branch into a target branch (defaults to 'main') and optionally clean up
   mergeFeature: (
     projectPath: string,
     branchName: string,
@@ -792,7 +649,6 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // Get worktree info for a feature
   getInfo: (
     projectPath: string,
     featureId: string
@@ -804,17 +660,14 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // Get worktree status (changed files, commits)
   getStatus: (projectPath: string, featureId: string) => Promise<WorktreeStatus>;
 
-  // List all feature worktrees
   list: (projectPath: string) => Promise<{
     success: boolean;
     worktrees?: WorktreeInfo[];
     error?: string;
   }>;
 
-  // List all worktrees with details (for worktree selector)
   listAll: (
     projectPath: string,
     includeDetails?: boolean,
@@ -825,8 +678,8 @@ export interface WorktreeAPI {
       path: string;
       branch: string;
       isMain: boolean;
-      isCurrent: boolean; // Is this the currently checked out branch?
-      hasWorktree: boolean; // Does this branch have an active worktree?
+      isCurrent: boolean;
+      hasWorktree: boolean;
       hasChanges?: boolean;
       changedFilesCount?: number;
       pr?: {
@@ -844,7 +697,6 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // Create a new worktree
   create: (
     projectPath: string,
     branchName: string,
@@ -859,7 +711,6 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // Delete a worktree
   delete: (
     projectPath: string,
     worktreePath: string,
@@ -873,7 +724,6 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // Commit changes in a worktree
   commit: (
     worktreePath: string,
     message: string
@@ -888,14 +738,12 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // Generate an AI commit message from git diff
   generateCommitMessage: (worktreePath: string) => Promise<{
     success: boolean;
     message?: string;
     error?: string;
   }>;
 
-  // Push a worktree branch to remote
   push: (
     worktreePath: string,
     force?: boolean,
@@ -911,7 +759,6 @@ export interface WorktreeAPI {
     code?: 'NOT_GIT_REPO' | 'NO_COMMITS';
   }>;
 
-  // Create a pull request from a worktree
   createPR: (
     worktreePath: string,
     options?: {
@@ -940,17 +787,14 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // Get file diffs for a feature worktree
   getDiffs: (projectPath: string, featureId: string) => Promise<FileDiffsResult>;
 
-  // Get diff for a specific file in a worktree
   getFileDiff: (
     projectPath: string,
     featureId: string,
     filePath: string
   ) => Promise<FileDiffResult>;
 
-  // Pull latest changes from remote
   pull: (worktreePath: string) => Promise<{
     success: boolean;
     result?: {
@@ -962,7 +806,6 @@ export interface WorktreeAPI {
     code?: 'NOT_GIT_REPO' | 'NO_COMMITS';
   }>;
 
-  // Create and checkout a new branch
   checkoutBranch: (
     worktreePath: string,
     branchName: string
@@ -977,7 +820,6 @@ export interface WorktreeAPI {
     code?: 'NOT_GIT_REPO' | 'NO_COMMITS';
   }>;
 
-  // List branches (local and optionally remote)
   listBranches: (
     worktreePath: string,
     includeRemote?: boolean
@@ -995,10 +837,9 @@ export interface WorktreeAPI {
       hasRemoteBranch: boolean;
     };
     error?: string;
-    code?: 'NOT_GIT_REPO' | 'NO_COMMITS'; // Error codes for git status issues
+    code?: 'NOT_GIT_REPO' | 'NO_COMMITS';
   }>;
 
-  // Switch to an existing branch
   switchBranch: (
     worktreePath: string,
     branchName: string
@@ -1013,7 +854,6 @@ export interface WorktreeAPI {
     code?: 'NOT_GIT_REPO' | 'NO_COMMITS' | 'UNCOMMITTED_CHANGES';
   }>;
 
-  // List all remotes and their branches
   listRemotes: (worktreePath: string) => Promise<{
     success: boolean;
     result?: {
@@ -1030,7 +870,6 @@ export interface WorktreeAPI {
     code?: 'NOT_GIT_REPO' | 'NO_COMMITS';
   }>;
 
-  // Open a worktree directory in the editor
   openInEditor: (
     worktreePath: string,
     editorCommand?: string
@@ -1043,7 +882,6 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // Get the default code editor name
   getDefaultEditor: () => Promise<{
     success: boolean;
     result?: {
@@ -1053,7 +891,6 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // Get all available code editors
   getAvailableEditors: () => Promise<{
     success: boolean;
     result?: {
@@ -1065,7 +902,6 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // Refresh editor cache and re-detect available editors
   refreshEditors: () => Promise<{
     success: boolean;
     result?: {
@@ -1078,7 +914,6 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // Get available external terminals
   getAvailableTerminals: () => Promise<{
     success: boolean;
     result?: {
@@ -1091,7 +926,6 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // Get default external terminal
   getDefaultTerminal: () => Promise<{
     success: boolean;
     result?: {
@@ -1102,7 +936,6 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // Refresh terminal cache and re-detect available terminals
   refreshTerminals: () => Promise<{
     success: boolean;
     result?: {
@@ -1116,7 +949,6 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // Open worktree in an external terminal
   openInExternalTerminal: (
     worktreePath: string,
     terminalId?: string
@@ -1129,7 +961,6 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // Initialize git repository in a project
   initGit: (projectPath: string) => Promise<{
     success: boolean;
     result?: {
@@ -1139,7 +970,6 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // Start a dev server for a worktree
   startDevServer: (
     projectPath: string,
     worktreePath: string
@@ -1154,7 +984,6 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // Stop a dev server for a worktree
   stopDevServer: (worktreePath: string) => Promise<{
     success: boolean;
     result?: {
@@ -1164,7 +993,6 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // List all running dev servers
   listDevServers: () => Promise<{
     success: boolean;
     result?: {
@@ -1177,7 +1005,6 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // Get buffered logs for a dev server
   getDevServerLogs: (worktreePath: string) => Promise<{
     success: boolean;
     result?: {
@@ -1190,7 +1017,6 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // Subscribe to dev server log events (started, output, stopped)
   onDevServerLogEvent: (
     callback: (
       event:
@@ -1215,7 +1041,6 @@ export interface WorktreeAPI {
     ) => void
   ) => () => void;
 
-  // Get PR info and comments for a branch
   getPRInfo: (
     worktreePath: string,
     branchName: string
@@ -1253,7 +1078,6 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // Get init script content for a project
   getInitScript: (projectPath: string) => Promise<{
     success: boolean;
     exists: boolean;
@@ -1262,7 +1086,6 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // Set init script content for a project
   setInitScript: (
     projectPath: string,
     content: string
@@ -1272,13 +1095,11 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // Delete init script for a project
   deleteInitScript: (projectPath: string) => Promise<{
     success: boolean;
     error?: string;
   }>;
 
-  // Run (or re-run) init script for a worktree
   runInitScript: (
     projectPath: string,
     worktreePath: string,
@@ -1289,7 +1110,6 @@ export interface WorktreeAPI {
     error?: string;
   }>;
 
-  // Subscribe to init script events
   onInitScriptEvent: (
     callback: (event: {
       type: 'worktree:init-started' | 'worktree:init-output' | 'worktree:init-completed';
@@ -1297,7 +1117,6 @@ export interface WorktreeAPI {
     }) => void
   ) => () => void;
 
-  // Discard changes for a worktree
   discardChanges: (worktreePath: string) => Promise<{
     success: boolean;
     result?: {
@@ -1312,14 +1131,10 @@ export interface WorktreeAPI {
 }
 
 export interface GitAPI {
-  // Get diffs for the main project (not a worktree)
   getDiffs: (projectPath: string) => Promise<FileDiffsResult>;
-
-  // Get diff for a specific file in the main project
   getFileDiff: (projectPath: string, filePath: string) => Promise<FileDiffResult>;
 }
 
-// Model definition type
 export interface ModelDefinition {
   id: string;
   name: string;
@@ -1330,7 +1145,6 @@ export interface ModelDefinition {
   default?: boolean;
 }
 
-// Provider status type
 export interface ProviderStatus {
   status: 'installed' | 'not_installed' | 'api_key_only';
   method?: string;
@@ -1344,12 +1158,3 @@ export interface ProviderStatus {
     npm?: string;
   };
 }
-
-declare global {
-  interface Window {
-    electronAPI: ElectronAPI;
-    isElectron: boolean;
-  }
-}
-
-export {};

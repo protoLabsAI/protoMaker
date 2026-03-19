@@ -26,7 +26,6 @@ import { BoardControls } from './board-controls';
 import { ViewToggle, type ViewMode } from './components';
 import { HeaderMobileMenu } from './header-mobile-menu';
 import { formatCostUsd } from '@/lib/format';
-import { isElectron, getOverlayAPI } from '@/lib/electron';
 import { formatShortcut } from '@/store/types';
 
 export type { ViewMode };
@@ -310,21 +309,6 @@ export function BoardHeader({
                     onConcurrencyChange={onConcurrencyChange}
                   />
                 </div>
-              )}
-
-              {/* Ava Anywhere discoverability hint — Electron only */}
-              {isMounted && !isTablet && isElectron() && (
-                <button
-                  onClick={() => getOverlayAPI()?.toggleOverlay?.()}
-                  className="flex items-center gap-1.5 px-3 h-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
-                  title="Open Ava Anywhere"
-                  data-testid="ava-anywhere-hint"
-                >
-                  <Sparkles className="size-3.5" />
-                  <KbdGroup>
-                    <Kbd>{formatShortcut(avaAnywhereShortcut, true)}</Kbd>
-                  </KbdGroup>
-                </button>
               )}
             </div>
           )}
