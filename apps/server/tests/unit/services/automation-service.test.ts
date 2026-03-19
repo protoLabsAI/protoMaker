@@ -412,9 +412,10 @@ describe('AutomationService', () => {
       await service.syncWithScheduler(mockDeps);
 
       expect(registerMaintenanceFlows).toHaveBeenCalledOnce();
-      // 3 always-on built-ins + 1 enabled user automation; disabled user automation is skipped
+      // 2 always-on built-ins + 1 enabled user automation; disabled user automation is skipped
+      // (branch-cleanup consolidated into stale-worktrees, auto-merge/rebase removed)
       // Ceremony automations are event-triggered and do NOT add to registerTask count
-      expect(scheduler.registerTask).toHaveBeenCalledTimes(4);
+      expect(scheduler.registerTask).toHaveBeenCalledTimes(3);
       const taskIds = vi.mocked(scheduler.registerTask).mock.calls.map(([id]) => id);
       expect(taskIds.every((id) => id.startsWith('automation:'))).toBe(true);
     });
