@@ -18,12 +18,13 @@ const mockLogger = vi.hoisted(() => ({
 // We attach it via util.promisify.custom so promisify(exec) returns it directly.
 const mockExecAsync = vi.hoisted(() => vi.fn(async () => ({ stdout: '', stderr: '' })));
 
-vi.mock('child_process', () => {
+vi.mock('child_process', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('child_process')>();
   const execFn = vi.fn();
   // util.promisify checks for Symbol.for('nodejs.util.promisify.custom')
   // and uses it directly instead of wrapping the callback-style function.
   (execFn as any)[Symbol.for('nodejs.util.promisify.custom')] = mockExecAsync;
-  return { exec: execFn };
+  return { ...actual, exec: execFn };
 });
 
 // ---------------------------------------------------------------------------
@@ -97,9 +98,12 @@ const mockGetWorkflowSettings = vi.hoisted(() => vi.fn(async () => ({})));
 const mockGetPhaseModelWithOverrides = vi.hoisted(() =>
   vi.fn(async () => ({ phaseModel: { model: '' }, isProjectOverride: false }))
 );
+// Default: returns 'dev' to preserve existing test behaviour
+const mockGetEffectivePrBaseBranch = vi.hoisted(() => vi.fn(async () => 'dev'));
 
 vi.mock('@/lib/settings-helpers.js', () => ({
   getWorkflowSettings: mockGetWorkflowSettings,
+  getEffectivePrBaseBranch: mockGetEffectivePrBaseBranch,
   getAutoLoadClaudeMdSetting: vi.fn(async () => false),
   filterClaudeMdFromContext: vi.fn(() => ''),
   getMCPServersFromSettings: vi.fn(async () => []),
@@ -393,7 +397,15 @@ describe('ExecutionService - merge pre-flight', () => {
   beforeEach(() => {
     vi.stubEnv('AUTOMAKER_MOCK_AGENT', 'true');
     mockExecAsync.mockReset();
-    mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
+    mockGetEffectivePrBaseBranch.mockReset();
+    mockGetEffectivePrBaseBranch.mockResolvedValue('dev');
+    // Default: git ls-remote returns a non-empty line (branch exists)
+    mockExecAsync.mockImplementation(async (cmd: string) => {
+      if (typeof cmd === 'string' && cmd.startsWith('git ls-remote --heads origin')) {
+        return { stdout: 'abc123\trefs/heads/dev\n', stderr: '' };
+      }
+      return { stdout: '', stderr: '' };
+    });
   });
 
   function makeWorktreeFeature(overrides: Partial<Feature> = {}): Feature {
@@ -435,10 +447,16 @@ describe('ExecutionService - merge pre-flight', () => {
     };
   }
 
-  it('runs git merge origin/dev during pre-flight sync', async () => {
+  it('runs git merge origin/dev during pre-flight sync (default prBaseBranch)', async () => {
     const feat = makeWorktreeFeature();
 
-    mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
+    // ls-remote returns non-empty to indicate branch exists; all other commands succeed
+    mockExecAsync.mockImplementation(async (cmd: string) => {
+      if (typeof cmd === 'string' && cmd.startsWith('git ls-remote --heads origin')) {
+        return { stdout: 'abc123\trefs/heads/dev\n', stderr: '' };
+      }
+      return { stdout: '', stderr: '' };
+    });
 
     const callbacks = makeWorktreeCallbacks(feat);
     const recoveryService = {
@@ -498,6 +516,9 @@ describe('ExecutionService - merge pre-flight', () => {
           stderr: '',
         };
       }
+      if (typeof cmd === 'string' && cmd.startsWith('git ls-remote --heads origin')) {
+        return { stdout: 'abc123\trefs/heads/dev\n', stderr: '' };
+      }
       return { stdout: '', stderr: '' };
     });
 
@@ -552,6 +573,9 @@ describe('ExecutionService - merge pre-flight', () => {
     const feat = makeWorktreeFeature();
 
     mockExecAsync.mockImplementation(async (cmd: string) => {
+      if (typeof cmd === 'string' && cmd.startsWith('git ls-remote --heads origin')) {
+        return { stdout: 'abc123\trefs/heads/dev\n', stderr: '' };
+      }
       if (cmd === 'git merge origin/dev') {
         throw new Error('CONFLICT (content): Merge conflict in apps/server/src/index.ts');
       }
@@ -608,6 +632,130 @@ describe('ExecutionService - merge pre-flight', () => {
       FEATURE_ID,
       expect.objectContaining({ status: 'blocked' })
     );
+  });
+
+  it('uses prBaseBranch "main" when project is configured with main-only workflow', async () => {
+    mockGetEffectivePrBaseBranch.mockResolvedValue('main');
+
+    const feat = makeWorktreeFeature();
+
+    mockExecAsync.mockImplementation(async (cmd: string) => {
+      if (typeof cmd === 'string' && cmd.startsWith('git ls-remote --heads origin')) {
+        return { stdout: 'abc123\trefs/heads/main\n', stderr: '' };
+      }
+      return { stdout: '', stderr: '' };
+    });
+
+    const callbacks = makeWorktreeCallbacks(feat);
+    const recoveryService = {
+      analyzeFailure: vi.fn(async () => ({
+        isRetryable: false,
+        maxRetries: 0,
+        suggestedDelay: 0,
+        category: 'execution',
+        confidence: 'high',
+        reason: 'test',
+      })),
+      executeRecovery: vi.fn(async () => ({ shouldRetry: false, actionTaken: 'none' })),
+      planRecovery: vi.fn(async () => null),
+    } as any;
+
+    const svc = new ExecutionService(
+      { subscribe: vi.fn(), emit: vi.fn() } as any,
+      null,
+      {
+        get: vi.fn(async () => feat),
+        update: vi.fn(async (_p: string, _id: string, updates: Record<string, unknown>) => ({
+          ...feat,
+          ...updates,
+        })),
+        list: vi.fn(async () => []),
+        save: vi.fn(async () => {}),
+      } as any,
+      null,
+      recoveryService,
+      null,
+      new Map(),
+      new Map(),
+      90,
+      95,
+      callbacks
+    );
+
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID, true /* useWorktrees */);
+
+    const commands: string[] = mockExecAsync.mock.calls.map(([cmd]) => cmd as string);
+
+    // Should merge against main, not dev
+    expect(commands).toContain('git merge origin/main');
+    expect(commands).not.toContain('git merge origin/dev');
+  });
+
+  it('blocks feature with clear error when resolved base branch does not exist on remote', async () => {
+    mockGetEffectivePrBaseBranch.mockResolvedValue('main');
+
+    const feat = makeWorktreeFeature();
+
+    // git ls-remote returns empty → branch not found
+    mockExecAsync.mockImplementation(async (cmd: string) => {
+      if (typeof cmd === 'string' && cmd.startsWith('git ls-remote --heads origin')) {
+        return { stdout: '', stderr: '' };
+      }
+      return { stdout: '', stderr: '' };
+    });
+
+    const featureLoader = {
+      get: vi.fn(async () => feat),
+      update: vi.fn(async (_p: string, _id: string, updates: Record<string, unknown>) => ({
+        ...feat,
+        ...updates,
+      })),
+      list: vi.fn(async () => []),
+      save: vi.fn(async () => {}),
+    } as any;
+
+    const callbacks = makeWorktreeCallbacks(feat);
+    const recoveryService = {
+      analyzeFailure: vi.fn(async () => ({
+        isRetryable: false,
+        maxRetries: 0,
+        suggestedDelay: 0,
+        category: 'execution',
+        confidence: 'high',
+        reason: 'test',
+      })),
+      executeRecovery: vi.fn(async () => ({ shouldRetry: false, actionTaken: 'none' })),
+      planRecovery: vi.fn(async () => null),
+    } as any;
+
+    const svc = new ExecutionService(
+      { subscribe: vi.fn(), emit: vi.fn() } as any,
+      null,
+      featureLoader,
+      null,
+      recoveryService,
+      null,
+      new Map(),
+      new Map(),
+      90,
+      95,
+      callbacks
+    );
+
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID, true /* useWorktrees */);
+
+    // Feature must be blocked with a clear error message
+    expect(featureLoader.update).toHaveBeenCalledWith(
+      PROJECT_PATH,
+      FEATURE_ID,
+      expect.objectContaining({
+        status: 'blocked',
+        statusChangeReason: expect.stringContaining('does not exist on remote'),
+      })
+    );
+    // The merge itself must NOT have been attempted
+    const commands: string[] = mockExecAsync.mock.calls.map(([cmd]) => cmd as string);
+    expect(commands).not.toContain('git merge origin/main');
   });
 });
 
