@@ -1,5 +1,27 @@
 # @protolabsai/observability
 
+## 0.80.0
+
+### Minor Changes
+
+- ### Features
+  - route feature failure notifications to #alerts instead of #dev
+  - wire Ava Engine queue state to QueueView in chat overlay
+
+  ### Bug Fixes
+  - remove dead EngineQueueState refs from chat overlay (#2980)
+  - remove pen-parser from Dockerfiles (#2978)
+  - install @esbuild/linux-x64 in deploy-docs workflow (#2974)
+
+  ### Refactors
+  - Add protoClawX Ava Engine as alternative chat transport (#2973)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.80.0
+  - @protolabsai/utils@0.80.0
+
 ## 0.79.7
 
 ### Patch Changes

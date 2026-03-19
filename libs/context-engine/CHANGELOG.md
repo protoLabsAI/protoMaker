@@ -1,5 +1,12 @@
 # @protolabsai/context-engine
 
+## 0.68.12
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/utils@0.80.0
+
 ## 0.68.11
 
 ### Patch Changes
