@@ -26,7 +26,7 @@ import { ConversationList } from './conversation-list';
 import { AvaSettingsPanel } from './ava-settings-panel';
 import type { ChatSession } from '@/store/chat-store';
 import type { SuggestionItem } from '@protolabsai/ui/ai';
-import type { EngineQueueState, PendingSubagentApproval } from '@/hooks/use-chat-session';
+import type { PendingSubagentApproval } from '@/hooks/use-chat-session';
 import type { ChatEffortLevel } from '@/store/chat-store';
 import { useSlashCommands } from '@/hooks/use-slash-commands';
 import { ChatStatusBar } from './chat-status-bar';
@@ -157,10 +157,6 @@ export interface AskAvaTabProps {
   historyOpen: boolean;
   queueOpen: boolean;
   queuePaused: boolean;
-  /** URL of the active Ava Engine (undefined when using local chat) */
-  avaEngineUrl?: string;
-  /** Current queue state from Ava Engine SSE annotations */
-  engineQueueState?: EngineQueueState | null;
   projectPath?: string;
   toolProgressLabel?: string;
   stepCount: number;
@@ -205,8 +201,6 @@ export function AskAvaTab({
   historyOpen,
   queueOpen,
   queuePaused,
-  avaEngineUrl,
-  engineQueueState,
   projectPath,
   toolProgressLabel,
   stepCount,
@@ -238,18 +232,7 @@ export function AskAvaTab({
       {/* Queue panel — slide in from left */}
       {queueOpen && (
         <div className="w-56 shrink-0 border-r border-border overflow-y-auto p-2 animate-in slide-in-from-left duration-200">
-          <QueueView
-            items={
-              avaEngineUrl && engineQueueState
-                ? engineQueueState.messages.map((m) => ({
-                    id: m.id,
-                    label: m.content.length > 60 ? m.content.slice(0, 57) + '...' : m.content,
-                  }))
-                : []
-            }
-            paused={queuePaused}
-            onTogglePause={onToggleQueuePause}
-          />
+          <QueueView items={[]} paused={queuePaused} onTogglePause={onToggleQueuePause} />
         </div>
       )}
 
