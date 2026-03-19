@@ -14,6 +14,29 @@ import type { CustomPrompt } from './prompts.js';
 import type { SignalDictionaryConfig } from './signal-dictionary.js';
 
 // ============================================================================
+// Pre-Push Validation Configuration
+// ============================================================================
+
+/**
+ * PrePushValidation — Configuration for pre-push code quality checks.
+ *
+ * When configured, runs format and/or typecheck validation before pushing code.
+ * Supports parallel execution, auto-fix, warn-only mode, and configurable timeout.
+ */
+export interface PrePushValidation {
+  /** When true, skips all checks and returns success immediately. @default false */
+  disabled?: boolean;
+  /** When true, check failures are reported as warnings instead of errors. @default false */
+  warnOnly?: boolean;
+  /** Which checks to run. When absent, all checks run. @default ['format', 'typecheck'] */
+  checks?: ('format' | 'typecheck')[];
+  /** Maximum milliseconds to wait for all checks to complete. @default 60000 */
+  timeout?: number;
+  /** When true, automatically runs prettier to fix format issues before re-checking. @default false */
+  autoFix?: boolean;
+}
+
+// ============================================================================
 // Context Engine Configuration
 // ============================================================================
 
