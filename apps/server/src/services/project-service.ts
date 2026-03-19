@@ -41,13 +41,11 @@ import {
   ensureMilestoneDir,
 } from '@protolabsai/platform';
 import type { FeatureLoader } from './feature-loader.js';
-import type { CalendarService } from './calendar-service.js';
 import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('ProjectService');
 
 export class ProjectService {
-  private calendarService?: CalendarService;
   /** In-memory cache: projectPath → { [slug]: Project } */
   private readonly _docs = new Map<string, Record<string, Project>>();
   private readonly _initPromises = new Map<string, Promise<void>>();
@@ -69,10 +67,6 @@ export class ProjectService {
         );
       });
     }
-  }
-
-  setCalendarService(calendarService: CalendarService): void {
-    this.calendarService = calendarService;
   }
 
   // ─── Feature status → phase execution status sync ──────────────────────────
@@ -335,21 +329,6 @@ export class ProjectService {
       }
     }
 
-    // Sync milestone target dates to calendar events
-    if (this.calendarService && project.milestones) {
-      for (const milestone of project.milestones) {
-        if (milestone.targetDate) {
-          const sourceId = `project:${project.slug}/milestone:${slugify(milestone.title)}`;
-          await this.calendarService.upsertBySourceId(projectPath, sourceId, {
-            title: `${milestone.title} (${project.title})`,
-            date: milestone.targetDate,
-            type: 'milestone',
-            description: milestone.description,
-          });
-        }
-      }
-    }
-
     // Update in-memory cache and emit event
     const doc = await this._ensureDoc(projectPath);
     doc[project.slug] = project;
@@ -447,21 +426,6 @@ export class ProjectService {
           phaseFilename
         );
         await secureFs.writeFile(phasePath, generatePhaseMarkdown(phase, milestone, updated));
-      }
-    }
-
-    // Sync milestone target dates to calendar events
-    if (this.calendarService && milestones) {
-      for (const milestone of milestones) {
-        if (milestone.targetDate) {
-          const sourceId = `project:${projectSlug}/milestone:${slugify(milestone.title)}`;
-          await this.calendarService.upsertBySourceId(projectPath, sourceId, {
-            title: `${milestone.title} (${updated.title})`,
-            date: milestone.targetDate,
-            type: 'milestone',
-            description: milestone.description,
-          });
-        }
       }
     }
 
@@ -564,21 +528,6 @@ export class ProjectService {
     // Update project.md
     const mdPath = getProjectFilePath(projectPath, projectSlug);
     await secureFs.writeFile(mdPath, generateProjectMarkdown(updated));
-
-    // Sync milestone target dates to calendar events
-    if (this.calendarService && updated.milestones) {
-      for (const milestone of updated.milestones) {
-        if (milestone.targetDate) {
-          const sourceId = `project:${projectSlug}/milestone:${slugify(milestone.title)}`;
-          await this.calendarService.upsertBySourceId(projectPath, sourceId, {
-            title: `${milestone.title} (${updated.title})`,
-            date: milestone.targetDate,
-            type: 'milestone',
-            description: milestone.description,
-          });
-        }
-      }
-    }
 
     // Update in-memory cache and emit event
     const doc = await this._ensureDoc(projectPath);

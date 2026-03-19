@@ -55,49 +55,6 @@ export function register(container: ServiceContainer): void {
         settingsService,
       });
 
-      // Register calendar job executor — scans for due jobs every minute
-      await schedulerService.registerTask(
-        'job-executor:tick',
-        'Calendar Job Executor',
-        '* * * * *',
-        () => container.jobExecutorService.tick(),
-        true
-      );
-
-      // Register periodic Google Calendar sync — runs every 6 hours for all connected projects
-      await schedulerService.registerTask(
-        'google-calendar:sync',
-        'Google Calendar Sync',
-        '0 */6 * * *',
-        async () => {
-          const globalSettings = await settingsService.getGlobalSettings();
-          const projects = globalSettings.projects ?? [];
-
-          for (const project of projects) {
-            const projectSettings = await settingsService.getProjectSettings(project.path);
-            const google = projectSettings.integrations?.google;
-
-            if (!google?.accessToken || !google?.refreshToken) {
-              continue; // Google Calendar not connected for this project
-            }
-
-            try {
-              const result = await container.googleCalendarSyncService.syncFromGoogle(project.path);
-              logger.info('Scheduled Google Calendar sync complete', {
-                projectPath: project.path,
-                ...result,
-              });
-            } catch (err) {
-              logger.error('Scheduled Google Calendar sync failed', {
-                projectPath: project.path,
-                err,
-              });
-            }
-          }
-        },
-        true
-      );
-
       // Initialize and register daily standup cron (every 15 minutes)
       container.dailyStandupService.initialize(
         settingsService,

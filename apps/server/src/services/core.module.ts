@@ -16,7 +16,6 @@ export function register(container: ServiceContainer): void {
     devServerService,
     notificationService,
     actionableItemService,
-    calendarService,
     authorityService,
     leadEngineerService,
     auditService,
@@ -26,9 +25,6 @@ export function register(container: ServiceContainer): void {
 
   // HITLFormService — wire settingsService for featureFlags.pipeline gate
   hitlFormService.setSettingsService(settingsService);
-
-  // Calendar service wiring
-  calendarService.setFeatureLoader(featureLoader);
 
   // DevServerService event emitter wiring
   devServerService.setEventEmitter(events);

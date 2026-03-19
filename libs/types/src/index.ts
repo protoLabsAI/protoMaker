@@ -198,19 +198,6 @@ export type {
   ResearchReport,
 } from './project.js';
 
-// Calendar types
-export type {
-  CalendarEventType,
-  RecurrenceFrequency,
-  RecurrenceRule,
-  CalendarEvent,
-  CalendarEventsFile,
-  CalendarQueryOptions,
-  JobStatus,
-  JobAction,
-  JobExecutionResult,
-} from './calendar.js';
-
 // Session types
 export type {
   AgentSession,
@@ -368,7 +355,6 @@ export type {
   ChannelWorkflowType,
   DiscordChannelMap,
   DiscordIntegrationConfig,
-  GoogleIntegrationConfig,
   ProjectIntegrations,
   IntegrationEventMapping,
   // Trust boundary types

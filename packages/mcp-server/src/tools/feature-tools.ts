@@ -5,9 +5,8 @@
  * - list_features: List all features
  * - get_feature: Get feature details
  * - create_feature: Create new feature
- * - update_feature: Update feature properties
+ * - update_feature: Update feature properties (including status changes)
  * - delete_feature: Delete feature
- * - move_feature: Move feature between columns
  * - update_feature_git_settings: Update git workflow settings
  */
 
@@ -224,30 +223,6 @@ export const featureTools: Tool[] = [
         },
       },
       required: ['projectPath', 'featureId'],
-    },
-  },
-  {
-    name: 'move_feature',
-    description:
-      'Move a feature to a different column on the board. This is a convenience wrapper around update_feature.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectPath: {
-          type: 'string',
-          description: 'Absolute path to the project directory',
-        },
-        featureId: {
-          type: 'string',
-          description: 'The feature ID (UUID)',
-        },
-        status: {
-          type: 'string',
-          enum: ['backlog', 'in-progress', 'review', 'done'],
-          description: "Target status/column. Moving to 'in-progress' starts an agent.",
-        },
-      },
-      required: ['projectPath', 'featureId', 'status'],
     },
   },
   {

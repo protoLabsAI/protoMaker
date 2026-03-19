@@ -15,12 +15,6 @@ import { getTerminalService } from '../services/terminal-service.js';
 import { SettingsService } from '../services/settings-service.js';
 import { ClaudeUsageService } from '../services/claude-usage-service.js';
 import { contentFlowService } from '../services/content-flow-service.js';
-import { calendarService } from '../services/calendar-service.js';
-import {
-  CalendarIntegrationService,
-  calendarIntegrationService,
-} from '../services/calendar-integration-service.js';
-import { GoogleCalendarSyncService } from '../services/google-calendar-sync-service.js';
 import { MCPTestService } from '../services/mcp-test-service.js';
 import { getEscalationRouter } from '../services/escalation-router.js';
 import { MetricsService } from '../services/metrics-service.js';
@@ -79,7 +73,6 @@ import { TrajectoryQueryService } from '../services/trajectory-query-service.js'
 import { LeadHandoffService } from '../services/lead-handoff-service.js';
 import { ChannelRouter } from '../services/channel-router.js';
 import { NotificationRouter } from '../services/notification-router.js';
-import { JobExecutorService } from '../services/job-executor-service.js';
 import { DoraMetricsService } from '../services/dora-metrics-service.js';
 import { DeploymentTrackerService } from '../services/deployment-tracker-service.js';
 import { SignalDictionaryService } from '../services/signal-dictionary-service.js';
@@ -160,13 +153,9 @@ export interface ServiceContainer {
   ledgerService: LedgerService;
   archivalService: ArchivalService;
 
-  // Calendar & scheduling
-  googleCalendarSyncService: GoogleCalendarSyncService;
-  calendarService: typeof calendarService;
-  calendarIntegrationService: CalendarIntegrationService;
+  // Scheduling
   schedulerService: ReturnType<typeof getSchedulerService>;
   automationService: AutomationService;
-  jobExecutorService: JobExecutorService;
 
   // Auto-mode
   autoModeService: AutoModeService;
@@ -383,8 +372,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   );
   archivalService.start();
 
-  // Calendar service (singleton wired in wireServices)
-  const googleCalendarSyncService = new GoogleCalendarSyncService(settingsService, calendarService);
   const autoModeService = new AutoModeService(events, settingsService);
   const workIntakeService = new WorkIntakeService();
   const hitlFormService = new HITLFormService({
@@ -532,7 +519,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   );
 
   const projectService = new ProjectService(featureLoader, events);
-  projectService.setCalendarService(calendarService);
 
   // Project Health Service — auto-computes on-track/at-risk/off-track from signals
   const projectHealthService = new ProjectHealthService(
@@ -675,15 +661,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Automation Service — manages automation registry and cron/manual execution
   const automationService = new AutomationService(schedulerService, dataDir);
 
-  // Job Executor Service — executes one-time scheduled jobs from the calendar
-  const jobExecutorService = new JobExecutorService(
-    calendarService,
-    autoModeService,
-    automationService,
-    settingsService,
-    events
-  );
-
   // Spec Generation Monitor for detecting and cleaning up stalled spec regeneration jobs
   const specGenerationMonitor = getSpecGenerationMonitor(events, {
     checkIntervalMs: 30000, // Check every 30 seconds
@@ -775,46 +752,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     escalationRouter,
   });
 
-  // Subscribe to calendar:reminder events and forward to ReactiveSpawner
-  calendarService.onReminder((payload) => {
-    void reactiveSpawnerService
-      .spawnForCron(payload.title, payload.description)
-      .catch((err) => logger.warn('[CalendarReminder] spawnForCron failed:', err));
-  });
-
-  // Relay job lifecycle events to remote peers in hivemind mode.
-  // JobExecutorService calls events.emit() (local only); the subscriptions below
-  // ensure job state changes are also forwarded via the remote broadcaster when one
-  // is registered (e.g. CRDT sync). A broadcasting flag prevents re-entrancy.
-  let broadcastingJob = false;
-  events.on('job:started', (payload) => {
-    if (broadcastingJob) return;
-    broadcastingJob = true;
-    try {
-      events.broadcast('job:started', payload);
-    } finally {
-      broadcastingJob = false;
-    }
-  });
-  events.on('job:completed', (payload) => {
-    if (broadcastingJob) return;
-    broadcastingJob = true;
-    try {
-      events.broadcast('job:completed', payload);
-    } finally {
-      broadcastingJob = false;
-    }
-  });
-  events.on('job:failed', (payload) => {
-    if (broadcastingJob) return;
-    broadcastingJob = true;
-    try {
-      events.broadcast('job:failed', payload);
-    } finally {
-      broadcastingJob = false;
-    }
-  });
-
   // Wire integrations health checks (requires integrationService + integrationRegistryService)
   integrationService.initialize(events, settingsService, featureLoader);
   wireHealthChecks(integrationRegistryService);
@@ -901,12 +838,8 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     metricsService,
     ledgerService,
     archivalService,
-    googleCalendarSyncService,
-    calendarService,
-    calendarIntegrationService,
     schedulerService,
     automationService,
-    jobExecutorService,
     autoModeService,
     workIntakeService,
     hitlFormService,

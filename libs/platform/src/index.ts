@@ -26,7 +26,6 @@ export {
   getBranchTrackingPath,
   getExecutionStatePath,
   getNotificationsPath,
-  getCalendarEventsPath,
   // Event history paths
   getEventHistoryDir,
   getEventHistoryIndexPath,

@@ -17,7 +17,6 @@ import { register as registerProjectPm } from '../services/project-pm.module.js'
 import { register as registerEventLedger } from '../services/event-ledger.module.js';
 import { register as registerWorkIntake } from '../services/work-intake.module.js';
 import { register as registerMaintenance } from '../services/maintenance.module.js';
-import { register as registerCalendarIntegration } from '../services/calendar-integration.module.js';
 import { register as registerSignalDictionary } from '../services/signal-dictionary.module.js';
 import { register as registerProjectHealth } from '../services/project-health.module.js';
 import { register as registerTrajectoryQuery } from '../services/trajectory-query.module.js';
@@ -47,7 +46,6 @@ export async function wireServices(services: ServiceContainer): Promise<void> {
   await registerEventLedger(services);
   await registerWorkIntake(services);
   registerMaintenance(services);
-  registerCalendarIntegration(services);
   registerSignalDictionary(services);
   registerProjectHealth(services);
   registerTrajectoryQuery(services);
