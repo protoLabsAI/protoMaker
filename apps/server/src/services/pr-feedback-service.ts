@@ -138,18 +138,6 @@ export class PRFeedbackService {
 
   setSchedulerService(schedulerService: SchedulerService): void {
     this.schedulerService = schedulerService;
-    // Migrate to scheduler if initialize() already ran and is using a raw interval
-    if (this.initialized && this.pollTimer) {
-      clearInterval(this.pollTimer);
-      this.pollTimer = null;
-      this.schedulerService.registerInterval(
-        PRFeedbackService.INTERVAL_ID,
-        'PR Feedback Poll',
-        POLL_INTERVAL_MS,
-        () => this.pollAllPRs()
-      );
-      logger.info('PR Feedback Service: migrated timer to scheduler');
-    }
   }
 
   setLeadEngineerService(service: { isFeatureActive(featureId: string): boolean }): void {
@@ -237,29 +225,13 @@ export class PRFeedbackService {
       }
     });
 
-    if (this.schedulerService) {
-      this.schedulerService.registerInterval(
-        PRFeedbackService.INTERVAL_ID,
-        'PR Feedback Poll',
-        POLL_INTERVAL_MS,
-        () => this.pollAllPRs()
-      );
-    } else {
-      this.pollTimer = setInterval(() => {
-        void this.pollAllPRs();
-      }, POLL_INTERVAL_MS);
-    }
+    // Polling loop removed — PR feedback is now fully event-driven via webhooks
+    // and Lead Engineer REVIEW phase. pollAllPRs() can still be called on-demand.
 
-    logger.info('PR Feedback Service initialized (webhook + poll)');
+    logger.info('PR Feedback Service initialized (webhook-driven)');
   }
 
   stop(): void {
-    if (this.schedulerService) {
-      this.schedulerService.unregisterInterval(PRFeedbackService.INTERVAL_ID);
-    } else if (this.pollTimer) {
-      clearInterval(this.pollTimer);
-      this.pollTimer = null;
-    }
     this.trackedPRs.clear();
     this.remediatingFeatures.clear();
     this.collectedDecisions.clear();

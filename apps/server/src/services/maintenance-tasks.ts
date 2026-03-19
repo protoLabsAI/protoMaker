@@ -154,10 +154,7 @@ export function registerMaintenanceFlows(
   registry.register('built-in:stale-worktrees', async () => {
     const projectPaths = getKnownProjectPaths(autoModeService);
     await detectStaleWorktrees(events, projectPaths, deps.settingsService);
-  });
-
-  registry.register('built-in:branch-cleanup', async () => {
-    const projectPaths = getKnownProjectPaths(autoModeService);
+    // Also clean up merged branches (consolidated from built-in:branch-cleanup)
     await checkMergedBranches(events, projectPaths, deps.settingsService);
   });
 
@@ -169,18 +166,7 @@ export function registerMaintenanceFlows(
     });
   }
 
-  if (deps.featureLoader && deps.settingsService) {
-    const fl = deps.featureLoader;
-    const ss = deps.settingsService;
-    registry.register('built-in:auto-merge-prs', async () => {
-      const projectPaths = getKnownProjectPaths(autoModeService);
-      await autoMergeEligiblePRs(fl, ss, events, projectPaths);
-    });
-    registry.register('built-in:auto-rebase-stale-prs', async () => {
-      const projectPaths = getKnownProjectPaths(autoModeService);
-      await autoRebaseStalePRs(fl, ss, events, projectPaths);
-    });
-  }
+  // auto-merge-prs and auto-rebase-stale-prs removed — Lead Engineer MERGE/REVIEW phases handle these
 
   if (process.env.GITHUB_TOKEN && process.env.GITHUB_REPO_OWNER && process.env.GITHUB_REPO_NAME) {
     registry.register('built-in:runner-health', async () => {
