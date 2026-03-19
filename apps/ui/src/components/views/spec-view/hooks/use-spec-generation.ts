@@ -9,7 +9,7 @@ import { CheckCircle2 } from 'lucide-react';
 import { createElement } from 'react';
 import { SPEC_FILE_WRITE_DELAY } from '../constants';
 import type { FeatureCount } from '../types';
-import type { SpecRegenerationEvent } from '@/types/electron';
+import type { SpecRegenerationEvent } from '@/types/api';
 import { useCreateSpec, useRegenerateSpec, useGenerateFeatures } from '@/hooks/mutations';
 
 interface UseSpecGenerationOptions {

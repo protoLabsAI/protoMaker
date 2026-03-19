@@ -8,7 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getElectronAPI } from '@/lib/electron';
 import { queryKeys } from '@/lib/query-keys';
 import { STALE_TIMES } from '@/lib/query-client';
-import type { SessionListItem } from '@/types/electron';
+import type { SessionListItem } from '@/types/api';
 
 /**
  * Fetch all sessions

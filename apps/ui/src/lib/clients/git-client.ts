@@ -3,7 +3,7 @@
  *
  * Provides: worktree, git
  */
-import type { WorktreeAPI, GitAPI } from '@/types/electron';
+import type { WorktreeAPI, GitAPI } from '@/types/api';
 import type {
   DevServerStartedEvent,
   DevServerOutputEvent,

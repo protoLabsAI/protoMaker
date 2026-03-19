@@ -4,7 +4,7 @@ import type { ReasoningEffort } from '@protolabsai/types';
 import { getProviderFromModel } from '@/lib/utils';
 import { parseAgentContext, formatModelName, DEFAULT_MODEL } from '@/lib/agent-context-parser';
 import { cn } from '@/lib/utils';
-import type { AutoModeEvent } from '@/types/electron';
+import type { AutoModeEvent } from '@/types/api';
 import { Brain, ListTodo, Sparkles, Expand, CheckCircle2, Circle, Wrench } from 'lucide-react';
 import { Spinner } from '@protolabsai/ui/atoms';
 import { getElectronAPI } from '@/lib/electron';

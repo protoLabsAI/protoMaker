@@ -8,7 +8,7 @@
  *   - codex      (usage, models)
  *   - context    (image/file description)
  */
-import type { SessionListItem } from '@/types/electron';
+import type { SessionListItem } from '@/types/api';
 import type { GlobalSettings, ProjectSettings } from '@protolabsai/types';
 import type { ClaudeUsageResponse, CodexUsageResponse } from '@/store/types';
 import { BaseHttpClient, type Constructor } from './base-http-client';
