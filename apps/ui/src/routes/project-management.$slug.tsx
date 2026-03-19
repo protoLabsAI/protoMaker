@@ -22,9 +22,12 @@ function ProjectSlugRoute() {
     );
   }
 
-  // New/drafting projects with no PRD or milestones get the wizard
+  // New/drafting projects with no PRD or milestones get the wizard.
+  // Ongoing projects (e.g. Bugs) skip the wizard — they're persistent containers.
   const isNewProject =
     project &&
+    project.status !== 'ongoing' &&
+    project.type !== 'ongoing' &&
     WIZARD_STATUSES.includes(project.status ?? '') &&
     !project.prd &&
     (!project.milestones || project.milestones.length === 0);
