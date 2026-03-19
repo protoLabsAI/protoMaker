@@ -76,6 +76,19 @@ const eslintConfig = defineConfig([
       // imports packages not in this workspace's package.json.
       'n/no-extraneous-import': 'error',
 
+      // Ban hardcoded 'main' as a PR base branch fallback.
+      // Use getEffectivePrBaseBranch() from lib/settings-helpers.ts or
+      // DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch instead.
+      // See: apps/server/src/routes/worktree/routes/create-pr.ts (incident: wasted $9.81, blocked 3 features)
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "LogicalExpression[operator='||'] > Literal[value='main']",
+          message:
+            "Do not hardcode 'main' as a PR base branch fallback. Use getEffectivePrBaseBranch() from lib/settings-helpers.ts or DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch instead.",
+        },
+      ],
+
       // Ban direct imports of @ai-sdk/anthropic in route/service code.
       // Use getAnthropicModel() from lib/ai-provider.ts instead — it
       // resolves credentials via CLI OAuth, env vars, and credentials file.
