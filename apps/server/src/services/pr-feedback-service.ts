@@ -1278,6 +1278,7 @@ export class PRFeedbackService {
       const classifiedChecks = await prStatusChecker.fetchFailedChecks(
         pr,
         data.headSha,
+        undefined,
         workflowSettings.ciClassification
       );
 
