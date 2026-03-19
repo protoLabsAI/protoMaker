@@ -191,7 +191,6 @@ agent-browser is a Rust CLI that controls Chrome for Testing via the Chrome DevT
 - The dev server must be running on `localhost:3007` before using agent-browser.
 - Always re-snapshot after navigation or state changes. Refs are invalidated by DOM mutations.
 - Do not commit screenshots. Use them for verification only, then clean up.
-- For Electron testing, connect via CDP: `agent-browser --cdp 9222 open http://localhost:3007`.
 
 ## Integration with Release Pipeline
 

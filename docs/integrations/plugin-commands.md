@@ -217,20 +217,6 @@ Deep work mode for autonomous feature processing.
 - Stays productive until the system is void of work
 - Minimal human interaction required
 
-### /calendar-assistant
-
-Calendar and scheduling operations.
-
-```bash
-/calendar-assistant       # Start calendar management
-```
-
-**Capabilities:**
-
-- List, create, update, and delete calendar events
-- Schedule meetings and deadlines
-- Track upcoming events
-
 ### /due-diligence
 
 Validate approaches and question architectures with evidence-based research.
@@ -448,24 +434,23 @@ Backup and restore Docker volumes.
 
 ### Command Models
 
-| Command               | Model  | Rationale                    |
-| --------------------- | ------ | ---------------------------- |
-| `/welcome`            | Sonnet | Adaptive conversational flow |
-| `/deep-research`      | Haiku  | Fast exploration             |
-| `/board`              | --     | No model (direct tool calls) |
-| `/auto-mode`          | --     | No model (direct tool calls) |
-| `/orchestrate`        | --     | No model (direct tool calls) |
-| `/context`            | --     | No model (direct tool calls) |
-| `/ship`               | --     | No model (direct tool calls) |
-| `/headsdown`          | --     | No model (direct tool calls) |
-| `/calendar-assistant` | --     | No model (direct tool calls) |
-| `/improve-prompts`    | --     | No model (direct tool calls) |
-| `/due-diligence`      | Sonnet | Evidence-based analysis      |
-| `/plan-project`       | Sonnet | Complex orchestration        |
-| `/sparc-prd`          | Sonnet | Sophisticated analysis       |
-| `/ava`                | --     | No model (direct tool calls) |
-| `/setuplab`           | Sonnet | Complex multi-phase pipeline |
-| `/update-plugin`      | --     | No model (direct tool calls) |
+| Command            | Model  | Rationale                    |
+| ------------------ | ------ | ---------------------------- |
+| `/welcome`         | Sonnet | Adaptive conversational flow |
+| `/deep-research`   | Haiku  | Fast exploration             |
+| `/board`           | --     | No model (direct tool calls) |
+| `/auto-mode`       | --     | No model (direct tool calls) |
+| `/orchestrate`     | --     | No model (direct tool calls) |
+| `/context`         | --     | No model (direct tool calls) |
+| `/ship`            | --     | No model (direct tool calls) |
+| `/headsdown`       | --     | No model (direct tool calls) |
+| `/improve-prompts` | --     | No model (direct tool calls) |
+| `/due-diligence`   | Sonnet | Evidence-based analysis      |
+| `/plan-project`    | Sonnet | Complex orchestration        |
+| `/sparc-prd`       | Sonnet | Sophisticated analysis       |
+| `/ava`             | --     | No model (direct tool calls) |
+| `/setuplab`        | Sonnet | Complex multi-phase pipeline |
+| `/update-plugin`   | --     | No model (direct tool calls) |
 
 ### Agent Models
 

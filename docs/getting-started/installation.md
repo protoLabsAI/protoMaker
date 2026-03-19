@@ -23,18 +23,14 @@ npm install
 npm run dev
 ```
 
-This opens an interactive launcher. Choose between:
-
-1. **Web Application** — Opens in your browser at `localhost:3007`
-2. **Desktop Application** — Electron app (recommended)
+This opens an interactive launcher. Choose **Web Application** to open in your browser at `localhost:3007`.
 
 Or specify directly:
 
 ```bash
 npm run dev:full             # Web mode — starts UI (:3007) AND server (:3008) together (recommended)
-npm run dev:electron         # Desktop app (bundles server automatically)
-npm run dev:electron:debug   # Desktop with DevTools
-npm run dev:electron:wsl     # WSL (Windows Subsystem for Linux)
+npm run dev:web              # UI only (localhost:3007) — requires server running separately
+npm run dev:server           # Backend server only (localhost:3008)
 ```
 
 > **Important:** `npm run dev:web` starts only the UI frontend on port 3007. It requires the backend server to be running separately on port 3008. Use `npm run dev:full` to start both in one command, or run `npm run dev:server` in a second terminal alongside `npm run dev:web`.
@@ -51,7 +47,6 @@ Features: gradient ASCII art, pre-flight dependency checks, remembers your last 
 
 ```bash
 ./start-automaker.sh web            # Direct launch — web
-./start-automaker.sh electron       # Direct launch — desktop
 ./start-automaker.sh --check-deps   # Verify dependencies
 ./start-automaker.sh --help         # All options
 ```
@@ -100,8 +95,6 @@ AUTOMAKER_API_KEY=your-custom-key npm run dev --workspace=apps/server
 
 | Variable                         | Default  | Description                               |
 | -------------------------------- | -------- | ----------------------------------------- |
-| `VITE_SKIP_ELECTRON`             | _(none)_ | Skip Electron in dev mode                 |
-| `OPEN_DEVTOOLS`                  | _(none)_ | Auto-open DevTools in Electron            |
 | `AUTOMAKER_AUTO_LOGIN`           | _(none)_ | Skip login prompt (ignored in production) |
 | `AUTOMAKER_MOCK_AGENT`           | _(none)_ | Enable mock agent mode for CI             |
 | `AUTOMAKER_SKIP_SANDBOX_WARNING` | _(none)_ | Skip sandbox warning dialog               |
@@ -113,17 +106,6 @@ AUTOMAKER_API_KEY=your-custom-key npm run dev --workspace=apps/server
 ```bash
 npm run build
 ```
-
-### Desktop Application
-
-```bash
-npm run build:electron              # Current platform
-npm run build:electron:mac          # macOS (DMG + ZIP, x64 + arm64)
-npm run build:electron:win          # Windows (NSIS installer, x64)
-npm run build:electron:linux        # Linux (AppImage + DEB + RPM, x64)
-```
-
-Output: `apps/ui/release/`
 
 ### Docker
 

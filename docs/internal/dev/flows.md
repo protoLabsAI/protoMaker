@@ -501,13 +501,12 @@ const flow = createProjectPlanningFlow({
 
 ## Ceremony Flows
 
-The `@protolabsai/flows` package exports three ceremony flows for automated team rituals. These are thin LangGraph wrappers around the server-side ceremony logic:
+The `@protolabsai/flows` package exports ceremony flows for automated team rituals. These are thin LangGraph wrappers around the server-side ceremony logic:
 
-| Export                   | Description                                                                              |
-| ------------------------ | ---------------------------------------------------------------------------------------- |
-| `createStandupFlow`      | Daily standup summarization — aggregates recent feature activity into team standup notes |
-| `createRetroFlow`        | Sprint/cycle retrospective — generates insights from completed and failed features       |
-| `createProjectRetroFlow` | Project-level retrospective — holistic review across milestones and epics                |
+| Export                   | Description                                                                        |
+| ------------------------ | ---------------------------------------------------------------------------------- |
+| `createRetroFlow`        | Sprint/cycle retrospective — generates insights from completed and failed features |
+| `createProjectRetroFlow` | Project-level retrospective — holistic review across milestones and epics          |
 
 For full ceremony configuration, trigger mechanics, and audit logging, see [Ceremonies](../agents/ceremonies.md).
 

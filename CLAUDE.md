@@ -217,20 +217,15 @@ The in-app docs viewer is the interface for internal docs. A page about "how to 
 
 ```bash
 # Development
-npm run dev                 # Interactive launcher (choose web or electron)
+npm run dev                 # Interactive launcher (choose web or docker)
 npm run dev:full            # Web mode — starts UI (:3007) AND server (:3008) together
 npm run dev:web             # UI only (localhost:3007) — requires server running separately on :3008
 npm run dev:server          # Backend server only (localhost:3008)
-npm run dev:electron        # Desktop app mode (bundles server automatically)
-npm run dev:electron:debug  # Desktop with DevTools open
 npm run dev:headless        # Production-mode server locally (builds packages + server first)
 
 # Building
 npm run build               # Build web application
 npm run build:packages      # Build all shared packages (required before other builds)
-npm run build:electron      # Build desktop app for current platform
-npm run build:electron:legless      # Legless Electron build (no bundled server)
-npm run build:electron:legless:dir  # Legless Electron unpacked directory (for testing)
 npm run build:server        # Build server only
 
 # Preview / Local Production Testing
@@ -262,7 +257,7 @@ npm run format:check        # Prettier check
 ```
 automaker/
 ├── apps/
-│   ├── ui/           # React + Vite + Electron frontend (port 3007)
+│   ├── ui/           # React + Vite frontend (port 3007)
 │   └── server/       # Express + WebSocket backend (port 3008)
 ├── site/             # Landing page (protolabs.studio) — static HTML on Cloudflare Pages
 └── libs/             # Shared packages (@protolabsai/*)
@@ -273,7 +268,6 @@ automaker/
     ├── model-resolver/    # Claude model alias resolution
     ├── dependency-resolver/  # Feature dependency ordering
     ├── spec-parser/       # XML/markdown spec parsing for project plans
-    ├── pen-parser/        # PEN file parser for Penpot design files
     ├── git-utils/    # Git operations & worktree management
     ├── tools/        # Unified tool definition and registry system
     ├── flows/        # LangGraph state graph primitives & flow orchestration
@@ -288,7 +282,7 @@ Packages can only depend on packages above them:
 ```
 @protolabsai/types (no dependencies)
     ↓
-@protolabsai/utils, @protolabsai/prompts, @protolabsai/platform, @protolabsai/model-resolver, @protolabsai/dependency-resolver, @protolabsai/spec-parser, @protolabsai/pen-parser, @protolabsai/tools, @protolabsai/flows, @protolabsai/observability
+@protolabsai/utils, @protolabsai/prompts, @protolabsai/platform, @protolabsai/model-resolver, @protolabsai/dependency-resolver, @protolabsai/spec-parser, @protolabsai/tools, @protolabsai/flows, @protolabsai/observability
     ↓
 @protolabsai/git-utils, @protolabsai/ui
     ↓
@@ -297,7 +291,7 @@ Packages can only depend on packages above them:
 
 ### Key Technologies
 
-- **Frontend**: React 19, Vite 7, Electron 39, TanStack Router, Zustand 5, Tailwind CSS 4
+- **Frontend**: React 19, Vite 7, TanStack Router, Zustand 5, Tailwind CSS 4
 - **Backend**: Express 5, WebSocket (ws), Claude Agent SDK, node-pty
 - **Testing**: Playwright (E2E), Vitest (unit)
 

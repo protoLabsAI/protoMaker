@@ -40,6 +40,6 @@ Extend protoLabs. Architecture, packages, code standards, and how to contribute.
 
 ## Processes
 
-- **[Release](./release)** — Release process and Electron builds
+- **[Release](./release)** — Release process
 - **[Terminal](./terminal)** — Terminal feature documentation
 - **[Docs Standard](./docs-standard)** — IA rules, content guidelines, maintenance procedures

@@ -57,8 +57,8 @@ protoLabs uses a containerized architecture with three services:
 
 ```bash
 npm run dev           # Interactive launcher
-npm run dev:web       # Web browser mode
-npm run dev:electron  # Desktop app mode
+npm run dev:full      # Web mode — starts UI (:3007) AND server (:3008) together
+npm run dev:web       # UI only (localhost:3007) — requires server separately
 ```
 
 ### 2. Development (Docker)
@@ -110,7 +110,6 @@ sudo systemctl start protomaker
 | `.github/workflows/format-check.yml`   | Prettier formatting                                |
 | `.github/workflows/security-audit.yml` | npm audit                                          |
 | `.github/workflows/auto-release.yml`   | Version bump + tag + GitHub Release (staging→main) |
-| `.github/workflows/build-electron.yml` | Multi-platform Electron builds (v\* tag)           |
 | `.github/workflows/deploy-staging.yml` | Auto-deploy to staging on push to staging          |
 
 ### Scripts

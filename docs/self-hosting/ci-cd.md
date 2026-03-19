@@ -13,7 +13,6 @@ protoLabs uses GitHub Actions for continuous integration and delivery. All workf
 | `deploy-staging.yml`    | Push to staging, manual  | self-hosted | Auto-deploy staging environment     |
 | `deploy-main.yml`       | Push to main, manual     | self-hosted | Auto-deploy production environment  |
 | `auto-release.yml`      | staging→main PR merged   | self-hosted | Version bump + tag + GitHub Release |
-| `build-electron.yml`    | `v*` tag push            | matrix      | Multi-platform Electron builds      |
 | `rewrite-release-notes` | Manual / CI step         | self-hosted | LLM-powered release notes rewriting |
 
 > **Note:** There are no separate `format-check.yml` or `security-audit.yml` workflows. Format checking, linting, and security audit are consolidated into `checks.yml`.
@@ -173,22 +172,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-project
-      - run: npm run build:electron:dir
+      - run: npm run build
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
 ```
 
-### Why Directory Build
+### What It Validates
 
-`build:electron:dir` creates the unpacked app without packaging:
-
-- Faster than full build
-- Still validates the build process
-- Catches TypeScript errors, missing imports, etc.
+- TypeScript compilation
+- Missing imports and type errors
+- Build process completes successfully
 
 ## Auto Release (`auto-release.yml`)
 
-Automatically cuts a version bump and GitHub Release whenever a `staging→main` PR is merged. The resulting `v*` tag triggers `build-electron.yml`.
+Automatically cuts a version bump and GitHub Release whenever a `staging→main` PR is merged.
 
 ### Release Flow
 
@@ -196,15 +193,11 @@ Automatically cuts a version bump and GitHub Release whenever a `staging→main`
 staging → main PR merged
     ↓
 auto-release.yml
-    ├── verify GH_PAT is set (warning if absent — Electron build chain won't fire)
     ├── clean stale changesets (find .changeset -name '*.md' ! -name 'README.md' -delete)
     ├── npm run release:prepare  (analyze commits since last tag → bump type)
     ├── npm run changeset:version  (bump @protolabsai/* in lockstep, write CHANGELOG)
     ├── git commit "chore: release vX.Y.Z" → pushed to main
     ├── git tag vX.Y.Z → pushed via GH_PAT
-    │               ↓
-    │       build-electron.yml fires (macOS, Linux, Windows in parallel)
-    │       → artifacts uploaded to GitHub Release
     └── sync version bump back to staging and dev
             ├── gh pr create --base staging --head main → auto-merge
             └── gh pr create --base dev --head main → auto-merge
@@ -212,23 +205,7 @@ auto-release.yml
 
 ### Token Requirement
 
-`auto-release.yml` uses `secrets.GH_PAT` (falls back to `GITHUB_TOKEN`) for the checkout and tag push. A PAT is required because GitHub's loop-prevention policy blocks `GITHUB_TOKEN`-triggered pushes from firing downstream workflow runs — without it, the `v*` tag won't trigger `build-electron.yml`.
-
-The first step in the release job validates that `GH_PAT` is configured and emits a visible warning when it is not. The release proceeds regardless — the version bump and GitHub Release are created — but the Electron build chain requires a PAT.
-
-## Electron Builds (`build-electron.yml`)
-
-Builds the Electron desktop app for all platforms on every `v*` tag push.
-
-| Platform | Runner           | Formats                     |
-| -------- | ---------------- | --------------------------- |
-| macOS    | `macos-latest`   | `.dmg`, `.zip`              |
-| Linux    | `self-hosted`    | `.AppImage`, `.deb`, `.rpm` |
-| Windows  | `windows-latest` | `.exe`                      |
-
-Each platform job builds independently, then `upload-release` waits for all three to finish before uploading artifacts to the GitHub Release.
-
-> **Note:** Linux uses `self-hosted` (not `ubuntu-latest`) — GitHub-hosted runner minutes are exhausted for large builds.
+`auto-release.yml` uses `secrets.GH_PAT` (falls back to `GITHUB_TOKEN`) for the checkout and tag push. A PAT is required because GitHub's loop-prevention policy blocks `GITHUB_TOKEN`-triggered pushes from firing downstream workflow runs.
 
 ## Release Notes Rewriting
 
@@ -368,7 +345,7 @@ IaC source of truth: `scripts/infra/rulesets/main.json`
 | Secret              | Purpose                                                                    |
 | ------------------- | -------------------------------------------------------------------------- |
 | `GITHUB_TOKEN`      | Auto-provided, used for releases                                           |
-| `GH_PAT`            | PAT for `auto-release.yml` tag push (enables `build-electron.yml` trigger) |
+| `GH_PAT`            | PAT for `auto-release.yml` tag push (enables downstream workflow triggers) |
 | `ANTHROPIC_API_KEY` | LLM release notes rewriting (Haiku 4.5)                                    |
 
 ## Self-Hosted Runner Capabilities
@@ -396,5 +373,5 @@ npm run format:check && npm run lint && npm audit --audit-level=critical
 npm run test:packages && npm run test:server
 
 # Build check
-npm run build:electron:dir
+npm run build
 ```

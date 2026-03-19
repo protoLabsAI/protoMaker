@@ -86,12 +86,12 @@ For development, run protoLabs directly on your machine:
 # Install dependencies
 npm install
 
-# Interactive launcher (choose web or electron)
+# Interactive launcher
 npm run dev
 
 # Or directly:
-npm run dev:web       # Web browser at localhost:3007
-npm run dev:electron  # Desktop app
+npm run dev:full      # Web mode — starts UI (:3007) AND server (:3008) together
+npm run dev:web       # UI only at localhost:3007 (requires server separately)
 ```
 
 ### Requirements
@@ -316,11 +316,10 @@ GF_ADMIN_PASSWORD=a-strong-password
 
 ### Frontend Configuration
 
-| Variable             | Default     | Description                       |
-| -------------------- | ----------- | --------------------------------- |
-| `VITE_SERVER_URL`    | `''`        | API server URL (empty = relative) |
-| `VITE_HOSTNAME`      | `localhost` | Hostname for API URLs             |
-| `VITE_SKIP_ELECTRON` | `false`     | Build without Electron            |
+| Variable          | Default     | Description                       |
+| ----------------- | ----------- | --------------------------------- |
+| `VITE_SERVER_URL` | `''`        | API server URL (empty = relative) |
+| `VITE_HOSTNAME`   | `localhost` | Hostname for API URLs             |
 
 ## Extracting OAuth Credentials
 
