@@ -8,7 +8,6 @@ export type ProjectSettingsViewId =
   | 'claude'
   | 'webhooks'
   | 'ceremonies'
-  | 'integrations'
   | 'agents'
   | 'danger';
 

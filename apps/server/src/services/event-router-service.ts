@@ -262,7 +262,6 @@ export class EventRouterService {
   private deriveCategory(source: string, channelContext: Record<string, unknown>): 'ops' | 'gtm' {
     if (source === 'github') return 'ops';
     if (source === 'mcp:create_feature') return 'ops';
-    if (source === 'mcp:process_idea') return 'ops';
     if (source === 'ui:content') return 'gtm';
 
     if (source === 'discord') {

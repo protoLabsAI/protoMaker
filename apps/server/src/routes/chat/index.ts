@@ -465,7 +465,6 @@ export function createChatRoutes(services: ServiceContainer): Router {
                 : undefined,
               canUseTool,
               discordBotService: services.discordBotService,
-              calendarService: services.calendarService,
               healthMonitorService: services.healthMonitorService,
             },
             {

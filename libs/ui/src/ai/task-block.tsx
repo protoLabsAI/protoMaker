@@ -54,7 +54,6 @@ const TOOL_TITLE_MAP: Record<string, string> = {
   get_feature: 'Checking features',
   create_feature: 'Creating feature',
   update_feature: 'Updating board',
-  move_feature: 'Moving feature',
   start_agent: 'Starting agent',
   stop_agent: 'Stopping agent',
   get_agent_output: 'Checking agents',

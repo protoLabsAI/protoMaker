@@ -863,6 +863,49 @@ export class AgentService {
   }
 
   /**
+   * Check if an agent session is currently running for the given feature.
+   * Scans all in-memory sessions for one whose featureContext.featureId matches.
+   */
+  isAgentRunning(featureId: string): boolean {
+    for (const [, session] of this.sessions) {
+      if (session.featureContext?.featureId === featureId && session.isRunning) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Inject a CI failure message into the running agent session for the given feature.
+   * Enqueues the message so it is picked up when the agent completes its current turn.
+   * Returns true if a running session was found and the message was queued; false otherwise.
+   */
+  async sendCIFailureToAgent(featureId: string, message: string): Promise<boolean> {
+    for (const [sessionId, session] of this.sessions) {
+      if (session.featureContext?.featureId === featureId && session.isRunning) {
+        const queuedPrompt: QueuedPrompt = {
+          id: this.generateId(),
+          message,
+          addedAt: new Date().toISOString(),
+          sender: 'system',
+        };
+        session.promptQueue.push(queuedPrompt);
+        session.messageQueueMiddleware.enqueue(queuedPrompt.id, queuedPrompt.message, 'system');
+        await this.saveQueueState(sessionId, session.promptQueue);
+        this.emitAgentEvent(sessionId, {
+          type: 'queue_updated',
+          queue: session.promptQueue,
+        });
+        this.logger.info(
+          `CI failure injected into running session ${sessionId} for feature ${featureId}`
+        );
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Stop current agent execution
    */
   async stopExecution(sessionId: string) {

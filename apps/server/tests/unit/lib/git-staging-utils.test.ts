@@ -19,23 +19,24 @@ describe('buildGitAddCommand', () => {
   });
 
   describe('default exclusions', () => {
-    it('should exclude .automaker/, .claude/worktrees/, and .worktrees/ by default', () => {
-      expect(buildGitAddCommand(tempDir)).toBe(
-        "git add -A -- ':!.automaker/' ':!.claude/worktrees/' ':!.worktrees/'"
-      );
+    it('should omit gitignore-managed dirs (.automaker/, .worktrees/) from pathspec and keep .claude/worktrees/', () => {
+      // .automaker/ and .worktrees/ are in .gitignore — using ':!dir/' pathspecs for
+      // gitignored dirs causes git to error. Only .claude/worktrees/ (not gitignored)
+      // appears as a pathspec exclusion.
+      expect(buildGitAddCommand(tempDir)).toBe("git add -A -- ':!.claude/worktrees/'");
     });
 
     it('should include .automaker/memory/ when that directory exists', () => {
       mkdirSync(join(tempDir, '.automaker', 'memory'), { recursive: true });
       expect(buildGitAddCommand(tempDir)).toBe(
-        "git add -A -- ':!.automaker/' ':!.claude/worktrees/' ':!.worktrees/' '.automaker/memory/'"
+        "git add -A -- ':!.claude/worktrees/' '.automaker/memory/'"
       );
     });
 
     it('should include .automaker/skills/ when that directory exists', () => {
       mkdirSync(join(tempDir, '.automaker', 'skills'), { recursive: true });
       expect(buildGitAddCommand(tempDir)).toBe(
-        "git add -A -- ':!.automaker/' ':!.claude/worktrees/' ':!.worktrees/' '.automaker/skills/'"
+        "git add -A -- ':!.claude/worktrees/' '.automaker/skills/'"
       );
     });
 
@@ -43,34 +44,40 @@ describe('buildGitAddCommand', () => {
       mkdirSync(join(tempDir, '.automaker', 'memory'), { recursive: true });
       mkdirSync(join(tempDir, '.automaker', 'skills'), { recursive: true });
       expect(buildGitAddCommand(tempDir)).toBe(
-        "git add -A -- ':!.automaker/' ':!.claude/worktrees/' ':!.worktrees/' '.automaker/memory/' '.automaker/skills/'"
+        "git add -A -- ':!.claude/worktrees/' '.automaker/memory/' '.automaker/skills/'"
       );
     });
 
     it('should not re-include memory/skills when only .automaker/ exists (no subdirs)', () => {
       mkdirSync(join(tempDir, '.automaker'), { recursive: true });
-      expect(buildGitAddCommand(tempDir)).toBe(
-        "git add -A -- ':!.automaker/' ':!.claude/worktrees/' ':!.worktrees/'"
-      );
+      expect(buildGitAddCommand(tempDir)).toBe("git add -A -- ':!.claude/worktrees/'");
     });
   });
 
   describe('configurable exclusions', () => {
-    it('should use custom exclusion list when provided', () => {
-      expect(buildGitAddCommand(tempDir, ['.automaker/'])).toBe("git add -A -- ':!.automaker/'");
+    it('should omit .automaker/ from pathspec when it is in custom list (gitignore-managed)', () => {
+      // .automaker/ is gitignore-managed — no pathspec exclusion is emitted for it
+      expect(buildGitAddCommand(tempDir, ['.automaker/'])).toBe('git add -A -- ');
     });
 
     it('should re-include .automaker/memory/ when .automaker/ is in custom list and dir exists', () => {
       mkdirSync(join(tempDir, '.automaker', 'memory'), { recursive: true });
       expect(buildGitAddCommand(tempDir, ['.automaker/'])).toBe(
-        "git add -A -- ':!.automaker/' '.automaker/memory/'"
+        "git add -A -- '.automaker/memory/'"
       );
     });
 
     it('should not re-include .automaker subdirs when .automaker/ is not in custom list', () => {
       mkdirSync(join(tempDir, '.automaker', 'memory'), { recursive: true });
       mkdirSync(join(tempDir, '.automaker', 'skills'), { recursive: true });
-      expect(buildGitAddCommand(tempDir, ['.worktrees/'])).toBe("git add -A -- ':!.worktrees/'");
+      // .worktrees/ is gitignore-managed too — no pathspec exclusion emitted
+      expect(buildGitAddCommand(tempDir, ['.worktrees/'])).toBe('git add -A -- ');
+    });
+
+    it('should emit pathspec for non-gitignore-managed dirs in custom list', () => {
+      expect(buildGitAddCommand(tempDir, ['.claude/worktrees/'])).toBe(
+        "git add -A -- ':!.claude/worktrees/'"
+      );
     });
 
     it('should handle empty exclusion list', () => {

@@ -172,8 +172,6 @@ export function compactToolResult(toolName: string, result: unknown): unknown {
       return compactFeatureSummary(result);
     case 'update_feature':
       return compactFeatureSummary(result);
-    case 'move_feature':
-      return result; // already small: { featureId, newStatus }
     case 'delete_feature':
       return result; // small confirmation object
 

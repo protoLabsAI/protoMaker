@@ -9,7 +9,6 @@ import {
   Settings2,
   NotebookPen,
   Palette,
-  CalendarDays,
   FolderOpen,
   FolderKanban,
   ListTodo,
@@ -57,7 +56,6 @@ interface UseNavigationProps {
     inbox: string;
     fileEditor: string;
     designs: string;
-    calendar: string;
     todo: string;
     automations: string;
     projects: string;
@@ -123,12 +121,6 @@ export function useNavigation({
         label: 'Notes',
         icon: NotebookPen,
         shortcut: shortcuts.notes,
-      },
-      {
-        id: 'calendar',
-        label: 'Calendar',
-        icon: CalendarDays,
-        shortcut: shortcuts.calendar,
       },
       {
         id: 'todo',

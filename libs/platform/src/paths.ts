@@ -233,18 +233,6 @@ export function getNotificationsPath(projectPath: string): string {
 }
 
 /**
- * Get the calendar events file path for a project
- *
- * Stores calendar events including feature milestones, custom events, and external integrations.
- *
- * @param projectPath - Absolute path to project directory
- * @returns Absolute path to {projectPath}/.automaker/calendar.json
- */
-export function getCalendarEventsPath(projectPath: string): string {
-  return path.join(getAutomakerDir(projectPath), 'calendar.json');
-}
-
-/**
  * Get the branch tracking file path for a project
  *
  * Stores JSON metadata about active git branches and worktrees.

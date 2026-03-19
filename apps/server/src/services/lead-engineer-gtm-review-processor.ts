@@ -18,7 +18,11 @@ import type {
   StateProcessor,
   StateTransitionResult,
 } from './lead-engineer-types.js';
-import { MAX_TOTAL_REMEDIATION_CYCLES } from './lead-engineer-types.js';
+import { getWorkflowSettings } from '../lib/settings-helpers.js';
+import {
+  RemediationBudgetEnforcer,
+  DEFAULT_CI_REACTION_SETTINGS,
+} from './remediation-budget-enforcer.js';
 
 const logger = createLogger('GtmReviewProcessor');
 
@@ -73,8 +77,30 @@ export class GtmReviewProcessor implements StateProcessor {
 
     // Score below threshold — send back to EXECUTE for revision
     // Check remediation budget to prevent unbounded revision loops
-    if (ctx.remediationAttempts >= MAX_TOTAL_REMEDIATION_CYCLES) {
-      ctx.escalationReason = `Max content remediation cycles exceeded (${MAX_TOTAL_REMEDIATION_CYCLES})`;
+    const gtmWorkflowSettings = await getWorkflowSettings(
+      ctx.projectPath,
+      this.serviceContext.settingsService,
+      '[GtmReviewProcessor]'
+    );
+    const gtmCiReactionSettings =
+      gtmWorkflowSettings.ciReactionSettings ?? DEFAULT_CI_REACTION_SETTINGS;
+
+    const gtmCiCount = (ctx.feature.ciRemediationCount as number | undefined) ?? 0;
+    const gtmReviewCount =
+      (ctx.feature.reviewRemediationCount as number | undefined) ?? ctx.remediationAttempts;
+    const gtmLegacyCount = (ctx.feature.remediationCycleCount as number | undefined) ?? 0;
+
+    const gtmEnforcer = new RemediationBudgetEnforcer(gtmCiReactionSettings);
+    const gtmBudgetResult = gtmEnforcer.checkAndIncrement({
+      type: 'review',
+      ciRemediationCount: gtmCiCount,
+      reviewRemediationCount: gtmReviewCount,
+      remediationCycleCount: gtmLegacyCount,
+      settings: gtmCiReactionSettings,
+    });
+
+    if (!gtmBudgetResult.allowed) {
+      ctx.escalationReason = `Max content remediation cycles exceeded: ${gtmBudgetResult.message}`;
       return {
         nextState: 'ESCALATE',
         shouldContinue: true,
