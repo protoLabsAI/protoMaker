@@ -158,8 +158,8 @@ This is iteration ${iterationCount} of the review cycle. Be judicious - not all 
   /**
    * Build a continuation prompt for fixing CI failures.
    *
-   * Only agent-fixable failures (test_failure, build_failure, lint_failure, type_error)
-   * are included in the prompt. Non-agent-fixable failures (infra, flaky, timeout, unknown)
+   * Only agent-fixable failures (code_error, test_failure, build_failure, unknown)
+   * are included in the prompt. Non-agent-fixable failures (infra, flaky, timeout)
    * are listed as informational context but the agent is not asked to fix them.
    */
   async buildCIFixPrompt(
@@ -171,8 +171,8 @@ This is iteration ${iterationCount} of the review cycle. Be judicious - not all 
   ): Promise<string> {
     const previousContext = await this.loadPreviousContext(projectPath, featureId, iteration);
 
-    const fixableChecks = classifiedChecks.filter((c) => c.agentFixable);
-    const skippedChecks = classifiedChecks.filter((c) => !c.agentFixable);
+    const fixableChecks = classifiedChecks.filter((c) => c.isAgentFixable);
+    const skippedChecks = classifiedChecks.filter((c) => !c.isAgentFixable);
 
     const checksDetails =
       fixableChecks.length > 0

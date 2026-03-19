@@ -233,6 +233,7 @@ export type {
   CIClassificationRule,
   CIClassificationConfig,
 } from './ci-failure.js';
+export { CI_FAILURE_CLASS_FIXABLE } from './ci-failure.js';
 
 // Image types
 export type { ImageData, ImageContentBlock } from './image.js';

@@ -1281,8 +1281,8 @@ export class PRFeedbackService {
         workflowSettings.ciClassification
       );
 
-      // Check if all failures are non-agent-fixable (infra/flaky/timeout/unknown)
-      const fixableChecks = classifiedChecks.filter((c) => c.agentFixable);
+      // Check if all failures are non-agent-fixable (infra/flaky/timeout)
+      const fixableChecks = classifiedChecks.filter((c) => c.isAgentFixable);
       if (classifiedChecks.length > 0 && fixableChecks.length === 0) {
         const classes = classifiedChecks.map((c) => `${c.name} [${c.failureClass}]`).join(', ');
         logger.info(

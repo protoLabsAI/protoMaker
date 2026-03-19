@@ -1,128 +1,123 @@
 /**
- * CI Failure Classifier Service
+ * CIFailureClassifierService - Pattern-based classification of CI check failures
  *
- * Pure function pattern-based classification for CI check failures.
- * No LLM calls — classification runs synchronously via ordered regex rules.
+ * Classifies FailedCheck instances into CIFailureClass categories using
+ * configurable pattern-matching rules. Built-in defaults cover common infra,
+ * flaky, timeout, code_error, test_failure, and build_failure patterns.
+ * Per-project rules configured via workflowSettings.ciClassification are
+ * evaluated before the built-in defaults (project rules take priority).
  *
- * Priority: custom project rules (from workflowSettings.ciClassification) are
- * evaluated BEFORE built-in defaults, allowing per-project overrides.
- *
- * Agent-fixable classes: test_failure, build_failure, lint_failure, type_error
- * Non-agent-fixable classes: infra, flaky, timeout, unknown (skip remediation)
+ * Agent-fixable classes: code_error, test_failure, build_failure, unknown
+ * Non-agent-fixable classes: infra, flaky, timeout
  */
 
-import type { CIClassificationConfig, CIFailureClass, ClassifiedCIFailure } from '@protolabsai/types';
+import { createLogger } from '@protolabsai/utils';
+import type {
+  CIClassificationConfig,
+  CIClassificationRule,
+  ClassifiedCIFailure,
+} from '@protolabsai/types';
+import { CI_FAILURE_CLASS_FIXABLE } from '@protolabsai/types';
 import type { FailedCheck } from './pr-status-checker.js';
 
-// ============================================================================
-// Agent-fixable set — classes where agent dispatch makes sense
-// ============================================================================
-
-const AGENT_FIXABLE_CLASSES = new Set<CIFailureClass>([
-  'test_failure',
-  'build_failure',
-  'lint_failure',
-  'type_error',
-]);
+const logger = createLogger('CIFailureClassifier');
 
 // ============================================================================
 // Built-in default classification rules (ordered — first match wins)
+// A rule matches when ALL specified patterns match (name AND output when both given).
+// When only one pattern is specified, only that field is tested.
 // ============================================================================
 
-interface InternalRule {
-  namePattern?: RegExp;
-  outputPattern?: RegExp;
-  failureClass: CIFailureClass;
-  confidence: number;
-}
-
-const DEFAULT_RULES: InternalRule[] = [
+const DEFAULT_RULES: CIClassificationRule[] = [
   // ── Infrastructure failures (non-agent-fixable) ───────────────────────────
   {
-    namePattern: /runner|infrastructure|setup|provisioning|machine/i,
-    failureClass: 'infra',
-    confidence: 0.85,
+    outputPattern:
+      'runner lost|runner disconnected|the runner has received a shutdown signal|lost communication',
+    class: 'infra',
+    reason: 'Runner was lost or disconnected (infra outage)',
+  },
+  {
+    outputPattern: 'out of memory|oom killer|killed.*memory|memory limit exceeded',
+    class: 'infra',
+    reason: 'Process killed due to OOM (infra constraint)',
   },
   {
     outputPattern:
-      /runner.*lost|lost.*runner|infrastructure.*fail|oom.*kill|out of memory|disk.*space|no space left|process exited with code 137/i,
-    failureClass: 'infra',
-    confidence: 0.9,
+      'docker.*pull.*error|error pulling image|failed to pull.*image|no space left on device',
+    class: 'infra',
+    reason: 'Container/image infrastructure failure',
+  },
+  {
+    outputPattern: 'network.*unreachable|connection refused.*npm|enotfound|econnreset|econnrefused',
+    class: 'infra',
+    reason: 'Network connectivity failure during CI (infra)',
+  },
+  {
+    outputPattern: 'github api.*rate limit|rate limit exceeded|secondary rate limit',
+    class: 'infra',
+    reason: 'GitHub API rate-limit hit during CI (infra)',
   },
 
-  // ── Timeout failures (non-agent-fixable) ────────────────────────────────
+  // ── Timeout failures (non-agent-fixable) ─────────────────────────────────
   {
-    namePattern: /timeout/i,
-    failureClass: 'timeout',
-    confidence: 0.9,
+    outputPattern: 'timed out|timeout exceeded|job.*cancelled.*timeout|step.*exceeded.*minutes',
+    class: 'timeout',
+    reason: 'Step or job exceeded its time limit',
   },
   {
-    outputPattern: /job timed out|exceeded.*timeout|cancelled.*timeout|timed out after/i,
-    failureClass: 'timeout',
-    confidence: 0.9,
-  },
-
-  // ── Flaky test patterns (non-agent-fixable) ────────────────────────────
-  {
-    namePattern: /flaky/i,
-    failureClass: 'flaky',
-    confidence: 0.95,
-  },
-  {
-    outputPattern: /flaky test|intermittent fail|non-deterministic|retry attempt \d+ of \d+.*fail/i,
-    failureClass: 'flaky',
-    confidence: 0.8,
+    namePattern: 'timeout',
+    class: 'timeout',
+    reason: 'Check name indicates a timeout step',
   },
 
-  // ── Lint / formatting failures (agent-fixable) ───────────────────────────
+  // ── Flaky test patterns (non-agent-fixable) ───────────────────────────────
   {
-    namePattern: /lint|format|prettier|eslint|stylelint|biome/i,
-    failureClass: 'lint_failure',
-    confidence: 0.9,
+    outputPattern: 'flaky|intermittent|non-deterministic|known.*flaky|marked.*flaky',
+    class: 'flaky',
+    reason: 'Failure output mentions known flaky test',
   },
+
+  // ── Code errors — type-check / lint (agent-fixable) ──────────────────────
   {
     outputPattern:
-      /eslint.*error|prettier.*error|lint.*fail|format.*fail|biome.*error|formatting.*error/i,
-    failureClass: 'lint_failure',
-    confidence: 0.85,
-  },
-
-  // ── TypeScript / type errors (agent-fixable) ─────────────────────────────
-  {
-    namePattern: /typecheck|type.?check|tsc|typescript/i,
-    failureClass: 'type_error',
-    confidence: 0.9,
+      'typescript error|type error|ts\\(\\d+\\)|error ts\\d+|compilation failed|tsc.*error',
+    class: 'code_error',
+    reason: 'TypeScript / compilation error',
   },
   {
-    outputPattern: /TS\d{4}:|type.*error|typescript.*error|cannot find.*type|property.*does not exist|type.*not assignable/i,
-    failureClass: 'type_error',
-    confidence: 0.85,
-  },
-
-  // ── Build / compile failures (agent-fixable) ─────────────────────────────
-  {
-    namePattern: /build|compile|bundle|webpack|vite|esbuild|tsc.*build/i,
-    failureClass: 'build_failure',
-    confidence: 0.85,
+    outputPattern: 'eslint|prettier|lint.*error|linting.*failed',
+    class: 'code_error',
+    reason: 'Linting or formatting failure',
   },
   {
-    outputPattern:
-      /build.*fail|compile.*error|bundl.*error|module not found|cannot find module|syntax.*error|unexpected token/i,
-    failureClass: 'build_failure',
-    confidence: 0.85,
+    namePattern: '(typecheck|type.check|lint|format)',
+    class: 'code_error',
+    reason: 'Check name indicates type-check or lint step',
   },
 
   // ── Test failures (agent-fixable) ─────────────────────────────────────────
   {
-    namePattern: /test|jest|vitest|mocha|playwright|cypress|e2e|unit|integration/i,
-    failureClass: 'test_failure',
-    confidence: 0.85,
+    outputPattern:
+      'test.*failed|assertion.*failed|expect.*received|\u25CF.*fail|vitest|jest.*fail|mocha.*fail',
+    class: 'test_failure',
+    reason: 'Test assertion or test runner failure',
   },
   {
-    outputPattern:
-      /test.*fail|fail.*test|assertion.*fail|expect.*received|FAIL.*\.test\.|● |✗ |✕ |FAILED/,
-    failureClass: 'test_failure',
-    confidence: 0.8,
+    namePattern: '(test|spec|unit|integration|e2e|cypress|playwright)',
+    class: 'test_failure',
+    reason: 'Check name indicates a test step',
+  },
+
+  // ── Build failures (agent-fixable) ────────────────────────────────────────
+  {
+    outputPattern: 'build.*failed|webpack.*error|rollup.*error|vite.*error|esbuild.*error',
+    class: 'build_failure',
+    reason: 'Build/bundler failure',
+  },
+  {
+    namePattern: '(build|compile|bundle)',
+    class: 'build_failure',
+    reason: 'Check name indicates a build step',
   },
 ];
 
@@ -134,65 +129,54 @@ export class CIFailureClassifierService {
   /**
    * Classify a single failed CI check.
    *
+   * Rules are evaluated in order; the first matching rule wins.
+   * A rule matches when ALL specified patterns match (AND logic).
+   * When only one pattern is specified, only that field is tested.
+   *
    * @param check  - Raw FailedCheck from PRStatusChecker
-   * @param config - Optional per-project classification config (custom rules prepended)
-   * @returns ClassifiedCIFailure with failureClass, agentFixable, and confidence
+   * @param config - Optional per-project ciClassification config
+   * @returns ClassifiedCIFailure with failureClass, isAgentFixable, classificationReason
    */
   classify(check: FailedCheck, config?: CIClassificationConfig): ClassifiedCIFailure {
-    const rules = this.buildRuleSet(config);
+    const projectRules = config?.rules ?? [];
+    const useDefaults = config?.disableDefaultRules !== true;
+    const rules: CIClassificationRule[] = useDefaults
+      ? [...projectRules, ...DEFAULT_RULES]
+      : projectRules;
 
     for (const rule of rules) {
-      const nameMatch = rule.namePattern ? rule.namePattern.test(check.name) : false;
-      const outputMatch = rule.outputPattern ? rule.outputPattern.test(check.output) : false;
+      const nameMatches =
+        rule.namePattern == null || new RegExp(rule.namePattern, 'i').test(check.name);
+      const outputMatches =
+        rule.outputPattern == null || new RegExp(rule.outputPattern, 'i').test(check.output ?? '');
 
-      if (nameMatch || outputMatch) {
-        const failureClass = rule.failureClass;
+      if (nameMatches && outputMatches) {
+        const failureClass = rule.class;
+        logger.debug(`Classified "${check.name}" as "${failureClass}": ${rule.reason}`);
         return {
           ...check,
           failureClass,
-          agentFixable: AGENT_FIXABLE_CLASSES.has(failureClass),
-          confidence: rule.confidence,
+          isAgentFixable: CI_FAILURE_CLASS_FIXABLE[failureClass],
+          classificationReason: rule.reason,
         };
       }
     }
 
-    // No rule matched — unknown, skip remediation conservatively
+    // No rule matched — default to unknown (agent-fixable by fail-safe)
+    logger.debug(`No rule matched "${check.name}", classifying as unknown`);
     return {
       ...check,
       failureClass: 'unknown',
-      agentFixable: false,
-      confidence: 0.5,
+      isAgentFixable: CI_FAILURE_CLASS_FIXABLE['unknown'],
+      classificationReason: 'No classification rule matched; treating as agent-fixable',
     };
   }
 
   /**
    * Classify a batch of failed checks.
    */
-  classifyBatch(checks: FailedCheck[], config?: CIClassificationConfig): ClassifiedCIFailure[] {
+  classifyAll(checks: FailedCheck[], config?: CIClassificationConfig): ClassifiedCIFailure[] {
     return checks.map((check) => this.classify(check, config));
-  }
-
-  /**
-   * Build the effective rule set: custom project rules first, then built-in defaults.
-   */
-  private buildRuleSet(config?: CIClassificationConfig): InternalRule[] {
-    if (!config?.rules?.length) {
-      return DEFAULT_RULES;
-    }
-
-    const customRules: InternalRule[] = config.rules.map((r) => {
-      const matchOn = r.matchOn ?? 'both';
-      const regex = new RegExp(r.pattern, 'i');
-
-      return {
-        namePattern: matchOn === 'output' ? undefined : regex,
-        outputPattern: matchOn === 'name' ? undefined : regex,
-        failureClass: r.failureClass,
-        confidence: r.confidence ?? 0.8,
-      };
-    });
-
-    return [...customRules, ...DEFAULT_RULES];
   }
 }
 

@@ -6,6 +6,7 @@
  */
 
 import type { PhaseModelEntry } from './agent-settings.js';
+import type { CIClassificationConfig } from './ci-failure.js';
 import type { DeviationRule } from './lead-engineer.js';
 import type { PipelineGateConfig } from './pipeline-phase.js';
 import type { RiskLevel } from './policy.js';
@@ -520,7 +521,7 @@ export interface WorkflowSettings {
    * PR remediation pipeline skips agent dispatch for non-fixable failures.
    * When absent, only built-in defaults are used.
    */
-  ciClassification?: import('./ci-failure.js').CIClassificationConfig;
+  ciClassification?: CIClassificationConfig;
   /**
    * Maintenance check configuration.
    * Controls thresholds and behavior for automated board health checks.
