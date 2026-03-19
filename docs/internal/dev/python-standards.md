@@ -4,15 +4,15 @@ The protoLabs velocity stack for Python projects. Applies to agents, scrapers, d
 
 ## The Velocity Stack
 
-| Layer                | Tool                   | Replaces                  |
-| -------------------- | ---------------------- | ------------------------- |
-| Package config       | `pyproject.toml`       | `requirements.txt`        |
-| Linting              | ruff                   | flake8 + isort + pylint   |
-| Formatting           | ruff format            | black                     |
-| Testing              | pytest + pytest-cov    | unittest                  |
-| Type checking        | Pylance (editor only)  | mypy CI gate              |
-| Containerization     | Dockerfile + compose   | —                         |
-| CI/CD                | GitHub Actions         | —                         |
+| Layer            | Tool                  | Replaces                |
+| ---------------- | --------------------- | ----------------------- |
+| Package config   | `pyproject.toml`      | `requirements.txt`      |
+| Linting          | ruff                  | flake8 + isort + pylint |
+| Formatting       | ruff format           | black                   |
+| Testing          | pytest + pytest-cov   | unittest                |
+| Type checking    | Pylance (editor only) | mypy CI gate            |
+| Containerization | Dockerfile + compose  | —                       |
+| CI/CD            | GitHub Actions        | —                       |
 
 ---
 
@@ -174,7 +174,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
       - run: pip install .[dev]
       - run: ruff check src/ tests/
       - run: ruff format --check src/ tests/
@@ -221,13 +221,13 @@ Don't block PRs on type errors until the codebase has consistent type annotation
 
 When setuplab scans a Python project, it looks for:
 
-| Signal                  | Indicates                              |
-| ----------------------- | -------------------------------------- |
-| `.py` files present     | Python project                         |
-| No `package.json`       | Not a Node.js project                  |
-| `requirements.txt`      | Gap: migrate to `pyproject.toml`       |
-| No `pyproject.toml`     | Gap: add PEP 621 config                |
-| `black` or `flake8`     | Gap: consolidate to ruff               |
-| No `Dockerfile`         | Gap: containerize                      |
-| No `pytest` config      | Gap: add pytest + pytest-cov           |
-| No GitHub Actions       | Gap: add CI workflow                   |
+| Signal              | Indicates                        |
+| ------------------- | -------------------------------- |
+| `.py` files present | Python project                   |
+| No `package.json`   | Not a Node.js project            |
+| `requirements.txt`  | Gap: migrate to `pyproject.toml` |
+| No `pyproject.toml` | Gap: add PEP 621 config          |
+| `black` or `flake8` | Gap: consolidate to ruff         |
+| No `Dockerfile`     | Gap: containerize                |
+| No `pytest` config  | Gap: add pytest + pytest-cov     |
+| No GitHub Actions   | Gap: add CI workflow             |
