@@ -1,10 +1,8 @@
 /**
  * Ava Cron Tasks — deterministic recurring heartbeats registered in the SchedulerService.
  *
- * Three built-in tasks:
- * 1. ava-staging-ping      (every 30 min)   — capacity heartbeat (board counts, uptime, auto-mode)
- * 2. ava-daily-board-health (09:00 daily)    — board summary, blocked/stale features
- * 3. ava-pr-triage          (every 4 hours)  — open PRs, stale PRs
+ * Built-in tasks:
+ * 1. ava-staging-ping (every 30 min) — capacity heartbeat (board counts, uptime, auto-mode)
  *
  * All tasks are deterministic — no LLM calls. Data is queried from services
  * and formatted as Discord embeds. If Discord is unavailable, output goes to
@@ -520,39 +518,10 @@ export async function registerAvaCronTasks(deps: AvaCronTaskDeps): Promise<void>
     true
   );
 
-  // 2. Daily board health check at 09:00
-  await schedulerService.registerTask(
-    'ava-daily-board-health',
-    'Ava Daily Board Health',
-    '0 9 * * *',
-    async () => {
-      logger.info('[AvaCronTasks] Running ava-daily-board-health');
-      try {
-        await handleDailyBoardHealth(deps);
-      } catch (err) {
-        logger.error('[AvaCronTasks] ava-daily-board-health failed', err);
-      }
-    },
-    true
-  );
+  // ava-daily-board-health removed — dashboard shows this live
+  // ava-pr-triage removed — Lead Engineer handles PR lifecycle
 
-  // 3. PR triage every 4 hours
-  await schedulerService.registerTask(
-    'ava-pr-triage',
-    'Ava PR Triage',
-    '0 */4 * * *',
-    async () => {
-      logger.info('[AvaCronTasks] Running ava-pr-triage');
-      try {
-        await handlePrTriage(deps);
-      } catch (err) {
-        logger.error('[AvaCronTasks] ava-pr-triage failed', err);
-      }
-    },
-    true
-  );
-
-  logger.info('[AvaCronTasks] Registered 3 deterministic cron tasks (no LLM)');
+  logger.info('[AvaCronTasks] Registered 1 deterministic cron task (staging-ping)');
 
   // Load workflow settings once for the remaining opt-in tasks
   const workflowSettings = await getWorkflowSettings(deps.projectPath, deps.settingsService);

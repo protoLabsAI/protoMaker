@@ -25,7 +25,6 @@ export function register(container: ServiceContainer): void {
     healthMonitorService,
     specGenerationMonitor,
     leadEngineerService,
-    prFeedbackService,
     archivalService,
   } = container;
 
@@ -38,7 +37,6 @@ export function register(container: ServiceContainer): void {
   if (prWatcher) {
     prWatcher.setSchedulerService(schedulerService);
   }
-  prFeedbackService.setSchedulerService(schedulerService);
   archivalService.setSchedulerService(schedulerService);
 
   // Scheduler Service initialization and task registration via AutomationService
@@ -54,16 +52,6 @@ export function register(container: ServiceContainer): void {
         featureLoader,
         settingsService,
       });
-
-      // Initialize and register daily standup cron (every 15 minutes)
-      container.dailyStandupService.initialize(
-        settingsService,
-        featureLoader,
-        container.discordBotService,
-        schedulerService,
-        dataDir
-      );
-      await container.dailyStandupService.registerCronTask();
 
       // Apply taskOverrides from global settings after all tasks are registered
       await schedulerService.applySettingsOverrides();

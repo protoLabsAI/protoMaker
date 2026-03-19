@@ -553,18 +553,11 @@ export class AutomationService {
       },
       {
         id: 'maintenance:stale-worktrees',
-        name: 'Stale Worktree Auto-Cleanup',
-        description: 'Auto-removes worktrees for merged branches with safety checks.',
+        name: 'Stale Worktree & Branch Cleanup',
+        description:
+          'Auto-removes worktrees for merged branches and cleans up merged local branches.',
         trigger: { type: 'cron' as const, expression: '0 3 * * *' },
         flowId: 'built-in:stale-worktrees',
-        enabled: true,
-      },
-      {
-        id: 'maintenance:branch-cleanup',
-        name: 'Merged Branch Auto-Cleanup',
-        description: 'Auto-deletes local branches already merged to main.',
-        trigger: { type: 'cron' as const, expression: '0 4 * * 0' },
-        flowId: 'built-in:branch-cleanup',
         enabled: true,
       },
     ];
@@ -584,24 +577,7 @@ export class AutomationService {
       });
     }
 
-    if (deps.featureLoader && deps.settingsService) {
-      await this.upsertBuiltIn({
-        id: 'maintenance:auto-merge-prs',
-        name: 'Auto-Merge Eligible PRs',
-        description: 'Automatically merges PRs that pass all eligibility checks.',
-        trigger: { type: 'cron', expression: '*/5 * * * *' },
-        flowId: 'built-in:auto-merge-prs',
-        enabled: true,
-      });
-      await this.upsertBuiltIn({
-        id: 'maintenance:auto-rebase-stale-prs',
-        name: 'Auto-Rebase Stale PRs',
-        description: 'Rebases PRs that are behind their base branch.',
-        trigger: { type: 'cron', expression: '*/30 * * * *' },
-        flowId: 'built-in:auto-rebase-stale-prs',
-        enabled: true,
-      });
-    }
+    // auto-merge-prs and auto-rebase-stale-prs removed — Lead Engineer handles these
 
     if (process.env.GITHUB_TOKEN && process.env.GITHUB_REPO_OWNER && process.env.GITHUB_REPO_NAME) {
       await this.upsertBuiltIn({
