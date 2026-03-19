@@ -1,5 +1,12 @@
 # @protolabsai/types
 
+## 0.79.5
+
+### Patch Changes
+
+- ### Bug Fixes
+  - skip project wizard for ongoing projects (#2965)
+
 ## 0.79.4
 
 ### Patch Changes
