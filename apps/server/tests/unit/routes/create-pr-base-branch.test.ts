@@ -45,9 +45,9 @@ vi.mock('@protolabsai/utils', async () => {
 // Helper to build a minimal SettingsService mock
 function makeSettingsService(prBaseBranch?: string): SettingsService {
   return {
-    getProjectSettings: vi.fn().mockResolvedValue(
-      prBaseBranch ? { workflow: { gitWorkflow: { prBaseBranch } } } : {}
-    ),
+    getProjectSettings: vi
+      .fn()
+      .mockResolvedValue(prBaseBranch ? { workflow: { gitWorkflow: { prBaseBranch } } } : {}),
     getGlobalSettings: vi.fn().mockResolvedValue({}),
     getInstanceId: vi.fn().mockResolvedValue('test-instance'),
   } as unknown as SettingsService;
