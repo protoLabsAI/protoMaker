@@ -134,7 +134,6 @@ All tools are defined as static schemas in separate module files under `packages
 | File Operations    | `file-ops-tools.ts`      | Copy, move, browse files                       |
 | Project Lifecycle  | `project-tools.ts`       | Projects, PRD, milestones, phases              |
 | Promotion          | `promotion-tools.ts`     | Staging/main promotion pipeline                |
-| Calendar           | `calendar-tools.ts`      | Calendar events CRUD                           |
 | Content            | `content-tools.ts`       | Content pipeline (blog, docs)                  |
 | Integrations       | `integration-tools.ts`   | Discord, HITL forms                            |
 | Lead Engineer      | `lead-engineer-tools.ts` | Lead engineer state machine control            |
@@ -322,7 +321,7 @@ temporary-reason: '...'
 
 ### Current Commands (17)
 
-`/auto-mode`, `/ava`, `/board`, `/calendar-assistant`, `/context`, `/deep-research`, `/due-diligence`, `/headsdown`, `/improve-prompts`, `/orchestrate`, `/plan-project`, `/promote`, `/setuplab`, `/ship`, `/sparc-prd`, `/update-plugin`, `/welcome`
+`/auto-mode`, `/ava`, `/board`, `/context`, `/deep-research`, `/due-diligence`, `/headsdown`, `/improve-prompts`, `/orchestrate`, `/plan-project`, `/promote`, `/setuplab`, `/ship`, `/sparc-prd`, `/update-plugin`, `/welcome`
 
 ## Session Lifecycle
 

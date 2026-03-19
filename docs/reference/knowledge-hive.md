@@ -221,7 +221,7 @@ Generates semantic embeddings using `@xenova/transformers` with the `all-MiniLM-
 
 **Why Xenova/transformers?**
 
-- Pure JavaScript, no native bindings (works in Electron + Docker)
+- Pure JavaScript, no native bindings (works in Docker + Node.js)
 - Model caches to disk, no network dependency after first load
 - Fast inference on CPU (~50ms per embedding)
 - 384-dimensional embeddings are small enough for SQLite BLOB storage
@@ -514,28 +514,13 @@ interface KnowledgeStoreSettings {
 
 ## Deployment Considerations
 
-### Electron Desktop App
-
-**Pros:**
+### Server-Side (Node.js / Docker)
 
 - SQLite works natively
-- `@xenova/transformers` runs in main process
-- Model cache persists in user data directory
-
-**Cons:**
-
+- `@xenova/transformers` runs in the server process
+- Model cache persists in the data directory
 - First-time model download requires ~90MB (cached afterward)
 - CPU-only inference (~50ms per embedding)
-
-### PWA / Web Browser
-
-**Not currently supported.** Browser limitations:
-
-- SQLite requires WASM build (not implemented)
-- `@xenova/transformers` works in Web Workers, but model download is ~90MB per session (no persistent cache)
-- IndexedDB could replace SQLite, but FTS5 doesn't exist in browser
-
-**Future Work:** Consider a server-side knowledge store for PWA deployments.
 
 ## Performance Characteristics
 

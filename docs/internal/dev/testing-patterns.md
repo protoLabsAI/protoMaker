@@ -118,7 +118,6 @@ agent-browser close                      # Free resources
 - Always close the browser session when done (`agent-browser close`)
 - Don't commit screenshots — use them for verification only, then clean up
 - Use `--json` flag when parsing snapshot output programmatically
-- For Electron testing, connect via CDP: `agent-browser --cdp 9222 open http://localhost:3007`
 
 ## Integration Testing
 

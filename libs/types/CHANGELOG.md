@@ -1,5 +1,27 @@
 # @protolabsai/types
 
+## 0.79.4
+
+### Patch Changes
+
+- ### Bug Fixes
+  - delete dead automation handlers and fix test assertion (#2957)
+  - deduplicate changeset entries and fix Docker version path (#2955)
+
+  ### Refactors
+  - trim 7 automation loops superseded by Lead Engineer (#2956)
+
+## 0.79.3
+
+### Patch Changes
+
+- ### Bug Fixes
+  - delete dead automation handlers and fix test assertion (#2957)
+  - deduplicate changeset entries and fix Docker version path (#2955)
+
+  ### Refactors
+  - trim 7 automation loops superseded by Lead Engineer (#2956)
+
 ## 0.79.2
 
 ### Patch Changes

@@ -218,17 +218,6 @@ When `createEpics: true`, each milestone becomes an epic feature. Phase 1 of eac
 | `list_actionable_items`  | List actionable items from the system   |
 | `act_on_actionable_item` | Execute an action on an actionable item |
 
-## Calendar (4 tools)
-
-Manages calendar events across custom, feature, milestone, and Google sources. The calendar assistant agent (`/calendar-assistant`) has exclusive write access.
-
-| Tool                    | Description                 | Required Params                       | Optional Params                                           |
-| ----------------------- | --------------------------- | ------------------------------------- | --------------------------------------------------------- |
-| `list_calendar_events`  | List calendar events        | `projectPath`, `startDate`, `endDate` | `types` (array)                                           |
-| `create_calendar_event` | Create a new calendar event | `projectPath`, `title`, `date`        | `endDate`, `type`, `description`, `color`, `url`          |
-| `update_calendar_event` | Update an existing event    | `projectPath`, `id`                   | `title`, `date`, `endDate`, `description`, `color`, `url` |
-| `delete_calendar_event` | Delete a calendar event     | `projectPath`, `id`                   | --                                                        |
-
 ## Quarantine & Trust (5 tools)
 
 | Tool                       | Description                         |

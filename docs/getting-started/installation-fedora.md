@@ -110,7 +110,7 @@ For development (source builds only):
 - Node.js 22+
 - npm 10+
 
-The packaged application includes its own Electron runtime and does not require system Node.js.
+Building from source requires system Node.js.
 
 ## Supported Distributions
 
@@ -361,11 +361,11 @@ npm install
 # Build packages
 npm run build:packages
 
-# Build Linux packages
-npm run build:electron:linux
+# Build web application
+npm run build
 
-# Packages in: apps/ui/release/
-ls apps/ui/release/*.rpm
+# Start the server
+npm run dev:full
 ```
 
 See the [installation guide](./installation.md#building) for detailed build instructions.
@@ -430,7 +430,7 @@ sudo journalctl -xeu automaker.service (if systemd service exists)
 2. **Close unnecessary applications**: Free up RAM for AI agent processing
 3. **Disable GPU acceleration if glitchy**: Set `DISABLE_GPU_ACCELERATION=1`
 4. **Keep system updated**: `sudo dnf update`
-5. **Use latest Fedora/RHEL**: Newer versions have better Electron support
+5. **Use latest Fedora/RHEL**: Newer versions have better Node.js and browser support
 
 ## Security Considerations
 

@@ -50,7 +50,7 @@ export async function wireServices(services: ServiceContainer): Promise<void> {
   registerProjectHealth(services);
   registerTrajectoryQuery(services);
 
-  // Start built-in sensors (websocket-clients + electron-idle) after all wiring is complete.
+  // Start built-in sensors (websocket-clients) after all wiring is complete.
   // This ensures the sensor registry is fully initialised before polling begins.
   services.sensorRegistryService.startBuiltinSensors();
 }

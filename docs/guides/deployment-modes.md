@@ -1,62 +1,31 @@
 # Deployment Modes
 
-protoLabs Studio supports three deployment modes depending on your use case.
+protoLabs Studio supports two deployment modes depending on your use case.
 
 ---
 
-## Mode 1: Standard Electron (Bundled Server)
+## Mode 1: Web Application (Development)
 
-The default desktop build. Bundles the backend server inside the Electron app and launches it automatically on startup.
+The default mode. Runs the UI and server locally with hot reload via Vite.
 
-**Build:**
-
-```bash
-npm run build:electron
-```
-
-**Run:** Double-click the produced `.dmg` / `.exe` / `.AppImage`.
-
-**Characteristics:**
-
-- Self-contained — no external server required.
-- Server starts on a dynamically selected port (default 3008).
-- API key is generated automatically for CSRF protection.
-- Suitable for individual developers and standard desktop installs.
-
----
-
-## Mode 2: Legless Electron (External Server — Shows Picker)
-
-A slimmed-down Electron build that ships **without** the embedded server. On first launch it prompts the user to connect to a running Automaker server instance.
-
-**Build:**
+**Start:**
 
 ```bash
-npm run build:electron:legless
+npm run dev:full    # Starts UI (:3007) AND server (:3008) together
 ```
 
 **Characteristics:**
 
-- `SKIP_EMBEDDED_SERVER=true` is baked in at build time.
-- The `prepare-server.mjs` bundling step is skipped entirely (faster builds, smaller app).
-- No `server-bundle` `extraResources` are included in the installer.
-- On launch, a native dialog asks the user to confirm the server URL.
-  - Default: `http://localhost:3008`
-  - Override via `AUTOMAKER_SERVER_URL` environment variable before launching.
-- Uses session-based authentication (same as web mode) — no embedded API key.
-- Suitable for teams running a shared/remote Automaker server (VPS, LAN, Docker).
-
-**Connect to a custom server:**
-
-```bash
-AUTOMAKER_SERVER_URL=http://192.168.1.50:3008 open protoLabs\ Studio.app
-```
+- UI served at `http://localhost:3007` with Vite HMR.
+- Server at `http://localhost:3008` with file watching.
+- PWA support — installable from the browser.
+- Suitable for individual developers and local development.
 
 ---
 
-## Mode 3: Headless Server (No UI)
+## Mode 2: Headless Server (No UI)
 
-Run the Automaker backend server in production mode with auto-mode enabled and no Electron UI. Ideal for CI runners, servers, or agent-only workloads.
+Run the Automaker backend server in production mode with auto-mode enabled and no browser UI. Ideal for CI runners, servers, or agent-only workloads.
 
 **Start:**
 
@@ -72,8 +41,8 @@ npm --workspace=apps/server run start:headless
 
 - `NODE_ENV=production` — production logging and behaviour.
 - `AUTO_MODE=true` — agents start and operate without manual intervention.
-- No Electron, no browser window, no UI dependencies.
-- Exposes the same HTTP/WebSocket API as the bundled Electron server.
+- No browser window, no UI dependencies.
+- Exposes the same HTTP/WebSocket API as the web application.
 - Suitable for 24/7 agent servers, staging environments, and headless CI builds.
 
 **Prerequisites:** Build the server first.

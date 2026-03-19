@@ -378,7 +378,7 @@ See `libs/ui/README.md` for complete documentation.
 
 ### Not adopted
 
-- **Server Components:** protoLabs is a Vite SPA (+ Electron), not Next.js. All components are client components. If/when we build Next.js apps (template repos, setupLab), Server Components become relevant there.
+- **Server Components:** protoLabs is a Vite SPA (+ PWA), not Next.js. All components are client components. If/when we build Next.js apps (template repos, setupLab), Server Components become relevant there.
 
 ## Accessibility
 
@@ -427,7 +427,6 @@ Lucide React is the standard icon library. It provides tree-shakeable, consisten
 | Tailwind CSS | 4       | Utility-first CSS               |
 | TypeScript   | 5.9     | Type safety                     |
 | React        | 19      | UI framework                    |
-| Electron     | 39      | Desktop app shell               |
 | LightningCSS | 1.29    | CSS minification and transforms |
 
 ### Build pipeline
@@ -435,7 +434,6 @@ Lucide React is the standard icon library. It provides tree-shakeable, consisten
 ```
 npm run build:packages   →  Build shared libs (@protolabsai/types, etc.)
 npm run build            →  Vite builds apps/ui/ for web
-npm run build:electron   →  Vite build + electron-builder for desktop
 ```
 
 **Rule:** Always run `build:packages` before building the UI if any shared package changed. Stale `dist/` in shared packages causes type errors and runtime failures.

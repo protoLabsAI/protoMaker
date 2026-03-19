@@ -41,9 +41,8 @@ _Desktop releases coming soon. Run from source to try now._
 git clone https://github.com/protoLabsAI/protoMaker.git
 cd protoMaker
 npm install
-npm run dev                 # Interactive launcher (choose web or electron)
+npm run dev                 # Interactive launcher (choose web or docker)
 npm run dev:full            # Web mode — starts UI (localhost:3007) AND server (localhost:3008)
-npm run dev:electron        # Desktop app mode (bundles server automatically)
 ```
 
 Requires **Node.js 22+** and an [Anthropic API key](https://console.anthropic.com/).
@@ -121,7 +120,7 @@ TypeScript monorepo with a React frontend, Express backend, and 15 shared packag
 ```
 protolabs-studio/
 ├── apps/
-│   ├── ui/              # React + Vite + Electron (port 3007)
+│   ├── ui/              # React + Vite + PWA (port 3007)
 │   └── server/          # Express + WebSocket backend (port 3008)
 ├── libs/                # 15 shared packages (@protolabsai/*)
 │   ├── types/           # Core TypeScript definitions
@@ -137,7 +136,7 @@ protolabs-studio/
 └── site/                # Landing page (protolabs.studio)
 ```
 
-**Key Stack**: React 19, Vite 7, Electron 39, Express 5, Claude Agent SDK, TanStack Router, Zustand 5, Tailwind CSS 4, Langfuse, Playwright, Vitest
+**Key Stack**: React 19, Vite 7, Express 5, Claude Agent SDK, TanStack Router, Zustand 5, Tailwind CSS 4, Langfuse, Playwright, Vitest
 
 ## Documentation
 

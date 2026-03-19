@@ -95,15 +95,11 @@ The full release flow is automated via `auto-release.yml`, triggered automatical
 staging → main PR merged
     ↓
 auto-release.yml
-    ├── verify GH_PAT is set (warning if absent — Electron build chain won't fire)
     ├── clean stale changesets
     ├── npm run release:prepare  (analyze commits since last tag → minor/patch/major)
     ├── npm run changeset:version  (bump all @protolabsai/* in lockstep, write CHANGELOG)
     ├── git commit "chore: release vX.Y.Z" → pushed to main
-    ├── git tag vX.Y.Z → pushed via GH_PAT (triggers build-electron.yml)
-    │               ↓
-    │       build-electron.yml (macOS + Linux + Windows Electron builds)
-    │       → artifacts uploaded to GitHub Release
+    ├── git tag vX.Y.Z → pushed via GH_PAT
     └── sync version bump back: main → staging (auto-merge PR) + main → dev (auto-merge PR)
 ```
 
@@ -144,7 +140,7 @@ npm run changeset:publish
 
 ### Prerequisites
 
-- `GH_PAT` secret must be set in GitHub repo settings — required for `auto-release.yml` to push tags that trigger `build-electron.yml` (falls back to `GITHUB_TOKEN` but won't fire Electron builds). `auto-release.yml` validates this at startup and emits a warning if absent so the gap is visible in the Actions log.
+- `GH_PAT` secret must be set in GitHub repo settings — required for `auto-release.yml` to push tags (falls back to `GITHUB_TOKEN`). `auto-release.yml` validates this at startup and emits a warning if absent so the gap is visible in the Actions log.
 - A baseline git tag (e.g., `v0.2.0`) must exist for `release:prepare` to analyze commits
 
 ## Roadmap

@@ -89,7 +89,7 @@ CREATE TABLE embeddings (
 
 ### Why
 
-**SQLite FTS5 is "good enough" for BM25.** We don't need Elasticsearch for a single-user desktop app. FTS5 provides:
+**SQLite FTS5 is "good enough" for BM25.** We don't need Elasticsearch for a single-user app. FTS5 provides:
 
 - Fast full-text search (BM25 ranking built-in)
 - Zero external dependencies
@@ -143,7 +143,6 @@ CREATE TABLE embeddings (
 **Portability.** `@xenova/transformers` is pure JavaScript with no native bindings. It works in:
 
 - Node.js (server)
-- Electron (desktop app)
 - Docker containers (Linux, macOS, Windows)
 - Web Workers (future PWA support)
 
@@ -178,7 +177,6 @@ CREATE TABLE embeddings (
 
 - Require platform-specific builds (x64, ARM, macOS, Windows)
 - Deployment complexity (need to bundle native libraries)
-- Electron packaging issues (need to rebuild native modules for Electron)
 - `@xenova/transformers` is pure JS, works everywhere
 
 ## 4. Retrieval Algorithm
@@ -317,7 +315,7 @@ CREATE TABLE embeddings (
 | Milvus   | Heavy (Java/Go), distributed system, not embeddable         |
 | Chroma   | Better than others, but still requires external service     |
 
-**Core Philosophy:** protoLabs Studio is a **local-first** desktop app. Adding external dependencies (cloud services, Docker containers) breaks the "install and run" experience.
+**Core Philosophy:** protoLabs Studio is a **local-first** app. Adding external dependencies (cloud services, Docker containers) breaks the "install and run" experience.
 
 **SQLite is sufficient.** For corpora under 100k chunks:
 

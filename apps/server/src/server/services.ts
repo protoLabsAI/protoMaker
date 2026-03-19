@@ -114,7 +114,6 @@ import { WorkIntakeService } from '../services/work-intake-service.js';
 import { TodoService } from '../services/todo-service.js';
 import { CommandRegistryService } from '../services/command-registry-service.js';
 import { CheckpointService } from '../services/checkpoint-service.js';
-import { DailyStandupService } from '../services/daily-standup-service.js';
 import { ProjectSlugResolver } from '../services/project-slug-resolver.js';
 import { DeviationRuleService } from '../services/deviation-rule-service.js';
 
@@ -227,7 +226,6 @@ export interface ServiceContainer {
   // Ceremonies
   ceremonyAuditLog: CeremonyAuditLogService;
   ceremonyService: CeremonyService;
-  dailyStandupService: DailyStandupService;
 
   // Lead Engineer
   leadEngineerService: LeadEngineerService;
@@ -804,9 +802,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   );
   ceremonyService.setAuditLog(ceremonyAuditLog);
 
-  // Daily Standup Service — board-wide daily standup automation
-  const dailyStandupService = new DailyStandupService();
-
   // Initialize Completion Detector Service
   await completionDetectorService.initialize(
     events,
@@ -881,7 +876,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     projectAssignmentService,
     ceremonyAuditLog,
     ceremonyService,
-    dailyStandupService,
     leadEngineerService,
     pipelineCheckpointService,
     factStoreService,

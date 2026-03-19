@@ -356,16 +356,15 @@ PR base branch resolution: feature in epic -> epic branch; epic itself -> dev; s
 
 Eight scheduled tasks run alongside the main loop.
 
-| Task                         | Cron           | Interval        | What It Does                                                              |
-| ---------------------------- | -------------- | --------------- | ------------------------------------------------------------------------- |
-| Stale Feature Detection      | `0 * * * *`    | Hourly          | Find agents running >2h, emit alert                                       |
-| Stale Worktree Cleanup       | `0 3 * * *`    | Daily 3 AM UTC  | Remove worktrees for merged branches (safety checks: clean, not current)  |
-| Merged Branch Cleanup        | `0 4 * * 0`    | Weekly Mon 4 AM | Delete local branches merged to main                                      |
-| Data Integrity Check         | `*/5 * * * *`  | Every 5 min     | Monitor feature dir count, CRITICAL alert on >50% drop                    |
-| Board Health Reconciliation  | `0 */6 * * *`  | Every 6 hours   | Auto-fix: orphaned epics, dangling deps, stale running, stale gates       |
-| Auto-Merge Eligible PRs      | `*/5 * * * *`  | Every 5 min     | Poll features in `review`, merge if all checks pass                       |
-| Auto-Rebase Stale PRs        | `*/30 * * * *` | Every 30 min    | Rebase PRs behind base, auto-resolve `.automaker-lock` conflicts          |
-| GitHub Actions Runner Health | `*/5 * * * *`  | Every 5 min     | Detect stuck builds >10min, cancel + retrigger; alert on >50% utilization |
+| Task                         | Cron          | Interval        | What It Does                                                              |
+| ---------------------------- | ------------- | --------------- | ------------------------------------------------------------------------- |
+| Stale Feature Detection      | `0 * * * *`   | Hourly          | Find agents running >2h, emit alert                                       |
+| Stale Worktree Cleanup       | `0 3 * * *`   | Daily 3 AM UTC  | Remove worktrees for merged branches (safety checks: clean, not current)  |
+| Merged Branch Cleanup        | `0 4 * * 0`   | Weekly Mon 4 AM | Delete local branches merged to main                                      |
+| Data Integrity Check         | `*/5 * * * *` | Every 5 min     | Monitor feature dir count, CRITICAL alert on >50% drop                    |
+| Board Health Reconciliation  | `0 */6 * * *` | Every 6 hours   | Auto-fix: orphaned epics, dangling deps, stale running, stale gates       |
+| Auto-Merge Eligible PRs      | `*/5 * * * *` | Every 5 min     | Poll features in `review`, merge if all checks pass                       |
+| GitHub Actions Runner Health | `*/5 * * * *` | Every 5 min     | Detect stuck builds >10min, cancel + retrigger; alert on >50% utilization |
 
 ### Ava Cron Tasks
 
@@ -579,7 +578,7 @@ Non-cron periodic tasks running in the server process.
 | Feature & Project         | 6     | FeatureLoader, ProjectService, ProjectLifecycleService, ProjectAssignmentService, ProjectSlugResolver, ProjectPMService               |
 | Agent Execution           | 4     | AgentService, AutoModeService, LeadEngineerService, WorkIntakeService                                                                 |
 | Knowledge & Metrics       | 6     | KnowledgeStoreService, MetricsService, DoraMetricsService, ErrorBudgetService, LedgerService, ArchivalService                         |
-| Scheduling & Automation   | 4     | SchedulerService, AutomationService, JobExecutorService, DailyStandupService                                                          |
+| Scheduling & Automation   | 3     | SchedulerService, AutomationService, JobExecutorService                                                                               |
 | Multi-Instance (Hivemind) | 3     | PeerMeshService, AvaChannelService, AvaChannelReactorService                                                                          |
 | Discord                   | 4     | DiscordService, DiscordBotService, AgentDiscordRouter, NotificationRouter                                                             |
 | Authority & Governance    | 6     | AuthorityService, PM/GTM/EM/ProjM Agents, AuditService                                                                                |
@@ -615,7 +614,7 @@ Services are wired in strict order via 15 register modules in `server/wiring.ts`
 ### Startup Sequence
 
 ```
-1. Settings migration (legacy Electron paths)
+1. Settings migration
 2. Runtime state migration (.automaker/ -> DATA_DIR)
 3. PeerMeshService.start()
 4. ProjectAssignmentService.claimPreferredProjects()

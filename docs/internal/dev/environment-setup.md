@@ -339,8 +339,6 @@ npm run dev
 # Or start web directly
 npm run dev:web
 
-# Or start Electron
-npm run dev:electron
 ```
 
 ### 5. Verify Setup

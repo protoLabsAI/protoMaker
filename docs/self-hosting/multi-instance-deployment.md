@@ -37,7 +37,7 @@ The mesh synchronizes feature and project events via `PeerMeshService`:
 | Settings       | `CrdtSettingsEvent` (primary→workers) | Shared workflow settings (no credentials)        |
 | Peer capacity  | Heartbeat `PeerMessage`               | Per-instance capacity metrics                    |
 
-Features are **instance-local** and never pushed across the mesh. Each instance creates features locally from claimed project phases. Notes, calendar, and todos are disk-based per-instance with no cross-instance replication.
+Features are **instance-local** and never pushed across the mesh. Each instance creates features locally from claimed project phases. Notes and todos are disk-based per-instance with no cross-instance replication.
 
 ### Event types bridged across the mesh
 

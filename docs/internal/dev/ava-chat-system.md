@@ -127,7 +127,6 @@ interface AvaConfig {
     briefing: boolean; // get_briefing tool
     avaChannel: boolean; // Ava Channel read/write tools
     discord: boolean; // Discord message tools
-    calendar: boolean; // calendar event tools
     health: boolean; // health status tools
     settings: boolean; // settings read/write tools
   };
@@ -201,7 +200,6 @@ Stored at `{projectPath}/.automaker/ava-config.json`. See the [AvaConfig Referen
 | briefing      | `get_briefing`                                                         | (JSON fallback)                                            |
 | avaChannel    | Ava Channel read/write tools                                           | (JSON fallback)                                            |
 | discord       | Discord message tools                                                  | (JSON fallback)                                            |
-| calendar      | calendar event tools                                                   | (JSON fallback)                                            |
 | health        | health status tools                                                    | (JSON fallback)                                            |
 | settings      | settings read/write tools                                              | (JSON fallback)                                            |
 
@@ -457,7 +455,7 @@ apps/ui/src/components/layout/
   sidebar/hooks/use-navigation.ts   # Desktop sidebar Chat nav item
 
 apps/ui/src/components/views/chat-overlay/
-  chat-overlay-view.tsx             # Top-level overlay (Electron bridge)
+  chat-overlay-view.tsx             # Chat overlay view
   chat-overlay-content.tsx          # Shared content (messages + input)
   conversation-list.tsx             # Session history sidebar
   ava-settings-panel.tsx            # Config popover

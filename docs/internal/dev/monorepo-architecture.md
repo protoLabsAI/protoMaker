@@ -7,7 +7,7 @@ protoLabs Studio is built as an npm workspace monorepo, providing a modular and 
 ```
 automaker/
 ├── apps/
-│   ├── ui/           # React + Vite + Electron frontend (port 3007)
+│   ├── ui/           # React + Vite frontend (port 3007)
 │   └── server/       # Express + WebSocket backend (port 3008)
 ├── site/             # Landing page (protolabs.studio) — static HTML on Cloudflare Pages
 └── libs/             # Shared packages (@protolabsai/*)
@@ -18,7 +18,6 @@ automaker/
     ├── model-resolver/    # Claude model alias resolution
     ├── dependency-resolver/  # Feature dependency ordering
     ├── spec-parser/       # XML/markdown spec parsing for project plans
-    ├── pen-parser/        # PEN file parser for Penpot design files
     ├── git-utils/    # Git operations & worktree management
     ├── tools/        # Unified tool definition and registry system
     ├── flows/        # LangGraph state graph primitives & flow orchestration
@@ -35,7 +34,7 @@ Packages follow a strict layered dependency hierarchy. Lower-level packages cann
     ↓
 @protolabsai/utils, @protolabsai/prompts, @protolabsai/platform,
 @protolabsai/model-resolver, @protolabsai/dependency-resolver,
-@protolabsai/spec-parser, @protolabsai/pen-parser, @protolabsai/tools,
+@protolabsai/spec-parser, @protolabsai/tools,
 @protolabsai/flows, @protolabsai/observability
     ↓
 @protolabsai/git-utils, @protolabsai/ui
@@ -248,7 +247,6 @@ npm run build:packages
 # 2. Then build applications
 npm run build:server
 npm run build           # Builds UI
-npm run build:electron  # Builds desktop app
 ```
 
 The `build:packages` script runs:
@@ -266,9 +264,6 @@ During development, you typically don't need to rebuild packages constantly:
 ```bash
 # Start dev server (auto-imports TypeScript from libs/)
 npm run dev:web
-
-# Or start Electron in dev mode
-npm run dev:electron
 ```
 
 **When to rebuild packages:**
