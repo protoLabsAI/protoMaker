@@ -374,7 +374,7 @@ export class PRStatusChecker {
         });
       }
 
-      return ciFailureClassifier.classifyBatch(failedChecks, ciClassificationConfig);
+      return ciFailureClassifier.classifyAll(failedChecks, ciClassificationConfig);
     } catch (error) {
       logger.debug(`Failed to fetch failed checks for ${headSha}: ${error}`);
       return [];

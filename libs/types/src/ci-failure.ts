@@ -1,101 +1,113 @@
 /**
- * CI Failure Classification — taxonomy, types, and configuration for CI failure triage.
+ * CI Failure Classification types
  *
- * CIFailureClass provides a structured taxonomy of CI failure types. Each class maps to
- * an agentFixable flag that determines whether the PR remediation pipeline should dispatch
- * an agent to fix the failure, or skip remediation (for infra/flaky failures).
+ * Taxonomy for classifying CI check failures by root cause category,
+ * enabling the system to distinguish agent-fixable failures (code bugs,
+ * test failures) from non-fixable ones (infra outages, flaky tests).
  */
 
 // ============================================================================
-// CIFailureClass Taxonomy
+// CIFailureClass — Root cause taxonomy
 // ============================================================================
 
 /**
- * CIFailureClass — classified type of a CI check failure.
+ * CIFailureClass — Root cause category of a CI check failure.
  *
- * Agent-fixable classes (agent can remediate):
- *   - test_failure    : Unit/integration tests failed — fix code or tests
- *   - build_failure   : Compilation or bundler error — fix build errors
- *   - lint_failure    : Linting / formatting violations — fix style issues
- *   - type_error      : TypeScript type-checking errors — fix type errors
+ * Determines whether the failure is agent-fixable and what remediation
+ * strategy (if any) should be applied.
  *
- * Non-agent-fixable classes (skip remediation):
- *   - flaky           : Known flaky test — transient, skip and retry externally
- *   - infra           : CI infrastructure issue (runner crash, OOM, network) — not code-related
- *   - timeout         : CI job timed out — likely infra, not agent-fixable
- *   - unknown         : Could not be classified — conservative default: skip remediation
+ * - code_error: Compilation failure, type error, linting violation — agent-fixable
+ * - test_failure: Unit/integration test assertion failed — agent-fixable
+ * - build_failure: Build step failed (bundling, packaging) — agent-fixable
+ * - infra: Runner outage, OOM kill, container crash, network timeout — skip remediation
+ * - flaky: Known-intermittent failure; not caused by PR changes — skip remediation
+ * - timeout: Step exceeded its time limit — skip remediation (infra concern)
+ * - unknown: Classification could not be determined — attempt remediation
  */
 export type CIFailureClass =
+  | 'code_error'
   | 'test_failure'
   | 'build_failure'
-  | 'lint_failure'
-  | 'type_error'
-  | 'flaky'
   | 'infra'
+  | 'flaky'
   | 'timeout'
   | 'unknown';
 
+/**
+ * Whether the given class is agent-fixable.
+ * Infra, flaky, and timeout failures should skip remediation.
+ */
+export const CI_FAILURE_CLASS_FIXABLE: Record<CIFailureClass, boolean> = {
+  code_error: true,
+  test_failure: true,
+  build_failure: true,
+  infra: false,
+  flaky: false,
+  timeout: false,
+  unknown: true, // Attempt remediation for unknown — fail safe
+};
+
 // ============================================================================
-// ClassifiedCIFailure
+// ClassifiedCIFailure — FailedCheck enriched with classification
 // ============================================================================
 
 /**
- * ClassifiedCIFailure — a CI check failure enriched with classification metadata.
- *
- * Replaces bare FailedCheck[] in the PR remediation pipeline.
- * Consumers should check agentFixable before dispatching an agent.
+ * A CI check failure enriched with classification metadata.
+ * Replaces the plain `FailedCheck` type in PRStatusChecker output.
  */
 export interface ClassifiedCIFailure {
-  /** Name of the CI check (e.g. "build", "test (ubuntu-latest)") */
+  /** Check name as reported by GitHub (e.g. "test / unit") */
   name: string;
-  /** GitHub conclusion for the check run (always "failure" for failed checks) */
+  /** GitHub check conclusion (typically "failure") */
   conclusion: string;
-  /** Truncated output from the check run (title + summary + text, max 1000 chars) */
+  /** Raw log output from the check run or GHA job logs */
   output: string;
-  /** Classified failure type */
+  /** Root cause category */
   failureClass: CIFailureClass;
-  /** Whether an agent can remediate this failure. False for infra/flaky/timeout/unknown. */
-  agentFixable: boolean;
-  /** Classifier confidence score (0–1). Lower values indicate ambiguous classification. */
-  confidence: number;
+  /** Whether an agent can be expected to fix this failure */
+  isAgentFixable: boolean;
+  /** Human-readable rationale for the classification */
+  classificationReason: string;
 }
 
 // ============================================================================
-// CI Classification Configuration
+// CIClassificationConfig — Per-project classification rule overrides
 // ============================================================================
 
 /**
- * CIClassificationRule — a single pattern-matching rule for CI failure classification.
- *
- * Rules are evaluated against the check name and/or output text.
- * The first matching rule wins (ordered evaluation).
+ * A pattern-matching rule that maps check name / output patterns to a class.
+ * Rules are evaluated in order; first match wins.
  */
 export interface CIClassificationRule {
   /**
-   * String pattern matched as a case-insensitive substring against the check name
-   * and output text. Alternatively, pass a regex string (without delimiters) for
-   * more precise matching.
+   * Regex pattern matched against the check name (case-insensitive).
+   * When absent, the name is not tested.
    */
-  pattern: string;
-  /** Which field(s) to match the pattern against. Defaults to both. */
-  matchOn?: 'name' | 'output' | 'both';
-  /** The failure class to assign when this rule matches. */
-  failureClass: CIFailureClass;
-  /** Classifier confidence for this rule (0–1). @default 0.8 */
-  confidence?: number;
+  namePattern?: string;
+  /**
+   * Regex pattern matched against the check output (case-insensitive).
+   * When absent, the output is not tested.
+   */
+  outputPattern?: string;
+  /** The class to assign when this rule matches */
+  class: CIFailureClass;
+  /** Human-readable label surfaced in classificationReason */
+  reason: string;
 }
 
 /**
- * CIClassificationConfig — per-project CI classification configuration.
- *
- * Set in workflowSettings.ciClassification.
- * Custom rules are evaluated BEFORE the built-in defaults, allowing projects to
- * override classification for known check names (e.g. mark a check as flaky).
+ * Per-project CI classification configuration.
+ * Stored under workflowSettings.ciClassification in .automaker/settings.json.
  */
 export interface CIClassificationConfig {
   /**
-   * Custom classification rules prepended to the built-in rule set.
-   * Each rule is evaluated in order; the first match wins.
+   * Additional project-specific rules prepended before the built-in defaults.
+   * Earlier entries take priority (first-match wins).
    */
   rules?: CIClassificationRule[];
+  /**
+   * When true, built-in default rules are disabled and only rules are used.
+   * @default false
+   */
+  disableDefaultRules?: boolean;
 }
