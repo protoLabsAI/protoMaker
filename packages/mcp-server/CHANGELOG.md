@@ -1,5 +1,15 @@
 # @protolabsai/mcp-server
 
+## 0.79.2
+
+### Patch Changes
+
+- ### Refactors
+  - remove designs panel, pen file viewer, and feature flag (#2951)
+  - remove designs panel, pen file viewer, and feature flag (#2951)
+- Updated dependencies
+  - @protolabsai/tools@0.79.2
+
 ## 0.79.1
 
 ### Patch Changes

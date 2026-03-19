@@ -1,5 +1,16 @@
 # @protolabsai/git-utils
 
+## 0.79.2
+
+### Patch Changes
+
+- ### Refactors
+  - remove designs panel, pen file viewer, and feature flag (#2951)
+  - remove designs panel, pen file viewer, and feature flag (#2951)
+- Updated dependencies
+  - @protolabsai/types@0.79.2
+  - @protolabsai/utils@0.79.2
+
 ## 0.79.1
 
 ### Patch Changes
