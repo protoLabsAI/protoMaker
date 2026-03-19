@@ -1,5 +1,5 @@
 /**
- * Utility and Support Tools (CoS, Escalation, Lead Engineer)
+ * Utility and Support Tools (CoS, Escalation)
  */
 
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
@@ -219,59 +219,6 @@ export const utilityTools: Tool[] = [
         },
       },
       required: ['signalId', 'acknowledgedBy'],
-    },
-  },
-
-  {
-    name: 'start_lead_engineer',
-    description:
-      'Start the Lead Engineer to manage a project through the production phase. Orchestrates auto-mode, reacts to events with fast-path rules, and wraps up with retro + improvement tickets.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectPath: {
-          type: 'string',
-          description: 'Absolute path to the project directory',
-        },
-        projectSlug: {
-          type: 'string',
-          description: 'Project slug',
-        },
-        maxConcurrency: {
-          type: 'number',
-          description: 'Maximum number of features to process concurrently (default: 1)',
-        },
-      },
-      required: ['projectPath', 'projectSlug'],
-    },
-  },
-  {
-    name: 'stop_lead_engineer',
-    description: 'Stop the Lead Engineer from managing a project.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectPath: {
-          type: 'string',
-          description: 'Absolute path to the project directory',
-        },
-      },
-      required: ['projectPath'],
-    },
-  },
-  {
-    name: 'get_lead_engineer_status',
-    description:
-      'Get Lead Engineer status including world state, flow state, rule execution log, and metrics.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectPath: {
-          type: 'string',
-          description: 'Absolute path to the project directory',
-        },
-      },
-      required: ['projectPath'],
     },
   },
 ];

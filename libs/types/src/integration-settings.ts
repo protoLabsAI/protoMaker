@@ -269,25 +269,6 @@ export const DEFAULT_DISCORD_INTEGRATION: DiscordIntegrationConfig = {
 };
 
 // ============================================================================
-// Google Integration - Google Calendar OAuth configuration
-// ============================================================================
-
-/**
- * GoogleIntegrationConfig - Configuration for Google Calendar OAuth integration
- */
-export interface GoogleIntegrationConfig {
-  /** OAuth2 access token */
-  accessToken?: string;
-  /** OAuth2 refresh token (for obtaining new access tokens) */
-  refreshToken?: string;
-  /** Token expiry timestamp (epoch ms) */
-  tokenExpiry?: number;
-  /** Google account email address */
-  email?: string;
-  /** Selected Google Calendar ID (defaults to 'primary') */
-  calendarId?: string;
-}
-
 // ============================================================================
 // Project Integrations - Container for all per-project integration configurations
 // ============================================================================
@@ -301,8 +282,6 @@ export interface GoogleIntegrationConfig {
 export interface ProjectIntegrations {
   /** Discord team communication integration */
   discord?: DiscordIntegrationConfig;
-  /** Google Calendar integration (OAuth2 tokens) */
-  google?: GoogleIntegrationConfig;
 }
 
 // ============================================================================

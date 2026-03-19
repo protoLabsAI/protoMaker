@@ -74,10 +74,10 @@ export const DEFAULT_GIT_WORKFLOW_SETTINGS: Required<GitWorkflowSettings> = {
   autoMergePR: true,
   prMergeStrategy: 'squash',
   waitForCI: true,
-  prBaseBranch: 'dev',
+  prBaseBranch: 'main',
   maxPRLinesChanged: 500,
   maxPRFilesTouched: 20,
-  excludeFromStaging: ['.automaker/', '.claude/worktrees/', '.worktrees/'],
+  excludeFromStaging: [],
   softChecks: [],
 };
 

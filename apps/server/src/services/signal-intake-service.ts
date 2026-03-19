@@ -237,11 +237,6 @@ export class SignalIntakeService {
       return { category: 'ops', reason: 'MCP create_feature is engineering work' };
     }
 
-    // MCP process_idea → Ops with PM pipeline
-    if (source === 'mcp:process_idea') {
-      return { category: 'ops', reason: 'MCP process_idea routes through PM pipeline' };
-    }
-
     // Discord messages classified by channel
     if (source === 'discord') {
       const channelName = (channelContext.channelName as string | undefined)?.toLowerCase() || '';
@@ -297,10 +292,6 @@ export class SignalIntakeService {
     if (source === 'mcp:create_feature') {
       return 'work_order';
     }
-    if (source === 'mcp:process_idea') {
-      return 'idea';
-    }
-
     // Interrupt signals: urgent/alert keywords in channel or trigger metadata
     const interruptKeywords = [
       'interrupt',

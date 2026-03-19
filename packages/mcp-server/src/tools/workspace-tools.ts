@@ -276,29 +276,4 @@ export const workspaceTools: Tool[] = [
       required: ['projectPath', 'tabOrder'],
     },
   },
-
-  // Idea Processing
-  {
-    name: 'process_idea',
-    description:
-      'Process an idea by creating a feature on the board with idea category in backlog status.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectPath: {
-          type: 'string',
-          description: 'Absolute path to the project directory',
-        },
-        title: {
-          type: 'string',
-          description: 'Short title for the idea',
-        },
-        description: {
-          type: 'string',
-          description: 'Detailed description of the idea',
-        },
-      },
-      required: ['projectPath', 'title', 'description'],
-    },
-  },
 ];

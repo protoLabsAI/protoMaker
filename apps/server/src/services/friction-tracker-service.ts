@@ -24,6 +24,25 @@ const logger = createLogger('FrictionTrackerService');
 /** Number of occurrences before a System Improvement feature is filed */
 const OCCURRENCE_THRESHOLD = 3;
 
+/**
+ * Patterns excluded from friction tracking.
+ *
+ * These are transient or infrastructure-level conditions that already have proper
+ * retry and backoff handling (FailureClassifierService + RecoveryService). Counting
+ * them toward the self-improvement threshold generates spurious tickets for conditions
+ * that are not systemic code defects:
+ *
+ * - 'rate_limit': API throttling is expected and self-resolving. The system already
+ *   handles it with pause_and_wait + exponential backoff. Three rate-limit hits in a
+ *   week is normal operation, not a bug.
+ * - 'transient': Network/timeout errors are transient by definition and handled with
+ *   automatic retry. They should not accumulate into a self-improvement ticket.
+ * - 'unknown': Catch-all fallback — unrelated unclassified failures must not accumulate
+ *   into a spurious ticket. Warn-level logs in FailureClassifierService surface the
+ *   original reasons for pattern expansion analysis.
+ */
+const EXCLUDED_FROM_FRICTION_TRACKING = new Set<string>(['rate_limit', 'transient', 'unknown']);
+
 /** How long (ms) to consider a peer-filed report as "recent" for de-duplication */
 const PEER_DEDUP_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -101,7 +120,7 @@ export class FrictionTrackerService {
    * System Improvement feature description for actionability.
    */
   async recordFailureWithContext(pattern: string, context: FailureContext): Promise<void> {
-    if (!pattern || pattern === 'unknown') return;
+    if (!pattern || EXCLUDED_FROM_FRICTION_TRACKING.has(pattern)) return;
 
     const existing = this.failureContexts.get(pattern) ?? [];
     existing.push(context);
@@ -125,14 +144,15 @@ export class FrictionTrackerService {
    * self-improvement ticket.
    */
   async recordFailure(pattern: string): Promise<void> {
-    // 'unknown' is a catch-all fallback category, not a meaningful recurring pattern.
-    // Skipping it prevents unrelated unclassified failures from accumulating into a
-    // spurious System Improvement ticket. A warn-level log in FailureClassifierService
-    // will surface the original reason for pattern expansion analysis.
-    if (!pattern || pattern === 'unknown') {
+    // Certain patterns are excluded from friction tracking because they represent
+    // transient or infrastructure-level conditions that already have proper retry /
+    // backoff handling and do not indicate a systemic code defect. See
+    // EXCLUDED_FROM_FRICTION_TRACKING for the full list and rationale.
+    if (!pattern || EXCLUDED_FROM_FRICTION_TRACKING.has(pattern)) {
       logger.debug(
-        'Dropping unclassified failure from friction counters — pattern="unknown" is a catch-all; ' +
-          'check FailureClassifierService warn logs to identify recurring unclassified reasons.'
+        `Dropping pattern="${pattern}" from friction counters — excluded from self-improvement tracking. ` +
+          'rate_limit/transient patterns have dedicated retry logic; ' +
+          'unknown is a catch-all — check FailureClassifierService warn logs for the original reason.'
       );
       return;
     }

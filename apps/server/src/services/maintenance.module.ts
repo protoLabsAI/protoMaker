@@ -5,6 +5,7 @@
  * - board-health (full tier, 6h): FeatureHealthService board audit with auto-fix
  * - resource-usage (critical tier, 5min): HealthMonitorService resource check
  * - feature-readiness (full tier, 6h): Scores backlog features and enriches thin descriptions
+ * - webhook-health (full tier, 6h): Warns when PRs in review have no CI events after grace period
  */
 
 import { createLogger } from '@protolabsai/utils';
@@ -18,6 +19,7 @@ import type {
 import type { ServiceContainer } from '../server/services.js';
 import { getWorkflowSettings } from '../lib/settings-helpers.js';
 import { FeatureReadinessCheck } from './maintenance/checks/feature-readiness-check.js';
+import { WebhookHealthCheck } from './maintenance/checks/webhook-health-check.js';
 import { simpleQuery } from '../providers/simple-query-service.js';
 
 const logger = createLogger('Server:Wiring');
@@ -178,9 +180,46 @@ export function register(container: ServiceContainer): void {
     },
   };
 
+  // Webhook health check (full tier) — warns when PRs in review have no CI events
+  const webhookHealthCheckInstance = new WebhookHealthCheck(featureLoader);
+  const webhookHealthCheck: MaintenanceCheck = {
+    id: 'webhook-health',
+    name: 'Webhook CI Health',
+    tier: 'full',
+    async run(context: MaintenanceCheckContext): Promise<MaintenanceCheckResult> {
+      const t0 = Date.now();
+      let totalWarnings = 0;
+
+      for (const projectPath of context.projectPaths) {
+        try {
+          const issues = await webhookHealthCheckInstance.run(projectPath);
+          totalWarnings += issues.length;
+
+          for (const issue of issues) {
+            logger.warn(`[webhook-health] ${issue.message} (project: ${projectPath})`);
+          }
+        } catch (err) {
+          logger.error(`Webhook health check failed for ${projectPath}:`, err);
+        }
+      }
+
+      return {
+        checkId: 'webhook-health',
+        passed: totalWarnings === 0,
+        summary:
+          totalWarnings === 0
+            ? `Webhook health: all PRs in review have received CI events`
+            : `Webhook health: ${totalWarnings} PR(s) in review with no CI events — webhook may be misconfigured`,
+        details: { totalWarnings, projectCount: context.projectPaths.length },
+        durationMs: Date.now() - t0,
+      };
+    },
+  };
+
   maintenanceOrchestrator.register(boardHealthCheck);
   maintenanceOrchestrator.register(resourceUsageCheck);
   maintenanceOrchestrator.register(featureReadinessCheck);
+  maintenanceOrchestrator.register(webhookHealthCheck);
 
   maintenanceOrchestrator.start(schedulerService, events, eventHistoryService, () => {
     const paths = new Set<string>();
@@ -191,6 +230,6 @@ export function register(container: ServiceContainer): void {
   });
 
   logger.info(
-    'MaintenanceOrchestrator started with board-health, resource-usage, and feature-readiness checks'
+    'MaintenanceOrchestrator started with board-health, resource-usage, feature-readiness, and webhook-health checks'
   );
 }

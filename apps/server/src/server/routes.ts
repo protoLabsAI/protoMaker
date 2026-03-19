@@ -45,8 +45,6 @@ import { createContextRoutes } from '../routes/context/index.js';
 import { createContentRoutes } from '../routes/content/index.js';
 import { createFlowsRoutes } from '../routes/flows/index.js';
 import { createBacklogPlanRoutes } from '../routes/backlog-plan/index.js';
-import { createCalendarRoutes } from '../routes/calendar/index.js';
-import { createGoogleOAuthRoutes } from '../routes/google-calendar/oauth.js';
 import { createMCPRoutes } from '../routes/mcp/index.js';
 import { createEscalationRoutes } from '../routes/escalation.js';
 import { createMetricsRoutes } from '../routes/metrics/index.js';
@@ -139,9 +137,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     ceremonyAuditLog,
     escalationRouter,
     authorityService,
-    calendarService,
-    jobExecutorService,
-    googleCalendarSyncService,
     knowledgeStoreService,
     integrityWatchdogService,
     featureHealthService,
@@ -215,12 +210,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/webhooks', createWebhooksRoutes(events, settingsService));
   // Alerts webhook routes (unauthenticated - Grafana webhooks)
   app.use('/webhooks/alerts', createAlertsRoutes(settingsService, discordBotService));
-  // Google Calendar OAuth + sync (unauthenticated — browser-initiated redirect flow)
-  app.use(
-    '/api/google-calendar',
-    createGoogleOAuthRoutes(settingsService, googleCalendarSyncService)
-  );
-
   // --- AUTHENTICATION MIDDLEWARE ---
   // Apply authentication to all /api/* routes
   app.use('/api', authMiddleware);
@@ -293,7 +282,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/context', createContextRoutes(settingsService));
   app.use('/api/content', createContentRoutes(settingsService));
   app.use('/api/backlog-plan', createBacklogPlanRoutes(events, settingsService));
-  app.use('/api/calendar', createCalendarRoutes(calendarService, jobExecutorService, events));
   app.use('/api/mcp', createMCPRoutes(mcpTestService));
   app.use(
     '/api/integrations',

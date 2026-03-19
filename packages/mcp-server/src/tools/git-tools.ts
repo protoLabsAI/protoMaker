@@ -170,7 +170,8 @@ export const gitTools: Tool[] = [
         },
         baseBranch: {
           type: 'string',
-          description: 'Base branch for the PR (optional, defaults to main)',
+          description:
+            'Base branch for the PR (optional, defaults to prBaseBranch from project settings or the repo default branch)',
         },
         draft: {
           type: 'boolean',

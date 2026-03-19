@@ -44,25 +44,25 @@ describe('FrictionTrackerService', () => {
   // -------------------------------------------------------------------------
 
   describe('counter tracking', () => {
-    it('starts at zero for unknown patterns', () => {
-      expect(service.getCount('rate_limit')).toBe(0);
+    it('starts at zero for unseen patterns', () => {
+      expect(service.getCount('test_failure')).toBe(0);
     });
 
     it('increments the counter on each recordFailure call', async () => {
-      await service.recordFailure('rate_limit');
-      expect(service.getCount('rate_limit')).toBe(1);
+      await service.recordFailure('test_failure');
+      expect(service.getCount('test_failure')).toBe(1);
 
-      await service.recordFailure('rate_limit');
-      expect(service.getCount('rate_limit')).toBe(2);
+      await service.recordFailure('test_failure');
+      expect(service.getCount('test_failure')).toBe(2);
     });
 
     it('tracks different patterns independently', async () => {
-      await service.recordFailure('rate_limit');
-      await service.recordFailure('rate_limit');
-      await service.recordFailure('timeout');
+      await service.recordFailure('test_failure');
+      await service.recordFailure('test_failure');
+      await service.recordFailure('merge_conflict');
 
-      expect(service.getCount('rate_limit')).toBe(2);
-      expect(service.getCount('timeout')).toBe(1);
+      expect(service.getCount('test_failure')).toBe(2);
+      expect(service.getCount('merge_conflict')).toBe(1);
     });
 
     it('ignores empty-string patterns', async () => {
@@ -77,6 +77,52 @@ describe('FrictionTrackerService', () => {
       }
       expect(service.getCount('unknown')).toBe(0);
       expect(deps.featureLoader.create).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Excluded patterns — transient/infrastructure conditions
+  // -------------------------------------------------------------------------
+
+  describe('excluded patterns', () => {
+    it('ignores "rate_limit" — transient API throttling has dedicated retry logic', async () => {
+      for (let i = 0; i < 5; i++) {
+        await service.recordFailure('rate_limit');
+      }
+      expect(service.getCount('rate_limit')).toBe(0);
+      expect(deps.featureLoader.create).not.toHaveBeenCalled();
+    });
+
+    it('ignores "transient" — network/timeout errors have automatic retry', async () => {
+      for (let i = 0; i < 5; i++) {
+        await service.recordFailure('transient');
+      }
+      expect(service.getCount('transient')).toBe(0);
+      expect(deps.featureLoader.create).not.toHaveBeenCalled();
+    });
+
+    it('ignores "rate_limit" in recordFailureWithContext too', async () => {
+      for (let i = 0; i < 5; i++) {
+        await service.recordFailureWithContext('rate_limit', { featureId: `f-${i}` });
+      }
+      expect(service.getCount('rate_limit')).toBe(0);
+      expect(deps.featureLoader.create).not.toHaveBeenCalled();
+    });
+
+    it('ignores "transient" in recordFailureWithContext too', async () => {
+      for (let i = 0; i < 5; i++) {
+        await service.recordFailureWithContext('transient', { featureId: `f-${i}` });
+      }
+      expect(service.getCount('transient')).toBe(0);
+      expect(deps.featureLoader.create).not.toHaveBeenCalled();
+    });
+
+    it('still tracks non-excluded patterns normally', async () => {
+      for (let i = 0; i < 3; i++) {
+        await service.recordFailure('tool_error');
+      }
+      expect(service.getCount('tool_error')).toBe(3);
+      expect(deps.featureLoader.create).toHaveBeenCalledOnce();
     });
   });
 
@@ -274,11 +320,11 @@ describe('FrictionTrackerService', () => {
       vi.mocked(deps.featureLoader.findByTitle).mockResolvedValue({
         id: 'feature-old-done',
         status: 'done',
-        title: 'System Improvement: recurring rate_limit failures',
+        title: 'System Improvement: recurring tool_error failures',
       } as never);
 
       for (let i = 0; i < 3; i++) {
-        await service.recordFailure('rate_limit');
+        await service.recordFailure('tool_error');
       }
 
       // Old feature is done → file a fresh one
@@ -365,12 +411,12 @@ describe('FrictionTrackerService', () => {
       const startTime = Date.now();
       vi.setSystemTime(startTime);
 
-      await service.recordFailure('rate_limit');
-      expect(service.getCount('rate_limit')).toBe(1);
+      await service.recordFailure('test_failure');
+      expect(service.getCount('test_failure')).toBe(1);
 
       // Move past window
       vi.setSystemTime(startTime + SEVEN_DAYS_MS + 1);
-      expect(service.getCount('rate_limit')).toBe(0);
+      expect(service.getCount('test_failure')).toBe(0);
     });
 
     it('starts a fresh window after expiry and counts from 1', async () => {

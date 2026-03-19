@@ -8,8 +8,10 @@
  */
 
 import { createLogger } from '@protolabsai/utils';
+import type { CIClassificationConfig, ClassifiedCIFailure } from '@protolabsai/types';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { ciFailureClassifier } from './ci-failure-classifier-service.js';
 
 const execFileAsync = promisify(execFile);
 const logger = createLogger('PRStatusChecker');
@@ -308,15 +310,22 @@ export class PRStatusChecker {
   }
 
   /**
-   * Fetch only failed CI check runs for a commit SHA, with output details.
+   * Fetch only failed CI check runs for a commit SHA, with output details and classification.
    * When ciProvider is 'github-actions' (default), fetches GHA job logs as a
    * fallback for checks where the API output is insufficient.
+   *
+   * @param pr     - The tracked PR to fetch checks for
+   * @param headSha - HEAD commit SHA to query
+   * @param ciProvider - CI provider string (default: 'github-actions')
+   * @param ciClassificationConfig - Optional per-project classification config
+   * @returns Array of ClassifiedCIFailure with failureClass and agentFixable fields
    */
   async fetchFailedChecks(
     pr: TrackedPR,
     headSha: string,
-    ciProvider: string = 'github-actions'
-  ): Promise<FailedCheck[]> {
+    ciProvider: string = 'github-actions',
+    ciClassificationConfig?: CIClassificationConfig
+  ): Promise<ClassifiedCIFailure[]> {
     try {
       const { stdout } = await execFileAsync(
         'gh',
@@ -341,7 +350,7 @@ export class PRStatusChecker {
       }>;
 
       const failedRuns = checkRuns.filter((check) => check.conclusion === 'failure');
-      const results: FailedCheck[] = [];
+      const failedChecks: Array<{ name: string; conclusion: string; output: string }> = [];
 
       for (const check of failedRuns) {
         const apiOutput = [check.output?.title, check.output?.summary, check.output?.text]
@@ -358,14 +367,14 @@ export class PRStatusChecker {
           }
         }
 
-        results.push({
+        failedChecks.push({
           name: check.name,
           conclusion: check.conclusion,
           output,
         });
       }
 
-      return results;
+      return ciFailureClassifier.classifyAll(failedChecks, ciClassificationConfig);
     } catch (error) {
       logger.debug(`Failed to fetch failed checks for ${headSha}: ${error}`);
       return [];

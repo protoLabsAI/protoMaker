@@ -219,7 +219,6 @@ import { workspaceTools } from './tools/workspace-tools.js';
 import { setupTools } from './tools/setup-tools.js';
 import { utilityTools } from './tools/utility-tools.js';
 import { schedulerTools } from './tools/scheduler-tools.js';
-import { calendarTools } from './tools/calendar-tools.js';
 import { quarantineTools } from './tools/quarantine-tools.js';
 import { fileOpsTools } from './tools/file-ops-tools.js';
 import { gitOpsTools } from './tools/git-ops-tools.js';
@@ -247,7 +246,6 @@ const tools: Tool[] = [
   ...setupTools,
   ...utilityTools,
   ...schedulerTools,
-  ...calendarTools,
   ...quarantineTools,
   ...fileOpsTools,
   ...worktreeGitTools,
@@ -337,13 +335,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/features/delete', {
         projectPath: args.projectPath,
         featureId: args.featureId,
-      });
-
-    case 'move_feature':
-      return apiCall('/features/update', {
-        projectPath: args.projectPath,
-        featureId: args.featureId,
-        updates: { status: args.status },
       });
 
     case 'rollback_feature':
@@ -1383,16 +1374,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         action: args.action,
       });
 
-    // Idea Processing — authority pipeline removed, create feature directly
-    case 'process_idea':
-      return apiCall('/features/create', {
-        projectPath: args.projectPath,
-        title: args.title,
-        description: args.description,
-        category: 'idea',
-        status: 'backlog',
-      });
-
     // Board Query
     case 'query_board': {
       const qResult = (await apiCall('/features/list', {
@@ -1576,51 +1557,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/notes/reorder-tabs', {
         projectPath: args.projectPath,
         tabOrder: args.tabOrder,
-      });
-
-    // Calendar Management
-    case 'list_calendar_events':
-      return apiCall('/calendar/list', {
-        projectPath: args.projectPath,
-        startDate: args.startDate,
-        endDate: args.endDate,
-        types: args.types,
-      });
-
-    case 'create_calendar_event': {
-      const eventData: Record<string, unknown> = {
-        projectPath: args.projectPath,
-        title: args.title,
-        date: args.date,
-        type: args.type || 'custom',
-      };
-      if (args.endDate) eventData.endDate = args.endDate;
-      if (args.description) eventData.description = args.description;
-      if (args.color) eventData.color = args.color;
-      if (args.url) eventData.url = args.url;
-      if (args.time) eventData.time = args.time;
-      if (args.jobAction) eventData.jobAction = args.jobAction;
-      return apiCall('/calendar/create', eventData);
-    }
-
-    case 'update_calendar_event': {
-      const updateBody: Record<string, unknown> = {
-        projectPath: args.projectPath,
-        id: args.id,
-      };
-      if (args.title) updateBody.title = args.title;
-      if (args.date) updateBody.date = args.date;
-      if (args.endDate) updateBody.endDate = args.endDate;
-      if (args.description) updateBody.description = args.description;
-      if (args.color) updateBody.color = args.color;
-      if (args.url) updateBody.url = args.url;
-      return apiCall('/calendar/update', updateBody);
-    }
-
-    case 'delete_calendar_event':
-      return apiCall('/calendar/delete', {
-        projectPath: args.projectPath,
-        id: args.id,
       });
 
     // Scheduler Management

@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "worktreePanelVisible": false,
+  "gtmEnabled": true,
+  "integrations": {
+    "linear": {
+      "teamId": "185e7caa-2855-4c67-a347-2011016bdddf"
+    },
+    "discord": {
+      "enabled": true,
+      "serverId": "1070606339363049492",
+      "channelId": "1469080556720623699",
+      "createThreadsForAgents": true,
+      "notifyOnCompletion": true,
+      "notifyOnError": true,
+      "notifyOnAutoModeComplete": true,
+      "useWebhook": false,
+      "channels": {
+        "primary": "1469195643590541353",
+        "dev": "1469080556720623699",
+        "infra": "1469109809939742814",
+        "bugs": "1477837770704814162",
+        "ceremonies": "1469080556720623699",
+        "contentBriefs": "1472072098238431342"
+      },
+      "channelWorkflows": [
+        {
+          "channelId": "1477837770704814162",
+          "channelName": "#bug-reports",
+          "workflow": "bug_triage",
+          "createThread": true,
+          "aiInvestigation": true,
+          "enabled": true
+        },
+        {
+          "channelId": "1469195643590541353",
+          "channelName": "#ava",
+          "workflow": "agent_conversation",
+          "agentRole": "ava",
+          "createThread": false,
+          "aiInvestigation": false,
+          "enabled": true
+        }
+      ]
+    }
+  },
+  "ceremonySettings": {
+    "enabled": true,
+    "enableMilestoneUpdates": true,
+    "enableProjectRetros": true,
+    "enableStandups": true,
+    "enableEpicKickoff": true,
+    "enableEpicDelivery": true,
+    "enableContentBriefs": true,
+    "discordChannelId": "1469080556720623699"
+  },
+  "defaultDeleteBranch": true,
+  "enabledPersonas": [
+    "board-janitor",
+    "backend-engineer",
+    "matt",
+    "sam",
+    "kai",
+    "frank",
+    "product-manager",
+    "engineering-manager",
+    "ava",
+    "cindi",
+    "linear-specialist",
+    "jon",
+    "calendar-assistant",
+    "pr-maintainer"
+  ],
+  "boardBackground": {
+    "imagePath": null,
+    "cardOpacity": 100,
+    "columnOpacity": 100,
+    "columnBorderEnabled": true,
+    "cardGlassmorphism": true,
+    "cardBorderEnabled": true,
+    "cardBorderOpacity": 100,
+    "hideScrollbar": false,
+    "imageVersion": 1772603872769
+  },
+  "workflow": {
+    "agentConfig": {
+      "autoAssignEnabled": true
+    },
+    "gitWorkflow": {
+      "prBaseBranch": "dev"
+    }
+  },
+  "docsPath": "docs/internal"
+}

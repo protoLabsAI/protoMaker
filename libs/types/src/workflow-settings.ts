@@ -6,11 +6,36 @@
  */
 
 import type { PhaseModelEntry } from './agent-settings.js';
+import type { CIClassificationConfig } from './ci-failure.js';
+import type { CIReactionSettings } from './ci-reaction.js';
 import type { DeviationRule } from './lead-engineer.js';
 import type { PipelineGateConfig } from './pipeline-phase.js';
 import type { RiskLevel } from './policy.js';
 import type { CustomPrompt } from './prompts.js';
 import type { SignalDictionaryConfig } from './signal-dictionary.js';
+
+// ============================================================================
+// Pre-Push Validation Configuration
+// ============================================================================
+
+/**
+ * PrePushValidation — Configuration for pre-push code quality checks.
+ *
+ * When configured, runs format and/or typecheck validation before pushing code.
+ * Supports parallel execution, auto-fix, warn-only mode, and configurable timeout.
+ */
+export interface PrePushValidation {
+  /** When true, skips all checks and returns success immediately. @default false */
+  disabled?: boolean;
+  /** When true, check failures are reported as warnings instead of errors. @default false */
+  warnOnly?: boolean;
+  /** Which checks to run. When absent, all checks run. @default ['format', 'typecheck'] */
+  checks?: ('format' | 'typecheck')[];
+  /** Maximum milliseconds to wait for all checks to complete. @default 60000 */
+  timeout?: number;
+  /** When true, automatically runs prettier to fix format issues before re-checking. @default false */
+  autoFix?: boolean;
+}
 
 // ============================================================================
 // Context Engine Configuration
@@ -522,6 +547,14 @@ export interface WorkflowSettings {
    */
   ciProvider?: 'github-actions' | 'other';
   /**
+   * CI failure classification configuration.
+   * Custom rules are prepended to the built-in default rule set.
+   * Allows projects to mark specific check names as flaky/infra so the
+   * PR remediation pipeline skips agent dispatch for non-fixable failures.
+   * When absent, only built-in defaults are used.
+   */
+  ciClassification?: CIClassificationConfig;
+  /**
    * Maintenance check configuration.
    * Controls thresholds and behavior for automated board health checks.
    */
@@ -542,6 +575,15 @@ export interface WorkflowSettings {
      */
     readinessScoreThreshold?: number;
   };
+  /**
+   * Split remediation budget configuration for CI and review cycles.
+   * Controls per-class retry limits (CI failures vs PR review feedback) and a
+   * hard cap on combined total cycles. When absent, the default split budget
+   * (2 CI + 2 review = 4 total) is used, preserving backward compatibility
+   * with the legacy MAX_TOTAL_REMEDIATION_CYCLES of 4.
+   * @see CIReactionSettings
+   */
+  ciReactionSettings?: CIReactionSettings;
 }
 
 /** Default workflow settings */
@@ -587,5 +629,10 @@ export const DEFAULT_WORKFLOW_SETTINGS: WorkflowSettings = {
     incrementalMaxDepth: 3,
     leafChunkTokens: 25_000,
     largeFileThreshold: 25_000,
+  },
+  ciReactionSettings: {
+    maxCiRemediationCycles: 2,
+    maxReviewRemediationCycles: 2,
+    maxTotalRemediationCycles: 4,
   },
 };

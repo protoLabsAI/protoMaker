@@ -112,6 +112,13 @@ export type {
 } from './feature.js';
 export { normalizeFeatureStatus } from './feature.js';
 
+// CI Reaction Engine types — split remediation budget enforcement
+export type {
+  CIReactionSettings,
+  RemediationBudgetCheckResult,
+  RemediationBudgetInput,
+} from './ci-reaction.js';
+
 // Quarantine types
 export type {
   TrustTier,
@@ -191,19 +198,6 @@ export type {
   ResearchReport,
 } from './project.js';
 
-// Calendar types
-export type {
-  CalendarEventType,
-  RecurrenceFrequency,
-  RecurrenceRule,
-  CalendarEvent,
-  CalendarEventsFile,
-  CalendarQueryOptions,
-  JobStatus,
-  JobAction,
-  JobExecutionResult,
-} from './calendar.js';
-
 // Session types
 export type {
   AgentSession,
@@ -225,6 +219,15 @@ export type {
   RecoveryConfig,
 } from './failure.js';
 export { DEFAULT_RECOVERY_CONFIG } from './failure.js';
+
+// CI failure classification types
+export type {
+  CIFailureClass,
+  ClassifiedCIFailure,
+  CIClassificationRule,
+  CIClassificationConfig,
+} from './ci-failure.js';
+export { CI_FAILURE_CLASS_FIXABLE } from './ci-failure.js';
 
 // Image types
 export type { ImageData, ImageContentBlock } from './image.js';
@@ -352,7 +355,6 @@ export type {
   ChannelWorkflowType,
   DiscordChannelMap,
   DiscordIntegrationConfig,
-  GoogleIntegrationConfig,
   ProjectIntegrations,
   IntegrationEventMapping,
   // Trust boundary types

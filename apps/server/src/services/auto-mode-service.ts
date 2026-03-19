@@ -213,6 +213,12 @@ export class AutoModeService {
   private resumeCheckedProjects = new Set<string>();
   // Cached backlog count refreshed asynchronously on each capacity read.
   private _backlogCountCache = 0;
+  /**
+   * Pending CI failure messages to inject into running agent sessions.
+   * Keyed by featureId. Consumed by executeFeature continuation after the
+   * current agent turn completes (when isAgentRunning was true at receipt).
+   */
+  private pendingCIInjections = new Map<string, string>();
   // Memory management thresholds (configurable via env vars)
   private readonly HEAP_USAGE_STOP_NEW_AGENTS_THRESHOLD = parseFloat(
     process.env.HEAP_STOP_THRESHOLD || '0.8'
@@ -887,6 +893,7 @@ export class AutoModeService {
       if (running.projectPath === projectPath) {
         running.abortController.abort();
         this.runningFeatures.delete(featureId);
+        this.pendingCIInjections.delete(featureId);
         logger.info(`Aborted running feature ${featureId} during auto-loop stop`);
       }
     }
@@ -1315,6 +1322,7 @@ export class AutoModeService {
     // The abort signal will still propagate to stop any ongoing execution
     this.concurrencyManager.release(featureId);
     this.runningFeatures.delete(featureId);
+    this.pendingCIInjections.delete(featureId);
     this.typedEventBus.clearFeature(featureId);
     activeAgentsCount.set(this.runningFeatures.size);
 
@@ -1377,6 +1385,7 @@ export class AutoModeService {
       logger.info(`[Shutdown] Aborted feature: ${featureId}`);
     }
     this.runningFeatures.clear();
+    this.pendingCIInjections.clear();
 
     // Unsubscribe all event listeners to prevent leaks on restart
     for (const sub of this.eventSubscriptions) {
@@ -1390,6 +1399,51 @@ export class AutoModeService {
    */
   isFeatureRunning(featureId: string): boolean {
     return this.runningFeatures.has(featureId);
+  }
+
+  /**
+   * Check if an agent is currently running for a feature.
+   * Matches on both featureId and projectPath to prevent cross-project collisions.
+   */
+  isAgentRunning(featureId: string, projectPath: string): boolean {
+    const running = this.runningFeatures.get(featureId);
+    return running !== undefined && running.projectPath === projectPath;
+  }
+
+  /**
+   * Inject a CI failure message into the running agent session for a feature.
+   * Stores the message as a pending CI injection; the message will be used as a
+   * continuation prompt after the current agent turn completes, so the agent
+   * can fix the CI failure without a full restart.
+   *
+   * Matches on both featureId and projectPath to prevent cross-project injection.
+   * Returns true if a running session was found and the injection was queued.
+   */
+  async sendCIFailureToAgent(
+    featureId: string,
+    projectPath: string,
+    message: string
+  ): Promise<boolean> {
+    const running = this.runningFeatures.get(featureId);
+    if (!running || running.projectPath !== projectPath) {
+      return false;
+    }
+    this.pendingCIInjections.set(featureId, message);
+    logger.info(`CI failure queued for injection into running agent for feature ${featureId}`);
+    return true;
+  }
+
+  /**
+   * Consume and return a pending CI injection message for a feature (if any).
+   * Called by executeFeature after the current run completes to chain the CI fix.
+   * @internal
+   */
+  consumePendingCIInjection(featureId: string): string | undefined {
+    const message = this.pendingCIInjections.get(featureId);
+    if (message !== undefined) {
+      this.pendingCIInjections.delete(featureId);
+    }
+    return message;
   }
 
   /**
@@ -2037,6 +2091,7 @@ Address the follow-up instructions above. Review the previous work and make the 
       if (current === followUpRunningFeature) {
         this.concurrencyManager.release(featureId);
         this.runningFeatures.delete(featureId);
+        this.pendingCIInjections.delete(featureId);
         this.typedEventBus.clearFeature(featureId);
         activeAgentsCount.set(this.runningFeatures.size);
       }
