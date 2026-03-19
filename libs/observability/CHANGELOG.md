@@ -1,5 +1,19 @@
 # @protolabsai/observability
 
+## 0.79.7
+
+### Patch Changes
+
+- ### Bug Fixes
+  - install @esbuild/linux-x64 in deploy-docs workflow (#2974)
+
+  ### Refactors
+  - Add protoClawX Ava Engine as alternative chat transport (#2973)
+
+- Updated dependencies
+  - @protolabsai/types@0.79.7
+  - @protolabsai/utils@0.79.7
+
 ## 0.79.6
 
 ### Patch Changes
