@@ -278,6 +278,15 @@ export interface ProjectSettings {
    * Set to `null` to explicitly disable the Docs viewer for this project.
    */
   docsPath?: string | null;
+
+  // Ava Engine Transport Override (per-project)
+  /**
+   * Optional URL for the protoClawX Ava Engine (e.g. http://localhost:8318/api/chat).
+   * When set, chat sessions for this project use a DefaultChatTransport pointing to
+   * this URL instead of the default /api/chat endpoint.
+   * Both transports speak AI SDK Data Stream Protocol so all UI features work unchanged.
+   */
+  avaEngineUrl?: string;
 }
 
 /** Default project settings (empty - all settings are optional and fall back to global) */

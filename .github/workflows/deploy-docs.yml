@@ -44,7 +44,10 @@ jobs:
       - name: Build docs
         run: |
           npm ci --ignore-scripts
-          npm install --ignore-scripts --no-save @rollup/rollup-linux-x64-gnu@$(node -p "require('./node_modules/rollup/package.json').version")
+          # Install platform-specific binaries that --ignore-scripts skips
+          npm install --ignore-scripts --no-save \
+            @rollup/rollup-linux-x64-gnu@$(node -p "require('./node_modules/rollup/package.json').version") \
+            @esbuild/linux-x64@$(node -p "require('./node_modules/vitepress/node_modules/esbuild/package.json').version")
           npm run docs:build
 
       - name: Deploy to Cloudflare Pages
