@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 
 const logger = createLogger('SpecRegeneration');
 import { getElectronAPI } from '@/lib/electron';
-import type { SpecRegenerationEvent } from '@/types/electron';
+import type { SpecRegenerationEvent } from '@/types/api';
 
 interface UseSpecRegenerationProps {
   creatingSpecProjectPath: string | null;

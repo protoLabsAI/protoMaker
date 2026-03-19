@@ -15,7 +15,7 @@ import {
 import { Spinner } from '@protolabsai/ui/atoms';
 import { Button } from '@protolabsai/ui/atoms';
 import { useWorktreeDiffs, useGitDiffs } from '@/hooks/queries';
-import type { FileStatus } from '@/types/electron';
+import type { FileStatus } from '@/types/api';
 
 interface GitDiffPanelProps {
   projectPath: string;

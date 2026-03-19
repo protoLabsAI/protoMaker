@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { Spinner } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
-import type { SessionListItem } from '@/types/electron';
+import type { SessionListItem } from '@/types/api';
 import { useKeyboardShortcutsConfig } from '@/hooks/use-keyboard-shortcuts';
 import { getElectronAPI } from '@/lib/electron';
 import { useSessions } from '@/hooks/queries';

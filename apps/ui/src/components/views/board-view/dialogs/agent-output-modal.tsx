@@ -16,7 +16,7 @@ import { Markdown } from '@protolabsai/ui/molecules';
 import { useWorktreeStore } from '@/store/worktree-store';
 import { selectSummary } from '@/lib/summary-selection';
 import { useAgentOutput } from '@/hooks/queries';
-import type { AutoModeEvent } from '@/types/electron';
+import type { AutoModeEvent } from '@/types/api';
 
 interface AgentOutputModalProps {
   open: boolean;

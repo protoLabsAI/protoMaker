@@ -23,7 +23,7 @@ import { useKeyboardShortcutsConfig } from '@/hooks/use-keyboard-shortcuts';
 import { useSetupStore } from '@/store/setup-store';
 import { useTerminalStore } from '@/store/terminal-store';
 import { useAuthStore } from '@/store/auth-store';
-import { getElectronAPI, isElectron } from '@/lib/electron';
+import { getElectronAPI } from '@/lib/electron';
 import { isMac } from '@/lib/utils';
 import { initializeProject } from '@/lib/project-init';
 import {
@@ -380,23 +380,7 @@ function RootLayoutContent() {
 
   // Handle sandbox risk denial
   const handleSandboxDeny = useCallback(async () => {
-    if (isElectron()) {
-      // In Electron mode, quit the application
-      // Use window.electronAPI directly since getElectronAPI() returns the HTTP client
-      try {
-        const electronAPI = window.electronAPI;
-        if (electronAPI?.quit) {
-          await electronAPI.quit();
-        } else {
-          logger.error('quit() not available on electronAPI');
-        }
-      } catch (error) {
-        logger.error('Failed to quit app:', error);
-      }
-    } else {
-      // In web mode, show rejection screen
-      setSandboxStatus('denied');
-    }
+    setSandboxStatus('denied');
   }, []);
 
   // Ref to prevent concurrent auth checks from running
@@ -706,14 +690,7 @@ function RootLayoutContent() {
   useEffect(() => {
     const testConnection = async () => {
       try {
-        if (isElectron()) {
-          const api = getElectronAPI();
-          const result = await api.ping();
-          setIpcConnected(result === 'pong');
-          return;
-        }
-
-        // Web mode: check backend availability without instantiating the full HTTP client
+        // Check backend availability
         const response = await fetch(`${getServerUrlSync()}/api/health`, {
           method: 'GET',
           signal: AbortSignal.timeout(2000),
@@ -953,13 +930,6 @@ function RootLayoutContent() {
   return (
     <>
       <main className="flex h-screen-safe overflow-hidden" data-testid="app-container">
-        {/* Full-width titlebar drag region for Electron window dragging */}
-        {isElectron() && (
-          <div
-            className={`fixed top-0 left-0 right-0 h-6 titlebar-drag-region z-40 pointer-events-none ${isMac ? 'pl-20' : ''}`}
-            aria-hidden="true"
-          />
-        )}
         <Sidebar />
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0">
           <PanelGroup direction="vertical" autoSaveId="root-layout">

@@ -24,7 +24,6 @@ import { useChatSession } from '@/hooks/use-chat-session';
 import { useAppStore } from '@/store/app-store';
 import { useContextualSuggestions } from '@/hooks/use-contextual-suggestions';
 import { useToolProgress } from '@/hooks/use-tool-progress';
-import { getOverlayAPI } from '@/lib/electron';
 import { AskAvaTab } from './ask-ava-tab';
 import { AvaChannelTab } from './ava-channel-tab';
 import { ProjectsTab } from './projects-tab';
@@ -170,7 +169,7 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
   const handleExpand = useCallback(() => {
     const next = !expanded;
     setExpanded(next);
-    getOverlayAPI()?.resizeOverlay?.(next ? OVERLAY_HEIGHT_EXPANDED : OVERLAY_HEIGHT_DEFAULT);
+    // Overlay resize was Electron-only — no-op in web mode
   }, [expanded]);
 
   // Regenerate: push the current last assistant response as a branch variant,

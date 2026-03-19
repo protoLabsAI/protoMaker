@@ -4,7 +4,6 @@ import { useChatStore } from '@/store/chat-store';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { useProjectHealth } from '@/hooks/use-project-health';
 import { useSystemHealth } from '@/hooks/queries/use-metrics';
-import { isElectron, getOverlayAPI } from '@/lib/electron';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabsai/ui/atoms';
 import { Popover, PopoverContent, PopoverTrigger } from '@protolabsai/ui/atoms';
@@ -435,11 +434,7 @@ export function BottomPanel() {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            if (isElectron()) {
-              getOverlayAPI()?.toggleOverlay?.();
-            } else {
-              setChatModalOpen(!chatModalOpen);
-            }
+            setChatModalOpen(!chatModalOpen);
           }}
           className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
           title="Open Ava Chat"

@@ -4,7 +4,7 @@
  * Provides: runningAgents, github, workspace, agent, templates
  */
 import type { GitHubAPI, IssueValidationInput, IssueValidationEvent } from '../electron';
-import type { Message } from '@/types/electron';
+import type { Message } from '@/types/api';
 import type { ModelId, ThinkingLevel, ReasoningEffort } from '@protolabsai/types';
 import type { EventCallback } from './base-http-client';
 import { BaseHttpClient, type Constructor } from './base-http-client';

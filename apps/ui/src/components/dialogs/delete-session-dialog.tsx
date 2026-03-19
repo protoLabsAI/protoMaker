@@ -1,6 +1,6 @@
 import { MessageSquare } from 'lucide-react';
 import { DeleteConfirmDialog } from '@/components/shared/delete-confirm-dialog';
-import type { SessionListItem } from '@/types/electron';
+import type { SessionListItem } from '@/types/api';
 
 interface DeleteSessionDialogProps {
   open: boolean;

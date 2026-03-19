@@ -260,13 +260,8 @@ export function NewProjectModal({
     }
   };
 
-  // Use platform-specific path separator
-  const pathSep =
-    typeof window !== 'undefined' && window.electronAPI
-      ? navigator.platform.indexOf('Win') !== -1
-        ? '\\'
-        : '/'
-      : '/';
+  // Use forward slash path separator (web mode)
+  const pathSep = '/';
   const projectPath = workspaceDir && projectName ? `${workspaceDir}${pathSep}${projectName}` : '';
 
   return (

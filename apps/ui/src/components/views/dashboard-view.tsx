@@ -3,7 +3,7 @@ import { createLogger } from '@protolabsai/utils/logger';
 import { useNavigate } from '@tanstack/react-router';
 import { useAppStore } from '@/store/app-store';
 import { useOSDetection } from '@/hooks/use-os-detection';
-import { getElectronAPI, isElectron } from '@/lib/electron';
+import { getElectronAPI } from '@/lib/electron';
 import { initializeProject } from '@/lib/project-init';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { isMac } from '@/lib/utils';
@@ -484,13 +484,6 @@ export function DashboardView() {
     <div className="flex-1 flex flex-col h-screen content-bg" data-testid="dashboard-view">
       {/* Header with logo */}
       <header className="shrink-0 border-b border-border bg-card/80 backdrop-blur-md">
-        {/* Electron titlebar drag region */}
-        {isElectron() && (
-          <div
-            className={`absolute top-0 left-0 right-0 h-6 titlebar-drag-region z-40 pointer-events-none ${isMac ? 'pl-20' : ''}`}
-            aria-hidden="true"
-          />
-        )}
         <div className="px-4 sm:px-8 py-4 flex items-center justify-between">
           <div
             className="flex items-center gap-2 sm:gap-3 cursor-pointer group titlebar-no-drag"

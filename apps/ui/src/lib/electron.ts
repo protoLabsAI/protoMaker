@@ -1,5 +1,5 @@
-// Type definitions for Electron IPC API
-import type { SessionListItem, Message } from '@/types/electron';
+// Type definitions for the HTTP API client
+import type { SessionListItem, Message } from '@/types/api';
 import type { ClaudeUsageResponse, CodexUsageResponse } from '@/store/types';
 import type {
   IssueValidationVerdict,
@@ -79,7 +79,7 @@ export interface StatResult {
   error?: string;
 }
 
-// Re-export types from electron.d.ts for external use
+// Re-export types from api.ts for use in components
 export type {
   AutoModeEvent,
   ModelDefinition,
@@ -91,16 +91,15 @@ export type {
   FileDiffsResult,
   FileDiffResult,
   FileStatus,
-} from '@/types/electron';
+} from '@/types/api';
 
-// Import types for internal use in this file
 import type {
   AutoModeEvent,
   WorktreeAPI,
   GitAPI,
   ModelDefinition,
   ProviderStatus,
-} from '@/types/electron';
+} from '@/types/api';
 
 // Import HTTP API client (ES module)
 import { getHttpApiClient, getServerUrlSync } from './http-api-client';
@@ -548,18 +547,6 @@ export interface EventHistoryAPI {
 
 export interface ElectronAPI {
   ping: () => Promise<string>;
-  getApiKey?: () => Promise<string | null>;
-  quit?: () => Promise<void>;
-
-  // Ava Anywhere overlay
-  toggleOverlay?: () => Promise<void>;
-  hideOverlay?: () => Promise<void>;
-  showOverlay?: () => Promise<void>;
-  startHide?: () => void;
-  resizeOverlay?: (height: number) => Promise<void>;
-  setOverlayShortcut?: (accelerator: string) => Promise<boolean>;
-  onOverlayDidShow?: (callback: () => void) => () => void;
-  onOverlayHideRequested?: (callback: () => void) => () => void;
 
   openExternalLink: (url: string) => Promise<{ success: boolean; error?: string }>;
   openDirectory: () => Promise<DialogResult>;
@@ -584,7 +571,6 @@ export interface ElectronAPI {
     mimeType: string,
     projectPath?: string
   ) => Promise<SaveImageResult>;
-  isElectron?: boolean;
   checkClaudeCli: () => Promise<{
     success: boolean;
     status?: string;
@@ -932,30 +918,12 @@ export interface ElectronAPI {
   };
 }
 
-// Note: Window interface is declared in @/types/electron.d.ts
-// Do not redeclare here to avoid type conflicts
-
 // Local storage keys
 const STORAGE_KEYS = {
   PROJECTS: 'automaker_projects',
   CURRENT_PROJECT: 'automaker_current_project',
   TRASHED_PROJECTS: 'automaker_trashed_projects',
 } as const;
-
-// Check if we're in Electron (for UI indicators only)
-export const isElectron = (): boolean => {
-  if (typeof window === 'undefined') {
-    return false;
-  }
-
-  const w = window as Window & { isElectron?: boolean; electronAPI?: { isElectron?: boolean } };
-
-  if (w.isElectron === true) {
-    return true;
-  }
-
-  return !!w.electronAPI?.isElectron;
-};
 
 // Check if backend server is available
 let serverAvailable: boolean | null = null;
@@ -1013,47 +981,10 @@ export const getElectronAPIAsync = async (): Promise<ElectronAPI> => {
   return getElectronAPI();
 };
 
-/**
- * Access the Electron preload bridge directly for overlay IPC calls.
- * These methods are only available in Electron renderer processes (not the HTTP API client).
- */
-export const getOverlayAPI = ():
-  | Pick<
-      ElectronAPI,
-      | 'toggleOverlay'
-      | 'hideOverlay'
-      | 'showOverlay'
-      | 'startHide'
-      | 'resizeOverlay'
-      | 'setOverlayShortcut'
-      | 'onOverlayDidShow'
-      | 'onOverlayHideRequested'
-    >
-  | undefined => {
-  if (typeof window === 'undefined') return undefined;
-  return (window as unknown as { electronAPI?: ElectronAPI }).electronAPI;
-};
-
 // Check if backend is connected (for showing connection status in UI)
 export const isBackendConnected = async (): Promise<boolean> => {
   return await checkServerAvailable();
 };
-
-/**
- * Get the current API mode being used
- * Always returns "http" since that's the only mode now
- */
-export const getCurrentApiMode = (): 'http' => {
-  return 'http';
-};
-
-// Debug helpers
-if (typeof window !== 'undefined') {
-  (window as Window & { __checkApiMode?: () => void }).__checkApiMode = () => {
-    console.log('Current API mode:', getCurrentApiMode());
-    console.log('isElectron():', isElectron());
-  };
-}
 
 // Utility functions for project management
 

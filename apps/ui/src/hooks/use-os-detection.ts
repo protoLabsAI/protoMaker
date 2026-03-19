@@ -10,19 +10,10 @@ export interface OSDetectionResult {
 }
 
 function detectOS(): OperatingSystem {
-  // Check Electron's exposed platform first (via preload contextBridge)
-  if (typeof window !== 'undefined' && window.electronAPI?.platform) {
-    const platform = window.electronAPI.platform;
-    if (platform === 'darwin') return 'mac';
-    if (platform === 'win32') return 'windows';
-    if (platform === 'linux') return 'linux';
-  }
-
   if (typeof navigator === 'undefined') {
     return 'unknown';
   }
 
-  // Fallback: use modern userAgentData API with fallback to navigator.platform
   const nav = navigator as Navigator & { userAgentData?: { platform: string } };
   const platform = (nav.userAgentData?.platform ?? navigator.platform ?? '').toLowerCase();
 
