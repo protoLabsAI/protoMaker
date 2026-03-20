@@ -6,15 +6,6 @@ import { Tool } from '@modelcontextprotocol/sdk/types.js';
 
 export const observabilityTools: Tool[] = [
   {
-    name: 'get_detailed_health',
-    description:
-      'Get detailed server health including memory usage, uptime, and environment info. Use this to monitor server resource consumption.',
-    inputSchema: {
-      type: 'object',
-      properties: {},
-    },
-  },
-  {
     name: 'get_settings',
     description:
       'Get global Automaker settings including theme, log level, auto-mode config, and project profiles.',
@@ -35,41 +26,6 @@ export const observabilityTools: Tool[] = [
         },
       },
       required: ['settings'],
-    },
-  },
-  {
-    name: 'list_events',
-    description:
-      'List event history for a project with optional filtering by type, severity, feature, and date range.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectPath: {
-          type: 'string',
-          description: 'Absolute path to the project directory',
-        },
-        filter: {
-          type: 'object',
-          description:
-            'Optional filter: { trigger?, severity?, featureId?, since?, until?, limit?, offset? }',
-        },
-      },
-      required: ['projectPath'],
-    },
-  },
-  {
-    name: 'list_notifications',
-    description:
-      'List system notifications for a project. Returns unread notifications about feature completions, verifications, and agent events.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectPath: {
-          type: 'string',
-          description: 'Absolute path to the project directory',
-        },
-      },
-      required: ['projectPath'],
     },
   },
   {

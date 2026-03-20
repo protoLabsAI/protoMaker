@@ -27,10 +27,17 @@ export const utilityTools: Tool[] = [
   },
   {
     name: 'health_check',
-    description: 'Check if the Automaker server is running and healthy.',
+    description:
+      'Check if the Automaker server is running and healthy. Set detailed: true to include memory usage, uptime, and environment info.',
     inputSchema: {
       type: 'object',
-      properties: {},
+      properties: {
+        detailed: {
+          type: 'boolean',
+          description:
+            'When true, returns detailed health info including memory usage, uptime, and environment info (default: false)',
+        },
+      },
     },
   },
   {
@@ -73,25 +80,6 @@ export const utilityTools: Tool[] = [
           type: 'string',
           description:
             'Filter to a specific project slug. When provided, board counts, blocked features, review features, and escalations only include features belonging to this project.',
-        },
-      },
-      required: ['projectPath'],
-    },
-  },
-  {
-    name: 'get_board_summary',
-    description: 'Get a summary of the board state showing feature counts by status.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectPath: {
-          type: 'string',
-          description: 'Absolute path to the project directory',
-        },
-        projectSlug: {
-          type: 'string',
-          description:
-            'Filter to a specific project slug. When provided, only features belonging to this project are counted.',
         },
       },
       required: ['projectPath'],
@@ -173,52 +161,6 @@ export const utilityTools: Tool[] = [
         },
       },
       required: ['projectPath', 'title', 'description'],
-    },
-  },
-
-  {
-    name: 'get_escalation_status',
-    description:
-      'Get status of the escalation router including registered channels, rate limits, and recent activity',
-    inputSchema: {
-      type: 'object',
-      properties: {},
-    },
-  },
-  {
-    name: 'get_escalation_log',
-    description: 'Get signal audit log from the escalation router',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        limit: {
-          type: 'number',
-          description: 'Number of log entries to return (default: 100)',
-        },
-      },
-    },
-  },
-  {
-    name: 'acknowledge_escalation',
-    description:
-      'Acknowledge an escalation signal. Use this to mark that you have seen and handled an escalation.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        signalId: {
-          type: 'string',
-          description: 'Signal ID to acknowledge',
-        },
-        acknowledgedBy: {
-          type: 'string',
-          description: 'Who is acknowledging this signal (e.g., "Claude Agent", user name)',
-        },
-        notes: {
-          type: 'string',
-          description: 'Optional notes about the acknowledgment',
-        },
-      },
-      required: ['signalId', 'acknowledgedBy'],
     },
   },
 ];
