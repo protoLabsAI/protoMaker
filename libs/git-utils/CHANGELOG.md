@@ -1,5 +1,31 @@
 # @protolabsai/git-utils
 
+## 0.82.0
+
+### Minor Changes
+
+- ### Features
+  - add message queue UI controls for Ava Engine transport (#2986)
+  - route feature failure notifications to #alerts instead of #dev
+  - wire Ava Engine queue state to QueueView in chat overlay
+
+  ### Bug Fixes
+  - git staging fails on gitignored paths + MCP quarantine bypass
+  - remove dead EngineQueueState refs from chat overlay (#2980)
+  - remove pen-parser from Dockerfiles (#2978)
+  - install @esbuild/linux-x64 in deploy-docs workflow (#2974)
+
+  ### Refactors
+  - slim down MCP server — remove 34 tools, consolidate 8, fix quarantine bypass (#2988)
+  - System Improvement: recurring merge_conflict failures (#2987)
+  - Add protoClawX Ava Engine as alternative chat transport (#2973)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.82.0
+  - @protolabsai/utils@0.82.0
+
 ## 0.81.0
 
 ### Minor Changes
