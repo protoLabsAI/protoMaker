@@ -73,25 +73,6 @@ export const workspaceTools: Tool[] = [
       required: ['projectPath'],
     },
   },
-  {
-    name: 'get_feature_dependencies',
-    description:
-      'Get the full dependency information for a feature: what it depends on (with satisfaction status), what depends on it (reverse deps), and whether all dependencies are met.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectPath: {
-          type: 'string',
-          description: 'Absolute path to the project directory',
-        },
-        featureId: {
-          type: 'string',
-          description: 'The feature ID to get dependencies for',
-        },
-      },
-      required: ['projectPath', 'featureId'],
-    },
-  },
 
   {
     name: 'list_note_tabs',
@@ -134,7 +115,7 @@ export const workspaceTools: Tool[] = [
   {
     name: 'write_note_tab',
     description:
-      'Write content to a specific note tab. Requires agentWrite permission on the tab. Supports replace (default) or append mode. Content should be TipTap-compatible HTML.',
+      'Write content to a specific note tab. Requires agentWrite permission on the tab. Supports replace (default) or append mode. Content should be TipTap-compatible HTML. Optionally rename the tab or update its permissions in the same call.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -154,6 +135,18 @@ export const workspaceTools: Tool[] = [
           type: 'string',
           enum: ['replace', 'append'],
           description: 'Write mode: replace (default) overwrites, append adds to end',
+        },
+        name: {
+          type: 'string',
+          description: 'Optional new name for the tab',
+        },
+        permissions: {
+          type: 'object',
+          description: 'Optional permission updates for the tab',
+          properties: {
+            agentRead: { type: 'boolean', description: 'Whether agents can read this tab' },
+            agentWrite: { type: 'boolean', description: 'Whether agents can write to this tab' },
+          },
         },
       },
       required: ['projectPath', 'tabId', 'content'],
@@ -206,74 +199,6 @@ export const workspaceTools: Tool[] = [
         },
       },
       required: ['projectPath', 'tabId'],
-    },
-  },
-  {
-    name: 'rename_note_tab',
-    description: 'Rename a note tab.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectPath: {
-          type: 'string',
-          description: 'Absolute path to the project directory',
-        },
-        tabId: {
-          type: 'string',
-          description: 'The tab ID (UUID) to rename',
-        },
-        name: {
-          type: 'string',
-          description: 'New name for the tab',
-        },
-      },
-      required: ['projectPath', 'tabId', 'name'],
-    },
-  },
-  {
-    name: 'update_note_tab_permissions',
-    description:
-      'Update agent read/write permissions for a note tab. Use agentWrite: false to lock a tab from agent edits.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectPath: {
-          type: 'string',
-          description: 'Absolute path to the project directory',
-        },
-        tabId: {
-          type: 'string',
-          description: 'The tab ID (UUID)',
-        },
-        agentRead: {
-          type: 'boolean',
-          description: 'Whether agents can read this tab',
-        },
-        agentWrite: {
-          type: 'boolean',
-          description: 'Whether agents can write to this tab',
-        },
-      },
-      required: ['projectPath', 'tabId'],
-    },
-  },
-  {
-    name: 'reorder_note_tabs',
-    description: 'Reorder note tabs. Provide the complete tab ID array in the desired order.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectPath: {
-          type: 'string',
-          description: 'Absolute path to the project directory',
-        },
-        tabOrder: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Complete array of tab IDs in desired order',
-        },
-      },
-      required: ['projectPath', 'tabOrder'],
     },
   },
 ];

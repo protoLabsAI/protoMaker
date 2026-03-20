@@ -474,34 +474,4 @@ export const projectTools: Tool[] = [
       required: ['projectPath', 'projectSlug'],
     },
   },
-  {
-    name: 'list_project_assignments',
-    description:
-      'List all project assignments for a projectPath. Returns every project that has an assignedTo field set.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectPath: {
-          type: 'string',
-          description: 'Absolute path to the project directory',
-        },
-      },
-      required: ['projectPath'],
-    },
-  },
-  {
-    name: 'reassign_orphaned_projects',
-    description:
-      'Detect projects assigned to peers with stale heartbeats (>120s) and reassign them to this instance.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectPath: {
-          type: 'string',
-          description: 'Absolute path to the project directory',
-        },
-      },
-      required: ['projectPath'],
-    },
-  },
 ];
