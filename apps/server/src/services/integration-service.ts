@@ -300,6 +300,7 @@ export class IntegrationService {
     if (!feature) return;
 
     // Discord: Send error notification as embed with optional mention
+    // Uses errorChannelId if configured, otherwise falls back to channelId
     if (integrations.discord?.enabled && integrations.discord.notifyOnError) {
       const mention = integrations.discord.mentionOnError || '';
       const errorText = error || 'Unknown error';
@@ -310,7 +311,7 @@ export class IntegrationService {
         featureId,
         feature,
         serverId: integrations.discord.serverId,
-        channelId: integrations.discord.channelId,
+        channelId: integrations.discord.errorChannelId || integrations.discord.channelId,
         webhookId: integrations.discord.webhookId,
         webhookToken: integrations.discord.webhookToken,
         action: 'send_embed',

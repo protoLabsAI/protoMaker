@@ -35,7 +35,6 @@ COPY libs/spec-parser/package*.json ./libs/spec-parser/
 COPY libs/flows/package*.json ./libs/flows/
 COPY libs/observability/package*.json ./libs/observability/
 COPY libs/tools/package*.json ./libs/tools/
-COPY libs/pen-parser/package*.json ./libs/pen-parser/
 COPY libs/ui/package*.json ./libs/ui/
 
 # Copy scripts (needed by npm workspace)

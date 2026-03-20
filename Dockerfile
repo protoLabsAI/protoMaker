@@ -33,7 +33,6 @@ COPY libs/spec-parser/package*.json ./libs/spec-parser/
 COPY libs/flows/package*.json ./libs/flows/
 COPY libs/observability/package*.json ./libs/observability/
 COPY libs/tools/package*.json ./libs/tools/
-COPY libs/pen-parser/package*.json ./libs/pen-parser/
 COPY libs/templates/package*.json ./libs/templates/
 COPY libs/ui/package*.json ./libs/ui/
 COPY libs/context-engine/package*.json ./libs/context-engine/
@@ -54,7 +53,7 @@ COPY apps/ui/package.json ./apps/ui/
 
 # Install dependencies (--ignore-scripts to skip husky/prepare, then rebuild native modules)
 # Note: apps/ui/package.json must exist above for npm ci to validate the lockfile,
-# but electron/desktop deps are skipped since we only build the server.
+# but desktop-only deps are skipped since we only build the server.
 RUN npm ci --ignore-scripts && \
     npm install --no-save --force --ignore-scripts \
       @esbuild/linux-x64@0.27.3 \
@@ -235,7 +234,6 @@ COPY apps/ui ./apps/ui
 # When empty, UI uses relative URLs which nginx proxies to the server container
 # Use ARG to allow overriding at build time: --build-arg VITE_SERVER_URL=http://api.example.com
 ARG VITE_SERVER_URL=""
-ENV VITE_SKIP_ELECTRON=true
 ENV VITE_SERVER_URL=${VITE_SERVER_URL}
 RUN npm run build:libs && npm run build --workspace=apps/ui
 
