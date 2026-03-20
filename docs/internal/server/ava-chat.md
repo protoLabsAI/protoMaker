@@ -62,6 +62,7 @@ interface AvaConfig {
     calendar: boolean; // Calendar event tools
     health: boolean; // Health monitoring tools
     settings: boolean; // Global settings access tools
+    scheduling: boolean; // list_timers, pause_timer, resume_timer
   };
   sitrepInjection: boolean;
   contextInjection: boolean;
@@ -80,7 +81,7 @@ All tool groups default to `true`. Model defaults to `sonnet`. `autoApproveTools
 | ---------------------------------------------------------- | ---------------------------------------------------------------------- |
 | `apps/server/src/routes/chat/index.ts`                     | Main chat route — wires config, sitrep, tools, streamText              |
 | `apps/server/src/routes/chat/ava-config.ts`                | `loadAvaConfig` / `saveAvaConfig` with deep-merge defaults             |
-| `apps/server/src/routes/chat/ava-tools.ts`                 | `buildAvaTools(projectPath, services, config)` — 19 tool groups        |
+| `apps/server/src/routes/chat/ava-tools.ts`                 | `buildAvaTools(projectPath, services, config)` — 20 tool groups        |
 | `apps/server/src/routes/chat/sitrep.ts`                    | `getSitrep(projectPath)` — 5-min TTL cache, `invalidateSitrep()`       |
 | `apps/server/src/routes/chat/personas.ts`                  | `buildAvaSystemPrompt({ ctx, projectContext, sitrep, extension })`     |
 | `apps/server/src/routes/ava/index.ts`                      | `/api/ava/config/get` and `/api/ava/config/update` HTTP endpoints      |

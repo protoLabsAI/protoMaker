@@ -23,6 +23,7 @@ export interface AvaToolGroups {
   contextFiles: boolean;
   projects: boolean;
   briefing: boolean;
+  scheduling: boolean;
 }
 
 export interface AvaConfig {

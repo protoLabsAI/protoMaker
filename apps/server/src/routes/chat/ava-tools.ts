@@ -36,6 +36,7 @@ import type { SettingsService } from '../../services/settings-service.js';
 import type { DiscordBotService } from '../../services/discord-bot-service.js';
 import type { HealthMonitorService } from '../../services/health-monitor-service.js';
 import type { CeremonyService } from '../../services/ceremony-service.js';
+import type { SchedulerService } from '../../services/scheduler-service.js';
 import type { ToolProgressEmitter } from './tool-progress.js';
 import { githubMergeService } from '../../services/github-merge-service.js';
 import { getPRWatcherService } from '../../services/pr-watcher-service.js';
@@ -107,6 +108,8 @@ export interface AvaToolsServices {
   discordBotService?: DiscordBotService;
   /** Health monitor service — optional, used for health tool group */
   healthMonitorService?: HealthMonitorService;
+  /** Scheduler service — optional, used for scheduling tool group */
+  schedulerService?: SchedulerService;
 }
 
 export interface AvaToolsConfig {
@@ -155,6 +158,8 @@ export interface AvaToolsConfig {
   delegateToPm?: boolean;
   /** Enable delegation tool group (delegate_to_pm) — preferred alias for delegateToPm */
   delegation?: boolean;
+  /** Enable scheduling tools (list_timers, pause_timer, resume_timer) */
+  scheduling?: boolean;
 }
 
 // Re-use the same status literals that the Feature type exposes
