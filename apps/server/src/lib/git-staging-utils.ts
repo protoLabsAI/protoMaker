@@ -24,7 +24,7 @@ export const DEFAULT_STAGING_EXCLUSIONS = ['.automaker/', '.claude/worktrees/', 
  * their subdirectories (e.g. `.automaker/memory/`) may need re-inclusion,
  * but they must NOT be emitted as pathspec arguments.
  */
-const GITIGNORE_MANAGED_EXCLUSIONS = new Set(['.automaker/', '.worktrees/']);
+const GITIGNORE_MANAGED_EXCLUSIONS = new Set(['.automaker/', '.worktrees/', '.claude/worktrees/']);
 
 /**
  * Builds a git add command that stages all changes except the directories in

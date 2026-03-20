@@ -115,52 +115,6 @@ export const setupTools: Tool[] = [
     },
   },
   {
-    name: 'open_report',
-    description:
-      'Open an existing ProtoLabs HTML report in the default browser. Use this to view previously generated reports.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        reportPath: {
-          type: 'string',
-          description:
-            'Absolute path to the report HTML file (e.g., {projectPath}/protoLabs.report.html)',
-        },
-      },
-      required: ['reportPath'],
-    },
-  },
-
-  {
-    name: 'trigger_ceremony',
-    description:
-      'Manually trigger a ceremony (standup, milestone retro, or project retro). Useful for retroactively generating ceremonies for already-completed milestones or projects.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectPath: {
-          type: 'string',
-          description: 'Absolute path to the project directory',
-        },
-        projectSlug: {
-          type: 'string',
-          description: 'Project slug',
-        },
-        milestoneSlug: {
-          type: 'string',
-          description: 'Milestone slug (required for standup and retro types)',
-        },
-        ceremonyType: {
-          type: 'string',
-          enum: ['standup', 'retro', 'project-retro'],
-          description:
-            'Type of ceremony: "standup" (milestone kickoff), "retro" (milestone completion), "project-retro" (full project retrospective)',
-        },
-      },
-      required: ['projectPath', 'projectSlug', 'ceremonyType'],
-    },
-  },
-  {
     name: 'run_full_setup',
     description:
       'Run the complete setup pipeline: clone (if git URL), research repo, analyze gaps, generate HTML report, initialize .automaker, generate proto.config.yaml, and generate proposal. This is a convenience wrapper that chains clone_repo (if URL) → research_repo → analyze_gaps → generate_report → setup_lab → propose_alignment. setup_lab writes proto.config.yaml at the project root, populated from research results (name, techStack, commands, git).',
@@ -183,71 +137,6 @@ export const setupTools: Tool[] = [
         },
       },
       required: ['projectPath'],
-    },
-  },
-
-  {
-    name: 'clone_repo',
-    description:
-      'Clone a git repository to the ./labs directory. Supports shallow clones for speed. If repository already exists, it will be refreshed with git pull --rebase.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        gitUrl: {
-          type: 'string',
-          description: 'Git repository URL (https://, git@, or git://)',
-        },
-        directoryName: {
-          type: 'string',
-          description:
-            'Optional directory name for the cloned repository (defaults to repository name extracted from URL)',
-        },
-        shallow: {
-          type: 'boolean',
-          default: true,
-          description: 'Perform shallow clone (--depth 1) for speed (default: true)',
-        },
-      },
-      required: ['gitUrl'],
-    },
-  },
-  {
-    name: 'deliver_alignment',
-    description:
-      'Deliver alignment work back to client repository via fork+PR. Forks the client repo to protoLabsAI org, creates an aligned-by-protolabs branch with branding (footer component + README badge), and opens a PR with alignment details.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        clientRepoUrl: {
-          type: 'string',
-          description: 'Client repository URL (e.g., https://github.com/owner/repo)',
-        },
-        scoreBefore: {
-          type: 'number',
-          description: 'Alignment score before alignment work (optional)',
-        },
-        scoreAfter: {
-          type: 'number',
-          description: 'Alignment score after alignment work (optional)',
-        },
-        gapsSummary: {
-          type: 'string',
-          description: 'Summary of gaps identified during analysis (optional)',
-        },
-        changesMade: {
-          type: 'array',
-          items: {
-            type: 'string',
-          },
-          description: 'List of changes made during alignment (optional)',
-        },
-        alignmentPerformed: {
-          type: 'boolean',
-          description: 'Whether alignment work was performed (vs just branding)',
-          default: false,
-        },
-      },
-      required: ['clientRepoUrl'],
     },
   },
 ];

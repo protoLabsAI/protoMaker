@@ -50,8 +50,47 @@ export async function rebaseWorktreeOnMain(
       logger.warn(`git fetch failed (continuing anyway): ${errorMsg}`);
     }
 
+    // Step 1b: Stash any uncommitted changes before merging.
+    // git merge refuses to run when there are unstaged/uncommitted changes, producing
+    // "cannot merge: You have unstaged changes." — which caused spurious merge_conflict
+    // failures in the friction tracker.  Stashing before and popping after is the
+    // standard git idiom for this situation.
+    let stashRef: string | null = null;
+    try {
+      const { stdout: statusOut } = await execAsync('git status --porcelain', {
+        cwd: worktreePath,
+        timeout: 10_000,
+      });
+      if (statusOut.trim()) {
+        const fileCount = statusOut.trim().split('\n').length;
+        logger.info(`Stashing ${fileCount} uncommitted file(s) before merge in ${worktreePath}`);
+        const { stdout: stashOut } = await execAsync(
+          'git stash push -m "automaker: pre-merge stash"',
+          { cwd: worktreePath, timeout: 30_000 }
+        );
+        // git stash push prints "No local changes to save" when there is nothing to stash
+        // (can happen for untracked-only trees).  Only record a ref when it actually stashed.
+        if (!stashOut.includes('No local changes to save')) {
+          const { stdout: listOut } = await execAsync('git stash list --format="%gd" -1', {
+            cwd: worktreePath,
+            timeout: 10_000,
+          });
+          stashRef = listOut.trim() || 'stash@{0}';
+          logger.info(`Stashed uncommitted changes at ${stashRef} in ${worktreePath}`);
+        }
+      }
+    } catch (stashError) {
+      // Non-critical — proceed without stashing; the merge may still succeed or
+      // produce an informative conflict error.
+      const errorMsg = stashError instanceof Error ? stashError.message : String(stashError);
+      logger.warn(`git stash failed (continuing anyway): ${errorMsg}`);
+    }
+
     // Step 2: Attempt merge with target branch
     logger.info(`Merging worktree with ${targetBranch}: ${worktreePath}`);
+    let mergeSuccess = false;
+    let mergeResult: RebaseResult;
+
     try {
       const { stdout, stderr } = await execAsync(`git merge ${targetBranch}`, {
         cwd: worktreePath,
@@ -66,7 +105,8 @@ export async function rebaseWorktreeOnMain(
         logger.info(`Successfully merged worktree with ${targetBranch}: ${worktreePath}`);
       }
 
-      return { success: true };
+      mergeSuccess = true;
+      mergeResult = { success: true };
     } catch (mergeError) {
       const errorMsg = mergeError instanceof Error ? mergeError.message : String(mergeError);
 
@@ -110,22 +150,49 @@ export async function rebaseWorktreeOnMain(
           );
         }
 
-        return {
+        mergeResult = {
           success: false,
           error: 'Merge conflicts detected',
           hasConflicts: true,
           conflictingFiles,
         };
+      } else {
+        // Other merge errors (not conflicts)
+        logger.warn(`Merge failed for ${worktreePath}: ${errorMsg}`);
+        mergeResult = {
+          success: false,
+          error: errorMsg,
+          hasConflicts: false,
+        };
       }
-
-      // Other merge errors (not conflicts)
-      logger.warn(`Merge failed for ${worktreePath}: ${errorMsg}`);
-      return {
-        success: false,
-        error: errorMsg,
-        hasConflicts: false,
-      };
     }
+
+    // Step 3: Restore stashed changes (if any were stashed)
+    if (stashRef) {
+      try {
+        await execAsync(`git stash pop ${stashRef}`, {
+          cwd: worktreePath,
+          timeout: 30_000,
+        });
+        logger.info(`Restored stashed changes from ${stashRef} in ${worktreePath}`);
+      } catch (popError) {
+        // If the stash pop conflicts (stashed changes conflict with merge result),
+        // log a warning but don't override the merge result — the merge itself succeeded.
+        const errorMsg = popError instanceof Error ? popError.message : String(popError);
+        logger.warn(
+          `git stash pop failed after merge in ${worktreePath} (stash preserved at ${stashRef}): ${errorMsg}`
+        );
+        if (mergeSuccess) {
+          // Surface the stash-pop conflict so callers are aware
+          mergeResult = {
+            success: true,
+            error: `Merge succeeded but stash pop conflicted — stash preserved at ${stashRef}: ${errorMsg}`,
+          };
+        }
+      }
+    }
+
+    return mergeResult;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     logger.error(`Unexpected error during merge for ${worktreePath}:`, errorMsg);

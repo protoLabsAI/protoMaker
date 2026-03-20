@@ -13,6 +13,7 @@ import {
   isGhCliAvailable,
 } from '../common.js';
 import { updateWorktreePRInfo } from '../../../lib/worktree-metadata.js';
+import { buildGitAddCommand } from '../../../lib/git-staging-utils.js';
 import { createLogger } from '@protolabsai/utils';
 import { validatePRState } from '@protolabsai/types';
 import { buildPROwnershipWatermark } from '../../github/utils/pr-ownership.js';
@@ -83,8 +84,8 @@ export function createCreatePRHandler(settingsService?: SettingsService) {
 
         try {
           // Stage all changes
-          logger.debug(`Running: git add -A (excluding .automaker/)`);
-          await execAsync("git add -A -- ':!.automaker/'", { cwd: worktreePath, env: execEnv });
+          logger.debug(`Running: git add -A (with staging exclusions)`);
+          await execAsync(buildGitAddCommand(worktreePath), { cwd: worktreePath, env: execEnv });
 
           // Create commit
           logger.debug(`Running: git commit`);

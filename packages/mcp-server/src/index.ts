@@ -93,6 +93,7 @@ async function apiCall(
     headers: {
       'Content-Type': 'application/json',
       'X-API-Key': API_KEY,
+      'x-automaker-client': 'mcp',
     },
   };
 
@@ -213,16 +214,13 @@ import { orchestrationTools } from './tools/orchestration-tools.js';
 import { projectTools } from './tools/project-tools.js';
 import { gitTools } from './tools/git-tools.js';
 import { observabilityTools } from './tools/observability-tools.js';
-import { contentTools } from './tools/content-tools.js';
 import { integrationTools } from './tools/integration-tools.js';
 import { workspaceTools } from './tools/workspace-tools.js';
 import { setupTools } from './tools/setup-tools.js';
 import { utilityTools } from './tools/utility-tools.js';
 import { schedulerTools } from './tools/scheduler-tools.js';
 import { quarantineTools } from './tools/quarantine-tools.js';
-import { fileOpsTools } from './tools/file-ops-tools.js';
 import { gitOpsTools } from './tools/git-ops-tools.js';
-import { worktreeGitTools } from './tools/worktree-git-tools.js';
 import { promotionTools } from './tools/promotion-tools.js';
 import { leadEngineerTools } from './tools/lead-engineer-tools.js';
 import { knowledgeTools } from './tools/knowledge-tools.js';
@@ -240,15 +238,12 @@ const tools: Tool[] = [
   ...gitTools,
   ...gitOpsTools,
   ...observabilityTools,
-  ...contentTools,
   ...integrationTools,
   ...workspaceTools,
   ...setupTools,
   ...utilityTools,
   ...schedulerTools,
   ...quarantineTools,
-  ...fileOpsTools,
-  ...worktreeGitTools,
   ...promotionTools,
   ...leadEngineerTools,
   ...knowledgeTools,
@@ -441,34 +436,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         filename: args.filename,
       });
 
-    // Skills
-    case 'list_skills':
-      return apiCall('/skills/list', {
-        projectPath: args.projectPath,
-      });
-
-    case 'get_skill':
-      return apiCall('/skills/get', {
-        projectPath: args.projectPath,
-        skillName: args.skillName,
-      });
-
-    case 'create_skill':
-      return apiCall('/skills/create', {
-        projectPath: args.projectPath,
-        name: args.name,
-        description: args.description,
-        content: args.content,
-        emoji: args.emoji,
-        tags: args.tags,
-      });
-
-    case 'delete_skill':
-      return apiCall('/skills/delete', {
-        projectPath: args.projectPath,
-        skillName: args.skillName,
-      });
-
     // Project Spec
     case 'get_project_spec':
       return apiCall('/app-spec/get', {
@@ -498,6 +465,42 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         features?: Array<{ id: string; title: string; status: string; dependencies?: string[] }>;
       };
       const features = result.features || [];
+
+      // When featureId is provided, return detailed dependency info for that feature
+      if (args.featureId) {
+        const depMap = new Map(features.map((f) => [f.id, f]));
+        const depTarget = depMap.get(args.featureId as string);
+        if (!depTarget) {
+          return { error: 'Feature not found' };
+        }
+        const satStatuses = ['done', 'completed', 'verified', 'review'];
+        const dependsOn = (depTarget.dependencies || []).map((depId: string) => {
+          const dep = depMap.get(depId);
+          return {
+            id: depId,
+            title: dep?.title,
+            status: dep?.status,
+            satisfied: dep ? satStatuses.includes(dep.status) : false,
+          };
+        });
+        const blockedBy = features
+          .filter((f) => (f.dependencies || []).includes(args.featureId as string))
+          .map((f) => ({
+            id: f.id,
+            title: f.title,
+            status: f.status,
+            satisfied: satStatuses.includes(f.status),
+          }));
+        return {
+          featureId: args.featureId,
+          featureTitle: depTarget.title,
+          dependsOn,
+          blockedBy,
+          allSatisfied:
+            dependsOn.length === 0 || dependsOn.every((d: { satisfied: boolean }) => d.satisfied),
+        };
+      }
+
       const graph: Record<
         string,
         { title: string; status: string; dependsOn: string[]; blocks: string[] }
@@ -656,6 +659,9 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       });
 
     case 'health_check':
+      if (args.detailed) {
+        return apiCall('/health/detailed', {}, 'GET');
+      }
       return apiCall('/health', {}, 'GET');
 
     case 'get_server_logs': {
@@ -766,23 +772,9 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
     case 'run_qa_check':
       return apiCall('/qa/check', { projectPath: String(args.projectPath ?? '') }, 'GET');
 
-    case 'get_board_summary': {
-      const result = (await apiCall('/features/summary', {
-        projectPath: args.projectPath,
-        projectSlug: args.projectSlug,
-      })) as { summary?: Record<string, number> };
-      return result.summary ?? result;
-    }
-
     // Git Operations
     case 'git_enhanced_status':
       return apiCall('/git/enhanced-status', { projectPath: args.projectPath });
-
-    case 'git_stage_files':
-      return apiCall('/git/stage-files', {
-        projectPath: args.projectPath,
-        files: args.files,
-      });
 
     case 'git_file_details':
       return apiCall('/git/details', {
@@ -819,35 +811,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         minSeverity: args.minSeverity ?? 'low',
       });
 
-    // Escalation
-    case 'get_escalation_status':
-      return apiCall('/escalation/status', {}, 'GET');
-
-    case 'get_escalation_log':
-      return apiCall(
-        '/escalation/log',
-        {
-          limit: args.limit ?? 100,
-        },
-        'GET'
-      );
-
-    case 'acknowledge_escalation':
-      return apiCall('/escalation/acknowledge', {
-        signalId: args.signalId,
-        acknowledgedBy: args.acknowledgedBy,
-        notes: args.notes,
-      });
-
-    // Ceremonies
-    case 'trigger_ceremony':
-      return apiCall('/ceremonies/trigger', {
-        projectPath: args.projectPath,
-        projectSlug: args.projectSlug,
-        milestoneSlug: args.milestoneSlug,
-        ceremonyType: args.ceremonyType,
-      });
-
     // Worktree Management
     case 'list_worktrees':
       return apiCall('/worktree/list', {
@@ -872,22 +835,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         draft: args.draft,
       });
 
-    case 'worktree_cherry_pick':
-      return apiCall('/worktree/cherry-pick', {
-        worktreePath: args.worktreePath,
-        commits: args.commits,
-      });
-
-    case 'worktree_abort_operation':
-      return apiCall('/worktree/abort-operation', {
-        worktreePath: args.worktreePath,
-      });
-
-    case 'worktree_continue_operation':
-      return apiCall('/worktree/continue-operation', {
-        worktreePath: args.worktreePath,
-      });
-
     case 'get_pr_review_comments':
       return apiCall('/github/pr-review-comments', {
         projectPath: args.projectPath,
@@ -901,32 +848,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         threadId: args.threadId,
       });
 
-    case 'worktree_stash_push':
-      return apiCall('/worktree/stash-push', {
-        worktreePath: args.worktreePath,
-        message: args.message,
-        files: args.files,
-      });
-
-    case 'worktree_stash_list':
-      return apiCall('/worktree/stash-list', { worktreePath: args.worktreePath });
-
-    case 'worktree_stash_apply':
-      return apiCall('/worktree/stash-apply', {
-        worktreePath: args.worktreePath,
-        stashRef: args.stashRef,
-      });
-
-    case 'worktree_stash_drop':
-      return apiCall('/worktree/stash-drop', {
-        worktreePath: args.worktreePath,
-        stashRef: args.stashRef,
-      });
-
     // Observability
-    case 'get_detailed_health':
-      return apiCall('/health/detailed', {}, 'GET');
-
     case 'get_settings': {
       // Strip large/stale fields to keep MCP response small (~12k→~1k tokens)
       const settingsResult = (await apiCall('/settings/global', {}, 'GET')) as {
@@ -946,17 +868,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
 
     case 'update_settings':
       return apiCall('/settings/global', (args.settings || {}) as Record<string, unknown>, 'PUT');
-
-    case 'list_events':
-      return apiCall('/event-history/list', {
-        projectPath: args.projectPath,
-        filter: args.filter,
-      });
-
-    case 'list_notifications':
-      return apiCall('/notifications/list', {
-        projectPath: args.projectPath,
-      });
 
     // Metrics
     case 'get_project_metrics':
@@ -1148,68 +1059,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       };
     }
 
-    // Content Pipeline
-    case 'create_content':
-      return apiCall('/content/create', {
-        projectPath: args.projectPath,
-        topic: args.topic,
-        contentConfig: args.contentConfig,
-      });
-
-    case 'get_content_status':
-      return apiCall('/content/status', {
-        runId: args.runId,
-      });
-
-    case 'list_content':
-      return apiCall('/content/list', {
-        projectPath: args.projectPath,
-        filters: args.filters,
-      });
-
-    case 'review_content':
-      return apiCall('/content/review', {
-        projectPath: args.projectPath,
-        runId: args.runId,
-        gate: args.gate,
-        decision: args.decision,
-        feedback: args.feedback,
-      });
-
-    case 'export_content':
-      return apiCall('/content/export', {
-        projectPath: args.projectPath,
-        runId: args.runId,
-        format: args.format,
-      });
-
-    case 'execute_antagonistic_review': {
-      // Parse SPARC sections from the description text
-      const desc = String(args.prdDescription || '');
-      const parseSparc = (text: string) => {
-        const extract = (label: string) => {
-          const re = new RegExp(`##\\s*${label}[\\s\\S]*?\\n([\\s\\S]*?)(?=\\n##\\s|$)`, 'i');
-          const m = text.match(re);
-          return m ? m[1].trim() : '';
-        };
-        const situation = extract('Situation');
-        const problem = extract('Problem');
-        const approach = extract('Approach');
-        const results = extract('Results');
-        const constraints = extract('Constraints');
-        // If no SPARC sections found, use full text as situation
-        if (!situation && !problem && !approach && !results) {
-          return { situation: text, problem: text, approach: text, results: text, constraints: '' };
-        }
-        return { situation, problem, approach, results, constraints };
-      };
-      return apiCall('/flows/antagonistic-review/execute', {
-        projectPath: args.projectPath,
-        prd: parseSparc(desc),
-        config: args.config,
-      });
-    }
-
     // Project Lifecycle
     case 'initiate_project':
       return apiCall('/projects/lifecycle/initiate', {
@@ -1268,16 +1117,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectSlug: args.projectSlug,
       });
 
-    case 'list_project_assignments':
-      return apiCall('/projects/assignment/list-assignments', {
-        projectPath: args.projectPath,
-      });
-
-    case 'reassign_orphaned_projects':
-      return apiCall('/projects/assignment/reassign-orphaned', {
-        projectPath: args.projectPath,
-      });
-
     // Lead Engineer (Production Phase)
     case 'start_lead_engineer':
       return apiCall('/lead-engineer/start', {
@@ -1302,29 +1141,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectPath: args.projectPath,
         research: args.research,
         report: args.report,
-      });
-
-    case 'open_report':
-      return apiCall('/setup/open-report', {
-        reportPath: args.reportPath,
-      });
-
-    // Labs Management
-    case 'clone_repo':
-      return apiCall('/setup/clone', {
-        gitUrl: args.gitUrl,
-        directoryName: args.directoryName,
-        shallow: args.shallow ?? true,
-      });
-
-    case 'deliver_alignment':
-      return apiCall('/setup/deliver', {
-        clientRepoUrl: args.clientRepoUrl,
-        scoreBefore: args.scoreBefore,
-        scoreAfter: args.scoreAfter,
-        gapsSummary: args.gapsSummary,
-        changesMade: args.changesMade,
-        alignmentPerformed: args.alignmentPerformed ?? false,
       });
 
     // Langfuse tools moved to project-level — not shipped in plugin
@@ -1355,23 +1171,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/hitl-forms/submit', {
         formId: args.formId,
         response: args.response,
-      });
-
-    case 'cancel_form':
-      return apiCall('/hitl-forms/cancel', {
-        formId: args.formId,
-      });
-
-    case 'list_actionable_items':
-      return apiCall('/actionable-items/list', {
-        projectPath: args.projectPath,
-        category: args.category,
-      });
-
-    case 'act_on_actionable_item':
-      return apiCall('/actionable-items/update-status', {
-        itemId: args.itemId,
-        action: args.action,
       });
 
     // Board Query
@@ -1454,52 +1253,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       };
     }
 
-    case 'get_feature_dependencies': {
-      const depResult = (await apiCall('/features/list', {
-        projectPath: args.projectPath,
-      })) as { features?: Array<Record<string, unknown>> };
-      const depFeatures = depResult.features || [];
-      const depMap = new Map(depFeatures.map((f) => [f.id, f]));
-      const depTarget = depMap.get(args.featureId as string);
-
-      if (!depTarget) {
-        return { error: 'Feature not found' };
-      }
-
-      const satStatuses = ['done', 'completed', 'verified', 'review'];
-      const dependsOn = ((depTarget.dependencies as string[]) || []).map((depId: string) => {
-        const dep = depMap.get(depId);
-        return {
-          id: depId,
-          title: dep?.title,
-          status: dep?.status,
-          satisfied: dep ? satStatuses.includes(dep.status as string) : false,
-        };
-      });
-
-      const reverseDeps = depFeatures
-        .filter(
-          (f) =>
-            Array.isArray(f.dependencies) &&
-            (f.dependencies as string[]).includes(args.featureId as string)
-        )
-        .map((f) => ({
-          id: f.id,
-          title: f.title,
-          status: f.status,
-          satisfied: satStatuses.includes(f.status as string),
-        }));
-
-      return {
-        featureId: args.featureId,
-        featureTitle: depTarget.title,
-        dependsOn,
-        blockedBy: reverseDeps,
-        allSatisfied:
-          dependsOn.length === 0 || dependsOn.every((d: { satisfied: boolean }) => d.satisfied),
-      };
-    }
-
     // Notes Workspace
     case 'list_note_tabs':
       return apiCall('/notes/list-tabs', {
@@ -1513,13 +1266,31 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         tabId: args.tabId,
       });
 
-    case 'write_note_tab':
-      return apiCall('/notes/write-tab', {
+    case 'write_note_tab': {
+      const writeTabResult = await apiCall('/notes/write-tab', {
         projectPath: args.projectPath,
         tabId: args.tabId,
         content: args.content,
         mode: args.mode,
       });
+      // Optionally rename the tab in the same call
+      if (args.name) {
+        await apiCall('/notes/rename-tab', {
+          projectPath: args.projectPath,
+          tabId: args.tabId,
+          name: args.name,
+        });
+      }
+      // Optionally update permissions in the same call
+      if (args.permissions) {
+        await apiCall('/notes/update-tab-permissions', {
+          projectPath: args.projectPath,
+          tabId: args.tabId,
+          permissions: args.permissions,
+        });
+      }
+      return writeTabResult;
+    }
 
     case 'create_note_tab':
       return apiCall('/notes/create-tab', {
@@ -1533,30 +1304,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/notes/delete-tab', {
         projectPath: args.projectPath,
         tabId: args.tabId,
-      });
-
-    case 'rename_note_tab':
-      return apiCall('/notes/rename-tab', {
-        projectPath: args.projectPath,
-        tabId: args.tabId,
-        name: args.name,
-      });
-
-    case 'update_note_tab_permissions': {
-      const permissions: Record<string, boolean> = {};
-      if (args.agentRead !== undefined) permissions.agentRead = args.agentRead as boolean;
-      if (args.agentWrite !== undefined) permissions.agentWrite = args.agentWrite as boolean;
-      return apiCall('/notes/update-tab-permissions', {
-        projectPath: args.projectPath,
-        tabId: args.tabId,
-        permissions,
-      });
-    }
-
-    case 'reorder_note_tabs':
-      return apiCall('/notes/reorder-tabs', {
-        projectPath: args.projectPath,
-        tabOrder: args.tabOrder,
       });
 
     // Scheduler Management
@@ -1589,49 +1336,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
 
       return { success: true, ...results };
     }
-
-    // Quarantine Management
-    case 'list_quarantine_entries':
-      return apiCall('/quarantine/list', {
-        projectPath: args.projectPath,
-        result: args.result,
-      });
-
-    case 'approve_quarantine_entry':
-      return apiCall('/quarantine/approve', {
-        projectPath: args.projectPath,
-        quarantineId: args.quarantineId,
-        reviewedBy: args.reviewedBy,
-      });
-
-    case 'reject_quarantine_entry':
-      return apiCall('/quarantine/reject', {
-        projectPath: args.projectPath,
-        quarantineId: args.quarantineId,
-        reviewedBy: args.reviewedBy,
-        reason: args.reason,
-      });
-
-    // File Operations
-    case 'copy_file':
-      return apiCall('/fs/copy', {
-        sourcePath: args.sourcePath,
-        destinationPath: args.destinationPath,
-        overwrite: args.overwrite,
-      });
-
-    case 'move_file':
-      return apiCall('/fs/move', {
-        sourcePath: args.sourcePath,
-        destinationPath: args.destinationPath,
-      });
-
-    case 'browse_project_files':
-      return apiCall('/fs/browse-project-files', {
-        projectPath: args.projectPath,
-        relativePath: args.relativePath,
-        showHidden: args.showHidden,
-      });
 
     // Promotion Pipeline
     case 'list_staging_candidates':

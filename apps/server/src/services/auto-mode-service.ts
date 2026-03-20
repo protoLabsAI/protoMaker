@@ -17,6 +17,7 @@ import { simpleQuery } from '../providers/simple-query-service.js';
 import { StreamObserver } from './stream-observer-service.js';
 import { getWorkflowSettings, getEffectivePrBaseBranch } from '../lib/settings-helpers.js';
 import { setFeatureContext } from '@protolabsai/error-tracking';
+import { buildGitAddCommand } from '../lib/git-staging-utils.js';
 
 /**
  * Error thrown when stream observer detects an agent loop.
@@ -2221,7 +2222,7 @@ Address the follow-up instructions above. Review the previous work and make the 
         : `feat: Feature ${featureId}`;
 
       // Stage and commit
-      await execAsync("git add -A -- ':!.automaker/'", { cwd: workDir });
+      await execAsync(buildGitAddCommand(workDir), { cwd: workDir });
       await execFileAsync('git', ['commit', '-m', commitMessage], {
         cwd: workDir,
       });

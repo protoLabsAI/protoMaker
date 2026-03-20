@@ -32,13 +32,18 @@ export const orchestrationTools: Tool[] = [
   {
     name: 'get_dependency_graph',
     description:
-      'Get the dependency graph for all features in a project. Shows which features block others.',
+      'Get the dependency graph for all features in a project. Shows which features block others. Pass an optional featureId to get detailed dependency info for a single feature (what it depends on, what depends on it, satisfaction status).',
     inputSchema: {
       type: 'object',
       properties: {
         projectPath: {
           type: 'string',
           description: 'Absolute path to the project directory',
+        },
+        featureId: {
+          type: 'string',
+          description:
+            'Optional feature ID. When provided, returns detailed dependency info for that feature instead of the full graph.',
         },
       },
       required: ['projectPath'],

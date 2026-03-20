@@ -8,6 +8,7 @@
 import type { Request, Response } from 'express';
 import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
+import { buildGitAddCommand } from '../../../lib/git-staging-utils.js';
 import { getErrorMessage, logError } from '../common.js';
 import { sanitizeCommitMessage } from '@protolabsai/platform';
 
@@ -47,7 +48,7 @@ export function createCommitHandler() {
       }
 
       // Stage all changes
-      await execAsync("git add -A -- ':!.automaker/'", { cwd: worktreePath });
+      await execAsync(buildGitAddCommand(worktreePath), { cwd: worktreePath });
 
       // Sanitize commit message to prevent injection
       const sanitizedMessage = sanitizeCommitMessage(message);

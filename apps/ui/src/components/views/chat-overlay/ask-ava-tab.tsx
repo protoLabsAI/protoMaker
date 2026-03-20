@@ -24,6 +24,7 @@ import { ChatModelSelect } from '@/components/views/chat/components/chat-model-s
 import '@/components/views/chat-overlay/inline-form-card';
 import { ConversationList } from './conversation-list';
 import { AvaSettingsPanel } from './ava-settings-panel';
+import { MessageQueuePanel } from './message-queue-panel';
 import type { ChatSession } from '@/store/chat-store';
 import type { SuggestionItem } from '@protolabsai/ui/ai';
 import type { PendingSubagentApproval } from '@/hooks/use-chat-session';
@@ -157,6 +158,7 @@ export interface AskAvaTabProps {
   historyOpen: boolean;
   queueOpen: boolean;
   queuePaused: boolean;
+  avaEngineUrl?: string;
   projectPath?: string;
   toolProgressLabel?: string;
   stepCount: number;
@@ -201,6 +203,7 @@ export function AskAvaTab({
   historyOpen,
   queueOpen,
   queuePaused,
+  avaEngineUrl,
   projectPath,
   toolProgressLabel,
   stepCount,
@@ -232,7 +235,11 @@ export function AskAvaTab({
       {/* Queue panel — slide in from left */}
       {queueOpen && (
         <div className="w-56 shrink-0 border-r border-border overflow-y-auto p-2 animate-in slide-in-from-left duration-200">
-          <QueueView items={[]} paused={queuePaused} onTogglePause={onToggleQueuePause} />
+          {avaEngineUrl ? (
+            <MessageQueuePanel engineBaseUrl={avaEngineUrl} />
+          ) : (
+            <QueueView items={[]} paused={queuePaused} onTogglePause={onToggleQueuePause} />
+          )}
         </div>
       )}
 
