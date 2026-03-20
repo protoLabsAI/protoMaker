@@ -373,6 +373,7 @@ Search the codebase for relevant patterns and integration points, then research 
         cwd: projectPath,
         maxTurns: 40,
         allowedTools: RESEARCH_TOOLS,
+        traceContext: { projectSlug, phase: 'research', agentRole: 'researcher' },
       });
 
       const researchText = result.text || '';

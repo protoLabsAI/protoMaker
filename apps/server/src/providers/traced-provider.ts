@@ -18,6 +18,8 @@ export interface TracedProviderContext {
   featureId?: string;
   featureName?: string;
   agentRole?: string;
+  projectSlug?: string;
+  phase?: string;
 }
 
 /**
@@ -27,6 +29,7 @@ export class TracedProvider extends BaseProvider {
   private wrapped: BaseProvider;
   private tracingConfig: TracingConfig;
   private _lastTraceId: string | null = null;
+  private _langfuseSessionId: string | undefined;
 
   constructor(wrapped: BaseProvider, tracingConfig: TracingConfig) {
     super(wrapped.getConfig());
@@ -63,6 +66,19 @@ export class TracedProvider extends BaseProvider {
         `role:${ctx.agentRole}`,
       ];
     }
+    if (ctx.projectSlug) {
+      this._langfuseSessionId = `project:${ctx.projectSlug}`;
+      this.tracingConfig.defaultTags = [
+        ...(this.tracingConfig.defaultTags ?? []),
+        `project:${ctx.projectSlug}`,
+      ];
+    }
+    if (ctx.phase) {
+      this.tracingConfig.defaultTags = [
+        ...(this.tracingConfig.defaultTags ?? []),
+        `phase:${ctx.phase}`,
+      ];
+    }
   }
 
   getName(): string {
@@ -86,7 +102,7 @@ export class TracedProvider extends BaseProvider {
       model,
       traceId,
       traceName: `provider:${this.getName()}`,
-      sessionId: options.sdkSessionId,
+      sessionId: this._langfuseSessionId || options.sdkSessionId,
       metadata: {
         provider: this.getName(),
         originalModel: options.originalModel,

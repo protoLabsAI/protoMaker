@@ -68,6 +68,7 @@ export function createGeneratePrdHandler(
         model: PRD_MODEL,
         cwd: projectPath,
         maxTurns: 1,
+        traceContext: { projectSlug, phase: 'prd', agentRole: 'prd-generator' },
       });
 
       const text = result.text || '';
