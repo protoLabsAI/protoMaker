@@ -12,6 +12,20 @@ import { useChatStore, type ChatEffortLevel } from '@/store/chat-store';
 import { getHttpApiClient, getServerUrlSync } from '@/lib/http-api-client';
 import { getAuthHeaders } from '@/lib/api-fetch';
 
+/** A single queued message in the Ava Engine message queue */
+export interface EngineQueueMessage {
+  id: string;
+  content: string;
+  /** Triage classification from SSE annotations */
+  triage?: 'ACT_NOW' | 'ABSORB' | 'HOLD' | 'PENDING';
+  queuedAt?: string;
+}
+
+/** Queue state streamed from Ava Engine SSE annotation events */
+export interface EngineQueueState {
+  messages: EngineQueueMessage[];
+}
+
 /** A pending subagent tool approval surfaced from the subagent:tool-approval-request event */
 export interface PendingSubagentApproval {
   approvalId: string;
@@ -114,6 +128,19 @@ export function useChatSession({
     });
 
   const isStreaming = status === 'streaming' || status === 'submitted';
+
+  // ── Engine queue state ─────────────────────────────────────────────────────
+  // Tracks pending messages in the Ava Engine message queue.
+  // Updated when the engine returns 202 (agent busy, message queued) or via
+  // SSE annotation events of type "queue:update".
+  const [engineQueueState, setEngineQueueState] = useState<EngineQueueState | null>(null);
+
+  // Reset queue state when engine transport is disabled
+  useEffect(() => {
+    if (!avaEngineUrl) {
+      setEngineQueueState(null);
+    }
+  }, [avaEngineUrl]);
 
   // ── Subagent approval state (gated trust model) ────────────────────────────
 
@@ -376,5 +403,10 @@ export function useChatSession({
     historyOpen,
     toggleHistory,
     setHistoryOpen,
+
+    // Ava Engine transport
+    avaEngineUrl,
+    engineQueueState,
+    setEngineQueueState,
   };
 }
