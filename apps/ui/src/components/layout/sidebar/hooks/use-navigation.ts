@@ -6,11 +6,11 @@ import {
   Library,
   Inbox,
   Settings,
-  Settings2,
   NotebookPen,
   FolderOpen,
   FolderKanban,
   ListTodo,
+  Github,
 } from 'lucide-react';
 
 /** protoLabs logo icon sized for sidebar nav (matches lucide icon API) */
@@ -55,6 +55,7 @@ interface UseNavigationProps {
     inbox: string;
     fileEditor: string;
     todo: string;
+    github: string;
     automations: string;
     projects: string;
     chat: string;
@@ -75,8 +76,6 @@ interface UseNavigationProps {
   unreadCeremonyCount?: number;
   /** Whether spec generation is currently running for the current project */
   isSpecGenerating?: boolean;
-  /** System health level for the Operations nav item indicator */
-  healthLevel?: 'healthy' | 'warning' | 'critical';
 }
 
 export function useNavigation({
@@ -94,7 +93,6 @@ export function useNavigation({
   unreadNotificationsCount,
   unreadCeremonyCount,
   isSpecGenerating,
-  healthLevel,
 }: UseNavigationProps) {
   // Build navigation sections
   const navSections: NavSection[] = useMemo(() => {
@@ -123,6 +121,12 @@ export function useNavigation({
         label: 'Todo',
         icon: ListTodo,
         shortcut: shortcuts.todo,
+      },
+      {
+        id: 'github',
+        label: 'GitHub',
+        icon: Github,
+        shortcut: shortcuts.github,
       },
     ];
 
@@ -175,7 +179,7 @@ export function useNavigation({
       },
     ];
 
-    // Add Inbox, Operations, and Project Settings as a standalone section (no label for visual separation)
+    // Add Inbox and Project Settings as a standalone section (no label for visual separation)
     const inboxCount = (unreadNotificationsCount ?? 0) + (unreadCeremonyCount ?? 0);
     sections.push({
       label: '',
@@ -186,23 +190,6 @@ export function useNavigation({
           icon: Inbox,
           shortcut: shortcuts.inbox,
           count: inboxCount || undefined,
-        },
-        {
-          id: 'ops',
-          label: 'Operations',
-          icon: Settings2,
-          suffix: healthLevel
-            ? createElement('span', {
-                className: `inline-block h-2 w-2 rounded-full ${
-                  healthLevel === 'critical'
-                    ? 'bg-red-500 animate-pulse'
-                    : healthLevel === 'warning'
-                      ? 'bg-amber-500'
-                      : 'bg-emerald-500'
-                }`,
-                'aria-label': `System health: ${healthLevel}`,
-              })
-            : undefined,
         },
         {
           id: 'project-settings',
@@ -221,7 +208,6 @@ export function useNavigation({
     unreadNotificationsCount,
     unreadCeremonyCount,
     isSpecGenerating,
-    healthLevel,
   ]);
 
   // Build keyboard shortcuts for navigation

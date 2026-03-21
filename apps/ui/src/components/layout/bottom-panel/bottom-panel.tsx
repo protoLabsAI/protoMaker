@@ -128,10 +128,14 @@ export function BottomPanel() {
   const uptime = systemHealth?.uptime ?? 0;
 
   const peakPercent = Math.max(memPercent, cpuPercent, heapPercent);
+  const activeAgents = systemHealth?.agents?.active ?? [];
+  const agentHealthCount = systemHealth?.agents?.count ?? 0;
+  const autoMode = systemHealth?.autoMode;
+  const leadEngineer = systemHealth?.leadEngineer;
 
   let systemStatus: 'ok' | 'warn' | 'error' = 'ok';
-  if (peakPercent > 90) systemStatus = 'error';
-  else if (peakPercent > 75) systemStatus = 'warn';
+  if (peakPercent > 80) systemStatus = 'error';
+  else if (peakPercent > 60) systemStatus = 'warn';
 
   const systemStatusColor = {
     ok: 'text-emerald-500',
@@ -243,13 +247,13 @@ export function BottomPanel() {
             </TooltipTrigger>
             <TooltipContent side="top" className="text-xs">
               {systemHealth ? (
-                <div className="space-y-1.5 min-w-[180px]">
+                <div className="space-y-1.5 min-w-[200px]">
                   <p className="font-medium border-b border-border pb-1">System Health</p>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Memory</span>
                     <span
                       className={
-                        memPercent > 90 ? 'text-red-400' : memPercent > 75 ? 'text-yellow-400' : ''
+                        memPercent > 80 ? 'text-red-400' : memPercent > 60 ? 'text-yellow-400' : ''
                       }
                     >
                       {memPercent.toFixed(0)}%{' '}
@@ -262,7 +266,7 @@ export function BottomPanel() {
                     <span className="text-muted-foreground">CPU</span>
                     <span
                       className={
-                        cpuPercent > 90 ? 'text-red-400' : cpuPercent > 75 ? 'text-yellow-400' : ''
+                        cpuPercent > 80 ? 'text-red-400' : cpuPercent > 60 ? 'text-yellow-400' : ''
                       }
                     >
                       {cpuPercent.toFixed(0)}%{' '}
@@ -275,9 +279,9 @@ export function BottomPanel() {
                     <span className="text-muted-foreground">Heap</span>
                     <span
                       className={
-                        heapPercent > 90
+                        heapPercent > 80
                           ? 'text-red-400'
-                          : heapPercent > 75
+                          : heapPercent > 60
                             ? 'text-yellow-400'
                             : ''
                       }
@@ -285,6 +289,34 @@ export function BottomPanel() {
                       {formatBytes(systemHealth.heap.used)} / {formatBytes(systemHealth.heap.total)}
                     </span>
                   </div>
+                  <div className="border-t border-border/50 my-1" />
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Agents</span>
+                    <span>{agentHealthCount} running</span>
+                  </div>
+                  {activeAgents.length > 0 && (
+                    <div className="pl-2 text-muted-foreground/70">
+                      {activeAgents.slice(0, 3).map((id) => (
+                        <p key={id} className="truncate max-w-[160px]">
+                          {id}
+                        </p>
+                      ))}
+                      {activeAgents.length > 3 && <p>+{activeAgents.length - 3} more</p>}
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Auto-mode</span>
+                    <span className={autoMode?.isRunning ? 'text-emerald-400' : ''}>
+                      {autoMode?.isRunning ? `on (${autoMode.runningCount})` : 'off'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Lead Engineer</span>
+                    <span className={leadEngineer?.running ? 'text-emerald-400' : ''}>
+                      {leadEngineer?.running ? `on (${leadEngineer.sessionCount})` : 'off'}
+                    </span>
+                  </div>
+                  <div className="border-t border-border/50 my-1" />
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Uptime</span>
                     <span>{formatUptime(uptime)}</span>
