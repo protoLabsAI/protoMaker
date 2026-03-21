@@ -116,6 +116,7 @@ import { CommandRegistryService } from '../services/command-registry-service.js'
 import { CheckpointService } from '../services/checkpoint-service.js';
 import { ProjectSlugResolver } from '../services/project-slug-resolver.js';
 import { DeviationRuleService } from '../services/deviation-rule-service.js';
+import { setToolExecutionLogger } from '../lib/sdk-options.js';
 
 const logger = createLogger('Server:Services');
 
@@ -492,8 +493,10 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Authority Service for trust-based policy enforcement
   const authorityService = new AuthorityService(events);
 
-  // Audit Trail (logs all authority events, tracks trust evolution)
-  const auditService = new AuditService(events);
+  // Audit Trail (logs all authority events, tracks trust evolution + tool execution audit)
+  const auditService = new AuditService(events, dataDir);
+  // Wire tool execution logger so all SDK agent runs emit audit entries
+  setToolExecutionLogger((entry) => auditService.logToolExecution(entry));
 
   // Authority Agents (AI executives)
   const pmAgent = new PMAuthorityAgent(
