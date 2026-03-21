@@ -217,5 +217,5 @@ If alerts are firing repeatedly, check `/api/ava/status` for `circuitBreaker.isO
 
 ## Next steps
 
-- **[Timer Registry](../internal/server/timer-registry.md)** — View and control scheduled tasks from the Ops Dashboard
-- **[Ava Chat System](../internal/server/ava-chat.md)** — Architecture reference for all Ava tool groups
+- **Timer Registry** — View and control scheduled tasks from the Ops Dashboard (internal docs: `docs/internal/server/timer-registry.md`)
+- **Ava Chat System** — Architecture reference for all Ava tool groups (internal docs: `docs/internal/server/ava-chat.md`)
