@@ -121,7 +121,7 @@ services:
       - ${LABS_MOUNT:-/home/josh/labs}:${LABS_MOUNT:-/home/josh/labs}:rw
 
     # Run as the automaker user so entrypoint works without CHOWN/SETUID caps
-    user: "${UID:-1001}:${GID:-1001}"
+    user: '${UID:-1001}:${GID:-1001}'
 
     # Read-only root filesystem — writes go to named volumes or tmpfs mounts
     read_only: true
