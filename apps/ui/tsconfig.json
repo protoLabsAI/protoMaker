@@ -10,6 +10,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
+      "@protolabsai/types": ["../../libs/types/src/index.ts"],
       "@protolabsai/ui/organisms": ["../../libs/ui/src/organisms/index.ts"]
     },
     "moduleResolution": "bundler",

@@ -320,6 +320,12 @@ export type EventType =
   | 'ava-gateway:alerts'
   | 'ava-gateway:heartbeat-ok'
   | 'ava-gateway:emergency-stop'
+  | 'ava-gateway:actions-executed'
+  // Ava Gateway action executor events (autonomous remediation)
+  | 'gateway:action-executed'
+  | 'gateway:action:unblock-feature'
+  | 'gateway:action:retry-agent'
+  | 'gateway:action:merge-pr'
   // Sensor registry events (core sensor framework)
   | 'sensor:registered'
   | 'sensor:data-received'

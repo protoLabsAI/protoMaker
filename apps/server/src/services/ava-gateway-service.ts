@@ -23,12 +23,39 @@ import { CircuitBreaker } from '../lib/circuit-breaker.js';
 const logger = createLogger('AvaGatewayService');
 
 /**
+ * Types of autonomous actions the gateway executor can perform
+ */
+export type GatewayActionType = 'unblock_feature' | 'retry_agent' | 'merge_ready_pr';
+
+/**
+ * Structured action recommendation produced during heartbeat analysis
+ */
+export interface GatewayActionRecommendation {
+  type: GatewayActionType;
+  featureId: string;
+  reason: string;
+  priority: number; // 1–10, higher = more urgent
+}
+
+/**
+ * Result of an executed gateway action (append-only audit entry)
+ */
+export interface GatewayActionResult {
+  type: GatewayActionType;
+  featureId: string;
+  success: boolean;
+  reason: string;
+  timestamp: string;
+}
+
+/**
  * Heartbeat evaluation result from Ava
  */
 export interface HeartbeatResult {
   status: 'ok' | 'alert';
   message?: string;
   alerts?: HeartbeatAlert[];
+  actionRecommendations?: GatewayActionRecommendation[];
 }
 
 /**
@@ -57,6 +84,81 @@ export interface GatewayStatus {
     isOpen: boolean;
     failureCount: number;
   };
+  /** Append-only audit log of all executed gateway actions */
+  actionAuditLog: GatewayActionResult[];
+}
+
+/**
+ * Executes structured action recommendations produced by the heartbeat.
+ * Enforces a per-cycle budget and emits events for each action taken.
+ */
+export class GatewayActionExecutor {
+  private static readonly ACTION_BUDGET = 3;
+
+  constructor(
+    private readonly events: EventEmitter,
+    private readonly auditLog: GatewayActionResult[]
+  ) {}
+
+  /**
+   * Execute up to ACTION_BUDGET recommendations, sorted by priority descending.
+   * Returns the results of attempted actions.
+   */
+  async execute(recommendations: GatewayActionRecommendation[]): Promise<GatewayActionResult[]> {
+    const sorted = [...recommendations].sort((a, b) => b.priority - a.priority);
+    const batch = sorted.slice(0, GatewayActionExecutor.ACTION_BUDGET);
+    const results: GatewayActionResult[] = [];
+
+    for (const rec of batch) {
+      const result = await this.executeOne(rec);
+      results.push(result);
+      // Append to audit log (append-only)
+      this.auditLog.push(result);
+      // Emit event for each action
+      this.events.emit('gateway:action-executed', {
+        type: result.type,
+        featureId: result.featureId,
+        success: result.success,
+        reason: result.reason,
+        timestamp: result.timestamp,
+      });
+    }
+
+    return results;
+  }
+
+  private async executeOne(rec: GatewayActionRecommendation): Promise<GatewayActionResult> {
+    const timestamp = new Date().toISOString();
+    try {
+      switch (rec.type) {
+        case 'unblock_feature':
+          this.events.emit('gateway:action:unblock-feature', { featureId: rec.featureId });
+          break;
+        case 'retry_agent':
+          this.events.emit('gateway:action:retry-agent', { featureId: rec.featureId });
+          break;
+        case 'merge_ready_pr':
+          this.events.emit('gateway:action:merge-pr', { featureId: rec.featureId });
+          break;
+      }
+      return {
+        type: rec.type,
+        featureId: rec.featureId,
+        success: true,
+        reason: rec.reason,
+        timestamp,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return {
+        type: rec.type,
+        featureId: rec.featureId,
+        success: false,
+        reason: message,
+        timestamp,
+      };
+    }
+  }
 }
 
 /**
@@ -113,6 +215,9 @@ export class AvaGatewayService {
   // Phase 9: Circuit breaker
   private circuitBreaker: CircuitBreaker;
   private backoffDelayMs = 0;
+
+  // Action audit log (append-only)
+  private actionAuditLog: GatewayActionResult[] = [];
 
   // Rate limiting for real-time notifications
   private lastNotificationPost: Map<string, number> = new Map();
@@ -254,7 +359,49 @@ export class AvaGatewayService {
         isOpen: this.circuitBreaker.isCircuitOpen(),
         failureCount: this.circuitBreaker.getFailureCount(),
       },
+      actionAuditLog: [...this.actionAuditLog],
     };
+  }
+
+  /**
+   * Generate structured action recommendations from board state.
+   * Blocked features → unblock_feature
+   * Stale in-progress features → retry_agent
+   * Features in review with a PR → merge_ready_pr
+   */
+  generateActionRecommendations(summary: BoardSummary): GatewayActionRecommendation[] {
+    const recommendations: GatewayActionRecommendation[] = [];
+
+    // Blocked features should be unblocked
+    for (const feature of summary.staleFeatures) {
+      if (feature.status === 'blocked') {
+        recommendations.push({
+          type: 'unblock_feature',
+          featureId: feature.id,
+          reason: `Feature has been blocked for ${feature.daysSinceUpdate} days`,
+          priority: 8,
+        });
+      } else if (feature.status === 'in_progress') {
+        recommendations.push({
+          type: 'retry_agent',
+          featureId: feature.id,
+          reason: `Feature has been in progress for ${feature.daysSinceUpdate} days without update`,
+          priority: 6,
+        });
+      }
+    }
+
+    // PRs in review are candidates for merge
+    for (const pr of summary.failedPRs) {
+      recommendations.push({
+        type: 'merge_ready_pr',
+        featureId: pr.id,
+        reason: `PR #${pr.prNumber ?? 'unknown'} is ready for merge`,
+        priority: 7,
+      });
+    }
+
+    return recommendations;
   }
 
   /**
@@ -708,6 +855,35 @@ export class AvaGatewayService {
         if (this.events) {
           this.events.emit('ava-gateway:heartbeat-ok', {
             message: result.message,
+          });
+        }
+      }
+
+      // Produce structured action recommendations when gatewayAutoRemediate flag is enabled
+      const globalSettings = this.settingsService
+        ? await this.settingsService.getGlobalSettings()
+        : null;
+      const autoRemediateEnabled = globalSettings?.featureFlags?.gatewayAutoRemediate ?? false;
+
+      if (autoRemediateEnabled && this.events) {
+        const recommendations = this.generateActionRecommendations(summary);
+        result.actionRecommendations = recommendations;
+
+        if (recommendations.length > 0) {
+          logger.info(`Generated ${recommendations.length} action recommendation(s)`, {
+            types: recommendations.map((r) => r.type),
+          });
+
+          const executor = new GatewayActionExecutor(this.events, this.actionAuditLog);
+          const actionResults = await executor.execute(recommendations);
+
+          logger.info(`Executed ${actionResults.length} action(s)`, {
+            successful: actionResults.filter((r) => r.success).length,
+          });
+
+          this.events.emit('ava-gateway:actions-executed', {
+            count: actionResults.length,
+            results: actionResults,
           });
         }
       }

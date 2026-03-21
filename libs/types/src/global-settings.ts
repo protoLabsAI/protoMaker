@@ -213,6 +213,13 @@ export interface FeatureFlags {
    * are auto-approved or escalated to Ava instead. Off by default.
    */
   hitlForms: boolean;
+  /**
+   * Gateway Auto-Remediate — enables the GatewayActionExecutor to automatically
+   * act on structured action recommendations produced during heartbeat cycles.
+   * Actions: unblock_feature, retry_agent, merge_ready_pr. Budget: max 3 per cycle.
+   * Off by default.
+   */
+  gatewayAutoRemediate: boolean;
 }
 
 /** Default feature flags — all off by default, opt-in per environment */
@@ -221,6 +228,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   userPresenceDetection: false,
   reactorEnabled: false,
   hitlForms: false,
+  gatewayAutoRemediate: false,
 };
 
 // ============================================================================

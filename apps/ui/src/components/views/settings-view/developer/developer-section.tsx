@@ -36,6 +36,11 @@ const FEATURE_FLAG_LABELS: Record<keyof FeatureFlags, { label: string; descripti
     description:
       'Enable human-in-the-loop interrupt forms from PM Agent, Signal Intake, and Lead Engineer. When off, gated actions are auto-approved or escalated to Ava.',
   },
+  gatewayAutoRemediate: {
+    label: 'Gateway Auto-Remediate',
+    description:
+      'Allow Ava Gateway to automatically act on board issues each heartbeat cycle (unblock features, retry agents, merge ready PRs). Budget: max 3 actions per cycle.',
+  },
 };
 
 // Role badge colour mapping
