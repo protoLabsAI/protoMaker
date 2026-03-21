@@ -142,7 +142,7 @@ export function SidebarNavigation({
                     </div>
                     <span
                       className={cn(
-                        'ml-3 font-medium text-sm flex-1 text-left',
+                        'ml-3 font-medium text-sm text-left',
                         sidebarOpen ? 'block' : 'hidden',
                         'transition-opacity duration-200',
                         contentReady ? 'opacity-100' : 'opacity-0'
@@ -150,18 +150,7 @@ export function SidebarNavigation({
                     >
                       {item.label}
                     </span>
-                    {/* Suffix element (e.g. health dot) */}
-                    {item.suffix && sidebarOpen && (
-                      <span
-                        className={cn(
-                          'transition-opacity duration-200',
-                          contentReady ? 'opacity-100' : 'opacity-0'
-                        )}
-                      >
-                        {item.suffix}
-                      </span>
-                    )}
-                    {/* Count badge */}
+                    {/* Count badge — next to label */}
                     {item.count !== undefined && item.count > 0 && sidebarOpen && (
                       <span
                         className={cn(
@@ -176,7 +165,19 @@ export function SidebarNavigation({
                         {item.count > 99 ? '99+' : item.count}
                       </span>
                     )}
-                    {item.shortcut && sidebarOpen && !item.count && (
+                    <span className="flex-1" />
+                    {/* Suffix element (e.g. health dot) */}
+                    {item.suffix && sidebarOpen && (
+                      <span
+                        className={cn(
+                          'transition-opacity duration-200',
+                          contentReady ? 'opacity-100' : 'opacity-0'
+                        )}
+                      >
+                        {item.suffix}
+                      </span>
+                    )}
+                    {item.shortcut && sidebarOpen && (
                       <span
                         className={cn(
                           'flex items-center justify-center min-w-5 h-5 px-1.5 text-[10px] font-mono rounded-md transition-all duration-200',
