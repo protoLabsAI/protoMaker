@@ -8,6 +8,10 @@
  * Also tracks trust evolution: successful actions increase trust score,
  * escalations and failures decrease it. When score crosses threshold,
  * trust level is automatically promoted.
+ *
+ * Additionally provides tool execution audit logging for agent tool calls.
+ * Tool executions are stored in {dataDir}/audit/tool-executions.jsonl with
+ * SHA-256 hashed inputs (never full input content) and log rotation at 50MB.
  */
 
 import path from 'path';
@@ -21,6 +25,22 @@ const logger = createLogger('AuditService');
 
 const AUDIT_FILE = 'audit.jsonl';
 const AUTHORITY_DIR = 'authority';
+
+const TOOL_EXEC_FILE = 'tool-executions.jsonl';
+const TOOL_EXEC_DIR = 'audit';
+const ROTATION_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
+
+/** An agent tool execution audit entry */
+export interface ToolExecutionEntry {
+  timestamp: string;
+  agentId: string;
+  featureId: string;
+  toolName: string;
+  /** SHA-256 hash of the tool input (never full input) */
+  inputHash: string;
+  resultStatus: 'success' | 'error' | 'blocked';
+  durationMs: number;
+}
 
 /** Trust score thresholds for auto-promotion */
 const TRUST_PROMOTION_THRESHOLDS: Record<number, number> = {
@@ -74,12 +94,14 @@ export class AuditService {
   private readonly events: EventEmitter;
   private authorityService: AuthorityService | null = null;
   private initialized = false;
+  private readonly dataDir: string | null;
 
   /** In-memory trust scores keyed by `${projectPath}:${agentId}` */
   private trustScores = new Map<string, TrustScore>();
 
-  constructor(events: EventEmitter) {
+  constructor(events: EventEmitter, dataDir?: string) {
     this.events = events;
+    this.dataDir = dataDir ?? null;
   }
 
   /**
@@ -568,6 +590,102 @@ export class AuditService {
 
       // Reset score after promotion
       score.score = 0;
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Tool Execution Audit
+  // --------------------------------------------------------------------------
+
+  /**
+   * Log a tool execution entry to the append-only JSONL audit file.
+   * Inputs are stored as SHA-256 hashes — never raw content.
+   * The file rotates automatically when it reaches 50MB.
+   */
+  async logToolExecution(entry: ToolExecutionEntry): Promise<void> {
+    if (!this.dataDir) return;
+    const filePath = this.getToolExecFilePath();
+    const dir = path.dirname(filePath);
+
+    try {
+      if (!secureFs.existsSync(dir)) {
+        await secureFs.mkdir(dir, { recursive: true });
+      }
+      await this.maybeRotateToolExecLog(filePath);
+      const line = JSON.stringify(entry) + '\n';
+      await secureFs.appendFile(filePath, line);
+    } catch (error) {
+      logger.error('Failed to write tool execution audit entry:', error);
+    }
+  }
+
+  /**
+   * Query recent tool execution entries with optional filtering.
+   */
+  async queryToolExecutions(options?: {
+    agentId?: string;
+    featureId?: string;
+    toolName?: string;
+    since?: string;
+    limit?: number;
+  }): Promise<ToolExecutionEntry[]> {
+    if (!this.dataDir) return [];
+    const filePath = this.getToolExecFilePath();
+
+    try {
+      if (!secureFs.existsSync(filePath)) return [];
+      const content = (await secureFs.readFile(filePath, 'utf-8')) as string;
+      const lines = content.split('\n').filter((l: string) => l.trim());
+
+      let entries = lines
+        .map((line) => {
+          try {
+            return JSON.parse(line) as ToolExecutionEntry;
+          } catch {
+            return null;
+          }
+        })
+        .filter((e): e is ToolExecutionEntry => e !== null);
+
+      if (options?.agentId) {
+        entries = entries.filter((e) => e.agentId === options.agentId);
+      }
+      if (options?.featureId) {
+        entries = entries.filter((e) => e.featureId === options.featureId);
+      }
+      if (options?.toolName) {
+        entries = entries.filter((e) => e.toolName === options.toolName);
+      }
+      if (options?.since) {
+        const sinceDate = new Date(options.since).getTime();
+        entries = entries.filter((e) => new Date(e.timestamp).getTime() >= sinceDate);
+      }
+      if (options?.limit) {
+        entries = entries.slice(-options.limit);
+      }
+
+      return entries;
+    } catch (error) {
+      logger.error('Failed to read tool execution audit log:', error);
+      return [];
+    }
+  }
+
+  private getToolExecFilePath(): string {
+    return path.join(this.dataDir!, TOOL_EXEC_DIR, TOOL_EXEC_FILE);
+  }
+
+  private async maybeRotateToolExecLog(filePath: string): Promise<void> {
+    try {
+      if (!secureFs.existsSync(filePath)) return;
+      const stats = await secureFs.stat(filePath);
+      if (stats.size >= ROTATION_SIZE_BYTES) {
+        const rotated = filePath + '.1';
+        await secureFs.rename(filePath, rotated);
+        logger.info(`Tool execution audit log rotated (was ${stats.size} bytes)`);
+      }
+    } catch {
+      // Never break audit logging due to rotation failure
     }
   }
 

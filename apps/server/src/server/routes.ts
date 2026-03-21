@@ -433,7 +433,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   logger.info('Agent routes mounted at /api/agents');
 
   // Ops routes (timer registry, operational controls)
-  app.use('/api/ops', createOpsRoutes(schedulerService, events, eventRouterService));
+  app.use('/api/ops', createOpsRoutes(schedulerService, events, eventRouterService, auditService));
   logger.info('Ops routes mounted at /api/ops');
 
   // QA check aggregation (consolidated report for Quinn QA agent)
