@@ -14,7 +14,7 @@
  */
 
 import path from 'path';
-import { exec, execSync } from 'child_process';
+import { exec, execFile, execSync } from 'child_process';
 import { createLogger } from '@protolabsai/utils';
 import * as secureFs from '../lib/secure-fs.js';
 import type { EventEmitter } from '../lib/events.js';
@@ -531,10 +531,14 @@ export class WorktreeLifecycleService {
     // This returns non-empty output when local HEAD has commits not on the remote.
     let unpushedOutput: string;
     try {
-      const result = await this.execAsync(`git log origin/${branchName}..HEAD --oneline`, {
-        cwd: worktreePath,
-        timeout: 15_000,
-      });
+      const result = await this.execFileAsync(
+        'git',
+        ['log', `origin/${branchName}..HEAD`, '--oneline'],
+        {
+          cwd: worktreePath,
+          timeout: 15_000,
+        }
+      );
       unpushedOutput = result.stdout.trim();
     } catch {
       // Remote tracking branch may not exist yet (brand-new branch that was
@@ -555,7 +559,7 @@ export class WorktreeLifecycleService {
 
     // Attempt push with --no-verify to skip hooks that may fail in worktrees
     try {
-      await this.execAsync(`git push --no-verify -u origin "${branchName}"`, {
+      await this.execFileAsync('git', ['push', '--no-verify', '-u', 'origin', branchName], {
         cwd: worktreePath,
         timeout: 60_000,
       });
@@ -580,6 +584,25 @@ export class WorktreeLifecycleService {
   ): Promise<{ stdout: string; stderr: string }> {
     return new Promise((resolve, reject) => {
       exec(command, options, (error: Error | null, stdout: string, stderr: string) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve({ stdout, stderr });
+        }
+      });
+    });
+  }
+
+  /**
+   * Promisified execFile for argv-based invocation (no shell parsing)
+   */
+  private execFileAsync(
+    file: string,
+    args: string[],
+    options: { cwd: string; timeout: number }
+  ): Promise<{ stdout: string; stderr: string }> {
+    return new Promise((resolve, reject) => {
+      execFile(file, args, options, (error: Error | null, stdout: string, stderr: string) => {
         if (error) {
           reject(error);
         } else {

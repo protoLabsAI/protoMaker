@@ -863,12 +863,14 @@ export class FeatureScheduler {
       const staleViaPrNumber = allFeatures.filter(
         (f) =>
           f.prNumber &&
+          !openPrNumbers.has(f.prNumber) &&
           (f.status === 'backlog' || f.status === 'blocked' || f.status === 'review') &&
           !alreadyReconciled.has(f.id)
       );
       for (const feature of staleViaPrNumber) {
         try {
           const prNum = String(feature.prNumber).replace(/[^0-9]/g, '');
+          if (!prNum) continue;
           const { stdout: prViewJson } = await execAsync(
             `gh pr view ${prNum} --json state,mergedAt`,
             { cwd: projectPath, timeout: 10000 }
