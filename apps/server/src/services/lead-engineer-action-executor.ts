@@ -100,6 +100,30 @@ export class ActionExecutor {
 
       case 'reset_feature': {
         try {
+          // Before resetting to backlog, check if the feature's branch already has a merged PR.
+          // This prevents zombie retry loops on already-merged work (e.g. feature manually set to
+          // done after merge, but failureClassification.retryable causes classifiedRecovery to keep
+          // resetting it back to backlog and spawning new agents).
+          const featureSnap = session.worldState.features[action.featureId];
+          if (featureSnap?.branchName) {
+            const mergedPR = await this.checkBranchMergedPR(
+              featureSnap.branchName,
+              session.projectPath
+            );
+            if (mergedPR) {
+              await this.deps.featureLoader.update(session.projectPath, action.featureId, {
+                status: 'done',
+                prMergedAt: mergedPR.mergedAt,
+                ...(!featureSnap.prNumber ? { prNumber: mergedPR.number } : {}),
+              });
+              logger.info(
+                `reset_feature skipped for ${action.featureId}: branch "${featureSnap.branchName}" ` +
+                  `has merged PR #${mergedPR.number} — marked done instead of retrying`
+              );
+              break;
+            }
+          }
+
           await this.deps.featureLoader.update(session.projectPath, action.featureId, {
             status: 'backlog',
           });
@@ -459,6 +483,31 @@ export class ActionExecutor {
       this.executeAction(session, action).catch((err) => {
         logger.error(`Action execution failed (${action.type}):`, err);
       });
+    }
+  }
+
+  /**
+   * Check if the given branch has a merged PR on GitHub.
+   * Queries by branch name (head), not by prNumber, so it works even when the
+   * feature's prNumber has been overwritten by a newer PR creation.
+   * Returns the first merged PR found, or null if none / on error (fail-open).
+   */
+  private async checkBranchMergedPR(
+    branchName: string,
+    projectPath: string
+  ): Promise<{ number: number; mergedAt: string } | null> {
+    try {
+      const { stdout } = await execAsync(
+        `gh pr list --head "${branchName}" --state merged --json number,mergedAt --limit 1`,
+        { cwd: projectPath, timeout: 15000 }
+      );
+      const trimmed = stdout.trim();
+      if (!trimmed || trimmed === '[]' || trimmed === 'null') return null;
+      const prs = JSON.parse(trimmed) as Array<{ number: number; mergedAt: string }>;
+      return prs.length > 0 ? (prs[0] ?? null) : null;
+    } catch {
+      // Fail-open: if the GitHub check fails, proceed with normal reset
+      return null;
     }
   }
 }
