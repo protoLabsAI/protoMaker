@@ -84,11 +84,13 @@ export interface SimpleQueryOptions {
    * Tools that are explicitly disallowed for this execution.
    */
   disallowedTools?: string[];
-  /** Trace context for Langfuse enrichment (feature ID, role, tags) */
+  /** Trace context for Langfuse enrichment (feature ID, role, project, phase) */
   traceContext?: {
     featureId?: string;
     featureName?: string;
     agentRole?: string;
+    projectSlug?: string;
+    phase?: string;
   };
 }
 

@@ -24,21 +24,32 @@ vi.mock('@protolabsai/platform', () => ({
   getFeatureDir: vi.fn(() => '/mock/.automaker/features/feat-001'),
 }));
 
-vi.mock('node:child_process', () => ({
-  // Default: call the callback with empty stdout so promisify(exec) resolves immediately.
-  // Existing tests never call exec (gate/pre-flight disabled), so this is backward-compatible.
-  exec: vi.fn(
-    (
-      _cmd: string,
-      _opts: unknown,
-      cb: (err: null, result: { stdout: string; stderr: string }) => void
-    ) => {
-      if (typeof cb === 'function') {
-        cb(null, { stdout: '', stderr: '' });
-      }
+vi.mock('node:child_process', () => {
+  // exec signature: (cmd, opts?, cb) — callback is last arg
+  const execMock = vi.fn((...args: unknown[]) => {
+    const cb = args[args.length - 1];
+    if (typeof cb === 'function') {
+      (cb as (err: null, result: { stdout: string; stderr: string }) => void)(null, {
+        stdout: '',
+        stderr: '',
+      });
     }
-  ),
-}));
+  });
+  // execFile signature: (file, args?, opts?, cb) — callback is last arg
+  const execFileMock = vi.fn((...args: unknown[]) => {
+    const cb = args[args.length - 1];
+    if (typeof cb === 'function') {
+      (cb as (err: null, result: { stdout: string; stderr: string }) => void)(null, {
+        stdout: '',
+        stderr: '',
+      });
+    }
+  });
+  return {
+    exec: execMock,
+    execFile: execFileMock,
+  };
+});
 
 import { ExecuteProcessor } from '../../../src/services/lead-engineer-execute-processor.js';
 import type {

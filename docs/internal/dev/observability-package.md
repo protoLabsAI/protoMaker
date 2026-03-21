@@ -210,6 +210,61 @@ interface CreateScoreOptions {
 }
 ```
 
+## Project Lifecycle Tracing
+
+When an LLM call originates from a project lifecycle phase (research, PRD generation, agent execution, deploy verification), the trace is tagged with project and phase context. This groups all traces under a single Langfuse session, enabling end-to-end cost and timeline visibility.
+
+### How It Works
+
+Pass `projectSlug` and `phase` in the `traceContext` option of `simpleQuery()` or `streamingQuery()`:
+
+```typescript
+const result = await streamingQuery({
+  prompt,
+  model: RESEARCH_MODEL,
+  cwd: projectPath,
+  traceContext: {
+    projectSlug: 'ci-reaction-engine',
+    phase: 'research',
+    agentRole: 'researcher',
+  },
+});
+```
+
+For direct provider usage (e.g., `ExecutionService.runAgent`), call `setContext()` on the `TracedProvider`:
+
+```typescript
+if (provider instanceof TracedProvider) {
+  provider.setContext({
+    featureId,
+    featureName: feature.title,
+    agentRole: 'engineer',
+    projectSlug: feature.projectSlug,
+    phase: 'execute',
+  });
+}
+```
+
+### What Happens
+
+- `projectSlug` sets `sessionId` to `project:{slug}` and adds a `project:{slug}` tag
+- `phase` adds a `phase:{phase}` tag
+- Both values are stored in `defaultMetadata` for the trace
+- Features without `projectSlug` fall back to the existing `sdkSessionId` behavior
+
+### Viewing in Langfuse
+
+Filter the Sessions tab by `project:{slug}` to see all lifecycle phases grouped together with cumulative cost.
+
+### Phase Values
+
+| Phase      | Source                               |
+| ---------- | ------------------------------------ |
+| `research` | `ProjectLifecycleService.research()` |
+| `prd`      | `generate-prd` route handler         |
+| `execute`  | `ExecutionService.runAgent()`        |
+| `deploy`   | `DeployProcessor` (reflection, goal) |
+
 ## Known Gotchas
 
 - **Langfuse SDK types lag runtime API** — `getPrompt()` accepts 3 args at runtime but TS types only declare 2. Use `(client as any).getPrompt()` for the label overload. Same for `score()`.

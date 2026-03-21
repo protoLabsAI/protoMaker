@@ -13,6 +13,7 @@
 
 import * as v8 from 'node:v8';
 import { ProviderFactory } from '../../providers/provider-factory.js';
+import { TracedProvider } from '../../providers/traced-provider.js';
 import { simpleQuery } from '../../providers/simple-query-service.js';
 import { StreamObserver } from '../stream-observer-service.js';
 import { getWorkflowSettings, getEffectivePrBaseBranch } from '../../lib/settings-helpers.js';
@@ -2179,6 +2180,18 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
 
     // Get provider for this model
     const provider = ProviderFactory.getProviderForModel(finalModel);
+
+    // Enrich trace with feature + project context
+    if (provider instanceof TracedProvider) {
+      const featureForTrace = await this.featureLoader.get(finalProjectPath, featureId);
+      provider.setContext({
+        featureId,
+        featureName: featureForTrace?.title,
+        agentRole: 'engineer',
+        projectSlug: featureForTrace?.projectSlug,
+        phase: 'execute',
+      });
+    }
 
     // Strip provider prefix - providers should receive bare model IDs
     const bareModel = stripProviderPrefix(finalModel);

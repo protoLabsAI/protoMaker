@@ -283,6 +283,8 @@ Return ONLY the JSON array, no other text.`;
           featureId: ctx.feature.id,
           featureName: ctx.feature.title,
           agentRole: 'goal-verification',
+          projectSlug: ctx.feature.projectSlug,
+          phase: 'deploy',
         },
       });
 
@@ -434,6 +436,8 @@ ${summary}`,
           featureId: ctx.feature.id,
           featureName: ctx.feature.title,
           agentRole: 'reflection',
+          projectSlug: ctx.feature.projectSlug,
+          phase: 'deploy',
         },
       });
 
