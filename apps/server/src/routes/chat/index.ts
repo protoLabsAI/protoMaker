@@ -473,6 +473,7 @@ export function createChatRoutes(services: ServiceContainer): Router {
               discordBotService: services.discordBotService,
               healthMonitorService: services.healthMonitorService,
               avaMemoryService,
+              schedulerService: services.schedulerService,
             },
             {
               ...avaConfig.toolGroups,

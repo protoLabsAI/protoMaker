@@ -1,6 +1,6 @@
 import { useState, lazy, Suspense } from 'react';
 import { Outlet, useChildMatches } from '@tanstack/react-router';
-import { FolderKanban, BarChart3, CircleDot } from 'lucide-react';
+import { FolderKanban, BarChart3, Settings2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
 import { Spinner } from '@protolabsai/ui/atoms';
@@ -8,11 +8,9 @@ import { ProjectDashboard } from './project-dashboard';
 import { ProjectMetricsTab } from '../dashboard-view/metrics/project-tab';
 import { TimeRangeSelector, type TimeRange } from '../dashboard-view/metrics/time-range';
 
-const GitHubIssuesView = lazy(() =>
-  import('../github-issues-view').then((m) => ({ default: m.GitHubIssuesView }))
-);
+const OpsView = lazy(() => import('../ops-view').then((m) => ({ default: m.OpsView })));
 
-type ProjectsTab = 'plans' | 'issues' | 'metrics';
+type ProjectsTab = 'plans' | 'metrics' | 'ops';
 
 const tabBtnClass =
   'inline-flex h-[calc(100%-1px)] items-center justify-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
@@ -62,19 +60,19 @@ export function ProjectsView() {
           </button>
           <button
             role="tab"
-            aria-selected={activeTab === 'issues'}
-            onClick={() => setActiveTab('issues')}
-            className={toggleBtnClass(activeTab === 'issues')}
-          >
-            <CircleDot className="w-4 h-4" />
-          </button>
-          <button
-            role="tab"
             aria-selected={activeTab === 'metrics'}
             onClick={() => setActiveTab('metrics')}
             className={toggleBtnClass(activeTab === 'metrics')}
           >
             <BarChart3 className="w-4 h-4" />
+          </button>
+          <button
+            role="tab"
+            aria-selected={activeTab === 'ops'}
+            onClick={() => setActiveTab('ops')}
+            className={toggleBtnClass(activeTab === 'ops')}
+          >
+            <Settings2 className="w-4 h-4" />
           </button>
         </div>
         {activeTab === 'metrics' && (
@@ -86,7 +84,14 @@ export function ProjectsView() {
       </div>
 
       {activeTab === 'plans' && <ProjectDashboard />}
-      {activeTab === 'issues' && (
+      {activeTab === 'metrics' && (
+        <div className="flex-1 overflow-y-auto px-4 py-2 sm:px-8 sm:py-2">
+          <div className="max-w-6xl mx-auto">
+            <ProjectMetricsTab projectPath={projectPath} timeRange={timeRange} />
+          </div>
+        </div>
+      )}
+      {activeTab === 'ops' && (
         <Suspense
           fallback={
             <div className="flex-1 flex items-center justify-center">
@@ -94,15 +99,8 @@ export function ProjectsView() {
             </div>
           }
         >
-          <GitHubIssuesView />
+          <OpsView />
         </Suspense>
-      )}
-      {activeTab === 'metrics' && (
-        <div className="flex-1 overflow-y-auto px-4 py-2 sm:px-8 sm:py-2">
-          <div className="max-w-6xl mx-auto">
-            <ProjectMetricsTab projectPath={projectPath} timeRange={timeRange} />
-          </div>
-        </div>
       )}
     </div>
   );
