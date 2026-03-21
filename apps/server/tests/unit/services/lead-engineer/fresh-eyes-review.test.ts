@@ -148,7 +148,11 @@ function setupApprovedExecMocksDisabled() {
   mockExecAsync
     .mockResolvedValueOnce({ stdout: '', stderr: '' }) // checkBranchMerged
     .mockResolvedValueOnce({ stdout: NORMALIZE_RESPONSE, stderr: '' }) // normalizePR
-    .mockResolvedValueOnce({ stdout: APPROVED_STATE, stderr: '' }); // getPRReviewState
+    .mockResolvedValueOnce({
+      stdout: JSON.stringify({ state: 'OPEN', mergedAt: null }),
+      stderr: '',
+    }) // getPRReviewState → merged fast-path check (not merged)
+    .mockResolvedValueOnce({ stdout: APPROVED_STATE, stderr: '' }); // getPRReviewState → review decision
 }
 
 // ── tests ─────────────────────────────────────────────────────────────────────
