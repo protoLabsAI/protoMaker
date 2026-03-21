@@ -33,6 +33,7 @@ import type { MetricsService } from '../../services/metrics-service.js';
 import type { ProjectService } from '../../services/project-service.js';
 import type { ProjectLifecycleService } from '../../services/project-lifecycle-service.js';
 import type { SettingsService } from '../../services/settings-service.js';
+import type { AvaMemoryService } from '../../services/ava-memory-service.js';
 import type { DiscordBotService } from '../../services/discord-bot-service.js';
 import type { HealthMonitorService } from '../../services/health-monitor-service.js';
 import type { CeremonyService } from '../../services/ceremony-service.js';
@@ -111,6 +112,8 @@ export interface AvaToolsServices {
   healthMonitorService?: HealthMonitorService;
   /** Scheduler service — optional, used for scheduling tool group */
   schedulerService?: SchedulerService;
+  /** Ava memory service — optional, used for persistent memory tools */
+  avaMemoryService?: AvaMemoryService;
 }
 
 export interface AvaToolsConfig {
@@ -161,6 +164,8 @@ export interface AvaToolsConfig {
   delegation?: boolean;
   /** Enable scheduling tools (list_timers, pause_timer, resume_timer) */
   scheduling?: boolean;
+  /** Enable memory tools (remember, recall, forget) */
+  memory?: boolean;
 }
 
 // Re-use the same status literals that the Feature type exposes
@@ -1777,6 +1782,86 @@ export function buildAvaTools(
             });
           }, FORM_TIMEOUT_MS);
         });
+      },
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // memory – persistent key-value memory (remember, recall, forget)
+  // -----------------------------------------------------------------------
+  if (config.memory && services.avaMemoryService) {
+    const memoryService = services.avaMemoryService;
+
+    tools['remember'] = makeTool({
+      description:
+        'Store a piece of information in persistent memory for later recall. ' +
+        'Use this to remember user preferences, project decisions, important facts, ' +
+        'or anything that should persist across chat sessions. ' +
+        'If a key already exists, its content and tags are updated.',
+      inputSchema: z.object({
+        key: z
+          .string()
+          .describe(
+            'A short, descriptive key for this memory (e.g., "deploy-process", "user-timezone")'
+          ),
+        content: z.string().describe('The information to remember'),
+        tags: z
+          .array(z.string())
+          .optional()
+          .describe('Optional tags for categorization and search (e.g., ["ops", "deploy"])'),
+      }),
+      execute: async ({ key, content, tags }) => {
+        const entry = await memoryService.remember(key, content, tags ?? []);
+        return {
+          stored: true,
+          key: entry.key,
+          updatedAt: entry.updatedAt,
+          tags: entry.tags,
+        };
+      },
+    });
+
+    tools['recall'] = makeTool({
+      description:
+        'Search persistent memory for previously stored information. ' +
+        'Matches by exact key, tag, or substring in key/content. ' +
+        'Results are ranked: exact key > tag match > substring, sorted by recency.',
+      inputSchema: z.object({
+        query: z.string().describe('Search query — matches against keys, tags, and content'),
+      }),
+      execute: async ({ query }) => {
+        const results = await memoryService.recall(query);
+        if (results.length === 0) {
+          return { found: false, message: `No memories found matching "${query}"` };
+        }
+        return {
+          found: true,
+          count: results.length,
+          results: results.map((r) => ({
+            key: r.entry.key,
+            content: r.entry.content,
+            tags: r.entry.tags,
+            matchType: r.matchType,
+            updatedAt: r.entry.updatedAt,
+            accessCount: r.entry.accessCount,
+          })),
+        };
+      },
+    });
+
+    tools['forget'] = makeTool({
+      description:
+        'Remove a specific memory entry by its exact key. ' +
+        'Use this when information is outdated or no longer relevant.',
+      inputSchema: z.object({
+        key: z.string().describe('The exact key of the memory to remove'),
+      }),
+      execute: async ({ key }) => {
+        const removed = await memoryService.forget(key);
+        if (!removed) {
+          return { removed: false, message: `No memory found with key "${key}"` };
+        }
+        return { removed: true, key };
       },
     });
   }

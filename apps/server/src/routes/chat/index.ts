@@ -56,6 +56,7 @@ import type { CheckpointService } from '../../services/checkpoint-service.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { EventType, SubagentProgress, SubagentStatus } from '@protolabsai/types';
 import { parseSlashCommand, expandCommandBody } from '../../services/command-expansion-service.js';
+import { AvaMemoryService } from '../../services/ava-memory-service.js';
 
 export type { AvaConfig };
 
@@ -446,6 +447,11 @@ export function createChatRoutes(services: ServiceContainer): Router {
           ...(s.headers !== undefined && { headers: s.headers }),
         }));
 
+      // Instantiate AvaMemoryService per-request when a projectPath is available.
+      // The service is lightweight (no state beyond the file path) so per-request
+      // construction is safe and avoids stale project path references.
+      const avaMemoryService = projectPath ? new AvaMemoryService(projectPath) : undefined;
+
       const rawTools = projectPath
         ? buildAvaTools(
             projectPath,
@@ -466,6 +472,7 @@ export function createChatRoutes(services: ServiceContainer): Router {
               canUseTool,
               discordBotService: services.discordBotService,
               healthMonitorService: services.healthMonitorService,
+              avaMemoryService,
               schedulerService: services.schedulerService,
             },
             {
