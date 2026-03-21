@@ -262,6 +262,9 @@ export {
   openInExternalTerminal,
 } from './terminal.js';
 
+// Network security (SSRF prevention)
+export { UrlNotAllowedError, isIpBlocked, validateUrlTarget } from './network-security.js';
+
 // proto.config.yaml schema & loader
 export {
   loadProtoConfig,
