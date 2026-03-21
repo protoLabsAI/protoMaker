@@ -71,12 +71,12 @@ Ava calls `trigger_task` and returns the result of the prompt invocation.
 
 ### Cron expression reference
 
-| Expression       | Meaning                     |
-| ---------------- | --------------------------- |
-| `0 9 * * 1-5`    | Weekdays at 9:00 AM         |
-| `0 */2 * * *`    | Every 2 hours               |
-| `*/30 * * * *`   | Every 30 minutes            |
-| `0 0 * * *`      | Daily at midnight           |
+| Expression     | Meaning             |
+| -------------- | ------------------- |
+| `0 9 * * 1-5`  | Weekdays at 9:00 AM |
+| `0 */2 * * *`  | Every 2 hours       |
+| `*/30 * * * *` | Every 30 minutes    |
+| `0 0 * * *`    | Daily at midnight   |
 
 ## Use Persistent Memory
 
