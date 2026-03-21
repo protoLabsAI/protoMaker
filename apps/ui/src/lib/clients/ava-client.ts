@@ -24,6 +24,7 @@ export interface AvaToolGroups {
   projects: boolean;
   briefing: boolean;
   scheduling: boolean;
+  memory: boolean;
 }
 
 export interface AvaConfig {

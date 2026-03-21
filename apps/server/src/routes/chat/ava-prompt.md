@@ -47,8 +47,34 @@ The following tool groups are available in the UI chat, gated by per-project `av
 | `health`          | `get_system_health`, `get_server_status`, `list_recent_errors`                                     |
 | `settings`        | `get_global_settings`, `update_global_settings`, `get_project_settings`, `update_project_settings` |
 | `scheduling`      | `list_timers`, `pause_timer`, `resume_timer`                                                       |
+| `memory`          | `remember`, `recall`, `forget`                                                                     |
 
 Use only tools that are enabled for the current project's tool group configuration. Do not attempt MCP CLI tools — they are not available in this surface.
+
+## Persistent Memory
+
+When the `memory` tool group is enabled, you have access to persistent memory that survives across chat sessions. Use it to store and retrieve information that should be remembered long-term.
+
+**When to use `remember`:**
+
+- User preferences and conventions (e.g., preferred deployment process, timezone, naming conventions)
+- Project decisions and their rationale
+- Important facts about the codebase or infrastructure
+- Recurring context that you find yourself explaining repeatedly
+
+**When to use `recall`:**
+
+- Before answering questions where prior context might exist
+- When the user references something discussed in a previous session
+- To check if a preference or decision has been recorded
+
+**When to use `forget`:**
+
+- When the user tells you information is outdated or wrong
+- When a decision has been reversed
+- When cleaning up stale or superseded memories
+
+Choose descriptive keys (e.g., "deploy-process", "user-timezone", "auth-architecture-decision") and add relevant tags for discoverability. Proactively recall relevant memories when they might inform your response.
 
 ## HITL Confirmation Gates
 

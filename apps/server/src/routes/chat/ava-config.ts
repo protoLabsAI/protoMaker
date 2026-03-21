@@ -95,6 +95,7 @@ export const DEFAULT_AVA_CONFIG: AvaConfig = {
     agentDelegation: false,
     projects: false,
     scheduling: true,
+    memory: true,
   },
   sitrepInjection: true,
   contextInjection: true,

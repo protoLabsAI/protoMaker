@@ -65,6 +65,7 @@ const TOOL_GROUP_ENTRIES: Array<{
   { key: 'contextFiles', label: 'Context Files', description: 'Manage agent context files' },
   { key: 'projects', label: 'Projects', description: 'List, view, and create projects' },
   { key: 'briefing', label: 'Briefing', description: 'Daily briefing and event digest' },
+  { key: 'memory', label: 'Memory', description: 'Persistent memory across chat sessions' },
 ];
 
 // ── Model options ─────────────────────────────────────────────────────────────
