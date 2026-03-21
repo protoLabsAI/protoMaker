@@ -6,7 +6,7 @@ Project-scoped AI chat with live board context, tool execution, and per-project 
 
 The Ava chat system extends the base chat endpoint with:
 
-- **Project context injection** — CLAUDE.md and `.automaker/context/` files injected into the system prompt
+- **Project context injection** — CLAUDE.md and `ava-prompt.md` injected into the system prompt (not `.automaker/context/` — that is for dev agents)
 - **Live sitrep** — board counts, running agents, and auto-mode status injected at request time
 - **Tool execution** — Ava can read and write the board, control agents, and manage auto-mode
 - **Per-project config** — model, tool groups, injection toggles, and system prompt extensions stored in `.automaker/ava-config.json`
@@ -50,6 +50,7 @@ interface AvaConfig {
     autoMode: boolean; // get_auto_mode_status, start_auto_mode, stop_auto_mode
     projectMgmt: boolean; // get_project_spec, update_project_spec, update_project
     orchestration: boolean; // get_execution_order, set_feature_dependencies
+    agentDelegation: boolean; // @deprecated — use native Agent tool instead
     notes: boolean; // list_note_tabs, read_note_tab, write_note_tab
     metrics: boolean; // get_project_metrics, get_capacity_metrics
     prWorkflow: boolean; // check_pr_status, get_pr_feedback, merge_pr
@@ -57,12 +58,11 @@ interface AvaConfig {
     contextFiles: boolean; // list_context_files, get_context_file, create_context_file
     projects: boolean; // list_projects, get_project, create_project
     briefing: boolean; // get_briefing, get_board_summary_extended
-    avaChannel: boolean; // Ava coordination channel tools
     discord: boolean; // Discord messaging tools
-    calendar: boolean; // Calendar event tools
     health: boolean; // Health monitoring tools
     settings: boolean; // Global settings access tools
-    scheduling: boolean; // list_timers, pause_timer, resume_timer
+    delegation: boolean; // delegate_to_pm
+    scheduling: boolean; // schedule_task, cancel_task, list_scheduled_tasks, trigger_task
     memory: boolean; // remember, recall, forget
   };
   sitrepInjection: boolean;
@@ -74,7 +74,14 @@ interface AvaConfig {
 }
 ```
 
-All tool groups default to `true`. Model defaults to `sonnet`. `autoApproveTools` defaults to `false`. `subagentTrust` defaults to `'full'`.
+**Default values:** Model defaults to `sonnet`. `autoApproveTools` defaults to `false`. `subagentTrust` defaults to `'full'`.
+
+Tool group defaults are split into two tiers:
+
+- **Enabled by default:** `boardRead`, `briefing`, `health`, `notes`, `discord`, `metrics`, `settings`, `delegation`, `scheduling`, `memory`
+- **Disabled by default:** `boardWrite`, `agentControl`, `autoMode`, `prWorkflow`, `promotion`, `contextFiles`, `orchestration`, `projectMgmt`, `agentDelegation`, `projects`
+
+Any group can be toggled via `.automaker/ava-config.json`.
 
 ## Key Files
 
@@ -82,7 +89,7 @@ All tool groups default to `true`. Model defaults to `sonnet`. `autoApproveTools
 | ---------------------------------------------------------- | ---------------------------------------------------------------------- |
 | `apps/server/src/routes/chat/index.ts`                     | Main chat route — wires config, sitrep, tools, streamText              |
 | `apps/server/src/routes/chat/ava-config.ts`                | `loadAvaConfig` / `saveAvaConfig` with deep-merge defaults             |
-| `apps/server/src/routes/chat/ava-tools.ts`                 | `buildAvaTools(projectPath, services, config)` — 21 tool groups        |
+| `apps/server/src/routes/chat/ava-tools.ts`                 | `buildAvaTools(projectPath, services, config)` — 19 tool groups        |
 | `apps/server/src/routes/chat/sitrep.ts`                    | `getSitrep(projectPath)` — 5-min TTL cache, `invalidateSitrep()`       |
 | `apps/server/src/routes/chat/personas.ts`                  | `buildAvaSystemPrompt({ ctx, projectContext, sitrep, extension })`     |
 | `apps/server/src/routes/ava/index.ts`                      | `/api/ava/config/get` and `/api/ava/config/update` HTTP endpoints      |
