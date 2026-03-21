@@ -138,11 +138,7 @@ describe('Ava scheduling tools', () => {
   });
 
   function buildSchedulingTools() {
-    return buildAvaTools(
-      tempDir,
-      { schedulerService },
-      { scheduling: true }
-    );
+    return buildAvaTools(tempDir, { schedulerService }, { scheduling: true });
   }
 
   // -------------------------------------------------------------------------
@@ -154,11 +150,11 @@ describe('Ava scheduling tools', () => {
       const tools = buildSchedulingTools();
       const exec = getExecute(tools, 'schedule_task');
 
-      const result = await exec({
+      const result = (await exec({
         name: 'Daily Report',
         prompt: 'Summarise the board',
         schedule: { type: 'cron', expression: '0 9 * * 1-5' },
-      }) as Record<string, unknown>;
+      })) as Record<string, unknown>;
 
       expect(result.taskId).toBe('ava:daily-report');
       expect(result.message).toContain('Daily Report');
@@ -297,7 +293,7 @@ describe('Ava scheduling tools', () => {
       const tools = buildSchedulingTools();
       const exec = getExecute(tools, 'cancel_task');
 
-      const result = await exec({ taskId: 'system:heartbeat' }) as Record<string, unknown>;
+      const result = (await exec({ taskId: 'system:heartbeat' })) as Record<string, unknown>;
 
       expect(result.error).toMatch(/ava:/);
       expect(schedulerService.unregisterTask).not.toHaveBeenCalled();
@@ -325,7 +321,7 @@ describe('Ava scheduling tools', () => {
       const tools = buildSchedulingTools();
       const exec = getExecute(tools, 'cancel_task');
 
-      const result = await exec({ taskId: 'ava:my-task' }) as Record<string, unknown>;
+      const result = (await exec({ taskId: 'ava:my-task' })) as Record<string, unknown>;
 
       expect(schedulerService.unregisterTask).toHaveBeenCalledWith('ava:my-task');
       expect(schedulerService.unregisterInterval).toHaveBeenCalledWith('ava:my-task');
@@ -340,7 +336,7 @@ describe('Ava scheduling tools', () => {
       const tools = buildSchedulingTools();
       const exec = getExecute(tools, 'cancel_task');
 
-      const result = await exec({ taskId: 'ava:ghost-task' }) as Record<string, unknown>;
+      const result = (await exec({ taskId: 'ava:ghost-task' })) as Record<string, unknown>;
 
       expect(result.error).toBeTruthy();
     });
@@ -388,7 +384,7 @@ describe('Ava scheduling tools', () => {
       const tools = buildSchedulingTools();
       const exec = getExecute(tools, 'list_scheduled_tasks');
 
-      const result = await exec({}) as Record<string, unknown>;
+      const result = (await exec({})) as Record<string, unknown>;
 
       expect(result.tasks).toEqual([]);
       expect(result.count).toBe(0);
@@ -422,7 +418,7 @@ describe('Ava scheduling tools', () => {
 
       const tools = buildSchedulingTools();
       const exec = getExecute(tools, 'list_scheduled_tasks');
-      const result = await exec({}) as Record<string, unknown>;
+      const result = (await exec({})) as Record<string, unknown>;
 
       expect(result.count).toBe(1);
       const tasks = result.tasks as Array<Record<string, unknown>>;
@@ -434,8 +430,22 @@ describe('Ava scheduling tools', () => {
 
     it('filters live timers to ava: prefix only', async () => {
       const liveTimers: Partial<TimerRegistryEntry>[] = [
-        { id: 'system:heartbeat', name: 'Heartbeat', type: 'interval', enabled: true, executionCount: 0, failureCount: 0 },
-        { id: 'ava:my-check', name: 'My Check', type: 'interval', enabled: true, executionCount: 1, failureCount: 0 },
+        {
+          id: 'system:heartbeat',
+          name: 'Heartbeat',
+          type: 'interval',
+          enabled: true,
+          executionCount: 0,
+          failureCount: 0,
+        },
+        {
+          id: 'ava:my-check',
+          name: 'My Check',
+          type: 'interval',
+          enabled: true,
+          executionCount: 1,
+          failureCount: 0,
+        },
       ];
       vi.mocked(schedulerService.listAll).mockReturnValue(liveTimers as TimerRegistryEntry[]);
 
@@ -455,7 +465,7 @@ describe('Ava scheduling tools', () => {
 
       const tools = buildSchedulingTools();
       const exec = getExecute(tools, 'list_scheduled_tasks');
-      const result = await exec({}) as Record<string, unknown>;
+      const result = (await exec({})) as Record<string, unknown>;
 
       // Only the ava: task should be listed
       const tasks = result.tasks as Array<Record<string, unknown>>;
@@ -472,7 +482,7 @@ describe('Ava scheduling tools', () => {
       const tools = buildSchedulingTools();
       const exec = getExecute(tools, 'trigger_task');
 
-      const result = await exec({ taskId: 'system:heartbeat' }) as Record<string, unknown>;
+      const result = (await exec({ taskId: 'system:heartbeat' })) as Record<string, unknown>;
 
       expect(result.error).toMatch(/ava:/);
       expect(simpleQuery).not.toHaveBeenCalled();
@@ -482,7 +492,7 @@ describe('Ava scheduling tools', () => {
       const tools = buildSchedulingTools();
       const exec = getExecute(tools, 'trigger_task');
 
-      const result = await exec({ taskId: 'ava:nonexistent' }) as Record<string, unknown>;
+      const result = (await exec({ taskId: 'ava:nonexistent' })) as Record<string, unknown>;
 
       expect(result.error).toBeTruthy();
       expect(simpleQuery).not.toHaveBeenCalled();
@@ -505,7 +515,7 @@ describe('Ava scheduling tools', () => {
 
       const tools = buildSchedulingTools();
       const exec = getExecute(tools, 'trigger_task');
-      const result = await exec({ taskId: 'ava:ping' }) as Record<string, unknown>;
+      const result = (await exec({ taskId: 'ava:ping' })) as Record<string, unknown>;
 
       expect(simpleQuery).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -540,7 +550,7 @@ describe('Ava scheduling tools', () => {
 
       const tools = buildSchedulingTools();
       const exec = getExecute(tools, 'trigger_task');
-      const result = await exec({ taskId: 'ava:flaky' }) as Record<string, unknown>;
+      const result = (await exec({ taskId: 'ava:flaky' })) as Record<string, unknown>;
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('LLM timeout');
@@ -565,7 +575,7 @@ describe('Ava scheduling tools', () => {
 
       const tools = buildSchedulingTools();
       const exec = getExecute(tools, 'trigger_task');
-      const result = await exec({ taskId: 'ava:verbose' }) as Record<string, unknown>;
+      const result = (await exec({ taskId: 'ava:verbose' })) as Record<string, unknown>;
 
       expect((result.result as string).length).toBe(1000);
     });
