@@ -11,12 +11,14 @@ Contributors adding new execution paths, operators hardening production deployme
 protoLabs Studio agents execute LLM-generated code and shell commands. The threat surface is:
 
 **What agents can do:**
+
 - Spawn subprocesses (git, npm, compilers, linters)
 - Read and write files within the project worktree
 - Make outbound HTTP/HTTPS requests
 - Run init scripts provided by the project (`.automaker/worktree-init.sh`)
 
 **What we protect against:**
+
 - Credential theft: agent reads `process.env` and exfiltrates API keys
 - Host escape: agent exploits container privilege to reach the host filesystem or network
 - Lateral movement: agent reaches internal services (databases, metadata APIs) not reachable from outside the container
@@ -24,6 +26,7 @@ protoLabs Studio agents execute LLM-generated code and shell commands. The threa
 - Resource exhaustion: runaway agent process causes OOM or fork bomb
 
 **What we do not protect against (known limitations):**
+
 - A fully adversarial LLM response that understands its container environment in detail
 - Zero-day kernel exploits that bypass seccomp and capability restrictions
 - Malicious project init scripts — `worktree-init.sh` is operator-controlled and runs with the same privileges as the server process
@@ -42,11 +45,11 @@ The server and all agent processes run as UID 1001 (`automaker`). The entrypoint
 
 The production compose drops all Linux capabilities (`cap_drop: ALL`) and adds back only:
 
-| Capability | Why it is needed |
-|---|---|
-| `CHOWN` | Entrypoint sets file ownership on named volumes at startup |
-| `SETUID` / `SETGID` | `gosu` drops from root to the `automaker` user |
-| `DAC_OVERRIDE` | Writing to files in host-mounted volumes that may have different ownership |
+| Capability          | Why it is needed                                                           |
+| ------------------- | -------------------------------------------------------------------------- |
+| `CHOWN`             | Entrypoint sets file ownership on named volumes at startup                 |
+| `SETUID` / `SETGID` | `gosu` drops from root to the `automaker` user                             |
+| `DAC_OVERRIDE`      | Writing to files in host-mounted volumes that may have different ownership |
 
 All other capabilities (network configuration, raw sockets, `ptrace`, `SYS_ADMIN`, etc.) are unavailable to the process and any subprocess it spawns.
 
@@ -78,6 +81,7 @@ This enforcement happens at the actual I/O call site (`libs/platform/src/secure-
 When `InitScriptService` spawns a worktree init script, it builds an explicit environment rather than passing `process.env` to the child process. See `apps/server/src/services/init-script-service.ts`.
 
 The allowlist includes only:
+
 - Automaker context variables (`AUTOMAKER_PROJECT_PATH`, `AUTOMAKER_WORKTREE_PATH`, `AUTOMAKER_BRANCH`)
 - System path and locale (`PATH`, `HOME`, `USER`, `LANG`, etc.)
 - Git and color output settings (`GIT_TERMINAL_PROMPT`, `FORCE_COLOR`)
@@ -132,17 +136,17 @@ See the [Audit Trail section in the security guide](../../self-hosting/security#
 
 ## Security Controls Summary
 
-| Control | Where it lives | Enforced for |
-|---|---|---|
-| Non-root user | Dockerfile + entrypoint | All server + agent processes |
-| Capability drop | `docker-compose.prod.yml` | Container and all its children |
-| No new privileges | `docker-compose.prod.yml` | SUID/SGID escalation attempts |
-| Path restrictions | `secureFs` in `@protolabsai/platform` | All server-initiated file I/O |
-| Environment sanitization | `InitScriptService` | Init scripts only |
-| tmpfs /tmp | `docker-compose.prod.yml` | Temporary file persistence |
-| Resource limits | `docker-compose.prod.yml` | CPU, memory, process count |
-| Network isolation | Docker networking | Inter-container and host access |
-| Audit trail | `AuditService` | Authority system actions |
+| Control                  | Where it lives                        | Enforced for                    |
+| ------------------------ | ------------------------------------- | ------------------------------- |
+| Non-root user            | Dockerfile + entrypoint               | All server + agent processes    |
+| Capability drop          | `docker-compose.prod.yml`             | Container and all its children  |
+| No new privileges        | `docker-compose.prod.yml`             | SUID/SGID escalation attempts   |
+| Path restrictions        | `secureFs` in `@protolabsai/platform` | All server-initiated file I/O   |
+| Environment sanitization | `InitScriptService`                   | Init scripts only               |
+| tmpfs /tmp               | `docker-compose.prod.yml`             | Temporary file persistence      |
+| Resource limits          | `docker-compose.prod.yml`             | CPU, memory, process count      |
+| Network isolation        | Docker networking                     | Inter-container and host access |
+| Audit trail              | `AuditService`                        | Authority system actions        |
 
 ## References
 
