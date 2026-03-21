@@ -130,12 +130,20 @@ services:
     # Run as the automaker user so entrypoint works without CHOWN/SETUID caps
     user: '${UID:-1001}:${GID:-1001}'
 
-    # Read-only root filesystem — writes go to named volumes or tmpfs mounts
+    # Read-only root filesystem — writes go to named volumes or tmpfs mounts.
+    # /home/automaker tmpfs provides writable space for ~/.claude.json and other
+    # dotfiles; named volume mounts at subdirectories (.claude/, .cursor/, etc.)
+    # take precedence and remain persistent across restarts.
     read_only: true
     tmpfs:
       - /tmp:size=512m,mode=1777
       - /npm-cache:size=512m
+      - /home/automaker:size=64m,uid=${UID:-1001},gid=${GID:-1001},mode=0750
 
+    # Drop all capabilities, then add back the minimum required set.
+    # The container runs as non-root (user: directive above), so most capabilities
+    # are irrelevant. We add back only what's needed for child process spawning
+    # (git, gh, node, claude) and network diagnostics.
     cap_drop:
       - ALL
     cap_add:
