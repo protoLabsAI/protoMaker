@@ -1,5 +1,19 @@
 # @protolabsai/model-resolver
 
+## 0.83.4
+
+### Patch Changes
+
+- ### Bug Fixes
+  - update worktree creation tests for execFileAsync migration
+
+  ### Refactors
+  - Re-harden Docker staging container security profile (#3031)
+  - Migrate shell-interpolated git commands to execFileAsync for injection s (#3030)
+
+- Updated dependencies
+  - @protolabsai/types@0.83.4
+
 ## 0.83.3
 
 ### Patch Changes
