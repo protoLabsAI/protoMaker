@@ -144,13 +144,37 @@ Tags: ops, deploy, staging
 
 ## Enable Gateway Auto-Remediation
 
-The Ava Gateway (`AvaGatewayService`) runs periodic heartbeat checks on the board and integrates with `HealthMonitorService` to automatically fix detected issues.
+The Ava Gateway runs periodic heartbeat checks on the board. By default it only alerts to Discord. With the `gatewayAutoRemediate` feature flag enabled, the gateway takes corrective action automatically.
 
-### How it works
+### Enable the feature flag
 
-When protoLabs Studio starts, `AvaGatewayService` initializes with `HealthMonitorService` and registers your project for monitoring. The health monitor runs checks every 5 minutes and automatically remediates issues that are marked auto-remediable (for example, clearing worktree locks on stuck features).
+In the UI: **Settings > Developer > Feature Flags > Gateway Auto-Remediate**.
 
-The gateway also subscribes to critical server events and sends alerts to the configured Discord `#infra` channel.
+Or via API:
+
+```json
+{
+  "featureFlags": {
+    "gatewayAutoRemediate": true
+  }
+}
+```
+
+When disabled (default), the gateway posts alerts to Discord only. When enabled, the `GatewayActionExecutor` runs after each heartbeat and can take up to 3 actions per cycle.
+
+### Available auto-remediation actions
+
+| Action            | What it does                                                  | When it triggers                                          |
+| ----------------- | ------------------------------------------------------------- | --------------------------------------------------------- |
+| `unblock_feature` | Resets blocked features with retryable errors back to backlog | Feature blocked > 30 min with retryable classification    |
+| `retry_agent`     | Restarts a failed agent session                               | Feature failed with transient error (rate limit, timeout) |
+| `merge_ready_pr`  | Merges PRs where all checks pass                              | PR in review with all CI green, no unresolved threads     |
+
+### Action budget
+
+The executor enforces a budget of 3 actions per heartbeat cycle. Actions beyond the budget are logged but not executed. This prevents runaway remediation loops.
+
+All executed actions are recorded in an append-only audit array on the gateway status object and emitted as `ava-gateway:action-executed` events.
 
 ### Configure the infra channel
 
@@ -160,7 +184,7 @@ Set the `DISCORD_CHANNEL_INFRA` environment variable to your Discord infra chann
 DISCORD_CHANNEL_INFRA=1469109809939742814
 ```
 
-The gateway posts startup messages and critical alerts to this channel.
+The gateway posts startup messages, heartbeat alerts, and action summaries to this channel.
 
 ### View gateway status
 
@@ -187,7 +211,7 @@ Returns the current gateway state:
 
 ### Circuit breaker behavior
 
-The gateway includes a circuit breaker that opens after 5 consecutive failures. When open, heartbeat evaluations are skipped for 5 minutes. The circuit resets automatically after the cooldown.
+The gateway includes a circuit breaker that opens after 5 consecutive failures. When open, heartbeat evaluations and auto-remediation are skipped for 5 minutes. The circuit resets automatically after the cooldown.
 
 If alerts are firing repeatedly, check `/api/ava/status` for `circuitBreaker.isOpen` and `failureCount`.
 
