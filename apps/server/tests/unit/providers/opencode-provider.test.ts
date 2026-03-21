@@ -7,18 +7,22 @@ import type { ProviderMessage, ModelDefinition } from '@protolabsai/types';
 import { collectAsyncGenerator } from '../../utils/helpers.js';
 import { spawnJSONLProcess, getOpenCodeAuthIndicators } from '@protolabsai/platform';
 
-vi.mock('@protolabsai/platform', () => ({
-  spawnJSONLProcess: vi.fn(),
-  isWslAvailable: vi.fn().mockReturnValue(false),
-  findCliInWsl: vi.fn().mockReturnValue(null),
-  createWslCommand: vi.fn(),
-  windowsToWslPath: vi.fn(),
-  getOpenCodeAuthIndicators: vi.fn().mockResolvedValue({
-    hasAuthFile: false,
-    hasOAuthToken: false,
-    hasApiKey: false,
-  }),
-}));
+vi.mock('@protolabsai/platform', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@protolabsai/platform')>();
+  return {
+    ...actual,
+    spawnJSONLProcess: vi.fn(),
+    isWslAvailable: vi.fn().mockReturnValue(false),
+    findCliInWsl: vi.fn().mockReturnValue(null),
+    createWslCommand: vi.fn(),
+    windowsToWslPath: vi.fn(),
+    getOpenCodeAuthIndicators: vi.fn().mockResolvedValue({
+      hasAuthFile: false,
+      hasOAuthToken: false,
+      hasApiKey: false,
+    }),
+  };
+});
 
 describe('opencode-provider.ts', () => {
   let provider: OpencodeProvider;
