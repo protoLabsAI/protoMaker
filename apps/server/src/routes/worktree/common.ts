@@ -3,7 +3,7 @@
  */
 
 import { createLogger } from '@protolabsai/utils';
-import { spawnProcess } from '@protolabsai/platform';
+import { buildSafeEnv, spawnProcess } from '@protolabsai/platform';
 import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import { getErrorMessage as getErrorMessageShared, createLogError } from '../common.js';
@@ -95,15 +95,12 @@ const extendedPath = [process.env.PATH, ...additionalPaths.filter(Boolean)]
   .join(pathSeparator);
 
 /**
- * Environment variables with extended PATH for executing shell commands.
- * Electron apps don't inherit the user's shell PATH, so we need to add
- * common tool installation locations.
+ * Sanitized environment variables for executing shell commands.
+ * Only whitelisted vars are passed — prevents leaking API keys and secrets.
+ * Extended PATH ensures tools installed in common locations are findable,
+ * especially in Electron apps that don't inherit the user's full shell PATH.
  */
-export const execEnv = {
-  ...process.env,
-  PATH: extendedPath,
-  HUSKY: '0', // Disable husky hooks in worktrees — agents handle formatting themselves
-};
+export const execEnv = buildSafeEnv({ path: extendedPath });
 
 // ============================================================================
 // Validation utilities

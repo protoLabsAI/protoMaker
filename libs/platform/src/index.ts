@@ -262,6 +262,9 @@ export {
   openInExternalTerminal,
 } from './terminal.js';
 
+// Safe environment builder for subprocess execution
+export { buildSafeEnv, type SafeEnvOptions } from './safe-env.js';
+
 // proto.config.yaml schema & loader
 export {
   loadProtoConfig,
