@@ -244,9 +244,8 @@ export async function validateUrlTarget(url: string): Promise<void> {
   }
 
   // Strip brackets from IPv6 literal addresses in URLs (e.g. [::1])
-  const rawHost = hostname.startsWith('[') && hostname.endsWith(']')
-    ? hostname.slice(1, -1)
-    : hostname;
+  const rawHost =
+    hostname.startsWith('[') && hostname.endsWith(']') ? hostname.slice(1, -1) : hostname;
 
   // Check if hostname is a direct IPv4 or IPv6 literal
   const directV4 = parseIpv4(rawHost);
@@ -270,10 +269,7 @@ export async function validateUrlTarget(url: string): Promise<void> {
   // Domain name — resolve and check all IPs
   const errors: string[] = [];
 
-  const [v4Results, v6Results] = await Promise.allSettled([
-    resolve4(hostname),
-    resolve6(hostname),
-  ]);
+  const [v4Results, v6Results] = await Promise.allSettled([resolve4(hostname), resolve6(hostname)]);
 
   const allIps: string[] = [];
 

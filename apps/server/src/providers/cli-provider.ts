@@ -27,6 +27,7 @@
  */
 
 import {
+  buildSafeEnv,
   createWslCommand,
   findCliInWsl,
   isWslAvailable,
@@ -452,13 +453,8 @@ export abstract class CliProvider extends BaseProvider {
 
     const cwd = options.cwd || process.cwd();
 
-    // Filter undefined values from process.env
-    const filteredEnv: Record<string, string> = {};
-    for (const [key, value] of Object.entries(process.env)) {
-      if (value !== undefined) {
-        filteredEnv[key] = value;
-      }
-    }
+    // Build sanitized environment — agents need ANTHROPIC_API_KEY to call Claude API
+    const filteredEnv = buildSafeEnv({ includeAnthropicKey: true });
 
     // Calculate dynamic timeout based on reasoning effort.
     // This addresses GitHub issue #530 where reasoning models with 'xhigh' effort would timeout.
