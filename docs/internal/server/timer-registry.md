@@ -148,6 +148,38 @@ Design your handler to fail fast and provide clear error messages. The scheduler
 | `apps/server/src/services/maintenance-tasks.ts` | Maintenance task handlers                                                       |
 | `apps/server/src/services/ava-cron-tasks.ts`    | Ava heartbeat tasks (staging ping, board health, PR triage, adaptive heartbeat) |
 
+## Ava-Created Tasks (`ava:` namespace)
+
+Ava can create its own scheduled tasks at runtime via the `schedule_task` chat tool. All agent-created tasks use the `ava:` ID prefix to distinguish them from system tasks registered by server modules.
+
+### How `ava:` tasks are registered
+
+When Ava calls `schedule_task`, the tool:
+
+1. Derives a task ID by lowercasing the name and replacing non-alphanumeric characters with hyphens, then prepending `ava:`.
+2. Registers the task with `SchedulerService` using `registerTask()` (cron) or `registerInterval()` (fixed delay).
+3. Persists the task definition to `.automaker/ava-tasks.json` so it survives server restarts.
+
+On server startup, `ensureAvaTasksRegistered()` reads `ava-tasks.json` and re-registers all stored tasks before the first tick.
+
+### Namespace enforcement
+
+The `cancel_task` and `trigger_task` tools reject any ID that does not start with `ava:`. This prevents Ava from modifying or triggering system timers (maintenance sweeps, health checks, cron tasks registered by server modules).
+
+`list_scheduled_tasks` returns only `ava:`-prefixed tasks. To view all timers including system ones, use the Ops Dashboard or `GET /api/ops/timers`.
+
+### Example task IDs
+
+| Name passed to `schedule_task` | Resulting task ID          |
+| ------------------------------ | -------------------------- |
+| `Daily Board Summary`          | `ava:daily-board-summary`  |
+| `PR Triage — Weekdays`         | `ava:pr-triage-weekdays`   |
+| `Check Stuck Features`         | `ava:check-stuck-features` |
+
+### Viewing Ava tasks in the Ops Dashboard
+
+Ava tasks appear in the **Timers** tab under their `ava:` IDs alongside system timers. You can pause, resume, and view execution history from the dashboard like any other timer.
+
 ## Next Steps
 
 - **[Maintenance Checks](./maintenance-checks.md)** -- Create a new check module that runs inside a maintenance sweep

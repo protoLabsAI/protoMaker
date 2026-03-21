@@ -165,6 +165,65 @@ Trust is enforced via the `canUseTool` callback built by `buildCanUseToolCallbac
 
 Omitting `subagentTrust` from `ava-config.json` defaults to `'full'`.
 
+## Self-Scheduling
+
+The `scheduling` tool group lets Ava create and manage recurring tasks that run a stored prompt on a schedule. Tasks persist across server restarts in `.automaker/ava-tasks.json`.
+
+### Tools
+
+| Tool                   | Description                                                                                |
+| ---------------------- | ------------------------------------------------------------------------------------------ |
+| `schedule_task`        | Register a recurring task with a cron expression or fixed interval in milliseconds         |
+| `cancel_task`          | Remove a scheduled task by ID (only `ava:`-prefixed tasks can be cancelled)                |
+| `list_scheduled_tasks` | List all `ava:`-prefixed tasks with schedule, last run time, next run time, failure counts |
+| `trigger_task`         | Execute a task immediately without waiting for its next scheduled time                     |
+
+### Task ID convention
+
+Task IDs are automatically prefixed with `ava:` and derived from the human-readable name:
+
+```
+name: "Daily Board Summary"
+→ taskId: "ava:daily-board-summary"
+```
+
+This namespace separates agent-created tasks from system tasks registered by server modules. Only `ava:` tasks are exposed via the scheduling tools; system tasks are not accessible through chat.
+
+### Persistence
+
+Each call to `schedule_task` writes a `AvaScheduledTaskDef` entry to `.automaker/ava-tasks.json`:
+
+```typescript
+interface AvaScheduledTaskDef {
+  id: string; // e.g. "ava:daily-board-summary"
+  name: string; // Human-readable name
+  prompt: string; // Prompt sent to Ava at run time
+  description?: string;
+  schedule: { type: 'cron'; expression: string } | { type: 'interval'; intervalMs: number };
+  createdAt: string; // ISO 8601
+}
+```
+
+On server startup, stored tasks are re-registered with `SchedulerService` via `ensureAvaTasksRegistered()`. Task handlers invoke `simpleQuery({ prompt, cwd: projectPath, maxTurns: 1 })`.
+
+### Configuration
+
+Enabled by default (`scheduling: true` in `DEFAULT_AVA_CONFIG.toolGroups`). Requires `schedulerService` to be present in `AvaToolsServices`. Disable via `ava-config.json`:
+
+```json
+{
+  "toolGroups": {
+    "scheduling": false
+  }
+}
+```
+
+### Implementation
+
+- **Persistence file**: `{projectPath}/.automaker/ava-tasks.json`
+- **Tool registration**: `apps/server/src/routes/chat/ava-tools.ts` — scheduling block at end of `buildAvaTools()`
+- **Scheduler integration**: `apps/server/src/services/scheduler-service.ts` — `registerTask()` for cron, `registerInterval()` for fixed intervals
+
 ## Persistent Memory
 
 The `memory` tool group provides persistent key-value storage that survives across chat sessions. Memory is stored at `{projectPath}/.automaker/ava-memory.json` using atomic writes for crash safety.
@@ -222,6 +281,72 @@ Enabled by default (`memory: true` in `DEFAULT_AVA_CONFIG.toolGroups`). Disable 
 - **Service**: `apps/server/src/services/ava-memory-service.ts` — `AvaMemoryService`
 - **Wiring**: Instantiated per-request in `apps/server/src/routes/chat/index.ts` when `projectPath` is available
 - **Atomic writes**: Uses `atomicWriteJson` from `@protolabsai/utils` (temp file + rename + fsync)
+
+## Gateway Service
+
+`AvaGatewayService` runs outside the chat request cycle. It provides periodic board health monitoring, critical event routing, and integration with `HealthMonitorService` for auto-remediation. It is not a tool group — it operates as a background service initialized at server startup.
+
+### Initialization
+
+```typescript
+// apps/server/src/server/services.ts
+const avaGatewayService = getAvaGatewayService(
+  featureLoader,
+  settingsService,
+  healthMonitorService
+);
+await avaGatewayService.initialize(events, projectPath, infraChannelId);
+avaGatewayService.start();
+```
+
+`initialize()` registers the project with `HealthMonitorService` for auto-remediation checks. `start()` subscribes to the event bus and begins routing critical events to Discord.
+
+### Auto-remediation
+
+`HealthMonitorService` runs every 5 minutes and checks all registered project paths for issues. Issues marked `autoRemediable: true` are fixed automatically (for example, clearing stuck worktree locks). Issues that require human intervention are flagged as alerts.
+
+The `AvaGatewayService` constructor passes `healthMonitor` at injection time:
+
+```typescript
+new AvaGatewayService(featureLoader, settingsService, healthMonitorService);
+```
+
+### Circuit breaker
+
+The gateway wraps heartbeat evaluations with a `CircuitBreaker` (5 failures, 5-minute cooldown). When the circuit is open, evaluations are skipped until the cooldown expires. This prevents Discord spam during sustained outages.
+
+### Status API
+
+```
+GET /api/ava/status
+```
+
+Returns `GatewayStatus`:
+
+```typescript
+interface GatewayStatus {
+  initialized: boolean;
+  listening: boolean;
+  projectPath: string | null;
+  infraChannelId: string | null;
+  lastHeartbeat: string | null;
+  lastHeartbeatStatus: 'ok' | 'alert' | null;
+  totalHeartbeats: number;
+  totalAlerts: number;
+  circuitBreaker: {
+    isOpen: boolean;
+    failureCount: number;
+  };
+}
+```
+
+### Key files
+
+| File                                                 | Role                                                          |
+| ---------------------------------------------------- | ------------------------------------------------------------- |
+| `apps/server/src/services/ava-gateway-service.ts`    | Heartbeat loop, event subscription, circuit breaker           |
+| `apps/server/src/services/health-monitor-service.ts` | Resource checks, auto-remediation for `autoRemediable` issues |
+| `apps/server/src/routes/ava/routes/status.ts`        | `GET /api/ava/status` endpoint                                |
 
 ## See Also
 

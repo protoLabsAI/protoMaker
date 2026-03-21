@@ -13,6 +13,7 @@ Step-by-step instructions for common tasks. Each guide assumes you have protoLab
 - **[Agent Manifests](./agent-manifests)** — Define agent roles and capabilities
 - **[Writing Prompts](./writing-prompts)** — Author effective agent prompts
 - **[Authoring Skills](./authoring-skills)** — Create reusable agent skills
+- **[Ava Autonomous Capabilities](./ava-autonomy)** — Set up self-scheduling, persistent memory, and gateway auto-remediation
 
 ## Development
 
