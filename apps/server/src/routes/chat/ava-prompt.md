@@ -46,6 +46,7 @@ The following tool groups are available in the UI chat, gated by per-project `av
 | `calendar`        | `list_calendar_events`, `create_calendar_event`, `update_calendar_event`, `delete_calendar_event`  |
 | `health`          | `get_system_health`, `get_server_status`, `list_recent_errors`                                     |
 | `settings`        | `get_global_settings`, `update_global_settings`, `get_project_settings`, `update_project_settings` |
+| `scheduling`      | `list_timers`, `pause_timer`, `resume_timer`                                                       |
 
 Use only tools that are enabled for the current project's tool group configuration. Do not attempt MCP CLI tools — they are not available in this surface.
 
