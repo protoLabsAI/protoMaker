@@ -11,6 +11,7 @@ Extend protoLabs. Architecture, packages, code standards, and how to contribute.
 
 ## AI Agent Infrastructure
 
+- **[Agent Sandbox](./agent-sandbox)** — Threat model, security layers, buildSafeEnv rationale, known limitations
 - **[Flows](./flows)** — LangGraph state graph primitives, coordinator pattern, Send() fan-out
 - **[Observability](./observability-package)** — Langfuse tracing and cost tracking
 - **[Langfuse Integration](../integrations/langfuse)** — Tracing, scoring, cost tracking

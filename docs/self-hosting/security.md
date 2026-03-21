@@ -65,6 +65,248 @@ services:
           memory: 512M
 ```
 
+## Agent Sandbox Hardening
+
+protoLabs Studio runs AI agents that execute shell commands in git worktrees. This section documents the defense-in-depth layers that contain agent execution and limit blast radius if an agent misbehaves.
+
+### Defense-in-Depth Layers
+
+| Layer                    | Mechanism                                       | What it protects against                                |
+| ------------------------ | ----------------------------------------------- | ------------------------------------------------------- |
+| Non-root user            | Container runs as UID 1001                      | Host privilege escalation via container breakout        |
+| Capability drop          | `cap_drop: ALL` + minimal adds                  | Kernel exploits requiring privileged capabilities       |
+| No new privileges        | `security_opt: no-new-privileges:true`          | SUID/SGID binaries elevating permissions mid-run        |
+| Path restrictions        | `ALLOWED_ROOT_DIRECTORY` enforced by `secureFs` | Agents reading/writing outside designated project root  |
+| Environment sanitization | `safeEnv` whitelist in `InitScriptService`      | Credential leakage via environment inheritance          |
+| tmpfs for /tmp           | `tmpfs: /tmp`                                   | Persistent attack artifacts surviving container restart |
+| Network isolation        | No host network, explicit port mapping          | Lateral movement to other services on the host          |
+| Resource limits          | CPU, memory, PID limits                         | Resource exhaustion (denial of service)                 |
+| Audit trail              | JSONL log at `.automaker/authority/audit.jsonl` | Undetected authority system abuse                       |
+
+### Capability Management
+
+The production compose drops all Linux capabilities and adds back only the minimum required for the server to run:
+
+```yaml
+services:
+  server:
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN # Set file ownership during init
+      - SETUID # Drop to non-root user via gosu
+      - SETGID # Drop to non-root group via gosu
+      - DAC_OVERRIDE # Write to files owned by other users in mounted volumes
+    security_opt:
+      - no-new-privileges:true
+```
+
+Agents executed inside the container inherit these restrictions. They cannot call `mount`, `ptrace`, modify network interfaces, or perform any other operation requiring dropped capabilities.
+
+### Read-Only Root Filesystem
+
+For maximum hardening, combine `read_only: true` with explicit writable mounts:
+
+```yaml
+services:
+  server:
+    read_only: true
+    tmpfs:
+      - /tmp # Temporary files
+      - /run # PID files and sockets
+    volumes:
+      - automaker-data:/data # Persistent app data
+      - automaker-claude-config:/home/automaker/.claude # Claude CLI state
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+```
+
+Note: The default production compose sets `read_only: false` because npm and some CLI tools write to locations that are difficult to enumerate in advance. Enable `read_only: true` after testing that all required paths are covered by tmpfs or named volumes.
+
+### Environment Sanitization
+
+When `InitScriptService` spawns worktree init scripts, it builds an explicit environment allowlist rather than inheriting `process.env`. This prevents agent scripts from accessing credentials present in the server process.
+
+The allowed variables are:
+
+| Variable                         | Purpose                           |
+| -------------------------------- | --------------------------------- |
+| `AUTOMAKER_PROJECT_PATH`         | Absolute path to the project root |
+| `AUTOMAKER_WORKTREE_PATH`        | Absolute path to the worktree     |
+| `AUTOMAKER_BRANCH`               | Branch name for this worktree     |
+| `PATH`                           | Command search path               |
+| `HOME`                           | Home directory                    |
+| `USER`                           | Username                          |
+| `TMPDIR`                         | Temporary directory               |
+| `SHELL`                          | Default shell                     |
+| `LANG` / `LC_ALL`                | Locale settings                   |
+| `FORCE_COLOR` / `CLICOLOR_FORCE` | Color output control              |
+| `GIT_TERMINAL_PROMPT`            | Disable interactive git prompts   |
+
+Credentials such as `ANTHROPIC_API_KEY`, `GH_TOKEN`, and `AUTOMAKER_API_KEY` are deliberately excluded.
+
+### SSRF Prevention
+
+Agents executing in the container can make network requests. To limit server-side request forgery (SSRF) to internal services, apply egress firewall rules at the host level:
+
+```bash
+# Block access to cloud metadata services from within containers
+sudo iptables -I DOCKER-USER -d 169.254.169.254 -j DROP
+sudo iptables -I DOCKER-USER -d 192.168.0.0/16 -j DROP
+
+# Allow only specific outbound destinations (optional, strict mode)
+# sudo iptables -I DOCKER-USER -j DROP  # deny all
+# sudo iptables -I DOCKER-USER -d 0.0.0.0/0 -p tcp --dport 443 -j ACCEPT  # allow HTTPS
+```
+
+These rules apply to all containers on the host. Adjust CIDR ranges to match your network topology.
+
+For environments that use Docker's internal DNS (`127.0.0.11`), preserve access to that address to avoid breaking container name resolution.
+
+### seccomp Profile
+
+Docker applies a default seccomp profile that blocks ~300 system calls. For tighter restrictions, provide a custom profile:
+
+```yaml
+services:
+  server:
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:/path/to/seccomp-profile.json
+```
+
+Start from Docker's default profile and remove syscalls your workload does not need. Common removals for Node.js servers:
+
+```json
+{
+  "defaultAction": "SCMP_ACT_ERRNO",
+  "architectures": ["SCMP_ARCH_X86_64"],
+  "syscalls": [
+    {
+      "names": [
+        "accept",
+        "bind",
+        "clone",
+        "connect",
+        "execve",
+        "exit_group",
+        "futex",
+        "getpid",
+        "listen",
+        "mmap",
+        "mprotect",
+        "open",
+        "openat",
+        "read",
+        "recvfrom",
+        "sendto",
+        "socket",
+        "write"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+    }
+  ]
+}
+```
+
+To customize for your environment:
+
+1. Run the server with audit logging enabled: `--security-opt seccomp:unconfined` and capture syscall traces with `strace` or `auditd`.
+2. Add required syscalls to the allowlist.
+3. Switch to your custom profile and verify the server starts cleanly.
+4. Test the full agent execution flow (worktree creation, init script, PR creation) before deploying to production.
+
+The default Docker seccomp profile (`/etc/docker/seccomp.json` on the host) is a safe starting point that permits all syscalls needed by standard Node.js workloads.
+
+## Audit Trail
+
+The authority system logs every agent proposal, approval, rejection, and escalation to an append-only JSONL file.
+
+### Log Location
+
+```
+{projectPath}/.automaker/authority/audit.jsonl
+```
+
+Each line is a JSON object:
+
+```json
+{
+  "timestamp": "2026-03-21T14:32:10.123Z",
+  "projectPath": "/projects/my-app",
+  "eventType": "approved",
+  "agentId": "agent-abc123",
+  "role": "feature-engineer",
+  "action": "write_file",
+  "target": "src/auth/login.ts",
+  "risk": "low",
+  "verdict": "approved",
+  "requestId": "req-xyz"
+}
+```
+
+### Event Types
+
+| `eventType`          | When it appears                                  |
+| -------------------- | ------------------------------------------------ |
+| `proposal_submitted` | Agent submitted an action for evaluation         |
+| `approved`           | Action approved (auto or manual)                 |
+| `rejected`           | Action denied by policy                          |
+| `awaiting_approval`  | Action escalated for human review                |
+| `agent_registered`   | New agent joined the authority system            |
+| `trust_updated`      | Agent trust level changed                        |
+| `idea_injected`      | CTO injected a feature idea into the PM pipeline |
+| `decision_logged`    | Structured architectural decision recorded       |
+
+### Query the Audit Trail
+
+```bash
+# Query recent entries for a project
+curl -X POST http://localhost:3008/api/authority/audit \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "projectPath": "/projects/my-app",
+    "limit": 50,
+    "since": "2026-03-01T00:00:00Z"
+  }'
+
+# Filter by event type
+curl -X POST http://localhost:3008/api/authority/audit \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"projectPath": "/projects/my-app", "eventType": "rejected"}'
+
+# Filter by agent
+curl -X POST http://localhost:3008/api/authority/audit \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"projectPath": "/projects/my-app", "agentId": "agent-abc123"}'
+```
+
+### Log Rotation
+
+The JSONL file grows indefinitely. Rotate it with `logrotate` or a cron job:
+
+```bash
+# /etc/logrotate.d/automaker-audit
+/projects/*/\.automaker/authority/audit.jsonl {
+  daily
+  rotate 30
+  compress
+  delaycompress
+  missingok
+  notifempty
+  copytruncate
+}
+```
+
+`copytruncate` is required because the server appends to the file via open file descriptors. Rename-based rotation would leave the server writing to the old inode.
+
 ## Credential Management
 
 ### API Keys
