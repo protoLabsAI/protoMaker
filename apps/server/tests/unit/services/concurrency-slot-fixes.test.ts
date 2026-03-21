@@ -24,6 +24,7 @@ vi.mock('@protolabsai/platform', () => ({
 
 vi.mock('node:child_process', () => ({
   exec: vi.fn(),
+  execFile: vi.fn(),
 }));
 
 import { ConcurrencyManager } from '../../../src/services/auto-mode/concurrency-manager.js';
