@@ -6,9 +6,10 @@
  * Mock call order in ReviewProcessor.process() when reviewState === 'approved':
  * 1. gh pr list --head ... --state merged   (checkBranchMerged)
  * 2. gh pr view --json body,autoMergeRequest (normalizePR)
- * 3. gh pr view --json reviewDecision,...    (getPRReviewState)
- * 4. gh pr diff                              (runFreshEyesReview)
- * 5. gh pr comment                          (runFreshEyesReview — CONCERN/BLOCK only)
+ * 3. gh pr view --json state,mergedAt        (getPRReviewState merged fast-path)
+ * 4. gh pr view --json reviewDecision,...    (getPRReviewState review decision)
+ * 5. gh pr diff                              (runFreshEyesReview)
+ * 6. gh pr comment                          (runFreshEyesReview — CONCERN/BLOCK only)
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -127,7 +128,11 @@ function setupApprovedExecMocks(extraCalls: { stdout: string; stderr: string }[]
   mockExecAsync
     .mockResolvedValueOnce({ stdout: '', stderr: '' }) // checkBranchMerged → not merged
     .mockResolvedValueOnce({ stdout: NORMALIZE_RESPONSE, stderr: '' }) // normalizePR body/autoMerge
-    .mockResolvedValueOnce({ stdout: APPROVED_STATE, stderr: '' }) // getPRReviewState
+    .mockResolvedValueOnce({
+      stdout: JSON.stringify({ state: 'OPEN', mergedAt: null }),
+      stderr: '',
+    }) // getPRReviewState → merged fast-path check (not merged)
+    .mockResolvedValueOnce({ stdout: APPROVED_STATE, stderr: '' }) // getPRReviewState → review decision
     .mockResolvedValueOnce({
       stdout: 'diff --git a/foo.ts b/foo.ts\n+const x = 1;\n',
       stderr: '',
