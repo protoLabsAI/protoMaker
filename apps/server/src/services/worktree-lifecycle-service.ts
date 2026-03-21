@@ -244,6 +244,17 @@ export class WorktreeLifecycleService {
         return; // git not available or not a repo
       }
 
+      // Safety check: push any unpushed commits before removal.
+      // Nested worktrees (.claude/worktrees/agent-*) may have commits that
+      // were never pushed — destroying the worktree would lose that work.
+      const pushedSafely = await this.pushUnpushedCommits(worktreePath, branchName);
+      if (!pushedSafely) {
+        logger.warn(
+          `[SAFETY] Skipping worktree removal for ${worktreeName} — push failed, leaving intact for manual recovery`
+        );
+        return; // Do NOT prune — work is at risk
+      }
+
       // Remove worktree
       try {
         execSync(`git worktree remove "${worktreePath}" --force`, {
@@ -491,6 +502,73 @@ export class WorktreeLifecycleService {
       drift,
       checkedAt: new Date().toISOString(),
     };
+  }
+
+  /**
+   * Push any unpushed commits from a worktree to the remote before cleanup.
+   *
+   * Checks whether the worktree has commits that are not yet on the remote
+   * (`git log origin/<branch>..HEAD`). If any exist, attempts a push with
+   * `--no-verify` to skip pre-push hooks (which may fail in isolated
+   * worktrees that have no node_modules).
+   *
+   * @param worktreePath - Absolute path to the worktree directory
+   * @param branchName - Branch name tracked by this worktree
+   * @returns `true` if all commits are on the remote (push succeeded or was
+   *          unnecessary), `false` if the push failed and the worktree must
+   *          NOT be removed.
+   */
+  private async pushUnpushedCommits(worktreePath: string, branchName: string): Promise<boolean> {
+    // First, verify the worktree directory actually exists on disk.
+    // If it doesn't exist there are no commits to push.
+    try {
+      await secureFs.access(worktreePath);
+    } catch {
+      return true; // Directory absent — nothing to push
+    }
+
+    // Check for unpushed commits: `git log origin/<branch>..HEAD --oneline`
+    // This returns non-empty output when local HEAD has commits not on the remote.
+    let unpushedOutput: string;
+    try {
+      const result = await this.execAsync(`git log origin/${branchName}..HEAD --oneline`, {
+        cwd: worktreePath,
+        timeout: 15_000,
+      });
+      unpushedOutput = result.stdout.trim();
+    } catch {
+      // Remote tracking branch may not exist yet (brand-new branch that was
+      // never pushed). Attempt a push to be safe.
+      unpushedOutput = '(remote ref missing — push required)';
+    }
+
+    if (!unpushedOutput) {
+      // All commits are already on the remote — safe to proceed
+      logger.debug(`[SAFETY] Worktree ${worktreePath} has no unpushed commits — safe to remove`);
+      return true;
+    }
+
+    logger.info(
+      `[SAFETY] Worktree ${worktreePath} has unpushed commits on branch ${branchName} — pushing before cleanup`
+    );
+    logger.debug(`[SAFETY] Unpushed commits:\n${unpushedOutput}`);
+
+    // Attempt push with --no-verify to skip hooks that may fail in worktrees
+    try {
+      await this.execAsync(`git push --no-verify -u origin "${branchName}"`, {
+        cwd: worktreePath,
+        timeout: 60_000,
+      });
+      logger.info(`[SAFETY] Successfully pushed ${branchName} before worktree cleanup`);
+      return true;
+    } catch (pushError) {
+      const msg = pushError instanceof Error ? pushError.message : String(pushError);
+      logger.error(
+        `[SAFETY] Push failed for branch ${branchName} in worktree ${worktreePath}: ${msg}. ` +
+          `Worktree will NOT be removed — manual recovery required.`
+      );
+      return false;
+    }
   }
 
   /**
