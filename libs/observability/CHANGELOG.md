@@ -1,5 +1,32 @@
 # @protolabsai/observability
 
+## 0.83.2
+
+### Patch Changes
+
+- ### Bug Fixes
+  - skip done features in orphan detection + batch Discord alerts
+  - add Discord channel env vars to staging compose
+  - remove dead internal doc links from public ava-autonomy guide
+  - add merged fast-path mock to disabled fresh-eyes test case
+  - update fresh-eyes test mocks for merged fast-path check in getPRReviewState
+  - check merged state before escalating on PR review state error
+  - use importOriginal in opencode-provider test mock for buildSafeEnv compat
+
+  ### Refactors
+  - Gateway Action Tests (#3013)
+  - Worktree cleanup on failed creation or agent abort (#3012)
+  - Update docs after: Native Ava Autonomy (#3011)
+  - Persistent Audit Trail (#3010)
+  - SSRF Prevention (#3008)
+  - Environment Sanitization (#3007)
+  - Gateway Action Executor + Feature Flag (#3006)
+  - Memory Store Service + Tools (#2995)
+
+- Updated dependencies
+  - @protolabsai/types@0.83.2
+  - @protolabsai/utils@0.83.2
+
 ## 0.83.1
 
 ### Patch Changes
