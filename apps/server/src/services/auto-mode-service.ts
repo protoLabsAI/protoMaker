@@ -2950,7 +2950,7 @@ Format your response as a structured markdown document.`;
       // Check if branch exists
       let branchExists = false;
       try {
-        await execAsync(`git rev-parse --verify "${branchName}"`, {
+        await execFileAsync('git', ['rev-parse', '--verify', branchName], {
           cwd: projectPath,
         });
         branchExists = true;
@@ -2970,7 +2970,7 @@ Format your response as a structured markdown document.`;
       try {
         if (branchExists) {
           // Use existing branch
-          await execAsync(`git worktree add "${worktreePath}" "${branchName}"`, {
+          await execFileAsync('git', ['worktree', 'add', worktreePath, branchName], {
             cwd: projectPath,
             env: gitEnv,
           });
@@ -2989,7 +2989,7 @@ Format your response as a structured markdown document.`;
               const epicFeature = await this.featureLoader.get(projectPath, feature.epicId);
               if (epicFeature?.branchName) {
                 // Verify the epic branch exists before using it as base
-                await execAsync(`git rev-parse --verify "${epicFeature.branchName}"`, {
+                await execFileAsync('git', ['rev-parse', '--verify', epicFeature.branchName], {
                   cwd: projectPath,
                 });
                 baseBranch = epicFeature.branchName;
@@ -3005,10 +3005,14 @@ Format your response as a structured markdown document.`;
           }
 
           // Create new branch from base (epic branch or HEAD)
-          await execAsync(`git worktree add -B "${branchName}" "${worktreePath}" ${baseBranch}`, {
-            cwd: projectPath,
-            env: gitEnv,
-          });
+          await execFileAsync(
+            'git',
+            ['worktree', 'add', '-B', branchName, worktreePath, baseBranch],
+            {
+              cwd: projectPath,
+              env: gitEnv,
+            }
+          );
         }
       } catch (worktreeAddError) {
         // Post-failure cleanup: remove partially-created directory to prevent permanent blocking

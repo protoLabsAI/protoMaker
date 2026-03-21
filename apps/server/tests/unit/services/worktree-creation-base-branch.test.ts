@@ -25,16 +25,14 @@ const mockLogger = vi.hoisted(() => ({
 }));
 
 const mockExecAsync = vi.hoisted(() => vi.fn(async () => ({ stdout: '', stderr: '' })));
+const mockExecFileAsync = vi.hoisted(() => vi.fn(async () => ({ stdout: '', stderr: '' })));
 
 vi.mock('child_process', async (importOriginal) => {
   const actual = await importOriginal<typeof import('child_process')>();
   const execFn = vi.fn();
   (execFn as any)[Symbol.for('nodejs.util.promisify.custom')] = mockExecAsync;
   const execFileFn = vi.fn();
-  (execFileFn as any)[Symbol.for('nodejs.util.promisify.custom')] = vi.fn(async () => ({
-    stdout: '',
-    stderr: '',
-  }));
+  (execFileFn as any)[Symbol.for('nodejs.util.promisify.custom')] = mockExecFileAsync;
   return { ...actual, exec: execFn, execFile: execFileFn };
 });
 
@@ -213,15 +211,16 @@ describe('AutoModeService - createWorktreeForBranch base branch resolution', () 
   beforeEach(() => {
     vi.stubEnv('AUTOMAKER_MOCK_AGENT', 'true');
     mockExecAsync.mockReset();
+    mockExecFileAsync.mockReset();
     mockGetEffectivePrBaseBranch.mockReset();
   });
 
   it('uses origin/dev when prBaseBranch is "dev" (default)', async () => {
     mockGetEffectivePrBaseBranch.mockResolvedValue('dev');
 
-    // git rev-parse --verify throws → branch doesn't exist → triggers worktree add
-    mockExecAsync.mockImplementation(async (cmd: string) => {
-      if (typeof cmd === 'string' && cmd.includes('rev-parse --verify')) {
+    // git rev-parse --verify throws → branch doesn't exist → triggers worktree add -B
+    mockExecFileAsync.mockImplementation(async (bin: string, args: string[]) => {
+      if (args.includes('rev-parse') && args.includes('--verify')) {
         throw new Error('unknown revision');
       }
       return { stdout: '', stderr: '' };
@@ -230,19 +229,21 @@ describe('AutoModeService - createWorktreeForBranch base branch resolution', () 
     const svc = makeService();
     await (svc as any).createWorktreeForBranch(PROJECT_PATH, BRANCH_NAME, makeFeature());
 
-    const commands: string[] = mockExecAsync.mock.calls.map(([cmd]) => cmd as string);
-    const worktreeAdd = commands.find((c) => c.includes('git worktree add') && c.includes('-b'));
+    const calls = mockExecFileAsync.mock.calls as [string, string[]][];
+    const worktreeAdd = calls.find(
+      ([bin, args]) => bin === 'git' && args.includes('worktree') && args.includes('-B')
+    );
     expect(worktreeAdd).toBeDefined();
-    expect(worktreeAdd).toContain('origin/dev');
-    expect(worktreeAdd).not.toContain('origin/main');
+    expect(worktreeAdd![1]).toContain('origin/dev');
+    expect(worktreeAdd![1]).not.toContain('origin/main');
   });
 
   it('uses origin/main when prBaseBranch is "main" (e.g. GitHub-only project)', async () => {
     mockGetEffectivePrBaseBranch.mockResolvedValue('main');
 
-    // git rev-parse --verify throws → branch doesn't exist → triggers worktree add
-    mockExecAsync.mockImplementation(async (cmd: string) => {
-      if (typeof cmd === 'string' && cmd.includes('rev-parse --verify')) {
+    // git rev-parse --verify throws → branch doesn't exist → triggers worktree add -B
+    mockExecFileAsync.mockImplementation(async (bin: string, args: string[]) => {
+      if (args.includes('rev-parse') && args.includes('--verify')) {
         throw new Error('unknown revision');
       }
       return { stdout: '', stderr: '' };
@@ -251,29 +252,32 @@ describe('AutoModeService - createWorktreeForBranch base branch resolution', () 
     const svc = makeService();
     await (svc as any).createWorktreeForBranch(PROJECT_PATH, BRANCH_NAME, makeFeature());
 
-    const commands: string[] = mockExecAsync.mock.calls.map(([cmd]) => cmd as string);
-    const worktreeAdd = commands.find((c) => c.includes('git worktree add') && c.includes('-b'));
+    const calls = mockExecFileAsync.mock.calls as [string, string[]][];
+    const worktreeAdd = calls.find(
+      ([bin, args]) => bin === 'git' && args.includes('worktree') && args.includes('-B')
+    );
     expect(worktreeAdd).toBeDefined();
-    expect(worktreeAdd).toContain('origin/main');
-    expect(worktreeAdd).not.toContain('origin/dev');
+    expect(worktreeAdd![1]).toContain('origin/main');
+    expect(worktreeAdd![1]).not.toContain('origin/dev');
   });
 
   it('skips getEffectivePrBaseBranch when branch already exists (uses existing branch checkout)', async () => {
     mockGetEffectivePrBaseBranch.mockResolvedValue('main');
 
-    // git rev-parse --verify succeeds → branch exists → uses `git worktree add <path> <branch>` (no -b)
-    mockExecAsync.mockResolvedValue({ stdout: 'abc123', stderr: '' });
+    // git rev-parse --verify succeeds → branch exists → uses `git worktree add <path> <branch>` (no -B)
+    mockExecFileAsync.mockResolvedValue({ stdout: 'abc123', stderr: '' });
 
     const svc = makeService();
     await (svc as any).createWorktreeForBranch(PROJECT_PATH, BRANCH_NAME, makeFeature());
 
-    const commands: string[] = mockExecAsync.mock.calls.map(([cmd]) => cmd as string);
-    const allWorktreeAdds = commands.filter((c) => c.includes('git worktree add'));
-    expect(allWorktreeAdds).toHaveLength(1);
-    // The existing-branch form does not use the -b <branchname> flag or origin/
-    // Use regex to avoid false positives from branch names like "feature-test-branch" containing "-b"
-    expect(allWorktreeAdds[0]).not.toMatch(/\s-b\s/);
-    expect(allWorktreeAdds[0]).not.toContain('origin/');
+    const calls = mockExecFileAsync.mock.calls as [string, string[]][];
+    const worktreeAdds = calls.filter(
+      ([bin, args]) => bin === 'git' && args.includes('worktree') && args.includes('add')
+    );
+    expect(worktreeAdds).toHaveLength(1);
+    // The existing-branch form does not use -B or origin/
+    expect(worktreeAdds[0][1]).not.toContain('-B');
+    expect(worktreeAdds[0][1].join(' ')).not.toContain('origin/');
     // getEffectivePrBaseBranch is only called in the new-branch path, so it should NOT be called here
     expect(mockGetEffectivePrBaseBranch).not.toHaveBeenCalled();
   });
