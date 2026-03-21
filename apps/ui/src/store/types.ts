@@ -225,6 +225,7 @@ export interface KeyboardShortcuts {
   inbox: string;
   fileEditor: string;
   todo: string;
+  github: string;
   automations: string;
   projects: string;
   chat: string;
@@ -265,6 +266,7 @@ export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
   inbox: 'B',
   fileEditor: 'E',
   todo: 'Shift+T',
+  github: 'G',
   automations: 'U',
   projects: 'R',
   chat: 'A',
