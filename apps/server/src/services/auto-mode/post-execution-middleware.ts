@@ -13,6 +13,7 @@
  *   [PostExecution] <featureId>: <step description>
  */
 
+import fs from 'node:fs';
 import path from 'path';
 import { createLogger } from '@protolabsai/utils';
 import type { Feature } from '@protolabsai/types';
@@ -309,6 +310,32 @@ export class PostExecutionMiddleware {
         await removeLock(worktreePath);
       } catch (lockError) {
         logger.error(`[PostExecution] ${featureId}: failed to remove worktree lock:`, lockError);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Step 3.5: Remove incomplete worktree directories
+    // If an agent was aborted mid-creation (or the worktree add command failed
+    // silently), the directory may exist without a .git file. This partial
+    // directory permanently blocks future worktree creation for the feature.
+    // Clean it up so retries can succeed.
+    // -------------------------------------------------------------------------
+    if (
+      worktreePath &&
+      fs.existsSync(worktreePath) &&
+      !fs.existsSync(path.join(worktreePath, '.git'))
+    ) {
+      logger.warn(
+        `[PostExecution] ${featureId}: removing incomplete worktree directory (no .git file): ${worktreePath}`
+      );
+      try {
+        await fs.promises.rm(worktreePath, { recursive: true, force: true });
+        logger.info(`[PostExecution] ${featureId}: incomplete worktree directory removed`);
+      } catch (rmError) {
+        logger.error(
+          `[PostExecution] ${featureId}: failed to remove incomplete worktree directory:`,
+          rmError
+        );
       }
     }
 

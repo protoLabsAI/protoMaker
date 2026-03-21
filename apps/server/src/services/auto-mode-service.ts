@@ -2935,6 +2935,18 @@ Format your response as a structured markdown document.`;
       // Create worktrees directory if it doesn't exist
       await secureFs.mkdir(worktreesDir, { recursive: true });
 
+      // Pre-creation check: remove orphaned directory from a previous failed creation.
+      // A valid worktree has a .git file (not directory) pointing back to the main repo.
+      // If the directory exists without one, it's a partial remnant that will block retry.
+      if (fs.existsSync(worktreePath) && !fs.existsSync(path.join(worktreePath, '.git'))) {
+        logger.warn(`Removing orphaned worktree directory (no .git file): ${worktreePath}`);
+        try {
+          await fs.promises.rm(worktreePath, { recursive: true, force: true });
+        } catch (cleanupErr) {
+          logger.error(`Failed to remove orphaned worktree directory: ${worktreePath}`, cleanupErr);
+        }
+      }
+
       // Check if branch exists
       let branchExists = false;
       try {
@@ -2955,47 +2967,65 @@ Format your response as a structured markdown document.`;
         GIT_COMMITTER_EMAIL: 'automaker@localhost',
       };
 
-      if (branchExists) {
-        // Use existing branch
-        await execAsync(`git worktree add "${worktreePath}" "${branchName}"`, {
-          cwd: projectPath,
-          env: gitEnv,
-        });
-      } else {
-        // Determine base branch: use epic branch if feature belongs to an epic,
-        // otherwise use the project's configured prBaseBranch as the canonical base
-        // (never HEAD which would inherit whatever branch is currently checked out in the main repo).
-        const resolvedPrBaseBranch = await getEffectivePrBaseBranch(
-          projectPath,
-          this.settingsService,
-          '[createWorktreeForBranch]'
-        );
-        let baseBranch = `origin/${resolvedPrBaseBranch}`;
-        if (feature?.epicId && !feature.isEpic) {
-          try {
-            const epicFeature = await this.featureLoader.get(projectPath, feature.epicId);
-            if (epicFeature?.branchName) {
-              // Verify the epic branch exists before using it as base
-              await execAsync(`git rev-parse --verify "${epicFeature.branchName}"`, {
-                cwd: projectPath,
-              });
-              baseBranch = epicFeature.branchName;
-              logger.info(
-                `Feature ${feature.id} belongs to epic, branching from epic branch: ${baseBranch}`
+      try {
+        if (branchExists) {
+          // Use existing branch
+          await execAsync(`git worktree add "${worktreePath}" "${branchName}"`, {
+            cwd: projectPath,
+            env: gitEnv,
+          });
+        } else {
+          // Determine base branch: use epic branch if feature belongs to an epic,
+          // otherwise use the project's configured prBaseBranch as the canonical base
+          // (never HEAD which would inherit whatever branch is currently checked out in the main repo).
+          const resolvedPrBaseBranch = await getEffectivePrBaseBranch(
+            projectPath,
+            this.settingsService,
+            '[createWorktreeForBranch]'
+          );
+          let baseBranch = `origin/${resolvedPrBaseBranch}`;
+          if (feature?.epicId && !feature.isEpic) {
+            try {
+              const epicFeature = await this.featureLoader.get(projectPath, feature.epicId);
+              if (epicFeature?.branchName) {
+                // Verify the epic branch exists before using it as base
+                await execAsync(`git rev-parse --verify "${epicFeature.branchName}"`, {
+                  cwd: projectPath,
+                });
+                baseBranch = epicFeature.branchName;
+                logger.info(
+                  `Feature ${feature.id} belongs to epic, branching from epic branch: ${baseBranch}`
+                );
+              }
+            } catch {
+              logger.warn(
+                `Epic branch not found for feature ${feature.id} (epicId: ${feature.epicId}), falling back to HEAD`
               );
             }
-          } catch {
-            logger.warn(
-              `Epic branch not found for feature ${feature.id} (epicId: ${feature.epicId}), falling back to HEAD`
+          }
+
+          // Create new branch from base (epic branch or HEAD)
+          await execAsync(`git worktree add -b "${branchName}" "${worktreePath}" ${baseBranch}`, {
+            cwd: projectPath,
+            env: gitEnv,
+          });
+        }
+      } catch (worktreeAddError) {
+        // Post-failure cleanup: remove partially-created directory to prevent permanent blocking
+        if (fs.existsSync(worktreePath)) {
+          logger.warn(
+            `Cleaning up partial worktree directory after failed creation: ${worktreePath}`
+          );
+          try {
+            await fs.promises.rm(worktreePath, { recursive: true, force: true });
+          } catch (cleanupErr) {
+            logger.error(
+              `Failed to clean up partial worktree directory: ${worktreePath}`,
+              cleanupErr
             );
           }
         }
-
-        // Create new branch from base (epic branch or HEAD)
-        await execAsync(`git worktree add -b "${branchName}" "${worktreePath}" ${baseBranch}`, {
-          cwd: projectPath,
-          env: gitEnv,
-        });
+        throw worktreeAddError;
       }
 
       logger.info(`Created worktree for branch "${branchName}" at: ${worktreePath}`);
