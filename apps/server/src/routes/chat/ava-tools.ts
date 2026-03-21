@@ -43,6 +43,7 @@ import { getPRWatcherService } from '../../services/pr-watcher-service.js';
 import { getEventHistoryService } from '../../services/event-history-service.js';
 import { getBriefingCursorService } from '../../services/briefing-cursor-service.js';
 import { queryPm } from '../project-pm/pm-agent.js';
+import { simpleQuery } from '../../providers/simple-query-service.js';
 
 // ---------------------------------------------------------------------------
 // Plan types
@@ -213,6 +214,38 @@ const TOOL_LABEL_MAP: Record<string, string> = {
 /** Convert an inner-agent tool name to a human-readable progress label. */
 function formatToolLabel(toolName: string): string {
   return TOOL_LABEL_MAP[toolName] ?? `Using ${toolName}`;
+}
+
+// ---------------------------------------------------------------------------
+// Ava scheduled task persistence helpers
+// ---------------------------------------------------------------------------
+
+/** Serializable task definition stored in .automaker/ava-tasks.json */
+interface AvaScheduledTaskDef {
+  id: string;
+  name: string;
+  prompt: string;
+  description?: string;
+  schedule: { type: 'cron'; expression: string } | { type: 'interval'; intervalMs: number };
+  createdAt: string;
+}
+
+const AVA_TASKS_FILENAME = path.join('.automaker', 'ava-tasks.json');
+
+async function loadAvaTaskDefs(projectPath: string): Promise<AvaScheduledTaskDef[]> {
+  try {
+    const filePath = path.join(projectPath, AVA_TASKS_FILENAME);
+    const content = await fs.readFile(filePath, 'utf-8');
+    return JSON.parse(content) as AvaScheduledTaskDef[];
+  } catch {
+    return [];
+  }
+}
+
+async function saveAvaTaskDefs(projectPath: string, tasks: AvaScheduledTaskDef[]): Promise<void> {
+  const filePath = path.join(projectPath, AVA_TASKS_FILENAME);
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, JSON.stringify(tasks, null, 2), 'utf-8');
 }
 
 // ---------------------------------------------------------------------------
@@ -1799,6 +1832,216 @@ export function buildAvaTools(
           return { error: `PM delegation failed: ${message}` };
         } finally {
           clearTimeout(timer);
+        }
+      },
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // Scheduling tools — Ava self-scheduling
+  // -----------------------------------------------------------------------
+  if (config.scheduling && services.schedulerService) {
+    const svc = services.schedulerService;
+
+    /**
+     * Re-register any ava:-prefixed tasks from .automaker/ava-tasks.json that
+     * are not currently active in the scheduler. Called lazily so tasks survive
+     * server restarts without requiring explicit startup wiring.
+     */
+    async function ensureAvaTasksRegistered(): Promise<void> {
+      const taskDefs = await loadAvaTaskDefs(projectPath);
+      const registered = new Set(svc.listAll().map((t) => t.id));
+      for (const def of taskDefs) {
+        if (registered.has(def.id)) continue;
+        const handler = async (): Promise<void> => {
+          await simpleQuery({
+            prompt: def.prompt,
+            cwd: projectPath,
+            maxTurns: 1,
+            allowedTools: [],
+          });
+        };
+        if (def.schedule.type === 'cron') {
+          await svc.registerTask(def.id, def.name, def.schedule.expression, handler);
+        } else {
+          svc.registerInterval(def.id, def.name, def.schedule.intervalMs, handler, {
+            category: 'monitor',
+          });
+        }
+      }
+    }
+
+    tools['schedule_task'] = makeTool({
+      description:
+        'Schedule a recurring Ava task that runs a stored prompt on a cron schedule or fixed interval. ' +
+        'Task IDs are automatically prefixed with "ava:" and persist across server restarts. ' +
+        'The handler re-invokes Ava via simpleQuery with the stored prompt.',
+      inputSchema: z.object({
+        name: z.string().describe('Human-readable task name (used to generate the task ID)'),
+        prompt: z.string().describe('Prompt to send to Ava each time the task runs'),
+        schedule: z
+          .discriminatedUnion('type', [
+            z.object({
+              type: z.literal('cron'),
+              expression: z.string().describe('Cron expression, e.g. "0 9 * * 1-5"'),
+            }),
+            z.object({
+              type: z.literal('interval'),
+              intervalMs: z.number().int().positive().describe('Interval in milliseconds'),
+            }),
+          ])
+          .describe('Schedule: cron expression or fixed interval'),
+        description: z.string().optional().describe('Optional description for the task'),
+      }),
+      execute: async ({ name, prompt, schedule, description }) => {
+        await ensureAvaTasksRegistered();
+
+        const taskId = `ava:${name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '')}`;
+
+        const handler = async (): Promise<void> => {
+          await simpleQuery({ prompt, cwd: projectPath, maxTurns: 1, allowedTools: [] });
+        };
+
+        if (schedule.type === 'cron') {
+          await svc.registerTask(taskId, name, schedule.expression, handler);
+        } else {
+          // Unregister first to allow re-scheduling with new intervalMs
+          svc.unregisterInterval(taskId);
+          svc.registerInterval(taskId, name, schedule.intervalMs, handler, {
+            category: 'monitor',
+          });
+        }
+
+        // Persist task definition for restart recovery
+        const taskDefs = await loadAvaTaskDefs(projectPath);
+        const existingIdx = taskDefs.findIndex((t) => t.id === taskId);
+        const taskDef: AvaScheduledTaskDef = {
+          id: taskId,
+          name,
+          prompt,
+          ...(description !== undefined && { description }),
+          schedule,
+          createdAt:
+            existingIdx >= 0
+              ? (taskDefs[existingIdx]?.createdAt ?? new Date().toISOString())
+              : new Date().toISOString(),
+        };
+        if (existingIdx >= 0) {
+          taskDefs[existingIdx] = taskDef;
+        } else {
+          taskDefs.push(taskDef);
+        }
+        await saveAvaTaskDefs(projectPath, taskDefs);
+
+        return { taskId, name, schedule, message: `Task "${name}" scheduled successfully` };
+      },
+    });
+
+    tools['cancel_task'] = makeTool({
+      description:
+        'Cancel a scheduled Ava task by its ID. Only ava:-prefixed tasks can be cancelled.',
+      inputSchema: z.object({
+        taskId: z.string().describe('The task ID to cancel (must start with "ava:")'),
+      }),
+      needsApproval: destructiveNeedsApproval,
+      execute: async ({ taskId }) => {
+        if (!taskId.startsWith('ava:')) {
+          return { error: 'Only ava:-prefixed tasks can be cancelled' };
+        }
+
+        await ensureAvaTasksRegistered();
+
+        const unregisteredCron = await svc.unregisterTask(taskId);
+        const unregisteredInterval = svc.unregisterInterval(taskId);
+
+        if (!unregisteredCron && !unregisteredInterval) {
+          return { error: `Task "${taskId}" not found` };
+        }
+
+        const taskDefs = await loadAvaTaskDefs(projectPath);
+        await saveAvaTaskDefs(
+          projectPath,
+          taskDefs.filter((t) => t.id !== taskId)
+        );
+
+        return { taskId, message: `Task "${taskId}" cancelled successfully` };
+      },
+    });
+
+    tools['list_scheduled_tasks'] = makeTool({
+      description:
+        'List all scheduled Ava tasks (ava:-prefixed only) with metadata including ' +
+        'schedule, last run time, next run time, and execution counts.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        await ensureAvaTasksRegistered();
+
+        const allTimers = svc.listAll().filter((t) => t.id.startsWith('ava:'));
+        const taskDefs = await loadAvaTaskDefs(projectPath);
+
+        const tasks = taskDefs.map((def) => {
+          const timer = allTimers.find((t) => t.id === def.id);
+          return {
+            id: def.id,
+            name: def.name,
+            description: def.description,
+            schedule: def.schedule,
+            createdAt: def.createdAt,
+            enabled: timer?.enabled ?? false,
+            lastRun: timer?.lastRun,
+            nextRun: timer?.nextRun,
+            failureCount: timer?.failureCount ?? 0,
+            executionCount: timer?.executionCount ?? 0,
+          };
+        });
+
+        return { tasks, count: tasks.length };
+      },
+    });
+
+    tools['trigger_task'] = makeTool({
+      description:
+        'Immediately execute a scheduled Ava task by its ID without waiting for its next scheduled time. Returns the result of the prompt invocation.',
+      inputSchema: z.object({
+        taskId: z.string().describe('The task ID to trigger (must start with "ava:")'),
+      }),
+      execute: async ({ taskId }) => {
+        if (!taskId.startsWith('ava:')) {
+          return { error: 'Only ava:-prefixed tasks can be triggered' };
+        }
+
+        const taskDefs = await loadAvaTaskDefs(projectPath);
+        const taskDef = taskDefs.find((t) => t.id === taskId);
+        if (!taskDef) {
+          return { error: `Task "${taskId}" not found` };
+        }
+
+        const startTime = Date.now();
+        try {
+          const result = await simpleQuery({
+            prompt: taskDef.prompt,
+            cwd: projectPath,
+            maxTurns: 1,
+            allowedTools: [],
+          });
+          return {
+            taskId,
+            success: true,
+            executedAt: new Date().toISOString(),
+            duration: Date.now() - startTime,
+            result: result.text.slice(0, 1000),
+          };
+        } catch (err) {
+          return {
+            taskId,
+            success: false,
+            executedAt: new Date().toISOString(),
+            duration: Date.now() - startTime,
+            error: err instanceof Error ? err.message : 'Unknown error',
+          };
         }
       },
     });
