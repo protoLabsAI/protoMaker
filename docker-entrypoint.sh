@@ -1,6 +1,37 @@
 #!/bin/sh
 set -e
 
+# If already running as non-root (e.g. staging with user: directive and reduced caps),
+# skip chown/gosu but still handle credential injection and npm cache setup.
+if [ "$(id -u)" != "0" ]; then
+    # Ensure npm cache directory exists at the configured path
+    NPM_CACHE_DIR="${NPM_CONFIG_CACHE:-/home/automaker/.npm}"
+    if [ ! -d "$NPM_CACHE_DIR" ]; then
+        mkdir -p "$NPM_CACHE_DIR" 2>/dev/null || true
+    fi
+
+    # Write Claude OAuth credentials if provided (volumes are writable as automaker)
+    if [ -n "$CLAUDE_OAUTH_CREDENTIALS" ]; then
+        mkdir -p /home/automaker/.claude 2>/dev/null || true
+        echo "$CLAUDE_OAUTH_CREDENTIALS" > /home/automaker/.claude/.credentials.json
+        chmod 600 /home/automaker/.claude/.credentials.json
+    fi
+
+    # Write Cursor auth token if provided
+    if [ -n "$CURSOR_AUTH_TOKEN" ]; then
+        CURSOR_CONFIG_DIR="/home/automaker/.config/cursor"
+        mkdir -p "$CURSOR_CONFIG_DIR" 2>/dev/null || true
+        cat > "$CURSOR_CONFIG_DIR/auth.json" << EOF
+{
+  "accessToken": "$CURSOR_AUTH_TOKEN"
+}
+EOF
+        chmod 600 "$CURSOR_CONFIG_DIR/auth.json"
+    fi
+
+    exec "$@"
+fi
+
 # Ensure Claude CLI config directory exists with correct permissions
 if [ ! -d "/home/automaker/.claude" ]; then
     mkdir -p /home/automaker/.claude
@@ -48,11 +79,13 @@ chown -R automaker:automaker /home/automaker/.cache/opencode
 chmod -R 700 /home/automaker/.cache/opencode
 
 # Ensure npm cache directory exists with correct permissions
+# NPM_CONFIG_CACHE may redirect to a tmpfs mount (e.g. /npm-cache) for read-only root fs
 # This is needed for using npx to run MCP servers
-if [ ! -d "/home/automaker/.npm" ]; then
-    mkdir -p /home/automaker/.npm
+NPM_CACHE_DIR="${NPM_CONFIG_CACHE:-/home/automaker/.npm}"
+if [ ! -d "$NPM_CACHE_DIR" ]; then
+    mkdir -p "$NPM_CACHE_DIR"
 fi
-chown -R automaker:automaker /home/automaker/.npm
+chown -R automaker:automaker "$NPM_CACHE_DIR"
 
 # If CURSOR_AUTH_TOKEN is set, write it to the cursor auth file
 # On Linux, cursor-agent uses ~/.config/cursor/auth.json for file-based credential storage

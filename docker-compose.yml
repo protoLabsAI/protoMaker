@@ -79,6 +79,12 @@ services:
       # Internal - indicates the API is running in a containerized sandbox environment
       # This is used by the UI to determine if sandbox risk warnings should be shown
       - IS_CONTAINERIZED=true
+
+      # Redirect npm cache to tmpfs mount
+      - NPM_CONFIG_CACHE=/npm-cache
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+      - /npm-cache:size=256m
     volumes:
       # ONLY named volumes - these are isolated from your host filesystem
       # This volume persists data between restarts but is container-managed
