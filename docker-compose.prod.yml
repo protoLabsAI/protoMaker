@@ -109,6 +109,9 @@ services:
       # Monitoring
       - ENABLE_METRICS=true
       - METRICS_PORT=9090
+
+      # Redirect npm cache to tmpfs so read_only root filesystem works
+      - NPM_CONFIG_CACHE=/npm-cache
     volumes:
       # Production volumes - named volumes only
       - automaker-data:/data
@@ -155,9 +158,10 @@ services:
       - 'com.automaker.service=server'
       - 'com.automaker.environment=production'
     # Security hardening
-    read_only: false # Can't be true due to npm cache, logs, etc.
+    read_only: true
     tmpfs:
-      - /tmp
+      - /tmp:size=512m,mode=1777
+      - /npm-cache:size=512m
     cap_drop:
       - ALL
     cap_add:
@@ -167,6 +171,7 @@ services:
       - DAC_OVERRIDE
     security_opt:
       - no-new-privileges:true
+      - seccomp:./seccomp-profile.json
 
   # Prometheus for metrics collection
   prometheus:

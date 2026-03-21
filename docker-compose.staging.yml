@@ -104,6 +104,9 @@ services:
       # Node.js memory tuning for high-concurrency agent execution
       - NODE_OPTIONS=--max-old-space-size=${NODE_MAX_OLD_SPACE:-4096} --max-semi-space-size=128
 
+      # Redirect npm cache to tmpfs so read_only root filesystem works
+      - NPM_CONFIG_CACHE=/npm-cache
+
     volumes:
       # Persistent data
       - automaker-data:/data
@@ -116,6 +119,23 @@ services:
       # Host project directories - mount at same path for MCP path compatibility
       - ${PROJECTS_MOUNT:-/home/josh/dev}:${PROJECTS_MOUNT:-/home/josh/dev}:rw
       - ${LABS_MOUNT:-/home/josh/labs}:${LABS_MOUNT:-/home/josh/labs}:rw
+
+    # Run as the automaker user so entrypoint works without CHOWN/SETUID caps
+    user: '${UID:-1001}:${GID:-1001}'
+
+    # Read-only root filesystem — writes go to named volumes or tmpfs mounts
+    read_only: true
+    tmpfs:
+      - /tmp:size=512m,mode=1777
+      - /npm-cache:size=512m
+
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_RAW
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:./seccomp-profile.json
 
     deploy:
       resources:
