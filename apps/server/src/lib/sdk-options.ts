@@ -28,7 +28,13 @@ import {
   type ThinkingLevel,
   getThinkingTokenBudget,
 } from '@protolabsai/types';
-import { isPathAllowed, PathNotAllowedError, getAllowedRootDirectory } from '@protolabsai/platform';
+import {
+  isPathAllowed,
+  PathNotAllowedError,
+  getAllowedRootDirectory,
+  validateUrlTarget,
+  UrlNotAllowedError,
+} from '@protolabsai/platform';
 
 /**
  * Result of sandbox compatibility check
@@ -239,6 +245,58 @@ export function createWorktreeWriteGuard(
 }
 
 /**
+ * Create a PreToolUse hook that blocks WebFetch requests to private/internal IP ranges.
+ *
+ * This prevents SSRF attacks where agents could be tricked into fetching internal
+ * resources (AWS metadata, private services, localhost) via WebFetch calls.
+ */
+export function createSsrfGuardHook(): HookCallback {
+  return async (input) => {
+    if (input.hook_event_name !== 'PreToolUse') {
+      return {};
+    }
+
+    if (input.tool_name !== 'WebFetch') {
+      return {};
+    }
+
+    const toolInput = input.tool_input as Record<string, unknown> | undefined;
+    const url = toolInput?.url as string | undefined;
+
+    if (!url) {
+      return {};
+    }
+
+    try {
+      await validateUrlTarget(url);
+    } catch (err) {
+      if (err instanceof UrlNotAllowedError) {
+        logger.warn(`[SsrfGuard] Blocked WebFetch to private/internal URL: ${url}`);
+        return {
+          decision: 'block' as const,
+          reason: `BLOCKED: ${err.message}`,
+        };
+      }
+      if (err instanceof TypeError) {
+        logger.warn(`[SsrfGuard] Blocked WebFetch with malformed URL: ${url}`);
+        return {
+          decision: 'block' as const,
+          reason: `BLOCKED: Malformed URL - ${err.message}`,
+        };
+      }
+      // Unexpected errors: block to be safe
+      logger.error(`[SsrfGuard] Unexpected error validating URL ${url}: ${String(err)}`);
+      return {
+        decision: 'block' as const,
+        reason: `BLOCKED: URL validation failed unexpectedly`,
+      };
+    }
+
+    return {};
+  };
+}
+
+/**
  * Escape special regex characters in a string
  */
 function escapeRegExp(s: string): string {
@@ -424,28 +482,46 @@ function buildThinkingOptions(thinkingLevel?: ThinkingLevel): Partial<Options> {
 }
 
 /**
- * Build worktree write guard hooks for SDK options.
- * Returns a hooks object if projectPath is set and differs from cwd (worktree mode).
+ * Build PreToolUse hooks combining the worktree write guard and SSRF guard.
+ * Returns a hooks object if either guard applies.
  */
-function buildWorktreeGuardHooks(config: CreateSdkOptionsConfig): Partial<Options> {
-  if (!config.projectPath) return {};
+function buildPreToolUseHooks(config: CreateSdkOptionsConfig): Partial<Options> {
+  const preToolUseHooks: HookCallback[] = [];
 
-  const guard = createWorktreeWriteGuard(config.cwd, config.projectPath);
-  if (!guard) return {};
+  // SSRF guard — always enabled for any config that includes WebFetch
+  preToolUseHooks.push(createSsrfGuardHook());
 
-  logger.info(
-    `[WorktreeGuard] Enabled: writes blocked outside worktree ${config.cwd} (project: ${config.projectPath})`
-  );
+  // Worktree write guard — only when running in a worktree context
+  if (config.projectPath) {
+    const guard = createWorktreeWriteGuard(config.cwd, config.projectPath);
+    if (guard) {
+      logger.info(
+        `[WorktreeGuard] Enabled: writes blocked outside worktree ${config.cwd} (project: ${config.projectPath})`
+      );
+      preToolUseHooks.push(guard);
+    }
+  }
+
+  if (preToolUseHooks.length === 0) return {};
 
   return {
     hooks: {
       PreToolUse: [
         {
-          hooks: [guard],
+          hooks: preToolUseHooks,
         },
       ],
     },
   };
+}
+
+/**
+ * Build worktree write guard hooks for SDK options.
+ * Returns a hooks object if projectPath is set and differs from cwd (worktree mode).
+ * @deprecated Use buildPreToolUseHooks instead — it includes both SSRF and worktree guards
+ */
+function buildWorktreeGuardHooks(config: CreateSdkOptionsConfig): Partial<Options> {
+  return buildPreToolUseHooks(config);
 }
 
 /**

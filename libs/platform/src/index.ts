@@ -262,6 +262,9 @@ export {
   openInExternalTerminal,
 } from './terminal.js';
 
+// Network security (SSRF prevention)
+export { UrlNotAllowedError, isIpBlocked, validateUrlTarget } from './network-security.js';
+
 // Safe environment builder for subprocess execution
 export { buildSafeEnv, type SafeEnvOptions } from './safe-env.js';
 
