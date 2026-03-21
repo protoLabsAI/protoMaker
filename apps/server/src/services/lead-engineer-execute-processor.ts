@@ -5,11 +5,12 @@
  * On failure, retries with accumulated context. On success, advances to REVIEW.
  */
 
-import { exec } from 'node:child_process';
+import { exec, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
 import { createLogger } from '@protolabsai/utils';
 import { getAutomakerDir, getFeatureDir } from '@protolabsai/platform';
+import { createGitExecEnv } from '@protolabsai/git-utils';
 import type {
   ContextMetrics,
   DeviationRule,
@@ -27,6 +28,7 @@ import type {
 import { EXECUTE_TIMEOUT_MS, MAX_AGENT_RETRIES, MAX_INFRA_RETRIES } from './lead-engineer-types.js';
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 const logger = createLogger('LeadEngineerService');
 
 /**
@@ -893,6 +895,10 @@ export class ExecuteProcessor implements StateProcessor {
       }
     }
 
+    // Post-agent formatting: unconditionally run prettier on all changed files
+    // before transitioning to REVIEW, regardless of how the agent committed.
+    await this.runPostAgentFormatting(ctx);
+
     return {
       nextState: 'REVIEW',
       shouldContinue: true,
@@ -1281,6 +1287,113 @@ export class ExecuteProcessor implements StateProcessor {
     }
 
     return { passed: true };
+  }
+
+  /**
+   * Run prettier on all files changed vs the base branch and push a format commit.
+   *
+   * Runs unconditionally after every agent session before transitioning to REVIEW,
+   * regardless of whether the agent used git-workflow-service or committed directly
+   * via Bash. This ensures every PR passes the Prettier CI check.
+   *
+   * Uses the same --ignore-path /dev/null pattern as git-workflow-service to bypass
+   * .prettierignore (which would otherwise skip generated files that CI checks).
+   *
+   * Non-fatal: any error is logged and swallowed so a formatting failure never
+   * blocks the feature from reaching REVIEW.
+   */
+  private async runPostAgentFormatting(ctx: StateContext): Promise<void> {
+    const { feature, projectPath } = ctx;
+    const branchName = feature.branchName;
+
+    if (!branchName) {
+      logger.info('[EXECUTE][format] No branch name on feature — skipping post-agent formatting');
+      return;
+    }
+
+    try {
+      const worktreeDir = await this.resolveWorktreeDir(projectPath, branchName);
+      if (!worktreeDir) {
+        logger.info('[EXECUTE][format] No worktree found — skipping post-agent formatting');
+        return;
+      }
+
+      const execEnv = createGitExecEnv();
+      const baseBranch = feature.gitWorkflow?.prBaseBranch || 'dev';
+
+      // Fetch to ensure origin/<baseBranch> ref is up-to-date
+      try {
+        await execAsync(`git fetch origin ${baseBranch}`, {
+          cwd: worktreeDir,
+          env: execEnv,
+          timeout: 30_000,
+        });
+      } catch {
+        // Non-fatal: proceed with stale ref
+      }
+
+      // Get all files changed in the worktree vs the base branch
+      const { stdout: changedFiles } = await execAsync(
+        `git diff --name-only origin/${baseBranch}..HEAD -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' '*.css' '*.md'`,
+        { cwd: worktreeDir, env: execEnv }
+      );
+
+      const files = changedFiles.trim().split('\n').filter(Boolean);
+      if (files.length === 0) {
+        logger.info(
+          '[EXECUTE][format] No formattable files changed — skipping post-agent formatting'
+        );
+        return;
+      }
+
+      logger.info(
+        `[EXECUTE][format] Running post-agent prettier on ${files.length} changed files`,
+        {
+          featureId: feature.id,
+          branch: branchName,
+          baseBranch,
+        }
+      );
+
+      // Use the workspace Prettier binary — worktrees have no node_modules
+      const prettierBin = path.join(projectPath, 'node_modules/.bin/prettier');
+      await execAsync(
+        `node "${prettierBin}" --ignore-path /dev/null --write ${files.map((f) => `"${f}"`).join(' ')}`,
+        { cwd: worktreeDir, env: execEnv }
+      );
+
+      // Only commit and push if formatting actually changed anything
+      const { stdout: status } = await execAsync('git status --porcelain', {
+        cwd: worktreeDir,
+        env: execEnv,
+      });
+      if (!status.trim()) {
+        logger.info('[EXECUTE][format] Code already formatted — no format commit needed');
+        return;
+      }
+
+      await execAsync('git add -A', { cwd: worktreeDir, env: execEnv });
+
+      const commitMessage = `style: apply prettier formatting\n\nPost-agent format pass to ensure Prettier CI check passes.\nFeature ID: ${feature.id}`;
+      await execFileAsync('git', ['commit', '--no-verify', '-m', commitMessage], {
+        cwd: worktreeDir,
+        env: execEnv,
+      });
+
+      await execAsync(`git push origin ${branchName}`, {
+        cwd: worktreeDir,
+        env: execEnv,
+        timeout: 60_000,
+      });
+
+      logger.info(`[EXECUTE][format] Format commit pushed to ${branchName}`, {
+        featureId: feature.id,
+      });
+    } catch (err) {
+      logger.warn(
+        `[EXECUTE][format] Post-agent formatting failed (non-fatal): ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
   }
 
   /**
