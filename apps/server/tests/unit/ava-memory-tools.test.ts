@@ -71,7 +71,11 @@ vi.mock('../../src/providers/simple-query-service.js', () => ({
 }));
 
 import { buildAvaTools } from '../../src/routes/chat/ava-tools.js';
-import type { AvaMemoryService, MemoryEntry, RecallResult } from '../../src/services/ava-memory-service.js';
+import type {
+  AvaMemoryService,
+  MemoryEntry,
+  RecallResult,
+} from '../../src/services/ava-memory-service.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -138,7 +142,11 @@ describe('Ava memory tools', () => {
     });
 
     it('excludes memory tools when config.memory is false', () => {
-      const tools = buildAvaTools(PROJECT_PATH, { avaMemoryService: memoryService }, { memory: false });
+      const tools = buildAvaTools(
+        PROJECT_PATH,
+        { avaMemoryService: memoryService },
+        { memory: false }
+      );
       expect(tools['remember']).toBeUndefined();
       expect(tools['recall']).toBeUndefined();
       expect(tools['forget']).toBeUndefined();
@@ -168,7 +176,10 @@ describe('Ava memory tools', () => {
 
       await exec({ key: 'deploy-key', content: 'deploy content', tags: ['ops', 'deploy'] });
 
-      expect(memoryService.remember).toHaveBeenCalledWith('deploy-key', 'deploy content', ['ops', 'deploy']);
+      expect(memoryService.remember).toHaveBeenCalledWith('deploy-key', 'deploy content', [
+        'ops',
+        'deploy',
+      ]);
     });
 
     it('calls memoryService.remember with empty tags when tags not provided', async () => {
@@ -237,8 +248,14 @@ describe('Ava memory tools', () => {
 
     it('returns found=true with count and results array on match', async () => {
       const recallResults: RecallResult[] = [
-        { entry: makeEntry({ key: 'k1', content: 'c1', tags: ['t1'], accessCount: 2 }), matchType: 'exact' },
-        { entry: makeEntry({ key: 'k2', content: 'c2', tags: [], accessCount: 0 }), matchType: 'substring' },
+        {
+          entry: makeEntry({ key: 'k1', content: 'c1', tags: ['t1'], accessCount: 2 }),
+          matchType: 'exact',
+        },
+        {
+          entry: makeEntry({ key: 'k2', content: 'c2', tags: [], accessCount: 0 }),
+          matchType: 'substring',
+        },
       ];
       vi.mocked(memoryService.recall).mockResolvedValue(recallResults);
 
