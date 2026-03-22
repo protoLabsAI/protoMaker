@@ -84,7 +84,11 @@ export function createWorktreeRoutes(
     requireValidProject,
     createMergeHandler()
   );
-  router.post('/create', validatePathParams('projectPath'), createCreateHandler(events));
+  router.post(
+    '/create',
+    validatePathParams('projectPath'),
+    createCreateHandler(events, settingsService)
+  );
   router.post(
     '/delete',
     validatePathParams('projectPath', 'worktreePath'),

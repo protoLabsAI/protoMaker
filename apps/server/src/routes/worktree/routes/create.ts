@@ -25,6 +25,8 @@ import {
 import { trackBranch } from './branch-tracking.js';
 import { createLogger } from '@protolabsai/utils';
 import { runInitScript } from '../../../services/init-script-service.js';
+import type { SettingsService } from '../../../services/settings-service.js';
+import { DEFAULT_GIT_WORKFLOW_SETTINGS } from '@protolabsai/types';
 const logger = createLogger('Worktree');
 
 const execAsync = promisify(exec);
@@ -80,7 +82,38 @@ async function findExistingWorktreeForBranch(
   }
 }
 
-export function createCreateHandler(events: EventEmitter) {
+/**
+ * Copy .env* files (excluding .env.example) from the main repo root to the worktree.
+ * Non-fatal: logs warnings on failure but does not throw.
+ */
+async function copyEnvFilesToWorktree(projectPath: string, worktreePath: string): Promise<void> {
+  try {
+    const entries = await secureFs.readdir(projectPath, { withFileTypes: true });
+    const envFiles = entries.filter(
+      (e) => e.isFile() && e.name.startsWith('.env') && e.name !== '.env.example'
+    );
+
+    for (const entry of envFiles) {
+      const srcPath = path.join(projectPath, entry.name);
+      const destPath = path.join(worktreePath, entry.name);
+      try {
+        const content = await secureFs.readFile(srcPath);
+        await secureFs.writeFile(destPath, content);
+        logger.debug(`Copied ${entry.name} to worktree`);
+      } catch (err) {
+        logger.warn(`Failed to copy ${entry.name} to worktree: ${err}`);
+      }
+    }
+
+    if (envFiles.length > 0) {
+      logger.info(`Copied ${envFiles.length} .env file(s) to worktree: ${worktreePath}`);
+    }
+  } catch (err) {
+    logger.warn(`Failed to read project directory for env file copy: ${err}`);
+  }
+}
+
+export function createCreateHandler(events: EventEmitter, settingsService?: SettingsService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath, branchName, baseBranch } = req.body as {
@@ -191,6 +224,16 @@ export function createCreateHandler(events: EventEmitter) {
       // Note: We intentionally do NOT symlink .automaker to worktrees
       // Features and config are always accessed from the main project path
       // This avoids symlink loop issues when activating worktrees
+
+      // Copy .env* files from main repo to the new worktree so that pre-push
+      // hooks and build commands inside the worktree can access env vars.
+      const globalSettings = await settingsService?.getGlobalSettings();
+      const copyEnv =
+        globalSettings?.gitWorkflow?.copyEnvToWorktrees ??
+        DEFAULT_GIT_WORKFLOW_SETTINGS.copyEnvToWorktrees;
+      if (copyEnv) {
+        await copyEnvFilesToWorktree(projectPath, worktreePath);
+      }
 
       // Track the branch so it persists in the UI even after worktree is removed
       await trackBranch(projectPath, branchName);

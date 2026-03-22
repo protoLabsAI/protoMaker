@@ -49,6 +49,7 @@ import {
   MAX_SYSTEM_CONCURRENCY,
   isClaudeModel,
   stripProviderPrefix,
+  DEFAULT_GIT_WORKFLOW_SETTINGS,
 } from '@protolabsai/types';
 import {
   buildPromptWithImages,
@@ -3052,10 +3053,63 @@ Format your response as a structured markdown document.`;
         logger.debug('Failed to update worktree git exclude (non-fatal):', err);
       }
 
+      // Copy .env* files from main repo root to the new worktree so that
+      // pre-push hooks and build commands inside the worktree can access env vars.
+      const copyEnvEnabled = await this.isCopyEnvToWorktreesEnabled();
+      if (copyEnvEnabled) {
+        await this.copyEnvFilesToWorktree(projectPath, path.resolve(worktreePath));
+      }
+
       return path.resolve(worktreePath);
     } catch (error) {
       logger.error(`Failed to create worktree for branch "${branchName}":`, error);
       return null;
+    }
+  }
+
+  /**
+   * Returns true when the copyEnvToWorktrees setting is enabled (default: true).
+   */
+  private async isCopyEnvToWorktreesEnabled(): Promise<boolean> {
+    if (!this.settingsService) return DEFAULT_GIT_WORKFLOW_SETTINGS.copyEnvToWorktrees;
+    try {
+      const settings = await this.settingsService.getGlobalSettings();
+      return (
+        settings.gitWorkflow?.copyEnvToWorktrees ?? DEFAULT_GIT_WORKFLOW_SETTINGS.copyEnvToWorktrees
+      );
+    } catch {
+      return DEFAULT_GIT_WORKFLOW_SETTINGS.copyEnvToWorktrees;
+    }
+  }
+
+  /**
+   * Copy .env* files (excluding .env.example) from the main repo root to the worktree.
+   * Non-fatal: logs warnings on failure but does not throw.
+   */
+  private async copyEnvFilesToWorktree(projectPath: string, worktreePath: string): Promise<void> {
+    try {
+      const entries = await secureFs.readdir(projectPath, { withFileTypes: true });
+      const envFiles = entries.filter(
+        (e) => e.isFile() && e.name.startsWith('.env') && e.name !== '.env.example'
+      );
+
+      for (const entry of envFiles) {
+        const srcPath = path.join(projectPath, entry.name);
+        const destPath = path.join(worktreePath, entry.name);
+        try {
+          const content = await secureFs.readFile(srcPath);
+          await secureFs.writeFile(destPath, content);
+          logger.debug(`Copied ${entry.name} to worktree`);
+        } catch (err) {
+          logger.warn(`Failed to copy ${entry.name} to worktree: ${err}`);
+        }
+      }
+
+      if (envFiles.length > 0) {
+        logger.info(`Copied ${envFiles.length} .env file(s) to worktree: ${worktreePath}`);
+      }
+    } catch (err) {
+      logger.warn(`Failed to read project directory for env file copy: ${err}`);
     }
   }
 

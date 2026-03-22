@@ -62,6 +62,13 @@ export interface GitWorkflowSettings {
    * Default: [] (all checks are hard — opt-in to soft classification)
    */
   softChecks?: string[];
+  /**
+   * When true, copies all .env* files (excluding .env.example) from the main repo root
+   * to the same relative path in newly created worktrees. Ensures pre-push hooks and
+   * build commands in worktrees can access environment variables.
+   * @default true
+   */
+  copyEnvToWorktrees?: boolean;
 }
 
 /**
@@ -79,6 +86,7 @@ export const DEFAULT_GIT_WORKFLOW_SETTINGS: Required<GitWorkflowSettings> = {
   maxPRFilesTouched: 20,
   excludeFromStaging: [],
   softChecks: [],
+  copyEnvToWorktrees: true,
 };
 
 /**
