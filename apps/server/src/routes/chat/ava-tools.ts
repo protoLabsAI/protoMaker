@@ -162,7 +162,7 @@ export interface AvaToolsConfig {
   delegateToPm?: boolean;
   /** Enable delegation tool group (delegate_to_pm) — preferred alias for delegateToPm */
   delegation?: boolean;
-  /** Enable scheduling tools (list_timers, pause_timer, resume_timer) */
+  /** Enable scheduling tools (schedule_task, cancel_task, list_scheduled_tasks, trigger_task) */
   scheduling?: boolean;
   /** Enable memory tools (remember, recall, forget) */
   memory?: boolean;

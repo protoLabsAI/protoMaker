@@ -23,6 +23,10 @@ export interface AvaToolGroups {
   contextFiles: boolean;
   projects: boolean;
   briefing: boolean;
+  discord: boolean;
+  health: boolean;
+  settings: boolean;
+  delegation: boolean;
   scheduling: boolean;
   memory: boolean;
 }
