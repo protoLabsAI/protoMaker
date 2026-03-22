@@ -55,9 +55,6 @@ COPY apps/ui/package.json ./apps/ui/
 # Note: apps/ui/package.json must exist above for npm ci to validate the lockfile,
 # but desktop-only deps are skipped since we only build the server.
 RUN npm ci --ignore-scripts && \
-    npm install --no-save --force --ignore-scripts \
-      @esbuild/linux-x64@0.27.3 \
-      @rollup/rollup-linux-x64-gnu@4.59.0 && \
     npm rebuild node-pty better-sqlite3
 
 # Copy all source files

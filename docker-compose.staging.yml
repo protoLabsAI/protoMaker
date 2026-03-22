@@ -140,10 +140,6 @@ services:
       - /npm-cache:size=512m
       - /home/automaker:size=64m,uid=${UID:-1001},gid=${GID:-1001},mode=0750
 
-    # Drop all capabilities, then add back the minimum required set.
-    # The container runs as non-root (user: directive above), so most capabilities
-    # are irrelevant. We add back only what's needed for child process spawning
-    # (git, gh, node, claude) and network diagnostics.
     cap_drop:
       - ALL
     cap_add:
@@ -171,6 +167,28 @@ services:
       options:
         max-size: '100m'
         max-file: '10'
+
+  # Auto-update: Watchtower polls GHCR every 5 min and restarts containers
+  # when a new image is available. Only watches containers with the
+  # com.centurylinklabs.watchtower.enable=true label.
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: automaker-watchtower
+    restart: unless-stopped
+    environment:
+      - WATCHTOWER_LABEL_ENABLE=true
+      - WATCHTOWER_POLL_INTERVAL=300
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_INCLUDE_STOPPED=false
+      - WATCHTOWER_ROLLING_RESTART=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${HOME}/.docker/config.json:/config.json:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
 
   # Documentation Site — hosted on Cloudflare Pages (docs.protolabs.studio).
   # Deployed via .github/workflows/deploy-docs.yml, not Docker.
