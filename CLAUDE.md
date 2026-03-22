@@ -24,9 +24,9 @@ protoLabs Studio is a **platform for building apps**, not just our internal tool
 
 ## Planning & Approach
 
-- When creating plans, start with the minimal viable scope. Do NOT propose multi-phase plans unless explicitly asked. Default to the smallest, lowest-risk approach first.
-- Do not exit plan mode or transition away from planning until the user explicitly confirms the plan is complete and approved. Wait for user signal before proceeding to implementation.
-- **Plan completion verification**: Before committing a multi-step plan implementation, run the verification checklist in `.automaker/context/plan-completion-verification.md`. CI catches broken code but NOT unwired code — a service with passing tests can be completely disconnected from the runtime. Every new file must have a non-test importer. Every new service must have an integration test covering its wiring point.
+- When creating plans, start with the minimal viable scope. Prefer single-phase plans unless explicitly asked for more. Default to the smallest, lowest-risk approach first.
+- Stay in plan mode until the user explicitly confirms the plan is complete and approved. Wait for user signal before proceeding to implementation.
+- **Plan completion verification**: Before committing a multi-step plan implementation, verify wiring is complete. CI catches broken code but NOT unwired code — a service with passing tests can be completely disconnected from the runtime. Every new file must have a non-test importer. Every new service must have an integration test covering its wiring point.
 
 ## Git Workflow
 
@@ -209,9 +209,14 @@ The in-app docs viewer is the interface for internal docs. A page about "how to 
 
 ## Important Guidelines
 
-- **Dev Server Management**: NEVER start, stop, restart, or otherwise manage the dev server yourself. Always ask the user to manage it, or you will break it.
+- **Dev Server Management**: Do not start, stop, restart, or otherwise manage the dev server yourself. Always ask the user to manage it, or you will break it.
+- **Investigate before answering**: Never speculate about code you have not read. Before making claims about what a file contains, what a function does, or what an import path resolves to, read the file first. Before suggesting a fix, verify the current state of the code. This applies to all interactions — chat, implementation, and review.
+- **Admit uncertainty**: If you are unsure about how something works in this codebase, say so and investigate rather than guessing. "I'm not sure — let me check" is always better than a confident but wrong answer.
+- **Use only verified APIs**: Do not rely on general training knowledge about library APIs. Verify imports, function signatures, and module paths by reading the actual source or package.json in this project. Hallucinated imports are a common source of agent failures.
 - **Document as you build**: When adding or changing a feature, update the relevant docs in `docs/`. New services get a page in the appropriate section. New config options get added to env var tables. API changes get reflected in the server reference. Follow the rules in `docs/dev/docs-standard.md` — every page must belong to a sidebar section, use `kebab-case.md` naming, and stay under 800 lines. If no appropriate section exists, add the page to the closest match rather than creating a new root-level file.
 - **No emojis in docs or code**: Do not use emojis anywhere in documentation, markdown files, comments, or code. The only exceptions are ✅ and ❌ when used as status indicators in documentation tables or checklists.
+- **Context window management**: Your context window will be automatically compacted as it approaches its limit. Do not stop tasks early due to token budget concerns. Save progress to git commits before context refreshes. Always be persistent and complete tasks fully.
+- **Subagent usage**: Use subagents when tasks can run in parallel, require isolated context, or involve independent workstreams. For simple tasks, sequential operations, or single-file edits, work directly rather than delegating.
 
 ## Common Commands
 

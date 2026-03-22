@@ -34,7 +34,7 @@ import { STATIC_PORT, SERVER_PORT } from '@protolabsai/types';
 
 export const DEFAULT_AUTO_MODE_PLANNING_LITE = `## Planning Phase (Lite Mode)
 
-IMPORTANT: Do NOT output exploration text, tool usage, or thinking before the plan. Start DIRECTLY with the planning outline format below. Silently analyze the codebase first, then output ONLY the structured plan.
+Start directly with the planning outline format below. Analyze the codebase silently first, then output the structured plan.
 
 Create a brief planning outline:
 
@@ -52,7 +52,7 @@ Then proceed with implementation.
 
 export const DEFAULT_AUTO_MODE_PLANNING_LITE_WITH_APPROVAL = `## Planning Phase (Lite Mode)
 
-IMPORTANT: Do NOT output exploration text, tool usage, or thinking before the plan. Start DIRECTLY with the planning outline format below. Silently analyze the codebase first, then output ONLY the structured plan.
+Start directly with the planning outline format below. Analyze the codebase silently first, then output the structured plan.
 
 Create a brief planning outline:
 
@@ -70,11 +70,13 @@ DO NOT proceed with implementation until you receive explicit approval.
 
 export const DEFAULT_AUTO_MODE_PLANNING_SPEC = `## Specification Phase (Spec Mode)
 
-IMPORTANT: Do NOT output exploration text, tool usage, or thinking before the spec. Start DIRECTLY with the specification format below. Silently analyze the codebase first, then output ONLY the structured specification.
+Start directly with the specification format below. Analyze the codebase silently first, then output the structured specification.
 
 **Before planning:** Check status.md at project root for current priorities and context.
 
-Generate a specification with an actionable task breakdown. WAIT for approval before implementing.
+**Grounding requirement:** Before writing the spec, read the files you plan to modify. Extract the relevant function signatures, type definitions, and patterns you will reference. Base your specification on what the code actually contains, not assumptions about what it should contain.
+
+Generate a specification with an actionable task breakdown. Wait for approval before implementing.
 
 ### Specification Format
 
@@ -126,7 +128,7 @@ This allows real-time progress tracking during implementation.
 
 export const DEFAULT_AUTO_MODE_PLANNING_FULL = `## Full Specification Phase (Full SDD Mode)
 
-IMPORTANT: Do NOT output exploration text, tool usage, or thinking before the spec. Start DIRECTLY with the specification format below. Silently analyze the codebase first, then output ONLY the structured specification.
+Start directly with the specification format below. Analyze the codebase silently first, then output the structured specification.
 
 Generate a comprehensive specification with phased task breakdown. WAIT for approval before implementing.
 
@@ -914,27 +916,47 @@ Begin implementing task {{taskId}} now.`;
 
 export const DEFAULT_IMPLEMENTATION_INSTRUCTIONS = `## Instructions
 
+<investigate_before_answering>
+Never speculate about code you have not opened. Before making any changes to a file, you
+MUST read that file first. Before importing a module, verify the import path exists by
+reading the source or checking package.json. Before calling a function, verify its signature
+by reading its definition. Never make claims about code you have not investigated.
+</investigate_before_answering>
+
+<external_knowledge_restriction>
+Only use information from files you have read in this session and the feature description.
+Do not rely on general knowledge about libraries or APIs — verify by reading the actual
+source files, package.json, or installed node_modules. If an import path or API looks
+correct based on your training data but you have not verified it exists in this project,
+check before using it.
+</external_knowledge_restriction>
+
 Implement this feature by:
-1. Read the feature description carefully - identify the specific files to create or modify
-2. Read ONLY those files (2-4 files max) to understand the existing patterns
-3. Write the code changes
+1. Read the feature description carefully — identify the specific files to create or modify
+2. Read those files to understand existing patterns and verify import paths
+3. Write the code changes, using only verified APIs and imports
 4. Build and verify the changes compile
 
-**CRITICAL: Scope Discipline**
-- Implement EXACTLY what the feature description says. Nothing more.
-- If the description says "create ServiceX", create ONLY ServiceX. Do NOT create routes, modify index.ts, or wire it into the server unless the description explicitly asks.
-- Other features in the backlog will handle remaining integration work. Over-delivering causes merge conflicts and blocks other agents working on those features.
-- When in doubt, do LESS, not more.
+**Scope Discipline**
+- Implement exactly what the feature description says — nothing more
+- If the description says "create ServiceX", create only ServiceX. Do not create routes, modify index.ts, or wire it into the server unless the description explicitly asks
+- Other features in the backlog handle remaining integration work. Over-delivering causes merge conflicts and blocks other agents
+- When in doubt, do less, not more
 
-**CRITICAL: Turn Budget**
-- Do NOT spend more than 20% of your turns reading/exploring code
-- If you're still reading files after 8 turns, you're behind schedule
-- Do NOT try to understand the entire codebase - focus only on files relevant to your task
+**Turn Budget**
+- Spend no more than 20% of your turns reading/exploring code
+- If you are still reading files after 8 turns, you are behind schedule
+- Focus only on files relevant to your task
 
-**Risk Awareness:**
-- Flag unclear requirements immediately rather than guessing
-- If a task is taking longer than expected, assess why and document
-- If you encounter a blocker, stop and report it clearly
+**Uncertainty and Blockers**
+- If the feature description is ambiguous or lacks necessary information, say "I don't have enough information to confidently implement this" and flag it as a blocker — do not guess
+- If you are unsure whether a function exists or an API works a certain way, read the source to verify before using it
+- If you encounter a blocker, stop and report it clearly rather than making speculative changes
+
+**Commit to an Approach**
+- When deciding how to approach a problem, choose one approach and commit to it
+- Avoid revisiting decisions unless you encounter new information that directly contradicts your reasoning
+- If weighing two approaches, pick one and see it through — you can course-correct later if it fails
 
 **Self-Review (Before Verification)**
 After completing your implementation, review your own work before running verification gates:
@@ -947,9 +969,9 @@ After completing your implementation, review your own work before running verifi
 **Skill Creation:**
 If you discover a reusable pattern during implementation, consider creating a skill file at \`.automaker/skills/{name}.md\`. Good candidates: project-specific build patterns, common error fixes, integration techniques. See the skill format in the system prompt.
 
-## Verification Gates (MANDATORY)
+## Verification Gates
 
-Before writing your summary, you MUST complete ALL of these:
+Before writing your summary, complete all of these:
 
 1. Run \`npm run build:server\` (or the appropriate build command) and verify exit code 0
 2. Run tests if any exist for the modified files
@@ -957,21 +979,23 @@ Before writing your summary, you MUST complete ALL of these:
 4. If you claim "tests pass" — paste the actual test output
 5. If you claim "build succeeds" — paste the actual build output
 
-DO NOT write your summary until all gates pass. If a gate fails, fix the issue first.
+Do not write your summary until all gates pass. If a gate fails, fix the issue first.
 
 ## When Stuck
 
 If you have attempted 3+ fixes for the same error:
-- STOP attempting more fixes
+- Stop attempting more fixes
 - Document what you tried and what happened each time
 - Report this in your summary as a blocker
-- Do NOT continue making speculative changes
+- Do not continue making speculative changes
 
-## Red Flags — STOP if you catch yourself thinking:
-- "This should work" (without running it)
-- "I'm confident this is correct" (confidence is not evidence)
-- "The build will pass" (run it and prove it)
-- "I'll skip verification since the change is small" (small changes need verification too)
+**No-progress detection:** If you notice yourself re-reading the same files, re-running the same commands, or restating your plan without making forward progress, stop and escalate. These are signs you need a different approach or human input, not more iterations of the same approach.
+
+## Red Flags — Stop if you catch yourself:
+- Assuming code works without running it
+- Feeling confident without evidence (confidence is not evidence)
+- Predicting a build will pass without running it
+- Skipping verification because the change seems small
 
 When done, wrap your final summary in <summary> tags like this:
 
@@ -984,14 +1008,18 @@ When done, wrap your final summary in <summary> tags like this:
 ### Files Modified
 - [List of files]
 
+### Verification Results
+- Build: [pass/fail with output excerpt]
+- Tests: [pass/fail/skipped with output excerpt]
+
 ### Risks/Blockers Encountered
 - [Any issues that came up and how they were resolved]
 
 ### Learnings
 - [Key decisions made and why - useful for future similar work]
 
-### Notes for Developer
-- [Any important notes]
+### Needs Human Input (if any)
+- [Decisions you could not make autonomously, or blockers requiring human intervention]
 </summary>
 
 This helps parse your summary correctly in the output logs.`;
