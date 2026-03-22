@@ -616,7 +616,45 @@ export class AutomationService {
       enabled: true,
     });
 
+    // Cleanup: remove persisted maintenance:* automations whose flowId is no longer registered.
+    // This handles cases where a built-in flow is removed from code but the persisted record
+    // and its scheduler task remain, causing recurring "Flow not registered" errors.
+    await this.purgeStaleBuiltIns();
+
     logger.info('Built-in automation records seeded');
+  }
+
+  /**
+   * Remove any persisted `maintenance:*` automation records whose flowId is not registered
+   * in the flow registry, and unregister their corresponding scheduler tasks.
+   * Called at the end of seedBuiltInAutomations() to clean up stale records left behind
+   * when built-in flows are removed from code.
+   */
+  private async purgeStaleBuiltIns(): Promise<void> {
+    const automations = await this.readAutomations();
+    const stale = automations.filter(
+      (a) => a.id.startsWith('maintenance:') && !flowRegistry.has(a.flowId)
+    );
+
+    if (stale.length === 0) return;
+
+    const staleIds = new Set(stale.map((a) => a.id));
+    const pruned = automations.filter((a) => !staleIds.has(a.id));
+    await this.writeAutomations(pruned);
+
+    for (const automation of stale) {
+      const taskId = `${AUTOMATION_TASK_PREFIX}${automation.id}`;
+      try {
+        await this.schedulerService.unregisterTask(taskId);
+      } catch {
+        // Task may not be registered — ignore
+      }
+      logger.warn(
+        `Purged stale built-in automation "${automation.name}" (${automation.id}): flow "${automation.flowId}" is no longer registered`
+      );
+    }
+
+    logger.info(`Purged ${stale.length} stale built-in automation(s) with unregistered flows`);
   }
 
   /**
