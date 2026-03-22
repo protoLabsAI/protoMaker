@@ -10,7 +10,6 @@ import type {
   PhaseModelEntry,
   ModelDefinition,
   ClaudeCompatibleProvider,
-  ClaudeApiProfile,
   OpenAICompatibleConfig,
 } from '@protolabsai/types';
 import {
@@ -71,9 +70,6 @@ interface AIModelsState {
   claudeCompatibleProviders: ClaudeCompatibleProvider[];
   // OpenAI-Compatible Providers
   openaiCompatibleProviders: OpenAICompatibleConfig[];
-  // Claude API Profiles (deprecated)
-  claudeApiProfiles: ClaudeApiProfile[];
-  activeClaudeApiProfileId: string | null;
   // Claude Usage Tracking
   claudeRefreshInterval: number;
   claudeUsage: ClaudeUsage | null;
@@ -159,12 +155,6 @@ interface AIModelsActions {
   deleteClaudeCompatibleProvider: (id: string) => Promise<void>;
   setClaudeCompatibleProviders: (providers: ClaudeCompatibleProvider[]) => Promise<void>;
   toggleClaudeCompatibleProviderEnabled: (id: string) => Promise<void>;
-  // Claude API Profile actions (deprecated)
-  addClaudeApiProfile: (profile: ClaudeApiProfile) => Promise<void>;
-  updateClaudeApiProfile: (id: string, updates: Partial<ClaudeApiProfile>) => Promise<void>;
-  deleteClaudeApiProfile: (id: string) => Promise<void>;
-  setActiveClaudeApiProfile: (id: string | null) => Promise<void>;
-  setClaudeApiProfiles: (profiles: ClaudeApiProfile[]) => Promise<void>;
   // Claude Usage Tracking actions
   setClaudeRefreshInterval: (interval: number) => void;
   setClaudeUsageLastUpdated: (timestamp: number) => void;
@@ -216,8 +206,6 @@ const initialState: AIModelsState = {
   skipSandboxWarning: false,
   claudeCompatibleProviders: [],
   openaiCompatibleProviders: [],
-  claudeApiProfiles: [],
-  activeClaudeApiProfileId: null,
   claudeRefreshInterval: 60,
   claudeUsage: null,
   claudeUsageLastUpdated: null,
@@ -465,47 +453,6 @@ export const useAIModelsStore = create<AIModelsState & AIModelsActions>()((set, 
         p.id === id ? { ...p, enabled: p.enabled === false ? true : false } : p
       ),
     });
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    await syncSettingsToServer();
-  },
-
-  // Claude API Profile actions (deprecated)
-  addClaudeApiProfile: async (profile) => {
-    set({ claudeApiProfiles: [...get().claudeApiProfiles, profile] });
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    await syncSettingsToServer();
-  },
-
-  updateClaudeApiProfile: async (id, updates) => {
-    set({
-      claudeApiProfiles: get().claudeApiProfiles.map((p) =>
-        p.id === id ? { ...p, ...updates } : p
-      ),
-    });
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    await syncSettingsToServer();
-  },
-
-  // Profile-only deletion (removes profile state + syncs).
-  // NOTE: The app-store version also handles project cleanup for per-project overrides.
-  deleteClaudeApiProfile: async (id) => {
-    const currentActiveId = get().activeClaudeApiProfileId;
-    set({
-      claudeApiProfiles: get().claudeApiProfiles.filter((p) => p.id !== id),
-      activeClaudeApiProfileId: currentActiveId === id ? null : currentActiveId,
-    });
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    await syncSettingsToServer();
-  },
-
-  setActiveClaudeApiProfile: async (id) => {
-    set({ activeClaudeApiProfileId: id });
-    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
-    await syncSettingsToServer();
-  },
-
-  setClaudeApiProfiles: async (profiles) => {
-    set({ claudeApiProfiles: profiles });
     const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
     await syncSettingsToServer();
   },
