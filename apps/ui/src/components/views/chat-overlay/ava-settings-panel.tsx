@@ -53,11 +53,6 @@ const TOOL_GROUP_ENTRIES: Array<{
     label: 'Orchestration',
     description: 'Manage feature dependencies and order',
   },
-  {
-    key: 'agentDelegation',
-    label: 'Agent Delegation',
-    description: 'Delegate tasks to specialized agents',
-  },
   { key: 'notes', label: 'Notes', description: 'Read and write project notes' },
   { key: 'metrics', label: 'Metrics', description: 'View project and capacity metrics' },
   { key: 'prWorkflow', label: 'PR Workflow', description: 'Check PR status, feedback, and merge' },
