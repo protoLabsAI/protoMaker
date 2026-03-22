@@ -201,14 +201,15 @@ function makeService(gitWorkflowOverride?: { copyEnvToWorktrees?: boolean }) {
     emit: vi.fn(),
     on: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
   };
-  const settingsService = gitWorkflowOverride !== undefined
-    ? {
-        getGlobalSettings: vi.fn(async () => ({
-          gitWorkflow: gitWorkflowOverride,
-        })),
-        getProjectSettings: vi.fn(async () => ({})),
-      }
-    : undefined;
+  const settingsService =
+    gitWorkflowOverride !== undefined
+      ? {
+          getGlobalSettings: vi.fn(async () => ({
+            gitWorkflow: gitWorkflowOverride,
+          })),
+          getProjectSettings: vi.fn(async () => ({})),
+        }
+      : undefined;
   return new AutoModeService(events as any, settingsService as any);
 }
 
@@ -280,9 +281,7 @@ describe('AutoModeService - copyEnvFilesToWorktree', () => {
   });
 
   it('does NOT copy .env.example files', async () => {
-    mockReaddir.mockResolvedValue([
-      makeDirent('.env.example'),
-    ]);
+    mockReaddir.mockResolvedValue([makeDirent('.env.example')]);
 
     const svc = makeService();
     await (svc as any).createWorktreeForBranch(PROJECT_PATH, BRANCH_NAME, makeFeature());
@@ -292,10 +291,7 @@ describe('AutoModeService - copyEnvFilesToWorktree', () => {
   });
 
   it('skips env file copy when copyEnvToWorktrees is false', async () => {
-    mockReaddir.mockResolvedValue([
-      makeDirent('.env'),
-      makeDirent('.env.local'),
-    ]);
+    mockReaddir.mockResolvedValue([makeDirent('.env'), makeDirent('.env.local')]);
 
     const svc = makeService({ copyEnvToWorktrees: false });
     await (svc as any).createWorktreeForBranch(PROJECT_PATH, BRANCH_NAME, makeFeature());
@@ -316,10 +312,7 @@ describe('AutoModeService - copyEnvFilesToWorktree', () => {
   });
 
   it('does not copy anything when project has no .env files', async () => {
-    mockReaddir.mockResolvedValue([
-      makeDirent('package.json'),
-      makeDirent('tsconfig.json'),
-    ]);
+    mockReaddir.mockResolvedValue([makeDirent('package.json'), makeDirent('tsconfig.json')]);
 
     const svc = makeService();
     await (svc as any).createWorktreeForBranch(PROJECT_PATH, BRANCH_NAME, makeFeature());
@@ -329,10 +322,7 @@ describe('AutoModeService - copyEnvFilesToWorktree', () => {
   });
 
   it('continues (non-fatal) when copying an env file fails', async () => {
-    mockReaddir.mockResolvedValue([
-      makeDirent('.env'),
-      makeDirent('.env.local'),
-    ]);
+    mockReaddir.mockResolvedValue([makeDirent('.env'), makeDirent('.env.local')]);
     // First readFile succeeds, second throws
     mockReadFile
       .mockResolvedValueOnce(Buffer.from('KEY=value'))
