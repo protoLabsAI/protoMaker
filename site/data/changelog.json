@@ -1,21 +1,69 @@
 {
   "summary": {
-    "totalEntries": 1695,
+    "totalEntries": 1701,
     "categories": {
-      "improvement": 294,
-      "feature": 874,
+      "improvement": 297,
+      "docs": 82,
+      "feature": 876,
       "fix": 339,
-      "infrastructure": 107,
-      "docs": 81
+      "infrastructure": 107
     },
     "firstDate": "2026-02-04T21:35:59.000Z",
-    "latestDate": "2026-03-21T05:12:05.000Z"
+    "latestDate": "2026-03-21T21:18:36.000Z"
   },
   "months": [
     {
       "month": "2026-03",
       "label": "March 2026",
       "entries": [
+        {
+          "hash": "d526faa6",
+          "date": "2026-03-21T14:18:36-07:00",
+          "title": "Re-harden Docker staging container security profile",
+          "prNumber": 3031,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3031",
+          "category": "improvement"
+        },
+        {
+          "hash": "8f0f33cc",
+          "date": "2026-03-21T14:04:11-07:00",
+          "title": "Migrate shell-interpolated git commands to execFileAsync for injection s",
+          "prNumber": 3030,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3030",
+          "category": "improvement"
+        },
+        {
+          "hash": "9e983126",
+          "date": "2026-03-21T17:35:09+00:00",
+          "title": "Regenerate site data",
+          "prNumber": 3019,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3019",
+          "category": "docs"
+        },
+        {
+          "hash": "e1c5c36b",
+          "date": "2026-03-21T02:31:55-07:00",
+          "title": "Nested worktree cleanup destroys unpushed agent work",
+          "prNumber": 3025,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3025",
+          "category": "improvement"
+        },
+        {
+          "hash": "e0a4312b",
+          "date": "2026-03-21T01:19:33-07:00",
+          "title": "Promote staging to main (v0.83.2)",
+          "prNumber": 3023,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3023",
+          "category": "feature"
+        },
+        {
+          "hash": "5162bd26",
+          "date": "2026-03-20T23:08:46-07:00",
+          "title": "Promote staging to main (v0.83.1)",
+          "prNumber": 3017,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3017",
+          "category": "feature"
+        },
         {
           "hash": "2ca8a737",
           "date": "2026-03-20T22:12:05-07:00",
@@ -13585,5 +13633,5 @@
       ]
     }
   ],
-  "generatedAt": "2026-03-21T06:15:54.033Z"
+  "generatedAt": "2026-03-22T06:20:26.917Z"
 }
