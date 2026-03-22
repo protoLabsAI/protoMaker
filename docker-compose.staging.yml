@@ -134,25 +134,19 @@ services:
     # /home/automaker tmpfs provides writable space for ~/.claude.json and other
     # dotfiles; named volume mounts at subdirectories (.claude/, .cursor/, etc.)
     # take precedence and remain persistent across restarts.
-    # read_only: true
+    read_only: true
     tmpfs:
       - /tmp:size=512m,mode=1777
       - /npm-cache:size=512m
       - /home/automaker:size=64m,uid=${UID:-1001},gid=${GID:-1001},mode=0750
 
-    # Security hardening disabled — cap_drop:ALL + seccomp causes EPERM on
-    # Node.js child_process.spawn() even with fork/clone/execve in the seccomp
-    # allowlist. Root cause unresolved (git runs and exits 0, but Node gets EPERM
-    # in the spawn lifecycle). Tracked in protoClawX seccomp profile for reference
-    # — that project's identical security config works, suggesting a Node.js
-    # version or libuv interaction specific to this image.
-    # cap_drop:
-    #   - ALL
-    # cap_add:
-    #   - NET_RAW
-    # security_opt:
-    #   - no-new-privileges:true
-    #   - seccomp:./seccomp-profile.json
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_RAW
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:./seccomp-profile.json
 
     deploy:
       resources:
