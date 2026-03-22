@@ -99,14 +99,14 @@ describe('auto-mode-service.ts - Planning Mode', () => {
       expect(result).toContain('## Feature Request');
     });
 
-    it('should instruct agent to NOT output exploration text', async () => {
+    it('should instruct agent to start directly with the format', async () => {
       const modes = ['lite', 'spec', 'full'] as const;
       for (const mode of modes) {
         const feature = { id: 'test', planningMode: mode };
         const result = await getPlanningPromptPrefix(service, feature);
-        // All modes should have the IMPORTANT instruction about not outputting exploration text
-        expect(result).toContain('IMPORTANT: Do NOT output exploration text');
-        expect(result).toContain('Silently analyze the codebase first');
+        // All modes should instruct the agent to start directly with the structured format
+        expect(result).toContain('Start directly with the');
+        expect(result).toContain('Analyze the codebase silently first');
       }
     });
   });

@@ -65,6 +65,11 @@ const TOOL_GROUP_ENTRIES: Array<{
   { key: 'contextFiles', label: 'Context Files', description: 'Manage agent context files' },
   { key: 'projects', label: 'Projects', description: 'List, view, and create projects' },
   { key: 'briefing', label: 'Briefing', description: 'Daily briefing and event digest' },
+  { key: 'discord', label: 'Discord', description: 'Send messages to Discord channels' },
+  { key: 'health', label: 'Health', description: 'Health monitoring and diagnostics' },
+  { key: 'settings', label: 'Settings', description: 'Access and modify global settings' },
+  { key: 'delegation', label: 'Delegation', description: 'Delegate tasks to PM agent' },
+  { key: 'scheduling', label: 'Scheduling', description: 'Create and manage recurring tasks' },
   { key: 'memory', label: 'Memory', description: 'Persistent memory across chat sessions' },
 ];
 
