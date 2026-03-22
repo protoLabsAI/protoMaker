@@ -125,6 +125,8 @@ export class FeatureScheduler {
   private featureHealthAuditor: FeatureHealthAuditor | null = null;
   /** Count of features skipped due to creation cooldown during the last loadPendingFeatures call. */
   private lastCooldownSkippedCount = 0;
+  /** Features already warned about needing human intervention — suppress repeat logs. */
+  private warnedHumanIntervention = new Set<string>();
   /**
    * Instance identity for project-affinity filtering.
    * When null, no affinity filtering is applied (single-instance backward compat).
@@ -346,9 +348,14 @@ export class FeatureScheduler {
         // Load pending features for this project/worktree
         const pendingFeatures = await this.loadPendingFeatures(projectPath, branchName);
 
-        logger.info(
-          `[AutoLoop] Iteration ${iterationCount}: Found ${pendingFeatures.length} pending features, ${projectRunningCount}/${projectState.config.maxConcurrency} running for ${worktreeDesc}`
-        );
+        // Only log at info level when there's something actionable
+        if (pendingFeatures.length > 0 || projectRunningCount > 0) {
+          logger.info(
+            `[AutoLoop] Iteration ${iterationCount}: Found ${pendingFeatures.length} pending features, ${projectRunningCount}/${projectState.config.maxConcurrency} running for ${worktreeDesc}`
+          );
+        } else {
+          logger.debug(`[AutoLoop] Iteration ${iterationCount}: idle for ${worktreeDesc}`);
+        }
 
         if (pendingFeatures.length === 0) {
           // If features were skipped due to creation cooldown, don't emit idle —
@@ -978,10 +985,13 @@ export class FeatureScheduler {
               changeReason.includes('plan validation failed') ||
               changeReason.includes('Max agent retries exceeded');
             if (isAgentFailureBlock || isGitWorkflowBlock) {
-              logger.warn(
-                `[loadPendingFeatures] Feature ${feature.id} skipping dep-unblock — ` +
-                  `blocked after ${failureCount} failure(s) (retryable: ${failureClassification?.retryable ?? 'unknown'}). Requires human intervention.`
-              );
+              if (!this.warnedHumanIntervention.has(feature.id)) {
+                logger.warn(
+                  `[loadPendingFeatures] Feature ${feature.id} skipping dep-unblock — ` +
+                    `blocked after ${failureCount} failure(s) (retryable: ${failureClassification?.retryable ?? 'unknown'}). Requires human intervention.`
+                );
+                this.warnedHumanIntervention.add(feature.id);
+              }
               continue;
             }
 
@@ -1159,27 +1169,15 @@ export class FeatureScheduler {
       }
 
       const worktreeDesc = branchName ? `worktree ${branchName}` : 'main worktree';
-      logger.info(
-        `[loadPendingFeatures] Found ${allFeatures.length} total features, ${pendingFeatures.length} candidates (pending/ready/backlog/approved_with_pending_tasks) for ${worktreeDesc}`
-      );
-
-      if (pendingFeatures.length === 0) {
-        logger.warn(
-          `[loadPendingFeatures] No pending features found for ${worktreeDesc}. Check branchName matching - looking for branchName: ${branchName === null ? 'null (main)' : branchName}`
+      // Only log at info when there are candidates; debug otherwise
+      if (pendingFeatures.length > 0) {
+        logger.info(
+          `[loadPendingFeatures] Found ${pendingFeatures.length}/${allFeatures.length} candidates for ${worktreeDesc}`
         );
-        const allBacklogFeatures = allFeatures.filter(
-          (f) =>
-            f.status === 'backlog' ||
-            f.status === 'pending' ||
-            f.status === 'ready' ||
-            (f.planSpec?.status === 'approved' &&
-              (f.planSpec.tasksCompleted ?? 0) < (f.planSpec.tasksTotal ?? 0))
+      } else {
+        logger.debug(
+          `[loadPendingFeatures] No candidates among ${allFeatures.length} features for ${worktreeDesc} (branchName: ${branchName === null ? 'null (main)' : branchName})`
         );
-        if (allBacklogFeatures.length > 0) {
-          logger.info(
-            `[loadPendingFeatures] Found ${allBacklogFeatures.length} backlog features with branchNames: ${allBacklogFeatures.map((f) => `${f.id}(${f.branchName ?? 'null'})`).join(', ')}`
-          );
-        }
       }
 
       // Apply dependency-aware ordering
