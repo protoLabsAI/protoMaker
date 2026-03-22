@@ -578,6 +578,7 @@ export class AutomationService {
     }
 
     // auto-merge-prs and auto-rebase-stale-prs removed — Lead Engineer handles these
+    // purgeStaleBuiltIns() at the end of seedBuiltInAutomations() cleans up orphaned records
 
     if (process.env.GITHUB_TOKEN && process.env.GITHUB_REPO_OWNER && process.env.GITHUB_REPO_NAME) {
       await this.upsertBuiltIn({
