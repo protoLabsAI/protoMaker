@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getMCPServersFromSettings, getWorkflowSettings } from '@/lib/settings-helpers.js';
+import {
+  getMCPServersFromSettings,
+  getWorkflowSettings,
+  getEffectivePrBaseBranch,
+} from '@/lib/settings-helpers.js';
 import type { SettingsService } from '@/services/settings-service.js';
 import { DEFAULT_WORKFLOW_SETTINGS } from '@protolabsai/types';
 
@@ -387,6 +391,76 @@ describe('settings-helpers.ts', () => {
       // Other pipeline defaults should be preserved
       expect(result.pipeline.checkpointEnabled).toBe(true);
       expect(result.pipeline.goalGatesEnabled).toBe(false);
+    });
+  });
+
+  describe('getEffectivePrBaseBranch', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('should return DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch (dev) when settingsService is null and git detect fails', async () => {
+      const result = await getEffectivePrBaseBranch('/some/path', null);
+      expect(result).toBe('dev');
+    });
+
+    it('should return project-level prBaseBranch when set in project workflow gitWorkflow settings', async () => {
+      const mockSettingsService = {
+        getProjectSettings: vi.fn().mockResolvedValue({
+          workflow: { gitWorkflow: { prBaseBranch: 'feature-branch' } },
+        }),
+        getGlobalSettings: vi.fn().mockResolvedValue({}),
+      } as unknown as SettingsService;
+
+      const result = await getEffectivePrBaseBranch('/some/path', mockSettingsService);
+      expect(result).toBe('feature-branch');
+      expect(mockSettingsService.getGlobalSettings).not.toHaveBeenCalled();
+    });
+
+    it('should return global-level prBaseBranch when project has none but global does', async () => {
+      const mockSettingsService = {
+        getProjectSettings: vi.fn().mockResolvedValue({}),
+        getGlobalSettings: vi.fn().mockResolvedValue({
+          gitWorkflow: { prBaseBranch: 'staging' },
+        }),
+      } as unknown as SettingsService;
+
+      const result = await getEffectivePrBaseBranch('/some/path', mockSettingsService);
+      expect(result).toBe('staging');
+    });
+
+    it('should fall back to dev when neither project nor global settings define prBaseBranch and git detect fails', async () => {
+      const mockSettingsService = {
+        getProjectSettings: vi.fn().mockResolvedValue({}),
+        getGlobalSettings: vi.fn().mockResolvedValue({}),
+      } as unknown as SettingsService;
+
+      const result = await getEffectivePrBaseBranch('/nonexistent/path', mockSettingsService);
+      expect(result).toBe('dev');
+    });
+
+    it('should fall back to dev when settings service throws', async () => {
+      const mockSettingsService = {
+        getProjectSettings: vi.fn().mockRejectedValue(new Error('Settings read error')),
+        getGlobalSettings: vi.fn().mockRejectedValue(new Error('Settings read error')),
+      } as unknown as SettingsService;
+
+      const result = await getEffectivePrBaseBranch('/nonexistent/path', mockSettingsService);
+      expect(result).toBe('dev');
+    });
+
+    it('should prefer project-level over global-level when both are set', async () => {
+      const mockSettingsService = {
+        getProjectSettings: vi.fn().mockResolvedValue({
+          workflow: { gitWorkflow: { prBaseBranch: 'project-branch' } },
+        }),
+        getGlobalSettings: vi.fn().mockResolvedValue({
+          gitWorkflow: { prBaseBranch: 'global-branch' },
+        }),
+      } as unknown as SettingsService;
+
+      const result = await getEffectivePrBaseBranch('/some/path', mockSettingsService);
+      expect(result).toBe('project-branch');
     });
   });
 });
