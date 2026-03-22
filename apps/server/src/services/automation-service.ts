@@ -621,6 +621,11 @@ export class AutomationService {
       enabled: true,
     });
 
+    // Cleanup: remove persisted maintenance:* automations whose flowId is no longer registered.
+    // This handles cases where a built-in flow is removed from code but the persisted record
+    // and its scheduler task remain, causing recurring "Flow not registered" errors.
+    await this.purgeStaleBuiltIns();
+
     logger.info('Built-in automation records seeded');
   }
 
