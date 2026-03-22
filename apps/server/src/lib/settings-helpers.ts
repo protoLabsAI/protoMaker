@@ -839,21 +839,26 @@ export async function getEffectivePrBaseBranch(
 ): Promise<string> {
   if (settingsService) {
     try {
-      // 1. Check per-project workflow settings first
+      // 1. Check per-project gitWorkflow settings
       const projectSettings = await settingsService.getProjectSettings(projectPath);
       const projectBranch = projectSettings.workflow?.gitWorkflow?.prBaseBranch;
       if (projectBranch) {
         logger.debug(`${logPrefix} Using project-level prBaseBranch: ${projectBranch}`);
         return projectBranch;
       }
-      // NOTE: Intentionally skip global settings — global prBaseBranch belongs to the
-      // automaker project and must not bleed into other projects with a different branch.
+      // 2. Check global gitWorkflow settings
+      const globalSettings = await settingsService.getGlobalSettings();
+      const globalBranch = globalSettings.gitWorkflow?.prBaseBranch;
+      if (globalBranch) {
+        logger.debug(`${logPrefix} Using global-level prBaseBranch: ${globalBranch}`);
+        return globalBranch;
+      }
     } catch (err) {
       logger.warn(`${logPrefix} Failed to read settings for prBaseBranch:`, err);
     }
   }
 
-  // 2. Auto-detect from remote HEAD
+  // 4. Auto-detect from remote HEAD
   try {
     const { stdout } = await execFileAsync('git', ['symbolic-ref', 'refs/remotes/origin/HEAD'], {
       cwd: projectPath,
@@ -870,6 +875,6 @@ export async function getEffectivePrBaseBranch(
     // origin/HEAD not set or git not available — fall through to default
   }
 
-  // 3. Final fallback
+  // 5. Final fallback
   return DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch;
 }

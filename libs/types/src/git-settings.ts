@@ -74,7 +74,7 @@ export const DEFAULT_GIT_WORKFLOW_SETTINGS: Required<GitWorkflowSettings> = {
   autoMergePR: true,
   prMergeStrategy: 'squash',
   waitForCI: true,
-  prBaseBranch: 'main',
+  prBaseBranch: 'dev',
   maxPRLinesChanged: 500,
   maxPRFilesTouched: 20,
   excludeFromStaging: [],
