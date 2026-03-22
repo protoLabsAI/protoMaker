@@ -215,12 +215,16 @@ export class SettingsService {
     // Migration v4 -> v5: Auto-create "Direct Anthropic" profile for existing users
     // If user has an Anthropic API key in credentials but no profiles, create a
     // "Direct Anthropic" profile that references the credentials and set it as active.
+    // NOTE: claudeApiProfiles/activeClaudeApiProfileId removed from GlobalSettings interface;
+    // access raw disk data via type cast for migration purposes only.
+    const raw = result as unknown as Record<string, unknown>;
     if (storedVersion < 5) {
       try {
         const credentials = await this.getCredentials();
         const hasAnthropicKey = !!credentials.apiKeys?.anthropic;
-        const hasNoProfiles = !result.claudeApiProfiles || result.claudeApiProfiles.length === 0;
-        const hasNoActiveProfile = !result.activeClaudeApiProfileId;
+        const legacyProfiles = raw.claudeApiProfiles as ClaudeApiProfile[] | undefined;
+        const hasNoProfiles = !legacyProfiles || legacyProfiles.length === 0;
+        const hasNoActiveProfile = !raw.activeClaudeApiProfileId;
 
         if (hasAnthropicKey && hasNoProfiles && hasNoActiveProfile) {
           const directAnthropicProfile = {
@@ -231,8 +235,8 @@ export class SettingsService {
             useAuthToken: false,
           };
 
-          result.claudeApiProfiles = [directAnthropicProfile];
-          result.activeClaudeApiProfileId = directAnthropicProfile.id;
+          raw.claudeApiProfiles = [directAnthropicProfile];
+          raw.activeClaudeApiProfileId = directAnthropicProfile.id;
 
           logger.info(
             'Migration v4->v5: Created "Direct Anthropic" profile using existing credentials'
@@ -251,7 +255,8 @@ export class SettingsService {
     // The new system uses a models[] array instead of modelMappings, and removes
     // the "active profile" concept - models are selected directly in phase model configs.
     if (storedVersion < 6) {
-      const legacyProfiles = settings.claudeApiProfiles || [];
+      const rawSettings = settings as unknown as Record<string, unknown>;
+      const legacyProfiles = (rawSettings.claudeApiProfiles as ClaudeApiProfile[]) || [];
       if (
         legacyProfiles.length > 0 &&
         (!result.claudeCompatibleProviders || result.claudeCompatibleProviders.length === 0)
@@ -262,9 +267,9 @@ export class SettingsService {
         result.claudeCompatibleProviders = this.migrateProfilesToProviders(legacyProfiles);
       }
       // Remove the deprecated activeClaudeApiProfileId field
-      if (result.activeClaudeApiProfileId) {
+      if (raw.activeClaudeApiProfileId) {
         logger.info('Migration v5->v6: Removing deprecated activeClaudeApiProfileId');
-        delete result.activeClaudeApiProfileId;
+        delete raw.activeClaudeApiProfileId;
       }
       needsSave = true;
     }
@@ -273,7 +278,11 @@ export class SettingsService {
     // If global settings has personaOverrides with any enabled entries, copy them to the
     // current project's .automaker/settings.json under agentConfig.rolePromptOverrides,
     // then remove personaOverrides from global settings.
-    const enabledPersonaOverrides = Object.entries(result.personaOverrides ?? {}).filter(
+    // NOTE: personaOverrides removed from GlobalSettings interface; access via raw cast.
+    const rawPersonaOverrides = raw.personaOverrides as
+      | Record<string, { value: string; enabled: boolean }>
+      | undefined;
+    const enabledPersonaOverrides = Object.entries(rawPersonaOverrides ?? {}).filter(
       ([, v]) => v.enabled
     );
     if (enabledPersonaOverrides.length > 0 && result.currentProjectId && result.projects) {
@@ -312,17 +321,38 @@ export class SettingsService {
         }
       }
       // Remove the global personaOverrides field
-      delete result.personaOverrides;
+      delete raw.personaOverrides;
       needsSave = true;
-    } else if (result.personaOverrides && Object.keys(result.personaOverrides).length > 0) {
+    } else if (rawPersonaOverrides && Object.keys(rawPersonaOverrides).length > 0) {
       // No enabled entries but field exists — remove it
-      delete result.personaOverrides;
+      delete raw.personaOverrides;
       needsSave = true;
     }
 
     // Update version if any migration occurred
     if (needsSave) {
       result.version = SETTINGS_VERSION;
+    }
+
+    // Strip deprecated fields that may exist on disk but are no longer part of GlobalSettings.
+    // This ensures callers never see stale legacy properties from old settings files.
+    const deprecated = [
+      'agentExposure',
+      'hivemind',
+      'avaChannelReactor',
+      'windowBounds',
+      'defaultSkipTests',
+      'defaultPlanningMode',
+      'defaultRequirePlanApproval',
+      'defaultFeatureModel',
+      'enhancementModel',
+      'validationModel',
+      'claudeApiProfiles',
+      'activeClaudeApiProfileId',
+      'personaOverrides',
+    ] as const;
+    for (const key of deprecated) {
+      delete raw[key];
     }
 
     // Save migrated settings if needed
@@ -375,14 +405,19 @@ export class SettingsService {
     }
 
     // Migrate legacy fields if phaseModels doesn't exist
-    // These were the only two legacy fields that existed
-    if (settings.enhancementModel) {
-      result.enhancementModel = this.toPhaseModelEntry(settings.enhancementModel);
-      logger.debug(`Migrated legacy enhancementModel: ${settings.enhancementModel}`);
+    // These fields were removed from GlobalSettings but may exist on disk
+    const rawSettings = settings as Record<string, unknown>;
+    if (rawSettings.enhancementModel) {
+      result.enhancementModel = this.toPhaseModelEntry(
+        rawSettings.enhancementModel as string | PhaseModelEntry
+      );
+      logger.debug(`Migrated legacy enhancementModel: ${rawSettings.enhancementModel}`);
     }
-    if (settings.validationModel) {
-      result.validationModel = this.toPhaseModelEntry(settings.validationModel);
-      logger.debug(`Migrated legacy validationModel: ${settings.validationModel}`);
+    if (rawSettings.validationModel) {
+      result.validationModel = this.toPhaseModelEntry(
+        rawSettings.validationModel as string | PhaseModelEntry
+      );
+      logger.debug(`Migrated legacy validationModel: ${rawSettings.validationModel}`);
     }
 
     return result;
@@ -683,7 +718,6 @@ export class SettingsService {
     ignoreEmptyArrayOverwrite('recentFolders');
     ignoreEmptyArrayOverwrite('mcpServers');
     ignoreEmptyArrayOverwrite('enabledCursorModels');
-    ignoreEmptyArrayOverwrite('claudeApiProfiles');
     // Note: claudeCompatibleProviders intentionally NOT guarded - users should be able to delete all providers
 
     // Empty object overwrite guard
@@ -1132,8 +1166,6 @@ export class SettingsService {
         theme: (appState.theme as GlobalSettings['theme']) || 'dark',
         sidebarOpen: appState.sidebarOpen !== undefined ? (appState.sidebarOpen as boolean) : true,
         maxConcurrency: (appState.maxConcurrency as number) || DEFAULT_MAX_CONCURRENCY,
-        defaultSkipTests:
-          appState.defaultSkipTests !== undefined ? (appState.defaultSkipTests as boolean) : true,
         enableDependencyBlocking:
           appState.enableDependencyBlocking !== undefined
             ? (appState.enableDependencyBlocking as boolean)
@@ -1144,12 +1176,7 @@ export class SettingsService {
             : false,
         useWorktrees:
           appState.useWorktrees !== undefined ? (appState.useWorktrees as boolean) : true,
-        defaultPlanningMode:
-          (appState.defaultPlanningMode as GlobalSettings['defaultPlanningMode']) || 'skip',
-        defaultRequirePlanApproval: (appState.defaultRequirePlanApproval as boolean) || false,
         muteDoneSound: (appState.muteDoneSound as boolean) || false,
-        enhancementModel:
-          (appState.enhancementModel as GlobalSettings['enhancementModel']) || 'sonnet',
         keyboardShortcuts:
           (appState.keyboardShortcuts as KeyboardShortcuts) ||
           DEFAULT_GLOBAL_SETTINGS.keyboardShortcuts,
