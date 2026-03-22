@@ -1,5 +1,15 @@
 # @protolabsai/types
 
+## 0.83.5
+
+### Patch Changes
+
+- ### Bug Fixes
+  - replace agent-generated seccomp profile with proven protoClawX profile
+  - disable Docker security hardening + add Watchtower service
+  - add linux-x64 native deps to optionalDependencies for Docker builds
+  - docker build native deps — drop --no-save --ignore-scripts
+
 ## 0.83.4
 
 ### Patch Changes

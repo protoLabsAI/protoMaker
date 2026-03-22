@@ -1,5 +1,21 @@
 # @protolabsai/flows
 
+## 0.83.5
+
+### Patch Changes
+
+- ### Bug Fixes
+  - replace agent-generated seccomp profile with proven protoClawX profile
+  - disable Docker security hardening + add Watchtower service
+  - add linux-x64 native deps to optionalDependencies for Docker builds
+  - docker build native deps — drop --no-save --ignore-scripts
+- Updated dependencies
+  - @protolabsai/types@0.83.5
+  - @protolabsai/utils@0.83.5
+  - @protolabsai/prompts@0.83.5
+  - @protolabsai/model-resolver@0.83.5
+  - @protolabsai/observability@0.83.5
+
 ## 0.83.4
 
 ### Patch Changes
