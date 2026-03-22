@@ -423,7 +423,9 @@ export async function getActiveClaudeApiProfile(
   try {
     const globalSettings = await settingsService.getGlobalSettings();
     const credentials = await settingsService.getCredentials();
-    const profiles = globalSettings.claudeApiProfiles || [];
+    // claudeApiProfiles was removed from GlobalSettings; access raw data for legacy migration
+    const rawGlobal = globalSettings as unknown as Record<string, unknown>;
+    const profiles = (rawGlobal.claudeApiProfiles as ClaudeApiProfile[] | undefined) || [];
 
     // Check for project-level override first
     let activeProfileId: string | null | undefined;
@@ -439,8 +441,9 @@ export async function getActiveClaudeApiProfile(
     }
 
     // Fall back to global if project doesn't specify
+    // activeClaudeApiProfileId was removed from GlobalSettings; access raw data for legacy migration
     if (activeProfileId === undefined && !isProjectOverride) {
-      activeProfileId = globalSettings.activeClaudeApiProfileId;
+      activeProfileId = rawGlobal.activeClaudeApiProfileId as string | null | undefined;
     }
 
     // No active profile selected - use direct Anthropic API
