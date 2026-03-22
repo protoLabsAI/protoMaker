@@ -35,8 +35,8 @@ const sparcPrdSchema = z.object({
   problem: z.string(),
   approach: z.string(),
   results: z.string(),
-  constraints: z.string(),
-  generatedAt: z.string(),
+  constraints: z.union([z.string(), z.array(z.string())]),
+  generatedAt: z.string().optional(),
   approvedAt: z.string().optional(),
 });
 
@@ -71,7 +71,16 @@ const createProjectBodySchema = z.object({
 export function createCreateHandler(projectService: ProjectService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const parsed = createProjectBodySchema.safeParse(req.body);
+      // MCP transport may stringify arrays — parse milestones if it arrives as a JSON string
+      const body = { ...req.body };
+      if (typeof body.milestones === 'string') {
+        try {
+          body.milestones = JSON.parse(body.milestones);
+        } catch {
+          // leave as-is and let Zod validation report the type error
+        }
+      }
+      const parsed = createProjectBodySchema.safeParse(body);
       if (!parsed.success) {
         res.status(400).json({
           success: false,

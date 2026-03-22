@@ -522,7 +522,10 @@ export function generatePrdFile(title: string, prd: SPARCPrd): string {
   content += `## Problem\n${prd.problem}\n\n`;
   content += `## Approach\n${prd.approach}\n\n`;
   content += `## Results\n${prd.results}\n\n`;
-  content += `## Constraints\n${prd.constraints}\n`;
+  const constraintsText = Array.isArray(prd.constraints)
+    ? prd.constraints.map((c) => `- ${c}`).join('\n')
+    : prd.constraints;
+  content += `## Constraints\n${constraintsText}\n`;
 
   return content;
 }

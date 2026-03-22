@@ -293,10 +293,10 @@ export interface SPARCPrd {
   results: string;
 
   /** Limitations, requirements, constraints */
-  constraints: string;
+  constraints: string | string[];
 
   /** Generated timestamp */
-  generatedAt: string;
+  generatedAt?: string;
 
   /** Approved timestamp (if approved) */
   approvedAt?: string;
