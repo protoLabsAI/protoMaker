@@ -6,6 +6,7 @@
  * the same logic and the behaviour is covered by a single test suite.
  */
 
+import { execSync } from 'child_process';
 import { existsSync } from 'fs';
 import { join } from 'path';
 
@@ -17,14 +18,24 @@ import { join } from 'path';
 export const DEFAULT_STAGING_EXCLUSIONS = ['.automaker/', '.claude/worktrees/', '.worktrees/'];
 
 /**
- * Directories that are already excluded by `.gitignore`.
- * Using `:!dir/` pathspec exclusions for gitignored directories causes git to
- * error: "The following paths are ignored by one of your .gitignore files: dir"
- * These entries should still appear in `excludeFromStaging` to signal that
- * their subdirectories (e.g. `.automaker/memory/`) may need re-inclusion,
- * but they must NOT be emitted as pathspec arguments.
+ * Checks whether a given path is already covered by `.gitignore` in the
+ * specified working directory. Uses `git check-ignore -q <path>` which exits
+ * with code 0 when the path is ignored, 1 when it is not, and >1 on error
+ * (e.g. not a git repo).
+ *
+ * Returns `true` (gitignore-managed) only on a clean exit-code-0 result.
+ * Any error (non-git dir, git not available, etc.) returns `false` so the
+ * caller falls back to emitting an explicit pathspec exclusion — the safe
+ * default.
  */
-const GITIGNORE_MANAGED_EXCLUSIONS = new Set(['.automaker/', '.worktrees/', '.claude/worktrees/']);
+export function isGitignoreManaged(workDir: string, path: string): boolean {
+  try {
+    execSync(`git check-ignore -q ${path}`, { cwd: workDir, stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Builds a git add command that stages all changes except the directories in
@@ -33,9 +44,10 @@ const GITIGNORE_MANAGED_EXCLUSIONS = new Set(['.automaker/', '.worktrees/', '.cl
  * exist in the working tree. This prevents a fatal pathspec error when a
  * directory is absent (e.g. in a fresh worktree).
  *
- * Directories already covered by `.gitignore` are intentionally omitted from
- * the pathspec exclusion list — git would throw an error if a gitignored path
- * appeared in the pathspec (even as a `:!` exclude).
+ * Directories already covered by `.gitignore` are dynamically detected via
+ * `git check-ignore` and intentionally omitted from the pathspec exclusion
+ * list — git would throw an error if a gitignored path appeared in the
+ * pathspec (even as a `:!` exclude).
  */
 export function buildGitAddCommand(workDir: string, excludeFromStaging?: string[]): string {
   const exclusions = excludeFromStaging ?? DEFAULT_STAGING_EXCLUSIONS;
@@ -45,7 +57,7 @@ export function buildGitAddCommand(workDir: string, excludeFromStaging?: string[
   // using `:!dir/` for a gitignored path causes:
   //   fatal: The following paths are ignored by one of your .gitignore files: dir
   const pathspecArgs: string[] = exclusions
-    .filter((dir) => !GITIGNORE_MANAGED_EXCLUSIONS.has(dir))
+    .filter((dir) => !isGitignoreManaged(workDir, dir))
     .map((dir) => `':!${dir}'`);
 
   // Re-include .automaker/memory/ and .automaker/skills/ when .automaker/ is excluded.
