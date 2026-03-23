@@ -140,6 +140,30 @@ interface StateContext {
 }
 ```
 
+## PM Layer Integration
+
+`LeadEngineerService` exposes a bidirectional integration interface to the PM layer. These types are defined in `lead-engineer-service.ts` to avoid circular imports:
+
+```typescript
+/** Execution status summary that LE exposes to the PM layer. */
+export interface LEExecutionStatusSummary {
+  activeProjectCount: number;
+  activeFeaturesCount: number;
+  projectStatuses: Array<{
+    projectPath: string;
+    projectSlug: string;
+    flowState: string;
+  }>;
+}
+
+/** Interface the PM layer must implement to provide next-phase data to LE. */
+export interface IPMWorldStateProvider {
+  getNextAssignablePhase(projectPath: string): Promise<PMNextAssignablePhase | null>;
+}
+```
+
+Inject the PM provider via `setPMWorldStateProvider(provider)` after both services are initialized. This avoids circular dependency between the PM and LE modules.
+
 ## Key Files
 
 | File                                                                | Role                                                                            |
