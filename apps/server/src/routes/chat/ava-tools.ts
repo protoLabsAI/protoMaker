@@ -586,28 +586,18 @@ export function buildAvaTools(
 
     tools['start_auto_mode'] = makeTool({
       description:
-        'Start the auto-mode loop so Ava will automatically pick up and execute backlog features.',
+        'Start the auto-mode loop so Ava will automatically pick up and execute backlog features. Concurrency is resolved from project settings.',
       inputSchema: z.object({
-        maxConcurrency: z
-          .number()
-          .int()
-          .min(1)
-          .optional()
-          .describe('Maximum number of features to execute in parallel'),
         branchName: z
           .string()
           .optional()
           .describe('Restrict auto-mode to features belonging to this branch'),
       }),
-      // Require confirmation only when running more than one worker in parallel
-      needsApproval: destructiveNeedsApproval
-        ? ({ maxConcurrency }) => (maxConcurrency ?? 1) > 1
-        : false,
-      execute: async ({ maxConcurrency, branchName }) => {
+      needsApproval: destructiveNeedsApproval,
+      execute: async ({ branchName }) => {
         const count = await services.autoModeService.startAutoLoopForProject(
           projectPath,
-          branchName ?? null,
-          maxConcurrency
+          branchName ?? null
         );
         return { startedFeatureCount: count };
       },
@@ -1362,26 +1352,18 @@ export function buildAvaTools(
     tools['launch_project'] = makeTool({
       description:
         'Launch a project: starts auto-mode to begin executing backlog features and optionally spawns a PM agent session. ' +
-        'Requires the PRD to be approved and features to be in backlog first.',
+        'Requires the PRD to be approved and features to be in backlog first. Concurrency is resolved from project settings.',
       inputSchema: z.object({
         projectSlug: z.string().describe('Project slug to launch'),
-        maxConcurrency: z
-          .number()
-          .int()
-          .min(1)
-          .max(10)
-          .optional()
-          .describe('Maximum number of concurrent agents (default: 2)'),
       }),
       needsApproval: destructiveNeedsApproval,
-      execute: async ({ projectSlug, maxConcurrency }) => {
+      execute: async ({ projectSlug }) => {
         if (!services.projectLifecycleService) {
           return { error: 'Project lifecycle service not available' };
         }
         const launchResult = await services.projectLifecycleService.launch(
           projectPath,
-          projectSlug,
-          maxConcurrency
+          projectSlug
         );
 
         let pmSession: { projectSlug: string; createdAt: string } | null = null;

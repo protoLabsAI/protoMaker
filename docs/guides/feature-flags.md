@@ -9,23 +9,19 @@ Feature flags live in a single source of truth: `DEFAULT_FEATURE_FLAGS` in `libs
 ```typescript
 // libs/types/src/global-settings.ts
 export interface FeatureFlags {
-  avaChat: boolean;
-  designs: boolean;
-  docs: boolean;
-  pipeline: boolean;
   specEditor: boolean;
-  systemView: boolean;
   userPresenceDetection: boolean;
+  reactorEnabled: boolean;
+  hitlForms: boolean;
+  gatewayAutoRemediate: boolean;
 }
 
 export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
-  avaChat: false,
-  designs: false,
-  docs: false,
-  pipeline: false,
   specEditor: false,
-  systemView: false,
   userPresenceDetection: false,
+  reactorEnabled: false,
+  hitlForms: false,
+  gatewayAutoRemediate: false,
 };
 ```
 
@@ -33,15 +29,13 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
 
 ## Current Flags
 
-| Flag                    | Default | What it gates                                                          |
-| ----------------------- | ------- | ---------------------------------------------------------------------- |
-| `avaChat`               | off     | Ava Anywhere -- chat overlay, Cmd+K modal, /chat route, mobile tab     |
-| `designs`               | off     | Designs/pen file viewer in the project sidebar                         |
-| `docs`                  | off     | Docs viewer in the project sidebar                                     |
-| `pipeline`              | off     | HITL interrupt forms and pipeline gate cycling (TRIAGE, SPEC, PUBLISH) |
-| `specEditor`            | off     | Spec editor in the sidebar Tools section                               |
-| `systemView`            | off     | Network/dependency graph view in the project sidebar                   |
-| `userPresenceDetection` | off     | Sensor-driven presence awareness (tab visibility, idle/afk)            |
+| Flag                    | Default | What it gates                                                                                                                                         |
+| ----------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `specEditor`            | off     | Spec editor in the sidebar Tools section                                                                                                              |
+| `userPresenceDetection` | off     | Sensor-driven presence awareness (tab visibility, idle/afk)                                                                                           |
+| `reactorEnabled`        | off     | Ava Channel Reactor — reactive orchestrator that monitors the CRDT-backed Ava Channel and auto-responds to incoming messages (requires hivemind)      |
+| `hitlForms`             | off     | HITL interrupt forms from PM Agent, Signal Intake, and Lead Engineer. When disabled, HITL-gated actions are auto-approved or escalated to Ava instead |
+| `gatewayAutoRemediate`  | off     | Gateway Action Executor auto-acts on structured recommendations from heartbeat cycles (unblock_feature, retry_agent, merge_ready_pr; max 3 per cycle) |
 
 ### Graduated Flags (GA -- always enabled)
 
@@ -51,6 +45,7 @@ These flags were removed from `FeatureFlags` after reaching general availability
 | ----------- | --------- | -------------------------------- |
 | `calendar`  | v0.17     | Calendar view in project sidebar |
 | `notes`     | v0.17     | Notes tabs in project sidebar    |
+| `avaChat`   | v0.84     | Ava Anywhere chat overlay        |
 
 ## How to Add a New Flag
 

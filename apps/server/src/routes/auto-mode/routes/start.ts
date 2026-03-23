@@ -14,7 +14,6 @@ const logger = createLogger('AutoMode');
 const startAutoModeBodySchema = z.object({
   projectPath: projectPathSchema,
   branchName: z.string().nullable().optional(),
-  maxConcurrency: z.number().int().min(1).max(20).optional(),
   forceStart: z.boolean().optional(),
 });
 
@@ -30,7 +29,7 @@ export function createStartHandler(autoModeService: AutoModeService) {
         });
         return;
       }
-      const { projectPath, branchName, maxConcurrency, forceStart } = parsed.data;
+      const { projectPath, branchName, forceStart } = parsed.data;
 
       // Normalize branchName: undefined becomes null
       const normalizedBranchName = branchName ?? null;
@@ -53,7 +52,6 @@ export function createStartHandler(autoModeService: AutoModeService) {
       const resolvedMaxConcurrency = await autoModeService.startAutoLoopForProject(
         projectPath,
         normalizedBranchName,
-        maxConcurrency,
         forceStart ?? false
       );
 

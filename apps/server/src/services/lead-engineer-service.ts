@@ -334,7 +334,7 @@ export class LeadEngineerService {
 
     if (!worldState.autoModeRunning && (worldState.boardCounts['backlog'] || 0) > 0) {
       await this.projectLifecycleService
-        .launch(projectPath, projectSlug, opts?.maxConcurrency)
+        .launch(projectPath, projectSlug)
         .catch((err) => logger.warn(`Failed to start auto-mode for ${projectSlug}:`, err));
     }
 
@@ -516,7 +516,14 @@ export class LeadEngineerService {
     this.activeFeatures.add(featureId);
     try {
       const feature = await this.featureLoader.get(projectPath, featureId);
-      if (!feature) throw new Error(`Feature ${featureId} not found`);
+      if (!feature) {
+        logger.warn(
+          `[LeadEngineer] Feature ${featureId} no longer exists — removing from resume queue`
+        );
+        this.pendingResumes.delete(featureId);
+        this.activeFeatures.delete(featureId);
+        return { outcome: 'completed', finalState: FeatureState.DONE, failureCount: 0 };
+      }
 
       // Guard: skip features already in terminal states
       const terminalStatuses = new Set(['done', 'completed', 'verified']);

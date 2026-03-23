@@ -11,6 +11,7 @@ import type { ProjectIntegrations, DiscordSettings } from './integration-setting
 import type { WorkflowSettings } from './workflow-settings.js';
 import type { AgentDefinition } from './provider.js';
 import type { PolicyConfig } from './policy.js';
+import type { MCPServerConfig } from './provider-settings.js';
 
 // ============================================================================
 // Worktree Info - Git worktree management
@@ -287,6 +288,14 @@ export interface ProjectSettings {
    * Both transports speak AI SDK Data Stream Protocol so all UI features work unchanged.
    */
   avaEngineUrl?: string;
+
+  // MCP Server Overrides (per-project)
+  /**
+   * Per-project MCP server additions. These servers are merged with the global
+   * mcpServers list for this project only. A project server with the same name
+   * as a global server overrides it for this project.
+   */
+  mcpServers?: MCPServerConfig[];
 }
 
 /** Default project settings (empty - all settings are optional and fall back to global) */

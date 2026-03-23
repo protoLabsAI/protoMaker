@@ -487,6 +487,16 @@ export interface MCPServerConfig {
   headers?: Record<string, string>;
   /** Whether this server is enabled */
   enabled?: boolean;
+  /**
+   * When false, exclude this server from agent (inner agent) MCP server lists.
+   * Defaults to true (included for agents when not specified).
+   */
+  enableForAgents?: boolean;
+  /**
+   * When false, exclude this server from Ava chat MCP server lists.
+   * Defaults to true (included for Ava when not specified).
+   */
+  enableForAva?: boolean;
   /** Tools discovered from this server with their enabled states */
   tools?: MCPToolInfo[];
   /** Timestamp when tools were last fetched */

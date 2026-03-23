@@ -80,7 +80,7 @@ describe('auto-mode-service.ts', () => {
 
       // Fire 9 concurrent calls (simulating the race condition scenario)
       const promises = Array.from({ length: 9 }, () =>
-        service.startAutoLoopForProject(projectPath, branchName, 1)
+        service.startAutoLoopForProject(projectPath, branchName)
       );
 
       // Wait for all promises to settle
@@ -110,15 +110,13 @@ describe('auto-mode-service.ts', () => {
       const branchName = 'feature/test-branch';
 
       // Start first time
-      await service.startAutoLoopForProject(projectPath, branchName, 1);
+      await service.startAutoLoopForProject(projectPath, branchName);
 
       // Stop
       await service.stopAutoLoopForProject(projectPath, branchName);
 
       // Should be able to start again
-      await expect(
-        service.startAutoLoopForProject(projectPath, branchName, 1)
-      ).resolves.not.toThrow();
+      await expect(service.startAutoLoopForProject(projectPath, branchName)).resolves.not.toThrow();
 
       // Cleanup
       await service.stopAutoLoopForProject(projectPath, branchName);
@@ -130,8 +128,8 @@ describe('auto-mode-service.ts', () => {
       const branchName = 'feature/test-branch';
 
       // Should be able to start both
-      await expect(service.startAutoLoopForProject(project1, branchName, 1)).resolves.not.toThrow();
-      await expect(service.startAutoLoopForProject(project2, branchName, 1)).resolves.not.toThrow();
+      await expect(service.startAutoLoopForProject(project1, branchName)).resolves.not.toThrow();
+      await expect(service.startAutoLoopForProject(project2, branchName)).resolves.not.toThrow();
 
       // Cleanup
       await service.stopAutoLoopForProject(project1, branchName);
@@ -144,8 +142,8 @@ describe('auto-mode-service.ts', () => {
       const branch2 = 'feature/branch2';
 
       // Should be able to start both
-      await expect(service.startAutoLoopForProject(projectPath, branch1, 1)).resolves.not.toThrow();
-      await expect(service.startAutoLoopForProject(projectPath, branch2, 1)).resolves.not.toThrow();
+      await expect(service.startAutoLoopForProject(projectPath, branch1)).resolves.not.toThrow();
+      await expect(service.startAutoLoopForProject(projectPath, branch2)).resolves.not.toThrow();
 
       // Cleanup
       await service.stopAutoLoopForProject(projectPath, branch1);

@@ -41,6 +41,7 @@ import { buildAvaSystemPrompt, type NotesContext } from './personas.js';
 import { loadAvaConfig, DEFAULT_AVA_CONFIG, type AvaConfig } from './ava-config.js';
 import { getSitrep } from './sitrep.js';
 import { buildAvaTools } from './ava-tools.js';
+import { getMCPServersFromSettings } from '../../lib/settings-helpers.js';
 import type { PlanData } from './ava-tools.js';
 import {
   estimateTokens,
@@ -431,21 +432,19 @@ export function createChatRoutes(services: ServiceContainer): Router {
       } catch {
         // Settings unavailable — safe default (flag disabled)
       }
-      // Convert ava-specific mcpServers to the agent SDK format and merge with
-      // project-level MCP servers configured in global settings.  The converted
-      // list is passed down to tools so inner agents delegated
-      // from Ava chat can access the same additional MCP servers.
-      const avaMcpServers = (avaConfig.mcpServers ?? [])
-        .filter((s) => s.enabled !== false)
-        .map((s) => ({
-          name: s.name,
-          ...(s.type !== undefined && { type: s.type }),
-          ...(s.command !== undefined && { command: s.command }),
-          ...(s.args !== undefined && { args: s.args }),
-          ...(s.env !== undefined && { env: s.env }),
-          ...(s.url !== undefined && { url: s.url }),
-          ...(s.headers !== undefined && { headers: s.headers }),
-        }));
+      // Load MCP servers from the unified global list filtered to the 'ava' context.
+      // Per-project overrides (ProjectSettings.mcpServers) are merged in when projectPath
+      // is available. The converted list is passed down to tools so inner agents
+      // delegated from Ava chat can access the same additional MCP servers.
+      const avaMcpServersRecord = await getMCPServersFromSettings(
+        services.settingsService,
+        '[ChatRoute]',
+        { context: 'ava', projectPath }
+      );
+      const avaMcpServers = Object.entries(avaMcpServersRecord).map(([name, sdkConfig]) => ({
+        name,
+        ...sdkConfig,
+      }));
 
       // Instantiate AvaMemoryService per-request when a projectPath is available.
       // The service is lightweight (no state beyond the file path) so per-request

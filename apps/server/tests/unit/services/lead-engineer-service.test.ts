@@ -547,11 +547,7 @@ describe('LeadEngineerService', () => {
       await service.initialize();
       await service.start('/test/project', 'my-project');
 
-      expect(projectLifecycleService.launch).toHaveBeenCalledWith(
-        '/test/project',
-        'my-project',
-        undefined
-      );
+      expect(projectLifecycleService.launch).toHaveBeenCalledWith('/test/project', 'my-project');
     });
 
     it('does not launch auto-mode when auto-mode is already running', async () => {

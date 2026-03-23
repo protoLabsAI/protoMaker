@@ -211,11 +211,7 @@ export class ActionExecutor {
 
       case 'restart_auto_mode': {
         try {
-          await this.deps.autoModeService.startAutoLoopForProject(
-            action.projectPath,
-            null,
-            action.maxConcurrency || session.worldState.maxConcurrency
-          );
+          await this.deps.autoModeService.startAutoLoopForProject(action.projectPath, null);
           session.worldState.autoModeRunning = true;
           session.worldState.lastAutoModeRestartAt = new Date().toISOString();
           logger.info(`Restarted auto-mode for ${action.projectPath}`);

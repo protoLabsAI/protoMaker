@@ -576,9 +576,9 @@ describe('AutoModeService - concurrency and race prevention', () => {
 
   it('startAutoLoopForProject prevents double-start for the same project+branch', async () => {
     const promises = [
-      service.startAutoLoopForProject('/test/project', null, 3),
-      service.startAutoLoopForProject('/test/project', null, 3),
-      service.startAutoLoopForProject('/test/project', null, 3),
+      service.startAutoLoopForProject('/test/project', null),
+      service.startAutoLoopForProject('/test/project', null),
+      service.startAutoLoopForProject('/test/project', null),
     ];
 
     const results = await Promise.allSettled(promises);
@@ -597,10 +597,10 @@ describe('AutoModeService - concurrency and race prevention', () => {
   });
 
   it('different project+branch combinations can run concurrently', async () => {
-    await expect(service.startAutoLoopForProject('/test/project', null, 2)).resolves.not.toThrow();
+    await expect(service.startAutoLoopForProject('/test/project', null)).resolves.not.toThrow();
 
     await expect(
-      service.startAutoLoopForProject('/test/project', 'feature/branch', 2)
+      service.startAutoLoopForProject('/test/project', 'feature/branch')
     ).resolves.not.toThrow();
 
     await service.stopAutoLoopForProject('/test/project', null);

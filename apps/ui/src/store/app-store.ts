@@ -212,10 +212,6 @@ export interface AppActions {
   getEffectiveFontSans: () => string | null; // Get effective UI font (project override -> global -> null for default)
   getEffectiveFontMono: () => string | null; // Get effective code font (project override -> global -> null for default)
 
-  // Claude API Profile actions (per-project override)
-  /** @deprecated Use setProjectPhaseModelOverride instead */
-  setProjectClaudeApiProfile: (projectId: string, profileId: string | null | undefined) => void; // Set per-project Claude API profile (undefined = use global, null = direct API, string = specific profile)
-
   // Project Phase Model Overrides
   setProjectPhaseModelOverride: (
     projectId: string,
@@ -284,9 +280,6 @@ export interface AppActions {
 
   // Event Hook actions
   setEventHooks: (hooks: EventHook[]) => void;
-
-  // Claude API Profile cross-domain cleanup (reads projects + delegates to AI models store)
-  deleteClaudeApiProfile: (id: string) => Promise<void>;
 
   // MCP Server actions
   addMCPServer: (server: Omit<MCPServerConfig, 'id'>) => void;
@@ -883,47 +876,6 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
     return getEffectiveFont(currentProject?.fontFamilyMono, fontFamilyMono, UI_MONO_FONT_OPTIONS);
   },
 
-  // Claude API Profile actions (per-project override)
-  setProjectClaudeApiProfile: (projectId, profileId) => {
-    // Find the project to get its path for server sync
-    const project = get().projects.find((p) => p.id === projectId);
-    if (!project) {
-      console.error('Cannot set Claude API profile: project not found');
-      return;
-    }
-
-    // Update the project's activeClaudeApiProfileId property
-    // undefined means "use global", null means "explicit direct API", string means specific profile
-    const projects = get().projects.map((p) =>
-      p.id === projectId ? { ...p, activeClaudeApiProfileId: profileId } : p
-    );
-    set({ projects });
-
-    // Also update currentProject if it's the same project
-    const currentProject = get().currentProject;
-    if (currentProject?.id === projectId) {
-      set({
-        currentProject: {
-          ...currentProject,
-          activeClaudeApiProfileId: profileId,
-        },
-      });
-    }
-
-    // Persist to server
-    // Note: undefined means "use global" but JSON doesn't serialize undefined,
-    // so we use a special marker string "__USE_GLOBAL__" to signal deletion
-    const httpClient = getHttpApiClient();
-    const serverValue = profileId === undefined ? '__USE_GLOBAL__' : profileId;
-    httpClient.settings
-      .updateProject(project.path, {
-        activeClaudeApiProfileId: serverValue,
-      })
-      .catch((error) => {
-        console.error('Failed to persist activeClaudeApiProfileId:', error);
-      });
-  },
-
   // Project Phase Model Override actions
   setProjectPhaseModelOverride: (projectId, phase, entry) => {
     // Find the project to get its path for server sync
@@ -1171,41 +1123,6 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
 
   // Event Hook actions
   setEventHooks: (hooks) => set({ eventHooks: hooks }),
-
-  // deleteClaudeApiProfile: cross-domain cleanup (reads projects + delegates to AI models store)
-  deleteClaudeApiProfile: async (id) => {
-    const projects = get().projects;
-    const affectedProjects = projects.filter((p) => p.activeClaudeApiProfileId === id);
-
-    // Delegate profile state cleanup to AI models store
-    await useAIModelsStore.getState().deleteClaudeApiProfile(id);
-
-    // Handle project cleanup (cross-domain)
-    set({
-      projects: projects.map((p) =>
-        p.activeClaudeApiProfileId === id ? { ...p, activeClaudeApiProfileId: undefined } : p
-      ),
-    });
-
-    const currentProject = get().currentProject;
-    if (currentProject?.activeClaudeApiProfileId === id) {
-      set({
-        currentProject: { ...currentProject, activeClaudeApiProfileId: undefined },
-      });
-    }
-
-    // Persist per-project changes to server
-    const httpClient = getHttpApiClient();
-    await Promise.all(
-      affectedProjects.map((project) =>
-        httpClient.settings
-          .updateProject(project.path, { activeClaudeApiProfileId: '__USE_GLOBAL__' })
-          .catch((error) => {
-            console.error(`Failed to clear profile override for project ${project.name}:`, error);
-          })
-      )
-    );
-  },
 
   // MCP Server actions
   addMCPServer: (server) => {

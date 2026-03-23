@@ -664,13 +664,9 @@ export class AutoModeService {
       reason: 'cooldown_complete',
     });
 
-    // Restart auto-mode with the same configuration
+    // Restart auto-mode — concurrency is resolved from settings
     try {
-      await this.startAutoLoopForProject(
-        projectPath,
-        projectState.branchName ?? null,
-        projectState.config.maxConcurrency
-      );
+      await this.startAutoLoopForProject(projectPath, projectState.branchName ?? null);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       // "Already running" is an expected race condition during cooldown — downgrade to warn
@@ -733,12 +729,11 @@ export class AutoModeService {
    * Start the auto mode loop for a specific project/worktree (supports multiple concurrent projects and worktrees)
    * @param projectPath - The project to start auto mode for
    * @param branchName - The branch name for worktree scoping, null for main worktree
-   * @param maxConcurrency - Maximum concurrent features (default: DEFAULT_MAX_CONCURRENCY)
+   * @param forceStart - Skip data integrity check (default: false)
    */
   async startAutoLoopForProject(
     projectPath: string,
     branchName: string | null = null,
-    maxConcurrency?: number,
     forceStart: boolean = false
   ): Promise<number> {
     // Check data integrity before starting (unless force-start is enabled)
@@ -773,8 +768,7 @@ export class AutoModeService {
 
     const resolvedMaxConcurrency = await this.scheduler.resolveMaxConcurrency(
       projectPath,
-      branchName,
-      maxConcurrency
+      branchName
     );
 
     const config: AutoModeLoopConfig = {

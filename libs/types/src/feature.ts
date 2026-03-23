@@ -677,6 +677,7 @@ export function normalizeFeatureStatus(
       normalized = 'backlog';
       break;
     case 'running':
+    case 'in-progress': // Hyphenated variant from external tools
       normalized = 'in_progress';
       break;
     case 'completed':

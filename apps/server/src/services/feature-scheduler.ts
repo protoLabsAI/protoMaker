@@ -125,6 +125,8 @@ export class FeatureScheduler {
   private featureHealthAuditor: FeatureHealthAuditor | null = null;
   /** Count of features skipped due to creation cooldown during the last loadPendingFeatures call. */
   private lastCooldownSkippedCount = 0;
+  /** Features already warned about needing human intervention — suppress repeat logs. */
+  private warnedHumanIntervention = new Set<string>();
   /**
    * Instance identity for project-affinity filtering.
    * When null, no affinity filtering is applied (single-instance backward compat).
@@ -346,9 +348,14 @@ export class FeatureScheduler {
         // Load pending features for this project/worktree
         const pendingFeatures = await this.loadPendingFeatures(projectPath, branchName);
 
-        logger.info(
-          `[AutoLoop] Iteration ${iterationCount}: Found ${pendingFeatures.length} pending features, ${projectRunningCount}/${projectState.config.maxConcurrency} running for ${worktreeDesc}`
-        );
+        // Only log at info level when there's something actionable
+        if (pendingFeatures.length > 0 || projectRunningCount > 0) {
+          logger.info(
+            `[AutoLoop] Iteration ${iterationCount}: Found ${pendingFeatures.length} pending features, ${projectRunningCount}/${projectState.config.maxConcurrency} running for ${worktreeDesc}`
+          );
+        } else {
+          logger.debug(`[AutoLoop] Iteration ${iterationCount}: idle for ${worktreeDesc}`);
+        }
 
         if (pendingFeatures.length === 0) {
           // If features were skipped due to creation cooldown, don't emit idle —
@@ -669,52 +676,80 @@ export class FeatureScheduler {
 
   // ── Concurrency ──────────────────────────────────────────────────────────
 
-  async resolveMaxConcurrency(
-    projectPath: string,
-    branchName: string | null,
-    provided?: number
-  ): Promise<number> {
-    let resolvedValue: number;
+  /**
+   * Resolve the effective maximum concurrency for a project/worktree.
+   *
+   * Precedence chain (highest priority first):
+   *
+   *   1. AUTOMAKER_MAX_CONCURRENCY env var → MAX_SYSTEM_CONCURRENCY
+   *      Absolute hard cap set at process start. Cannot be exceeded.
+   *
+   *   2. settings.systemMaxConcurrency (UI-configurable system cap)
+   *      Admin override for the system ceiling. Must be ≤ MAX_SYSTEM_CONCURRENCY.
+   *
+   *   3. autoModeByWorktree[projectId::branchName].maxConcurrency (per-project setting)
+   *      Per-worktree concurrency configured in global settings.
+   *
+   *   4. settings.maxConcurrency (global default)
+   *      Installation-wide default when no per-project setting is configured.
+   *
+   *   5. DEFAULT_MAX_CONCURRENCY (code fallback = 1)
+   *      Used when settings are unavailable or unconfigured.
+   *
+   * Steps 3–5 determine the desired value. Steps 1–2 apply as ceilings.
+   */
+  async resolveMaxConcurrency(projectPath: string, branchName: string | null): Promise<number> {
+    let desired: number;
+    let systemCap = MAX_SYSTEM_CONCURRENCY;
 
-    if (typeof provided === 'number' && Number.isFinite(provided)) {
-      resolvedValue = provided;
-    } else if (!this.settingsService) {
-      resolvedValue = DEFAULT_MAX_CONCURRENCY;
+    if (!this.settingsService) {
+      desired = DEFAULT_MAX_CONCURRENCY;
     } else {
       try {
         const settings = await this.settingsService.getGlobalSettings();
+
+        // Step 2: UI-configurable system cap (capped by env var hard limit)
+        if (typeof settings.systemMaxConcurrency === 'number') {
+          systemCap = Math.min(settings.systemMaxConcurrency, MAX_SYSTEM_CONCURRENCY);
+        }
+
         const globalMax =
           typeof settings.maxConcurrency === 'number'
             ? settings.maxConcurrency
             : DEFAULT_MAX_CONCURRENCY;
+
         const projectId = settings.projects?.find((project) => project.path === projectPath)?.id;
         const autoModeByWorktree = settings.autoModeByWorktree;
 
         if (projectId && autoModeByWorktree && typeof autoModeByWorktree === 'object') {
           const key = `${projectId}::${branchName ?? '__main__'}`;
           const entry = autoModeByWorktree[key];
+          // Step 3: per-project setting
           if (entry && typeof entry.maxConcurrency === 'number') {
-            resolvedValue = entry.maxConcurrency;
+            desired = entry.maxConcurrency;
           } else {
-            resolvedValue = globalMax;
+            // Step 4: global default
+            desired = globalMax;
           }
         } else {
-          resolvedValue = globalMax;
+          // Step 4: global default
+          desired = globalMax;
         }
       } catch {
-        resolvedValue = DEFAULT_MAX_CONCURRENCY;
+        // Step 5: code fallback
+        desired = DEFAULT_MAX_CONCURRENCY;
       }
     }
 
-    // Enforce hard system limit to prevent resource exhaustion
-    if (resolvedValue > MAX_SYSTEM_CONCURRENCY) {
+    // Apply ceilings (steps 1 & 2)
+    if (desired > systemCap) {
       logger.warn(
-        `maxConcurrency ${resolvedValue} exceeds system limit of ${MAX_SYSTEM_CONCURRENCY}, capping to ${MAX_SYSTEM_CONCURRENCY}`
+        `maxConcurrency ${desired} exceeds system cap of ${systemCap}, capping to ${systemCap}`
       );
-      return MAX_SYSTEM_CONCURRENCY;
+      return systemCap;
     }
 
-    return resolvedValue;
+    return desired;
   }
 
   // ── Feature Loading ──────────────────────────────────────────────────────
@@ -978,10 +1013,13 @@ export class FeatureScheduler {
               changeReason.includes('plan validation failed') ||
               changeReason.includes('Max agent retries exceeded');
             if (isAgentFailureBlock || isGitWorkflowBlock) {
-              logger.warn(
-                `[loadPendingFeatures] Feature ${feature.id} skipping dep-unblock — ` +
-                  `blocked after ${failureCount} failure(s) (retryable: ${failureClassification?.retryable ?? 'unknown'}). Requires human intervention.`
-              );
+              if (!this.warnedHumanIntervention.has(feature.id)) {
+                logger.warn(
+                  `[loadPendingFeatures] Feature ${feature.id} skipping dep-unblock — ` +
+                    `blocked after ${failureCount} failure(s) (retryable: ${failureClassification?.retryable ?? 'unknown'}). Requires human intervention.`
+                );
+                this.warnedHumanIntervention.add(feature.id);
+              }
               continue;
             }
 
@@ -1159,27 +1197,15 @@ export class FeatureScheduler {
       }
 
       const worktreeDesc = branchName ? `worktree ${branchName}` : 'main worktree';
-      logger.info(
-        `[loadPendingFeatures] Found ${allFeatures.length} total features, ${pendingFeatures.length} candidates (pending/ready/backlog/approved_with_pending_tasks) for ${worktreeDesc}`
-      );
-
-      if (pendingFeatures.length === 0) {
-        logger.warn(
-          `[loadPendingFeatures] No pending features found for ${worktreeDesc}. Check branchName matching - looking for branchName: ${branchName === null ? 'null (main)' : branchName}`
+      // Only log at info when there are candidates; debug otherwise
+      if (pendingFeatures.length > 0) {
+        logger.info(
+          `[loadPendingFeatures] Found ${pendingFeatures.length}/${allFeatures.length} candidates for ${worktreeDesc}`
         );
-        const allBacklogFeatures = allFeatures.filter(
-          (f) =>
-            f.status === 'backlog' ||
-            f.status === 'pending' ||
-            f.status === 'ready' ||
-            (f.planSpec?.status === 'approved' &&
-              (f.planSpec.tasksCompleted ?? 0) < (f.planSpec.tasksTotal ?? 0))
+      } else {
+        logger.debug(
+          `[loadPendingFeatures] No candidates among ${allFeatures.length} features for ${worktreeDesc} (branchName: ${branchName === null ? 'null (main)' : branchName})`
         );
-        if (allBacklogFeatures.length > 0) {
-          logger.info(
-            `[loadPendingFeatures] Found ${allBacklogFeatures.length} backlog features with branchNames: ${allBacklogFeatures.map((f) => `${f.id}(${f.branchName ?? 'null'})`).join(', ')}`
-          );
-        }
       }
 
       // Apply dependency-aware ordering
