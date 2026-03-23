@@ -31,6 +31,8 @@ export interface ChatSession {
 // State + Actions
 // ============================================================================
 
+const MAX_ACTIVE_SESSIONS = 5;
+
 interface ChatStoreState {
   sessions: ChatSession[];
   currentSessionId: string | null;
@@ -38,6 +40,10 @@ interface ChatStoreState {
   chatModalOpen: boolean;
   /** Session ID that is currently streaming — used for the background streaming indicator */
   activeStreamingSessionId: string | null;
+  /** Runtime-only: IDs of sessions with live useChat hooks (not persisted). */
+  activeSessions: string[];
+  /** Runtime-only: per-session streaming state map (not persisted). */
+  sessionStreamingMap: Record<string, boolean>;
 }
 
 interface ChatActions {
@@ -54,6 +60,12 @@ interface ChatActions {
   setActiveStreamingSession: (sessionId: string | null) => void;
   getCurrentSession: () => ChatSession | null;
   getSessionsForProject: (projectId: string) => ChatSession[];
+  /** Register a session as having a live useChat hook. Enforces MAX_ACTIVE_SESSIONS. */
+  activateSession: (id: string) => void;
+  /** Unregister a session's live useChat hook. */
+  deactivateSession: (id: string) => void;
+  /** Update streaming state for a specific session. */
+  setSessionStreaming: (id: string, streaming: boolean) => void;
 }
 
 // ============================================================================
@@ -84,6 +96,8 @@ export function autoTitle(messages: UIMessage[]): string {
 
 const MAX_SESSIONS = 50;
 
+export { MAX_ACTIVE_SESSIONS };
+
 export const useChatStore = create<ChatStoreState & ChatActions>()(
   persist(
     (set, get) => ({
@@ -92,6 +106,8 @@ export const useChatStore = create<ChatStoreState & ChatActions>()(
       historyOpen: false,
       chatModalOpen: false,
       activeStreamingSessionId: null,
+      activeSessions: [],
+      sessionStreamingMap: {},
 
       createSession: (modelAlias = 'sonnet', projectId = 'default') => {
         const now = Date.now();
@@ -176,6 +192,32 @@ export const useChatStore = create<ChatStoreState & ChatActions>()(
 
       getSessionsForProject: (projectId) => {
         return get().sessions.filter((s) => s.projectId === projectId);
+      },
+
+      activateSession: (id) => {
+        const { activeSessions } = get();
+        if (activeSessions.includes(id)) return;
+        const next = [...activeSessions, id];
+        // Enforce cap: drop the oldest (first) entry if over limit
+        if (next.length > MAX_ACTIVE_SESSIONS) {
+          next.shift();
+        }
+        set({ activeSessions: next });
+      },
+
+      deactivateSession: (id) => {
+        set((state) => ({
+          activeSessions: state.activeSessions.filter((sid) => sid !== id),
+          sessionStreamingMap: Object.fromEntries(
+            Object.entries(state.sessionStreamingMap).filter(([k]) => k !== id)
+          ),
+        }));
+      },
+
+      setSessionStreaming: (id, streaming) => {
+        set((state) => ({
+          sessionStreamingMap: { ...state.sessionStreamingMap, [id]: streaming },
+        }));
       },
     }),
     {
