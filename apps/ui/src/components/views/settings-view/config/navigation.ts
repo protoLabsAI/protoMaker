@@ -34,6 +34,7 @@ export type { SettingsNavigationItem };
 
 export type NavigationItem = SettingsNavigationItem & {
   id: SettingsViewId;
+  description?: string;
   subItems?: (SettingsNavigationItem & { id: SettingsViewId })[];
 };
 
@@ -91,7 +92,12 @@ export const GLOBAL_NAV_GROUPS: NavigationGroup[] = [
     label: 'System',
     items: [
       { id: 'health', label: 'Health', icon: Activity },
-      { id: 'workflow', label: 'Workflow', icon: Cog },
+      {
+        id: 'workflow',
+        label: 'Workflow',
+        icon: Cog,
+        description: 'Per-project pipeline settings',
+      },
     ],
   },
   {
