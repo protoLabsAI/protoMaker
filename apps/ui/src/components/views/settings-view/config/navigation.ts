@@ -92,6 +92,7 @@ export const GLOBAL_NAV_GROUPS: NavigationGroup[] = [
     items: [
       { id: 'health', label: 'Health', icon: Activity },
       { id: 'workflow', label: 'Workflow', icon: Cog },
+      { id: 'git-workflow-defaults', label: 'Git Workflow Defaults', icon: GitBranch },
     ],
   },
   {

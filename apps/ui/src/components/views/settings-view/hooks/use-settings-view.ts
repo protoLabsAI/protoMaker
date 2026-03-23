@@ -28,6 +28,7 @@ export type SettingsViewId =
   | 'developer'
   | 'danger'
   | 'workflow'
+  | 'git-workflow-defaults'
   | 'automations'
   | 'sensors';
 
