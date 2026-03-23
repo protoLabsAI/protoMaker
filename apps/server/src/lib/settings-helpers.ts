@@ -171,11 +171,17 @@ function getDefaultMCPServers(): Record<string, McpServerConfig> {
  *
  * @param settingsService - Optional settings service instance
  * @param logPrefix - Prefix for log messages (e.g., '[AgentService]')
+ * @param options.context - Filter servers by context: 'agents' excludes servers with
+ *   enableForAgents=false; 'ava' excludes servers with enableForAva=false.
+ *   When omitted, all enabled servers are returned.
+ * @param options.projectPath - When provided, per-project mcpServers are merged in.
+ *   Project-level servers override global servers with the same name.
  * @returns Promise resolving to MCP servers in SDK format (keyed by name)
  */
 export async function getMCPServersFromSettings(
   settingsService?: SettingsService | null,
-  logPrefix = '[SettingsHelper]'
+  logPrefix = '[SettingsHelper]',
+  options?: { context?: 'agents' | 'ava'; projectPath?: string }
 ): Promise<Record<string, McpServerConfig>> {
   const defaults = getDefaultMCPServers();
 
@@ -185,10 +191,30 @@ export async function getMCPServersFromSettings(
 
   try {
     const globalSettings = await settingsService.getGlobalSettings();
-    const mcpServers = globalSettings.mcpServers || [];
+    let mcpServers = globalSettings.mcpServers || [];
 
-    // Filter to only enabled servers and convert to SDK format
-    const enabledServers = mcpServers.filter((s) => s.enabled !== false);
+    // Merge per-project MCP servers when a projectPath is provided.
+    // Project-level servers are keyed by name and override global entries.
+    if (options?.projectPath) {
+      const projectSettings = await settingsService.getProjectSettings(options.projectPath);
+      if (projectSettings.mcpServers && projectSettings.mcpServers.length > 0) {
+        const byName = new Map(mcpServers.map((s) => [s.name, s]));
+        for (const s of projectSettings.mcpServers) {
+          byName.set(s.name, s);
+        }
+        mcpServers = [...byName.values()];
+      }
+    }
+
+    // Filter to only enabled servers
+    let enabledServers = mcpServers.filter((s) => s.enabled !== false);
+
+    // Apply context-specific filtering
+    if (options?.context === 'agents') {
+      enabledServers = enabledServers.filter((s) => s.enableForAgents !== false);
+    } else if (options?.context === 'ava') {
+      enabledServers = enabledServers.filter((s) => s.enableForAva !== false);
+    }
 
     if (enabledServers.length === 0) {
       return defaults;
