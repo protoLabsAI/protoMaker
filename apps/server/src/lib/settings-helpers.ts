@@ -171,11 +171,17 @@ function getDefaultMCPServers(): Record<string, McpServerConfig> {
  *
  * @param settingsService - Optional settings service instance
  * @param logPrefix - Prefix for log messages (e.g., '[AgentService]')
+ * @param options.context - Filter servers by context: 'agents' excludes servers with
+ *   enableForAgents=false; 'ava' excludes servers with enableForAva=false.
+ *   When omitted, all enabled servers are returned.
+ * @param options.projectPath - When provided, per-project mcpServers are merged in.
+ *   Project-level servers override global servers with the same name.
  * @returns Promise resolving to MCP servers in SDK format (keyed by name)
  */
 export async function getMCPServersFromSettings(
   settingsService?: SettingsService | null,
-  logPrefix = '[SettingsHelper]'
+  logPrefix = '[SettingsHelper]',
+  options?: { context?: 'agents' | 'ava'; projectPath?: string }
 ): Promise<Record<string, McpServerConfig>> {
   const defaults = getDefaultMCPServers();
 
@@ -185,10 +191,30 @@ export async function getMCPServersFromSettings(
 
   try {
     const globalSettings = await settingsService.getGlobalSettings();
-    const mcpServers = globalSettings.mcpServers || [];
+    let mcpServers = globalSettings.mcpServers || [];
 
-    // Filter to only enabled servers and convert to SDK format
-    const enabledServers = mcpServers.filter((s) => s.enabled !== false);
+    // Merge per-project MCP servers when a projectPath is provided.
+    // Project-level servers are keyed by name and override global entries.
+    if (options?.projectPath) {
+      const projectSettings = await settingsService.getProjectSettings(options.projectPath);
+      if (projectSettings.mcpServers && projectSettings.mcpServers.length > 0) {
+        const byName = new Map(mcpServers.map((s) => [s.name, s]));
+        for (const s of projectSettings.mcpServers) {
+          byName.set(s.name, s);
+        }
+        mcpServers = [...byName.values()];
+      }
+    }
+
+    // Filter to only enabled servers
+    let enabledServers = mcpServers.filter((s) => s.enabled !== false);
+
+    // Apply context-specific filtering
+    if (options?.context === 'agents') {
+      enabledServers = enabledServers.filter((s) => s.enableForAgents !== false);
+    } else if (options?.context === 'ava') {
+      enabledServers = enabledServers.filter((s) => s.enableForAva !== false);
+    }
 
     if (enabledServers.length === 0) {
       return defaults;
@@ -423,7 +449,9 @@ export async function getActiveClaudeApiProfile(
   try {
     const globalSettings = await settingsService.getGlobalSettings();
     const credentials = await settingsService.getCredentials();
-    const profiles = globalSettings.claudeApiProfiles || [];
+    // claudeApiProfiles was removed from GlobalSettings; access raw data for legacy migration
+    const rawGlobal = globalSettings as unknown as Record<string, unknown>;
+    const profiles = (rawGlobal.claudeApiProfiles as ClaudeApiProfile[] | undefined) || [];
 
     // Check for project-level override first
     let activeProfileId: string | null | undefined;
@@ -439,8 +467,9 @@ export async function getActiveClaudeApiProfile(
     }
 
     // Fall back to global if project doesn't specify
+    // activeClaudeApiProfileId was removed from GlobalSettings; access raw data for legacy migration
     if (activeProfileId === undefined && !isProjectOverride) {
-      activeProfileId = globalSettings.activeClaudeApiProfileId;
+      activeProfileId = rawGlobal.activeClaudeApiProfileId as string | null | undefined;
     }
 
     // No active profile selected - use direct Anthropic API
@@ -836,21 +865,26 @@ export async function getEffectivePrBaseBranch(
 ): Promise<string> {
   if (settingsService) {
     try {
-      // 1. Check per-project workflow settings first
+      // 1. Check per-project gitWorkflow settings
       const projectSettings = await settingsService.getProjectSettings(projectPath);
       const projectBranch = projectSettings.workflow?.gitWorkflow?.prBaseBranch;
       if (projectBranch) {
         logger.debug(`${logPrefix} Using project-level prBaseBranch: ${projectBranch}`);
         return projectBranch;
       }
-      // NOTE: Intentionally skip global settings — global prBaseBranch belongs to the
-      // automaker project and must not bleed into other projects with a different branch.
+      // 2. Check global gitWorkflow settings
+      const globalSettings = await settingsService.getGlobalSettings();
+      const globalBranch = globalSettings.gitWorkflow?.prBaseBranch;
+      if (globalBranch) {
+        logger.debug(`${logPrefix} Using global-level prBaseBranch: ${globalBranch}`);
+        return globalBranch;
+      }
     } catch (err) {
       logger.warn(`${logPrefix} Failed to read settings for prBaseBranch:`, err);
     }
   }
 
-  // 2. Auto-detect from remote HEAD
+  // 4. Auto-detect from remote HEAD
   try {
     const { stdout } = await execFileAsync('git', ['symbolic-ref', 'refs/remotes/origin/HEAD'], {
       cwd: projectPath,
@@ -867,6 +901,6 @@ export async function getEffectivePrBaseBranch(
     // origin/HEAD not set or git not available — fall through to default
   }
 
-  // 3. Final fallback
+  // 5. Final fallback
   return DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch;
 }

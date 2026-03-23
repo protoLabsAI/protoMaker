@@ -326,15 +326,14 @@ export async function runStartup(
       // Start auto-mode for each configured project
       for (const projectConfig of settings.autoModeAlwaysOn.projects) {
         try {
-          const { projectPath, branchName, maxConcurrency } = projectConfig;
+          const { projectPath, branchName } = projectConfig;
           const worktreeDesc = branchName ? `worktree ${branchName}` : 'main worktree';
 
           logger.info(`[AUTO-START] Starting auto-mode for ${worktreeDesc} in ${projectPath}...`);
 
           const resolvedMaxConcurrency = await autoModeService.startAutoLoopForProject(
             projectPath,
-            branchName ?? null,
-            maxConcurrency
+            branchName ?? null
           );
 
           logger.info(

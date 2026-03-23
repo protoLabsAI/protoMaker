@@ -360,24 +360,22 @@ The following automations are seeded automatically at server startup. They appea
 
 ### Cron-Scheduled Tasks
 
-| ID                            | Name                         | Schedule      | Branch-Aware | Description                                           |
-| ----------------------------- | ---------------------------- | ------------- | ------------ | ----------------------------------------------------- |
-| `maintenance:data-integrity`  | Data Integrity Check         | Every 5 min   | No           | Monitors feature directory count and data consistency |
-| `maintenance:stale-features`  | Stale Feature Detection      | Hourly        | No           | Finds features stuck in running/in-progress > 2 hours |
-| `maintenance:stale-worktrees` | Stale Worktree Auto-Cleanup  | Daily 3 AM    | Yes          | Auto-removes worktrees for merged branches            |
-| `maintenance:branch-cleanup`  | Merged Branch Auto-Cleanup   | Sunday 4 AM   | Yes          | Auto-deletes local branches already merged to target  |
-| `maintenance:board-health`    | Board Health Reconciliation  | Every 6 hours | No           | Audits and auto-fixes board state inconsistencies     |
-| `maintenance:runner-health`   | GitHub Actions Runner Health | Every 5 min   | No           | Monitors runner health and detects stuck builds       |
+| ID                            | Name                            | Schedule    | Branch-Aware | Description                                                                    |
+| ----------------------------- | ------------------------------- | ----------- | ------------ | ------------------------------------------------------------------------------ |
+| `maintenance:data-integrity`  | Data Integrity Check            | Every 5 min | No           | Monitors feature directory count and data consistency                          |
+| `maintenance:stale-features`  | Stale Feature Detection         | Hourly      | No           | Finds features stuck in running/in-progress > 2 hours                          |
+| `maintenance:stale-worktrees` | Stale Worktree & Branch Cleanup | Daily 3 AM  | Yes          | Auto-removes worktrees for merged branches and cleans up merged local branches |
+| `maintenance:runner-health`   | GitHub Actions Runner Health    | Every 5 min | No           | Monitors runner health and detects stuck builds                                |
 
-Conditional registration: `data-integrity` requires `IntegrityWatchdogService`, `board-health` requires `FeatureHealthService`, `runner-health` requires GitHub env vars (`GITHUB_TOKEN`, `GITHUB_REPO_OWNER`, `GITHUB_REPO_NAME`).
+Conditional registration: `data-integrity` requires `IntegrityWatchdogService`, `runner-health` requires GitHub env vars (`GITHUB_TOKEN`, `GITHUB_REPO_OWNER`, `GITHUB_REPO_NAME`).
 
 ### Branch-Aware Tasks
 
 Tasks marked "Branch-Aware" in the table above call `resolveIntegrationBranch()` to determine the correct target branch from the project's `gitWorkflow.prBaseBranch` setting (defaults to `dev`). This means:
 
-- **`stale-worktrees`** and **`branch-cleanup`** use the integration branch when determining which branches are safe to clean
+- **`stale-worktrees`** uses the integration branch when determining which branches are safe to clean (covers both worktree removal and merged branch deletion)
 
-Tasks that don't operate on git branches (data-integrity, stale-features, board-health, runner-health) are unaffected.
+Tasks that don't operate on git branches (data-integrity, stale-features, runner-health) are unaffected.
 
 The `resolveIntegrationBranch()` function reads `prBaseBranch` from `settingsService` and falls back to `main` then `master` if the configured branch doesn't exist on the remote.
 

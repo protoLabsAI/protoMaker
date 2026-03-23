@@ -9,10 +9,9 @@ import { getErrorMessage, logError } from '../common.js';
 export function createLaunchHandler(lifecycleService: ProjectLifecycleService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath, projectSlug, maxConcurrency } = req.body as {
+      const { projectPath, projectSlug } = req.body as {
         projectPath: string;
         projectSlug: string;
-        maxConcurrency?: number;
       };
 
       if (!projectPath || !projectSlug) {
@@ -20,7 +19,7 @@ export function createLaunchHandler(lifecycleService: ProjectLifecycleService) {
         return;
       }
 
-      const result = await lifecycleService.launch(projectPath, projectSlug, maxConcurrency);
+      const result = await lifecycleService.launch(projectPath, projectSlug);
       res.json({ success: true, ...result });
     } catch (error) {
       logError(error, 'Launch project failed');

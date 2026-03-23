@@ -542,6 +542,10 @@ export class AutomationService {
    * so user edits to built-in automations (e.g. custom cron expressions) are preserved.
    */
   private async seedBuiltInAutomations(deps: SyncWithSchedulerDeps): Promise<void> {
+    // Purge stale built-ins BEFORE seeding new ones — ensures removed flows are cleaned up
+    // without accidentally purging freshly-seeded records whose flows haven't registered yet.
+    await this.purgeStaleBuiltIns();
+
     const always = [
       {
         id: 'maintenance:stale-features',
@@ -578,6 +582,7 @@ export class AutomationService {
     }
 
     // auto-merge-prs and auto-rebase-stale-prs removed — Lead Engineer handles these
+    // purgeStaleBuiltIns() at the end of seedBuiltInAutomations() cleans up orphaned records
 
     if (process.env.GITHUB_TOKEN && process.env.GITHUB_REPO_OWNER && process.env.GITHUB_REPO_NAME) {
       await this.upsertBuiltIn({
@@ -617,6 +622,39 @@ export class AutomationService {
     });
 
     logger.info('Built-in automation records seeded');
+  }
+
+  /**
+   * Remove any persisted `maintenance:*` automation records whose flowId is not registered
+   * in the flow registry, and unregister their corresponding scheduler tasks.
+   * Called at the end of seedBuiltInAutomations() to clean up stale records left behind
+   * when built-in flows are removed from code.
+   */
+  private async purgeStaleBuiltIns(): Promise<void> {
+    const automations = await this.readAutomations();
+    const stale = automations.filter(
+      (a) => a.id.startsWith('maintenance:') && !flowRegistry.has(a.flowId)
+    );
+
+    if (stale.length === 0) return;
+
+    const staleIds = new Set(stale.map((a) => a.id));
+    const pruned = automations.filter((a) => !staleIds.has(a.id));
+    await this.writeAutomations(pruned);
+
+    for (const automation of stale) {
+      const taskId = `${AUTOMATION_TASK_PREFIX}${automation.id}`;
+      try {
+        await this.schedulerService.unregisterTask(taskId);
+      } catch {
+        // Task may not be registered — ignore
+      }
+      logger.warn(
+        `Purged stale built-in automation "${automation.name}" (${automation.id}): flow "${automation.flowId}" is no longer registered`
+      );
+    }
+
+    logger.info(`Purged ${stale.length} stale built-in automation(s) with unregistered flows`);
   }
 
   /**

@@ -35,8 +35,14 @@ const sparcPrdSchema = z.object({
   problem: z.string(),
   approach: z.string(),
   results: z.string(),
-  constraints: z.string(),
-  generatedAt: z.string(),
+  // Accept constraints as string or array of strings (MCP tool sends array, UI sends string)
+  constraints: z
+    .union([z.string(), z.array(z.string())])
+    .transform((v) => (Array.isArray(v) ? v.join('\n') : v)),
+  generatedAt: z
+    .string()
+    .optional()
+    .default(() => new Date().toISOString()),
   approvedAt: z.string().optional(),
 });
 

@@ -172,15 +172,10 @@ export function parseLocalStorageSettings(): Partial<GlobalSettings> | null {
       theme: state.theme as GlobalSettings['theme'],
       sidebarOpen: state.sidebarOpen as boolean,
       maxConcurrency: state.maxConcurrency as number,
-      defaultSkipTests: state.defaultSkipTests as boolean,
       enableDependencyBlocking: state.enableDependencyBlocking as boolean,
       skipVerificationInAutoMode: state.skipVerificationInAutoMode as boolean,
       useWorktrees: state.useWorktrees as boolean,
-      defaultPlanningMode: state.defaultPlanningMode as GlobalSettings['defaultPlanningMode'],
-      defaultRequirePlanApproval: state.defaultRequirePlanApproval as boolean,
       muteDoneSound: state.muteDoneSound as boolean,
-      enhancementModel: state.enhancementModel as GlobalSettings['enhancementModel'],
-      validationModel: state.validationModel as GlobalSettings['validationModel'],
       phaseModels: state.phaseModels as GlobalSettings['phaseModels'],
       enabledCursorModels: state.enabledCursorModels as GlobalSettings['enabledCursorModels'],
       cursorDefaultModel: state.cursorDefaultModel as GlobalSettings['cursorDefaultModel'],
@@ -206,11 +201,7 @@ export function parseLocalStorageSettings(): Partial<GlobalSettings> | null {
         worktreePanelCollapsed === 'true' || (state.worktreePanelCollapsed as boolean),
       lastProjectDir: lastProjectDir || (state.lastProjectDir as string),
       recentFolders: recentFolders ? JSON.parse(recentFolders) : (state.recentFolders as string[]),
-      // Claude API Profiles (legacy)
-      claudeApiProfiles: (state.claudeApiProfiles as GlobalSettings['claudeApiProfiles']) ?? [],
-      activeClaudeApiProfileId:
-        (state.activeClaudeApiProfileId as GlobalSettings['activeClaudeApiProfileId']) ?? null,
-      // Claude Compatible Providers (new system)
+      // Claude Compatible Providers
       claudeCompatibleProviders:
         (state.claudeCompatibleProviders as GlobalSettings['claudeCompatibleProviders']) ?? [],
       // OpenAI Compatible Providers
@@ -334,20 +325,6 @@ export function mergeSettings(
   // Preserve current project ID from localStorage if server doesn't have one
   if (!serverSettings.currentProjectId && localSettings.currentProjectId) {
     merged.currentProjectId = localSettings.currentProjectId;
-  }
-
-  // Claude API Profiles - preserve from localStorage if server is empty
-  if (
-    (!serverSettings.claudeApiProfiles || serverSettings.claudeApiProfiles.length === 0) &&
-    localSettings.claudeApiProfiles &&
-    localSettings.claudeApiProfiles.length > 0
-  ) {
-    merged.claudeApiProfiles = localSettings.claudeApiProfiles;
-  }
-
-  // Active Claude API Profile ID - preserve from localStorage if server doesn't have one
-  if (!serverSettings.activeClaudeApiProfileId && localSettings.activeClaudeApiProfileId) {
-    merged.activeClaudeApiProfileId = localSettings.activeClaudeApiProfileId;
   }
 
   // Claude Compatible Providers - preserve from localStorage if server is empty
@@ -715,14 +692,8 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
   // Hydrate AppStore (only properties owned by AppState)
   useAppStore.setState({
     sidebarOpen: settings.sidebarOpen ?? true,
-    defaultSkipTests: settings.defaultSkipTests ?? true,
     enableDependencyBlocking: settings.enableDependencyBlocking ?? true,
     skipVerificationInAutoMode: settings.skipVerificationInAutoMode ?? false,
-    defaultPlanningMode: settings.defaultPlanningMode ?? 'skip',
-    defaultRequirePlanApproval: settings.defaultRequirePlanApproval ?? false,
-    defaultFeatureModel: migratePhaseModelEntry(settings.defaultFeatureModel) ?? {
-      model: 'claude-opus',
-    },
     muteDoneSound: settings.muteDoneSound ?? false,
     serverLogLevel: settings.serverLogLevel ?? 'info',
     enableRequestLogging: settings.enableRequestLogging ?? true,
@@ -752,8 +723,6 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
   });
 
   useAIModelsStore.setState({
-    enhancementModel: settings.enhancementModel ?? 'claude-sonnet',
-    validationModel: settings.validationModel ?? 'claude-opus',
     phaseModels: settings.phaseModels ?? currentAIModels.phaseModels,
     enabledCursorModels: allCursorModels,
     cursorDefaultModel: sanitizedCursorDefaultModel,
@@ -763,8 +732,6 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
     disabledProviders: settings.disabledProviders ?? [],
     autoLoadClaudeMd: settings.autoLoadClaudeMd ?? false,
     skipSandboxWarning: settings.skipSandboxWarning ?? false,
-    claudeApiProfiles: settings.claudeApiProfiles ?? [],
-    activeClaudeApiProfileId: settings.activeClaudeApiProfileId ?? null,
     claudeCompatibleProviders: settings.claudeCompatibleProviders ?? [],
     openaiCompatibleProviders: settings.openaiCompatibleProviders ?? [],
   });
@@ -828,8 +795,6 @@ function buildSettingsUpdateFromStore(): Record<string, unknown> {
     fontFamilySans: themeState.fontFamilySans,
     fontFamilyMono: themeState.fontFamilyMono,
     // AI models store
-    enhancementModel: aiState.enhancementModel,
-    validationModel: aiState.validationModel,
     phaseModels: aiState.phaseModels,
     enabledCursorModels: aiState.enabledCursorModels,
     cursorDefaultModel: aiState.cursorDefaultModel,
@@ -838,8 +803,6 @@ function buildSettingsUpdateFromStore(): Record<string, unknown> {
     enabledDynamicModelIds: aiState.enabledDynamicModelIds,
     disabledProviders: aiState.disabledProviders,
     autoLoadClaudeMd: aiState.autoLoadClaudeMd,
-    claudeApiProfiles: aiState.claudeApiProfiles,
-    activeClaudeApiProfileId: aiState.activeClaudeApiProfileId,
     claudeCompatibleProviders: aiState.claudeCompatibleProviders,
     openaiCompatibleProviders: aiState.openaiCompatibleProviders,
     // Worktree store
@@ -852,11 +815,8 @@ function buildSettingsUpdateFromStore(): Record<string, unknown> {
     defaultTerminalId: terminalState.defaultTerminalId,
     // App store (remaining fields)
     sidebarOpen: state.sidebarOpen,
-    defaultSkipTests: state.defaultSkipTests,
     enableDependencyBlocking: state.enableDependencyBlocking,
     skipVerificationInAutoMode: state.skipVerificationInAutoMode,
-    defaultPlanningMode: state.defaultPlanningMode,
-    defaultRequirePlanApproval: state.defaultRequirePlanApproval,
     muteDoneSound: state.muteDoneSound,
     serverLogLevel: state.serverLogLevel,
     enableRequestLogging: state.enableRequestLogging,

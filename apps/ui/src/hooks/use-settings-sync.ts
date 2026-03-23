@@ -9,6 +9,22 @@
  * during the initial hydration phase.
  *
  * The server's settings.json file is the single source of truth.
+ *
+ * ## Sync Paths
+ *
+ * ### Debounced Zustand sync (this file)
+ * All fields in SETTINGS_FIELDS_TO_SYNC are read from domain stores and sent
+ * to PATCH /api/settings/global on a 1-second debounce whenever any store
+ * changes. Critical fields (projects, currentProjectId) sync immediately.
+ * This is the primary persistence path for all user preferences.
+ *
+ * ### Direct API calls (bypass this hook)
+ * Some settings write directly to the server via syncSettingsToServer() from
+ * use-settings-migration.ts, bypassing the debounce. These are fields where
+ * instant persistence is required (e.g. provider CRUD operations in
+ * ai-models-store.ts). The Zustand subscriber here will still detect the store
+ * change and schedule a redundant sync — that sync is deduplicated via
+ * lastSyncedRef hash comparison and produces no extra network request.
  */
 
 import { useEffect, useRef, useCallback, useState } from 'react';
@@ -42,54 +58,77 @@ const SYNC_DEBOUNCE_MS = 1000;
 
 // Fields to sync to server (subset of AppState that should be persisted)
 const SETTINGS_FIELDS_TO_SYNC = [
-  'theme',
-  'fontFamilySans',
-  'fontFamilyMono',
-  'terminalFontFamily', // Maps to terminalState.fontFamily
-  'openTerminalMode', // Maps to terminalState.openTerminalMode
-  'sidebarOpen',
-  'maxConcurrency',
-  'systemMaxConcurrency',
-  'autoModeByWorktree', // Per-worktree auto mode settings (only maxConcurrency is persisted)
-  'defaultSkipTests',
-  'enableDependencyBlocking',
-  'skipVerificationInAutoMode',
-  'useWorktrees',
-  'defaultPlanningMode',
-  'defaultRequirePlanApproval',
-  'defaultFeatureModel',
-  'muteDoneSound',
-  'serverLogLevel',
-  'enableRequestLogging',
-  'enhancementModel',
-  'validationModel',
-  'phaseModels',
-  'enabledCursorModels',
-  'cursorDefaultModel',
-  'enabledOpencodeModels',
-  'opencodeDefaultModel',
-  'enabledDynamicModelIds',
-  'disabledProviders',
-  'autoLoadClaudeMd',
-  'keyboardShortcuts',
-  'mcpServers',
-  'defaultEditorCommand',
-  'defaultTerminalId',
-  'promptCustomization',
-  'eventHooks',
-  'claudeApiProfiles',
-  'activeClaudeApiProfileId',
-  'projects',
-  'trashedProjects',
-  'currentProjectId', // ID of currently open project
-  'projectHistory',
-  'projectHistoryIndex',
-  'lastSelectedSessionByProject',
-  // UI State (previously in localStorage)
-  'worktreePanelCollapsed',
-  'lastProjectDir',
-  'recentFolders',
-  'featureFlags',
+  // ── Theme & Fonts ──────────────────────────────────────────────────────────
+  'theme', // useThemeStore
+  'fontFamilySans', // useThemeStore
+  'fontFamilyMono', // useThemeStore
+  'terminalFontFamily', // useTerminalStore → terminalState.fontFamily
+  'openTerminalMode', // useTerminalStore → terminalState.openTerminalMode
+  // ── UI Layout ──────────────────────────────────────────────────────────────
+  'sidebarOpen', // useAppStore
+  'worktreePanelCollapsed', // useWorktreeStore
+  // ── Concurrency & Auto-Mode ────────────────────────────────────────────────
+  'maxConcurrency', // useWorktreeStore
+  'systemMaxConcurrency', // useAppStore
+  'autoModeByWorktree', // useWorktreeStore (only maxConcurrency/branchName persisted)
+  'enableDependencyBlocking', // useAppStore
+  'skipVerificationInAutoMode', // useAppStore
+  'useWorktrees', // useWorktreeStore
+  // ── Audio ──────────────────────────────────────────────────────────────────
+  'muteDoneSound', // useAppStore
+  // ── Server Logging ─────────────────────────────────────────────────────────
+  'serverLogLevel', // useAppStore
+  'enableRequestLogging', // useAppStore
+  // ── AI Commit Messages ─────────────────────────────────────────────────────
+  'enableAiCommitMessages', // useAppStore
+  // ── AI Models (Phase / Cursor / OpenCode) ──────────────────────────────────
+  'phaseModels', // useAIModelsStore
+  'enabledCursorModels', // useAIModelsStore
+  'cursorDefaultModel', // useAIModelsStore
+  'enabledOpencodeModels', // useAIModelsStore
+  'opencodeDefaultModel', // useAIModelsStore
+  'enabledDynamicModelIds', // useAIModelsStore
+  // ── Provider Visibility ────────────────────────────────────────────────────
+  'disabledProviders', // useAIModelsStore
+  // ── Claude-Compatible & OpenAI-Compatible Providers ────────────────────────
+  'claudeCompatibleProviders', // useAIModelsStore
+  'openaiCompatibleProviders', // useAIModelsStore
+  // ── Claude Agent SDK ───────────────────────────────────────────────────────
+  'autoLoadClaudeMd', // useAIModelsStore
+  'skipSandboxWarning', // useAIModelsStore
+  // ── Codex CLI ──────────────────────────────────────────────────────────────
+  'codexAutoLoadAgents', // useAIModelsStore
+  'codexSandboxMode', // useAIModelsStore
+  'codexApprovalPolicy', // useAIModelsStore
+  'codexEnableWebSearch', // useAIModelsStore
+  'codexEnableImages', // useAIModelsStore
+  // ── Skills ─────────────────────────────────────────────────────────────────
+  'enableSkills', // useAppStore
+  'skillsSources', // useAppStore
+  // ── Subagents ──────────────────────────────────────────────────────────────
+  'enableSubagents', // useAppStore
+  'subagentsSources', // useAppStore
+  // ── Input & Editor ─────────────────────────────────────────────────────────
+  'keyboardShortcuts', // useAppStore
+  'mcpServers', // useAppStore
+  'defaultEditorCommand', // useAppStore
+  'defaultTerminalId', // useTerminalStore
+  // ── Prompt Customization ───────────────────────────────────────────────────
+  'promptCustomization', // useAppStore
+  // ── Event Hooks ────────────────────────────────────────────────────────────
+  'eventHooks', // useAppStore
+  // ── Project Management ─────────────────────────────────────────────────────
+  'projects', // useAppStore
+  'trashedProjects', // useAppStore
+  'currentProjectId', // useAppStore → currentProject.id
+  'projectHistory', // useAppStore
+  'projectHistoryIndex', // useAppStore
+  'lastSelectedSessionByProject', // useAppStore
+  // ── File Browser / UI State ────────────────────────────────────────────────
+  'lastProjectDir', // useAppStore
+  'recentFolders', // useAppStore
+  // ── Feature Flags ──────────────────────────────────────────────────────────
+  'featureFlags', // useAppStore
 ] as const;
 
 // Fields from setup store to sync
@@ -131,8 +170,6 @@ function getSettingsFieldValue(
 
   // AI models store fields
   if (
-    field === 'enhancementModel' ||
-    field === 'validationModel' ||
     field === 'phaseModels' ||
     field === 'enabledCursorModels' ||
     field === 'cursorDefaultModel' ||
@@ -140,9 +177,15 @@ function getSettingsFieldValue(
     field === 'opencodeDefaultModel' ||
     field === 'enabledDynamicModelIds' ||
     field === 'disabledProviders' ||
+    field === 'claudeCompatibleProviders' ||
+    field === 'openaiCompatibleProviders' ||
     field === 'autoLoadClaudeMd' ||
-    field === 'claudeApiProfiles' ||
-    field === 'activeClaudeApiProfileId'
+    field === 'skipSandboxWarning' ||
+    field === 'codexAutoLoadAgents' ||
+    field === 'codexSandboxMode' ||
+    field === 'codexApprovalPolicy' ||
+    field === 'codexEnableWebSearch' ||
+    field === 'codexEnableImages'
   ) {
     const aiState = useAIModelsStore.getState();
     return aiState[field as keyof typeof aiState];
@@ -207,8 +250,6 @@ function hasSettingsFieldChanged(
 
   // AI models store fields
   if (
-    field === 'enhancementModel' ||
-    field === 'validationModel' ||
     field === 'phaseModels' ||
     field === 'enabledCursorModels' ||
     field === 'cursorDefaultModel' ||
@@ -216,9 +257,15 @@ function hasSettingsFieldChanged(
     field === 'opencodeDefaultModel' ||
     field === 'enabledDynamicModelIds' ||
     field === 'disabledProviders' ||
+    field === 'claudeCompatibleProviders' ||
+    field === 'openaiCompatibleProviders' ||
     field === 'autoLoadClaudeMd' ||
-    field === 'claudeApiProfiles' ||
-    field === 'activeClaudeApiProfileId'
+    field === 'skipSandboxWarning' ||
+    field === 'codexAutoLoadAgents' ||
+    field === 'codexSandboxMode' ||
+    field === 'codexApprovalPolicy' ||
+    field === 'codexEnableWebSearch' ||
+    field === 'codexEnableImages'
   ) {
     const key = field as keyof typeof newSnap.aiModels;
     return newSnap.aiModels[key] !== prevSnap.aiModels[key];
@@ -754,8 +801,6 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
 
     // Hydrate AI models store
     useAIModelsStore.setState({
-      enhancementModel: serverSettings.enhancementModel,
-      validationModel: serverSettings.validationModel,
       phaseModels: migratedPhaseModels ?? serverSettings.phaseModels,
       enabledCursorModels: allCursorModels, // Always use ALL cursor models
       cursorDefaultModel: sanitizedCursorDefault,
@@ -763,9 +808,15 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
       opencodeDefaultModel: sanitizedOpencodeDefaultModel,
       enabledDynamicModelIds: sanitizedDynamicModelIds,
       disabledProviders: serverSettings.disabledProviders ?? [],
+      claudeCompatibleProviders: serverSettings.claudeCompatibleProviders ?? [],
+      openaiCompatibleProviders: serverSettings.openaiCompatibleProviders ?? [],
       autoLoadClaudeMd: serverSettings.autoLoadClaudeMd ?? false,
-      claudeApiProfiles: serverSettings.claudeApiProfiles ?? [],
-      activeClaudeApiProfileId: serverSettings.activeClaudeApiProfileId ?? null,
+      skipSandboxWarning: serverSettings.skipSandboxWarning ?? false,
+      codexAutoLoadAgents: serverSettings.codexAutoLoadAgents ?? false,
+      codexSandboxMode: serverSettings.codexSandboxMode ?? 'workspace-write',
+      codexApprovalPolicy: serverSettings.codexApprovalPolicy ?? 'on-request',
+      codexEnableWebSearch: serverSettings.codexEnableWebSearch ?? false,
+      codexEnableImages: serverSettings.codexEnableImages ?? true,
     });
 
     // Hydrate worktree store
@@ -798,18 +849,17 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
     // Hydrate app store (only fields that remain in app-store)
     useAppStore.setState({
       sidebarOpen: serverSettings.sidebarOpen,
-      defaultSkipTests: serverSettings.defaultSkipTests,
       enableDependencyBlocking: serverSettings.enableDependencyBlocking,
       skipVerificationInAutoMode: serverSettings.skipVerificationInAutoMode,
+      enableAiCommitMessages: serverSettings.enableAiCommitMessages ?? true,
       systemMaxConcurrency: serverSettings.systemMaxConcurrency ?? 10,
-      defaultPlanningMode: serverSettings.defaultPlanningMode,
-      defaultRequirePlanApproval: serverSettings.defaultRequirePlanApproval,
-      defaultFeatureModel: serverSettings.defaultFeatureModel
-        ? migratePhaseModelEntry(serverSettings.defaultFeatureModel)
-        : { model: 'claude-opus' },
       muteDoneSound: serverSettings.muteDoneSound,
       serverLogLevel: serverSettings.serverLogLevel ?? 'info',
       enableRequestLogging: serverSettings.enableRequestLogging ?? true,
+      enableSkills: serverSettings.enableSkills ?? true,
+      skillsSources: serverSettings.skillsSources ?? ['user', 'project'],
+      enableSubagents: serverSettings.enableSubagents ?? true,
+      subagentsSources: serverSettings.subagentsSources ?? ['user', 'project'],
       keyboardShortcuts: {
         ...currentAppState.keyboardShortcuts,
         ...(serverSettings.keyboardShortcuts as unknown as Partial<

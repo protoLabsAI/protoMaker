@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@protolabsai/ui/atoms';
 import { Label, Kbd, KbdGroup } from '@protolabsai/ui/atoms';
-import { GitBranch, DollarSign, Sparkles, FolderKanban } from 'lucide-react';
+import { GitBranch, DollarSign, Sparkles, FolderKanban, SlidersHorizontal } from 'lucide-react';
 import { queryKeys } from '@/lib/query-keys';
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabsai/ui/atoms';
@@ -51,6 +51,9 @@ interface BoardHeaderProps {
   // Project filter props
   selectedProjectSlug: string | null;
   onProjectFilterChange: (slug: string | null) => void;
+  // Settings panel props
+  isSettingsPanelOpen: boolean;
+  onSettingsPanelToggle: () => void;
 }
 
 // Shared styles for header control containers
@@ -74,6 +77,8 @@ export function BoardHeader({
   onViewModeChange,
   selectedProjectSlug,
   onProjectFilterChange,
+  isSettingsPanelOpen,
+  onSettingsPanelToggle,
 }: BoardHeaderProps) {
   const claudeAuthStatus = useSetupStore((state) => state.claudeAuthStatus);
   const skipVerificationInAutoMode = useAppStore((state) => state.skipVerificationInAutoMode);
@@ -309,6 +314,23 @@ export function BoardHeader({
                     onConcurrencyChange={onConcurrencyChange}
                   />
                 </div>
+              )}
+
+              {/* Settings Panel Toggle */}
+              {isMounted && !isTablet && (
+                <button
+                  type="button"
+                  onClick={onSettingsPanelToggle}
+                  className={`p-1.5 rounded-md border transition-colors ${
+                    isSettingsPanelOpen
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-secondary border-border text-muted-foreground hover:text-foreground hover:bg-accent'
+                  }`}
+                  title="Board Settings"
+                  data-testid="board-settings-toggle"
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                </button>
               )}
             </div>
           )}

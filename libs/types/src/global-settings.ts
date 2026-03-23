@@ -17,29 +17,16 @@ import { getAllOpencodeModelIds, DEFAULT_OPENCODE_MODEL } from './opencode-model
 import type { PromptCustomization } from './prompts.js';
 import type { CodexSandboxMode, CodexApprovalPolicy } from './codex.js';
 import type { UserProfile } from './user-profile.js';
-import type { CustomPrompt } from './prompts.js';
 
 // Domain file imports
-import type {
-  ThemeMode,
-  PlanningMode,
-  ServerLogLevel,
-  WindowBounds,
-  KeyboardShortcuts,
-} from './ui-settings.js';
+import type { ThemeMode, ServerLogLevel, KeyboardShortcuts } from './ui-settings.js';
 import { DEFAULT_KEYBOARD_SHORTCUTS } from './ui-settings.js';
-import type {
-  PhaseModelEntry,
-  PhaseModelConfig,
-  ModelProvider,
-  DeploymentEnvironment,
-} from './agent-settings.js';
+import type { PhaseModelConfig, ModelProvider, DeploymentEnvironment } from './agent-settings.js';
 import { DEFAULT_PHASE_MODELS } from './agent-settings.js';
 import type { GitWorkflowSettings } from './git-settings.js';
 import { DEFAULT_GIT_WORKFLOW_SETTINGS } from './git-settings.js';
 import type {
   ClaudeCompatibleProvider,
-  ClaudeApiProfile,
   MCPServerConfig,
   OpenAICompatibleConfig,
 } from './provider-settings.js';
@@ -346,8 +333,6 @@ export interface GlobalSettings {
   maxConcurrency: number;
   /** User-configurable system-wide maximum concurrent agents (overrides env var default) */
   systemMaxConcurrency?: number;
-  /** Default: skip tests during feature generation */
-  defaultSkipTests: boolean;
   /** Default: enable dependency blocking */
   enableDependencyBlocking: boolean;
   /** Skip verification requirement in auto-mode (treat 'completed' same as 'verified') */
@@ -360,12 +345,6 @@ export interface GlobalSettings {
   autoModePickupCooldownMs?: number;
   /** Default: use git worktrees for feature branches */
   useWorktrees: boolean;
-  /** Default: planning approach (skip/lite/spec/full) */
-  defaultPlanningMode: PlanningMode;
-  /** Default: require manual approval before generating */
-  defaultRequirePlanApproval: boolean;
-  /** Default model and thinking level for new feature cards */
-  defaultFeatureModel: PhaseModelEntry;
 
   // Knowledge Store / Learning Settings
   /**
@@ -393,12 +372,6 @@ export interface GlobalSettings {
   // AI Model Selection (per-phase configuration)
   /** Phase-specific AI model configuration */
   phaseModels: PhaseModelConfig;
-
-  // Legacy AI Model Selection (deprecated - use phaseModels instead)
-  /** @deprecated Use phaseModels.enhancementModel instead */
-  enhancementModel: ModelAlias;
-  /** @deprecated Use phaseModels.validationModel instead */
-  validationModel: ModelAlias;
 
   // Cursor CLI Settings (global)
   /** Which Cursor models are available in feature modal (empty = all) */
@@ -445,10 +418,6 @@ export interface GlobalSettings {
   // Session Tracking
   /** Maps project path -> last selected session ID in that project */
   lastSelectedSessionByProject: Record<string, string>;
-
-  // Window State (Electron only)
-  /** Persisted window bounds for restoring position/size across sessions */
-  windowBounds?: WindowBounds;
 
   // Claude Agent SDK Settings
   /** Auto-load CLAUDE.md files using SDK's settingSources option */
@@ -548,34 +517,6 @@ export interface GlobalSettings {
    */
   openaiCompatibleProviders?: OpenAICompatibleConfig[];
 
-  // Deprecated Claude API Profiles (kept for migration)
-  /**
-   * @deprecated Use claudeCompatibleProviders instead.
-   * Kept for backward compatibility during migration.
-   */
-  claudeApiProfiles?: ClaudeApiProfile[];
-
-  /**
-   * @deprecated No longer used. Models are selected per-phase via phaseModels.
-   * Each PhaseModelEntry can specify a providerId for provider-specific models.
-   */
-  activeClaudeApiProfileId?: string | null;
-
-  /**
-   * Runtime overrides for agent exposure (CLI skills + Discord slash commands).
-   * Key: agent template name (e.g., "ava", "jon").
-   * Overrides the template's built-in exposure config.
-   */
-  agentExposure?: Record<
-    string,
-    {
-      /** Override Discord slash command registration */
-      discord?: boolean;
-      /** Override allowed Discord users */
-      allowedUsers?: string[];
-    }
-  >;
-
   /**
    * Per-worktree auto mode settings
    * Key: "${projectId}::${branchName ?? '__main__'}"
@@ -619,8 +560,6 @@ export interface GlobalSettings {
       projectPath: string;
       /** Branch name for worktree scoping (null = main worktree) */
       branchName: string | null;
-      /** Maximum concurrent features for this project (optional, falls back to global maxConcurrency) */
-      maxConcurrency?: number;
     }>;
   };
 
@@ -697,24 +636,11 @@ export interface GlobalSettings {
    */
   prOwnershipStaleTtlHours?: number;
 
-  /**
-   * Hivemind mesh configuration for multi-instance coordination.
-   * @see HivemindConfig
-   */
-  hivemind?: import('./hivemind.js').HivemindConfig;
-
   /** User profile for agent personalization — replaces hardcoded values in persona prompts */
   userProfile?: UserProfile;
 
   /** User's name for assignment and display purposes (resolved from settings, env, or git) */
   userName?: string;
-
-  /**
-   * @deprecated Use project-level agentConfig.rolePromptOverrides instead.
-   * Kept temporarily so the migration in SettingsService can read and copy
-   * any enabled entries to the active project before removing this field.
-   */
-  personaOverrides?: Record<string, CustomPrompt>;
 
   /**
    * Promotion pipeline configuration for staging/production candidate tracking.
@@ -735,14 +661,6 @@ export interface GlobalSettings {
    * @see SchedulerSettings
    */
   schedulerSettings?: SchedulerSettings;
-
-  /**
-   * Ava Channel reactor settings.
-   * Controls whether this instance auto-responds to incoming Ava Channel messages
-   * and at what depth/cadence.
-   * @see AvaChannelReactorSettings
-   */
-  avaChannelReactor?: AvaChannelReactorSettings;
 
   /**
    * Global ceremony configuration.
@@ -779,20 +697,14 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   sidebarOpen: true,
   maxConcurrency: DEFAULT_MAX_CONCURRENCY,
   systemMaxConcurrency: 10,
-  defaultSkipTests: true,
   enableDependencyBlocking: true,
   skipVerificationInAutoMode: false,
   useWorktrees: true,
-  defaultPlanningMode: 'skip',
-  defaultRequirePlanApproval: false,
-  defaultFeatureModel: { model: 'claude-opus' }, // Use canonical ID
   muteDoneSound: false,
   serverLogLevel: 'info',
   enableRequestLogging: true,
   enableAiCommitMessages: true,
   phaseModels: DEFAULT_PHASE_MODELS,
-  enhancementModel: 'sonnet', // Legacy alias still supported
-  validationModel: 'opus', // Legacy alias still supported
   enabledCursorModels: getAllCursorModelIds(), // Returns prefixed IDs
   cursorDefaultModel: 'cursor-auto', // Use canonical prefixed ID
   enabledOpencodeModels: getAllOpencodeModelIds(), // Returns prefixed IDs
@@ -828,9 +740,6 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   // New provider system
   claudeCompatibleProviders: [],
   openaiCompatibleProviders: [],
-  // Deprecated - kept for migration
-  claudeApiProfiles: [],
-  activeClaudeApiProfileId: null,
   autoModeByWorktree: {},
   // Git workflow automation (enabled by default)
   gitWorkflow: DEFAULT_GIT_WORKFLOW_SETTINGS,

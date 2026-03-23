@@ -70,6 +70,7 @@ export function SettingsView() {
     systemMaxConcurrency,
     setSystemMaxConcurrency,
     featureFlags,
+    currentProject,
   } = useAppStore();
   const { skipSandboxWarning, setSkipSandboxWarning } = useAIModelsStore();
   const { theme, setTheme } = useThemeStore();
@@ -199,7 +200,17 @@ export function SettingsView() {
       case 'health':
         return <HealthSection />;
       case 'workflow':
-        return <WorkflowSettingsPanel />;
+        return (
+          <>
+            {currentProject && (
+              <div className="mb-4 px-3 py-2 rounded-lg bg-muted/40 border border-border/40 flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Per-project settings for:</span>
+                <span className="text-xs font-medium text-foreground">{currentProject.name}</span>
+              </div>
+            )}
+            <WorkflowSettingsPanel />
+          </>
+        );
       case 'automations':
         return <AutomationsSection />;
       case 'sensors':

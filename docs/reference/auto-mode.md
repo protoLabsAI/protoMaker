@@ -52,7 +52,46 @@ Owns the auto-loop tick. Each iteration:
 1. Checks if auto-mode is still running
 2. Loads backlog features respecting dependency order
 3. Filters blocked features (human-assigned deps, pipeline gates)
-4. Dispatches to `ExecutionService`
+4. Checks hot-file overlap against currently running features
+5. Dispatches to `PipelineRunner` (`LeadEngineerService` or `ExecutionService`)
+
+#### Hot-File Conflict Avoidance
+
+`FeatureScheduler` tracks a set of high-conflict basenames:
+
+```typescript
+const HOT_FILE_BASENAMES = new Set(['wiring.ts', 'event.ts', 'index.ts', 'services.ts']);
+```
+
+Before dispatching, it checks whether any currently running feature's `filesToModify` overlaps with the candidate's `filesToModify` on a hot-file basename. If overlap is detected, the candidate is deferred until the conflicting agent completes. This prevents predictable `merge_conflict` failures.
+
+#### DispatchResult
+
+```typescript
+interface DispatchResult {
+  outcome: 'completed' | 'escalated' | 'blocked' | 'needs_retry';
+  retryAfterMs?: number;
+  errorInfo?: string;
+}
+```
+
+The `'blocked'` outcome indicates the feature was deferred (hot-file conflict, concurrency cap, or pickup freeze). The scheduler re-queues the feature on the next tick.
+
+#### PipelineRunner Interface
+
+The scheduler delegates execution via a `PipelineRunner` abstraction rather than calling `ExecutionService` directly:
+
+```typescript
+interface PipelineRunner {
+  run(projectPath: string, featureId: string): Promise<DispatchResult>;
+  getGlobalRunningCount(): number;
+  getRunningFeatureIds(): string[];
+  isFeatureActiveInPipeline(featureId: string): boolean;
+  isPickupFrozen?(): boolean; // Optional: pause new pickups during error budget freezes
+}
+```
+
+This lets `LeadEngineerService` satisfy the interface and receive feature dispatches when active.
 
 ### ExecutionService
 
