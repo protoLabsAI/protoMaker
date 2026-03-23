@@ -223,6 +223,10 @@ export class AvaGatewayService {
   private lastNotificationPost: Map<string, number> = new Map();
   private readonly NOTIFICATION_RATE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
 
+  // Dedup for heartbeat alerts — suppress identical alerts until server restarts.
+  // Key = alert title. Prevents the same health issue from spamming Discord every cycle.
+  private postedAlertKeys = new Set<string>();
+
   constructor(
     featureLoader: FeatureLoader,
     settingsService?: SettingsService,
@@ -721,6 +725,14 @@ export class AvaGatewayService {
     if (!this.infraChannelId || !this.discordBotService) {
       return;
     }
+
+    // Dedup: suppress identical alerts. Critical alerts always post.
+    const alertKey = `${alert.title}::${alert.description}`;
+    if (alert.severity !== 'critical' && this.postedAlertKeys.has(alertKey)) {
+      logger.debug('Suppressing duplicate alert', { title: alert.title });
+      return;
+    }
+    this.postedAlertKeys.add(alertKey);
 
     const severityEmoji: Record<HeartbeatAlert['severity'], string> = {
       low: '🟢',
