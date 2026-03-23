@@ -3052,6 +3052,27 @@ Format your response as a structured markdown document.`;
         logger.debug('Failed to update worktree git exclude (non-fatal):', err);
       }
 
+      // Copy .env* files from project root into worktree (gitignored files aren't inherited)
+      try {
+        const workflowSettings = await getWorkflowSettings(projectPath, this.settingsService);
+        if (workflowSettings.copyEnvFiles !== false) {
+          const entries = await secureFs.readdir(projectPath, { withFileTypes: true });
+          const envFiles = entries.filter((e) => e.isFile() && e.name.startsWith('.env'));
+          for (const entry of envFiles) {
+            const src = path.join(projectPath, entry.name);
+            const dest = path.join(worktreePath, entry.name);
+            await secureFs.copyFile(src, dest);
+          }
+          if (envFiles.length > 0) {
+            logger.info(
+              `Copied ${envFiles.length} .env file(s) to worktree: ${path.basename(worktreePath)}`,
+            );
+          }
+        }
+      } catch (err) {
+        logger.debug('Failed to copy .env files to worktree (non-fatal):', err);
+      }
+
       return path.resolve(worktreePath);
     } catch (error) {
       logger.error(`Failed to create worktree for branch "${branchName}":`, error);
