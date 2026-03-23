@@ -188,8 +188,9 @@ function SectionHeader({ title }: { title: string }) {
 
 export function GitWorkflowDefaultsSection() {
   const queryClient = useQueryClient();
-  const [localSettings, setLocalSettings] =
-    useState<Required<GitWorkflowSettings>>(DEFAULT_GIT_WORKFLOW_SETTINGS);
+  const [localSettings, setLocalSettings] = useState<Required<GitWorkflowSettings>>(
+    DEFAULT_GIT_WORKFLOW_SETTINGS
+  );
   const [isDirty, setIsDirty] = useState(false);
 
   const { data, isLoading } = useQuery({
