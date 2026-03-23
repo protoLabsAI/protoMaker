@@ -84,6 +84,7 @@ import {
 import { SelectionActionBar, ListView } from './board-view/components';
 import { MassEditDialog } from './board-view/dialogs';
 import { InitScriptIndicator } from './board-view/init-script-indicator';
+import { BoardSettingsPanel } from './board-view/board-settings-panel';
 import { useInitScriptEvents } from '@/hooks/use-init-script-events';
 import { useAutoModeQueryInvalidation } from '@/hooks/use-query-invalidation';
 import { useUpdateGlobalSettings } from '@/hooks/mutations/use-settings-mutations';
@@ -228,6 +229,9 @@ export function BoardView() {
 
   // View mode state (kanban vs list)
   const { viewMode, setViewMode, isListView, sortConfig, setSortColumn } = useListViewState();
+
+  // Board settings panel visibility
+  const [showSettingsPanel, setShowSettingsPanel] = useState(false);
 
   // Search filter for Kanban cards
   const [searchQuery, setSearchQuery] = useState('');
@@ -1376,6 +1380,8 @@ export function BoardView() {
         onViewModeChange={setViewMode}
         selectedProjectSlug={selectedProjectSlug}
         onProjectFilterChange={setSelectedProjectSlug}
+        isSettingsPanelOpen={showSettingsPanel}
+        onSettingsPanelToggle={() => setShowSettingsPanel((v) => !v)}
       />
 
       {/* DndContext wraps both WorktreePanel and main content area to enable drag-to-worktree */}
@@ -1540,6 +1546,42 @@ export function BoardView() {
           )}
         </div>
       </DndContext>
+
+      {/* Board Settings Panel */}
+      {showSettingsPanel && (
+        <BoardSettingsPanel
+          onClose={() => setShowSettingsPanel(false)}
+          maxConcurrency={maxConcurrency}
+          runningAgentsCount={runningAutoTasks.length}
+          onConcurrencyChange={(newMaxConcurrency) => {
+            if (currentProject && selectedWorktree) {
+              const branchName = selectedWorktree.isMain ? null : selectedWorktree.branch;
+              setMaxConcurrencyForWorktree(currentProject.id, branchName, newMaxConcurrency);
+              const worktreeKey = `${currentProject.id}::${branchName ?? '__main__'}`;
+              const currentAutoMode = useWorktreeStore.getState().autoModeByWorktree;
+              const persistedAutoMode: Record<
+                string,
+                { maxConcurrency: number; branchName: string | null }
+              > = {};
+              for (const [key, value] of Object.entries(currentAutoMode)) {
+                persistedAutoMode[key] = {
+                  maxConcurrency: value.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY,
+                  branchName: value.branchName,
+                };
+              }
+              persistedAutoMode[worktreeKey] = { maxConcurrency: newMaxConcurrency, branchName };
+              updateGlobalSettings.mutate({ autoModeByWorktree: persistedAutoMode });
+              if (autoMode.isRunning) {
+                autoMode.stop().then(() => {
+                  autoMode.start().catch((error) => {
+                    logger.error('[AutoMode] Failed to restart with new concurrency:', error);
+                  });
+                });
+              }
+            }
+          }}
+        />
+      )}
 
       {/* Selection Action Bar */}
       {isSelectionMode && (
