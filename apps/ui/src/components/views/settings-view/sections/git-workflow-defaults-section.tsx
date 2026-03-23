@@ -322,9 +322,7 @@ export function GitWorkflowDefaultsSection() {
           <SelectRow
             label="Merge Strategy"
             description="How commits are combined when the PR is merged"
-            value={
-              localSettings.prMergeStrategy ?? DEFAULT_GIT_WORKFLOW_SETTINGS.prMergeStrategy
-            }
+            value={localSettings.prMergeStrategy ?? DEFAULT_GIT_WORKFLOW_SETTINGS.prMergeStrategy}
             options={PR_MERGE_STRATEGY_OPTIONS}
             onChange={(v) => set('prMergeStrategy', v as PRMergeStrategy)}
           />
@@ -365,8 +363,7 @@ export function GitWorkflowDefaultsSection() {
             label="Exclude from Staging"
             description="Directories to skip during git add (one path per line)"
             value={
-              localSettings.excludeFromStaging ??
-              DEFAULT_GIT_WORKFLOW_SETTINGS.excludeFromStaging
+              localSettings.excludeFromStaging ?? DEFAULT_GIT_WORKFLOW_SETTINGS.excludeFromStaging
             }
             onChange={(v) => set('excludeFromStaging', v)}
             placeholder=".automaker/&#10;.worktrees/"
