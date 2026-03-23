@@ -194,10 +194,7 @@ export function BoardSettingsPanel({
 
           {/* Skip tests */}
           <div className="flex items-center justify-between py-1.5">
-            <Label
-              htmlFor="settings-skip-tests"
-              className="text-xs font-medium cursor-pointer"
-            >
+            <Label htmlFor="settings-skip-tests" className="text-xs font-medium cursor-pointer">
               Enable tests
             </Label>
             <Switch
@@ -221,10 +218,7 @@ export function BoardSettingsPanel({
           </div>
 
           <div className="flex items-center justify-between py-1.5">
-            <Label
-              htmlFor="settings-auto-commit"
-              className="text-xs font-medium cursor-pointer"
-            >
+            <Label htmlFor="settings-auto-commit" className="text-xs font-medium cursor-pointer">
               Auto commit
             </Label>
             <Switch
@@ -236,10 +230,7 @@ export function BoardSettingsPanel({
           </div>
 
           <div className="flex items-center justify-between py-1.5">
-            <Label
-              htmlFor="settings-auto-push"
-              className="text-xs font-medium cursor-pointer"
-            >
+            <Label htmlFor="settings-auto-push" className="text-xs font-medium cursor-pointer">
               Auto push
             </Label>
             <Switch
@@ -251,10 +242,7 @@ export function BoardSettingsPanel({
           </div>
 
           <div className="flex items-center justify-between py-1.5">
-            <Label
-              htmlFor="settings-auto-create-pr"
-              className="text-xs font-medium cursor-pointer"
-            >
+            <Label htmlFor="settings-auto-create-pr" className="text-xs font-medium cursor-pointer">
               Auto create PR
             </Label>
             <Switch
@@ -266,10 +254,7 @@ export function BoardSettingsPanel({
           </div>
 
           <div className="flex items-center justify-between py-1.5">
-            <Label
-              htmlFor="settings-auto-merge-pr"
-              className="text-xs font-medium cursor-pointer"
-            >
+            <Label htmlFor="settings-auto-merge-pr" className="text-xs font-medium cursor-pointer">
               Auto merge PR
             </Label>
             <Switch
