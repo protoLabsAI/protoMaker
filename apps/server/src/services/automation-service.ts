@@ -542,6 +542,10 @@ export class AutomationService {
    * so user edits to built-in automations (e.g. custom cron expressions) are preserved.
    */
   private async seedBuiltInAutomations(deps: SyncWithSchedulerDeps): Promise<void> {
+    // Purge stale built-ins BEFORE seeding new ones — ensures removed flows are cleaned up
+    // without accidentally purging freshly-seeded records whose flows haven't registered yet.
+    await this.purgeStaleBuiltIns();
+
     const always = [
       {
         id: 'maintenance:stale-features',
@@ -616,11 +620,6 @@ export class AutomationService {
       flowId: 'project-retro-flow',
       enabled: true,
     });
-
-    // Cleanup: remove persisted maintenance:* automations whose flowId is no longer registered.
-    // This handles cases where a built-in flow is removed from code but the persisted record
-    // and its scheduler task remain, causing recurring "Flow not registered" errors.
-    await this.purgeStaleBuiltIns();
 
     logger.info('Built-in automation records seeded');
   }
