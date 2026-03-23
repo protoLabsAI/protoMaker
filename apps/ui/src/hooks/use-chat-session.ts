@@ -241,6 +241,15 @@ export function useChatSession({
     [removePendingApproval]
   );
 
+  // Sync streaming state to store for the background streaming indicator.
+  // External consumers (e.g., the minimized chat badge) read this to know
+  // whether Ava is actively working even when the panel is hidden.
+  useEffect(() => {
+    useChatStore
+      .getState()
+      .setActiveStreamingSession(isStreaming && currentSessionId ? currentSessionId : null);
+  }, [isStreaming, currentSessionId]);
+
   // When messages change, persist to store
   useEffect(() => {
     if (currentSessionId && activeSessionRef.current === currentSessionId && messages.length > 0) {

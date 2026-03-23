@@ -36,6 +36,8 @@ interface ChatStoreState {
   currentSessionId: string | null;
   historyOpen: boolean;
   chatModalOpen: boolean;
+  /** Session ID that is currently streaming — used for the background streaming indicator */
+  activeStreamingSessionId: string | null;
 }
 
 interface ChatActions {
@@ -49,6 +51,7 @@ interface ChatActions {
   setHistoryOpen: (open: boolean) => void;
   toggleHistory: () => void;
   setChatModalOpen: (open: boolean) => void;
+  setActiveStreamingSession: (sessionId: string | null) => void;
   getCurrentSession: () => ChatSession | null;
   getSessionsForProject: (projectId: string) => ChatSession[];
 }
@@ -88,6 +91,7 @@ export const useChatStore = create<ChatStoreState & ChatActions>()(
       currentSessionId: null,
       historyOpen: false,
       chatModalOpen: false,
+      activeStreamingSessionId: null,
 
       createSession: (modelAlias = 'sonnet', projectId = 'default') => {
         const now = Date.now();
@@ -163,6 +167,7 @@ export const useChatStore = create<ChatStoreState & ChatActions>()(
       setHistoryOpen: (open) => set({ historyOpen: open }),
       toggleHistory: () => set({ historyOpen: !get().historyOpen }),
       setChatModalOpen: (open) => set({ chatModalOpen: open }),
+      setActiveStreamingSession: (sessionId) => set({ activeStreamingSessionId: sessionId }),
 
       getCurrentSession: () => {
         const state = get();
