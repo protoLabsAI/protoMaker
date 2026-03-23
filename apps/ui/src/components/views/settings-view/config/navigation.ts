@@ -46,13 +46,9 @@ export interface NavigationGroup {
 // Global settings organized into groups
 export const GLOBAL_NAV_GROUPS: NavigationGroup[] = [
   {
-    label: 'Model & Prompts',
+    label: 'AI and Models',
     items: [
-      { id: 'defaults', label: 'Feature Defaults', icon: FlaskConical },
       { id: 'model-defaults', label: 'Model Defaults', icon: Workflow },
-      { id: 'worktrees', label: 'Worktrees', icon: GitBranch },
-      { id: 'prompts', label: 'Prompt Customization', icon: MessageSquareText },
-      { id: 'api-keys', label: 'API Keys', icon: Key },
       {
         id: 'providers',
         label: 'AI Providers',
@@ -66,6 +62,8 @@ export const GLOBAL_NAV_GROUPS: NavigationGroup[] = [
           { id: 'openai-compatible-provider', label: 'OpenAI-Compatible', icon: Server },
         ],
       },
+      { id: 'api-keys', label: 'API Keys', icon: Key },
+      { id: 'prompts', label: 'Prompt Customization', icon: MessageSquareText },
       { id: 'mcp-servers', label: 'MCP Servers', icon: Server },
     ],
   },
@@ -76,35 +74,35 @@ export const GLOBAL_NAV_GROUPS: NavigationGroup[] = [
       { id: 'terminal', label: 'Terminal', icon: SquareTerminal },
       { id: 'keyboard', label: 'Keyboard Shortcuts', icon: Settings2 },
       { id: 'audio', label: 'Audio', icon: Volume2 },
-      { id: 'event-hooks', label: 'Event Hooks', icon: Webhook },
-      { id: 'integrations', label: 'Integrations', icon: Plug },
     ],
   },
   {
-    label: 'Account & Security',
+    label: 'Pipeline and Automation',
     items: [
-      { id: 'account', label: 'Account', icon: User },
-      { id: 'profile', label: 'User Profile', icon: UserCog },
-      { id: 'security', label: 'Security', icon: Shield },
-    ],
-  },
-  {
-    label: 'System',
-    items: [
-      { id: 'health', label: 'Health', icon: Activity },
+      { id: 'defaults', label: 'Feature Defaults', icon: FlaskConical },
+      { id: 'worktrees', label: 'Worktrees', icon: GitBranch },
       {
         id: 'workflow',
         label: 'Workflow',
         icon: Cog,
         description: 'Per-project pipeline settings',
       },
+      { id: 'automations', label: 'Automations', icon: Zap },
+      { id: 'sensors', label: 'Sensors', icon: Radio },
+      { id: 'event-hooks', label: 'Event Hooks', icon: Webhook },
     ],
   },
   {
-    label: 'Advanced',
+    label: 'Integrations',
+    items: [{ id: 'integrations', label: 'Integrations', icon: Plug }],
+  },
+  {
+    label: 'System',
     items: [
-      { id: 'automations', label: 'Automations', icon: Zap },
-      { id: 'sensors', label: 'Sensors', icon: Radio },
+      { id: 'health', label: 'Health', icon: Activity },
+      { id: 'account', label: 'Account', icon: User },
+      { id: 'profile', label: 'User Profile', icon: UserCog },
+      { id: 'security', label: 'Security', icon: Shield },
       { id: 'developer', label: 'Developer', icon: Code2 },
     ],
   },
