@@ -13,6 +13,7 @@
  * - Health check API for monitoring worktree state
  */
 
+import fs from 'node:fs';
 import path from 'path';
 import { exec, execFile, execSync } from 'child_process';
 import { createLogger } from '@protolabsai/utils';
@@ -611,4 +612,84 @@ export class WorktreeLifecycleService {
       });
     });
   }
+}
+
+/**
+ * Directories that are gitignored but required at runtime for MCP servers
+ * and build tooling. These are symlinked from the main project into worktrees
+ * after creation so that external projects' toolchains work correctly.
+ *
+ * Only top-level directories are symlinked. Nested node_modules (inside
+ * workspace packages) are resolved transitively through the root symlink.
+ */
+const BUILD_ARTIFACT_DIRS = ['node_modules', 'dist', 'build', '.next', '.nuxt', 'out'] as const;
+
+/**
+ * Symlink gitignored build artifacts from the main project into a worktree.
+ *
+ * Git worktrees share the git history but NOT the working tree, so directories
+ * listed in .gitignore (node_modules, dist, build, etc.) are absent in fresh
+ * worktrees. For external projects whose MCP servers or build tools depend on
+ * these artifacts, the agent will fail immediately with exit code 1.
+ *
+ * This function creates directory symlinks for each artifact that:
+ * 1. Exists in the main project (source must be present)
+ * 2. Does NOT already exist in the worktree (no clobbering)
+ *
+ * Symlinks are preferred over copying because they are instant, use no extra
+ * disk space, and always reflect the current state of the main project's
+ * artifacts.
+ *
+ * @param projectPath - Absolute path to the main project root
+ * @param worktreePath - Absolute path to the worktree directory
+ * @returns List of directories that were successfully symlinked
+ */
+export async function symlinkBuildArtifacts(
+  projectPath: string,
+  worktreePath: string
+): Promise<string[]> {
+  const symlinked: string[] = [];
+
+  for (const dir of BUILD_ARTIFACT_DIRS) {
+    const sourcePath = path.join(projectPath, dir);
+    const targetPath = path.join(worktreePath, dir);
+
+    try {
+      // Check if source exists in main project
+      await fs.promises.access(sourcePath);
+    } catch {
+      // Source doesn't exist in main project -- nothing to symlink
+      continue;
+    }
+
+    try {
+      // Check if target already exists in worktree (real dir, symlink, or file)
+      await fs.promises.lstat(targetPath);
+      // Already exists -- skip to avoid clobbering
+      continue;
+    } catch {
+      // Target doesn't exist -- proceed with symlink creation
+    }
+
+    try {
+      // Use 'junction' type on Windows for directory symlinks (no admin required),
+      // 'dir' type on Unix (default for symlink when target is a directory).
+      const symlinkType = process.platform === 'win32' ? 'junction' : 'dir';
+      await fs.promises.symlink(sourcePath, targetPath, symlinkType);
+      symlinked.push(dir);
+    } catch (error) {
+      // Non-fatal: log and continue with remaining directories
+      logger.warn(
+        `Failed to symlink ${dir} from ${projectPath} to ${worktreePath}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  if (symlinked.length > 0) {
+    logger.info(
+      `Symlinked build artifacts into worktree ${path.basename(worktreePath)}: ${symlinked.join(', ')}`
+    );
+  }
+
+  return symlinked;
 }

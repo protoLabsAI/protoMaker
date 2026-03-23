@@ -1,5 +1,16 @@
 # @protolabsai/types
 
+## 0.83.7
+
+### Patch Changes
+
+- ### Bug Fixes
+  - symlink build artifacts into worktrees for external projects (#3064)
+
+  ### Refactors
+  - Fix: pathToClaudeCodeExecutable uses fragile process.cwd() (#3068)
+  - Fix: pathToClaudeCodeExecutable uses fragile process.cwd() (#3066)
+
 ## 0.83.6
 
 ### Patch Changes

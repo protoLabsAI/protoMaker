@@ -20,6 +20,7 @@ import {
   UserCog,
   Zap,
   Radio,
+  GitMerge,
 } from 'lucide-react';
 import {
   AnthropicIcon,
@@ -103,6 +104,12 @@ export const GLOBAL_NAV_GROUPS: NavigationGroup[] = [
       { id: 'account', label: 'Account', icon: User },
       { id: 'profile', label: 'User Profile', icon: UserCog },
       { id: 'security', label: 'Security', icon: Shield },
+      {
+        id: 'git-workflow-defaults',
+        label: 'Git Workflow Defaults',
+        icon: GitMerge,
+        description: 'Global git automation defaults',
+      },
       { id: 'developer', label: 'Developer', icon: Code2 },
     ],
   },

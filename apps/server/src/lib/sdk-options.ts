@@ -17,12 +17,23 @@
 
 import type { Options, HookCallback, PostToolUseHookInput } from '@anthropic-ai/claude-agent-sdk';
 import path from 'path';
+import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { resolveModelString } from '@protolabsai/model-resolver';
 import { createLogger } from '@protolabsai/utils';
 import type { ToolExecutionEntry } from '../services/audit-service.js';
 
 const logger = createLogger('SdkOptions');
+
+/**
+ * Resolved at module load time so it remains stable when CWD shifts during
+ * worktree operations. Using import.meta.url anchors resolution to this file's
+ * location rather than the process working directory.
+ */
+const CLAUDE_CODE_EXECUTABLE = path.resolve(
+  fileURLToPath(import.meta.url),
+  '../../../../../node_modules/@anthropic-ai/claude-agent-sdk/cli.js'
+);
 
 /** Module-level tool execution logger, set via setToolExecutionLogger() from services.ts */
 let _toolExecutionLogger: ((entry: ToolExecutionEntry) => Promise<void>) | null = null;
@@ -456,10 +467,7 @@ function getBaseOptions(): Partial<Options> {
   return {
     permissionMode: 'bypassPermissions',
     allowDangerouslySkipPermissions: true,
-    pathToClaudeCodeExecutable: path.resolve(
-      process.cwd(),
-      'node_modules/@anthropic-ai/claude-agent-sdk/cli.js'
-    ),
+    pathToClaudeCodeExecutable: CLAUDE_CODE_EXECUTABLE,
   };
 }
 
