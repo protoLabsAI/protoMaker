@@ -227,11 +227,7 @@ export class ProjectLifecycleService {
   /**
    * Launch project: start auto-mode
    */
-  async launch(
-    projectPath: string,
-    projectSlug: string,
-    maxConcurrency?: number
-  ): Promise<LifecycleLaunchResult> {
+  async launch(projectPath: string, projectSlug: string): Promise<LifecycleLaunchResult> {
     const project = await this.projectService.getProject(projectPath, projectSlug);
     if (!project) {
       throw new Error(`Project "${projectSlug}" not found`);
@@ -255,7 +251,7 @@ export class ProjectLifecycleService {
     // Start auto-mode
     let autoModeStarted = false;
     try {
-      await this.autoModeService.startAutoLoopForProject(projectPath, null, maxConcurrency);
+      await this.autoModeService.startAutoLoopForProject(projectPath, null);
       autoModeStarted = true;
     } catch (error) {
       logger.warn('Failed to start auto-mode:', error);

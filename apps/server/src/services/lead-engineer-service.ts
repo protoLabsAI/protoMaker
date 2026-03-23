@@ -334,7 +334,7 @@ export class LeadEngineerService {
 
     if (!worldState.autoModeRunning && (worldState.boardCounts['backlog'] || 0) > 0) {
       await this.projectLifecycleService
-        .launch(projectPath, projectSlug, opts?.maxConcurrency)
+        .launch(projectPath, projectSlug)
         .catch((err) => logger.warn(`Failed to start auto-mode for ${projectSlug}:`, err));
     }
 

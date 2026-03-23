@@ -560,8 +560,6 @@ export interface GlobalSettings {
       projectPath: string;
       /** Branch name for worktree scoping (null = main worktree) */
       branchName: string | null;
-      /** Maximum concurrent features for this project (optional, falls back to global maxConcurrency) */
-      maxConcurrency?: number;
     }>;
   };
 
