@@ -15,7 +15,6 @@ export interface AvaToolGroups {
   autoMode: boolean;
   projectMgmt: boolean;
   orchestration: boolean;
-  agentDelegation: boolean;
   notes: boolean;
   metrics: boolean;
   prWorkflow: boolean;

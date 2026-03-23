@@ -51,18 +51,12 @@ const SETTINGS_FIELDS_TO_SYNC = [
   'maxConcurrency',
   'systemMaxConcurrency',
   'autoModeByWorktree', // Per-worktree auto mode settings (only maxConcurrency is persisted)
-  'defaultSkipTests',
   'enableDependencyBlocking',
   'skipVerificationInAutoMode',
   'useWorktrees',
-  'defaultPlanningMode',
-  'defaultRequirePlanApproval',
-  'defaultFeatureModel',
   'muteDoneSound',
   'serverLogLevel',
   'enableRequestLogging',
-  'enhancementModel',
-  'validationModel',
   'phaseModels',
   'enabledCursorModels',
   'cursorDefaultModel',
@@ -77,8 +71,6 @@ const SETTINGS_FIELDS_TO_SYNC = [
   'defaultTerminalId',
   'promptCustomization',
   'eventHooks',
-  'claudeApiProfiles',
-  'activeClaudeApiProfileId',
   'projects',
   'trashedProjects',
   'currentProjectId', // ID of currently open project
@@ -131,8 +123,6 @@ function getSettingsFieldValue(
 
   // AI models store fields
   if (
-    field === 'enhancementModel' ||
-    field === 'validationModel' ||
     field === 'phaseModels' ||
     field === 'enabledCursorModels' ||
     field === 'cursorDefaultModel' ||
@@ -140,9 +130,7 @@ function getSettingsFieldValue(
     field === 'opencodeDefaultModel' ||
     field === 'enabledDynamicModelIds' ||
     field === 'disabledProviders' ||
-    field === 'autoLoadClaudeMd' ||
-    field === 'claudeApiProfiles' ||
-    field === 'activeClaudeApiProfileId'
+    field === 'autoLoadClaudeMd'
   ) {
     const aiState = useAIModelsStore.getState();
     return aiState[field as keyof typeof aiState];
@@ -207,8 +195,6 @@ function hasSettingsFieldChanged(
 
   // AI models store fields
   if (
-    field === 'enhancementModel' ||
-    field === 'validationModel' ||
     field === 'phaseModels' ||
     field === 'enabledCursorModels' ||
     field === 'cursorDefaultModel' ||
@@ -216,9 +202,7 @@ function hasSettingsFieldChanged(
     field === 'opencodeDefaultModel' ||
     field === 'enabledDynamicModelIds' ||
     field === 'disabledProviders' ||
-    field === 'autoLoadClaudeMd' ||
-    field === 'claudeApiProfiles' ||
-    field === 'activeClaudeApiProfileId'
+    field === 'autoLoadClaudeMd'
   ) {
     const key = field as keyof typeof newSnap.aiModels;
     return newSnap.aiModels[key] !== prevSnap.aiModels[key];
@@ -754,8 +738,6 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
 
     // Hydrate AI models store
     useAIModelsStore.setState({
-      enhancementModel: serverSettings.enhancementModel,
-      validationModel: serverSettings.validationModel,
       phaseModels: migratedPhaseModels ?? serverSettings.phaseModels,
       enabledCursorModels: allCursorModels, // Always use ALL cursor models
       cursorDefaultModel: sanitizedCursorDefault,
@@ -764,8 +746,6 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
       enabledDynamicModelIds: sanitizedDynamicModelIds,
       disabledProviders: serverSettings.disabledProviders ?? [],
       autoLoadClaudeMd: serverSettings.autoLoadClaudeMd ?? false,
-      claudeApiProfiles: serverSettings.claudeApiProfiles ?? [],
-      activeClaudeApiProfileId: serverSettings.activeClaudeApiProfileId ?? null,
     });
 
     // Hydrate worktree store
@@ -798,15 +778,9 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
     // Hydrate app store (only fields that remain in app-store)
     useAppStore.setState({
       sidebarOpen: serverSettings.sidebarOpen,
-      defaultSkipTests: serverSettings.defaultSkipTests,
       enableDependencyBlocking: serverSettings.enableDependencyBlocking,
       skipVerificationInAutoMode: serverSettings.skipVerificationInAutoMode,
       systemMaxConcurrency: serverSettings.systemMaxConcurrency ?? 10,
-      defaultPlanningMode: serverSettings.defaultPlanningMode,
-      defaultRequirePlanApproval: serverSettings.defaultRequirePlanApproval,
-      defaultFeatureModel: serverSettings.defaultFeatureModel
-        ? migratePhaseModelEntry(serverSettings.defaultFeatureModel)
-        : { model: 'claude-opus' },
       muteDoneSound: serverSettings.muteDoneSound,
       serverLogLevel: serverSettings.serverLogLevel ?? 'info',
       enableRequestLogging: serverSettings.enableRequestLogging ?? true,

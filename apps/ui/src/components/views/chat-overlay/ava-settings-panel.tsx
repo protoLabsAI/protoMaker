@@ -30,6 +30,7 @@ import {
   SelectItem,
 } from '@protolabsai/ui/atoms';
 import type { AvaConfig, AvaToolGroups } from '@/lib/clients/ava-client';
+import type { MCPServerConfig } from '@protolabsai/types';
 
 export interface AvaSettingsPanelProps {
   /** Absolute path of the current project */
@@ -52,11 +53,6 @@ const TOOL_GROUP_ENTRIES: Array<{
     key: 'orchestration',
     label: 'Orchestration',
     description: 'Manage feature dependencies and order',
-  },
-  {
-    key: 'agentDelegation',
-    label: 'Agent Delegation',
-    description: 'Delegate tasks to specialized agents',
   },
   { key: 'notes', label: 'Notes', description: 'Read and write project notes' },
   { key: 'metrics', label: 'Metrics', description: 'View project and capacity metrics' },
@@ -102,6 +98,19 @@ export function AvaSettingsPanel({ projectPath }: AvaSettingsPanelProps) {
     },
     enabled: !!projectPath,
     staleTime: 10_000,
+  });
+
+  // ── Query: load global settings for unified MCP server list ───────────────
+
+  const { data: globalSettings } = useQuery({
+    queryKey: ['global-settings'],
+    queryFn: async () => {
+      const api = getHttpApiClient();
+      const res = await api.settings.getGlobal();
+      if (!res.success || !res.settings) throw new Error(res.error ?? 'Failed to load settings');
+      return res.settings;
+    },
+    staleTime: 30_000,
   });
 
   // Sync server data to local textarea state
@@ -153,15 +162,31 @@ export function AvaSettingsPanel({ projectPath }: AvaSettingsPanelProps) {
     [saveMutation]
   );
 
-  const handleMcpServerToggle = useCallback(
-    (serverId: string, enabled: boolean) => {
-      if (!data) return;
-      const updated = (data.mcpServers ?? []).map((s) =>
-        s.id === serverId ? { ...s, enabled } : s
-      );
-      saveMutation.mutate({ mcpServers: updated });
+  // ── Mutation: update enableForAva on a global MCP server ─────────────────
+
+  const mcpAvaMutation = useMutation({
+    mutationFn: async ({ serverId, enableForAva }: { serverId: string; enableForAva: boolean }) => {
+      const api = getHttpApiClient();
+      const currentServers: MCPServerConfig[] = globalSettings?.mcpServers ?? [];
+      const updated = currentServers.map((s) => (s.id === serverId ? { ...s, enableForAva } : s));
+      const res = await api.settings.updateGlobal({ mcpServers: updated });
+      if (!res.success) throw new Error(res.error ?? 'Failed to update MCP server');
+      return res.settings!;
     },
-    [saveMutation, data]
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['global-settings'], updated);
+      toast.success('Settings updated');
+    },
+    onError: (err) => {
+      toast.error(`Failed to save: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    },
+  });
+
+  const handleMcpServerToggle = useCallback(
+    (serverId: string, enableForAva: boolean) => {
+      mcpAvaMutation.mutate({ serverId, enableForAva });
+    },
+    [mcpAvaMutation]
   );
 
   const handlePromptChange = useCallback(
@@ -373,8 +398,8 @@ export function AvaSettingsPanel({ projectPath }: AvaSettingsPanelProps) {
         </div>
       </div>
 
-      {/* MCP Servers — only shown when servers are configured */}
-      {(data.mcpServers ?? []).length > 0 && (
+      {/* MCP Servers — unified list from global settings, filtered by enableForAva */}
+      {(globalSettings?.mcpServers ?? []).length > 0 && (
         <>
           <hr className="border-border" />
           <Collapsible>
@@ -382,21 +407,21 @@ export function AvaSettingsPanel({ projectPath }: AvaSettingsPanelProps) {
               <ChevronRight className="size-3 text-muted-foreground transition-transform group-data-[state=open]:rotate-90" />
               MCP Servers
               <span className="ml-auto text-[10px] font-normal text-muted-foreground">
-                {(data.mcpServers ?? []).filter((s) => s.enabled !== false).length}/
-                {(data.mcpServers ?? []).length}
+                {(globalSettings?.mcpServers ?? []).filter((s) => s.enableForAva).length}/
+                {(globalSettings?.mcpServers ?? []).length}
               </span>
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="grid grid-cols-2 gap-1.5 pt-2">
-                {(data.mcpServers ?? []).map((server) => (
+                {(globalSettings?.mcpServers ?? []).map((server) => (
                   <button
                     key={server.id}
                     type="button"
-                    onClick={() => handleMcpServerToggle(server.id, server.enabled === false)}
+                    onClick={() => handleMcpServerToggle(server.id, !server.enableForAva)}
                     title={server.description ?? server.name}
                     className={cn(
-                      'flex items-center gap-1.5 rounded-md border px-2 py-1.5 text-[11px] transition-colors',
-                      server.enabled !== false
+                      'relative flex items-center gap-1.5 rounded-md border px-2 py-1.5 text-[11px] transition-colors',
+                      server.enableForAva
                         ? 'border-primary/30 bg-primary/10 text-foreground'
                         : 'border-border bg-muted/30 text-muted-foreground'
                     )}
@@ -404,10 +429,18 @@ export function AvaSettingsPanel({ projectPath }: AvaSettingsPanelProps) {
                     <span
                       className={cn(
                         'size-1.5 shrink-0 rounded-full',
-                        server.enabled !== false ? 'bg-green-500' : 'bg-muted-foreground/30'
+                        server.enableForAva ? 'bg-green-500' : 'bg-muted-foreground/30'
                       )}
                     />
-                    {server.name}
+                    <span className="truncate">{server.name}</span>
+                    {server.enabled !== false && (
+                      <span
+                        title="Also shared with agents globally"
+                        className="ml-auto shrink-0 rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[9px] font-medium text-blue-600 dark:text-blue-400"
+                      >
+                        Shared
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
