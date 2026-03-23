@@ -41,6 +41,7 @@ import { ProfileSection } from './settings-view/profile';
 import { WorkflowSettingsPanel } from './settings-view/workflow/workflow-settings-panel';
 import { AutomationsSection } from './settings-view/automations/automations-section';
 import { SensorsSection } from './settings-view/sensors/sensors-section';
+import { GitWorkflowDefaultsSection } from './settings-view/sections/git-workflow-defaults-section';
 import { ImportExportDialog } from './settings-view/components/import-export-dialog';
 import { SettingsScopeToggle } from './settings-view/components/settings-scope-toggle';
 import { GLOBAL_NAV_GROUPS } from './settings-view/config/navigation';
@@ -215,6 +216,8 @@ export function SettingsView() {
         return <AutomationsSection />;
       case 'sensors':
         return <SensorsSection />;
+      case 'git-workflow-defaults':
+        return <GitWorkflowDefaultsSection />;
       case 'developer':
         return <DeveloperSection />;
       default:

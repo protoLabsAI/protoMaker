@@ -29,7 +29,8 @@ export type SettingsViewId =
   | 'danger'
   | 'workflow'
   | 'automations'
-  | 'sensors';
+  | 'sensors'
+  | 'git-workflow-defaults';
 
 interface UseSettingsViewOptions {
   initialView?: SettingsViewId;
