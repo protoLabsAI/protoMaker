@@ -3065,7 +3065,7 @@ Format your response as a structured markdown document.`;
           }
           if (envFiles.length > 0) {
             logger.info(
-              `Copied ${envFiles.length} .env file(s) to worktree: ${path.basename(worktreePath)}`,
+              `Copied ${envFiles.length} .env file(s) to worktree: ${path.basename(worktreePath)}`
             );
           }
         }
