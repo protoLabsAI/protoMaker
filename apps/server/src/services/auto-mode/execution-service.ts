@@ -89,6 +89,7 @@ import { getAgentManifestService } from '../agent-manifest-service.js';
 import { TypedEventBus } from './typed-event-bus.js';
 import { PostExecutionMiddleware } from './post-execution-middleware.js';
 import { TrajectoryQueryService } from '../trajectory-query-service.js';
+import { symlinkBuildArtifacts } from '../worktree-lifecycle-service.js';
 import type {
   RunningFeature,
   ParsedTask,
@@ -501,6 +502,17 @@ export class ExecutionService {
           projectSlug: feature?.projectSlug,
         });
         return;
+      }
+
+      // Ensure build artifacts (node_modules, dist, etc.) are present in the worktree.
+      // New worktrees get symlinks during creation, but existing worktrees from earlier
+      // sessions may be missing them. This is a no-op if symlinks already exist.
+      if (worktreePath) {
+        try {
+          await symlinkBuildArtifacts(projectPath, worktreePath);
+        } catch (err) {
+          logger.debug('Failed to symlink build artifacts into worktree (non-fatal):', err);
+        }
       }
 
       // Ensure workDir is always an absolute path for cross-platform compatibility
