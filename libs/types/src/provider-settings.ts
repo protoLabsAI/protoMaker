@@ -487,6 +487,8 @@ export interface MCPServerConfig {
   headers?: Record<string, string>;
   /** Whether this server is enabled */
   enabled?: boolean;
+  /** Whether this server is available to Ava (chat assistant). When true, Ava can use this server's tools. */
+  enableForAva?: boolean;
   /** Tools discovered from this server with their enabled states */
   tools?: MCPToolInfo[];
   /** Timestamp when tools were last fetched */
