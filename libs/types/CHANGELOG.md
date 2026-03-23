@@ -1,5 +1,12 @@
 # @protolabsai/types
 
+## 0.84.0
+
+### Minor Changes
+
+- ### Features
+  - add Quinn QA engineer to plugin commands
+
 ## 0.83.7
 
 ### Patch Changes

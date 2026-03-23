@@ -1,5 +1,21 @@
 # @protolabsai/flows
 
+## 0.84.0
+
+### Minor Changes
+
+- ### Features
+  - add Quinn QA engineer to plugin commands
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.84.0
+  - @protolabsai/utils@0.84.0
+  - @protolabsai/prompts@0.84.0
+  - @protolabsai/model-resolver@0.84.0
+  - @protolabsai/observability@0.84.0
+
 ## 0.83.7
 
 ### Patch Changes

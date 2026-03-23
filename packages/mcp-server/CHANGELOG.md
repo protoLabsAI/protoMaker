@@ -1,5 +1,17 @@
 # @protolabsai/mcp-server
 
+## 0.84.0
+
+### Minor Changes
+
+- ### Features
+  - add Quinn QA engineer to plugin commands
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/tools@0.84.0
+
 ## 0.83.7
 
 ### Patch Changes

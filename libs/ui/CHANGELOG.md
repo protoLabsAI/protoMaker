@@ -1,5 +1,18 @@
 # @protolabsai/ui
 
+## 0.84.0
+
+### Minor Changes
+
+- ### Features
+  - add Quinn QA engineer to plugin commands
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.84.0
+  - @protolabsai/utils@0.84.0
+
 ## 0.83.7
 
 ### Patch Changes
