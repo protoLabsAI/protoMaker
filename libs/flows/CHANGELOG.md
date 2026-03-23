@@ -1,5 +1,19 @@
 # @protolabsai/flows
 
+## 0.84.1
+
+### Patch Changes
+
+- ### Bug Fixes
+  - remove duplicate purgeStaleBuiltIns call that breaks automation test
+  - prevent infinite zombie recovery features in failure-to-bug pipeline
+- Updated dependencies
+  - @protolabsai/types@0.84.1
+  - @protolabsai/utils@0.84.1
+  - @protolabsai/prompts@0.84.1
+  - @protolabsai/model-resolver@0.84.1
+  - @protolabsai/observability@0.84.1
+
 ## 0.84.0
 
 ### Minor Changes
