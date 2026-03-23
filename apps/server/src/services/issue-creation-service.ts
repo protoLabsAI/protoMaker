@@ -271,6 +271,25 @@ export class IssueCreationService {
     }
   ): Promise<IssueCreationResult> {
     try {
+      // Guard: prevent recursive recovery — never create a bug from a bug.
+      // Features with [Auto] prefix are themselves recovery bugs; re-escalating
+      // them creates infinite zombie chains that waste agent budget.
+      if (feature.title?.startsWith('[Auto]')) {
+        logger.info(
+          `Skipping bug creation for ${feature.id} — already a recovery feature. Max recovery depth reached.`
+        );
+        return { success: false, error: 'Max recovery depth reached' };
+      }
+
+      // Guard: skip if the feature's PR already merged — the work landed,
+      // filing a bug would just confirm what's already on main.
+      if (feature.prMergedAt) {
+        logger.info(
+          `Skipping bug creation for ${feature.id} — PR already merged at ${feature.prMergedAt}`
+        );
+        return { success: false, error: 'PR already merged' };
+      }
+
       const title = this.buildIssueTitle(feature, context.trigger);
       const body = this.buildIssueBody(feature, context);
 

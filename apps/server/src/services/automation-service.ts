@@ -621,6 +621,10 @@ export class AutomationService {
       enabled: true,
     });
 
+    // Note: purgeStaleBuiltIns() runs BEFORE seeding (top of this method)
+    // to avoid accidentally purging freshly-seeded records whose flows
+    // haven't registered yet in the test environment.
+
     logger.info('Built-in automation records seeded');
   }
 
