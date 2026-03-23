@@ -584,6 +584,13 @@ export interface WorkflowSettings {
    * @see CIReactionSettings
    */
   ciReactionSettings?: CIReactionSettings;
+  /**
+   * When true, copies .env* files from the project root into newly created worktrees.
+   * Worktrees do not inherit .env files (gitignored) by default, which can break
+   * builds for projects that require environment variables (e.g. Next.js PAYLOAD_SECRET).
+   * @default true
+   */
+  copyEnvFiles?: boolean;
 }
 
 /** Default workflow settings */
@@ -635,4 +642,5 @@ export const DEFAULT_WORKFLOW_SETTINGS: WorkflowSettings = {
     maxReviewRemediationCycles: 2,
     maxTotalRemediationCycles: 4,
   },
+  copyEnvFiles: true,
 };
