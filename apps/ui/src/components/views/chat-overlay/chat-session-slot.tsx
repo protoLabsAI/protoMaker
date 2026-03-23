@@ -38,7 +38,6 @@ export function ChatSessionSlot({
     setSessionStreaming,
     historyOpen,
     setHistoryOpen,
-    toggleHistory,
     switchSession,
     createSession,
     deleteSession,
@@ -83,7 +82,6 @@ export function ChatSessionSlot({
       setMessages(session.messages);
       seededRef.current = true;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Activate on mount, deactivate on unmount
