@@ -74,14 +74,32 @@ export function ChatTabBar({ projectId, modelAlias, className }: ChatTabBarProps
     return session?.projectId === projectId;
   });
 
+  const activateSession = useChatStore((s) => s.activateSession);
+  const deactivateSession = useChatStore((s) => s.deactivateSession);
+
   const handleNew = () => {
-    createSession(modelAlias ?? 'sonnet', projectId);
+    const session = createSession(modelAlias ?? 'sonnet', projectId);
+    activateSession(session.id);
   };
 
   const handleClose = (e: React.MouseEvent, id: string) => {
-    // Prevent the click from also triggering the tab switch
     e.stopPropagation();
-    deleteSession(id);
+    // Prevent closing the last tab — always keep at least one
+    if (visibleIds.length <= 1) return;
+    // Confirm before closing to prevent accidental loss
+    const session = sessions.find((s) => s.id === id);
+    const title = session?.title ?? 'New chat';
+    if (!window.confirm(`Close "${title}"? The conversation will be removed from active tabs.`)) {
+      return;
+    }
+    deactivateSession(id);
+    // If closing the current tab, switch to the nearest remaining
+    if (id === currentSessionId) {
+      const remaining = visibleIds.filter((sid) => sid !== id);
+      if (remaining.length > 0) {
+        switchSession(remaining[0]);
+      }
+    }
   };
 
   return (
@@ -101,7 +119,10 @@ export function ChatTabBar({ projectId, modelAlias, className }: ChatTabBarProps
         return (
           <button
             key={sessionId}
-            onClick={() => switchSession(sessionId)}
+            onClick={() => {
+              switchSession(sessionId);
+              activateSession(sessionId);
+            }}
             className={cn(
               'group flex min-w-0 max-w-[160px] shrink-0 items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors',
               isActive
