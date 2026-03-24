@@ -1,20 +1,10 @@
 /**
- * ChatOverlayContent — Shared chat content for overlay and modal.
+ * ChatOverlayContent — Ava chat panel content.
  *
- * Contains the header, tab bar, and tab content areas.
- * Tab 1: Ask Ava — human<>Ava chat (unchanged behavior)
- * Tab 2: Ava Channel — private Ava-to-Ava coordination message stream
+ * Renders the header, session tab bar, and chat session pool.
+ * Each session tab runs an independent useChat hook with its own SSE stream.
  *
- * Used by both the Electron overlay view and the web fallback modal.
- *
- * Reads currentProject from useAppStore and passes projectId/projectPath
- * to ChatSessionPool for project-scoped session management.
- *
- * Multi-session support: ChatSessionPool manages active session slots;
- * ChatTabBar appears when more than one session is active.
- *
- * Input state is managed via PromptInputProvider so ChatInput does not
- * require value/onChange props to be threaded through the tree.
+ * Used by the web fallback modal (ChatModal).
  */
 
 import { useState, useCallback, useEffect } from 'react';
@@ -23,14 +13,8 @@ import { Button } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { useChatStore } from '@/store/chat-store';
 import { useAppStore } from '@/store/app-store';
-import { AvaChannelTab } from './ava-channel-tab';
-import { ProjectsTab } from './projects-tab';
 import { ChatSessionPool } from './chat-session-pool';
 import { ChatTabBar } from './chat-tab-bar';
-import {
-  useAvaChannelStore,
-  type AvaChannelTab as AvaChannelTabType,
-} from '@/store/ava-channel-store';
 
 export interface ChatOverlayContentProps {
   /** Called when the user wants to close/hide the overlay or modal */
@@ -60,25 +44,6 @@ export function ChatOverlayContent({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
-  const [queuePaused, setQueuePaused] = useState(false);
-
-  // Tab state — persisted in ava-channel-store so keyboard shortcut restores last active tab
-  const lastActiveTab = useAvaChannelStore((s) => s.lastActiveTab);
-  const setLastActiveTab = useAvaChannelStore((s) => s.setLastActiveTab);
-  const [activeTab, setActiveTab] = useState<AvaChannelTabType>(lastActiveTab);
-
-  // Sync local tab state when the store is updated externally (e.g. PM button sets 'projects')
-  useEffect(() => {
-    setActiveTab(lastActiveTab);
-  }, [lastActiveTab]);
-
-  const handleTabChange = useCallback(
-    (tab: AvaChannelTabType) => {
-      setActiveTab(tab);
-      setLastActiveTab(tab);
-    },
-    [setLastActiveTab]
-  );
 
   // Bootstrap: on mount, ensure currentSessionId is set and in activeSessions so
   // ChatSessionPool has a slot to render. activeSessions is runtime-only (not persisted).
@@ -87,32 +52,26 @@ export function ChatOverlayContent({
     const { currentSessionId: sid, sessions: allSessions } = store;
 
     if (sid) {
-      // Existing current session: add to activeSessions so ChatSessionPool renders it
       store.activateSession(sid);
     } else if (allSessions.length > 0) {
-      // No current session but have history: switch to most recent
       const firstId = allSessions[0].id;
       store.switchSession(firstId);
       store.activateSession(firstId);
     } else {
-      // Fresh start: create a new session
       const session = store.createSession('sonnet', currentProject?.id ?? 'default');
       store.activateSession(session.id);
     }
   }, []); // Intentionally empty — bootstrap runs once on mount
 
   // Recovery: if all sessions are gone (user closed all tabs), auto-create one.
-  // Also handles the case where currentSessionId is unset but activeSessions exist.
   useEffect(() => {
     if (activeSessions.length === 0) {
-      // No active sessions — create a fresh one so the UI isn't blank
       const store = useChatStore.getState();
       const session = store.createSession('sonnet', currentProject?.id ?? 'default');
       store.activateSession(session.id);
       return;
     }
     if (currentSessionId === null || currentSessionId === undefined) {
-      // Active sessions exist but none is current — select the first
       useChatStore.getState().switchSession(activeSessions[0]);
     }
   }, [activeSessions, currentSessionId, currentProject]);
@@ -124,12 +83,9 @@ export function ChatOverlayContent({
 
   const handleExpand = useCallback(() => {
     setExpanded((v) => !v);
-    // Overlay resize was Electron-only — no-op in web mode
   }, []);
 
   // Escape key: close history panel if open, otherwise hide the overlay.
-  // Only active when the panel is visible to prevent interference with other
-  // keyboard handlers when the chat is running in the background.
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -159,41 +115,37 @@ export function ChatOverlayContent({
           <span className="shrink-0 text-sm font-medium text-foreground">Ava</span>
         </div>
         <div className={cn('flex items-center gap-1', !isModal && 'pointer-events-auto')}>
-          {activeTab === 'ask-ava' && (
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7"
-                onClick={toggleHistory}
-                title="Conversation history"
-                aria-label="Toggle conversation history"
-              >
-                <History className="size-3.5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7"
-                onClick={() => setQueueOpen((v) => !v)}
-                title="Feature queue"
-                aria-label="Toggle feature queue"
-                data-testid="queue-panel-toggle"
-              >
-                <ListOrdered className="size-3.5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7"
-                onClick={handleNewChat}
-                title="New chat"
-                aria-label="New chat"
-              >
-                <SquarePen className="size-3.5" />
-              </Button>
-            </>
-          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={toggleHistory}
+            title="Conversation history"
+            aria-label="Toggle conversation history"
+          >
+            <History className="size-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={() => setQueueOpen((v) => !v)}
+            title="Feature queue"
+            aria-label="Toggle feature queue"
+            data-testid="queue-panel-toggle"
+          >
+            <ListOrdered className="size-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={handleNewChat}
+            title="New chat"
+            aria-label="New chat"
+          >
+            <SquarePen className="size-3.5" />
+          </Button>
           {!isModal && (
             <Button
               variant="ghost"
@@ -229,65 +181,11 @@ export function ChatOverlayContent({
         </div>
       </div>
 
-      {/* Tab bar */}
-      <div className="flex items-center border-b border-border px-2" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          className={cn(
-            'px-3 py-1.5 text-xs font-medium transition-colors border-b-2 -mb-px',
-            activeTab === 'ask-ava'
-              ? 'border-primary text-foreground'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          )}
-          onClick={() => handleTabChange('ask-ava')}
-          aria-selected={activeTab === 'ask-ava'}
-        >
-          Ask Ava
-        </button>
-        <button
-          type="button"
-          role="tab"
-          className={cn(
-            'px-3 py-1.5 text-xs font-medium transition-colors border-b-2 -mb-px',
-            activeTab === 'projects'
-              ? 'border-primary text-foreground'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          )}
-          onClick={() => handleTabChange('projects')}
-          aria-selected={activeTab === 'projects'}
-        >
-          Projects
-        </button>
-        <button
-          type="button"
-          role="tab"
-          className={cn(
-            'px-3 py-1.5 text-xs font-medium transition-colors border-b-2 -mb-px',
-            activeTab === 'ava-channel'
-              ? 'border-primary text-foreground'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          )}
-          onClick={() => handleTabChange('ava-channel')}
-          aria-selected={activeTab === 'ava-channel'}
-        >
-          #backchannel
-        </button>
-      </div>
+      {/* Session tab bar — always visible */}
+      <ChatTabBar projectId={currentProject?.id} />
 
-      {/* Tab content */}
-      {activeTab === 'projects' ? (
-        <ProjectsTab />
-      ) : activeTab === 'ask-ava' ? (
-        <div className="flex min-h-0 flex-1 flex-col">
-          {/* Multi-session tab bar — only shown when more than one session is active */}
-          {activeSessions.length > 1 && <ChatTabBar projectId={currentProject?.id} />}
-          {/* Session pool — renders one ChatSessionSlot per active session */}
-          <ChatSessionPool projectPath={currentProject?.path} projectId={currentProject?.id} />
-        </div>
-      ) : (
-        <AvaChannelTab />
-      )}
+      {/* Session pool — renders one ChatSessionSlot per active session */}
+      <ChatSessionPool projectPath={currentProject?.path} projectId={currentProject?.id} />
     </div>
   );
 }
