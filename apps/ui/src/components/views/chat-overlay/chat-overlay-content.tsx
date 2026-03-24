@@ -99,7 +99,6 @@ export function ChatOverlayContent({
       const session = store.createSession('sonnet', currentProject?.id ?? 'default');
       store.activateSession(session.id);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Intentionally empty — bootstrap runs once on mount
 
   // Auto-activate: if activeSessions gains members but currentSessionId is not set,
