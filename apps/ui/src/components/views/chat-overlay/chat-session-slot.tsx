@@ -139,14 +139,16 @@ export function ChatSessionSlot({
   }, [stop]);
 
   const handleNewChat = useCallback(() => {
-    createSession(modelAlias, projectId);
-  }, [createSession, modelAlias, projectId]);
+    const session = createSession(modelAlias, projectId);
+    activateSession(session.id);
+  }, [createSession, activateSession, modelAlias, projectId]);
 
   const handleSelectSession = useCallback(
     (id: string) => {
       switchSession(id);
+      activateSession(id);
     },
-    [switchSession]
+    [switchSession, activateSession]
   );
 
   const handleDeleteSession = useCallback(
