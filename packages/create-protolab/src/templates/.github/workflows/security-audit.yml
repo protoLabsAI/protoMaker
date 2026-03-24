@@ -23,5 +23,8 @@ jobs:
           cache: '{{packageManager}}'
 
 {{packageManagerSetup}}
+      - name: Clean node_modules if corrupted
+        run: if [ -e node_modules ] && [ ! -d node_modules ]; then rm -f node_modules; fi
+
       - name: Run security audit
         run: {{auditCommand}}
