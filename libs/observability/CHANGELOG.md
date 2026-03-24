@@ -1,5 +1,23 @@
 # @protolabsai/observability
 
+## 0.89.0
+
+### Minor Changes
+
+- ### Features
+  - inline editing for project fields in ActiveProjectView
+  - add Ava desktop wrapper (Tauri v2)
+
+  ### Bug Fixes
+  - register global shortcut plugin once with handler
+  - remove global-shortcut plugin config (configured in Rust)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.89.0
+  - @protolabsai/utils@0.89.0
+
 ## 0.88.0
 
 ### Minor Changes
