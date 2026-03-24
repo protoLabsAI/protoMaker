@@ -134,6 +134,11 @@ export const featureTools: Tool[] = [
           description:
             'Category for organizing this feature on the board (optional, defaults to "Uncategorized"). Examples: "infrastructure", "frontend", "api", "bug-fix".',
         },
+        projectSlug: {
+          type: 'string',
+          description:
+            'Optional project slug to scope this feature to a specific project. Features with a projectSlug appear in project-filtered views (e.g., get_sitrep with projectSlug). Leave unset for standalone features.',
+        },
       },
       required: ['projectPath', 'title', 'description'],
     },

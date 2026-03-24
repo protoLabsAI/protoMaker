@@ -59,19 +59,14 @@ export interface AvaConfig {
 /**
  * Default configuration used when no per-project config file exists.
  *
- * Enabled by default (8 tool groups): briefing, health, notes, discord,
- * metrics, settings, delegation, boardRead.
+ * All tool groups enabled by default so Ava has full operational authority
+ * from the chat panel — equivalent to the MCP plugin.
  *
- * Disabled by default (project-tactical): boardWrite, agentControl, autoMode,
- * prWorkflow, promotion, contextFiles, orchestration, projectMgmt,
- * agentDelegation, projects.
- *
- * Any group can be re-enabled via .automaker/ava-config.json.
+ * Any group can be disabled via .automaker/ava-config.json.
  */
 export const DEFAULT_AVA_CONFIG: AvaConfig = {
   model: 'sonnet',
   toolGroups: {
-    // ── Always-on: oversight & communication ──────────────────────────────
     boardRead: true,
     briefing: true,
     health: true,
@@ -80,17 +75,16 @@ export const DEFAULT_AVA_CONFIG: AvaConfig = {
     metrics: true,
     settings: true,
     delegation: true,
-    // ── Off by default: project-tactical (re-enable via ava-config.json) ──
-    boardWrite: false,
-    agentControl: false,
-    autoMode: false,
-    prWorkflow: false,
-    promotion: false,
-    contextFiles: false,
-    orchestration: false,
-    projectMgmt: false,
-    agentDelegation: false,
-    projects: false,
+    boardWrite: true,
+    agentControl: true,
+    autoMode: true,
+    prWorkflow: true,
+    promotion: true,
+    contextFiles: true,
+    orchestration: true,
+    projectMgmt: true,
+    agentDelegation: true,
+    projects: true,
     scheduling: true,
     memory: true,
   },

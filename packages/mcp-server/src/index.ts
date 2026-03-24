@@ -302,6 +302,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       if (args.priority !== undefined) featureData.priority = args.priority;
       if (args.isFoundation !== undefined) featureData.isFoundation = args.isFoundation;
       if (args.category) featureData.category = args.category;
+      if (args.projectSlug) featureData.projectSlug = args.projectSlug;
       return apiCall('/features/create', {
         projectPath: args.projectPath,
         feature: featureData,

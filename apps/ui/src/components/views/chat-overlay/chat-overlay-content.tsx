@@ -1,39 +1,20 @@
 /**
- * ChatOverlayContent — Shared chat content for overlay and modal.
+ * ChatOverlayContent — Ava chat panel content.
  *
- * Contains the header, tab bar, and tab content areas.
- * Tab 1: Ask Ava — human<>Ava chat (unchanged behavior)
- * Tab 2: Ava Channel — private Ava-to-Ava coordination message stream
+ * Renders the header, session tab bar, and chat session pool.
+ * Each session tab runs an independent useChat hook with its own SSE stream.
  *
- * Used by both the Electron overlay view and the web fallback modal.
- *
- * Reads currentProject from useAppStore and passes projectId/projectPath
- * to useChatSession for project-scoped session management.
- *
- * Input state is managed via PromptInputProvider so ChatInput does not
- * require value/onChange props to be threaded through the tree.
+ * Used by the web fallback modal (ChatModal).
  */
 
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import type { UIMessage } from 'ai';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { History, X, Settings, ChevronUp, ChevronDown, SquarePen, ListOrdered } from 'lucide-react';
-import { type BranchInfo } from '@protolabsai/ui/ai';
 import { Button } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
-import { useChatSession } from '@/hooks/use-chat-session';
+import { useChatStore } from '@/store/chat-store';
 import { useAppStore } from '@/store/app-store';
-import { useContextualSuggestions } from '@/hooks/use-contextual-suggestions';
-import { useToolProgress } from '@/hooks/use-tool-progress';
-import { AskAvaTab } from './ask-ava-tab';
-import { AvaChannelTab } from './ava-channel-tab';
-import { ProjectsTab } from './projects-tab';
-import {
-  useAvaChannelStore,
-  type AvaChannelTab as AvaChannelTabType,
-} from '@/store/ava-channel-store';
-
-const OVERLAY_HEIGHT_DEFAULT = 600;
-const OVERLAY_HEIGHT_EXPANDED = 900;
+import { ChatSessionPool } from './chat-session-pool';
+import { ChatTabBar } from './chat-tab-bar';
 
 export interface ChatOverlayContentProps {
   /** Called when the user wants to close/hide the overlay or modal */
@@ -50,275 +31,67 @@ export function ChatOverlayContent({
   isOpen = true,
 }: ChatOverlayContentProps) {
   const currentProject = useAppStore((s) => s.currentProject);
-  const features = useAppStore((s) => s.features);
 
-  const {
-    messages,
-    sendMessage,
-    stop,
-    isStreaming,
-    error,
-    sessions,
-    currentSessionId,
-    modelAlias,
-    handleNewChat,
-    handleSwitchSession,
-    handleDeleteSession,
-    handleModelChange,
-    effortLevel,
-    handleEffortChange,
-    approveToolAction,
-    rejectToolAction,
-    pendingSubagentApprovals,
-    approveSubagentTool,
-    denySubagentTool,
-    historyOpen,
-    toggleHistory,
-    setHistoryOpen,
-  } = useChatSession({
-    defaultModel: 'sonnet',
-    projectId: currentProject?.id,
-    projectPath: currentProject?.path,
-  });
+  // Chat store — multi-session state
+  const activeSessions = useChatStore((s) => s.activeSessions);
+  const currentSessionId = useChatStore((s) => s.currentSessionId);
+  const historyOpen = useChatStore((s) => s.historyOpen);
+  const toggleHistory = useChatStore((s) => s.toggleHistory);
+  const setHistoryOpen = useChatStore((s) => s.setHistoryOpen);
+  const createSession = useChatStore((s) => s.createSession);
+  const activateSession = useChatStore((s) => s.activateSession);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
-  const [queuePaused, setQueuePaused] = useState(false);
 
-  // Tab state — persisted in ava-channel-store so keyboard shortcut restores last active tab
-  const lastActiveTab = useAvaChannelStore((s) => s.lastActiveTab);
-  const setLastActiveTab = useAvaChannelStore((s) => s.setLastActiveTab);
-  const [activeTab, setActiveTab] = useState<AvaChannelTabType>(lastActiveTab);
-
-  // Sync local tab state when the store is updated externally (e.g. PM button sets 'projects')
+  // Bootstrap: on mount, ensure currentSessionId is set and in activeSessions so
+  // ChatSessionPool has a slot to render. activeSessions is runtime-only (not persisted).
   useEffect(() => {
-    setActiveTab(lastActiveTab);
-  }, [lastActiveTab]);
+    const store = useChatStore.getState();
+    const { currentSessionId: sid, sessions: allSessions } = store;
 
-  const handleTabChange = useCallback(
-    (tab: AvaChannelTabType) => {
-      setActiveTab(tab);
-      setLastActiveTab(tab);
-    },
-    [setLastActiveTab]
-  );
-
-  // Branch state — tracks multiple response variants per assistant message.
-  // branchMap key: the ID of the first (original) assistant message variant.
-  // branchMap value: all variants in order (original first, newest last).
-  const [branchMap, setBranchMap] = useState<Map<string, UIMessage[]>>(new Map());
-  const [currentBranchIndex, setCurrentBranchIndex] = useState<Map<string, number>>(new Map());
-  // Set to the origId when a regeneration is in-flight, cleared when the new
-  // assistant message arrives and is added to the branch list.
-  // pendingBranchFor ref is used for non-reactive logic in effects.
-  // pendingBranchOrigId state mirrors it so the UI can show a Regenerating shimmer.
-  const pendingBranchFor = useRef<string | null>(null);
-  const [pendingBranchOrigId, setPendingBranchOrigId] = useState<string | null>(null);
-
-  const suggestions = useContextualSuggestions(features ?? []);
-  const { getProgressLabel, activeLabel: activeToolLabel } = useToolProgress();
-
-  // Show current context window size from the most recent data-usage part.
-  // The server sends inputTokens (= prompt size sent to the model) after each
-  // response. The latest value is the best measure of context window usage.
-  // Falls back to chars/4 estimate before the first response arrives.
-  const tokenUsage = useMemo(() => {
-    let latestInput = 0;
-    let latestOutput = 0;
-    let hasReal = false;
-    for (const msg of messages) {
-      if (msg.role !== 'assistant' || !msg.parts) continue;
-      for (const part of msg.parts) {
-        if (part.type === 'data-usage' && part.data) {
-          const d = part.data as { inputTokens?: number; outputTokens?: number };
-          latestInput = d.inputTokens ?? 0;
-          latestOutput = d.outputTokens ?? 0;
-          hasReal = true;
-        }
-      }
+    if (sid) {
+      store.activateSession(sid);
+    } else if (allSessions.length > 0) {
+      const firstId = allSessions[0].id;
+      store.switchSession(firstId);
+      store.activateSession(firstId);
+    } else {
+      const session = store.createSession('sonnet', currentProject?.id ?? 'default');
+      store.activateSession(session.id);
     }
-    if (hasReal) {
-      return { total: latestInput, input: latestInput, output: latestOutput, estimated: false };
+  }, []); // Intentionally empty — bootstrap runs once on mount
+
+  // Recovery: if all sessions are gone (user closed all tabs), auto-create one.
+  // Skip the first run — bootstrap effect handles initialization.
+  const bootstrapDoneRef = useRef(false);
+  useEffect(() => {
+    if (!bootstrapDoneRef.current) {
+      bootstrapDoneRef.current = true;
+      return;
     }
-    // Fallback: rough estimate before first response completes
-    if (messages.length === 0) return { total: 0, input: 0, output: 0, estimated: true };
-    const chars = JSON.stringify(messages).length;
-    return { total: Math.ceil(chars / 4), input: 0, output: 0, estimated: true };
-  }, [messages]);
+    if (activeSessions.length === 0) {
+      const store = useChatStore.getState();
+      const session = store.createSession('sonnet', currentProject?.id ?? 'default');
+      store.activateSession(session.id);
+      return;
+    }
+    if (currentSessionId === null || currentSessionId === undefined) {
+      useChatStore.getState().switchSession(activeSessions[0]);
+    }
+  }, [activeSessions, currentSessionId, currentProject]);
 
-  // Count agentic steps in the current streaming message for the status bar
-  const stepCount = useMemo(() => {
-    if (!isStreaming || messages.length === 0) return 0;
-    const lastMsg = messages[messages.length - 1];
-    if (lastMsg.role !== 'assistant') return 0;
-    return (lastMsg.parts ?? []).filter((p) => p.type === 'step-start').length;
-  }, [messages, isStreaming]);
-
-  // onSubmit receives the trimmed text from ChatInput (via PromptInputProvider).
-  // ChatInput clears the input immediately after calling this.
-  const handleSubmit = useCallback(
-    (text: string) => {
-      if (isStreaming) return;
-      sendMessage({ text });
-    },
-    [isStreaming, sendMessage]
-  );
-
-  const handleSuggestionSelect = useCallback(
-    (value: string) => {
-      sendMessage({ text: value });
-    },
-    [sendMessage]
-  );
+  const handleNewChat = useCallback(() => {
+    const session = createSession('sonnet', currentProject?.id ?? 'default');
+    activateSession(session.id);
+  }, [createSession, activateSession, currentProject]);
 
   const handleExpand = useCallback(() => {
-    const next = !expanded;
-    setExpanded(next);
-    // Overlay resize was Electron-only — no-op in web mode
-  }, [expanded]);
-
-  // Regenerate: push the current last assistant response as a branch variant,
-  // then re-send the last user message to generate a new response.
-  const handleRegenerate = useCallback(() => {
-    const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
-    const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
-    if (!lastAssistant || !lastUserMsg) return;
-
-    const origId = lastAssistant.id;
-
-    // Register the current response as the first branch (if not already tracked)
-    setBranchMap((prev) => {
-      if (prev.has(origId)) return prev;
-      const next = new Map(prev);
-      next.set(origId, [lastAssistant]);
-      return next;
-    });
-    setCurrentBranchIndex((prev) => {
-      if (prev.has(origId)) return prev;
-      const next = new Map(prev);
-      next.set(origId, 0);
-      return next;
-    });
-
-    // Mark that the next completed assistant message should be added to this branch.
-    // Both the ref (for effect logic) and state (for UI shimmer) are updated.
-    pendingBranchFor.current = origId;
-    setPendingBranchOrigId(origId);
-
-    // Re-send the last user message
-    const text = (lastUserMsg.parts ?? [])
-      .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
-      .map((p) => p.text)
-      .join('');
-    if (text) sendMessage({ text });
-  }, [messages, sendMessage]);
-
-  // Detect when a regenerated response has finished streaming and add it to
-  // the appropriate branch list.
-  useEffect(() => {
-    if (!pendingBranchFor.current || isStreaming) return;
-
-    const origId = pendingBranchFor.current;
-    const currentBranches = branchMap.get(origId) ?? [];
-    const knownIds = new Set(currentBranches.map((b) => b.id));
-
-    const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
-    if (!lastAssistant || knownIds.has(lastAssistant.id)) return;
-
-    // New finished assistant message — add as latest branch and focus it
-    const newBranches = [...currentBranches, lastAssistant];
-    setBranchMap((prev) => {
-      const next = new Map(prev);
-      next.set(origId, newBranches);
-      return next;
-    });
-    setCurrentBranchIndex((prev) => {
-      const next = new Map(prev);
-      next.set(origId, newBranches.length - 1);
-      return next;
-    });
-    pendingBranchFor.current = null;
-    setPendingBranchOrigId(null);
-  }, [messages, isStreaming, branchMap]);
-
-  // Clear branch state when starting a new chat session
-  useEffect(() => {
-    setBranchMap(new Map());
-    setCurrentBranchIndex(new Map());
-    pendingBranchFor.current = null;
-    setPendingBranchOrigId(null);
-  }, [currentSessionId]);
-
-  // Navigate to the previous branch variant for a given message
-  const handlePreviousBranch = useCallback((origId: string) => {
-    setCurrentBranchIndex((prev) => {
-      const idx = prev.get(origId) ?? 0;
-      if (idx <= 0) return prev;
-      const next = new Map(prev);
-      next.set(origId, idx - 1);
-      return next;
-    });
-  }, []);
-
-  // Navigate to the next branch variant for a given message
-  const handleNextBranch = useCallback(
-    (origId: string) => {
-      setCurrentBranchIndex((prev) => {
-        const variants = branchMap.get(origId);
-        const idx = prev.get(origId) ?? 0;
-        if (!variants || idx >= variants.length - 1) return prev;
-        const next = new Map(prev);
-        next.set(origId, idx + 1);
-        return next;
-      });
-    },
-    [branchMap]
-  );
-
-  // Compute displayed messages — substitute branch variants at branch positions
-  // and trim the re-sent user+assistant pairs that accumulate after regenerations.
-  const displayedMessages = useMemo<UIMessage[]>(() => {
-    if (branchMap.size === 0) return messages;
-
-    let result = [...messages];
-    // Process each branch point (typically just one at a time in practice)
-    for (const [origId, variants] of branchMap) {
-      const idx = currentBranchIndex.get(origId) ?? variants.length - 1;
-      const origPos = result.findIndex((m) => m.id === origId);
-      if (origPos === -1) continue;
-      // Replace from the original position onwards with the selected variant
-      result = [...result.slice(0, origPos), variants[idx]];
-    }
-    return result;
-  }, [messages, branchMap, currentBranchIndex]);
-
-  // Build branchInfoMap for ChatMessageList — maps each displayed variant's ID
-  // to its branch navigation context so ChatMessage can show the nav bar.
-  const branchInfoMap = useMemo<Map<string, BranchInfo>>(() => {
-    const map = new Map<string, BranchInfo>();
-    for (const [origId, variants] of branchMap) {
-      const idx = currentBranchIndex.get(origId) ?? variants.length - 1;
-      // Tag all variants so the currently displayed one gets nav props
-      for (let i = 0; i < variants.length; i++) {
-        map.set(variants[i].id, { branchIndex: idx, branchCount: variants.length, origId });
-      }
-    }
-    return map;
-  }, [branchMap, currentBranchIndex]);
-
-  // Thumbs up/down — no-op placeholders; wire to telemetry or feedback API as needed
-  const handleThumbsUp = useCallback(() => {
-    // Positive feedback placeholder
-  }, []);
-
-  const handleThumbsDown = useCallback(() => {
-    // Negative feedback placeholder
+    setExpanded((v) => !v);
   }, []);
 
   // Escape key: close history panel if open, otherwise hide the overlay.
-  // Only active when the panel is visible to prevent interference with other
-  // keyboard handlers when the chat is running in the background.
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -348,41 +121,37 @@ export function ChatOverlayContent({
           <span className="shrink-0 text-sm font-medium text-foreground">Ava</span>
         </div>
         <div className={cn('flex items-center gap-1', !isModal && 'pointer-events-auto')}>
-          {activeTab === 'ask-ava' && (
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7"
-                onClick={toggleHistory}
-                title="Conversation history"
-                aria-label="Toggle conversation history"
-              >
-                <History className="size-3.5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7"
-                onClick={() => setQueueOpen((v) => !v)}
-                title="Feature queue"
-                aria-label="Toggle feature queue"
-                data-testid="queue-panel-toggle"
-              >
-                <ListOrdered className="size-3.5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7"
-                onClick={handleNewChat}
-                title="New chat"
-                aria-label="New chat"
-              >
-                <SquarePen className="size-3.5" />
-              </Button>
-            </>
-          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={toggleHistory}
+            title="Conversation history"
+            aria-label="Toggle conversation history"
+          >
+            <History className="size-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={() => setQueueOpen((v) => !v)}
+            title="Feature queue"
+            aria-label="Toggle feature queue"
+            data-testid="queue-panel-toggle"
+          >
+            <ListOrdered className="size-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={handleNewChat}
+            title="New chat"
+            aria-label="New chat"
+          >
+            <SquarePen className="size-3.5" />
+          </Button>
           {!isModal && (
             <Button
               variant="ghost"
@@ -418,108 +187,11 @@ export function ChatOverlayContent({
         </div>
       </div>
 
-      {/* Error banner — shown for Ask Ava tab errors */}
-      {activeTab === 'ask-ava' && error && (
-        <div className="border-b border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-          {error.message || 'An error occurred'}
-        </div>
-      )}
+      {/* Session tab bar — always visible */}
+      <ChatTabBar projectId={currentProject?.id} />
 
-      {/* Status bar moved into ChatInput actions slot — no longer renders here */}
-
-      {/* Tab bar */}
-      <div className="flex items-center border-b border-border px-2" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          className={cn(
-            'px-3 py-1.5 text-xs font-medium transition-colors border-b-2 -mb-px',
-            activeTab === 'ask-ava'
-              ? 'border-primary text-foreground'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          )}
-          onClick={() => handleTabChange('ask-ava')}
-          aria-selected={activeTab === 'ask-ava'}
-        >
-          Ask Ava
-        </button>
-        <button
-          type="button"
-          role="tab"
-          className={cn(
-            'px-3 py-1.5 text-xs font-medium transition-colors border-b-2 -mb-px',
-            activeTab === 'projects'
-              ? 'border-primary text-foreground'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          )}
-          onClick={() => handleTabChange('projects')}
-          aria-selected={activeTab === 'projects'}
-        >
-          Projects
-        </button>
-        <button
-          type="button"
-          role="tab"
-          className={cn(
-            'px-3 py-1.5 text-xs font-medium transition-colors border-b-2 -mb-px',
-            activeTab === 'ava-channel'
-              ? 'border-primary text-foreground'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          )}
-          onClick={() => handleTabChange('ava-channel')}
-          aria-selected={activeTab === 'ava-channel'}
-        >
-          #backchannel
-        </button>
-      </div>
-
-      {/* Tab content */}
-      {activeTab === 'projects' ? (
-        <ProjectsTab />
-      ) : activeTab === 'ask-ava' ? (
-        <AskAvaTab
-          displayedMessages={displayedMessages}
-          isStreaming={isStreaming}
-          suggestions={suggestions}
-          sessions={sessions}
-          currentSessionId={currentSessionId}
-          modelAlias={modelAlias}
-          tokenUsage={tokenUsage}
-          branchInfoMap={branchInfoMap}
-          pendingBranchOrigId={pendingBranchOrigId}
-          settingsOpen={settingsOpen}
-          historyOpen={historyOpen}
-          queueOpen={queueOpen}
-          queuePaused={queuePaused}
-          projectPath={currentProject?.path}
-          toolProgressLabel={activeToolLabel}
-          stepCount={stepCount}
-          onSubmit={handleSubmit}
-          onStop={stop}
-          onSuggestionSelect={handleSuggestionSelect}
-          onRegenerate={handleRegenerate}
-          onThumbsUp={handleThumbsUp}
-          onThumbsDown={handleThumbsDown}
-          onToolApprove={approveToolAction}
-          onToolReject={rejectToolAction}
-          onPreviousBranch={handlePreviousBranch}
-          onNextBranch={handleNextBranch}
-          onSelectSession={handleSwitchSession}
-          onNewChat={handleNewChat}
-          onDeleteSession={handleDeleteSession}
-          onCloseHistory={() => setHistoryOpen(false)}
-          onToggleQueuePause={() => setQueuePaused((v) => !v)}
-          onModelChange={handleModelChange}
-          effortLevel={effortLevel}
-          onEffortChange={handleEffortChange}
-          getToolProgressLabel={getProgressLabel}
-          pendingSubagentApprovals={pendingSubagentApprovals}
-          approveSubagentTool={approveSubagentTool}
-          denySubagentTool={denySubagentTool}
-        />
-      ) : (
-        <AvaChannelTab />
-      )}
+      {/* Session pool — renders one ChatSessionSlot per active session */}
+      <ChatSessionPool projectPath={currentProject?.path} projectId={currentProject?.id} />
     </div>
   );
 }
