@@ -1,0 +1,41 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-config-schema/schema.json",
+  "productName": "Ava",
+  "version": "0.1.0",
+  "identifier": "studio.protolabs.ava",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:3007",
+    "beforeDevCommand": "",
+    "beforeBuildCommand": ""
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Ava",
+        "url": "http://localhost:3007",
+        "width": 440,
+        "height": 720,
+        "minWidth": 360,
+        "minHeight": 500,
+        "decorations": true,
+        "transparent": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": false,
+        "visible": true,
+        "resizable": true
+      }
+    ],
+    "trayIcon": {
+      "iconPath": "icons/icon.png",
+      "iconAsTemplate": true,
+      "tooltip": "Ava"
+    },
+    "security": {
+      "csp": null
+    }
+  },
+  "plugins": {}
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@protolabsai/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "cd src-tauri && cargo tauri dev",
+    "build": "cd src-tauri && cargo tauri build",
+    "tauri": "cargo tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}
