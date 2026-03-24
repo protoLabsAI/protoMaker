@@ -153,6 +153,41 @@ export function createCreatePRHandler(settingsService?: SettingsService) {
       const base =
         baseBranch ||
         (await getEffectivePrBaseBranch(effectiveProjectPath, settingsService, '[CreatePR]'));
+
+      // Verify the branch has commits ahead of the base branch before creating a PR.
+      // If there are no commits ahead, the PR diff would be empty, causing a squash-merge
+      // that produces a commit with no file changes — a silent data loss bug.
+      try {
+        await execAsync(`git fetch origin ${base}`, {
+          cwd: worktreePath,
+          env: execEnv,
+        });
+        const { stdout: aheadCountStr } = await execAsync(
+          `git rev-list --count origin/${base}..HEAD`,
+          { cwd: worktreePath, env: execEnv }
+        );
+        const aheadCount = parseInt(aheadCountStr.trim(), 10);
+        if (aheadCount <= 0) {
+          logger.warn(
+            `Branch ${branchName} has no commits ahead of ${base} — skipping PR creation to prevent empty squash-merge`
+          );
+          res.status(422).json({
+            success: false,
+            error: `Branch ${branchName} has no commits ahead of base branch ${base}. PR creation skipped to prevent empty squash-merge.`,
+            emptyDiff: true,
+          });
+          return;
+        }
+        logger.debug(`Branch ${branchName} is ${aheadCount} commit(s) ahead of ${base}`);
+      } catch (fetchErr) {
+        // If we can't verify, log a warning but allow PR creation to proceed.
+        // This avoids blocking legitimate PRs due to transient network errors.
+        logger.warn(
+          `Could not verify commits ahead of ${base}, proceeding with PR creation:`,
+          fetchErr
+        );
+      }
+
       const title = prTitle || branchName;
       const rawBody = prBody || `Changes from branch ${branchName}`;
 
