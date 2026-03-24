@@ -74,7 +74,7 @@ describe('buildGitAddCommand', () => {
     it('should omit all gitignore-managed dirs from pathspec', () => {
       // All three default exclusions are gitignore-managed
       mockGitignored('.automaker/', '.claude/worktrees/', '.worktrees/');
-      expect(buildGitAddCommand(tempDir)).toBe('git add -A -- ');
+      expect(buildGitAddCommand(tempDir)).toBe('git add -A');
     });
 
     it('should include .automaker/memory/ when that directory exists', () => {
@@ -101,12 +101,14 @@ describe('buildGitAddCommand', () => {
     it('should not re-include memory/skills when only .automaker/ exists (no subdirs)', () => {
       mockGitignored('.automaker/', '.claude/worktrees/', '.worktrees/');
       mkdirSync(join(tempDir, '.automaker'), { recursive: true });
-      expect(buildGitAddCommand(tempDir)).toBe('git add -A -- ');
+      expect(buildGitAddCommand(tempDir)).toBe('git add -A');
     });
 
     it('should emit pathspec exclusion for .claude/worktrees/ when NOT in gitignore', () => {
       // Only .automaker/ and .worktrees/ are gitignored; .claude/worktrees/ is not
       mockGitignored('.automaker/', '.worktrees/');
+      // .claude/worktrees/ doesn't exist in tempDir, so it's skipped (existsSync check)
+      mkdirSync(join(tempDir, '.claude', 'worktrees'), { recursive: true });
       expect(buildGitAddCommand(tempDir)).toBe("git add -A -- ':!.claude/worktrees/'");
     });
   });
@@ -114,7 +116,7 @@ describe('buildGitAddCommand', () => {
   describe('configurable exclusions', () => {
     it('should omit .automaker/ from pathspec when it is gitignore-managed', () => {
       mockGitignored('.automaker/');
-      expect(buildGitAddCommand(tempDir, ['.automaker/'])).toBe('git add -A -- ');
+      expect(buildGitAddCommand(tempDir, ['.automaker/'])).toBe('git add -A');
     });
 
     it('should re-include .automaker/memory/ when .automaker/ is gitignore-managed and dir exists', () => {
@@ -130,22 +132,23 @@ describe('buildGitAddCommand', () => {
       mkdirSync(join(tempDir, '.automaker', 'memory'), { recursive: true });
       mkdirSync(join(tempDir, '.automaker', 'skills'), { recursive: true });
       // .worktrees/ is gitignore-managed — no pathspec exclusion emitted
-      expect(buildGitAddCommand(tempDir, ['.worktrees/'])).toBe('git add -A -- ');
+      expect(buildGitAddCommand(tempDir, ['.worktrees/'])).toBe('git add -A');
     });
 
     it('should omit .claude/worktrees/ from pathspec when it is gitignore-managed', () => {
       mockGitignored('.claude/worktrees/');
-      expect(buildGitAddCommand(tempDir, ['.claude/worktrees/'])).toBe('git add -A -- ');
+      expect(buildGitAddCommand(tempDir, ['.claude/worktrees/'])).toBe('git add -A');
     });
 
     it('should emit pathspec for dirs not in gitignore', () => {
       // custom-dir/ is not gitignored — execSync throws
       mockGitignored(); // nothing gitignored
+      mkdirSync(join(tempDir, 'custom-dir'), { recursive: true });
       expect(buildGitAddCommand(tempDir, ['custom-dir/'])).toBe("git add -A -- ':!custom-dir/'");
     });
 
     it('should handle empty exclusion list', () => {
-      expect(buildGitAddCommand(tempDir, [])).toBe('git add -A -- ');
+      expect(buildGitAddCommand(tempDir, [])).toBe('git add -A');
     });
   });
 
