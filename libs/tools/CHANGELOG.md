@@ -1,5 +1,21 @@
 # @protolabsai/tools
 
+## 0.87.0
+
+### Minor Changes
+
+- ### Features
+  - map feature complexity to Claude effort levels
+
+  ### Refactors
+  - Pre-flight merge conflict on every agent launch in fast-moving projects (#3102)
+  - Squash-merge PRs can produce empty commits when worktree code not pushed (#3101)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.87.0
+
 ## 0.86.0
 
 ### Minor Changes
