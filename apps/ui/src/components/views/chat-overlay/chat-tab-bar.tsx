@@ -6,9 +6,10 @@
  * and a [+] button to create a new session.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Plus, X } from 'lucide-react';
 import { useChatStore } from '@/store/chat-store';
+import { DeleteConfirmDialog } from '@/components/shared/delete-confirm-dialog';
 import { cn } from '@/lib/utils';
 
 interface ChatTabBarProps {
@@ -33,13 +34,19 @@ export function ChatTabBar({ projectId, modelAlias, className }: ChatTabBarProps
   const sessions = useChatStore((s) => s.sessions);
   const sessionStreamingMap = useChatStore((s) => s.sessionStreamingMap);
   const switchSession = useChatStore((s) => s.switchSession);
-  const deleteSession = useChatStore((s) => s.deleteSession);
   const createSession = useChatStore((s) => s.createSession);
+  const activateSession = useChatStore((s) => s.activateSession);
+  const deactivateSession = useChatStore((s) => s.deactivateSession);
 
   // Track when each session started streaming (wall-clock ms)
   const streamingStartTimesRef = useRef<Record<string, number>>({});
   // Tick state drives re-renders every second while any session is streaming
   const [, setTick] = useState(0);
+
+  // Close confirmation dialog state
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [pendingCloseId, setPendingCloseId] = useState<string | null>(null);
+  const pendingCloseSession = pendingCloseId ? sessions.find((s) => s.id === pendingCloseId) : null;
 
   // Maintain streaming start times: record on first true, clear on false
   useEffect(() => {
@@ -74,112 +81,124 @@ export function ChatTabBar({ projectId, modelAlias, className }: ChatTabBarProps
     return session?.projectId === projectId;
   });
 
-  const activateSession = useChatStore((s) => s.activateSession);
-  const deactivateSession = useChatStore((s) => s.deactivateSession);
-
   const handleNew = () => {
     const session = createSession(modelAlias ?? 'sonnet', projectId);
     activateSession(session.id);
   };
 
-  const handleClose = (e: React.MouseEvent, id: string) => {
+  const handleCloseRequest = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     // Prevent closing the last tab — always keep at least one
     if (visibleIds.length <= 1) return;
-    // Confirm before closing to prevent accidental loss
-    const session = sessions.find((s) => s.id === id);
-    const title = session?.title ?? 'New chat';
-    if (!window.confirm(`Close "${title}"? The conversation will be removed from active tabs.`)) {
-      return;
-    }
-    deactivateSession(id);
+    setPendingCloseId(id);
+    setCloseDialogOpen(true);
+  };
+
+  const handleCloseConfirm = useCallback(() => {
+    if (!pendingCloseId) return;
+    deactivateSession(pendingCloseId);
     // If closing the current tab, switch to the nearest remaining
-    if (id === currentSessionId) {
-      const remaining = visibleIds.filter((sid) => sid !== id);
+    if (pendingCloseId === currentSessionId) {
+      const remaining = visibleIds.filter((sid) => sid !== pendingCloseId);
       if (remaining.length > 0) {
         switchSession(remaining[0]);
       }
     }
-  };
+    setPendingCloseId(null);
+  }, [pendingCloseId, currentSessionId, visibleIds, deactivateSession, switchSession]);
 
   return (
-    <div
-      className={cn(
-        'flex items-center gap-0.5 overflow-x-auto border-b border-border bg-background px-1 py-0.5',
-        className
-      )}
-      data-testid="chat-tab-bar"
-    >
-      {visibleIds.map((sessionId) => {
-        const session = sessions.find((s) => s.id === sessionId);
-        const title = session?.title ?? 'New chat';
-        const isActive = sessionId === currentSessionId;
-        const isStreaming = sessionStreamingMap[sessionId] === true;
-
-        return (
-          <button
-            key={sessionId}
-            onClick={() => {
-              switchSession(sessionId);
-              activateSession(sessionId);
-            }}
-            className={cn(
-              'group flex min-w-0 max-w-[160px] shrink-0 items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors',
-              isActive
-                ? 'bg-accent text-accent-foreground'
-                : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
-            )}
-            title={title}
-            data-testid={`chat-tab-${sessionId}`}
-          >
-            {/* Streaming indicator dot */}
-            <span
-              className={cn(
-                'size-1.5 shrink-0 rounded-full',
-                isStreaming
-                  ? 'animate-pulse bg-green-500'
-                  : isActive
-                    ? 'bg-foreground/40'
-                    : 'bg-muted-foreground/30'
-              )}
-            />
-
-            {/* Session title — truncated */}
-            <span className="min-w-0 flex-1 truncate text-left">{title}</span>
-
-            {/* Elapsed time — shown while streaming */}
-            {isStreaming && streamingStartTimesRef.current[sessionId] !== undefined && (
-              <span className="shrink-0 font-mono text-[10px] text-green-500">
-                {formatElapsed(streamingStartTimesRef.current[sessionId])}
-              </span>
-            )}
-
-            {/* Close button */}
-            <span
-              role="button"
-              onClick={(e) => handleClose(e, sessionId)}
-              className={cn(
-                'flex shrink-0 items-center rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100',
-                isActive && 'opacity-60 hover:opacity-100'
-              )}
-              title={`Close "${title}"`}
-              data-testid={`chat-tab-close-${sessionId}`}
-            >
-              <X className="size-3" />
-            </span>
-          </button>
-        );
-      })}
-
-      {/* New session button */}
-      <button
-        onClick={handleNew}
-        className="flex shrink-0 items-center gap-1 rounded px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
-        title="New chat session"
-        data-testid="chat-tab-new"
+    <>
+      <div
+        className={cn(
+          'flex items-center gap-0.5 overflow-x-auto border-b border-border bg-background px-1 py-0.5',
+          className
+        )}
+        data-testid="chat-tab-bar"
       >
-        <Plus className="size-3" />
-      </button>
-    </div>
+        {visibleIds.map((sessionId) => {
+          const session = sessions.find((s) => s.id === sessionId);
+          const title = session?.title ?? 'New chat';
+          const isActive = sessionId === currentSessionId;
+          const isStreaming = sessionStreamingMap[sessionId] === true;
+
+          return (
+            <button
+              key={sessionId}
+              onClick={() => {
+                switchSession(sessionId);
+                activateSession(sessionId);
+              }}
+              className={cn(
+                'group flex min-w-0 max-w-[160px] shrink-0 items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors',
+                isActive
+                  ? 'bg-accent text-accent-foreground'
+                  : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+              )}
+              title={title}
+              data-testid={`chat-tab-${sessionId}`}
+            >
+              {/* Streaming indicator dot */}
+              <span
+                className={cn(
+                  'size-1.5 shrink-0 rounded-full',
+                  isStreaming
+                    ? 'animate-pulse bg-green-500'
+                    : isActive
+                      ? 'bg-foreground/40'
+                      : 'bg-muted-foreground/30'
+                )}
+              />
+
+              {/* Session title — truncated */}
+              <span className="min-w-0 flex-1 truncate text-left">{title}</span>
+
+              {/* Elapsed time — shown while streaming */}
+              {isStreaming && streamingStartTimesRef.current[sessionId] !== undefined && (
+                <span className="shrink-0 font-mono text-[10px] text-green-500">
+                  {formatElapsed(streamingStartTimesRef.current[sessionId])}
+                </span>
+              )}
+
+              {/* Close button — hidden on last remaining tab */}
+              {visibleIds.length > 1 && (
+                <span
+                  role="button"
+                  onClick={(e) => handleCloseRequest(e, sessionId)}
+                  className={cn(
+                    'flex shrink-0 items-center rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100',
+                    isActive && 'opacity-60 hover:opacity-100'
+                  )}
+                  title={`Close "${title}"`}
+                  data-testid={`chat-tab-close-${sessionId}`}
+                >
+                  <X className="size-3" />
+                </span>
+              )}
+            </button>
+          );
+        })}
+
+        {/* New session button */}
+        <button
+          onClick={handleNew}
+          className="flex shrink-0 items-center gap-1 rounded px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
+          title="New chat session"
+          data-testid="chat-tab-new"
+        >
+          <Plus className="size-3" />
+        </button>
+      </div>
+
+      {/* Close tab confirmation dialog */}
+      <DeleteConfirmDialog
+        open={closeDialogOpen}
+        onOpenChange={setCloseDialogOpen}
+        onConfirm={handleCloseConfirm}
+        title="Close chat tab"
+        description={`Close "${pendingCloseSession?.title ?? 'this session'}"? The conversation will be removed from active tabs but stays in your history.`}
+        confirmText="Close tab"
+      />
+    </>
   );
 }
