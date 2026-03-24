@@ -101,13 +101,21 @@ export function ChatOverlayContent({
     }
   }, []); // Intentionally empty — bootstrap runs once on mount
 
-  // Auto-activate: if activeSessions gains members but currentSessionId is not set,
-  // make the first active session current. Handles edge cases after session deletions.
+  // Recovery: if all sessions are gone (user closed all tabs), auto-create one.
+  // Also handles the case where currentSessionId is unset but activeSessions exist.
   useEffect(() => {
-    if (currentSessionId !== null && currentSessionId !== undefined) return;
-    if (activeSessions.length === 0) return; // Wait for sessions to appear
-    useChatStore.getState().switchSession(activeSessions[0]);
-  }, [activeSessions, currentSessionId]);
+    if (activeSessions.length === 0) {
+      // No active sessions — create a fresh one so the UI isn't blank
+      const store = useChatStore.getState();
+      const session = store.createSession('sonnet', currentProject?.id ?? 'default');
+      store.activateSession(session.id);
+      return;
+    }
+    if (currentSessionId === null || currentSessionId === undefined) {
+      // Active sessions exist but none is current — select the first
+      useChatStore.getState().switchSession(activeSessions[0]);
+    }
+  }, [activeSessions, currentSessionId, currentProject]);
 
   const handleNewChat = useCallback(() => {
     const session = createSession('sonnet', currentProject?.id ?? 'default');
