@@ -6,6 +6,7 @@
  * and a [+] button to create a new session.
  */
 
+import { useEffect, useRef, useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { useChatStore } from '@/store/chat-store';
 import { cn } from '@/lib/utils';
@@ -18,6 +19,14 @@ interface ChatTabBarProps {
   className?: string;
 }
 
+/** Format elapsed seconds as m:ss */
+function formatElapsed(startMs: number): string {
+  const secs = Math.floor((Date.now() - startMs) / 1000);
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
 export function ChatTabBar({ projectId, modelAlias, className }: ChatTabBarProps) {
   const activeSessions = useChatStore((s) => s.activeSessions);
   const currentSessionId = useChatStore((s) => s.currentSessionId);
@@ -26,6 +35,37 @@ export function ChatTabBar({ projectId, modelAlias, className }: ChatTabBarProps
   const switchSession = useChatStore((s) => s.switchSession);
   const deleteSession = useChatStore((s) => s.deleteSession);
   const createSession = useChatStore((s) => s.createSession);
+
+  // Track when each session started streaming (wall-clock ms)
+  const streamingStartTimesRef = useRef<Record<string, number>>({});
+  // Tick state drives re-renders every second while any session is streaming
+  const [, setTick] = useState(0);
+
+  // Maintain streaming start times: record on first true, clear on false
+  useEffect(() => {
+    const map = sessionStreamingMap;
+    for (const [id, streaming] of Object.entries(map)) {
+      if (streaming && streamingStartTimesRef.current[id] === undefined) {
+        streamingStartTimesRef.current[id] = Date.now();
+      } else if (!streaming) {
+        delete streamingStartTimesRef.current[id];
+      }
+    }
+    // Clear stale entries for sessions no longer in the map
+    for (const id of Object.keys(streamingStartTimesRef.current)) {
+      if (!map[id]) {
+        delete streamingStartTimesRef.current[id];
+      }
+    }
+  }, [sessionStreamingMap]);
+
+  // Tick every second while any session is streaming so elapsed times update
+  useEffect(() => {
+    const anyStreaming = Object.values(sessionStreamingMap).some(Boolean);
+    if (!anyStreaming) return;
+    const interval = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(interval);
+  }, [sessionStreamingMap]);
 
   // Only show tabs for active sessions; optionally filtered by project
   const visibleIds = activeSessions.filter((id) => {
@@ -85,6 +125,13 @@ export function ChatTabBar({ projectId, modelAlias, className }: ChatTabBarProps
 
             {/* Session title — truncated */}
             <span className="min-w-0 flex-1 truncate text-left">{title}</span>
+
+            {/* Elapsed time — shown while streaming */}
+            {isStreaming && streamingStartTimesRef.current[sessionId] !== undefined && (
+              <span className="shrink-0 font-mono text-[10px] text-green-500">
+                {formatElapsed(streamingStartTimesRef.current[sessionId])}
+              </span>
+            )}
 
             {/* Close button */}
             <span
