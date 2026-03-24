@@ -28,7 +28,16 @@ fn toggle_window(app: &tauri::AppHandle) {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        // Register global shortcut plugin with handler — only once
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, _shortcut, event| {
+                    if event.state == ShortcutState::Pressed {
+                        toggle_window(app);
+                    }
+                })
+                .build(),
+        )
         .setup(|app| {
             // ── System Tray ──────────────────────────────────────────
             let show_hide = MenuItem::with_id(app, "show_hide", "Show / Hide", true, None::<&str>)?;
@@ -52,20 +61,8 @@ fn main() {
                 })
                 .build(app)?;
 
-            // ── Global Hotkey: Cmd+Shift+A (Mac) / Ctrl+Shift+A ─────
+            // ── Register Cmd+Shift+A hotkey ───────────────────────────
             let shortcut = Shortcut::new(Some(Modifiers::SUPER | Modifiers::SHIFT), Code::KeyA);
-            let app_handle = app.handle().clone();
-
-            app.handle().plugin(
-                tauri_plugin_global_shortcut::Builder::new()
-                    .with_handler(move |_app, _shortcut, event| {
-                        if event.state == ShortcutState::Pressed {
-                            toggle_window(&app_handle);
-                        }
-                    })
-                    .build(),
-            )?;
-
             app.global_shortcut().register(shortcut)?;
 
             Ok(())
