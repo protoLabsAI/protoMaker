@@ -1,5 +1,25 @@
 # @protolabsai/mcp-server
 
+## 0.85.0
+
+### Minor Changes
+
+- ### Features
+  - create ChatSessionSlot component for independent chat sessions (#3082)
+  - extend chat store for multi-session active tracking (#3081)
+
+  ### Bug Fixes
+  - use ES import for child_process instead of require()
+  - remove pathspec exclusions from git add entirely
+  - update git-staging-utils tests for existsSync guard
+  - skip git add exclusion pathspec for non-existent worktree dirs
+  - persist Ava chat streaming when panel is closed (#3080)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/tools@0.85.0
+
 ## 0.84.1
 
 ### Patch Changes

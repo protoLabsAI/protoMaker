@@ -40,9 +40,15 @@ export interface ChatOverlayContentProps {
   onHide: () => void;
   /** When true, renders in modal mode (no drag region, different hint text) */
   isModal?: boolean;
+  /** Whether the panel is currently visible — gates keyboard shortcuts to prevent interference when hidden */
+  isOpen?: boolean;
 }
 
-export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayContentProps) {
+export function ChatOverlayContent({
+  onHide,
+  isModal = false,
+  isOpen = true,
+}: ChatOverlayContentProps) {
   const currentProject = useAppStore((s) => s.currentProject);
   const features = useAppStore((s) => s.features);
 
@@ -310,8 +316,11 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
     // Negative feedback placeholder
   }, []);
 
-  // Escape key: close history panel if open, otherwise hide the overlay
+  // Escape key: close history panel if open, otherwise hide the overlay.
+  // Only active when the panel is visible to prevent interference with other
+  // keyboard handlers when the chat is running in the background.
   useEffect(() => {
+    if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (historyOpen) {
@@ -323,7 +332,7 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [historyOpen, setHistoryOpen, onHide]);
+  }, [isOpen, historyOpen, setHistoryOpen, onHide]);
 
   return (
     <div data-slot="chat-overlay-content" className="flex h-full w-full flex-col overflow-hidden">

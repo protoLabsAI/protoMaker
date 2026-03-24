@@ -1,9 +1,13 @@
 /**
  * Git Staging Utilities — shared helpers for staging files in worktrees.
  *
- * Centralises the pathspec-safe "git add" command so that all call sites
+ * Centralises the "git add" command so that all call sites
  * (worktree-guard, git-workflow-service, worktree-recovery-service) use
  * the same logic and the behaviour is covered by a single test suite.
+ *
+ * History: previously used `:!.automaker/` pathspec exclusions, but these
+ * conflict with .gitignore when tracked files exist under .automaker/.
+ * Now uses plain `git add -A` and relies on .gitignore for exclusion.
  */
 
 import { execSync } from 'child_process';
@@ -12,21 +16,15 @@ import { join } from 'path';
 
 /**
  * Default directories to exclude from `git add`.
- * Prevents worktree `.git` files and internal automaker directories from
- * being staged as broken submodules (causing CI failures on Cloudflare Pages etc.)
+ * Kept for API compatibility — callers may reference this list.
+ * The actual exclusion is handled by .gitignore, not pathspec.
  */
 export const DEFAULT_STAGING_EXCLUSIONS = ['.automaker/', '.claude/worktrees/', '.worktrees/'];
 
 /**
  * Checks whether a given path is already covered by `.gitignore` in the
- * specified working directory. Uses `git check-ignore -q <path>` which exits
- * with code 0 when the path is ignored, 1 when it is not, and >1 on error
- * (e.g. not a git repo).
- *
- * Returns `true` (gitignore-managed) only on a clean exit-code-0 result.
- * Any error (non-git dir, git not available, etc.) returns `false` so the
- * caller falls back to emitting an explicit pathspec exclusion — the safe
- * default.
+ * specified working directory. Retained for external callers that may
+ * need to check gitignore status independently.
  */
 export function isGitignoreManaged(workDir: string, path: string): boolean {
   try {
@@ -38,38 +36,33 @@ export function isGitignoreManaged(workDir: string, path: string): boolean {
 }
 
 /**
- * Builds a git add command that stages all changes except the directories in
- * `excludeFromStaging`, then re-includes `.automaker/memory/` and
- * `.automaker/skills/` only if `.automaker/` is excluded and those directories
- * exist in the working tree. This prevents a fatal pathspec error when a
- * directory is absent (e.g. in a fresh worktree).
+ * Builds a git add command that stages all changes.
  *
- * Directories already covered by `.gitignore` are dynamically detected via
- * `git check-ignore` and intentionally omitted from the pathspec exclusion
- * list — git would throw an error if a gitignored path appeared in the
- * pathspec (even as a `:!` exclude).
+ * Uses plain `git add -A` — .gitignore handles exclusion of .automaker/,
+ * .worktrees/, etc. Pathspec exclusions (`:!dir/`) are intentionally NOT
+ * used because they conflict with .gitignore when tracked files exist
+ * under the excluded directory (e.g. .automaker/settings.json is tracked,
+ * causing `git check-ignore` to return "not ignored", which then causes
+ * the `:!.automaker/` pathspec to throw a fatal error).
+ *
+ * Re-includes .automaker/memory/ and .automaker/skills/ explicitly when
+ * those directories exist, since they are git-tracked subdirs under a
+ * gitignored parent.
  */
-export function buildGitAddCommand(workDir: string, excludeFromStaging?: string[]): string {
-  const exclusions = excludeFromStaging ?? DEFAULT_STAGING_EXCLUSIONS;
+export function buildGitAddCommand(workDir: string, _excludeFromStaging?: string[]): string {
+  const pathspecArgs: string[] = [];
 
-  // Collect all pathspec arguments into one array, then join at the end.
-  // Only emit exclusion pathspecs for dirs NOT already handled by .gitignore:
-  // using `:!dir/` for a gitignored path causes:
-  //   fatal: The following paths are ignored by one of your .gitignore files: dir
-  const pathspecArgs: string[] = exclusions
-    .filter((dir) => !isGitignoreManaged(workDir, dir))
-    .map((dir) => `':!${dir}'`);
+  // Re-include .automaker/memory/ and .automaker/skills/ — these are
+  // git-tracked agent memory files under a gitignored parent directory.
+  if (existsSync(join(workDir, '.automaker/memory'))) {
+    pathspecArgs.push("'.automaker/memory/'");
+  }
+  if (existsSync(join(workDir, '.automaker/skills'))) {
+    pathspecArgs.push("'.automaker/skills/'");
+  }
 
-  // Re-include .automaker/memory/ and .automaker/skills/ when .automaker/ is excluded.
-  // These subdirs are git-tracked agent memory files that live under a gitignored
-  // parent directory and must be staged explicitly.
-  if (exclusions.includes('.automaker/')) {
-    if (existsSync(join(workDir, '.automaker/memory'))) {
-      pathspecArgs.push("'.automaker/memory/'");
-    }
-    if (existsSync(join(workDir, '.automaker/skills'))) {
-      pathspecArgs.push("'.automaker/skills/'");
-    }
+  if (pathspecArgs.length === 0) {
+    return 'git add -A';
   }
 
   return `git add -A -- ${pathspecArgs.join(' ')}`;
