@@ -748,6 +748,29 @@ export class ExecutionService {
         const planningPrefix = await this.getPlanningPromptPrefix(feature);
         prompt = planningPrefix + featurePrompt;
 
+        // Inject worktree build environment guidance when running in a worktree.
+        // Agents frequently spiral trying to resolve tsc/vitest binaries in worktrees
+        // because pnpm binary paths don't resolve correctly from workspace package subdirs.
+        // Providing the exact paths upfront prevents 5-10+ minute binary resolution spirals.
+        if (worktreePath) {
+          const worktreeSection =
+            `## Worktree Build Environment\n\n` +
+            `You are working in a git worktree.\n` +
+            `- **Worktree root**: \`${workDir}\`\n` +
+            `- **Main project root**: \`${projectPath}\`\n\n` +
+            `**How to run builds and tests:**\n` +
+            `- Run all \`pnpm\` commands from the **worktree root** (\`${workDir}\`), not from a workspace package subdirectory\n` +
+            `- Example: \`pnpm run build\` or \`pnpm run test\` in \`${workDir}\`\n` +
+            `- If a binary isn't found via \`pnpm\`, use the absolute path from the main project: \`${projectPath}/node_modules/.bin/vitest\`, \`${projectPath}/node_modules/.bin/tsc\`\n` +
+            `- Alternatively, run through the main project with a filter: \`pnpm --filter <package-name> build\` in \`${projectPath}\`\n\n` +
+            `**Hard rules:**\n` +
+            `- **Never** run \`pnpm install\` in the worktree — it will break the symlinked \`node_modules\`\n` +
+            `- **Never** spend more than 2 attempts debugging \`.pnpm\` store paths or binary resolution\n` +
+            `- If build/test verification fails after 2 attempts, **stop** — commit your code and push. CI will verify the build.\n`;
+          prompt = worktreeSection + '\n\n' + prompt;
+          logger.debug(`Injected worktree build environment context for feature ${featureId}`);
+        }
+
         // Add recovery context if this is a retry attempt
         if (options?.recoveryContext) {
           const recoverySection = `\n\n## Recovery Context\n\nThis is retry attempt #${options.retryCount ?? 1}. The previous attempt failed with the following context:\n\n${options.recoveryContext}\n\nPlease address these issues in your implementation.\n`;
