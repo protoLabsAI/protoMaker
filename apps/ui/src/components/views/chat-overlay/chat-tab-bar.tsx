@@ -86,6 +86,12 @@ export function ChatTabBar({ projectId, modelAlias, className }: ChatTabBarProps
     e.stopPropagation();
     // Prevent closing the last tab — always keep at least one
     if (visibleIds.length <= 1) return;
+    // Confirm before closing to prevent accidental loss
+    const session = sessions.find((s) => s.id === id);
+    const title = session?.title ?? 'New chat';
+    if (!window.confirm(`Close "${title}"? The conversation will be removed from active tabs.`)) {
+      return;
+    }
     deactivateSession(id);
     // If closing the current tab, switch to the nearest remaining
     if (id === currentSessionId) {
