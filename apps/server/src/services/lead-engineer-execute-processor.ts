@@ -1175,21 +1175,109 @@ export class ExecuteProcessor implements StateProcessor {
           { featureId: feature.id }
         );
 
+        // Stash any remaining uncommitted changes before merging so git merge
+        // does not refuse with "cannot merge: You have unstaged changes".
+        // We already committed .automaker/ drift above, but other files may still
+        // be dirty (e.g., generated files, mid-session writes by services).
+        let preFlightStashRef: string | null = null;
+        try {
+          const { stdout: dirtyStatus } = await execAsync('git status --porcelain', {
+            cwd: workDir,
+            timeout: 10_000,
+          });
+          if (dirtyStatus.trim()) {
+            const { stdout: stashOut } = await execAsync(
+              'git stash push -u -m "automaker: pre-flight stash before merge"',
+              { cwd: workDir, timeout: 30_000 }
+            );
+            if (!stashOut.includes('No local changes to save')) {
+              const { stdout: listOut } = await execAsync('git stash list --format="%gd" -1', {
+                cwd: workDir,
+                timeout: 10_000,
+              });
+              preFlightStashRef = listOut.trim() || 'stash@{0}';
+              logger.info(
+                `[EXECUTE][pre-flight] Stashed ${dirtyStatus.trim().split('\n').length} file(s) before merge at ${preFlightStashRef}`,
+                { featureId: feature.id }
+              );
+            }
+          }
+        } catch (stashErr) {
+          const stashMsg = stashErr instanceof Error ? stashErr.message : String(stashErr);
+          logger.warn('[EXECUTE][pre-flight] Pre-merge stash failed (non-fatal, continuing)', {
+            msg: stashMsg,
+          });
+        }
+
         try {
           await execAsync(`git merge origin/${baseBranch}`, { cwd: workDir, timeout: 60_000 });
           logger.info('[EXECUTE][pre-flight] Merge succeeded', { featureId: feature.id });
         } catch (mergeErr) {
+          const mergeMsg = mergeErr instanceof Error ? mergeErr.message : String(mergeErr);
+
+          // Determine whether this is an actual content conflict or a different error.
+          // Only true merge conflicts should fail the pre-flight; other errors (e.g.
+          // lock file, network, transient git errors) should be treated as non-fatal
+          // so they don't burn agent retry budget unnecessarily.
+          const hasConflicts =
+            mergeMsg.includes('CONFLICT') ||
+            mergeMsg.includes('conflict') ||
+            mergeMsg.includes('needs merge') ||
+            mergeMsg.includes('Merge conflict');
+
           // Abort the merge to leave the worktree clean
           try {
             await execAsync('git merge --abort', { cwd: workDir, timeout: 10_000 });
           } catch {
             /* best-effort */
           }
-          const mergeMsg = mergeErr instanceof Error ? mergeErr.message : String(mergeErr);
-          return {
-            passed: false,
-            reason: `Worktree merge with origin/${baseBranch} failed (conflicts or error): ${mergeMsg}`,
-          };
+
+          // Restore stash before returning so worktree is not left in a stashed state
+          if (preFlightStashRef) {
+            try {
+              await execAsync(`git stash pop ${preFlightStashRef}`, {
+                cwd: workDir,
+                timeout: 30_000,
+              });
+            } catch {
+              /* best-effort — stash preserved, agent will handle */
+            }
+            preFlightStashRef = null;
+          }
+
+          if (hasConflicts) {
+            return {
+              passed: false,
+              reason: `Worktree merge with origin/${baseBranch} failed due to content conflicts: ${mergeMsg}`,
+            };
+          }
+
+          // Non-conflict merge error: log and continue rather than failing the pre-flight.
+          // The agent will work on a slightly stale base, which is acceptable.
+          logger.warn(
+            `[EXECUTE][pre-flight] Merge failed with non-conflict error (continuing anyway): ${mergeMsg}`,
+            { featureId: feature.id }
+          );
+        }
+
+        // Restore stash after successful merge (or non-fatal merge failure path above)
+        if (preFlightStashRef) {
+          try {
+            await execAsync(`git stash pop ${preFlightStashRef}`, {
+              cwd: workDir,
+              timeout: 30_000,
+            });
+            logger.info(
+              `[EXECUTE][pre-flight] Restored stashed changes from ${preFlightStashRef}`,
+              { featureId: feature.id }
+            );
+          } catch (popErr) {
+            const popMsg = popErr instanceof Error ? popErr.message : String(popErr);
+            logger.warn(
+              `[EXECUTE][pre-flight] git stash pop failed after merge (stash preserved at ${preFlightStashRef}): ${popMsg}`,
+              { featureId: feature.id }
+            );
+          }
         }
       }
     } catch (err) {

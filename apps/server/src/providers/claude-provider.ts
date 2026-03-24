@@ -234,6 +234,7 @@ export class ClaudeProvider extends BaseProvider {
       claudeApiProfile,
       claudeCompatibleProvider,
       credentials,
+      claudeEffortLevel,
     } = options;
 
     // Determine which provider config to use
@@ -243,16 +244,19 @@ export class ClaudeProvider extends BaseProvider {
     // Convert thinking level to token budget
     const maxThinkingTokens = getThinkingTokenBudget(thinkingLevel);
 
+    // Build env with effort level
+    const env = buildEnv(providerConfig, credentials);
+    if (claudeEffortLevel) {
+      env['CLAUDE_CODE_EFFORT_LEVEL'] = claudeEffortLevel;
+    }
+
     // Build Claude SDK options
     const sdkOptions: Options = {
       model,
       systemPrompt,
       maxTurns,
       cwd,
-      // Pass only explicitly allowed environment variables to SDK
-      // When a provider is active, uses provider settings (clean switch)
-      // When no provider, uses direct Anthropic API (from process.env or CLI OAuth)
-      env: buildEnv(providerConfig, credentials),
+      env,
       // Pass through allowedTools if provided by caller (decided by sdk-options.ts)
       ...(allowedTools && { allowedTools }),
       // Permission mode: use 'default' when a canUseTool gating callback is active

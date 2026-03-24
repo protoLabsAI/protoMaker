@@ -264,6 +264,15 @@ export interface ExecuteOptions {
     schema: Record<string, unknown>;
   };
   /**
+   * Claude Code effort level — scales computational depth.
+   * Maps to CLAUDE_CODE_EFFORT_LEVEL env var in Claude CLI subprocess.
+   * - 'low': fast, cheap, deterministic — boilerplate, renames, JSDoc
+   * - 'medium': balanced (default)
+   * - 'high': deep reasoning — complex refactors, architectural work
+   * - 'max': maximum reasoning chains — quality-critical tasks
+   */
+  claudeEffortLevel?: 'low' | 'medium' | 'high' | 'max';
+  /**
    * Active Claude API profile for alternative endpoint configuration.
    * When set, uses profile's settings (base URL, auth, model mappings) instead of direct Anthropic API.
    * When undefined, uses direct Anthropic API (via API key or Claude Max CLI OAuth).
