@@ -1,21 +1,253 @@
 {
   "summary": {
-    "totalEntries": 1695,
+    "totalEntries": 1724,
     "categories": {
-      "improvement": 294,
-      "feature": 874,
-      "fix": 339,
-      "infrastructure": 107,
-      "docs": 81
+      "feature": 884,
+      "improvement": 310,
+      "fix": 341,
+      "docs": 82,
+      "infrastructure": 107
     },
     "firstDate": "2026-02-04T21:35:59.000Z",
-    "latestDate": "2026-03-21T05:12:05.000Z"
+    "latestDate": "2026-03-24T04:04:16.000Z"
   },
   "months": [
     {
       "month": "2026-03",
       "label": "March 2026",
       "entries": [
+        {
+          "hash": "a527c41c",
+          "date": "2026-03-23T21:04:16-07:00",
+          "title": "Integrate ChatSessionPool and ChatTabBar into ChatOverlayContent",
+          "prNumber": 3089,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3089",
+          "category": "feature"
+        },
+        {
+          "hash": "917f7e7a",
+          "date": "2026-03-23T20:50:46-07:00",
+          "title": "Per-tab streaming indicators and floating badge update",
+          "prNumber": 3090,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3090",
+          "category": "improvement"
+        },
+        {
+          "hash": "6881d58d",
+          "date": "2026-03-23T20:20:20-07:00",
+          "title": "Create ChatTabBar component",
+          "prNumber": 3088,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3088",
+          "category": "improvement"
+        },
+        {
+          "hash": "407bec1e",
+          "date": "2026-03-23T20:00:08-07:00",
+          "title": "Create ChatSessionPool component",
+          "prNumber": 3087,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3087",
+          "category": "feature"
+        },
+        {
+          "hash": "6f6f9564",
+          "date": "2026-03-23T14:34:27-07:00",
+          "title": "Create ChatSessionSlot component for independent chat sessions",
+          "prNumber": 3082,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3082",
+          "category": "feature"
+        },
+        {
+          "hash": "abde08e4",
+          "date": "2026-03-23T13:56:57-07:00",
+          "title": "Extend chat store for multi-session active tracking",
+          "prNumber": 3081,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3081",
+          "category": "feature"
+        },
+        {
+          "hash": "12fcbe09",
+          "date": "2026-03-23T13:12:31-07:00",
+          "title": "Persist Ava chat streaming when panel is closed",
+          "prNumber": 3080,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3080",
+          "category": "fix"
+        },
+        {
+          "hash": "a542ed05",
+          "date": "2026-03-23T10:39:49-07:00",
+          "title": "Fix git add exclusion pattern conflicting with .gitignore",
+          "prNumber": 3076,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3076",
+          "category": "feature"
+        },
+        {
+          "hash": "c77c8ae6",
+          "date": "2026-03-22T23:24:18-07:00",
+          "title": "Symlink build artifacts into worktrees for external projects",
+          "prNumber": 3064,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3064",
+          "category": "fix"
+        },
+        {
+          "hash": "7d87ea7a",
+          "date": "2026-03-22T22:55:52-07:00",
+          "title": "Fix: pathToClaudeCodeExecutable uses fragile process.cwd()",
+          "prNumber": 3068,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3068",
+          "category": "improvement"
+        },
+        {
+          "hash": "ebdeeb96",
+          "date": "2026-03-22T22:52:55-07:00",
+          "title": "Fix: pathToClaudeCodeExecutable uses fragile process.cwd()",
+          "prNumber": 3066,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3066",
+          "category": "improvement"
+        },
+        {
+          "hash": "d892b40d",
+          "date": "2026-03-22T22:46:28-07:00",
+          "title": "Copy .env files to worktrees during creation",
+          "prNumber": 3063,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3063",
+          "category": "feature"
+        },
+        {
+          "hash": "f6fad88b",
+          "date": "2026-03-22T21:55:26-07:00",
+          "title": "Git Workflow defaults in Global Settings",
+          "prNumber": 3062,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3062",
+          "category": "feature"
+        },
+        {
+          "hash": "c4ca4694",
+          "date": "2026-03-22T17:29:59-07:00",
+          "title": "Board view contextual settings panel",
+          "prNumber": 3055,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3055",
+          "category": "feature"
+        },
+        {
+          "hash": "7808c3f6",
+          "date": "2026-03-22T17:16:08-07:00",
+          "title": "Restructure Global Settings navigation",
+          "prNumber": 3054,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3054",
+          "category": "improvement"
+        },
+        {
+          "hash": "c726b35a",
+          "date": "2026-03-22T17:13:15-07:00",
+          "title": "Unify MCP server configuration",
+          "prNumber": 3053,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3053",
+          "category": "improvement"
+        },
+        {
+          "hash": "c33e5962",
+          "date": "2026-03-22T17:06:43-07:00",
+          "title": "Fix Workflow panel scope indication",
+          "prNumber": 3051,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3051",
+          "category": "improvement"
+        },
+        {
+          "hash": "6c1050c0",
+          "date": "2026-03-22T17:05:23-07:00",
+          "title": "Update docs after: Settings System Overhaul",
+          "prNumber": 3050,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3050",
+          "category": "improvement"
+        },
+        {
+          "hash": "97982e87",
+          "date": "2026-03-22T16:56:11-07:00",
+          "title": "Fix prBaseBranch default and resolution",
+          "prNumber": 3048,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3048",
+          "category": "improvement"
+        },
+        {
+          "hash": "697cac50",
+          "date": "2026-03-22T16:55:20-07:00",
+          "title": "Clean Zustand sync coverage",
+          "prNumber": 3047,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3047",
+          "category": "improvement"
+        },
+        {
+          "hash": "8740b9ec",
+          "date": "2026-03-22T16:29:27-07:00",
+          "title": "Clean Zustand sync and stores",
+          "prNumber": 3046,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3046",
+          "category": "improvement"
+        },
+        {
+          "hash": "e0589a5d",
+          "date": "2026-03-22T16:15:16-07:00",
+          "title": "Remove dead GlobalSettings fields",
+          "prNumber": 3045,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3045",
+          "category": "improvement"
+        },
+        {
+          "hash": "a2ff7154",
+          "date": "2026-03-22T15:12:12-07:00",
+          "title": "Bug: Stale scheduler task 'Auto-Merge Eligible PRs' references removed f",
+          "prNumber": 3044,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3044",
+          "category": "improvement"
+        },
+        {
+          "hash": "d526faa6",
+          "date": "2026-03-21T14:18:36-07:00",
+          "title": "Re-harden Docker staging container security profile",
+          "prNumber": 3031,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3031",
+          "category": "improvement"
+        },
+        {
+          "hash": "8f0f33cc",
+          "date": "2026-03-21T14:04:11-07:00",
+          "title": "Migrate shell-interpolated git commands to execFileAsync for injection s",
+          "prNumber": 3030,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3030",
+          "category": "improvement"
+        },
+        {
+          "hash": "9e983126",
+          "date": "2026-03-21T17:35:09+00:00",
+          "title": "Regenerate site data",
+          "prNumber": 3019,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3019",
+          "category": "docs"
+        },
+        {
+          "hash": "e1c5c36b",
+          "date": "2026-03-21T02:31:55-07:00",
+          "title": "Nested worktree cleanup destroys unpushed agent work",
+          "prNumber": 3025,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3025",
+          "category": "improvement"
+        },
+        {
+          "hash": "e0a4312b",
+          "date": "2026-03-21T01:19:33-07:00",
+          "title": "Promote staging to main (v0.83.2)",
+          "prNumber": 3023,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3023",
+          "category": "feature"
+        },
+        {
+          "hash": "5162bd26",
+          "date": "2026-03-20T23:08:46-07:00",
+          "title": "Promote staging to main (v0.83.1)",
+          "prNumber": 3017,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3017",
+          "category": "feature"
+        },
         {
           "hash": "2ca8a737",
           "date": "2026-03-20T22:12:05-07:00",
@@ -13585,5 +13817,5 @@
       ]
     }
   ],
-  "generatedAt": "2026-03-21T06:15:54.033Z"
+  "generatedAt": "2026-03-24T06:27:13.516Z"
 }
