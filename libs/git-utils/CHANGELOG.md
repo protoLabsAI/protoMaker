@@ -1,5 +1,34 @@
 # @protolabsai/git-utils
 
+## 0.86.0
+
+### Minor Changes
+
+- ### Features
+  - enable all Ava chat tool groups by default
+  - add projectSlug param to create_feature MCP tool
+
+  ### Bug Fixes
+  - textarea height 0px on first tab after page reload
+  - add overflow-hidden to pool and slot containers
+  - add flex container to session pool, match old tab styling
+  - use DeleteConfirmDialog for tab close instead of window.confirm
+  - confirm before closing chat tab to prevent accidental loss
+  - prevent blank state when all tabs closed, fix tab bar handlers
+  - activate session in slot's handleNewChat and handleSelectSession
+  - gitignore node_modules symlinks in worktrees
+
+  ### Refactors
+  - remove Projects and #backchannel tabs from Ava chat
+  - Per-tab streaming indicators and floating badge update (#3090)
+  - Create ChatTabBar component (#3088)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.86.0
+  - @protolabsai/utils@0.86.0
+
 ## 0.85.0
 
 ### Minor Changes
