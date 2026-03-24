@@ -64,10 +64,7 @@ export function ReasoningBlock({ text, state, className }: ReasoningBlockProps) 
           )}
         />
         <span
-          className={cn(
-            'flex-1 truncate text-muted-foreground',
-            isStreaming && 'animate-pulse'
-          )}
+          className={cn('flex-1 truncate text-muted-foreground', isStreaming && 'animate-pulse')}
         >
           {summaryText}
         </span>
