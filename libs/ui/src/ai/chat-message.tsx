@@ -21,7 +21,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { Bot, User } from 'lucide-react';
 import type { UIMessage } from 'ai';
 import { cn } from '../lib/utils.js';
-import { ChainOfThought } from './chain-of-thought.js';
+import { ReasoningBlock } from './reasoning-block.js';
 import { ToolInvocationPart, type ToolInvocationPartProps } from './tool-invocation-part.js';
 import { TaskBlock, type ToolInvocationItem, type TaskToolState } from './task-block.js';
 import { ChatMessageMarkdown } from './chat-message-markdown.js';
@@ -313,7 +313,7 @@ function MessagePartRenderer({
 
   if (type === 'reasoning') {
     return (
-      <ChainOfThought
+      <ReasoningBlock
         text={part.text as string}
         state={part.state as 'streaming' | 'done' | undefined}
       />

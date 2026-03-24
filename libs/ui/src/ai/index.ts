@@ -37,6 +37,8 @@ export { ChainOfThought, type ChainOfThoughtProps } from './chain-of-thought.js'
 
 export { ReasoningPart, type ReasoningPartProps } from './reasoning-part.js';
 
+export { ReasoningBlock, type ReasoningBlockProps } from './reasoning-block.js';
+
 export { ToolInvocationPart, type ToolInvocationPartProps } from './tool-invocation-part.js';
 
 export {
