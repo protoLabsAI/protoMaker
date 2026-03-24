@@ -51,6 +51,7 @@ import { useAppStore } from '@/store/app-store';
 import { useAvaChannelStore } from '@/store/ava-channel-store';
 import { useChatStore } from '@/store/chat-store';
 import { DeleteConfirmDialog } from '@/components/shared/delete-confirm-dialog';
+import { InlineEditor } from '@/components/shared/inline-editor';
 
 interface ActiveProjectViewProps {
   project: Project;
@@ -197,7 +198,15 @@ export function ActiveProjectView({ project, projectSlug, onBack }: ActiveProjec
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h1 className="text-sm font-semibold truncate">{project.title}</h1>
+            <div className="min-w-0 flex-1 max-w-[240px]">
+              <InlineEditor
+                content={project.title}
+                onSave={(title) => updateProject.mutate({ title })}
+                placeholder="Project title..."
+                singleLine
+                className="text-sm font-semibold -mx-2 -my-1"
+              />
+            </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -238,9 +247,15 @@ export function ActiveProjectView({ project, projectSlug, onBack }: ActiveProjec
             )}
             {project.health && <HealthIndicator health={project.health as ProjectHealth} />}
           </div>
-          {project.goal && (
-            <p className="text-xs text-muted-foreground truncate mt-0.5">{project.goal}</p>
-          )}
+          <div className="mt-0.5">
+            <InlineEditor
+              content={project.goal ?? ''}
+              onSave={(goal) => updateProject.mutate({ goal })}
+              placeholder="Project goal..."
+              singleLine
+              className="text-xs text-muted-foreground -mx-2 -my-1"
+            />
+          </div>
         </div>
 
         <Button
@@ -326,14 +341,24 @@ export function ActiveProjectView({ project, projectSlug, onBack }: ActiveProjec
 
                 {/* Priority */}
                 <PropertyRow label="Priority">
-                  <span className="text-xs text-foreground/80 capitalize">
-                    {project.priority ?? 'none'}
-                  </span>
+                  <InlineEditor
+                    content={project.priority ?? ''}
+                    onSave={(priority) => updateProject.mutate({ priority })}
+                    placeholder="none"
+                    singleLine
+                    className="text-xs text-foreground/80 -mx-2 -my-1"
+                  />
                 </PropertyRow>
 
                 {/* Lead */}
                 <PropertyRow label="Lead" icon={User}>
-                  <span className="text-xs text-foreground/80">{project.lead || '—'}</span>
+                  <InlineEditor
+                    content={project.lead ?? ''}
+                    onSave={(lead) => updateProject.mutate({ lead })}
+                    placeholder="Unassigned"
+                    singleLine
+                    className="text-xs text-foreground/80 -mx-2 -my-1"
+                  />
                 </PropertyRow>
 
                 {/* Color */}
@@ -493,16 +518,28 @@ export function ActiveProjectView({ project, projectSlug, onBack }: ActiveProjec
                     <div className="py-4 space-y-3">
                       {SPARC_SECTIONS.map(({ key, label }) => {
                         const content = project.prd?.[key] ?? '';
-                        if (!content) return null;
                         return (
                           <div key={key}>
                             <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
                               {label}
                             </h3>
-                            <div className="rounded-md bg-muted/5 p-3 border-l-2 border-l-primary/20">
-                              <div className="prose prose-sm prose-invert max-w-none prose-p:text-foreground/90 prose-headings:text-foreground prose-li:text-foreground/90">
-                                <Markdown>{content}</Markdown>
-                              </div>
+                            <div className="rounded-md bg-muted/5 border-l-2 border-l-primary/20">
+                              <InlineEditor
+                                content={
+                                  typeof content === 'string'
+                                    ? content
+                                    : Array.isArray(content)
+                                      ? (content as string[]).join('\n')
+                                      : ''
+                                }
+                                onSave={(value) => {
+                                  const prd = { ...project.prd, [key]: value };
+                                  updateProject.mutate({ prd });
+                                }}
+                                placeholder={`Add ${label.toLowerCase()}...`}
+                                markdown
+                                className="text-sm text-foreground/90 p-1"
+                              />
                             </div>
                           </div>
                         );
@@ -529,9 +566,19 @@ export function ActiveProjectView({ project, projectSlug, onBack }: ActiveProjec
                             className="rounded-md border border-border/10 bg-muted/[0.03] p-3 space-y-2"
                           >
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium flex-1 truncate">
-                                {milestone.title}
-                              </span>
+                              <div className="flex-1 min-w-0">
+                                <InlineEditor
+                                  content={milestone.title}
+                                  onSave={(title) => {
+                                    const milestones = [...(project.milestones ?? [])];
+                                    milestones[i] = { ...milestones[i], title };
+                                    updateProject.mutate({ milestones });
+                                  }}
+                                  placeholder="Milestone title..."
+                                  singleLine
+                                  className="text-sm font-medium -mx-2 -my-1"
+                                />
+                              </div>
                               <Badge
                                 variant={getMilestoneStatusVariant(milestone.status)}
                                 size="sm"
@@ -543,11 +590,16 @@ export function ActiveProjectView({ project, projectSlug, onBack }: ActiveProjec
                                 {completedPhases}/{totalPhases}
                               </span>
                             </div>
-                            {milestone.description && (
-                              <p className="text-xs text-muted-foreground line-clamp-2">
-                                {milestone.description}
-                              </p>
-                            )}
+                            <InlineEditor
+                              content={milestone.description ?? ''}
+                              onSave={(description) => {
+                                const milestones = [...(project.milestones ?? [])];
+                                milestones[i] = { ...milestones[i], description };
+                                updateProject.mutate({ milestones });
+                              }}
+                              placeholder="Add description..."
+                              className="text-xs text-muted-foreground -mx-2"
+                            />
                             <div className="h-1 rounded-full bg-muted overflow-hidden">
                               <div
                                 className="h-full rounded-full bg-emerald-500/50"
