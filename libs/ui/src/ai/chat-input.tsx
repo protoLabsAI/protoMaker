@@ -53,11 +53,15 @@ export function ChatInput({
   const commandMode = !!slashCommands?.isActive;
 
   // Auto-resize up to MAX_HEIGHT_PX; textarea handles its own overflow beyond that.
+  // Uses a minimum of 1 line (~24px) to prevent collapse when mounted inside a
+  // hidden container (scrollHeight returns 0 when display:none).
+  const MIN_HEIGHT_PX = 24;
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, MAX_HEIGHT_PX)}px`;
+    const measured = el.scrollHeight;
+    el.style.height = `${Math.max(MIN_HEIGHT_PX, Math.min(measured, MAX_HEIGHT_PX))}px`;
   }, [value]);
 
   // Re-focus after streaming ends so the user can type the next message immediately.

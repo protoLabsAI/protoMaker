@@ -7,7 +7,7 @@
  * Used by the web fallback modal (ChatModal).
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { History, X, Settings, ChevronUp, ChevronDown, SquarePen, ListOrdered } from 'lucide-react';
 import { Button } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
@@ -64,7 +64,13 @@ export function ChatOverlayContent({
   }, []); // Intentionally empty — bootstrap runs once on mount
 
   // Recovery: if all sessions are gone (user closed all tabs), auto-create one.
+  // Skip the first run — bootstrap effect handles initialization.
+  const bootstrapDoneRef = useRef(false);
   useEffect(() => {
+    if (!bootstrapDoneRef.current) {
+      bootstrapDoneRef.current = true;
+      return;
+    }
     if (activeSessions.length === 0) {
       const store = useChatStore.getState();
       const session = store.createSession('sonnet', currentProject?.id ?? 'default');
