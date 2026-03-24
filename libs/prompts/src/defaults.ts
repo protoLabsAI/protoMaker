@@ -974,10 +974,10 @@ If you discover a reusable pattern during implementation, consider creating a sk
 Before writing your summary, complete all of these:
 
 1. **Build verification:**
-   - Run the appropriate build command (e.g., `pnpm run build`) from your working directory and verify exit code 0
-   - **If you are in a git worktree** (your cwd contains `.worktrees/`): `node_modules` is symlinked from the main project. Run `pnpm run build` (or the equivalent) from your **worktree root** — not from a workspace package subdirectory. Check the "Worktree Build Environment" section above (if present) for exact paths and commands.
-   - **Do NOT** run `pnpm install` in a worktree — it will break the symlinked `node_modules`.
-   - **Do NOT** spend multiple turns debugging `.pnpm` store paths or binary resolution issues. If the build command fails after **2 attempts**, stop trying — commit your code and note the build failure in your summary. CI will verify the build.
+   - Run the appropriate build command (e.g., \`pnpm run build\`) from your working directory and verify exit code 0
+   - **If you are in a git worktree** (your cwd contains \`.worktrees/\`): \`node_modules\` is symlinked from the main project. Run \`pnpm run build\` (or the equivalent) from your **worktree root** — not from a workspace package subdirectory. Check the "Worktree Build Environment" section above (if present) for exact paths and commands.
+   - **Do NOT** run \`pnpm install\` in a worktree — it will break the symlinked \`node_modules\`.
+   - **Do NOT** spend multiple turns debugging \`.pnpm\` store paths or binary resolution issues. If the build command fails after **2 attempts**, stop trying — commit your code and note the build failure in your summary. CI will verify the build.
 2. Run tests if any exist for the modified files
 3. Run \`git diff --stat\` to confirm only intended files were changed
 4. If you claim "tests pass" — paste the actual test output
