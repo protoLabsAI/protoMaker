@@ -20,7 +20,8 @@ import { cn } from '@/lib/utils';
 export function ChatModal() {
   const chatModalOpen = useChatStore((s) => s.chatModalOpen);
   const setChatModalOpen = useChatStore((s) => s.setChatModalOpen);
-  const activeStreamingSessionId = useChatStore((s) => s.activeStreamingSessionId);
+  const sessionStreamingMap = useChatStore((s) => s.sessionStreamingMap);
+  const streamingCount = Object.values(sessionStreamingMap).filter(Boolean).length;
 
   const handleClose = useCallback(() => {
     setChatModalOpen(false);
@@ -66,7 +67,7 @@ export function ChatModal() {
       </div>
 
       {/* Streaming indicator — visible when panel is closed but Ava is working */}
-      {!chatModalOpen && activeStreamingSessionId && (
+      {!chatModalOpen && streamingCount > 0 && (
         <button
           type="button"
           onClick={() => setChatModalOpen(true)}
@@ -79,7 +80,7 @@ export function ChatModal() {
           title="Ava is working — click to view (Ctrl+K)"
         >
           <span className="size-2 rounded-full bg-primary-foreground animate-pulse" />
-          Ava is working...
+          {streamingCount > 1 ? `Ava is working (${streamingCount} sessions)` : 'Ava is working...'}
         </button>
       )}
     </>

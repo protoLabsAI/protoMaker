@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
+import { toast } from 'sonner';
 import { useChatStore } from '@/store/chat-store';
 import { getAuthHeaders } from '@/lib/api-fetch';
 import { AskAvaTab } from './ask-ava-tab';
@@ -72,9 +73,12 @@ export function ChatSessionSlot({
   });
 
   const isStreaming = status === 'streaming' || status === 'submitted';
+  const chatModalOpen = useChatStore((s) => s.chatModalOpen);
 
   // Track whether we've already seeded messages from the store on first mount
   const seededRef = useRef(false);
+  // Track previous streaming state to detect transitions
+  const prevStreamingRef = useRef(false);
 
   // Seed messages from store on first mount
   useEffect(() => {
@@ -96,6 +100,22 @@ export function ChatSessionSlot({
   useEffect(() => {
     setSessionStreaming(sessionId, isStreaming);
   }, [sessionId, isStreaming, setSessionStreaming]);
+
+  // Toast when a background session finishes (modal was closed during streaming)
+  useEffect(() => {
+    const wasStreaming = prevStreamingRef.current;
+    if (wasStreaming && !isStreaming && !chatModalOpen) {
+      const title = session?.title ?? 'Chat session';
+      toast(`${title} complete`, {
+        description: 'Ava finished responding. Click to open.',
+        action: {
+          label: 'Open',
+          onClick: () => useChatStore.getState().setChatModalOpen(true),
+        },
+      });
+    }
+    prevStreamingRef.current = isStreaming;
+  }, [isStreaming, chatModalOpen, session?.title]);
 
   // Persist messages to the store whenever they change
   const messagesRef = useRef(messages);
