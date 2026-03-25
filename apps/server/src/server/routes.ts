@@ -237,7 +237,8 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
       events,
       authorityService,
       featureHealthService,
-      pipelineCheckpointService
+      pipelineCheckpointService,
+      worktreeLifecycleService
     )
   );
   app.post(

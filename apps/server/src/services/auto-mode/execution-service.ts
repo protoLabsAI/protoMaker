@@ -535,13 +535,19 @@ export class ExecutionService {
         return;
       }
 
-      // CRITICAL: Merge worktree with latest origin/main before agent execution
+      // CRITICAL: Merge worktree with latest origin/${prBaseBranch} before agent execution
       // This prevents agents from executing against stale code when PRs merge in quick succession.
       // Uses merge instead of rebase to handle concurrent .automaker/ modifications gracefully.
       if (worktreePath) {
         try {
-          logger.info(`Merging worktree with latest origin/main: ${worktreePath}`);
-          const mergeResult = await rebaseWorktreeOnMain(worktreePath);
+          const prBaseBranch = await getEffectivePrBaseBranch(
+            projectPath,
+            this.settingsService,
+            '[AutoMode]'
+          );
+          const targetBranch = `origin/${prBaseBranch}`;
+          logger.info(`Merging worktree with latest ${targetBranch}: ${worktreePath}`);
+          const mergeResult = await rebaseWorktreeOnMain(worktreePath, targetBranch);
 
           if (!mergeResult.success) {
             if (mergeResult.hasConflicts) {
@@ -550,7 +556,7 @@ export class ExecutionService {
                   ? ` Conflicting files: ${mergeResult.conflictingFiles.join(', ')}.`
                   : '';
               const reason =
-                `Pre-flight merge with origin/main has conflicts — branch "${branchName}" must be manually merged before the agent can proceed.${fileList} ` +
+                `Pre-flight merge with ${targetBranch} has conflicts — branch "${branchName}" must be manually merged before the agent can proceed.${fileList} ` +
                 `Blocking feature to prevent repeated merge_conflict failures.`;
               logger.warn(`${reason} Feature: ${featureId}`);
               await this.featureLoader.update(projectPath, featureId, {
@@ -571,7 +577,7 @@ export class ExecutionService {
               );
             }
           } else {
-            logger.info(`Worktree successfully merged with latest origin/main`);
+            logger.info(`Worktree successfully merged with latest ${targetBranch}`);
           }
         } catch (mergeError) {
           // Log error but don't fail execution - agent can still work on stale base

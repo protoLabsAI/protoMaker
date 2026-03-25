@@ -17,6 +17,7 @@ import type { SettingsService } from '../../../services/settings-service.js';
 import type { FeatureHealthService } from '../../../services/feature-health-service.js';
 import type { EventEmitter } from '../../../lib/events.js';
 import type { PipelineCheckpointService } from '../../../services/pipeline-checkpoint-service.js';
+import type { WorktreeLifecycleService } from '../../../services/worktree-lifecycle-service.js';
 import { getErrorMessage, logError } from '../common.js';
 import { createLogger } from '@protolabsai/utils';
 
@@ -47,7 +48,8 @@ export function createUpdateHandler(
   authorityService?: AuthorityService,
   healthService?: FeatureHealthService,
   events?: EventEmitter,
-  checkpointService?: PipelineCheckpointService
+  checkpointService?: PipelineCheckpointService,
+  worktreeLifecycleService?: WorktreeLifecycleService
 ) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
@@ -159,6 +161,22 @@ export function createUpdateHandler(
         } catch (checkpointError) {
           // Non-critical — log but don't fail the update
           logger.error(`Failed to clear pipeline checkpoint for ${featureId}:`, checkpointError);
+        }
+      }
+
+      // Clean up stale worktree, branch, and context files when resetting to backlog.
+      // Without this, the next agent launch reuses the old worktree (which may contain
+      // merge conflicts from the previous failed attempt) and immediately blocks again.
+      if (newStatus === 'backlog' && previousStatus !== 'backlog' && worktreeLifecycleService) {
+        try {
+          await worktreeLifecycleService.cleanupForBacklogReset(projectPath, featureId);
+          logger.info(`Cleaned up worktree and stale files for ${featureId} on reset to backlog`);
+        } catch (cleanupError) {
+          // Non-critical — log but don't fail the update
+          logger.error(
+            `Failed to clean up worktree for ${featureId} on backlog reset:`,
+            cleanupError
+          );
         }
       }
 

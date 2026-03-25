@@ -1,5 +1,19 @@
 # @protolabsai/observability
 
+## 0.89.2
+
+### Patch Changes
+
+- ### Bug Fixes
+  - auto-recover merge_conflict blocked features when branch is clean (#3124)
+
+  ### Refactors
+  - Pre-flight merge uses origin/main instead of prBaseBranch (#3122)
+
+- Updated dependencies
+  - @protolabsai/types@0.89.2
+  - @protolabsai/utils@0.89.2
+
 ## 0.89.1
 
 ### Patch Changes
