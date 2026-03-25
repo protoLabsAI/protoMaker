@@ -1,4 +1,4 @@
 dist/
 dist-cjs/
-node_modules/
+node_modules
 *.tsbuildinfo

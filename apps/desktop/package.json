@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "cd src-tauri && cargo tauri dev",
-    "build": "cd src-tauri && cargo tauri build",
+    "build:desktop": "cd src-tauri && cargo tauri build",
     "tauri": "cargo tauri"
   },
   "devDependencies": {

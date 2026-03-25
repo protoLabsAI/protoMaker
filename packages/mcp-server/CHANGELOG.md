@@ -1,5 +1,19 @@
 # @protolabsai/mcp-server
 
+## 0.89.1
+
+### Patch Changes
+
+- ### Bug Fixes
+  - rename desktop build script to avoid Turbo CI pickup
+
+  ### Refactors
+  - [Bug] symlinkBuildArtifacts creates self-referencing node_modules symlin (#3117)
+  - [Bug] CI ENOTDIR failure on pnpm install in GitHub Actions (#3116)
+
+- Updated dependencies
+  - @protolabsai/tools@0.89.1
+
 ## 0.89.0
 
 ### Minor Changes
