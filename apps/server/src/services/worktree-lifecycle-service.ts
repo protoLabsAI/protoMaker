@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import path from 'path';
 import { exec, execFile, execSync } from 'child_process';
 import { createLogger } from '@protolabsai/utils';
+import { getFeatureDir } from '@protolabsai/platform';
 import * as secureFs from '../lib/secure-fs.js';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
@@ -315,6 +316,123 @@ export class WorktreeLifecycleService {
       await this.cleanupWorktree(projectPath, feature.branchName, featureId);
     } catch (error) {
       logger.error(`Failed to clean up worktree for feature ${featureId}:`, error);
+    }
+  }
+
+  /**
+   * Clean up worktree, branch, and stale context files when a feature is reset to backlog.
+   *
+   * Unlike the post-merge cleanup (which preserves unpushed work), this performs a
+   * destructive reset: the worktree is force-removed, the local branch is force-deleted,
+   * and stale agent context files are renamed so the next agent launch starts fresh.
+   *
+   * All operations are best-effort -- failures are logged but never thrown, so the
+   * status update that triggers this cleanup is never blocked.
+   */
+  async cleanupForBacklogReset(projectPath: string, featureId: string): Promise<void> {
+    let feature;
+    try {
+      feature = await this.featureLoader.get(projectPath, featureId);
+    } catch (error) {
+      logger.warn(`[BACKLOG-RESET] Could not load feature ${featureId}: ${error}`);
+      return;
+    }
+
+    const branchName = feature?.branchName;
+    if (!branchName) {
+      logger.debug(`[BACKLOG-RESET] Feature ${featureId} has no branch — nothing to clean`);
+      // Still attempt stale file cleanup even without a branch
+      await this.renameStaleContextFiles(projectPath, featureId);
+      return;
+    }
+
+    const worktreeName = branchName.replace(/\//g, '-');
+    const worktreePath = path.join(projectPath, '.worktrees', worktreeName);
+
+    // 1. Remove worktree (force — we are intentionally discarding this work)
+    try {
+      execSync(`git worktree remove "${worktreePath}" --force`, {
+        cwd: projectPath,
+        timeout: 30_000,
+        encoding: 'utf-8',
+      });
+      logger.info(`[BACKLOG-RESET] Removed worktree: ${worktreeName}`);
+    } catch (error) {
+      logger.debug(
+        `[BACKLOG-RESET] Worktree ${worktreeName} not found or already removed: ${error}`
+      );
+    }
+
+    // 2. Force-delete the local branch so the next agent creates a fresh one
+    try {
+      execSync(`git branch -D "${branchName}"`, {
+        cwd: projectPath,
+        timeout: 10_000,
+        encoding: 'utf-8',
+      });
+      logger.info(`[BACKLOG-RESET] Deleted local branch: ${branchName}`);
+    } catch (error) {
+      logger.debug(`[BACKLOG-RESET] Could not delete branch ${branchName}: ${error}`);
+    }
+
+    // 3. Prune stale worktree metadata
+    try {
+      execSync('git worktree prune', {
+        cwd: projectPath,
+        timeout: 10_000,
+        encoding: 'utf-8',
+      });
+    } catch {
+      // Non-critical
+    }
+
+    // 4. Rename stale context files
+    await this.renameStaleContextFiles(projectPath, featureId);
+
+    // 5. Emit cleanup event
+    this.events.emit('feature:worktree-cleaned', {
+      projectPath,
+      branchName,
+      featureId,
+      worktreePath,
+      reason: 'backlog-reset',
+    });
+
+    logger.info(
+      `[BACKLOG-RESET] Cleanup complete for feature ${featureId} (branch: ${branchName})`
+    );
+  }
+
+  /**
+   * Rename stale agent context files so the next agent launch starts fresh.
+   *
+   * Renames agent-output.md and handoff-*.json files to .stale variants.
+   */
+  private async renameStaleContextFiles(projectPath: string, featureId: string): Promise<void> {
+    const featureDir = getFeatureDir(projectPath, featureId);
+
+    // Rename agent-output.md
+    const agentOutputPath = path.join(featureDir, 'agent-output.md');
+    try {
+      await fs.promises.access(agentOutputPath);
+      await fs.promises.rename(agentOutputPath, `${agentOutputPath}.stale`);
+      logger.info(`[BACKLOG-RESET] Renamed agent-output.md to .stale for ${featureId}`);
+    } catch {
+      // File doesn't exist — nothing to rename
+    }
+
+    // Rename handoff-*.json files
+    try {
+      const entries = await fs.promises.readdir(featureDir);
+      for (const entry of entries) {
+        if (entry.startsWith('handoff-') && entry.endsWith('.json')) {
+          const filePath = path.join(featureDir, entry);
+          await fs.promises.rename(filePath, `${filePath}.stale`);
+          logger.info(`[BACKLOG-RESET] Renamed ${entry} to .stale for ${featureId}`);
+        }
+      }
+    } catch {
+      // Feature directory may not exist — nothing to rename
     }
   }
 
