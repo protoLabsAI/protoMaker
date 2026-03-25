@@ -164,9 +164,7 @@ describe('WorktreeLifecycleService.cleanupForBacklogReset', () => {
     vi.mocked(fs.promises.readdir).mockRejectedValue(new Error('ENOENT'));
 
     // Should not throw
-    await expect(
-      service.cleanupForBacklogReset(projectPath, featureId)
-    ).resolves.toBeUndefined();
+    await expect(service.cleanupForBacklogReset(projectPath, featureId)).resolves.toBeUndefined();
 
     // Branch deletion should still be attempted
     expect(execSync).toHaveBeenCalledWith(
@@ -186,9 +184,7 @@ describe('WorktreeLifecycleService.cleanupForBacklogReset', () => {
     vi.mocked(fs.promises.readdir).mockRejectedValue(new Error('ENOENT'));
 
     // Should not throw
-    await expect(
-      service.cleanupForBacklogReset(projectPath, featureId)
-    ).resolves.toBeUndefined();
+    await expect(service.cleanupForBacklogReset(projectPath, featureId)).resolves.toBeUndefined();
   });
 
   it('does not throw when feature cannot be loaded', async () => {
@@ -198,9 +194,7 @@ describe('WorktreeLifecycleService.cleanupForBacklogReset', () => {
     );
     service = new WorktreeLifecycleService(events, featureLoader);
 
-    await expect(
-      service.cleanupForBacklogReset(projectPath, featureId)
-    ).resolves.toBeUndefined();
+    await expect(service.cleanupForBacklogReset(projectPath, featureId)).resolves.toBeUndefined();
   });
 
   it('handles missing agent-output.md gracefully', async () => {
@@ -208,9 +202,7 @@ describe('WorktreeLifecycleService.cleanupForBacklogReset', () => {
     vi.mocked(fs.promises.access).mockRejectedValue(new Error('ENOENT'));
     vi.mocked(fs.promises.readdir).mockResolvedValue([] as unknown as fs.Dirent[]);
 
-    await expect(
-      service.cleanupForBacklogReset(projectPath, featureId)
-    ).resolves.toBeUndefined();
+    await expect(service.cleanupForBacklogReset(projectPath, featureId)).resolves.toBeUndefined();
 
     // rename should not be called for agent-output.md since access failed
     expect(fs.promises.rename).not.toHaveBeenCalledWith(
