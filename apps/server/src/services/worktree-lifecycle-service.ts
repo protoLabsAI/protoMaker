@@ -650,25 +650,59 @@ export async function symlinkBuildArtifacts(
 ): Promise<string[]> {
   const symlinked: string[] = [];
 
+  // Guard: never symlink a project to itself — creates self-referencing circular symlinks
+  // (e.g. node_modules -> /project/node_modules) which break all tooling with ELOOP errors
+  // and can be committed to git if .gitignore uses trailing-slash form
+  if (path.resolve(projectPath) === path.resolve(worktreePath)) {
+    logger.warn(
+      `symlinkBuildArtifacts: projectPath and worktreePath resolve to the same directory ` +
+        `(${path.resolve(projectPath)}) — skipping to prevent self-referencing symlinks`
+    );
+    return symlinked;
+  }
+
   for (const dir of BUILD_ARTIFACT_DIRS) {
     const sourcePath = path.join(projectPath, dir);
     const targetPath = path.join(worktreePath, dir);
 
     try {
-      // Check if source exists in main project
-      await fs.promises.access(sourcePath);
+      // Use stat() (follows symlinks) to verify source is an actual directory.
+      // access() only checks existence — it passes for broken symlinks and files.
+      // stat() throws ENOENT for broken symlinks, giving us a reliable directory check.
+      const sourceStat = await fs.promises.stat(sourcePath);
+      if (!sourceStat.isDirectory()) {
+        logger.debug(`Skipping ${dir}: source at ${sourcePath} is not a directory`);
+        continue;
+      }
     } catch {
-      // Source doesn't exist in main project -- nothing to symlink
+      // Source doesn't exist or is a broken symlink — nothing to symlink
       continue;
     }
 
     try {
       // Check if target already exists in worktree (real dir, symlink, or file)
-      await fs.promises.lstat(targetPath);
-      // Already exists -- skip to avoid clobbering
-      continue;
+      const targetLstat = await fs.promises.lstat(targetPath);
+
+      if (targetLstat.isSymbolicLink()) {
+        // Target is a symlink — verify it's not broken before skipping.
+        // lstat() succeeds for broken symlinks (they exist on disk), but stat()
+        // throws ENOENT when the symlink target is missing.
+        try {
+          await fs.promises.stat(targetPath);
+          // Symlink resolves to a valid target — skip to avoid clobbering
+          continue;
+        } catch {
+          // Broken symlink — remove it so we can create a correct one
+          logger.warn(`Removing broken symlink at ${targetPath} before re-creating`);
+          await fs.promises.unlink(targetPath);
+          // Fall through to create the new symlink below
+        }
+      } else {
+        // Real directory or file exists — skip to avoid clobbering
+        continue;
+      }
     } catch {
-      // Target doesn't exist -- proceed with symlink creation
+      // Target doesn't exist — proceed with symlink creation
     }
 
     try {
