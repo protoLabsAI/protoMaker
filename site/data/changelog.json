@@ -1,21 +1,77 @@
 {
   "summary": {
-    "totalEntries": 1724,
+    "totalEntries": 1731,
     "categories": {
-      "feature": 884,
-      "improvement": 310,
+      "docs": 83,
+      "improvement": 314,
+      "feature": 886,
       "fix": 341,
-      "docs": 82,
       "infrastructure": 107
     },
     "firstDate": "2026-02-04T21:35:59.000Z",
-    "latestDate": "2026-03-24T04:04:16.000Z"
+    "latestDate": "2026-03-25T00:25:35.000Z"
   },
   "months": [
     {
       "month": "2026-03",
       "label": "March 2026",
       "entries": [
+        {
+          "hash": "e56a7a80",
+          "date": "2026-03-25T00:25:35+00:00",
+          "title": "Regenerate site data",
+          "prNumber": 3097,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3097",
+          "category": "docs"
+        },
+        {
+          "hash": "a2381c2a",
+          "date": "2026-03-24T16:15:20-07:00",
+          "title": "[Bug] symlinkBuildArtifacts creates self-referencing node_modules symlin",
+          "prNumber": 3117,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3117",
+          "category": "improvement"
+        },
+        {
+          "hash": "07688bab",
+          "date": "2026-03-24T16:02:59-07:00",
+          "title": "[Bug] CI ENOTDIR failure on pnpm install in GitHub Actions",
+          "prNumber": 3116,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3116",
+          "category": "improvement"
+        },
+        {
+          "hash": "edea83df",
+          "date": "2026-03-24T01:45:46-07:00",
+          "title": "Add ReasoningBlock component for Ava extended thinking",
+          "prNumber": 3108,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3108",
+          "category": "feature"
+        },
+        {
+          "hash": "9f649ffe",
+          "date": "2026-03-24T01:06:03-07:00",
+          "title": "Agents stuck on tsc/vitest resolution in worktrees",
+          "prNumber": 3103,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3103",
+          "category": "feature"
+        },
+        {
+          "hash": "e20ae431",
+          "date": "2026-03-24T00:38:00-07:00",
+          "title": "Pre-flight merge conflict on every agent launch in fast-moving projects",
+          "prNumber": 3102,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3102",
+          "category": "improvement"
+        },
+        {
+          "hash": "946da822",
+          "date": "2026-03-24T00:34:57-07:00",
+          "title": "Squash-merge PRs can produce empty commits when worktree code not pushed",
+          "prNumber": 3101,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3101",
+          "category": "improvement"
+        },
         {
           "hash": "a527c41c",
           "date": "2026-03-23T21:04:16-07:00",
@@ -13817,5 +13873,5 @@
       ]
     }
   ],
-  "generatedAt": "2026-03-24T06:27:13.516Z"
+  "generatedAt": "2026-03-25T06:26:52.971Z"
 }
