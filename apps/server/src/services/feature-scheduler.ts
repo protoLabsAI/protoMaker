@@ -29,6 +29,7 @@ import {
 import { resolveDependencies, areDependenciesSatisfied } from '@protolabsai/dependency-resolver';
 import { getFeaturesDir } from '@protolabsai/platform';
 import { isWorktreeLocked } from '../lib/worktree-lock.js';
+import { getEffectivePrBaseBranch } from '../lib/settings-helpers.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { SettingsService } from './settings-service.js';
 import type { EventEmitter } from '../lib/events.js';
@@ -934,6 +935,102 @@ export class FeatureScheduler {
           logger.debug(
             `[loadPendingFeatures] Could not verify PR #${feature.prNumber} for feature ${feature.id} (non-fatal)`
           );
+        }
+      }
+
+      // ── Merge-conflict stale block recovery ──
+      // Features blocked for pre-flight merge conflicts may resolve automatically
+      // when a subsequent PR merges the conflicting changes into the base branch.
+      // This check detects features whose branch is now up-to-date with origin/<prBaseBranch>
+      // and resets them to backlog so the agent can retry without human intervention.
+      const mergeConflictBlocked = allFeatures.filter(
+        (f) =>
+          f.status === 'blocked' &&
+          f.branchName &&
+          (f.statusChangeReason ?? '').includes('Pre-flight merge') &&
+          (f.statusChangeReason ?? '').toLowerCase().includes('conflict')
+      );
+
+      if (mergeConflictBlocked.length > 0) {
+        let resolvedPrBaseBranch = 'dev';
+        try {
+          resolvedPrBaseBranch = await getEffectivePrBaseBranch(
+            projectPath,
+            this.settingsService,
+            '[loadPendingFeatures]'
+          );
+        } catch {
+          // fall through with default
+        }
+
+        for (const feature of mergeConflictBlocked) {
+          const branchName = feature.branchName!;
+          const worktreePath = path.join(projectPath, '.worktrees', branchName.replace(/\//g, '-'));
+
+          try {
+            let isClean = false;
+
+            // Check if the worktree directory exists
+            let worktreeExists = false;
+            try {
+              await secureFs.access(worktreePath);
+              worktreeExists = true;
+            } catch {
+              worktreeExists = false;
+            }
+
+            if (!worktreeExists) {
+              // No worktree: a new one will be created fresh from origin/<prBaseBranch> HEAD — always conflict-free
+              isClean = true;
+              logger.info(
+                `[loadPendingFeatures] Feature ${feature.id} ("${feature.title}") merge-conflict block is stale — no worktree exists, will start fresh`
+              );
+            } else {
+              // Worktree exists: check if origin/<prBaseBranch> is already an ancestor of HEAD.
+              // Exit code 0 means the branch already contains all base commits — merge would be a no-op.
+              try {
+                await execAsync(
+                  `git merge-base --is-ancestor origin/${resolvedPrBaseBranch} HEAD`,
+                  { cwd: worktreePath, timeout: 10000 }
+                );
+                isClean = true;
+                logger.info(
+                  `[loadPendingFeatures] Feature ${feature.id} ("${feature.title}") merge-conflict block is stale — branch is already up-to-date with origin/${resolvedPrBaseBranch}`
+                );
+              } catch {
+                isClean = false;
+                logger.debug(
+                  `[loadPendingFeatures] Feature ${feature.id} still has unresolved conflicts with origin/${resolvedPrBaseBranch} — leaving blocked`
+                );
+              }
+            }
+
+            if (isClean) {
+              feature.status = 'backlog';
+              try {
+                await this.featureLoader.update(projectPath, feature.id, {
+                  status: 'backlog',
+                  statusChangeReason: undefined,
+                  failureCount: 0,
+                  failureClassification: undefined,
+                });
+                logger.info(
+                  `[loadPendingFeatures] Auto-reset feature ${feature.id} from blocked (merge_conflict) to backlog`
+                );
+              } catch (updateErr) {
+                feature.status = 'blocked';
+                logger.error(
+                  `[loadPendingFeatures] Failed to auto-reset merge-conflict blocked feature ${feature.id}:`,
+                  updateErr
+                );
+              }
+            }
+          } catch (checkErr) {
+            logger.warn(
+              `[loadPendingFeatures] Could not check merge-conflict status for feature ${feature.id} (non-fatal):`,
+              checkErr
+            );
+          }
         }
       }
 
