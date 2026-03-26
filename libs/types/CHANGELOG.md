@@ -8,10 +8,9 @@
   - auto-decay stalled review features to prevent review queue deadlock (#3130)
   - replace -webkit-app-region CSS with data-tauri-drag-region attribute for Tauri window dragging (#3128)
 
-  ### Refactors
-  - Bug: Global concurrency gate starves projects — no fair-share scheduling (#3132)
-  - Bug: Auto-mode status reports isRunning:false while start returns 'alrea (#3131)
-  - Bug: start_auto_mode silently ignores maxConcurrency parameter (#3129)
+  - Global concurrency gate starves projects — no fair-share scheduling (#3132)
+  - Auto-mode status reports isRunning:false while start returns 'already running' (#3131)
+  - start_auto_mode silently ignores maxConcurrency parameter (#3129)
 
 ## 0.89.2
 

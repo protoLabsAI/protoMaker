@@ -731,7 +731,23 @@ export class FeatureScheduler {
 
     if (typeof maxConcurrencyOverride === 'number') {
       // Caller-supplied override bypasses steps 3–5; system cap still applies.
-      desired = maxConcurrencyOverride;
+      // Validate override is a finite positive integer
+      desired =
+        Number.isFinite(maxConcurrencyOverride) && maxConcurrencyOverride > 0
+          ? Math.floor(maxConcurrencyOverride)
+          : DEFAULT_MAX_CONCURRENCY;
+
+      // Still load admin UI cap so the override is properly clamped
+      if (this.settingsService) {
+        try {
+          const settings = await this.settingsService.getGlobalSettings();
+          if (typeof settings.systemMaxConcurrency === 'number') {
+            systemCap = Math.min(settings.systemMaxConcurrency, MAX_SYSTEM_CONCURRENCY);
+          }
+        } catch {
+          // Settings unavailable — use env var hard limit as system cap
+        }
+      }
     } else if (!this.settingsService) {
       desired = DEFAULT_MAX_CONCURRENCY;
     } else {
@@ -1696,7 +1712,7 @@ export class FeatureScheduler {
           (feature.ciRemediationCount ?? 0) > 0 ||
           (feature.ciIterationCount ?? 0) > 0 ||
           (feature.remediationHistory ?? []).some((h) => h.cycleType === 'ci_failure') ||
-          (feature.statusChangeReason ?? '').toLowerCase().includes('ci');
+          /\bci\b|\bci fail/i.test(feature.statusChangeReason ?? '');
 
         if (!hasCiFailureIndicator) continue;
 
@@ -1708,6 +1724,12 @@ export class FeatureScheduler {
             status: 'backlog',
             failureCount: prevFailureCount + 1,
             statusChangeReason: `Auto-decayed: stalled in review for ${elapsedMinutes}min with failing CI`,
+            // Clear PR linkage so the feature doesn't bounce back to review via open-PR sync
+            prNumber: undefined,
+            prUrl: undefined,
+            prCreatedAt: undefined,
+            reviewStartedAt: undefined,
+            prTrackedSince: undefined,
           });
           decayedCount++;
           logger.warn(

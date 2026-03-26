@@ -221,9 +221,9 @@ When the number of features awaiting human review reaches `maxPendingReviews`, t
 
 | Setting             | Type    | Default | Range | Description                                |
 | ------------------- | ------- | ------- | ----- | ------------------------------------------ |
-| `maxPendingReviews` | integer | 5       | 1--50 | Maximum PRs in review before pickup pauses |
+| `maxPendingReviews` | integer | 5       | 1-50  | Maximum PRs in review before pickup pauses |
 
-Values outside the 1--50 range are rejected and the default of 5 is used instead.
+Values outside the 1-50 range fall back to the default of 5.
 
 ### Review Queue Auto-Decay
 

@@ -327,6 +327,13 @@ export class ConcurrencyManager {
     projectsWithPendingWork: Set<string>,
     startingCount: number
   ): boolean {
+    // Global capacity check: total running + starting across ALL projects must be below globalCap
+    const globalRunning = this.size;
+    if (globalRunning + startingCount >= globalCap) {
+      return false;
+    }
+
+    // Per-project fair-share check
     const currentRunning = this.getRunningCountForProject(projectPath);
     const totalOccupied = currentRunning + startingCount;
     const fairShare = this.calculateFairShareForProject(

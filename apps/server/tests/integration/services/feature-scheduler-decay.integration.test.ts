@@ -55,6 +55,7 @@ describe('FeatureScheduler auto-decay (integration)', () => {
   const mockCallbacks = {
     getRunningCountForWorktree: vi.fn().mockResolvedValue(0),
     getGlobalRunningCount: vi.fn().mockReturnValue(0),
+    canProjectAcquireGlobalSlot: vi.fn().mockResolvedValue(true),
     hasInProgressFeatures: vi.fn().mockResolvedValue(false),
     isFeatureRunning: vi.fn().mockReturnValue(false),
     getRunningFeatureIds: vi.fn().mockReturnValue([]),

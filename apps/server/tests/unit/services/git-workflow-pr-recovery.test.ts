@@ -85,7 +85,12 @@ function makeExecQueue(
       typeof _optsOrCb === 'function'
         ? (_optsOrCb as ExecResultCallback)
         : (maybeCb as ExecResultCallback);
-    const response = responses[idx++] ?? { stdout: '' };
+    const response = responses[idx++];
+    if (!response) {
+      throw new Error(
+        `makeExecQueue: unexpected exec call #${idx} (only ${responses.length} responses provided). Command: ${_cmd}`
+      );
+    }
     if ('error' in response) {
       cb(response.error);
     } else {
@@ -96,12 +101,30 @@ function makeExecQueue(
 }
 
 /**
- * Build an execFile mock that always throws with the given error.
- * Suitable for simulating `gh pr create` → "already exists".
+ * Build an execFile mock that responds to calls in order from the provided queue.
+ * Each entry is either `{ stdout }` for success or `{ error }` for failure.
+ * Supports the execFile signature: (file, args, opts, cb).
  */
-function makeExecFileAlwaysThrows(err: Error): ReturnType<typeof vi.fn> {
-  return vi.fn((_file: string, _args: string[], _opts: unknown, cb: ExecFileCallback) => {
-    cb(err, { stdout: '', stderr: err.message });
+function makeExecFileQueue(
+  responses: Array<{ stdout: string } | { error: Error }>
+): ReturnType<typeof vi.fn> {
+  let idx = 0;
+  return vi.fn((_file: string, _args: string[], _optsOrCb: unknown, maybeCb?: unknown) => {
+    const cb: ExecFileCallback =
+      typeof _optsOrCb === 'function'
+        ? (_optsOrCb as ExecFileCallback)
+        : (maybeCb as ExecFileCallback);
+    const response = responses[idx++];
+    if (!response) {
+      throw new Error(
+        `makeExecFileQueue: unexpected execFile call #${idx} (only ${responses.length} provided). File: ${_file}, Args: ${JSON.stringify(_args)}`
+      );
+    }
+    if ('error' in response) {
+      cb(response.error, { stdout: '', stderr: response.error.message });
+    } else {
+      cb(null, { stdout: response.stdout, stderr: '' });
+    }
     return {} as ReturnType<typeof execFile>;
   });
 }
@@ -152,12 +175,11 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
 
   // ─── exec response builders ────────────────────────────────────────────────
 
-  /** Standard exec preamble: gh available + git remote -v + empty pre-check */
+  /** Standard exec preamble: gh available + git remote -v (shell commands only) */
   function preambleResponses(): Array<{ stdout: string } | { error: Error }> {
     return [
       { stdout: '/usr/bin/gh\n' }, // command -v gh
       { stdout: 'origin\thttps://github.com/org/repo.git (fetch)\n' }, // git remote -v
-      { stdout: '[]' }, // gh pr list --limit 1 (pre-check: no open PRs)
     ];
   }
 
@@ -167,8 +189,14 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
     );
 
     vi.mocked(exec).mockImplementation(
-      makeExecQueue([
-        ...preambleResponses(),
+      makeExecQueue([...preambleResponses()]) as ReturnType<typeof exec>
+    );
+    vi.mocked(execFile).mockImplementation(
+      makeExecFileQueue([
+        { stdout: '[]' }, // pre-check: no open PRs
+        { error: alreadyExistsError }, // gh pr create attempt 1
+        { error: alreadyExistsError }, // gh pr create attempt 2 (retry)
+        { error: alreadyExistsError }, // gh pr create attempt 3 (retry, final)
         {
           stdout: JSON.stringify([
             {
@@ -179,10 +207,7 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
             },
           ]),
         }, // gh pr list --state all (recovery)
-      ]) as ReturnType<typeof exec>
-    );
-    vi.mocked(execFile).mockImplementation(
-      makeExecFileAlwaysThrows(alreadyExistsError) as ReturnType<typeof execFile>
+      ]) as ReturnType<typeof execFile>
     );
 
     const result = await service.createPullRequest(
@@ -207,8 +232,14 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
     );
 
     vi.mocked(exec).mockImplementation(
-      makeExecQueue([
-        ...preambleResponses(),
+      makeExecQueue([...preambleResponses()]) as ReturnType<typeof exec>
+    );
+    vi.mocked(execFile).mockImplementation(
+      makeExecFileQueue([
+        { stdout: '[]' }, // pre-check: no open PRs
+        { error: alreadyExistsError }, // gh pr create attempt 1
+        { error: alreadyExistsError }, // gh pr create attempt 2 (retry)
+        { error: alreadyExistsError }, // gh pr create attempt 3 (retry, final)
         {
           stdout: JSON.stringify([
             {
@@ -218,11 +249,8 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
               state: 'MERGED',
             },
           ]),
-        },
-      ]) as ReturnType<typeof exec>
-    );
-    vi.mocked(execFile).mockImplementation(
-      makeExecFileAlwaysThrows(alreadyExistsError) as ReturnType<typeof execFile>
+        }, // recovery
+      ]) as ReturnType<typeof execFile>
     );
 
     const result = await service.createPullRequest(
@@ -246,8 +274,14 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
     );
 
     vi.mocked(exec).mockImplementation(
-      makeExecQueue([
-        ...preambleResponses(),
+      makeExecQueue([...preambleResponses()]) as ReturnType<typeof exec>
+    );
+    vi.mocked(execFile).mockImplementation(
+      makeExecFileQueue([
+        { stdout: '[]' }, // pre-check: no open PRs
+        { error: alreadyExistsError }, // gh pr create attempt 1
+        { error: alreadyExistsError }, // gh pr create attempt 2 (retry)
+        { error: alreadyExistsError }, // gh pr create attempt 3 (retry, final)
         {
           stdout: JSON.stringify([
             {
@@ -257,11 +291,8 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
               state: 'CLOSED',
             },
           ]),
-        },
-      ]) as ReturnType<typeof exec>
-    );
-    vi.mocked(execFile).mockImplementation(
-      makeExecFileAlwaysThrows(alreadyExistsError) as ReturnType<typeof execFile>
+        }, // recovery
+      ]) as ReturnType<typeof execFile>
     );
 
     const result = await service.createPullRequest(
@@ -284,13 +315,16 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
     );
 
     vi.mocked(exec).mockImplementation(
-      makeExecQueue([
-        ...preambleResponses(),
-        { stdout: '[]' }, // recovery: empty list
-      ]) as ReturnType<typeof exec>
+      makeExecQueue([...preambleResponses()]) as ReturnType<typeof exec>
     );
     vi.mocked(execFile).mockImplementation(
-      makeExecFileAlwaysThrows(alreadyExistsError) as ReturnType<typeof execFile>
+      makeExecFileQueue([
+        { stdout: '[]' }, // pre-check: no open PRs
+        { error: alreadyExistsError }, // gh pr create attempt 1
+        { error: alreadyExistsError }, // gh pr create attempt 2 (retry)
+        { error: alreadyExistsError }, // gh pr create attempt 3 (retry, final)
+        { stdout: '[]' }, // recovery: empty list
+      ]) as ReturnType<typeof execFile>
     );
 
     await expect(
@@ -304,13 +338,16 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
     );
 
     vi.mocked(exec).mockImplementation(
-      makeExecQueue([
-        ...preambleResponses(),
-        { error: new Error('gh: not authenticated') }, // recovery fails
-      ]) as ReturnType<typeof exec>
+      makeExecQueue([...preambleResponses()]) as ReturnType<typeof exec>
     );
     vi.mocked(execFile).mockImplementation(
-      makeExecFileAlwaysThrows(alreadyExistsError) as ReturnType<typeof execFile>
+      makeExecFileQueue([
+        { stdout: '[]' }, // pre-check: no open PRs
+        { error: alreadyExistsError }, // gh pr create attempt 1
+        { error: alreadyExistsError }, // gh pr create attempt 2 (retry)
+        { error: alreadyExistsError }, // gh pr create attempt 3 (retry, final)
+        { error: new Error('gh: not authenticated') }, // recovery fails
+      ]) as ReturnType<typeof execFile>
     );
 
     await expect(
@@ -324,6 +361,11 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
       makeExecQueue([
         { stdout: '/usr/bin/gh\n' }, // command -v gh
         { stdout: 'origin\thttps://github.com/org/repo.git (fetch)\n' }, // git remote -v
+      ]) as ReturnType<typeof exec>
+    );
+    // Pre-check via execFileAsync finds the open PR — creation is skipped
+    vi.mocked(execFile).mockImplementation(
+      makeExecFileQueue([
         {
           stdout: JSON.stringify([
             {
@@ -333,12 +375,8 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
               state: 'OPEN',
             },
           ]),
-        }, // gh pr list --limit 1 (pre-check finds it)
-      ]) as ReturnType<typeof exec>
-    );
-    // execFile should never be called
-    vi.mocked(execFile).mockImplementation(
-      makeExecFileAlwaysThrows(new Error('should not be called')) as ReturnType<typeof execFile>
+        }, // gh pr list (pre-check finds it)
+      ]) as ReturnType<typeof execFile>
     );
 
     const result = await service.createPullRequest(
@@ -354,6 +392,7 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
       prNumber: 55,
       prAlreadyExisted: true,
     });
-    expect(vi.mocked(execFile)).not.toHaveBeenCalled();
+    // Only 1 execFile call (pre-check), no create or recovery
+    expect(vi.mocked(execFile)).toHaveBeenCalledTimes(1);
   });
 });

@@ -309,24 +309,31 @@ export class AutoModeService {
           projectsWithPendingWork.add(pp);
         }
 
-        // Read per-project settings for min/max concurrency
+        // Read per-project settings for min/max concurrency and admin UI cap
+        let effectiveCap = MAX_SYSTEM_CONCURRENCY;
         if (this.settingsService) {
           try {
             const settings = await this.settingsService.getGlobalSettings();
+
+            // Use admin UI cap if configured, clamped by env var hard limit
+            if (typeof settings.systemMaxConcurrency === 'number') {
+              effectiveCap = Math.min(settings.systemMaxConcurrency, MAX_SYSTEM_CONCURRENCY);
+            }
+
             const autoModeByWorktree = settings.autoModeByWorktree;
 
             if (autoModeByWorktree && typeof autoModeByWorktree === 'object') {
-              // Build a projectPath-to-bounds map from all worktree entries
-              for (const entry of Object.values(autoModeByWorktree)) {
-                // Find the project path for this entry by matching against
-                // registered projects
-                const project = settings.projects?.find((p) => {
-                  const key = `${p.id}::${entry.branchName ?? '__main__'}`;
-                  return Object.keys(autoModeByWorktree).some((k) => k === key);
-                });
+              // Build a projectPath-to-bounds map from all worktree entries.
+              // Keys are formatted as "projectId::branchName" — parse projectId
+              // directly from the key to avoid the reverse-lookup ambiguity.
+              for (const [key, entry] of Object.entries(autoModeByWorktree)) {
+                const separatorIdx = key.indexOf('::');
+                const projectId = separatorIdx >= 0 ? key.slice(0, separatorIdx) : key;
+
+                const project = settings.projects?.find((p) => p.id === projectId);
                 if (project?.path) {
                   const existing = reservations.get(project.path);
-                  const entryMax = entry.maxConcurrency ?? MAX_SYSTEM_CONCURRENCY;
+                  const entryMax = entry.maxConcurrency ?? effectiveCap;
                   const entryMin = entry.minConcurrency ?? 1;
                   if (existing) {
                     // Merge: take the higher max and min across worktree entries
@@ -348,7 +355,7 @@ export class AutoModeService {
 
         return this.concurrencyManager.canProjectAcquireSlot(
           projectPath,
-          MAX_SYSTEM_CONCURRENCY,
+          effectiveCap,
           reservations,
           projectsWithPendingWork,
           startingCount
