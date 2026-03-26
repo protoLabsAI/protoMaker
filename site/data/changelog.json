@@ -1,21 +1,149 @@
 {
   "summary": {
-    "totalEntries": 1724,
+    "totalEntries": 1740,
     "categories": {
-      "feature": 884,
-      "improvement": 310,
-      "fix": 341,
-      "docs": 82,
+      "fix": 345,
+      "improvement": 319,
+      "docs": 83,
+      "feature": 886,
       "infrastructure": 107
     },
     "firstDate": "2026-02-04T21:35:59.000Z",
-    "latestDate": "2026-03-24T04:04:16.000Z"
+    "latestDate": "2026-03-26T03:35:56.000Z"
   },
   "months": [
     {
       "month": "2026-03",
       "label": "March 2026",
       "entries": [
+        {
+          "hash": "2aaf6cfc",
+          "date": "2026-03-25T20:35:56-07:00",
+          "title": "'PR already exists' error blocks features despite existing recovery path",
+          "prNumber": 3133,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3133",
+          "category": "fix"
+        },
+        {
+          "hash": "7743cde4",
+          "date": "2026-03-25T20:26:17-07:00",
+          "title": "Bug: Global concurrency gate starves projects — no fair-share scheduling",
+          "prNumber": 3132,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3132",
+          "category": "improvement"
+        },
+        {
+          "hash": "18c29603",
+          "date": "2026-03-25T20:13:02-07:00",
+          "title": "Bug: Auto-mode status reports isRunning:false while start returns 'alrea",
+          "prNumber": 3131,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3131",
+          "category": "improvement"
+        },
+        {
+          "hash": "9b271aaf",
+          "date": "2026-03-25T20:12:25-07:00",
+          "title": "Auto-decay stalled review features to prevent review queue deadlock",
+          "prNumber": 3130,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3130",
+          "category": "fix"
+        },
+        {
+          "hash": "e2b739d7",
+          "date": "2026-03-25T19:55:50-07:00",
+          "title": "Bug: start_auto_mode silently ignores maxConcurrency parameter",
+          "prNumber": 3129,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3129",
+          "category": "improvement"
+        },
+        {
+          "hash": "3c75eb24",
+          "date": "2026-03-25T16:38:07-07:00",
+          "title": "Replace -webkit-app-region CSS with data-tauri-drag-region attribute for Tauri window dragging",
+          "prNumber": 3128,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3128",
+          "category": "fix"
+        },
+        {
+          "hash": "5edeac6c",
+          "date": "2026-03-25T00:09:33-07:00",
+          "title": "Auto-recover merge_conflict blocked features when branch is clean",
+          "prNumber": 3124,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3124",
+          "category": "fix"
+        },
+        {
+          "hash": "731bd1fb",
+          "date": "2026-03-24T23:56:24-07:00",
+          "title": "Auto-clean stale worktrees on feature reset to backlog",
+          "prNumber": 3123,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3123",
+          "category": "improvement"
+        },
+        {
+          "hash": "46b44c3d",
+          "date": "2026-03-24T23:49:17-07:00",
+          "title": "Pre-flight merge uses origin/main instead of prBaseBranch",
+          "prNumber": 3122,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3122",
+          "category": "improvement"
+        },
+        {
+          "hash": "e56a7a80",
+          "date": "2026-03-25T00:25:35+00:00",
+          "title": "Regenerate site data",
+          "prNumber": 3097,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3097",
+          "category": "docs"
+        },
+        {
+          "hash": "a2381c2a",
+          "date": "2026-03-24T16:15:20-07:00",
+          "title": "[Bug] symlinkBuildArtifacts creates self-referencing node_modules symlin",
+          "prNumber": 3117,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3117",
+          "category": "improvement"
+        },
+        {
+          "hash": "07688bab",
+          "date": "2026-03-24T16:02:59-07:00",
+          "title": "[Bug] CI ENOTDIR failure on pnpm install in GitHub Actions",
+          "prNumber": 3116,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3116",
+          "category": "improvement"
+        },
+        {
+          "hash": "edea83df",
+          "date": "2026-03-24T01:45:46-07:00",
+          "title": "Add ReasoningBlock component for Ava extended thinking",
+          "prNumber": 3108,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3108",
+          "category": "feature"
+        },
+        {
+          "hash": "9f649ffe",
+          "date": "2026-03-24T01:06:03-07:00",
+          "title": "Agents stuck on tsc/vitest resolution in worktrees",
+          "prNumber": 3103,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3103",
+          "category": "feature"
+        },
+        {
+          "hash": "e20ae431",
+          "date": "2026-03-24T00:38:00-07:00",
+          "title": "Pre-flight merge conflict on every agent launch in fast-moving projects",
+          "prNumber": 3102,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3102",
+          "category": "improvement"
+        },
+        {
+          "hash": "946da822",
+          "date": "2026-03-24T00:34:57-07:00",
+          "title": "Squash-merge PRs can produce empty commits when worktree code not pushed",
+          "prNumber": 3101,
+          "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/3101",
+          "category": "improvement"
+        },
         {
           "hash": "a527c41c",
           "date": "2026-03-23T21:04:16-07:00",
@@ -13817,5 +13945,5 @@
       ]
     }
   ],
-  "generatedAt": "2026-03-24T06:27:13.516Z"
+  "generatedAt": "2026-03-26T06:29:10.665Z"
 }
