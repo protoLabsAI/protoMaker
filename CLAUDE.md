@@ -132,6 +132,21 @@ Then reset `failureCount: 0` in `feature.json` and call `start_agent`. Resetting
 
 Do not just recover and move on. The flywheel only improves if failures are captured.
 
+## Naming Convention: Instance / App / Project / Feature
+
+Four terms with precise meanings. Confusing them causes cross-app contamination bugs. See `docs/internal/portfolio-philosophy.md` for the full glossary.
+
+| Term         | Identifier     | Scope        | Isolation                                                 |
+| ------------ | -------------- | ------------ | --------------------------------------------------------- |
+| **Instance** | Server process | Global       | Blind to other instances                                  |
+| **App**      | `projectPath`  | Per-instance | Filesystem-enforced (`{projectPath}/.automaker/`)         |
+| **Project**  | `projectSlug`  | Per-app      | Tag-based filter, NOT a filesystem boundary               |
+| **Feature**  | `featureId`    | Per-app      | Lives in `{projectPath}/.automaker/features/{featureId}/` |
+
+- Auto-mode, concurrency, review queues, and worktrees are all scoped per-app (`projectPath`).
+- `projectSlug` groups features within an app for planning and filtering — it does not create isolation.
+- Cross-instance coordination is the user's responsibility. Instances do not communicate.
+
 ## Project Overview
 
 protoLabs Studio is an autonomous AI development studio built as an npm workspace monorepo. It provides a Kanban-based workflow where AI agents (powered by Claude Agent SDK) implement features in isolated git worktrees. The repo name `protoMaker` on GitHub preserves lineage to the original Automaker project. Internal package names (`@protolabsai/*`), directory paths (`.automaker/`), and the codename "Automaker" are preserved in code and config.

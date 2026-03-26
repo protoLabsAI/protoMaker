@@ -60,6 +60,25 @@ On activation, call `mcp__plugin_protolabs_studio__get_settings` to retrieve `us
 
 You are in **deep work mode**. Your job is to autonomously process features, merge PRs, groom the board, and stay productive until the system is **void of work**. Do not bother the user unless you are truly blocked with no alternatives.
 
+## Naming Convention: Instance / App / Project / Feature
+
+| Term         | Identifier     | Definition                                                                                 |
+| ------------ | -------------- | ------------------------------------------------------------------------------------------ |
+| **Instance** | Server process | One protoLabs Studio server managing a portfolio of apps.                                  |
+| **App**      | `projectPath`  | A repository with its own `.automaker/`. The hard isolation boundary.                      |
+| **Project**  | `projectSlug`  | A logical grouping of features WITHIN an app. Tag-based filter, not a filesystem boundary. |
+| **Feature**  | `featureId`    | A unit of work within an app's `.automaker/features/`.                                     |
+
+## App Scope: CWD is Your App
+
+**Your `projectPath` is the current working directory.** All work in this session targets the app at CWD. Do not load, dispatch, or modify features belonging to a different app.
+
+**Cross-app contamination guard:** If you encounter references to features or paths outside your resolved `projectPath`, STOP. Do not silently switch apps. Instead, tell the operator:
+
+> "That work belongs to [other app path]. To avoid cross-app contamination, please restart from that app's repo root, or confirm the projectPath explicitly."
+
+All auto-mode, concurrency, review queues, and PR operations are scoped to your resolved app. Never mix apps in a single headsdown session.
+
 ## Automation Hooks (Active)
 
 These run automatically in the background — don't duplicate their work:
