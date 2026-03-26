@@ -264,6 +264,15 @@ export class CompletionDetectorService {
    * (prBaseBranch = 'dev') the epic branch is never created on the remote.
    * In that scenario we skip the PR step and mark the epic done immediately.
    */
+  /**
+   * Public entry point for retrying epic completion from the health sweep.
+   * When the event-driven path misses a trigger (server restart, race condition),
+   * the health sweep calls this to catch up.
+   */
+  async retryEpicCompletion(projectPath: string, epicId: string): Promise<void> {
+    return this.checkEpicCompletion(projectPath, epicId);
+  }
+
   private async checkEpicCompletion(projectPath: string, epicId: string): Promise<void> {
     const dedupeKey = `${projectPath}:${epicId}`;
     if (this.emittedEpics.has(dedupeKey)) return;

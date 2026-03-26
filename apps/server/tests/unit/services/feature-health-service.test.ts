@@ -3,7 +3,8 @@
  *
  * Covers epic completion detection logic:
  * - Children in 'review' should NOT count as done
- * - Git-backed epics should NOT be auto-fixable (delegate to CompletionDetectorService)
+ * - Git-backed epics are auto-fixable via CompletionDetectorService retry
+ * - Non-git epics are auto-fixable by marking done directly
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { FeatureHealthService } from '@/services/feature-health-service.js';
@@ -13,6 +14,7 @@ describe('feature-health-service.ts', () => {
   let service: FeatureHealthService;
   let mockFeatureLoader: any;
   let mockAutoModeService: any;
+  let mockCompletionDetector: any;
 
   beforeEach(() => {
     mockFeatureLoader = {
@@ -23,7 +25,11 @@ describe('feature-health-service.ts', () => {
       getRunningAgents: vi.fn().mockResolvedValue([]),
       releaseStaleLeases: vi.fn().mockReturnValue([]),
     };
+    mockCompletionDetector = {
+      retryEpicCompletion: vi.fn().mockResolvedValue(undefined),
+    };
     service = new FeatureHealthService(mockFeatureLoader, mockAutoModeService);
+    service.setCompletionDetector(mockCompletionDetector);
   });
 
   describe('checkEpicChildrenDone', () => {
@@ -55,7 +61,7 @@ describe('feature-health-service.ts', () => {
       expect(epicIssues).toHaveLength(1);
     });
 
-    it('marks git-backed epics as NOT auto-fixable', async () => {
+    it('marks git-backed epics as auto-fixable via CompletionDetector retry', async () => {
       const features: Partial<Feature>[] = [
         { id: 'epic-1', title: 'Epic', isEpic: true, status: 'backlog', branchName: 'epic/test' },
         { id: 'child-1', epicId: 'epic-1', status: 'done' },
@@ -66,7 +72,7 @@ describe('feature-health-service.ts', () => {
 
       const epicIssue = report.issues.find((i) => i.type === 'epic_children_done');
       expect(epicIssue).toBeDefined();
-      expect(epicIssue!.autoFixable).toBe(false);
+      expect(epicIssue!.autoFixable).toBe(true);
       expect(epicIssue!.fix).toContain('CompletionDetectorService');
     });
 
@@ -85,7 +91,7 @@ describe('feature-health-service.ts', () => {
       expect(epicIssue!.fix).toBe('Set epic status to done');
     });
 
-    it('auto-fixes non-git epics but skips git-backed ones', async () => {
+    it('auto-fixes both git and non-git epics with appropriate strategy', async () => {
       const features: Partial<Feature>[] = [
         {
           id: 'epic-git',
@@ -102,15 +108,18 @@ describe('feature-health-service.ts', () => {
 
       const report = await service.audit('/mock', true);
 
-      // Only the non-git epic should have been auto-fixed
-      expect(report.fixed).toHaveLength(1);
-      expect(report.fixed[0].featureId).toBe('epic-no-git');
+      // Both epics should have been auto-fixed
+      expect(report.fixed).toHaveLength(2);
 
-      // update should only have been called for the non-git epic
-      const updateCalls = mockFeatureLoader.update.mock.calls.filter(
-        ([, id]: [string, string]) => id === 'epic-git'
+      // Git epic: routed through CompletionDetectorService for PR creation
+      expect(mockCompletionDetector.retryEpicCompletion).toHaveBeenCalledWith('/mock', 'epic-git');
+
+      // Non-git epic: marked done directly via featureLoader.update
+      const nonGitUpdateCalls = mockFeatureLoader.update.mock.calls.filter(
+        ([, id]: [string, string]) => id === 'epic-no-git'
       );
-      expect(updateCalls).toHaveLength(0);
+      expect(nonGitUpdateCalls).toHaveLength(1);
+      expect(nonGitUpdateCalls[0][2]).toEqual({ status: 'done' });
     });
   });
 });

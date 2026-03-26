@@ -1,5 +1,14 @@
 # @protolabsai/mcp-server
 
+## 0.89.6
+
+### Patch Changes
+
+- ### Bug Fixes
+  - health sweep retries epic completion for git-backed epics (#3145)
+- Updated dependencies
+  - @protolabsai/tools@0.89.6
+
 ## 0.89.5
 
 ### Patch Changes
