@@ -1234,7 +1234,7 @@ export class AutoModeService {
           this.executeFeature(
             projectPath,
             nextFeature.id,
-            true, // useWorktrees
+            nextFeature.executionMode !== 'read-only', // useWorktrees
             true
           ).catch((error) => {
             logger.error(`Feature ${nextFeature.id} error:`, error);

@@ -1733,10 +1733,17 @@ export class ExecuteProcessor implements StateProcessor {
       // safeResolve (called from the event subscriber above) waits for the concurrency
       // lease to be released before unblocking the EXECUTE processor's retry attempt.
       this.serviceContext.autoModeService
-        .executeFeature(ctx.projectPath, ctx.feature.id, true, false, undefined, {
-          recoveryContext,
-          retryCount: ctx.retryCount,
-        })
+        .executeFeature(
+          ctx.projectPath,
+          ctx.feature.id,
+          ctx.feature.executionMode !== 'read-only',
+          false,
+          undefined,
+          {
+            recoveryContext,
+            retryCount: ctx.retryCount,
+          }
+        )
         .then(() => {
           resolveSettled();
         })

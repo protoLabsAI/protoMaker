@@ -572,8 +572,11 @@ export class FeatureLoader implements FeatureStore {
       });
     }
 
-    // Auto-generate branchName from title if not provided
-    const branchName = featureData.branchName || this.generateBranchName(featureData.title);
+    // Read-only features don't need a branch — skip generation entirely
+    const branchName =
+      featureData.executionMode === 'read-only'
+        ? undefined
+        : featureData.branchName || this.generateBranchName(featureData.title);
 
     // Auto-assign projectSlug if not already provided
     let resolvedProjectSlug = featureData.projectSlug;

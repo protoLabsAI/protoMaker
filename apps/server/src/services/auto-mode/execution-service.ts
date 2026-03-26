@@ -452,7 +452,10 @@ export class ExecutionService {
       let worktreePath: string | null = null;
       const branchName = feature.branchName;
 
-      if (useWorktrees && branchName) {
+      // Read-only features run against the main working tree — no worktree, no branch.
+      const effectiveUseWorktrees = feature.executionMode === 'read-only' ? false : useWorktrees;
+
+      if (effectiveUseWorktrees && branchName) {
         // Try to find existing worktree for this branch
         worktreePath = await this.callbacks.findExistingWorktreeForBranch(projectPath, branchName);
 
@@ -487,7 +490,7 @@ export class ExecutionService {
             return;
           }
         }
-      } else if (useWorktrees && !branchName) {
+      } else if (effectiveUseWorktrees && !branchName) {
         // Worktrees are enabled but the feature has no branch name — cannot proceed safely
         const reason = `Feature ${featureId} has no branchName but useWorktrees is enabled. Blocking feature — assign a branch name first.`;
         logger.error(reason);
@@ -519,7 +522,7 @@ export class ExecutionService {
       const workDir = worktreePath ? path.resolve(worktreePath) : path.resolve(projectPath);
 
       // Defense-in-depth: if worktrees are enabled, workDir must NOT be the project path
-      if (useWorktrees && path.resolve(workDir) === path.resolve(projectPath)) {
+      if (effectiveUseWorktrees && path.resolve(workDir) === path.resolve(projectPath)) {
         const reason = `Worktree safety check failed for feature ${featureId}: workDir resolved to projectPath ("${projectPath}"). Blocking feature to prevent main working tree corruption.`;
         logger.error(reason);
         await this.featureLoader.update(projectPath, featureId, {
@@ -825,7 +828,7 @@ export class ExecutionService {
 
       // Merge branch with the project's base branch before agent execution
       // Uses merge instead of rebase to handle concurrent .automaker/ modifications gracefully
-      if (branchName && useWorktrees) {
+      if (branchName && effectiveUseWorktrees) {
         logger.info(`Syncing branch ${branchName} before agent execution...`);
         this.typedEventBus.emitAutoModeEvent('sync_started', {
           featureId,
@@ -1146,10 +1149,11 @@ export class ExecutionService {
       }
 
       // Run git workflow (commit, push, PR) if enabled
+      // Read-only features skip the git workflow entirely — no commit, push, or PR.
       let gitWorkflowResult: Awaited<
         ReturnType<typeof gitWorkflowService.runPostCompletionWorkflow>
       > = null;
-      if (this.settingsService) {
+      if (feature.executionMode !== 'read-only' && this.settingsService) {
         try {
           const settings = await this.settingsService.getGlobalSettings();
 
@@ -1285,7 +1289,11 @@ export class ExecutionService {
         gitWorkflowResult?.prUrl &&
         (postGitFeature?.status === 'review' || postGitFeature?.status === 'done');
 
-      if (!gitAlreadySetStatus) {
+      if (feature.executionMode === 'read-only') {
+        // Read-only features go straight to done — no PR to review
+        finalStatus = 'done';
+        await this.callbacks.updateFeatureStatus(projectPath, featureId, 'done');
+      } else if (!gitAlreadySetStatus) {
         if (feature.skipTests) {
           finalStatus = 'waiting_approval';
         } else if (hasPrEvidence) {

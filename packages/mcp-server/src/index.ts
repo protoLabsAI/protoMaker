@@ -303,6 +303,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       if (args.isFoundation !== undefined) featureData.isFoundation = args.isFoundation;
       if (args.category) featureData.category = args.category;
       if (args.projectSlug) featureData.projectSlug = args.projectSlug;
+      if (args.executionMode) featureData.executionMode = args.executionMode;
       return apiCall('/features/create', {
         projectPath: args.projectPath,
         feature: featureData,
@@ -320,6 +321,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       if (args.isFoundation !== undefined) updates.isFoundation = args.isFoundation;
       if (args.statusChangeReason) updates.statusChangeReason = args.statusChangeReason;
       if (args.category) updates.category = args.category;
+      if (args.executionMode) updates.executionMode = args.executionMode;
       return apiCall('/features/update', {
         projectPath: args.projectPath,
         featureId: args.featureId,

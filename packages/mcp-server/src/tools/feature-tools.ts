@@ -139,6 +139,12 @@ export const featureTools: Tool[] = [
           description:
             'Optional project slug to scope this feature to a specific project. Features with a projectSlug appear in project-filtered views (e.g., get_sitrep with projectSlug). Leave unset for standalone features.',
         },
+        executionMode: {
+          type: 'string',
+          enum: ['standard', 'read-only'],
+          description:
+            'Execution mode: "standard" (default) runs the full git pipeline (worktree, branch, commit, push, PR). "read-only" runs the agent against the main working tree with no git operations — ideal for audits, analysis, and report generation.',
+        },
       },
       required: ['projectPath', 'title', 'description'],
     },
@@ -207,6 +213,12 @@ export const featureTools: Tool[] = [
           type: 'string',
           description:
             'Category for organizing this feature on the board (optional). Examples: "infrastructure", "frontend", "api", "bug-fix".',
+        },
+        executionMode: {
+          type: 'string',
+          enum: ['standard', 'read-only'],
+          description:
+            'Execution mode: "standard" runs the full git pipeline. "read-only" runs with no git operations.',
         },
       },
       required: ['projectPath', 'featureId'],

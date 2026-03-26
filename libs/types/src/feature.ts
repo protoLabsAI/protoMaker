@@ -553,6 +553,14 @@ export interface Feature {
    */
   featureType?: 'code' | 'content';
   /**
+   * Execution mode for this feature.
+   * - 'standard' (default): Full pipeline — worktree, branch, commit, push, PR.
+   * - 'read-only': Agent reads code and produces reports only. Runs in the main
+   *   working tree with no worktree, branch, commit, push, or PR. Transitions
+   *   directly to 'done' after completion. Ideal for audits, analysis, and reports.
+   */
+  executionMode?: 'standard' | 'read-only';
+  /**
    * Content configuration for GTM content features (only relevant when featureType === 'content').
    */
   contentConfig?: {

@@ -384,6 +384,12 @@ export class GitWorkflowService {
     events?: EventEmitter,
     projectPrBaseBranch?: string
   ): Promise<GitWorkflowResult | null> {
+    // Read-only features should never reach git workflow, but guard defensively.
+    if (feature.executionMode === 'read-only') {
+      logger.debug(`Skipping git workflow for read-only feature ${featureId}`);
+      return null;
+    }
+
     const gitSettings = this.resolveGitWorkflowSettings(feature, settings, projectPrBaseBranch);
 
     // Determine PR base branch:
