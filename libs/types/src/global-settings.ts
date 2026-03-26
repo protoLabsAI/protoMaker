@@ -526,6 +526,14 @@ export interface GlobalSettings {
     {
       maxConcurrency: number;
       branchName: string | null;
+      /**
+       * Minimum concurrency slots reserved for this project when multiple projects
+       * compete for the global concurrency pool. Guarantees a project can always run
+       * at least this many agents, even when other projects are consuming capacity.
+       *
+       * Must be >= 1 and <= maxConcurrency. Defaults to 1 when not set.
+       */
+      minConcurrency?: number;
     }
   >;
 

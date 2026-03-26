@@ -188,4 +188,153 @@ export class ConcurrencyManager {
     }
     return count;
   }
+
+  // ---------------------------------------------------------------------------
+  // Fair-share allocation
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Return an atomic snapshot of running counts keyed by projectPath.
+   * Iterates leases once to avoid TOCTOU races between separate
+   * getRunningCountForProject calls.
+   */
+  getAllProjectCounts(): Map<string, number> {
+    const counts = new Map<string, number>();
+    for (const lease of this.leases.values()) {
+      counts.set(lease.projectPath, (counts.get(lease.projectPath) ?? 0) + 1);
+    }
+    return counts;
+  }
+
+  /**
+   * Return the set of distinct project paths that currently hold leases.
+   */
+  getActiveProjectPaths(): Set<string> {
+    const paths = new Set<string>();
+    for (const lease of this.leases.values()) {
+      paths.add(lease.projectPath);
+    }
+    return paths;
+  }
+
+  /**
+   * Determine how many slots are available for a given project under
+   * fair-share allocation.
+   *
+   * Fair-share algorithm:
+   *
+   * 1. Each active project with pending work gets a guaranteed minimum
+   *    of `minConcurrency` slots (default 1).
+   * 2. After reservations are satisfied, remaining global capacity is
+   *    distributed proportionally to projects that can use more.
+   * 3. A project's allocation is capped by its per-project hard cap
+   *    (maxConcurrency from autoModeByWorktree).
+   * 4. The global ceiling (MAX_SYSTEM_CONCURRENCY) is never exceeded.
+   *
+   * @param projectPath - The project requesting a slot.
+   * @param globalCap - MAX_SYSTEM_CONCURRENCY (absolute system ceiling).
+   * @param projectReservations - Map of projectPath to { min, max } slot
+   *   bounds for all projects with active auto-loops. Projects not in this
+   *   map are treated as having min=1, max=globalCap.
+   * @param projectsWithPendingWork - Set of projectPaths that have pending
+   *   features waiting to be scheduled. Only projects with pending work
+   *   compete for fair-share allocation.
+   * @returns The maximum number of slots the requesting project may occupy.
+   */
+  calculateFairShareForProject(
+    projectPath: string,
+    globalCap: number,
+    projectReservations: Map<string, { min: number; max: number }>,
+    projectsWithPendingWork: Set<string>
+  ): number {
+    const projectCounts = this.getAllProjectCounts();
+
+    // If the requesting project is not in the reservation map, use defaults
+    const selfBounds = projectReservations.get(projectPath) ?? {
+      min: 1,
+      max: globalCap,
+    };
+
+    // Phase 1: Calculate total reserved minimums across all competing projects.
+    // Only projects that are either currently running agents OR have pending work
+    // compete for reservations.
+    const competingProjects = new Set<string>();
+    for (const pp of projectCounts.keys()) {
+      competingProjects.add(pp);
+    }
+    for (const pp of projectsWithPendingWork) {
+      competingProjects.add(pp);
+    }
+
+    let totalReserved = 0;
+    for (const pp of competingProjects) {
+      const bounds = projectReservations.get(pp) ?? { min: 1, max: globalCap };
+      totalReserved += Math.min(bounds.min, globalCap);
+    }
+
+    // If total reservations exceed global cap, scale down proportionally.
+    // This handles the edge case where more active projects exist than slots.
+    let effectiveMin: number;
+    if (totalReserved > globalCap && competingProjects.size > 0) {
+      // Distribute slots evenly across all competing projects (floor division)
+      const evenShare = Math.floor(globalCap / competingProjects.size);
+      effectiveMin = Math.max(1, Math.min(evenShare, selfBounds.min));
+    } else {
+      effectiveMin = selfBounds.min;
+    }
+
+    // Phase 2: Calculate surplus capacity after all reservations are met.
+    const surplus = Math.max(0, globalCap - totalReserved);
+
+    // Phase 3: Distribute surplus to projects that can use more capacity.
+    // Surplus is divided evenly among projects that want more.
+
+    // Projects wanting surplus = those whose max > their reserved min
+    let projectsWantingSurplus = 0;
+    for (const pp of competingProjects) {
+      const bounds = projectReservations.get(pp) ?? { min: 1, max: globalCap };
+      if (bounds.max > bounds.min) {
+        projectsWantingSurplus++;
+      }
+    }
+
+    let surplusShare = 0;
+    if (projectsWantingSurplus > 0 && selfBounds.max > effectiveMin) {
+      surplusShare = Math.floor(surplus / projectsWantingSurplus);
+    }
+
+    // The project's fair-share allocation is its reservation + surplus share,
+    // capped by its per-project hard limit
+    const allocation = Math.min(effectiveMin + surplusShare, selfBounds.max);
+
+    // Never exceed global cap
+    return Math.min(allocation, globalCap);
+  }
+
+  /**
+   * Check whether a project may acquire a new concurrency slot under
+   * fair-share allocation rules.
+   *
+   * This replaces the simple `globalRunning >= MAX_SYSTEM_CONCURRENCY`
+   * gate with a per-project aware check.
+   *
+   * @returns true if the project has room to start another agent.
+   */
+  canProjectAcquireSlot(
+    projectPath: string,
+    globalCap: number,
+    projectReservations: Map<string, { min: number; max: number }>,
+    projectsWithPendingWork: Set<string>,
+    startingCount: number
+  ): boolean {
+    const currentRunning = this.getRunningCountForProject(projectPath);
+    const totalOccupied = currentRunning + startingCount;
+    const fairShare = this.calculateFairShareForProject(
+      projectPath,
+      globalCap,
+      projectReservations,
+      projectsWithPendingWork
+    );
+    return totalOccupied < fairShare;
+  }
 }

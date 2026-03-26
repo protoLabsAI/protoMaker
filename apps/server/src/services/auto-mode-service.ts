@@ -291,6 +291,69 @@ export class AutoModeService {
     const schedulerCallbacks: SchedulerCallbacks = {
       getRunningCountForWorktree: this.getRunningCountForWorktree.bind(this),
       getGlobalRunningCount: () => this.concurrencyManager.size,
+      canProjectAcquireGlobalSlot: async (
+        projectPath: string,
+        startingCount: number
+      ): Promise<boolean> => {
+        // Build per-project reservation map from settings
+        const reservations = new Map<string, { min: number; max: number }>();
+        const projectsWithPendingWork = new Set<string>();
+
+        // The requesting project has pending work (otherwise the scheduler
+        // would not be calling this method)
+        projectsWithPendingWork.add(projectPath);
+
+        // All projects with active leases are considered active
+        const activeProjectPaths = this.concurrencyManager.getActiveProjectPaths();
+        for (const pp of activeProjectPaths) {
+          projectsWithPendingWork.add(pp);
+        }
+
+        // Read per-project settings for min/max concurrency
+        if (this.settingsService) {
+          try {
+            const settings = await this.settingsService.getGlobalSettings();
+            const autoModeByWorktree = settings.autoModeByWorktree;
+
+            if (autoModeByWorktree && typeof autoModeByWorktree === 'object') {
+              // Build a projectPath-to-bounds map from all worktree entries
+              for (const entry of Object.values(autoModeByWorktree)) {
+                // Find the project path for this entry by matching against
+                // registered projects
+                const project = settings.projects?.find((p) => {
+                  const key = `${p.id}::${entry.branchName ?? '__main__'}`;
+                  return Object.keys(autoModeByWorktree).some((k) => k === key);
+                });
+                if (project?.path) {
+                  const existing = reservations.get(project.path);
+                  const entryMax = entry.maxConcurrency ?? MAX_SYSTEM_CONCURRENCY;
+                  const entryMin = entry.minConcurrency ?? 1;
+                  if (existing) {
+                    // Merge: take the higher max and min across worktree entries
+                    existing.max = Math.max(existing.max, entryMax);
+                    existing.min = Math.max(existing.min, entryMin);
+                  } else {
+                    reservations.set(project.path, {
+                      min: Math.max(1, entryMin),
+                      max: entryMax,
+                    });
+                  }
+                }
+              }
+            }
+          } catch {
+            // Settings unavailable — fall back to default reservations (min=1)
+          }
+        }
+
+        return this.concurrencyManager.canProjectAcquireSlot(
+          projectPath,
+          MAX_SYSTEM_CONCURRENCY,
+          reservations,
+          projectsWithPendingWork,
+          startingCount
+        );
+      },
       hasInProgressFeatures: this.hasInProgressFeatures.bind(this),
       isFeatureRunning: this.isFeatureRunning.bind(this),
       getRunningFeatureIds: () => [...this.runningFeatures.keys()],

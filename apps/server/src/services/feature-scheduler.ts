@@ -77,6 +77,17 @@ export interface SchedulerCallbacks {
   getRunningCountForWorktree(projectPath: string, branchName: string | null): Promise<number>;
   /** Total running agents across ALL projects (for global capacity gate). */
   getGlobalRunningCount(): number;
+  /**
+   * Fair-share global capacity check. Returns true if the requesting project
+   * may start another agent without violating the global ceiling, taking into
+   * account per-project minimum reservations so that no single project can
+   * starve others.
+   *
+   * @param projectPath - The project requesting a slot.
+   * @param startingCount - Features currently being started but not yet
+   *   tracked by the ConcurrencyManager (avoids double-counting).
+   */
+  canProjectAcquireGlobalSlot(projectPath: string, startingCount: number): Promise<boolean>;
   hasInProgressFeatures(projectPath: string, branchName: string | null): Promise<boolean>;
   isFeatureRunning(featureId: string): boolean;
   /** Returns IDs of all currently running features (for hot-file overlap checks). */
@@ -336,11 +347,17 @@ export class FeatureScheduler {
           continue;
         }
 
-        // Global capacity gate: prevent cross-app overcommit
-        const globalRunning = this.callbacks.getGlobalRunningCount();
-        if (globalRunning >= MAX_SYSTEM_CONCURRENCY) {
+        // Fair-share global capacity gate: prevents any single project from
+        // consuming all global slots when other projects have pending work.
+        // Each project is guaranteed a minimum reservation (default 1 slot).
+        const canAcquire = await this.callbacks.canProjectAcquireGlobalSlot(
+          projectPath,
+          startingCount
+        );
+        if (!canAcquire) {
+          const globalRunning = this.callbacks.getGlobalRunningCount();
           logger.debug(
-            `[AutoLoop] Global capacity reached (${globalRunning}/${MAX_SYSTEM_CONCURRENCY} across all apps), waiting...`
+            `[AutoLoop] Fair-share capacity reached for ${worktreeDesc} (${globalRunning}/${MAX_SYSTEM_CONCURRENCY} global, project has ${projectRunningCount} running + ${startingCount} starting), waiting...`
           );
           await this.callbacks.sleep(SLEEP_INTERVAL_CAPACITY_MS);
           continue;
