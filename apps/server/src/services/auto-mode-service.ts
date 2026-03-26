@@ -735,7 +735,8 @@ export class AutoModeService {
   async startAutoLoopForProject(
     projectPath: string,
     branchName: string | null = null,
-    forceStart: boolean = false
+    forceStart: boolean = false,
+    maxConcurrencyOverride?: number
   ): Promise<number> {
     // Check data integrity before starting (unless force-start is enabled)
     if (this.integrityWatchdogService) {
@@ -769,7 +770,8 @@ export class AutoModeService {
 
     const resolvedMaxConcurrency = await this.scheduler.resolveMaxConcurrency(
       projectPath,
-      branchName
+      branchName,
+      maxConcurrencyOverride
     );
 
     const config: AutoModeLoopConfig = {
@@ -1705,17 +1707,23 @@ export class AutoModeService {
       throw new Error(reason);
     }
 
-    // CRITICAL: Rebase worktree onto latest origin/main before follow-up execution
+    // CRITICAL: Rebase worktree onto latest origin/${prBaseBranch} before follow-up execution
+    const prBaseBranch = await getEffectivePrBaseBranch(
+      projectPath,
+      this.settingsService,
+      '[AutoMode]'
+    );
+    const followUpTargetBranch = `origin/${prBaseBranch}`;
     let followUpConflictReason: string | null = null;
     if (worktreePath) {
       try {
-        logger.info(`Rebasing worktree onto latest origin/main: ${worktreePath}`);
-        const rebaseResult = await rebaseWorktreeOnMain(worktreePath);
+        logger.info(`Rebasing worktree onto latest ${followUpTargetBranch}: ${worktreePath}`);
+        const rebaseResult = await rebaseWorktreeOnMain(worktreePath, followUpTargetBranch);
 
         if (!rebaseResult.success) {
           if (rebaseResult.hasConflicts) {
             followUpConflictReason =
-              `Pre-flight rebase onto origin/main has conflicts — branch "${branchName}" must be manually rebased before the follow-up can proceed. ` +
+              `Pre-flight rebase onto ${followUpTargetBranch} has conflicts — branch "${branchName}" must be manually rebased before the follow-up can proceed. ` +
               `Blocking feature to prevent repeated merge_conflict failures.`;
             logger.warn(`⚠️  ${followUpConflictReason} Feature: ${featureId}`);
           } else {
@@ -1725,7 +1733,7 @@ export class AutoModeService {
             );
           }
         } else {
-          logger.info(`✓ Worktree successfully rebased onto latest origin/main`);
+          logger.info(`✓ Worktree successfully rebased onto latest ${followUpTargetBranch}`);
         }
       } catch (rebaseError) {
         logger.error(`Unexpected error during pre-execution rebase for ${featureId}:`, rebaseError);

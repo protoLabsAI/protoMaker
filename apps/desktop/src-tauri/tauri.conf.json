@@ -25,7 +25,8 @@
         "alwaysOnTop": true,
         "skipTaskbar": false,
         "visible": true,
-        "resizable": true
+        "resizable": true,
+        "acceptFirstMouse": true
       }
     ],
     "trayIcon": {

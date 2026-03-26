@@ -111,10 +111,8 @@ export function ChatOverlayContent({
     <div data-slot="chat-overlay-content" className="flex h-full w-full flex-col overflow-hidden">
       {/* Header */}
       <div
-        className={cn(
-          'flex items-center justify-between border-b border-border px-3 py-2',
-          !isModal && 'titlebar-drag-region'
-        )}
+        className={cn('flex items-center justify-between border-b border-border px-3 py-2')}
+        {...(!isModal && { 'data-tauri-drag-region': true })}
       >
         <div className={cn('flex items-center gap-2 min-w-0', !isModal && 'pointer-events-none')}>
           <div className="size-2 shrink-0 rounded-full bg-primary animate-pulse" />

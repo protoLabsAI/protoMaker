@@ -26,6 +26,7 @@ import { createHandoffHandler, HandoffRequestSchema } from './routes/handoff.js'
 import type { FeatureHealthService } from '../../services/feature-health-service.js';
 import type { TrustTierService } from '../../services/trust-tier-service.js';
 import type { PipelineCheckpointService } from '../../services/pipeline-checkpoint-service.js';
+import type { WorktreeLifecycleService } from '../../services/worktree-lifecycle-service.js';
 
 export function createFeaturesRoutes(
   featureLoader: FeatureLoader,
@@ -34,7 +35,8 @@ export function createFeaturesRoutes(
   events?: EventEmitter,
   authorityService?: AuthorityService,
   healthService?: FeatureHealthService,
-  checkpointService?: PipelineCheckpointService
+  checkpointService?: PipelineCheckpointService,
+  worktreeLifecycleService?: WorktreeLifecycleService
 ): Router {
   const router = Router();
 
@@ -56,7 +58,8 @@ export function createFeaturesRoutes(
       authorityService,
       healthService,
       events,
-      checkpointService
+      checkpointService,
+      worktreeLifecycleService
     )
   );
   router.post(
