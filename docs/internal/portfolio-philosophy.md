@@ -4,17 +4,62 @@ How protoLabs Studio manages multiple apps, many projects, and the attention of 
 
 This document is the authoritative reference for portfolio-level governance, signal design, and decision rights. All dashboard, signal, and automation work should align with the principles here.
 
+---
+
+## Glossary: The Naming Convention
+
+The word "project" is overloaded in software. In protoLabs Studio, four terms have precise meanings. Using them incorrectly causes real bugs (cross-app contamination, features on wrong boards, shared concurrency starvation). Use these terms exactly.
+
+| Term         | Identifier     | Scope        | Definition                                                                                                                                                                                            |
+| ------------ | -------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Instance** | Server process | Global       | One running protoLabs Studio server. Manages a portfolio of apps. Blind to other instances.                                                                                                           |
+| **App**      | `projectPath`  | Per-instance | A repository with its own `.automaker/` directory. The fundamental isolation boundary. Features, worktrees, settings, and context files are all per-app.                                              |
+| **Project**  | `projectSlug`  | Per-app      | A logical grouping of features within an app. Used by the project orchestration system (milestones, phases, epics). Scopes features for planning and filtering. Does NOT create filesystem isolation. |
+| **Feature**  | `featureId`    | Per-app      | A unit of work on the board. Optionally scoped to a project via `projectSlug`. Lives in `{projectPath}/.automaker/features/{featureId}/`.                                                             |
+
+### Isolation boundaries
+
+```
+Instance (server process)
+  ├── App A (projectPath: /path/to/app-a)
+  │   ├── .automaker/features/     ← HARD boundary. Only App A's features live here.
+  │   ├── .automaker/settings.json ← Per-app settings.
+  │   ├── .worktrees/              ← Per-app worktrees.
+  │   ├── Project "auth" (projectSlug)
+  │   │   └── Features with projectSlug="auth"
+  │   └── Project "payments" (projectSlug)
+  │       └── Features with projectSlug="payments"
+  ├── App B (projectPath: /path/to/app-b)
+  │   └── .automaker/features/     ← HARD boundary. Only App B's features live here.
+  └── App C ...
+```
+
+- **App isolation is filesystem-enforced.** `getFeaturesDir(projectPath)` returns `{projectPath}/.automaker/features/`. Two apps cannot share a features directory.
+- **Project isolation is tag-based.** Features within an app are differentiated by `feature.projectSlug`. This is a filter, not a boundary. All features in an app share the same directory.
+- **Instance isolation is the user's responsibility.** If two instances on different machines both manage the same app, the users must coordinate via GitHub (branch protection, PR reviews). Instances do not communicate with each other. Cross-instance orchestration, if needed, will come from an external orchestrator — not built in.
+
+### What goes wrong when terms are confused
+
+| Confusion                                      | Consequence                                              |
+| ---------------------------------------------- | -------------------------------------------------------- |
+| Treating a project slug as an app path         | Features created in wrong `.automaker/` directory        |
+| Treating apps as projects within one directory | Auto-mode dispatches foreign features                    |
+| Assuming instances coordinate                  | Two instances push conflicting branches to the same repo |
+| Using "project" without qualifying which level | Agents, operators, and docs talk past each other         |
+
+---
+
 ## Core Decisions
 
 Three architectural decisions shape the entire operating model:
 
 ### 1. Single Instance, Multiple Apps
 
-One protoLabs Studio instance manages all apps. Each app is a registered `projectPath` with its own `.automaker/` directory, features, projects, and settings. The portfolio layer aggregates across all apps.
+One protoLabs Studio instance manages a portfolio of apps. Each app is a registered `projectPath` with its own `.automaker/` directory, features, projects, and settings. The portfolio layer aggregates across all apps for dashboards and metrics.
 
-If distributed instances exist (e.g., a teammate running their own instance), each instance must claim work to avoid conflicts. Two instances must never work on the same feature simultaneously.
+Instances are blind to each other. If distributed instances exist (e.g., a teammate running their own instance on a different machine), it is the users' responsibility to keep GitHub repos and merging aligned. Cross-instance coordination will come from an external orchestrator in the future — it is not built into protoLabs Studio.
 
-**Implication:** The server knows about multiple project roots. Cross-app views query all registered paths. Per-app settings (WIP limits, trust levels, error budgets) are independent. Portfolio metrics roll up.
+**Implication:** The server knows about multiple app roots. Cross-app views query all registered paths. Per-app settings (WIP limits, trust levels, error budgets) are independent. Portfolio metrics roll up. Auto-mode, concurrency, and review queues must be scoped per-app to prevent cross-app contamination.
 
 ### 2. Exception-Gated Ritual
 
