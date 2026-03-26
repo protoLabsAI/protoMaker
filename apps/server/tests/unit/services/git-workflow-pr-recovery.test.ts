@@ -37,9 +37,8 @@ vi.mock('@/services/coderabbit-resolver-service.js', () => ({
 }));
 
 vi.mock('@protolabsai/git-utils', async () => {
-  const actual = await vi.importActual<typeof import('@protolabsai/git-utils')>(
-    '@protolabsai/git-utils'
-  );
+  const actual =
+    await vi.importActual<typeof import('@protolabsai/git-utils')>('@protolabsai/git-utils');
   return {
     ...actual,
     createGitExecEnv: vi.fn().mockReturnValue({}),
@@ -69,15 +68,9 @@ import type { Feature } from '@protolabsai/types';
 // it resolves with the first value after err. So we must pass a single {stdout,stderr}
 // object as the result arg — not separate stdout/stderr strings — so the service's
 // `const { stdout } = await execAsync(...)` destructuring works correctly.
-type ExecResultCallback = (
-  err: Error | null,
-  result?: { stdout: string; stderr: string }
-) => void;
+type ExecResultCallback = (err: Error | null, result?: { stdout: string; stderr: string }) => void;
 
-type ExecFileCallback = (
-  err: Error | null,
-  result?: { stdout: string; stderr: string }
-) => void;
+type ExecFileCallback = (err: Error | null, result?: { stdout: string; stderr: string }) => void;
 
 /**
  * Build an exec mock that responds to calls in order from the provided queue.
@@ -107,17 +100,10 @@ function makeExecQueue(
  * Suitable for simulating `gh pr create` → "already exists".
  */
 function makeExecFileAlwaysThrows(err: Error): ReturnType<typeof vi.fn> {
-  return vi.fn(
-    (
-      _file: string,
-      _args: string[],
-      _opts: unknown,
-      cb: ExecFileCallback
-    ) => {
-      cb(err, { stdout: '', stderr: err.message });
-      return {} as ReturnType<typeof execFile>;
-    }
-  );
+  return vi.fn((_file: string, _args: string[], _opts: unknown, cb: ExecFileCallback) => {
+    cb(err, { stdout: '', stderr: err.message });
+    return {} as ReturnType<typeof execFile>;
+  });
 }
 
 const FAKE_FEATURE: Feature = {
@@ -143,12 +129,10 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
     vi.clearAllMocks();
 
     // Bypass retry delays so tests run fast
-    vi.spyOn(global, 'setTimeout').mockImplementation(
-      (fn: TimerHandler) => {
-        if (typeof fn === 'function') fn();
-        return 0 as unknown as ReturnType<typeof setTimeout>;
-      }
-    );
+    vi.spyOn(global, 'setTimeout').mockImplementation((fn: TimerHandler) => {
+      if (typeof fn === 'function') fn();
+      return 0 as unknown as ReturnType<typeof setTimeout>;
+    });
 
     const mod = await import('@/services/git-workflow-service.js');
     const { GitWorkflowService } = mod as unknown as {
@@ -158,9 +142,7 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
     };
     const instance = new GitWorkflowService();
     // Silence the CI workflow validator — not relevant to these tests
-    vi.spyOn(instance as never, 'validateCIWorkflowTriggers').mockResolvedValue(
-      undefined
-    );
+    vi.spyOn(instance as never, 'validateCIWorkflowTriggers').mockResolvedValue(undefined);
     service = instance as unknown as typeof service;
   });
 
@@ -312,13 +294,7 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
     );
 
     await expect(
-      service.createPullRequest(
-        WORK_DIR,
-        PROJECT_PATH,
-        FAKE_FEATURE,
-        BRANCH_NAME,
-        BASE_BRANCH
-      )
+      service.createPullRequest(WORK_DIR, PROJECT_PATH, FAKE_FEATURE, BRANCH_NAME, BASE_BRANCH)
     ).rejects.toThrow(alreadyExistsError);
   });
 
@@ -338,13 +314,7 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
     );
 
     await expect(
-      service.createPullRequest(
-        WORK_DIR,
-        PROJECT_PATH,
-        FAKE_FEATURE,
-        BRANCH_NAME,
-        BASE_BRANCH
-      )
+      service.createPullRequest(WORK_DIR, PROJECT_PATH, FAKE_FEATURE, BRANCH_NAME, BASE_BRANCH)
     ).rejects.toThrow(alreadyExistsError);
   });
 
@@ -368,9 +338,7 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
     );
     // execFile should never be called
     vi.mocked(execFile).mockImplementation(
-      makeExecFileAlwaysThrows(new Error('should not be called')) as ReturnType<
-        typeof execFile
-      >
+      makeExecFileAlwaysThrows(new Error('should not be called')) as ReturnType<typeof execFile>
     );
 
     const result = await service.createPullRequest(
