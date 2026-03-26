@@ -20,6 +20,7 @@ import { createLogger } from '@protolabsai/utils';
 import type { Feature } from '@protolabsai/types';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
+import type { CompletionDetectorService } from './completion-detector-service.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -52,10 +53,20 @@ export interface HealthReport {
 }
 
 export class FeatureHealthService {
+  private completionDetector: CompletionDetectorService | null = null;
+
   constructor(
     private readonly featureLoader: FeatureLoader,
     private readonly autoModeService: AutoModeService
   ) {}
+
+  /**
+   * Inject CompletionDetectorService for epic completion catch-up.
+   * Called after both services are constructed in the wiring phase.
+   */
+  setCompletionDetector(detector: CompletionDetectorService): void {
+    this.completionDetector = detector;
+  }
 
   /**
    * Run a full health audit on the board.
@@ -198,9 +209,9 @@ export class FeatureHealthService {
           featureId: epic.id,
           featureTitle: epic.title ?? epic.id,
           message: `Epic has ${children.length} children, all done, but epic status is '${epic.status}'`,
-          autoFixable: !hasGitBranch,
+          autoFixable: true,
           fix: hasGitBranch
-            ? 'Delegate to CompletionDetectorService for epic-to-dev PR creation'
+            ? 'Retry CompletionDetectorService for epic-to-dev PR creation'
             : 'Set epic status to done',
         });
       }
@@ -326,9 +337,20 @@ export class FeatureHealthService {
         break;
       }
 
-      case 'epic_children_done':
-        await this.featureLoader.update(projectPath, issue.featureId, { status: 'done' });
+      case 'epic_children_done': {
+        const epicFeature = featureMap.get(issue.featureId);
+        if (epicFeature?.branchName && this.completionDetector) {
+          // Epic has a branch — route through CompletionDetectorService for PR creation
+          logger.info(
+            `[HealthFix] Retrying epic completion for "${epicFeature.title}" via CompletionDetectorService`
+          );
+          await this.completionDetector.retryEpicCompletion(projectPath, issue.featureId);
+        } else {
+          // No branch or no detector — mark done directly
+          await this.featureLoader.update(projectPath, issue.featureId, { status: 'done' });
+        }
         break;
+      }
 
       case 'stale_running':
         await this.featureLoader.update(projectPath, issue.featureId, { status: 'backlog' });

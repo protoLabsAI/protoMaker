@@ -546,6 +546,10 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Completion Detector Service — cascades feature done → epic → milestone → project
   const completionDetectorService = new CompletionDetectorService();
 
+  // Wire CompletionDetectorService into FeatureHealthService for epic completion catch-up.
+  // When the event-driven path misses a trigger, the health sweep retries via this link.
+  featureHealthService.setCompletionDetector(completionDetectorService);
+
   // Fact Store Service — extracts and persists structured facts from agent output
   const factStoreService = new FactStoreService();
 
