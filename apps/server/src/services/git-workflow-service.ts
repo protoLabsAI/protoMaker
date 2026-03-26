@@ -1612,8 +1612,10 @@ export class GitWorkflowService {
           prAlreadyExisted: true,
         };
       }
-    } catch {
-      // No existing PR found, continue to create
+    } catch (preCheckError) {
+      logger.debug(
+        `[createPullRequest] Pre-check for existing PR failed (will attempt creation): ${preCheckError instanceof Error ? preCheckError.message : String(preCheckError)}`
+      );
     }
 
     // Create new PR - use execFileAsync array args to avoid shell injection
@@ -1687,29 +1689,54 @@ export class GitWorkflowService {
       // Check if error indicates PR already exists
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (errorMessage.toLowerCase().includes('already exists')) {
-        // Try to fetch existing PR
+        logger.warn(
+          `[createPullRequest] PR creation returned "already exists" for branch "${branchName}" — attempting recovery`
+        );
+        // Use --state all to find the PR regardless of open/closed/merged state
         try {
-          const { stdout: viewOutput } = await execAsync(
-            `gh pr view --json number,title,url,state`,
-            { cwd: workDir, env: execEnv }
-          );
-          const existingPr = JSON.parse(viewOutput);
-          if (existingPr.url) {
+          const recoveryCmd = `gh pr list${repoArg} --head "${headRef}" --state all --json number,title,url,state --limit 1`;
+          const { stdout: recoveryOutput } = await execAsync(recoveryCmd, {
+            cwd: workDir,
+            env: execEnv,
+          });
+          const recoveryPrs = JSON.parse(recoveryOutput);
+          if (Array.isArray(recoveryPrs) && recoveryPrs.length > 0) {
+            const existingPr = recoveryPrs[0];
+            const prState = validatePRState(existingPr.state);
             await updateWorktreePRInfo(projectPath, branchName, {
               number: existingPr.number,
               url: existingPr.url,
               title: existingPr.title || title,
-              state: validatePRState(existingPr.state),
+              state: prState,
               createdAt: new Date().toISOString(),
             });
+            if (prState === 'MERGED') {
+              logger.info(
+                `[createPullRequest] Recovery: PR #${existingPr.number} for "${branchName}" is already MERGED — treating as done`
+              );
+            } else if (prState === 'CLOSED') {
+              logger.warn(
+                `[createPullRequest] Recovery: PR #${existingPr.number} for "${branchName}" is CLOSED — returning existing URL`
+              );
+            } else {
+              logger.info(
+                `[createPullRequest] Recovery: found existing OPEN PR #${existingPr.number} for "${branchName}" — reusing`
+              );
+            }
             return {
               prUrl: existingPr.url,
               prNumber: existingPr.number,
               prAlreadyExisted: true,
             };
+          } else {
+            logger.error(
+              `[createPullRequest] Recovery: "already exists" error but no PR found via gh pr list for "${branchName}" — rethrowing original error`
+            );
           }
-        } catch {
-          // Fall through to throw
+        } catch (recoveryError) {
+          logger.error(
+            `[createPullRequest] Recovery: failed to look up existing PR for "${branchName}": ${recoveryError instanceof Error ? recoveryError.message : String(recoveryError)}`
+          );
         }
       }
       throw error;
