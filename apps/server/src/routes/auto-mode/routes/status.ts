@@ -40,7 +40,7 @@ export function createStatusHandler(
         );
         res.json({
           success: true,
-          isRunning: projectStatus.runningCount > 0,
+          isRunning: projectStatus.isAutoLoopRunning,
           isAutoLoopRunning: projectStatus.isAutoLoopRunning,
           runningFeatures: projectStatus.runningFeatures,
           runningCount: projectStatus.runningCount,
