@@ -756,6 +756,10 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
     enabled: false,
     projects: [],
   },
+  // Promotion pipeline — auto-register candidates when features merge to dev
+  promotion: {
+    autoCandidateOnDevMerge: true,
+  },
   // Feature flags — all on in development by default
   featureFlags: DEFAULT_FEATURE_FLAGS,
   // Scheduler settings — no task overrides by default
