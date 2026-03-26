@@ -459,6 +459,11 @@ export class FeatureScheduler {
             continue;
           }
 
+          // Auto-decay stalled review features before checking queue depth.
+          // This prevents deadlocks where all review slots are filled by features
+          // with failing CI that no agent can fix (the queue never drains).
+          await this.checkAndDecayStalled(projectPath);
+
           // Review queue WIP limit: pause pickup when too many PRs are in review
           const reviewDepth = await this.getReviewQueueDepth(projectPath);
           const maxPendingReviews = await this.getMaxPendingReviews(projectPath);
@@ -1551,7 +1556,11 @@ export class FeatureScheduler {
       const workflow = projectSettings.workflow as typeof projectSettings.workflow & {
         maxPendingReviews?: number;
       };
-      return workflow?.maxPendingReviews ?? DEFAULT_MAX;
+      const raw = workflow?.maxPendingReviews;
+      if (raw === undefined || raw === null) return DEFAULT_MAX;
+      const value = Math.floor(raw);
+      if (!Number.isFinite(value) || value < 1 || value > 50) return DEFAULT_MAX;
+      return value;
     } catch {
       return DEFAULT_MAX;
     }
@@ -1599,6 +1608,115 @@ export class FeatureScheduler {
     } catch {
       return { skipReadinessGate: false, readinessThreshold: DEFAULT_THRESHOLD };
     }
+  }
+
+  /**
+   * Read the auto-decay timeout from project workflow settings.
+   * Default: 30 minutes. Set to 0 to disable auto-decay.
+   */
+  private async getAutoDecayTimeoutMinutes(projectPath: string): Promise<number> {
+    const DEFAULT_TIMEOUT = 30;
+    try {
+      if (!this.settingsService) return DEFAULT_TIMEOUT;
+      const projectSettings = await this.settingsService.getProjectSettings(projectPath);
+      const workflow = projectSettings.workflow as typeof projectSettings.workflow & {
+        autoDecayTimeoutMinutes?: number;
+      };
+      const raw = workflow?.autoDecayTimeoutMinutes;
+      if (raw === undefined || raw === null) return DEFAULT_TIMEOUT;
+      const value = Math.floor(raw);
+      if (!Number.isFinite(value) || value < 0) return DEFAULT_TIMEOUT;
+      return value;
+    } catch {
+      return DEFAULT_TIMEOUT;
+    }
+  }
+
+  /**
+   * Find features in 'review' status with failing CI that have been stalled
+   * beyond the configured timeout, and reset them to 'backlog' with an
+   * incremented failureCount. This prevents review queue deadlocks where
+   * all review slots are occupied by features with failing CI.
+   *
+   * @returns Number of features that were decayed.
+   */
+  async checkAndDecayStalled(projectPath: string): Promise<number> {
+    const timeoutMinutes = await this.getAutoDecayTimeoutMinutes(projectPath);
+    if (timeoutMinutes === 0) return 0;
+
+    const timeoutMs = timeoutMinutes * 60 * 1000;
+    const featuresDir = getFeaturesDir(projectPath);
+    let decayedCount = 0;
+
+    try {
+      const entries = await secureFs.readdir(featuresDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const featurePath = path.join(featuresDir, entry.name, 'feature.json');
+        const result = await readJsonWithRecovery<Feature | null>(featurePath, null, {
+          maxBackups: DEFAULT_BACKUP_COUNT,
+          autoRestore: false,
+        });
+        const feature = result.data;
+        if (!feature || feature.status !== 'review') continue;
+
+        // Determine how long the feature has been in review.
+        // Use reviewStartedAt if available, fall back to updatedAt.
+        const reviewTimestamp = feature.reviewStartedAt ?? feature.updatedAt;
+        if (!reviewTimestamp) continue;
+        const reviewStartMs =
+          typeof reviewTimestamp === 'number'
+            ? reviewTimestamp
+            : new Date(reviewTimestamp).getTime();
+        const elapsedMs = Date.now() - reviewStartMs;
+        if (elapsedMs < timeoutMs) continue;
+
+        // Check for failing CI indicators:
+        // - ciRemediationCount > 0 indicates CI failures have been detected
+        // - remediationHistory with ci_failure entries
+        // - statusChangeReason containing CI failure language
+        const hasCiFailureIndicator =
+          (feature.ciRemediationCount ?? 0) > 0 ||
+          (feature.ciIterationCount ?? 0) > 0 ||
+          (feature.remediationHistory ?? []).some((h) => h.cycleType === 'ci_failure') ||
+          (feature.statusChangeReason ?? '').toLowerCase().includes('ci');
+
+        if (!hasCiFailureIndicator) continue;
+
+        // Decay the feature back to backlog
+        const prevFailureCount = feature.failureCount ?? 0;
+        const elapsedMinutes = Math.round(elapsedMs / 60000);
+        try {
+          await this.featureLoader.update(projectPath, feature.id, {
+            status: 'backlog',
+            failureCount: prevFailureCount + 1,
+            statusChangeReason: `Auto-decayed: stalled in review for ${elapsedMinutes}min with failing CI`,
+          });
+          decayedCount++;
+          logger.warn(
+            `[AutoDecay] Feature ${feature.id} ("${feature.title}") decayed from review to backlog — ` +
+              `stalled ${elapsedMinutes}min with failing CI (failureCount: ${prevFailureCount} -> ${prevFailureCount + 1})`
+          );
+          this.events.emit('feature:auto-decayed' as EventType, {
+            featureId: feature.id,
+            featureTitle: feature.title,
+            elapsedMinutes,
+            failureCount: prevFailureCount + 1,
+            projectPath,
+          });
+        } catch (error) {
+          logger.error(`[AutoDecay] Failed to decay feature ${feature.id}:`, error);
+        }
+      }
+    } catch (error) {
+      logger.error('[AutoDecay] Error scanning review queue for stalled features:', error);
+    }
+
+    if (decayedCount > 0) {
+      logger.warn(`[AutoDecay] Decayed ${decayedCount} stalled review feature(s) back to backlog`);
+    }
+
+    return decayedCount;
   }
 
   /**

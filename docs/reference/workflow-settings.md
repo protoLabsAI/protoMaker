@@ -219,6 +219,35 @@ interface WorkflowSettings {
 
 When the number of features awaiting human review reaches `maxPendingReviews`, the system pauses automatic feature pickup to prevent unbounded queue growth.
 
+| Setting             | Type    | Default | Range | Description                                |
+| ------------------- | ------- | ------- | ----- | ------------------------------------------ |
+| `maxPendingReviews` | integer | 5       | 1--50 | Maximum PRs in review before pickup pauses |
+
+Values outside the 1--50 range are rejected and the default of 5 is used instead.
+
+### Review Queue Auto-Decay
+
+```typescript
+interface WorkflowSettings {
+  autoDecayTimeoutMinutes?: number; // Recycle stalled review features. Default: 30
+}
+```
+
+When features sit in `review` status with failing CI for longer than `autoDecayTimeoutMinutes`, they are automatically reset to `backlog` with an incremented `failureCount`. This prevents a deadlock where all review slots are occupied by features with failing CI that no agent can fix, blocking all new agent launches indefinitely.
+
+| Setting                   | Type    | Default | Description                                                                               |
+| ------------------------- | ------- | ------- | ----------------------------------------------------------------------------------------- |
+| `autoDecayTimeoutMinutes` | integer | 30      | Minutes before a stalled review feature with failing CI is recycled. Set to 0 to disable. |
+
+**How it works:**
+
+1. Before each review queue depth check, the scheduler scans all features in `review` status.
+2. For each feature that has been in review longer than the configured timeout AND has a failing CI indicator (non-zero `ciRemediationCount`, `ciIterationCount`, `remediationHistory` with `ci_failure` entries, or `statusChangeReason` containing "ci"), the feature is reset to `backlog`.
+3. The feature's `failureCount` is incremented so model escalation rules apply on the next attempt.
+4. A `feature:auto-decayed` event is emitted for observability.
+
+Features in review without CI failure indicators (e.g., waiting for human code review approval) are never auto-decayed.
+
 ### Error Budget
 
 ```typescript

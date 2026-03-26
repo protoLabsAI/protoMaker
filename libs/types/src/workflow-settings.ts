@@ -354,6 +354,15 @@ export interface WorkflowSettings {
    */
   maxPendingReviews?: number;
   /**
+   * Minutes a feature can remain in 'review' with failing CI before being
+   * auto-decayed back to 'backlog'. Prevents the review queue from deadlocking
+   * when multiple features have failing CI and no agent can make progress.
+   * The feature's failureCount is incremented on each decay.
+   * Set to 0 to disable auto-decay.
+   * @default 30
+   */
+  autoDecayTimeoutMinutes?: number;
+  /**
    * Rolling window (in days) over which the change fail rate is computed
    * for the error budget system. PRs merged outside this window are excluded.
    * @default 7
