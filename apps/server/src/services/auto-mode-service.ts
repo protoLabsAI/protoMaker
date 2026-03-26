@@ -735,7 +735,8 @@ export class AutoModeService {
   async startAutoLoopForProject(
     projectPath: string,
     branchName: string | null = null,
-    forceStart: boolean = false
+    forceStart: boolean = false,
+    maxConcurrencyOverride?: number
   ): Promise<number> {
     // Check data integrity before starting (unless force-start is enabled)
     if (this.integrityWatchdogService) {
@@ -769,7 +770,8 @@ export class AutoModeService {
 
     const resolvedMaxConcurrency = await this.scheduler.resolveMaxConcurrency(
       projectPath,
-      branchName
+      branchName,
+      maxConcurrencyOverride
     );
 
     const config: AutoModeLoopConfig = {

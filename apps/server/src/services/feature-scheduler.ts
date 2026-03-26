@@ -699,11 +699,18 @@ export class FeatureScheduler {
    *
    * Steps 3–5 determine the desired value. Steps 1–2 apply as ceilings.
    */
-  async resolveMaxConcurrency(projectPath: string, branchName: string | null): Promise<number> {
+  async resolveMaxConcurrency(
+    projectPath: string,
+    branchName: string | null,
+    maxConcurrencyOverride?: number
+  ): Promise<number> {
     let desired: number;
     let systemCap = MAX_SYSTEM_CONCURRENCY;
 
-    if (!this.settingsService) {
+    if (typeof maxConcurrencyOverride === 'number') {
+      // Caller-supplied override bypasses steps 3–5; system cap still applies.
+      desired = maxConcurrencyOverride;
+    } else if (!this.settingsService) {
       desired = DEFAULT_MAX_CONCURRENCY;
     } else {
       try {
