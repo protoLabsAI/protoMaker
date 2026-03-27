@@ -6,7 +6,7 @@
  */
 
 import { createLogger } from '@protolabsai/utils';
-import type { Feature, GoalGateResult, EventType } from '@protolabsai/types';
+import type { Feature, GoalGateResult, EventType, WorkflowDefinition } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
 import { IntakeProcessor, PlanProcessor } from './lead-engineer-processors.js';
@@ -14,6 +14,7 @@ import { ExecuteProcessor } from './lead-engineer-execute-processor.js';
 import { ReviewProcessor, MergeProcessor } from './lead-engineer-review-merge-processors.js';
 import { DeployProcessor } from './lead-engineer-deploy-processor.js';
 import { EscalateProcessor } from './lead-engineer-escalation.js';
+import type { ProcessorRegistry } from './processor-registry.js';
 import type {
   ProcessorServiceContext,
   StateContext,
@@ -141,9 +142,25 @@ const DEFAULT_GOAL_GATES: Map<string, GoalGateValidator> = new Map([
  * - Checkpointing: persist state after each successful transition
  * - Pipeline events: emit typed events for observability
  */
+/**
+ * Standard phase order used to resolve next-state skipping.
+ * When a processor returns a disabled phase, the machine skips forward
+ * to the next enabled phase in this order. DONE and ESCALATE are always valid targets.
+ */
+const PHASE_ORDER: FeatureProcessingState[] = [
+  'INTAKE',
+  'PLAN',
+  'EXECUTE',
+  'REVIEW',
+  'MERGE',
+  'DEPLOY',
+  'DONE',
+];
+
 export class FeatureStateMachine {
   private readonly processors: Map<FeatureProcessingState, StateProcessor>;
   private readonly goalGates: Map<string, GoalGateValidator>;
+  private readonly enabledPhases: Set<FeatureProcessingState>;
   private checkpointService?: PipelineCheckpointService;
   private events?: EventEmitter;
   private readonly persistQueue: PersistQueue;
@@ -154,21 +171,123 @@ export class FeatureStateMachine {
       checkpointService?: PipelineCheckpointService;
       events?: EventEmitter;
       goalGatesEnabled?: boolean;
+      workflow?: WorkflowDefinition;
+      processorRegistry?: ProcessorRegistry;
     }
   ) {
     this.processors = new Map<FeatureProcessingState, StateProcessor>();
-    this.processors.set('INTAKE', new IntakeProcessor(serviceContext));
-    this.processors.set('PLAN', new PlanProcessor(serviceContext));
-    this.processors.set('EXECUTE', new ExecuteProcessor(serviceContext));
-    this.processors.set('REVIEW', new ReviewProcessor(serviceContext));
-    this.processors.set('MERGE', new MergeProcessor(serviceContext));
-    this.processors.set('DEPLOY', new DeployProcessor(serviceContext));
-    this.processors.set('ESCALATE', new EscalateProcessor(serviceContext));
+    this.enabledPhases = new Set<FeatureProcessingState>();
+
+    if (opts?.workflow && opts?.processorRegistry) {
+      // Workflow-driven: register only enabled phases with the correct processors
+      for (const phase of opts.workflow.phases) {
+        const state = phase.state as FeatureProcessingState;
+        if (!phase.enabled) continue;
+
+        this.enabledPhases.add(state);
+
+        if (phase.processor) {
+          // Custom processor from registry
+          const processor = opts.processorRegistry.get(phase.processor, serviceContext);
+          if (processor) {
+            this.processors.set(state, processor);
+          } else {
+            logger.warn(
+              `Processor "${phase.processor}" not found in registry for state ${state}, using default`
+            );
+            this.setDefaultProcessor(state, serviceContext);
+          }
+        } else {
+          // Default processor for this state
+          this.setDefaultProcessor(state, serviceContext);
+        }
+      }
+
+      // ESCALATE is always available regardless of workflow
+      this.processors.set('ESCALATE', new EscalateProcessor(serviceContext));
+      this.enabledPhases.add('ESCALATE');
+
+      logger.info('State machine configured from workflow', {
+        workflow: opts.workflow.name,
+        enabledPhases: Array.from(this.enabledPhases),
+      });
+    } else {
+      // Default: all phases enabled with built-in processors
+      this.processors.set('INTAKE', new IntakeProcessor(serviceContext));
+      this.processors.set('PLAN', new PlanProcessor(serviceContext));
+      this.processors.set('EXECUTE', new ExecuteProcessor(serviceContext));
+      this.processors.set('REVIEW', new ReviewProcessor(serviceContext));
+      this.processors.set('MERGE', new MergeProcessor(serviceContext));
+      this.processors.set('DEPLOY', new DeployProcessor(serviceContext));
+      this.processors.set('ESCALATE', new EscalateProcessor(serviceContext));
+
+      for (const state of PHASE_ORDER) {
+        this.enabledPhases.add(state);
+      }
+      this.enabledPhases.add('ESCALATE');
+    }
 
     this.goalGates = opts?.goalGatesEnabled === false ? new Map() : new Map(DEFAULT_GOAL_GATES);
     this.checkpointService = opts?.checkpointService;
     this.events = opts?.events;
     this.persistQueue = new PersistQueue();
+  }
+
+  /**
+   * Set the default (built-in) processor for a state.
+   */
+  private setDefaultProcessor(state: FeatureProcessingState, ctx: ProcessorServiceContext): void {
+    switch (state) {
+      case 'INTAKE':
+        this.processors.set(state, new IntakeProcessor(ctx));
+        break;
+      case 'PLAN':
+        this.processors.set(state, new PlanProcessor(ctx));
+        break;
+      case 'EXECUTE':
+        this.processors.set(state, new ExecuteProcessor(ctx));
+        break;
+      case 'REVIEW':
+        this.processors.set(state, new ReviewProcessor(ctx));
+        break;
+      case 'MERGE':
+        this.processors.set(state, new MergeProcessor(ctx));
+        break;
+      case 'DEPLOY':
+        this.processors.set(state, new DeployProcessor(ctx));
+        break;
+      case 'ESCALATE':
+        this.processors.set(state, new EscalateProcessor(ctx));
+        break;
+    }
+  }
+
+  /**
+   * Resolve next state, skipping disabled phases.
+   * If a processor returns a disabled phase, skip forward to the next enabled one.
+   * DONE and ESCALATE are never skipped.
+   */
+  private resolveNextState(
+    requestedState: FeatureProcessingState | null
+  ): FeatureProcessingState | null {
+    if (!requestedState) return null;
+    if (requestedState === 'DONE' || requestedState === 'ESCALATE') return requestedState;
+    if (this.enabledPhases.has(requestedState)) return requestedState;
+
+    // Skip forward in standard order
+    const idx = PHASE_ORDER.indexOf(requestedState);
+    if (idx === -1) return requestedState; // Unknown state, don't modify
+
+    for (let i = idx + 1; i < PHASE_ORDER.length; i++) {
+      if (this.enabledPhases.has(PHASE_ORDER[i])) {
+        logger.info(`Skipping disabled phase ${requestedState} → ${PHASE_ORDER[i]}`);
+        return PHASE_ORDER[i];
+      }
+    }
+
+    // If all remaining phases are disabled, go to DONE
+    logger.info(`All phases after ${requestedState} disabled, transitioning to DONE`);
+    return 'DONE';
   }
 
   /**
@@ -195,7 +314,9 @@ export class FeatureStateMachine {
       ...resumeFromCheckpoint?.restoredContext,
     };
 
-    let currentState: FeatureProcessingState = resumeFromCheckpoint?.state || 'INTAKE';
+    // Resolve initial state: if the default/requested start phase is disabled, skip forward
+    let currentState: FeatureProcessingState =
+      this.resolveNextState(resumeFromCheckpoint?.state || 'INTAKE') || 'INTAKE';
     let transitionCount = 0;
     const MAX_TRANSITIONS = 20;
     // Self-transitions (e.g. REVIEW → REVIEW polling) don't burn the main transition
@@ -284,8 +405,15 @@ export class FeatureStateMachine {
         }
 
         await processor.enter(ctx);
-        const result: StateTransitionResult = await processor.process(ctx);
+        const rawResult: StateTransitionResult = await processor.process(ctx);
         await processor.exit(ctx);
+
+        // Resolve next state through workflow phase skipping.
+        // If the processor returns a disabled phase, skip to the next enabled one.
+        const result: StateTransitionResult = {
+          ...rawResult,
+          nextState: rawResult.nextState ? this.resolveNextState(rawResult.nextState) : null,
+        };
 
         // Evaluate exit gate
         const exitGate = this.goalGates.get(`${currentState.toLowerCase()}-exit`);

@@ -44,13 +44,13 @@ import { WorldStateBuilder } from './lead-engineer-world-state.js';
 import { ActionExecutor } from './lead-engineer-action-executor.js';
 import { CeremonyOrchestrator } from './lead-engineer-ceremonies.js';
 import { LeadEngineerSessionStore } from './lead-engineer-session-store.js';
-import { GtmExecuteProcessor } from './lead-engineer-gtm-execute-processor.js';
 import type {
   FeatureProcessingState,
   StateContext,
   IPlanReviewService,
 } from './lead-engineer-types.js';
-import { GtmReviewProcessor } from './lead-engineer-gtm-review-processor.js';
+import type { ProcessorRegistry } from './processor-registry.js';
+import type { WorkflowLoader } from './workflow-loader.js';
 import type { HITLFormService } from './hitl-form-service.js';
 import type { AuthorityService } from './authority-service.js';
 import type { SchedulerService } from './scheduler-service.js';
@@ -129,6 +129,8 @@ export class LeadEngineerService {
   private antagonisticReviewService?: IPlanReviewService;
   private hitlFormService?: HITLFormService;
   private authorityService?: AuthorityService;
+  private processorRegistry?: ProcessorRegistry;
+  private workflowLoader?: WorkflowLoader;
   /** Per-project workflow settings cache — populated when a session starts */
   private workflowSettingsCache = new Map<string, import('@protolabsai/types').WorkflowSettings>();
 
@@ -201,6 +203,12 @@ export class LeadEngineerService {
   }
   setSchedulerService(s: SchedulerService): void {
     this.schedulerService = s;
+  }
+  setProcessorRegistry(r: ProcessorRegistry): void {
+    this.processorRegistry = r;
+  }
+  setWorkflowLoader(l: WorkflowLoader): void {
+    this.workflowLoader = l;
   }
 
   // ────────────────────────── Bidirectional Integration ──────────────────────────
@@ -588,25 +596,33 @@ export class LeadEngineerService {
         this.settingsService,
         '[LeadEngineer]'
       );
-      const isContentFeature = feature.featureType === 'content';
+
+      // Resolve workflow definition for this feature
+      const workflowDef = this.workflowLoader
+        ? await this.workflowLoader.resolveForFeature(projectPath, feature)
+        : undefined;
+
+      // Workflows that skip PR-centric phases (REVIEW, MERGE) don't need goal gates
+      const hasPRPhases = workflowDef
+        ? workflowDef.phases.some((p) => p.enabled && (p.state === 'REVIEW' || p.state === 'MERGE'))
+        : true;
+
       const stateMachine = new FeatureStateMachine(serviceContext, {
         checkpointService: workflowSettings.pipeline.checkpointEnabled
           ? this.checkpointService
           : undefined,
         events: this.events,
-        // Content features bypass PR-centric goal gates (no PR is created)
-        goalGatesEnabled: isContentFeature ? false : workflowSettings.pipeline.goalGatesEnabled,
+        goalGatesEnabled: hasPRPhases ? workflowSettings.pipeline.goalGatesEnabled : false,
+        workflow: workflowDef,
+        processorRegistry: this.processorRegistry,
       });
-      if (isContentFeature) {
-        stateMachine.registerProcessor('EXECUTE', new GtmExecuteProcessor());
-        logger.info(`[LeadEngineer] Content feature ${featureId} routed to GtmExecuteProcessor`);
+
+      if (workflowDef && workflowDef.name !== 'standard') {
+        logger.info(`[LeadEngineer] Feature ${featureId} using workflow: ${workflowDef.name}`, {
+          enabledPhases: workflowDef.phases.filter((p) => p.enabled).map((p) => p.state),
+        });
       }
 
-      // Route content features to GtmReviewProcessor instead of standard ReviewProcessor
-      if (feature.featureType === 'content') {
-        stateMachine.registerProcessor('REVIEW', new GtmReviewProcessor(serviceContext));
-        logger.info(`[LeadEngineer] Content feature routed to GtmReviewProcessor`, { featureId });
-      }
       // Emit pipeline:phase-sync after each LE state transition so PipelineOrchestrator
       // can keep the 9-phase model in sync with the Lead Engineer's actual progress.
       const phaseSyncStates = new Set(['REVIEW', 'MERGE', 'DEPLOY', 'DONE']);

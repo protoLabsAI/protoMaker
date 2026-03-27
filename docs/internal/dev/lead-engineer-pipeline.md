@@ -2,7 +2,7 @@
 
 The Lead Engineer pipeline is a state machine that orchestrates AI-assisted feature implementation across seven phases: **INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DEPLOY → DONE** (plus ESCALATE from any state). Each phase is handled by a dedicated `StateProcessor` that encapsulates the logic for that stage.
 
-For the full system context (auto-mode, maintenance tasks, ceremonies, timing reference), see [System Architecture](./system-architecture.md).
+For the full system context (auto-mode, maintenance tasks, ceremonies, timing reference), see [System Architecture](./system-architecture.md). For custom workflow definitions that control which phases run and which processors handle them, see [Custom Workflows](/guides/custom-workflows).
 
 ## Architecture Overview
 

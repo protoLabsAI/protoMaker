@@ -561,6 +561,12 @@ export interface Feature {
    */
   executionMode?: 'standard' | 'read-only';
   /**
+   * Workflow to use for this feature. Determines phases, agent, execution mode.
+   * References a WorkflowDefinition by name from `.automaker/workflows/`.
+   * Falls back to 'standard' (full code pipeline) if not set.
+   */
+  workflow?: string;
+  /**
    * Content configuration for GTM content features (only relevant when featureType === 'content').
    */
   contentConfig?: {
