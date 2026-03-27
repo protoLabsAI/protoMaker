@@ -120,7 +120,7 @@ export function createSitrepRoutes({
         }));
 
       // Pull recent entries from the escalation router audit log
-      const recentEscalations = getRecentEscalations(10);
+      const recentEscalations = getRecentEscalations(10, projectPath);
 
       res.json({
         timestamp: new Date().toISOString(),
@@ -251,11 +251,19 @@ async function getStagingDelta(repoRoot: string) {
   }
 }
 
-function getRecentEscalations(limit: number) {
+function getRecentEscalations(limit: number, projectPath?: string) {
   try {
     const router = getEscalationRouter();
-    const entries = router.getLog(limit);
-    return entries.map((entry) => {
+    // Fetch more than needed so we can filter by projectPath and still return `limit` entries
+    const entries = router.getLog(projectPath ? limit * 3 : limit);
+    const filtered = projectPath
+      ? entries.filter((entry) => {
+          const entryPath = entry.signal.context?.projectPath as string | undefined;
+          // Include entries that match the requested projectPath, or have no projectPath (global)
+          return !entryPath || entryPath === projectPath;
+        })
+      : entries;
+    return filtered.slice(0, limit).map((entry) => {
       const ctx = entry.signal.context ?? {};
       const failureAnalysis = ctx.failureAnalysis as Record<string, unknown> | undefined;
       return {
