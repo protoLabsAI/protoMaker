@@ -1,6 +1,6 @@
 {
   "name": "@protolabsai/context-engine",
-  "version": "0.68.21",
+  "version": "0.68.22",
   "type": "module",
   "description": "Conversation storage and context management for AutoMaker agents",
   "main": "dist/index.js",
@@ -33,7 +33,7 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@protolabsai/utils": "^0.89.0",
+    "@protolabsai/utils": "^0.90.0",
     "better-sqlite3": "^11.7.0"
   },
   "devDependencies": {

@@ -1,5 +1,21 @@
 # @protolabsai/utils
 
+## 0.90.0
+
+### Minor Changes
+
+- ### Features
+  - add read-only execution mode for audit/analysis features (#3149)
+
+  ### Bug Fixes
+  - enable autoCandidateOnDevMerge in DEFAULT_GLOBAL_SETTINGS (#3150)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.90.0
+  - @protolabsai/platform@0.90.0
+
 ## 0.89.6
 
 ### Patch Changes
