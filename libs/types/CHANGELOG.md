@@ -1,5 +1,12 @@
 # @protolabsai/types
 
+## 0.92.2
+
+### Patch Changes
+
+- ### Bug Fixes
+  - maintenance push circuit breaker + empty PR guard (#3172)
+
 ## 0.92.1
 
 ### Patch Changes
