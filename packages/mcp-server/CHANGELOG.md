@@ -1,5 +1,14 @@
 # @protolabsai/mcp-server
 
+## 0.90.1
+
+### Patch Changes
+
+- ### Bug Fixes
+  - filter sitrep escalation log by projectPath (#3154)
+- Updated dependencies
+  - @protolabsai/tools@0.90.1
+
 ## 0.90.0
 
 ### Minor Changes

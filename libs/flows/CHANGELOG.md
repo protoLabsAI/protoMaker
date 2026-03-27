@@ -1,5 +1,18 @@
 # @protolabsai/flows
 
+## 0.90.1
+
+### Patch Changes
+
+- ### Bug Fixes
+  - filter sitrep escalation log by projectPath (#3154)
+- Updated dependencies
+  - @protolabsai/types@0.90.1
+  - @protolabsai/utils@0.90.1
+  - @protolabsai/prompts@0.90.1
+  - @protolabsai/model-resolver@0.90.1
+  - @protolabsai/observability@0.90.1
+
 ## 0.90.0
 
 ### Minor Changes

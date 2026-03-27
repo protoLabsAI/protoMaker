@@ -1,5 +1,12 @@
 # @protolabsai/types
 
+## 0.90.1
+
+### Patch Changes
+
+- ### Bug Fixes
+  - filter sitrep escalation log by projectPath (#3154)
+
 ## 0.90.0
 
 ### Minor Changes
