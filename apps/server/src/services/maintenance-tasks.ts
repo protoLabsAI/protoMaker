@@ -785,23 +785,69 @@ export async function scanWorktreesForCrashRecovery(
       });
       const hasUncommittedChanges = statusOutput.trim() !== '';
 
+      // Prune stale remote tracking refs before checking unpushed state.
+      // Without this, git rev-list may compare against a deleted remote branch,
+      // causing false "unpushed" results and infinite push retry loops.
+      try {
+        await execFileAsync('git', ['remote', 'prune', 'origin'], {
+          cwd: worktree.path,
+          encoding: 'utf-8',
+          timeout: 10_000,
+        });
+      } catch {
+        // Non-fatal — continue with potentially stale refs
+      }
+
+      // Check if remote branch still exists (ls-remote exits 2 if not found)
+      let remoteBranchExists = false;
+      try {
+        await execFileAsync(
+          'git',
+          ['ls-remote', '--exit-code', 'origin', `refs/heads/${worktree.branch}`],
+          { cwd: worktree.path, encoding: 'utf-8', timeout: 10_000 }
+        );
+        remoteBranchExists = true;
+      } catch {
+        remoteBranchExists = false;
+      }
+
+      // Check if the branch's work is already reachable from the integration branch.
+      // If the remote branch is gone and the work is merged, this is a cleanup candidate — not a push candidate.
+      if (!remoteBranchExists && integrationBranch) {
+        const alreadyMerged = await isBranchFullyMerged(
+          worktree.path,
+          worktree.branch,
+          `origin/${integrationBranch}`
+        );
+        if (alreadyMerged) {
+          logger.info(
+            `Worktree ${worktree.branch} (${feature.title}) — remote branch deleted and work already merged into ${integrationBranch}. Skipping push, queuing for cleanup.`
+          );
+          continue;
+        }
+      }
+
       // Check for unpushed commits (compare local branch to remote)
       let hasUnpushedCommits = false;
-      try {
-        const { stdout: revListOutput } = await execFileAsync(
-          'git',
-          ['rev-list', `origin/${worktree.branch}..${worktree.branch}`, '--count'],
-          {
-            cwd: worktree.path,
-            encoding: 'utf-8',
-            timeout: 5_000,
-          }
-        );
-        const unpushedCount = parseInt(revListOutput.trim(), 10);
-        hasUnpushedCommits = unpushedCount > 0;
-      } catch (_error) {
-        // Remote branch might not exist yet - treat as unpushed
-        logger.debug(`Could not check unpushed commits for ${worktree.branch}, assuming unpushed`);
+      if (remoteBranchExists) {
+        try {
+          const { stdout: revListOutput } = await execFileAsync(
+            'git',
+            ['rev-list', `origin/${worktree.branch}..${worktree.branch}`, '--count'],
+            {
+              cwd: worktree.path,
+              encoding: 'utf-8',
+              timeout: 5_000,
+            }
+          );
+          const unpushedCount = parseInt(revListOutput.trim(), 10);
+          hasUnpushedCommits = unpushedCount > 0;
+        } catch {
+          // rev-list failed even though remote exists — treat as unpushed
+          hasUnpushedCommits = true;
+        }
+      } else {
+        // Remote branch doesn't exist but work isn't merged — needs push
         hasUnpushedCommits = true;
       }
 
@@ -812,7 +858,7 @@ export async function scanWorktreesForCrashRecovery(
       }
 
       logger.info(
-        `Worktree ${worktree.branch} (${feature.title}) has uncommitted: ${hasUncommittedChanges}, unpushed: ${hasUnpushedCommits}, status: ${feature.status}`
+        `Worktree ${worktree.branch} (${feature.title}) has uncommitted: ${hasUncommittedChanges}, unpushed: ${hasUnpushedCommits}, remoteBranch: ${remoteBranchExists ? 'exists' : 'gone'}, status: ${feature.status}`
       );
 
       // For verified/done features with unpushed work, trigger post-completion workflow
