@@ -303,6 +303,12 @@ export function GitWorkflowDefaultsSection() {
             checked={localSettings.waitForCI}
             onChange={(v) => update('waitForCI', v)}
           />
+          <ToggleRow
+            label="Skip Git Hooks"
+            description="Bypass Husky/commitlint/lint-staged on agent commits. Disable to run local hooks."
+            checked={localSettings.skipGitHooks}
+            onChange={(v) => update('skipGitHooks', v)}
+          />
         </div>
 
         <div className="py-3">
