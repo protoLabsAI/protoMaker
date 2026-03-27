@@ -59,7 +59,8 @@ export async function checkAndRecoverUncommittedWork(
   feature: Feature,
   worktreePath: string,
   projectPath: string,
-  prBaseBranch?: string
+  prBaseBranch?: string,
+  skipGitHooks = true
 ): Promise<WorktreeRecoveryResult> {
   const rawBranch = prBaseBranch || DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch;
   // Sanitize branch name to prevent shell injection — allow only valid git ref characters
@@ -144,16 +145,20 @@ export async function checkAndRecoverUncommittedWork(
       logger.info(`[PostAgentHook] Fallback 'git add .' staged files successfully`);
     }
 
-    // Step 3: Commit with HUSKY=0 / --no-verify to bypass hooks
+    // Step 3: Commit — skip hooks by default unless skipGitHooks is false
     const commitTitle = (feature.title || 'feature implementation')
       .replace(/"/g, "'")
       .substring(0, 72);
     const commitMessage = `refactor: ${commitTitle}`;
 
     try {
-      await execFileAsync('git', ['commit', '--no-verify', '-m', commitMessage], {
+      const commitArgs = skipGitHooks
+        ? ['commit', '--no-verify', '-m', commitMessage]
+        : ['commit', '-m', commitMessage];
+      const commitEnv = skipGitHooks ? { ...execEnv, HUSKY: '0' } : execEnv;
+      await execFileAsync('git', commitArgs, {
         cwd: worktreePath,
-        env: { ...execEnv, HUSKY: '0' },
+        env: commitEnv,
       });
     } catch (commitError: unknown) {
       // Log the actual git stderr for debugging

@@ -38,7 +38,8 @@ export interface WorktreeGuardResult {
 export async function ensureCleanWorktree(
   worktreePath: string,
   featureId: string,
-  branchName: string
+  branchName: string,
+  skipGitHooks = true
 ): Promise<WorktreeGuardResult> {
   const result: WorktreeGuardResult = {
     committed: false,
@@ -60,7 +61,7 @@ export async function ensureCleanWorktree(
       logger.debug(`Uncommitted changes:\n${statusOutput}`);
 
       // Stage all changes - exclude .automaker/ except memory/ and skills/ (if they exist).
-      const guardEnv = { ...process.env, HUSKY: '0' };
+      const guardEnv = skipGitHooks ? { ...process.env, HUSKY: '0' } : { ...process.env };
       await execAsync(buildGitAddCommand(worktreePath), {
         cwd: worktreePath,
         env: guardEnv,
@@ -76,9 +77,10 @@ export async function ensureCleanWorktree(
         return result;
       }
 
-      // Commit with --no-verify to bypass husky hooks in the worktree
+      // Commit changes — skip hooks by default unless skipGitHooks is false
+      const noVerify = skipGitHooks ? '--no-verify ' : '';
       await execAsync(
-        'git commit --no-verify -m "chore: auto-commit agent progress before verification"',
+        `git commit ${noVerify}-m "chore: auto-commit agent progress before verification"`,
         { cwd: worktreePath, env: guardEnv }
       );
 

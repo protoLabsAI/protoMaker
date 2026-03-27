@@ -62,6 +62,16 @@ export interface GitWorkflowSettings {
    * Default: [] (all checks are hard — opt-in to soft classification)
    */
   softChecks?: string[];
+  /**
+   * Skip git hooks (Husky, commitlint, lint-staged) on agent commits.
+   * When true (default), agents use --no-verify and HUSKY=0 to bypass hooks.
+   * Set to false to run all local git hooks on agent commits — useful when
+   * you have local CI (e.g. act) or custom pre-commit/pre-push checks.
+   * Note: lint-staged reverts ALL changes on hook failure, which can destroy
+   * agent work. Only disable this if your hooks are fast and reliable.
+   * Default: true
+   */
+  skipGitHooks?: boolean;
 }
 
 /**
@@ -79,6 +89,7 @@ export const DEFAULT_GIT_WORKFLOW_SETTINGS: Required<GitWorkflowSettings> = {
   maxPRFilesTouched: 20,
   excludeFromStaging: [],
   softChecks: [],
+  skipGitHooks: true,
 };
 
 /**
