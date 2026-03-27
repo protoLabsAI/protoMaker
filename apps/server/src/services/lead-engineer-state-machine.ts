@@ -502,6 +502,18 @@ export class FeatureStateMachine {
           return { finalState: currentState, context: ctx };
         }
 
+        // DONE is a terminal state — no processor needed, just stop.
+        // This can be reached via resolveNextState() skipping all remaining phases.
+        if (result.nextState === 'DONE') {
+          currentState = 'DONE';
+          logger.info('Feature processing completed (all phases done)', {
+            featureId: feature.id,
+            finalState: currentState,
+            transitionCount,
+          });
+          break;
+        }
+
         if (!result.shouldContinue || !result.nextState) {
           // Capture the terminal state signaled by the processor (e.g. DONE from DEPLOY)
           if (result.nextState) {

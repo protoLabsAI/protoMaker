@@ -602,6 +602,29 @@ export class LeadEngineerService {
         ? await this.workflowLoader.resolveForFeature(projectPath, feature)
         : undefined;
 
+      // Apply workflow execution settings to the feature so downstream services
+      // (ExecuteProcessor, git-workflow-service, execution-service) respect them.
+      if (workflowDef && workflowDef.name !== 'standard') {
+        // Derive executionMode from workflow's useWorktrees setting
+        if (!workflowDef.execution.useWorktrees) {
+          feature.executionMode = 'read-only';
+        }
+
+        // Merge workflow gitWorkflow overrides into feature-level git settings
+        if (workflowDef.execution.gitWorkflow) {
+          feature.gitWorkflow = {
+            ...feature.gitWorkflow,
+            ...workflowDef.execution.gitWorkflow,
+          };
+        }
+
+        // Persist so execution-service and git-workflow-service pick them up
+        await this.featureLoader.update(projectPath, featureId, {
+          executionMode: feature.executionMode,
+          gitWorkflow: feature.gitWorkflow,
+        });
+      }
+
       // Workflows that skip PR-centric phases (REVIEW, MERGE) don't need goal gates
       const hasPRPhases = workflowDef
         ? workflowDef.phases.some((p) => p.enabled && (p.state === 'REVIEW' || p.state === 'MERGE'))
@@ -681,6 +704,23 @@ export class LeadEngineerService {
         outcome,
         success: result.finalState !== 'ESCALATE',
       });
+
+      // Apply workflow terminal status: move feature to 'done' when the workflow says so.
+      // Without this, features whose workflows skip REVIEW/MERGE/DEPLOY would stay
+      // in their last status instead of transitioning to done.
+      if (result.finalState === 'DONE' && workflowDef?.execution.terminalStatus === 'done') {
+        const currentFeature = await this.featureLoader.get(projectPath, featureId);
+        if (currentFeature && currentFeature.status !== 'done') {
+          await this.featureLoader.update(projectPath, featureId, {
+            status: 'done',
+            completedAt: new Date().toISOString(),
+            statusChangeReason: `Workflow '${workflowDef.name}' completed — terminal status is done`,
+          });
+          logger.info(
+            `[LeadEngineer] Feature ${featureId} moved to done per workflow terminal status`
+          );
+        }
+      }
 
       // Index engineering learnings when feature completes via state machine (DONE)
       if (result.finalState === 'DONE' && this.knowledgeStoreService) {
