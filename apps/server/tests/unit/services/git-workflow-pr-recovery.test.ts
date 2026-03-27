@@ -194,6 +194,7 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
     vi.mocked(execFile).mockImplementation(
       makeExecFileQueue([
         { stdout: '[]' }, // pre-check: no open PRs
+        { stdout: '1\n' }, // diff check: rev-list --count (has commits)
         { error: alreadyExistsError }, // gh pr create attempt 1
         { error: alreadyExistsError }, // gh pr create attempt 2 (retry)
         { error: alreadyExistsError }, // gh pr create attempt 3 (retry, final)
@@ -237,6 +238,7 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
     vi.mocked(execFile).mockImplementation(
       makeExecFileQueue([
         { stdout: '[]' }, // pre-check: no open PRs
+        { stdout: '1\n' }, // diff check: rev-list --count (has commits)
         { error: alreadyExistsError }, // gh pr create attempt 1
         { error: alreadyExistsError }, // gh pr create attempt 2 (retry)
         { error: alreadyExistsError }, // gh pr create attempt 3 (retry, final)
@@ -279,6 +281,7 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
     vi.mocked(execFile).mockImplementation(
       makeExecFileQueue([
         { stdout: '[]' }, // pre-check: no open PRs
+        { stdout: '1\n' }, // diff check: rev-list --count (has commits)
         { error: alreadyExistsError }, // gh pr create attempt 1
         { error: alreadyExistsError }, // gh pr create attempt 2 (retry)
         { error: alreadyExistsError }, // gh pr create attempt 3 (retry, final)
@@ -320,6 +323,7 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
     vi.mocked(execFile).mockImplementation(
       makeExecFileQueue([
         { stdout: '[]' }, // pre-check: no open PRs
+        { stdout: '1\n' }, // diff check: rev-list --count (has commits)
         { error: alreadyExistsError }, // gh pr create attempt 1
         { error: alreadyExistsError }, // gh pr create attempt 2 (retry)
         { error: alreadyExistsError }, // gh pr create attempt 3 (retry, final)
@@ -343,6 +347,7 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
     vi.mocked(execFile).mockImplementation(
       makeExecFileQueue([
         { stdout: '[]' }, // pre-check: no open PRs
+        { stdout: '1\n' }, // diff check: rev-list --count (has commits)
         { error: alreadyExistsError }, // gh pr create attempt 1
         { error: alreadyExistsError }, // gh pr create attempt 2 (retry)
         { error: alreadyExistsError }, // gh pr create attempt 3 (retry, final)

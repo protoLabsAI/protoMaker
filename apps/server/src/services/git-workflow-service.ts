@@ -1661,6 +1661,25 @@ export class GitWorkflowService {
       );
     }
 
+    // Guard: check if there are actually commits between base and head.
+    // If not (e.g., branch already merged, environmental recovery with no code changes),
+    // skip PR creation — GitHub would reject it with "No commits between <base> and <head>".
+    try {
+      const { stdout: diffCount } = await execFileAsync(
+        'git',
+        ['rev-list', '--count', `origin/${baseBranch}..${branchName}`],
+        { cwd: workDir, env: execEnv, timeout: 10_000 }
+      );
+      if (parseInt(diffCount.trim(), 10) === 0) {
+        logger.warn(
+          `[createPullRequest] No commits between ${baseBranch} and ${branchName} — skipping PR creation`
+        );
+        return { prUrl: null, prAlreadyExisted: false };
+      }
+    } catch {
+      // If the check fails, proceed with PR creation — gh will catch it
+    }
+
     // Create new PR - use execFileAsync array args to avoid shell injection
     // with backticks, $(), !, and other special chars in LLM-generated PR bodies
     const prArgs = [
