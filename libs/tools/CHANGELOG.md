@@ -1,5 +1,17 @@
 # @protolabsai/tools
 
+## 0.91.0
+
+### Minor Changes
+
+- ### Features
+  - custom workflows & processor registry for Lead Engineer pipeline (#3159)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.91.0
+
 ## 0.90.1
 
 ### Patch Changes
