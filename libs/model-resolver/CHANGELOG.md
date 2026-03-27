@@ -1,5 +1,17 @@
 # @protolabsai/model-resolver
 
+## 0.92.0
+
+### Minor Changes
+
+- ### Features
+  - make git hook bypass configurable via skipGitHooks setting (#3164)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.92.0
+
 ## 0.91.0
 
 ### Minor Changes
