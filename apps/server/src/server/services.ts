@@ -116,6 +116,8 @@ import { CommandRegistryService } from '../services/command-registry-service.js'
 import { CheckpointService } from '../services/checkpoint-service.js';
 import { ProjectSlugResolver } from '../services/project-slug-resolver.js';
 import { DeviationRuleService } from '../services/deviation-rule-service.js';
+import { createDefaultProcessorRegistry } from '../services/processor-registry.js';
+import { WorkflowLoader } from '../services/workflow-loader.js';
 import { setToolExecutionLogger } from '../lib/sdk-options.js';
 
 const logger = createLogger('Server:Services');
@@ -770,6 +772,12 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   leadEngineerService.setHITLFormService(hitlFormService);
   // Wire pipeline checkpoint service into lead engineer for durable workflow
   leadEngineerService.setCheckpointService(pipelineCheckpointService);
+
+  // Wire ProcessorRegistry and WorkflowLoader for custom workflow support
+  const processorRegistry = createDefaultProcessorRegistry();
+  const workflowLoader = new WorkflowLoader();
+  leadEngineerService.setProcessorRegistry(processorRegistry);
+  leadEngineerService.setWorkflowLoader(workflowLoader);
   await leadEngineerService.initialize();
 
   // Wire project-affinity filtering into auto-mode when projectPreferences are configured.

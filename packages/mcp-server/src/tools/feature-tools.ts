@@ -145,6 +145,11 @@ export const featureTools: Tool[] = [
           description:
             'Execution mode: "standard" (default) runs the full git pipeline (worktree, branch, commit, push, PR). "read-only" runs the agent against the main working tree with no git operations — ideal for audits, analysis, and report generation.',
         },
+        workflow: {
+          type: 'string',
+          description:
+            'Workflow name from .automaker/workflows/ or built-in (standard, read-only, content, audit). Determines which pipeline phases run, which processors handle each phase, and execution settings. Overrides executionMode when set.',
+        },
       },
       required: ['projectPath', 'title', 'description'],
     },
@@ -219,6 +224,11 @@ export const featureTools: Tool[] = [
           enum: ['standard', 'read-only'],
           description:
             'Execution mode: "standard" runs the full git pipeline. "read-only" runs with no git operations.',
+        },
+        workflow: {
+          type: 'string',
+          description:
+            'Workflow name (standard, read-only, content, audit, or custom). Determines pipeline phases and processors.',
         },
       },
       required: ['projectPath', 'featureId'],

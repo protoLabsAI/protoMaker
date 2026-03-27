@@ -841,6 +841,15 @@ export type {
   ContextMetrics,
 } from './lead-engineer.js';
 
+// Workflow Definition types (custom workflows for Lead Engineer pipeline)
+export type {
+  WorkflowDefinition,
+  WorkflowPhase,
+  WorkflowAgentConfig,
+  WorkflowExecutionConfig,
+  WorkflowMatchRules,
+} from './workflow-definition.js';
+
 // Notes types (Tiptap-based project notes workspace)
 export type { NoteTab, NoteTabPermissions, NotesWorkspace } from './notes.js';
 
