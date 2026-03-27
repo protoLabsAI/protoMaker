@@ -260,6 +260,10 @@ export class GitWorkflowService {
         DEFAULT_GIT_WORKFLOW_SETTINGS.excludeFromStaging,
       softChecks:
         featureOverride.softChecks ?? global.softChecks ?? DEFAULT_GIT_WORKFLOW_SETTINGS.softChecks,
+      skipGitHooks:
+        featureOverride.skipGitHooks ??
+        global.skipGitHooks ??
+        DEFAULT_GIT_WORKFLOW_SETTINGS.skipGitHooks,
     };
   }
 
@@ -275,7 +279,8 @@ export class GitWorkflowService {
     workDir: string,
     feature: Feature,
     branchName: string,
-    projectPath?: string
+    projectPath?: string,
+    skipGitHooks = true
   ): Promise<string | null> {
     try {
       // Check for uncommitted changes
@@ -320,7 +325,10 @@ export class GitWorkflowService {
       // Create WIP commit
       const title = feature.title || 'agent work';
       const commitMessage = `wip: ${title}\n\nAgent progress checkpoint — interrupted before completion.\nFeature ID: ${feature.id}`;
-      await execFileAsync('git', ['commit', '--no-verify', '-m', commitMessage], {
+      const wipArgs = skipGitHooks
+        ? ['commit', '--no-verify', '-m', commitMessage]
+        : ['commit', '-m', commitMessage];
+      await execFileAsync('git', wipArgs, {
         cwd: workDir,
         env: execEnv,
       });
@@ -449,11 +457,13 @@ export class GitWorkflowService {
     try {
       // Step 1: Commit changes
       let commitHash: string | null;
+      const skipHooks = gitSettings.skipGitHooks ?? true;
       commitHash = await this.commitChanges(
         workDir,
         feature,
         projectPath,
-        gitSettings.excludeFromStaging
+        gitSettings.excludeFromStaging,
+        skipHooks
       );
 
       if (!commitHash) {
@@ -482,7 +492,8 @@ export class GitWorkflowService {
             branchName,
             prBaseBranch,
             projectPath,
-            gitSettings.excludeFromStaging
+            gitSettings.excludeFromStaging,
+            skipHooks
           );
           const { stdout: headAfterFmt } = await execAsync('git rev-parse --short HEAD', {
             cwd: workDir,
@@ -494,7 +505,12 @@ export class GitWorkflowService {
           logger.info(
             `No uncommitted changes but found unpushed commits for feature ${featureId}, continuing pipeline`
           );
-          await this.formatAndAmendLastCommit(workDir, projectPath, gitSettings.excludeFromStaging);
+          await this.formatAndAmendLastCommit(
+            workDir,
+            projectPath,
+            gitSettings.excludeFromStaging,
+            skipHooks
+          );
           commitHash = unpushedHash;
         }
       }
@@ -1101,7 +1117,8 @@ export class GitWorkflowService {
     workDir: string,
     feature: Feature,
     projectPath: string,
-    excludeFromStaging?: string[]
+    excludeFromStaging?: string[],
+    skipGitHooks = true
   ): Promise<string | null> {
     // Check for changes - include untracked files explicitly
     const { stdout: status } = await execAsync('git status --porcelain --untracked-files=all', {
@@ -1163,12 +1180,16 @@ export class GitWorkflowService {
       );
     }
 
-    // Create commit (--no-verify bypasses commitlint hook; agents use auto-generated messages)
+    // Create commit. --no-verify bypasses commitlint/lint-staged hooks; controlled by skipGitHooks setting.
     // Use execFile to pass the commit message as an argument directly, avoiding shell
     // interpolation issues with newlines and special characters in the message.
-    await execFileAsync('git', ['commit', '--no-verify', '-m', commitMessage], {
+    const commitArgs = skipGitHooks
+      ? ['commit', '--no-verify', '-m', commitMessage]
+      : ['commit', '-m', commitMessage];
+    const commitEnv = skipGitHooks ? execEnv : { ...execEnv, HUSKY: undefined };
+    await execFileAsync('git', commitArgs, {
       cwd: workDir,
-      env: execEnv,
+      env: commitEnv,
     });
 
     // Get commit hash
@@ -1334,7 +1355,8 @@ export class GitWorkflowService {
   private async formatAndAmendLastCommit(
     workDir: string,
     projectPath: string,
-    excludeFromStaging?: string[]
+    excludeFromStaging?: string[],
+    skipGitHooks = true
   ): Promise<void> {
     try {
       // Get files changed in the last commit
@@ -1364,7 +1386,8 @@ export class GitWorkflowService {
         cwd: workDir,
         env: execEnv,
       });
-      await execAsync('git commit --no-verify --amend --no-edit', { cwd: workDir, env: execEnv });
+      const amendFlag = skipGitHooks ? '--no-verify ' : '';
+      await execAsync(`git commit ${amendFlag}--amend --no-edit`, { cwd: workDir, env: execEnv });
       logger.info(`Formatted and amended last commit (${files.length} files checked)`);
     } catch (error) {
       logger.warn(
@@ -1414,7 +1437,8 @@ export class GitWorkflowService {
     branchName: string,
     prBaseBranch: string,
     projectPath: string,
-    excludeFromStaging?: string[]
+    excludeFromStaging?: string[],
+    skipGitHooks = true
   ): Promise<void> {
     try {
       // Make sure local branch tracks the remote commits
@@ -1458,7 +1482,8 @@ export class GitWorkflowService {
         cwd: workDir,
         env: execEnv,
       });
-      await execAsync('git commit --no-verify -m "fix(format): prettier on agent-created files"', {
+      const noVerify = skipGitHooks ? '--no-verify ' : '';
+      await execAsync(`git commit ${noVerify}-m "fix(format): prettier on agent-created files"`, {
         cwd: workDir,
         env: execEnv,
       });
