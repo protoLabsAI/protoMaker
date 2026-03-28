@@ -113,6 +113,13 @@ export interface Phase {
   /** Estimated complexity */
   complexity?: PhaseComplexity;
 
+  /**
+   * Workflow to use when this phase becomes a feature.
+   * Controls pipeline phases, processors, and execution settings.
+   * References a built-in or project-specific WorkflowDefinition by name.
+   */
+  workflow?: string;
+
   /** Phase dependencies (phase names within same milestone) */
   dependencies?: string[];
 
