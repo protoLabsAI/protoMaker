@@ -11,6 +11,32 @@
 import type { GitWorkflowSettings } from './git-settings.js';
 
 /**
+ * Configuration for a configurable processor — defines agent behavior via config instead of code.
+ *
+ * A single generic ConfigurableProcessor reads this config and runs an agent with
+ * the specified prompt, tools, output format, and validation. No TypeScript needed
+ * to create a new processor — just add a processorConfig to a workflow phase.
+ */
+export interface ProcessorConfig {
+  /** System prompt injected into the agent for this phase */
+  prompt: string;
+  /** Tool allowlist. Empty array or omitted = all tools allowed. */
+  tools?: string[];
+  /** Model override for this specific phase */
+  model?: string;
+  /** Expected output format — affects how the result is captured and validated */
+  outputFormat?: 'markdown' | 'json' | 'diff' | 'text';
+  /** Bash commands to run before the agent starts (e.g. install deps, prep data) */
+  preScripts?: string[];
+  /** Bash commands to run after the agent completes (e.g. validate output, format results) */
+  postScripts?: string[];
+  /** Max agent turns for this phase (default: from workflow settings) */
+  maxTurns?: number;
+  /** Timeout in milliseconds for this phase */
+  timeoutMs?: number;
+}
+
+/**
  * A single phase in a workflow definition.
  * Maps to a Lead Engineer state machine state.
  */
@@ -21,8 +47,12 @@ export interface WorkflowPhase {
   enabled: boolean;
   /** Custom processor name from the ProcessorRegistry. If omitted, uses the built-in default. */
   processor?: string;
-  /** Phase-specific configuration passed to the processor */
-  config?: Record<string, unknown>;
+  /**
+   * Inline processor configuration. When set, the phase uses the generic
+   * ConfigurableProcessor driven by this config instead of a named processor.
+   * Takes precedence over the `processor` field.
+   */
+  processorConfig?: ProcessorConfig;
 }
 
 /**
