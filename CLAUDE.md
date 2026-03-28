@@ -526,6 +526,23 @@ mcp__protolabs__create_feature({
 });
 ```
 
+### Custom Workflows
+
+Features can use a `workflow` field to control which pipeline phases run, which processors handle them, and execution settings. 12 built-in workflows ship with the product. See `docs/guides/custom-workflows.md` for the full reference.
+
+```typescript
+mcp__protolabs__create_feature({
+  projectPath: '/path/to/project',
+  title: 'Security audit of auth module',
+  description: '...',
+  workflow: 'audit', // Read-only, no git ops, goes to done
+});
+```
+
+Key workflows: `standard` (default, full code pipeline), `audit` (read-only), `research` (investigation), `postmortem` (incident analysis, Opus), `strategic-review` (goals/gaps, Opus).
+
+Use `list_workflows` MCP tool to discover available workflows for a project. Projects can define custom workflows in `.automaker/workflows/{name}.yml`.
+
 ## Environment Variables
 
 - `ANTHROPIC_API_KEY` - Anthropic API key (or use Claude Code CLI auth)

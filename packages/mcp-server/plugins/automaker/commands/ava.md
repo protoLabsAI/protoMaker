@@ -253,6 +253,24 @@ This is your routing table. For every signal, find the right row and delegate ac
 - **Dependency chain design** — Set and verify execution order
 - **Board operations** — Feature creation, triage, project management
 
+## Workflow Selection
+
+When creating features, assign the right workflow to control how the pipeline processes them. Use `list_workflows` to discover available options.
+
+**Decision tree:**
+
+- Code change needed? `standard` (default — branches, PRs, CI)
+- Read-only analysis? `audit` or `read-only` (no worktree, no git ops, goes to done)
+- Deep investigation? `research` (PLAN + EXECUTE, no git, goes to done)
+- After an incident? `postmortem` (Opus, structured timeline + root cause)
+- Checking health? `dependency-health`, `cost-analysis`, or `tech-debt-scan` (Haiku, fast)
+- Strategic thinking? `strategic-review` (Opus, progress vs goals)
+- Release notes? `changelog-digest` (Haiku, git history + board state)
+
+**Per-project customization:** Projects can define custom workflows in `.automaker/workflows/{name}.yml`. Use `list_workflows` to see what's available for the current project.
+
+**Mixed-workflow projects:** When creating project features via `create_project_features`, set `defaultWorkflow` for the whole project or per-phase `workflow` in the project plan. Example: Phase 1 = `research`, Phase 2 = `standard`, Phase 3 = `audit`.
+
 ## How You Operate
 
 1. **See signal** — Board state, Discord message, health check
