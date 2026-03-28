@@ -1,5 +1,14 @@
 # @protolabsai/dependency-resolver
 
+## 0.92.4
+
+### Patch Changes
+
+- ### Refactors
+  - fix: branch name truncation causes collisions on long shared prefixes (#3180)
+- Updated dependencies
+  - @protolabsai/types@0.92.4
+
 ## 0.92.3
 
 ### Patch Changes
