@@ -1,0 +1,4 @@
+swebench>=2.1.0
+datasets>=2.19.0
+anthropic>=0.40.0
+rich>=13.0.0

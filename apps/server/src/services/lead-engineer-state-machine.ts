@@ -15,6 +15,7 @@ import { ReviewProcessor, MergeProcessor } from './lead-engineer-review-merge-pr
 import { DeployProcessor } from './lead-engineer-deploy-processor.js';
 import { EscalateProcessor } from './lead-engineer-escalation.js';
 import type { ProcessorRegistry } from './processor-registry.js';
+import { ConfigurableProcessor } from './lead-engineer-configurable-processor.js';
 import type {
   ProcessorServiceContext,
   StateContext,
@@ -186,8 +187,12 @@ export class FeatureStateMachine {
 
         this.enabledPhases.add(state);
 
-        if (phase.processor) {
-          // Custom processor from registry
+        if (phase.processorConfig) {
+          // Inline configurable processor — behavior defined in YAML, no TypeScript needed
+          this.processors.set(state, new ConfigurableProcessor(phase.processorConfig));
+          logger.info(`Configured inline processor for state: ${state}`);
+        } else if (phase.processor) {
+          // Named processor from registry
           const processor = opts.processorRegistry.get(phase.processor, serviceContext);
           if (processor) {
             this.processors.set(state, processor);

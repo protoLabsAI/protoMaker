@@ -118,12 +118,216 @@ const AUDIT_WORKFLOW: WorkflowDefinition = {
   },
 };
 
+// ─── Operational Workflows ─────────────────────────────────────────────────
+
+const RESEARCH_WORKFLOW: WorkflowDefinition = {
+  name: 'research',
+  description:
+    'Deep research — investigates a topic, reads code/docs/web, produces a structured report',
+  phases: [
+    { state: 'INTAKE', enabled: true },
+    { state: 'PLAN', enabled: true },
+    { state: 'EXECUTE', enabled: true },
+    { state: 'REVIEW', enabled: false },
+    { state: 'MERGE', enabled: false },
+    { state: 'DEPLOY', enabled: false },
+  ],
+  agent: { model: 'sonnet' },
+  execution: {
+    useWorktrees: false,
+    gitWorkflow: { autoCommit: false, autoPush: false, autoCreatePR: false },
+    terminalStatus: 'done',
+  },
+  match: {
+    categories: ['research', 'investigation', 'analysis', 'exploration', 'due-diligence'],
+    keywords: ['research', 'investigate', 'explore', 'analyze', 'compare', 'evaluate', 'survey'],
+  },
+};
+
+const TECH_DEBT_SCAN_WORKFLOW: WorkflowDefinition = {
+  name: 'tech-debt-scan',
+  description:
+    'Scan codebase for tech debt — TODOs, suppressed lint rules, deprecated patterns, test skips',
+  phases: [
+    { state: 'INTAKE', enabled: true },
+    { state: 'PLAN', enabled: false },
+    { state: 'EXECUTE', enabled: true },
+    { state: 'REVIEW', enabled: false },
+    { state: 'MERGE', enabled: false },
+    { state: 'DEPLOY', enabled: false },
+  ],
+  agent: { model: 'sonnet' },
+  execution: {
+    useWorktrees: false,
+    gitWorkflow: { autoCommit: false, autoPush: false, autoCreatePR: false },
+    terminalStatus: 'done',
+  },
+  match: {
+    categories: ['tech-debt', 'hygiene', 'cleanup'],
+    keywords: ['tech debt', 'TODO', 'deprecated', 'lint', 'skip', 'hack', 'workaround'],
+  },
+};
+
+const POSTMORTEM_WORKFLOW: WorkflowDefinition = {
+  name: 'postmortem',
+  description:
+    'Incident postmortem — reads git history, PR threads, Discord, produces timeline + root cause',
+  phases: [
+    { state: 'INTAKE', enabled: true },
+    { state: 'PLAN', enabled: true },
+    { state: 'EXECUTE', enabled: true },
+    { state: 'REVIEW', enabled: false },
+    { state: 'MERGE', enabled: false },
+    { state: 'DEPLOY', enabled: false },
+  ],
+  agent: { model: 'opus' },
+  execution: {
+    useWorktrees: false,
+    gitWorkflow: { autoCommit: false, autoPush: false, autoCreatePR: false },
+    terminalStatus: 'done',
+  },
+  match: {
+    categories: ['postmortem', 'incident', 'outage', 'retrospective'],
+    keywords: ['postmortem', 'incident', 'outage', 'root cause', 'what went wrong'],
+  },
+};
+
+const DEPENDENCY_HEALTH_WORKFLOW: WorkflowDefinition = {
+  name: 'dependency-health',
+  description: 'Scan dependencies for CVEs, outdated packages, license conflicts, and duplicates',
+  phases: [
+    { state: 'INTAKE', enabled: true },
+    { state: 'PLAN', enabled: false },
+    { state: 'EXECUTE', enabled: true },
+    { state: 'REVIEW', enabled: false },
+    { state: 'MERGE', enabled: false },
+    { state: 'DEPLOY', enabled: false },
+  ],
+  agent: { model: 'haiku' },
+  execution: {
+    useWorktrees: false,
+    gitWorkflow: { autoCommit: false, autoPush: false, autoCreatePR: false },
+    terminalStatus: 'done',
+  },
+  match: {
+    categories: ['dependencies', 'security', 'compliance', 'supply-chain'],
+    keywords: ['dependency', 'CVE', 'vulnerability', 'outdated', 'license', 'audit'],
+  },
+};
+
+const COST_ANALYSIS_WORKFLOW: WorkflowDefinition = {
+  name: 'cost-analysis',
+  description:
+    'Analyze agent execution costs — spend per feature, model tier ROI, budget projections',
+  phases: [
+    { state: 'INTAKE', enabled: true },
+    { state: 'PLAN', enabled: false },
+    { state: 'EXECUTE', enabled: true },
+    { state: 'REVIEW', enabled: false },
+    { state: 'MERGE', enabled: false },
+    { state: 'DEPLOY', enabled: false },
+  ],
+  agent: { model: 'haiku' },
+  execution: {
+    useWorktrees: false,
+    gitWorkflow: { autoCommit: false, autoPush: false, autoCreatePR: false },
+    terminalStatus: 'done',
+  },
+  match: {
+    categories: ['cost', 'budget', 'spending', 'optimization'],
+    keywords: ['cost', 'spend', 'budget', 'ROI', 'expensive', 'tokens', 'usage'],
+  },
+};
+
+const STRATEGIC_REVIEW_WORKFLOW: WorkflowDefinition = {
+  name: 'strategic-review',
+  description:
+    'Long-horizon reflection — reviews progress against goals, identifies gaps, proposes next steps',
+  phases: [
+    { state: 'INTAKE', enabled: true },
+    { state: 'PLAN', enabled: true },
+    { state: 'EXECUTE', enabled: true },
+    { state: 'REVIEW', enabled: false },
+    { state: 'MERGE', enabled: false },
+    { state: 'DEPLOY', enabled: false },
+  ],
+  agent: { role: 'ava', model: 'opus' },
+  execution: {
+    useWorktrees: false,
+    gitWorkflow: { autoCommit: false, autoPush: false, autoCreatePR: false },
+    terminalStatus: 'done',
+  },
+  match: {
+    categories: ['strategy', 'planning', 'review', 'roadmap', 'goals'],
+    keywords: ['strategic', 'roadmap', 'goals', 'progress', 'milestone', 'direction', 'vision'],
+  },
+};
+
+const CHANGELOG_DIGEST_WORKFLOW: WorkflowDefinition = {
+  name: 'changelog-digest',
+  description:
+    'Generate user-facing changelog from merged PRs, completed features, and git history',
+  phases: [
+    { state: 'INTAKE', enabled: true },
+    { state: 'PLAN', enabled: false },
+    { state: 'EXECUTE', enabled: true },
+    { state: 'REVIEW', enabled: false },
+    { state: 'MERGE', enabled: false },
+    { state: 'DEPLOY', enabled: false },
+  ],
+  agent: { model: 'haiku' },
+  execution: {
+    useWorktrees: false,
+    gitWorkflow: { autoCommit: false, autoPush: false, autoCreatePR: false },
+    terminalStatus: 'done',
+  },
+  match: {
+    categories: ['changelog', 'release-notes', 'communication'],
+    keywords: ['changelog', 'release notes', 'what shipped', 'update', 'digest'],
+  },
+};
+
+const SWEBENCH_WORKFLOW: WorkflowDefinition = {
+  name: 'swebench',
+  description: 'SWE-bench evaluation — read-only agent produces a patch for a repo issue',
+  phases: [
+    { state: 'INTAKE', enabled: true },
+    { state: 'PLAN', enabled: true },
+    { state: 'EXECUTE', enabled: true },
+    { state: 'REVIEW', enabled: false },
+    { state: 'MERGE', enabled: false },
+    { state: 'DEPLOY', enabled: false },
+  ],
+  agent: { model: 'sonnet' },
+  execution: {
+    useWorktrees: false,
+    gitWorkflow: { autoCommit: false, autoPush: false, autoCreatePR: false },
+    terminalStatus: 'done',
+  },
+  match: {
+    categories: ['benchmark', 'eval', 'swebench'],
+    keywords: ['swe-bench', 'swebench', 'benchmark', 'evaluation'],
+  },
+};
+
 /** All built-in workflows, keyed by name */
 const BUILT_IN_WORKFLOWS = new Map<string, WorkflowDefinition>([
+  // Core pipelines
   ['standard', STANDARD_WORKFLOW],
   ['read-only', READ_ONLY_WORKFLOW],
   ['content', CONTENT_WORKFLOW],
   ['audit', AUDIT_WORKFLOW],
+  // Operational
+  ['research', RESEARCH_WORKFLOW],
+  ['tech-debt-scan', TECH_DEBT_SCAN_WORKFLOW],
+  ['dependency-health', DEPENDENCY_HEALTH_WORKFLOW],
+  ['cost-analysis', COST_ANALYSIS_WORKFLOW],
+  ['changelog-digest', CHANGELOG_DIGEST_WORKFLOW],
+  // Strategic
+  ['postmortem', POSTMORTEM_WORKFLOW],
+  ['strategic-review', STRATEGIC_REVIEW_WORKFLOW],
+  // Benchmark
+  ['swebench', SWEBENCH_WORKFLOW],
 ]);
 
 // ─── Service ──────────────────────────────────────────────────────────────

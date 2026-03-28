@@ -848,6 +848,7 @@ export type {
   WorkflowAgentConfig,
   WorkflowExecutionConfig,
   WorkflowMatchRules,
+  ProcessorConfig,
 } from './workflow-definition.js';
 
 // Notes types (Tiptap-based project notes workspace)
