@@ -122,6 +122,11 @@ export const projectTools: Tool[] = [
                     filesToModify: { type: 'array', items: { type: 'string' } },
                     acceptanceCriteria: { type: 'array', items: { type: 'string' } },
                     complexity: { type: 'string', enum: ['small', 'medium', 'large'] },
+                    workflow: {
+                      type: 'string',
+                      description:
+                        'Workflow for this phase when it becomes a feature (e.g. standard, audit, research)',
+                    },
                   },
                 },
               },
@@ -239,6 +244,11 @@ export const projectTools: Tool[] = [
           enum: ['backlog', 'in-progress'],
           default: 'backlog',
           description: 'Initial status for created features',
+        },
+        defaultWorkflow: {
+          type: 'string',
+          description:
+            'Default workflow for all features. Per-phase workflow (set in create_project) takes precedence.',
         },
       },
       required: ['projectPath', 'projectSlug'],

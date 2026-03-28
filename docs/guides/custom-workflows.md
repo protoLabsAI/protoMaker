@@ -101,6 +101,41 @@ Use the `processor` field to route a phase through a non-default processor. Buil
 | `content-execute` | --          | GTM content creation via ContentFlowService            |
 | `content-review`  | --          | Antagonistic content review scoring                    |
 
+#### Inline Processor Config (config-as-code)
+
+Instead of referencing a named processor, define behavior inline with `processorConfig`. No TypeScript needed -- the generic `ConfigurableProcessor` reads the config at runtime.
+
+```yaml
+phases:
+  - state: EXECUTE
+    enabled: true
+    processorConfig:
+      prompt: |
+        Scan the codebase for TODO/FIXME/HACK comments,
+        suppressed lint rules, deprecated API usage, and skipped tests.
+        Output a JSON report with file, line, severity, description.
+      tools: [Read, Grep, Glob, Bash]
+      outputFormat: json
+      maxTurns: 15
+      preScripts:
+        - 'npm run build:packages 2>/dev/null || true'
+      postScripts:
+        - "echo 'Scan complete'"
+```
+
+`processorConfig` takes precedence over the `processor` field. Available options:
+
+| Field          | Type     | Description                                            |
+| -------------- | -------- | ------------------------------------------------------ |
+| `prompt`       | string   | System prompt injected into the agent                  |
+| `tools`        | string[] | Tool allowlist (omit for all tools)                    |
+| `model`        | string   | Model override for this phase                          |
+| `outputFormat` | string   | Expected output: `markdown`, `json`, `diff`, or `text` |
+| `preScripts`   | string[] | Bash commands to run before the agent                  |
+| `postScripts`  | string[] | Bash commands to run after the agent                   |
+| `maxTurns`     | number   | Agent turn budget                                      |
+| `timeoutMs`    | number   | Phase timeout in milliseconds                          |
+
 ### Agent Configuration
 
 Override the agent role, model, prompt, or available tools:
@@ -228,6 +263,41 @@ execution:
   useWorktrees: true
   terminalStatus: review
 ```
+
+### Benchmark Evaluation Workflow
+
+Run SWE-bench or similar evaluation tasks — agent reads a repo and issue, produces a patch:
+
+```yaml
+name: swebench
+description: SWE-bench evaluation — read-only agent produces a patch for a repo issue
+phases:
+  - state: INTAKE
+    enabled: true
+  - state: PLAN
+    enabled: true
+  - state: EXECUTE
+    enabled: true
+  - state: REVIEW
+    enabled: false
+  - state: MERGE
+    enabled: false
+  - state: DEPLOY
+    enabled: false
+agent:
+  model: sonnet
+execution:
+  useWorktrees: false
+  gitWorkflow:
+    autoCommit: false
+    autoPush: false
+    autoCreatePR: false
+  terminalStatus: done
+match:
+  categories: [benchmark, eval, swebench]
+```
+
+See `tools/swebench/` for the evaluation harness that uses this workflow.
 
 ## Resolution Order
 

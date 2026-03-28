@@ -331,6 +331,11 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       });
     }
 
+    case 'list_workflows':
+      return apiCall('/settings/workflows', {
+        projectPath: args.projectPath,
+      });
+
     case 'delete_feature':
       return apiCall('/features/delete', {
         projectPath: args.projectPath,
@@ -643,6 +648,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         createEpics: args.createEpics ?? true,
         setupDependencies: args.setupDependencies ?? true,
         initialStatus: args.initialStatus || 'backlog',
+        defaultWorkflow: args.defaultWorkflow,
       });
 
     // Chief of Staff (CoS)

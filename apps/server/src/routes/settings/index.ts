@@ -103,6 +103,38 @@ export function createSettingsRoutes(
     createUpdateWorkflowHandler(settingsService, events)
   );
 
+  // Workflow definitions (list available workflows for a project)
+  router.post('/workflows', async (req, res) => {
+    try {
+      const { projectPath } = req.body;
+      if (!projectPath) {
+        return res.status(400).json({ error: 'projectPath is required' });
+      }
+      const { WorkflowLoader } = await import('../../services/workflow-loader.js');
+      const loader = new WorkflowLoader();
+      const names = await loader.listWorkflows(projectPath);
+      const workflows = [];
+      for (const name of names) {
+        const def = await loader.resolve(projectPath, name);
+        if (def) {
+          workflows.push({
+            name: def.name,
+            description: def.description,
+            phases: def.phases.filter((p) => p.enabled).map((p) => p.state),
+            useWorktrees: def.execution.useWorktrees,
+            terminalStatus: def.execution.terminalStatus,
+            model: def.agent?.model,
+          });
+        }
+      }
+      res.json({ success: true, workflows, count: workflows.length });
+    } catch (error) {
+      res.status(500).json({
+        error: error instanceof Error ? error.message : 'Failed to list workflows',
+      });
+    }
+  });
+
   // OpenAI-compatible provider CRUD
   router.post(
     '/openai-compatible-providers/list',

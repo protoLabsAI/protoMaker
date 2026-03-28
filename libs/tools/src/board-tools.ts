@@ -53,6 +53,7 @@ const UpdateFeatureInputSchema = z.object({
     .optional()
     .describe('Complexity tier'),
   priority: z.number().int().min(0).max(4).optional().describe('Priority (0=none,1=urgent,4=low)'),
+  workflow: z.string().optional().describe('Workflow name for pipeline control'),
 });
 
 const CreateFeatureInputSchema = z.object({
@@ -65,6 +66,12 @@ const CreateFeatureInputSchema = z.object({
     .default('medium')
     .describe('Complexity tier'),
   epicId: z.string().optional().describe('Parent epic ID if this feature belongs to an epic'),
+  workflow: z
+    .string()
+    .optional()
+    .describe(
+      'Workflow name (standard, read-only, content, audit, research, tech-debt-scan, postmortem, dependency-health, cost-analysis, strategic-review, changelog-digest, swebench, or custom). Controls pipeline phases, processors, and execution settings.'
+    ),
 });
 
 const FeatureOutputSchema = z.object({

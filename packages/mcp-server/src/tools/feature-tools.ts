@@ -319,4 +319,19 @@ export const featureTools: Tool[] = [
       required: ['projectPath', 'featureId'],
     },
   },
+  {
+    name: 'list_workflows',
+    description:
+      'List all available workflows for a project. Returns built-in workflows (standard, read-only, content, audit, research, tech-debt-scan, postmortem, dependency-health, cost-analysis, strategic-review, changelog-digest, swebench) plus any project-specific YAML overrides from .automaker/workflows/.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
 ];

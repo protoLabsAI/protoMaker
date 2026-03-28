@@ -35,6 +35,8 @@ export interface OrchestrateFeaturesOptions {
   createEpics?: boolean;
   setupDependencies?: boolean;
   initialStatus?: 'backlog' | 'in-progress';
+  /** Default workflow for features. Per-phase workflow takes precedence. */
+  defaultWorkflow?: string;
 }
 
 /**
@@ -229,6 +231,7 @@ export async function orchestrateProjectFeatures(
             projectSlug,
             milestoneSlug: milestone.slug,
             phaseSlug: phase.name,
+            workflow: phase.workflow ?? options.defaultWorkflow,
           });
 
           result.phaseFeatureMap[phaseKey] = feature.id;
