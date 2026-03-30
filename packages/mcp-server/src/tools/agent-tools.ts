@@ -40,6 +40,12 @@ export const agentTools: Tool[] = [
           type: 'string',
           description: 'The feature ID of the running agent',
         },
+        targetStatus: {
+          type: 'string',
+          enum: ['backlog', 'done', 'verified'],
+          description:
+            "Final status to set after stopping the agent. Use 'done' to mark the feature complete and prevent auto-mode from respawning it. Defaults to 'backlog'.",
+        },
       },
       required: ['featureId'],
     },

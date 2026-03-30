@@ -527,10 +527,16 @@ export function buildAvaTools(
       description: 'Stop a running feature agent by its feature ID.',
       inputSchema: z.object({
         featureId: z.string().describe('The feature ID of the running agent to stop'),
+        targetStatus: z
+          .enum(['backlog', 'done', 'verified'])
+          .optional()
+          .describe(
+            "Final status to set after stopping the agent. Use 'done' to mark the feature complete and prevent auto-mode from respawning it. Defaults to 'backlog'."
+          ),
       }),
       needsApproval: destructiveNeedsApproval,
-      execute: async ({ featureId }) => {
-        const stopped = await services.autoModeService.stopFeature(featureId);
+      execute: async ({ featureId, targetStatus }) => {
+        const stopped = await services.autoModeService.stopFeature(featureId, targetStatus);
         return { success: stopped, featureId };
       },
     });
