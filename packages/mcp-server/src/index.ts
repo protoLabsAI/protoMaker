@@ -375,6 +375,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
     case 'stop_agent':
       return apiCall('/auto-mode/stop-feature', {
         featureId: args.featureId,
+        ...(args.targetStatus !== undefined && { targetStatus: args.targetStatus }),
       });
 
     case 'list_running_agents':

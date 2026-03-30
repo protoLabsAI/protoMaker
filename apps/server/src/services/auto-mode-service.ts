@@ -395,7 +395,9 @@ export class AutoModeService {
           logger.info(
             `Stopping agent for completed feature ${data.featureId} (→ ${data.newStatus})`
           );
-          void this.stopFeature(data.featureId);
+          // Pass the terminal status so stopFeature does NOT reset it back to 'backlog',
+          // which would cause the auto-mode loop to immediately respawn the agent.
+          void this.stopFeature(data.featureId, data.newStatus as string);
         }
       }
     });
@@ -1366,7 +1368,7 @@ export class AutoModeService {
   /**
    * Stop a specific feature
    */
-  async stopFeature(featureId: string): Promise<boolean> {
+  async stopFeature(featureId: string, targetStatus?: string): Promise<boolean> {
     const running = this.runningFeatures.get(featureId);
     if (!running) {
       return false;
@@ -1377,11 +1379,19 @@ export class AutoModeService {
 
     running.abortController.abort();
 
-    // Reset feature status to backlog immediately so the board reflects reality.
+    // Update feature status so the board reflects reality.
     // Without this, the feature stays in 'in_progress' for ~100 seconds until
     // the health sweep catches the stale status.
+    //
+    // When targetStatus is a terminal state ('done' or 'verified'), preserve it —
+    // resetting to 'backlog' would cause the auto-mode loop to immediately respawn
+    // the agent (zombie agent bug). Only reset to 'backlog' when no terminal
+    // status is requested.
+    const terminalStatuses = new Set(['done', 'verified', 'completed']);
+    const statusToSet =
+      targetStatus && terminalStatuses.has(targetStatus) ? targetStatus : 'backlog';
     try {
-      await this.updateFeatureStatus(running.projectPath, featureId, 'backlog');
+      await this.updateFeatureStatus(running.projectPath, featureId, statusToSet);
     } catch (err) {
       logger.warn(`Failed to reset status for stopped feature ${featureId}: ${err}`);
     }
