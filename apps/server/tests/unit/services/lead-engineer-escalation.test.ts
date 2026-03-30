@@ -221,3 +221,70 @@ describe('EscalateProcessor — HITL form gating', () => {
     expect(hitlFormService.create).toHaveBeenCalledOnce();
   });
 });
+
+describe('EscalateProcessor — done/verified guard', () => {
+  beforeEach(() => {
+    vi.spyOn(FailureClassifierService.prototype, 'classify').mockReturnValue(
+      MOCK_FAILURE_ANALYSIS as ReturnType<FailureClassifierService['classify']>
+    );
+  });
+
+  it('skips blocked transition when current DB status is already done', async () => {
+    const featureLoader = {
+      update: vi.fn().mockResolvedValue(undefined),
+      get: vi.fn().mockResolvedValue({ ...makeFeature(), status: 'done' }),
+      getAll: vi.fn().mockResolvedValue([]),
+    };
+    const ctx = makeServiceContext({
+      featureLoader: featureLoader as unknown as ProcessorServiceContext['featureLoader'],
+    });
+    const processor = new EscalateProcessor(ctx);
+
+    const result = await processor.process(makeCtx());
+
+    expect(result.shouldContinue).toBe(false);
+    expect(result.nextState).toBeNull();
+    expect(result.reason).toContain('already done');
+    // Must NOT overwrite the manually-set done status
+    expect(featureLoader.update).not.toHaveBeenCalled();
+  });
+
+  it('skips blocked transition when current DB status is already verified', async () => {
+    const featureLoader = {
+      update: vi.fn().mockResolvedValue(undefined),
+      get: vi.fn().mockResolvedValue({ ...makeFeature(), status: 'verified' }),
+      getAll: vi.fn().mockResolvedValue([]),
+    };
+    const ctx = makeServiceContext({
+      featureLoader: featureLoader as unknown as ProcessorServiceContext['featureLoader'],
+    });
+    const processor = new EscalateProcessor(ctx);
+
+    const result = await processor.process(makeCtx());
+
+    expect(result.shouldContinue).toBe(false);
+    expect(result.nextState).toBeNull();
+    expect(result.reason).toContain('already verified');
+    expect(featureLoader.update).not.toHaveBeenCalled();
+  });
+
+  it('proceeds with blocked transition when current DB status is in_progress', async () => {
+    const featureLoader = {
+      update: vi.fn().mockResolvedValue(undefined),
+      get: vi.fn().mockResolvedValue({ ...makeFeature(), status: 'in_progress' }),
+      getAll: vi.fn().mockResolvedValue([]),
+    };
+    const ctx = makeServiceContext({
+      featureLoader: featureLoader as unknown as ProcessorServiceContext['featureLoader'],
+    });
+    const processor = new EscalateProcessor(ctx);
+
+    await processor.process(makeCtx());
+
+    expect(featureLoader.update).toHaveBeenCalledWith(
+      '/test/project',
+      'feat-001',
+      expect.objectContaining({ status: 'blocked' })
+    );
+  });
+});
