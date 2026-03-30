@@ -53,6 +53,24 @@ export class EscalateProcessor implements StateProcessor {
       };
     }
 
+    // Guard: if the feature is already done or verified (e.g. manually closed while the
+    // agent was still running), do not overwrite the terminal status with blocked.
+    const currentFeature = await this.serviceContext.featureLoader.get(
+      ctx.projectPath,
+      ctx.feature.id
+    );
+    if (currentFeature?.status === 'done' || currentFeature?.status === 'verified') {
+      logger.info(
+        `[ESCALATE] Feature ${ctx.feature.id} is already ${currentFeature.status} — skipping blocked transition`,
+        { currentStatus: currentFeature.status, reason: ctx.escalationReason }
+      );
+      return {
+        nextState: null,
+        shouldContinue: false,
+        reason: `Feature already ${currentFeature.status} — escalation suppressed`,
+      };
+    }
+
     // Classify the failure for structured analysis before writing
     const failureAnalysis = this.failureClassifier.classify(
       ctx.escalationReason || 'Unknown escalation reason',
