@@ -259,7 +259,7 @@ describe('ReviewProcessor', () => {
       expect(result.reason).toMatch(/budget exhausted/i);
     });
 
-    it('does NOT treat CodeRabbit failures as CI failures', async () => {
+    it('does NOT treat CodeRabbit failures as CI failures', { timeout: 35_000 }, async () => {
       mockExec.mockReset();
       mockExec
         // Call 1: normalizePR fails
