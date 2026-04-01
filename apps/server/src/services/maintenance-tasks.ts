@@ -33,12 +33,40 @@ import { githubMergeService } from './github-merge-service.js';
 import { gitWorkflowService } from './git-workflow-service.js';
 import type { Feature } from '@protolabsai/types';
 import { Octokit } from '@octokit/rest';
+import { CircuitBreaker } from '../lib/circuit-breaker.js';
 
 const execFileAsync = promisify(execFile);
 
 const logger = createLogger('MaintenanceTasks');
 
 const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours
+
+/** Max consecutive push failures before a worktree is given up for the cooldown period */
+const PUSH_FAILURE_THRESHOLD = 3;
+/** Cooldown before retrying a worktree whose circuit breaker has tripped (30 minutes) */
+const PUSH_CIRCUIT_BREAKER_COOLDOWN_MS = 30 * 60 * 1000;
+
+/**
+ * Per-worktree circuit breakers for crash-recovery push attempts.
+ *
+ * Keyed by branch name. State persists across maintenance cycles (in-process) so
+ * that a branch that fails N times in a row is not retried until the cooldown expires.
+ */
+const worktreePushCircuitBreakers = new Map<string, CircuitBreaker>();
+
+function getWorktreeCircuitBreaker(branch: string): CircuitBreaker {
+  if (!worktreePushCircuitBreakers.has(branch)) {
+    worktreePushCircuitBreakers.set(
+      branch,
+      new CircuitBreaker({
+        failureThreshold: PUSH_FAILURE_THRESHOLD,
+        cooldownMs: PUSH_CIRCUIT_BREAKER_COOLDOWN_MS,
+        name: `worktree-push:${branch}`,
+      })
+    );
+  }
+  return worktreePushCircuitBreakers.get(branch)!;
+}
 const STUCK_RUN_THRESHOLD_MS = 10 * 60 * 1000; // 10 minutes
 const RUNNER_CONGESTION_THRESHOLD = 0.5; // 50% utilization
 
@@ -866,6 +894,29 @@ export async function scanWorktreesForCrashRecovery(
         (feature.status === 'verified' || feature.status === 'done') &&
         (hasUncommittedChanges || hasUnpushedCommits)
       ) {
+        const breaker = getWorktreeCircuitBreaker(worktree.branch);
+
+        // Circuit breaker: skip this worktree if it has failed too many times recently
+        if (breaker.isCircuitOpen()) {
+          const state = breaker.getState();
+          const minutesRemaining = Math.ceil(
+            (PUSH_CIRCUIT_BREAKER_COOLDOWN_MS - state.timeSinceLastFailure) / 60_000
+          );
+          logger.warn(
+            `Worktree ${worktree.branch} (${feature.title}) push circuit breaker is OPEN after ` +
+              `${PUSH_FAILURE_THRESHOLD} consecutive failures. ` +
+              `Skipping — will retry automatically in ~${minutesRemaining} minute(s). ` +
+              `Manual intervention may be required (e.g. resolve a force-with-lease rejection).`
+          );
+          totalWarnings++;
+          warningWorktrees.push({
+            worktree: worktree.branch,
+            status: feature.status,
+            reason: `Push circuit breaker open (${PUSH_FAILURE_THRESHOLD} consecutive failures, ~${minutesRemaining}min until auto-retry) — needs manual intervention`,
+          });
+          continue;
+        }
+
         logger.info(`Triggering post-completion workflow for ${feature.title} (${feature.status})`);
 
         try {
@@ -884,21 +935,61 @@ export async function scanWorktreesForCrashRecovery(
           );
 
           if (result) {
+            if (result.pushed) {
+              // Push succeeded — clear any prior failure count
+              breaker.recordSuccess();
+            }
             totalRecovered++;
             recoveredWorktrees.push(
               `${worktree.branch} (${feature.title}) - committed: ${!!result.commitHash}, pushed: ${result.pushed}, PR: ${!!result.prUrl}`
             );
-            logger.info(`Successfully recovered ${worktree.branch}: ${JSON.stringify(result)}`);
+            if (result.pushed) {
+              logger.info(`Successfully recovered ${worktree.branch}: ${JSON.stringify(result)}`);
+            } else {
+              logger.warn(
+                `Partial recovery for ${worktree.branch} — workflow ran but push did not complete (pushed: false). ` +
+                  `Result: ${JSON.stringify(result)}`
+              );
+            }
           } else {
             logger.debug(`No recovery actions needed for ${worktree.branch}`);
           }
         } catch (error) {
-          logger.error(`Failed to run post-completion workflow for ${worktree.branch}:`, error);
+          const circuitOpened = breaker.recordFailure();
+          const errorMessage = error instanceof Error ? error.message : String(error);
+
+          if (circuitOpened) {
+            logger.error(
+              `Worktree ${worktree.branch} (${feature.title}) push circuit breaker OPENED after ` +
+                `${PUSH_FAILURE_THRESHOLD} consecutive failures. ` +
+                `Auto-recovery suspended for ${PUSH_CIRCUIT_BREAKER_COOLDOWN_MS / 60_000} minutes. ` +
+                `Last error: ${errorMessage}`
+            );
+            // Mark the feature blocked so the board reflects that it needs attention
+            try {
+              await featureLoader.update(projectPath, feature.id, {
+                status: 'blocked',
+                statusChangeReason:
+                  `Push circuit breaker opened after ${PUSH_FAILURE_THRESHOLD} consecutive ` +
+                  `crash-recovery failures. Last error: ${errorMessage}`,
+              });
+            } catch (updateError) {
+              logger.error(`Failed to mark feature ${feature.id} as blocked:`, updateError);
+            }
+          } else {
+            const state = breaker.getState();
+            logger.error(
+              `Failed to run post-completion workflow for ${worktree.branch} ` +
+                `(failure ${state.failureCount}/${PUSH_FAILURE_THRESHOLD}):`,
+              error
+            );
+          }
+
           totalWarnings++;
           warningWorktrees.push({
             worktree: worktree.branch,
             status: feature.status,
-            reason: `Recovery failed: ${error instanceof Error ? error.message : String(error)}`,
+            reason: `Recovery failed: ${errorMessage}`,
           });
         }
       } else {
