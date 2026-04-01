@@ -51,7 +51,7 @@ export class ContextFidelityService {
   ): ContextFidelityMode {
     if (stage === 'PLAN') return 'none';
     if (stage === 'EXECUTE' && opts?.isRetry) return 'compact';
-    if (stage === 'EXECUTE' && opts?.hasPlan) return 'full';
+    if (stage === 'EXECUTE' && opts?.hasPlan) return 'compact';
     if (stage === 'EXECUTE') return 'none';
     if (stage === 'REVIEW' && opts?.isRemediation) return 'compact';
     return 'none';

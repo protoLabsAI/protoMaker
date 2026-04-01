@@ -1,5 +1,16 @@
 # @protolabsai/types
 
+## 0.95.0
+
+### Minor Changes
+
+- ### Features
+  - add three-tier verification ladder auto-selected by complexity (#3221)
+  - add structured verification output format context file (#3220)
+
+  ### Performance
+  - cap unbounded context injection to reduce agent token waste (#3219)
+
 ## 0.94.0
 
 ### Minor Changes

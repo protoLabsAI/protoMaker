@@ -616,6 +616,38 @@ export interface Feature {
 }
 
 /**
+ * Verification tier determines the depth of testing and validation
+ * an agent should perform after implementing a feature.
+ *
+ * - smoke: Quick confirmation that the primary code path works
+ * - regression: Targeted tests covering changed files and adjacent behavior
+ * - deep: Full test suite, integration tests, and build verification
+ */
+export type VerificationTier = 'smoke' | 'regression' | 'deep';
+
+/**
+ * Derives the verification tier from feature complexity and failure count.
+ *
+ * Rules:
+ * - complexity 'architectural' OR failureCount >= 2 → 'deep'
+ * - complexity 'medium' or 'large' → 'regression' (default)
+ * - complexity 'small' → 'smoke'
+ * - No complexity set → 'regression'
+ */
+export function deriveVerificationTier(
+  complexity: Feature['complexity'],
+  failureCount: number
+): VerificationTier {
+  if (complexity === 'architectural' || failureCount >= 2) {
+    return 'deep';
+  }
+  if (complexity === 'small') {
+    return 'smoke';
+  }
+  return 'regression';
+}
+
+/**
  * Canonical feature status values (5 statuses)
  * Strategic decision: Single source of truth for all feature states
  *

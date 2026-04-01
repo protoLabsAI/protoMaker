@@ -49,7 +49,9 @@ import {
   MAX_SYSTEM_CONCURRENCY,
   isClaudeModel,
   stripProviderPrefix,
+  deriveVerificationTier,
 } from '@protolabsai/types';
+import { getVerificationTierInstructions } from '@protolabsai/prompts';
 import {
   buildPromptWithImages,
   classifyError,
@@ -3350,13 +3352,18 @@ You can use the Read tool to view these images at any time during implementation
 `;
     }
 
+    // Derive and inject verification tier
+    const tier = deriveVerificationTier(feature.complexity, feature.failureCount ?? 0);
+    const tierInstructions = getVerificationTierInstructions(tier);
+    prompt += `\n\n${tierInstructions}`;
+
     // Add verification instructions based on testing mode
     if (feature.skipTests) {
       // Manual verification - just implement the feature
-      prompt += `\n${taskExecutionPrompts.implementationInstructions}`;
+      prompt += `\n\n${taskExecutionPrompts.implementationInstructions}`;
     } else {
       // Automated testing - implement and verify with Playwright
-      prompt += `\n${taskExecutionPrompts.implementationInstructions}\n\n${taskExecutionPrompts.playwrightVerificationInstructions}`;
+      prompt += `\n\n${taskExecutionPrompts.implementationInstructions}\n\n${taskExecutionPrompts.playwrightVerificationInstructions}`;
     }
 
     return prompt;
