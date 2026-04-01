@@ -1,5 +1,23 @@
 # @protolabsai/tools
 
+## 0.96.0
+
+### Minor Changes
+
+- ### Features
+  - add tool sequencing discipline context file for agent prompts (#3226)
+
+  ### Bug Fixes
+  - include all child_process exports in github-state-checker mock
+
+  ### Refactors
+  - Bug: Merged PRs not reconciled to done — features stuck in backlog/block (#3228)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.96.0
+
 ## 0.95.0
 
 ### Minor Changes
