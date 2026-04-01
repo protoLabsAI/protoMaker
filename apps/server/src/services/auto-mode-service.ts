@@ -130,7 +130,10 @@ import {
 import { AutoModeCoordinator } from './auto-mode/auto-mode-coordinator.js';
 import { FeatureStateManager } from './auto-mode/feature-state-manager.js';
 import { ExecutionService } from './auto-mode/execution-service.js';
-import { symlinkBuildArtifacts } from './worktree-lifecycle-service.js';
+import {
+  symlinkBuildArtifacts,
+  installWorktreeDependencies,
+} from './worktree-lifecycle-service.js';
 import type {
   RunningFeature,
   PendingApproval,
@@ -3175,6 +3178,16 @@ Format your response as a structured markdown document.`;
         await symlinkBuildArtifacts(projectPath, worktreePath);
       } catch (err) {
         logger.debug('Failed to symlink build artifacts into worktree (non-fatal):', err);
+      }
+
+      // Auto-install dependencies so agents can run build/test commands immediately.
+      // Runs AFTER symlink (symlink handles the common case for monorepos where the
+      // main project's node_modules can be shared; install handles standalone worktrees
+      // and workspace packages that need their own resolution).
+      try {
+        await installWorktreeDependencies(projectPath, worktreePath);
+      } catch (err) {
+        logger.debug('Failed to install dependencies in worktree (non-fatal):', err);
       }
 
       return path.resolve(worktreePath);
