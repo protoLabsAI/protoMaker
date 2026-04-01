@@ -1047,3 +1047,11 @@ export type {
   WebhookDeliverySource,
   WebhookDelivery,
 } from './webhook-delivery.js';
+
+// TopicBus types (hierarchical pub/sub for internal event routing)
+export type {
+  TopicMessage,
+  TopicHandler,
+  TopicUnsubscribeFn,
+  TopicBusInterface,
+} from './topic-bus.js';

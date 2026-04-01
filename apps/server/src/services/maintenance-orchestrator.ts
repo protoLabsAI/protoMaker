@@ -13,6 +13,7 @@ import { randomUUID } from 'crypto';
 import { createLogger } from '@protolabsai/utils';
 import type { MaintenanceCheck, MaintenanceSweepResult } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
+import type { TopicBus } from '../lib/topic-bus.js';
 import type { SchedulerService } from './scheduler-service.js';
 import type { EventHistoryService } from './event-history-service.js';
 
@@ -32,6 +33,7 @@ const INTERVAL_ID_FULL = 'maintenance:sweep:full';
 export class MaintenanceOrchestrator {
   private readonly checks: MaintenanceCheck[] = [];
   private events: EventEmitter | null = null;
+  private topicBus: TopicBus | null = null;
   private eventHistoryService: EventHistoryService | null = null;
   private schedulerService: SchedulerService | null = null;
   private getProjectPaths: (() => string[]) | null = null;
@@ -52,6 +54,10 @@ export class MaintenanceOrchestrator {
   /**
    * Start the two-tier sweep schedule.
    */
+  setTopicBus(topicBus: TopicBus): void {
+    this.topicBus = topicBus;
+  }
+
   start(
     schedulerService: SchedulerService,
     events: EventEmitter,
@@ -162,6 +168,20 @@ export class MaintenanceOrchestrator {
         }
       })
     );
+
+    // Publish individual check results to TopicBus
+    if (this.topicBus) {
+      for (const result of results) {
+        this.topicBus.publish(`maintenance.sweep.${result.checkId}`, {
+          sweepId,
+          tier,
+          checkId: result.checkId,
+          passed: result.passed,
+          summary: result.summary,
+          durationMs: result.durationMs,
+        });
+      }
+    }
 
     const completedAt = new Date().toISOString();
     const passed = results.filter((r) => r.passed).length;

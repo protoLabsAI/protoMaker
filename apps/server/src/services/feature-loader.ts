@@ -16,6 +16,7 @@ import type {
 } from '@protolabsai/types';
 import { normalizeFeatureStatus } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
+import type { TopicBus } from '../lib/topic-bus.js';
 import {
   createLogger,
   atomicWriteJson,
@@ -49,6 +50,7 @@ export type { Feature };
 export class FeatureLoader implements FeatureStore {
   private integrityWatchdog: DataIntegrityWatchdogService | null = null;
   private events: EventEmitter | null = null;
+  private topicBus: TopicBus | null = null;
   /** Instance ID stamped onto newly created features as createdByInstance */
   private instanceId: string | null = null;
   private projectSlugResolver: ProjectSlugResolver | null = null;
@@ -59,6 +61,10 @@ export class FeatureLoader implements FeatureStore {
 
   setEventEmitter(events: EventEmitter): void {
     this.events = events;
+  }
+
+  setTopicBus(topicBus: TopicBus): void {
+    this.topicBus = topicBus;
   }
 
   /**
@@ -784,6 +790,20 @@ export class FeatureLoader implements FeatureStore {
             : 'status updated',
         feature: updatedFeature,
       });
+
+      // Publish to TopicBus (hierarchical routing, coexists with EventEmitter)
+      if (this.topicBus) {
+        this.topicBus.publish(`feature.status.${featureId}`, {
+          featureId,
+          projectPath,
+          oldStatus: feature.status,
+          newStatus: updates.status,
+          reason:
+            typeof updates.statusChangeReason === 'string'
+              ? updates.statusChangeReason
+              : 'status updated',
+        });
+      }
 
       // Emit specific lifecycle events based on new status
       const lifecyclePayload = {

@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { createLogger } from '@protolabsai/utils';
 import { loadProtoConfig } from '@protolabsai/platform';
 import { createEventEmitter, type EventEmitter } from '../lib/events.js';
+import { TopicBus } from '../lib/topic-bus.js';
 
 import { AgentService } from '../services/agent-service.js';
 import { FeatureLoader } from '../services/feature-loader.js';
@@ -305,6 +306,9 @@ export interface ServiceContainer {
   // Deviation rule evaluation (agent scope constraints)
   deviationRuleService: DeviationRuleService;
 
+  // TopicBus (hierarchical pub/sub, coexists with EventEmitter)
+  topicBus: TopicBus;
+
   // Drift detection interval (set by wireServices, cleared by shutdown)
   driftCheckInterval: ReturnType<typeof setInterval> | null;
 }
@@ -317,6 +321,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Create shared event emitter for streaming
   const events: EventEmitter = createEventEmitter();
 
+  // Create hierarchical topic bus (coexists with EventEmitter)
+  const topicBus = new TopicBus();
+
   // Settings & identity (created first — injected into most other services)
   const settingsService = new SettingsService(dataDir);
   // Wire settingsService into the contentFlowService singleton for model resolution
@@ -325,6 +332,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Features are local to each instance — no CRDT sync.
   const featureLoader = new FeatureLoader();
   featureLoader.setEventEmitter(events);
+  featureLoader.setTopicBus(topicBus);
 
   // Trust Tier Service for quarantine pipeline
   const trustTierService = new TrustTierService(dataDir);
@@ -922,6 +930,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     checkpointService,
     projectSlugResolver,
     deviationRuleService,
+    topicBus,
     driftCheckInterval: null,
   };
 }
