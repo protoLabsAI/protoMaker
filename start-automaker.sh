@@ -17,7 +17,7 @@ MIN_TERM_WIDTH=70
 MIN_TERM_HEIGHT=20
 MENU_BOX_WIDTH=66
 MENU_INNER_WIDTH=64
-LOGO_WIDTH=52
+LOGO_WIDTH=74
 INPUT_TIMEOUT=30
 SELECTED_OPTION=1
 MAX_OPTIONS=2
@@ -670,17 +670,23 @@ show_header() {
     local top_pad=$(( TERM_LINES / 6 ))
     for ((i=0; i<top_pad; i++)); do echo ""; done
 
-    # Automaker ASCII art logo
-    local l1="  █▀▀█ █  █ ▀▀█▀▀ █▀▀█ █▀▄▀█ █▀▀█ █ █ █▀▀ █▀▀█  "
-    local l2="  █▄▄█ █  █   █   █  █ █ ▀ █ █▄▄█ █▀▄ █▀▀ █▄▄▀  "
-    local l3="  ▀  ▀  ▀▀▀   ▀   ▀▀▀▀ ▀   ▀ ▀  ▀ ▀ ▀ ▀▀▀ ▀ ▀▀  "
+    # protoLabs studio ASCII art logo
+    local l1="                 _        _       _               _             _ _       "
+    local l2=" _ __  _ __ ___ | |_ ___ | | __ _| |__  ___   ___| |_ _   _  __| (_) ___  "
+    local l3="| '_ \| '__/ _ \| __/ _ \| |/ _\` | '_ \/ __| / __| __| | | |/ _\` | |/ _ \ "
+    local l4="| |_) | | | (_) | || (_) | | (_| | |_) \__ \_\__ \ |_| |_| | (_| | | (_) |"
+    local l5="| .__/|_|  \___/ \__\___/|_|\__,_|_.__/|___(_)___/\__|\__,_|\__,_|_|\___/ "
+    local l6="|_|"
 
     local pad_left=$(( (TERM_COLS - LOGO_WIDTH) / 2 ))
     local pad=$(printf "%${pad_left}s" "")
 
     echo -e "${pad}${C_PRI}${l1}${RESET}"
-    echo -e "${pad}${C_SEC}${l2}${RESET}"
-    echo -e "${pad}${C_ACC}${l3}${RESET}"
+    echo -e "${pad}${C_PRI}${l2}${RESET}"
+    echo -e "${pad}${C_PRI}${l3}${RESET}"
+    echo -e "${pad}${C_SEC}${l4}${RESET}"
+    echo -e "${pad}${C_SEC}${l5}${RESET}"
+    echo -e "${pad}${C_ACC}${l6}${RESET}"
 
     echo ""
     local mode_indicator=""
