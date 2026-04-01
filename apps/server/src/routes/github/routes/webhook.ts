@@ -20,6 +20,7 @@ import type {
 } from '@protolabsai/types';
 import type { SettingsService } from '../../../services/settings-service.js';
 import type { EventEmitter } from '../../../lib/events.js';
+import { generateCorrelationId } from '../../../lib/events.js';
 import { getPRWatcherService } from '../../../services/pr-watcher-service.js';
 import { projectPathSchema } from '../../../lib/validation.js';
 import { verifySingleSecret } from '../../../lib/webhook-signature.js';
@@ -347,6 +348,14 @@ export function createWebhookHandler(
 
       logger.info(`Processing GitHub ${eventType} event for project: ${projectPath}`);
 
+      // Set correlation context for the entire webhook processing chain.
+      // All events emitted during this handler share a single correlationId.
+      const webhookCorrelationId = generateCorrelationId();
+      events.setCorrelationContext({
+        correlationId: webhookCorrelationId,
+        source: 'github-webhook',
+      });
+
       // Validate basic payload structure
       const payloadParsed = webhookPayloadSchema.safeParse(req.body);
       if (!payloadParsed.success) {
@@ -410,12 +419,17 @@ export function createWebhookHandler(
           return;
       }
 
+      // Clear correlation context after processing
+      events.clearCorrelationContext();
+
       // Success response
       res.status(200).json({
         message: 'Webhook processed successfully',
         event: eventType,
+        correlationId: webhookCorrelationId,
       });
     } catch (error) {
+      events.clearCorrelationContext();
       logger.error('Error processing webhook:', error);
       next(error);
     }

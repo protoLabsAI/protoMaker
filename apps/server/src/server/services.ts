@@ -120,6 +120,7 @@ import { DeviationRuleService } from '../services/deviation-rule-service.js';
 import { createDefaultProcessorRegistry } from '../services/processor-registry.js';
 import { WorkflowLoader } from '../services/workflow-loader.js';
 import { setToolExecutionLogger } from '../lib/sdk-options.js';
+import { EventStore } from '../lib/event-store.js';
 
 const logger = createLogger('Server:Services');
 
@@ -309,6 +310,9 @@ export interface ServiceContainer {
   // TopicBus (hierarchical pub/sub, coexists with EventEmitter)
   topicBus: TopicBus;
 
+  // Correlated event store (in-memory ring buffer for event traceability)
+  eventStore: EventStore;
+
   // Drift detection interval (set by wireServices, cleared by shutdown)
   driftCheckInterval: ReturnType<typeof setInterval> | null;
 }
@@ -323,6 +327,23 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
 
   // Create hierarchical topic bus (coexists with EventEmitter)
   const topicBus = new TopicBus();
+
+  // Create correlated event store (in-memory ring buffer, 10k capacity)
+  const eventStore = new EventStore();
+
+  // Wire event emitter to auto-store all events as correlated events
+  events.subscribe((type, payload) => {
+    const ctx = events.getCorrelationContext();
+    const event = eventStore.createEvent(
+      type,
+      payload,
+      ctx?.source ?? 'unknown',
+      ctx
+        ? { correlationId: ctx.correlationId, causationId: ctx.causationId, source: ctx.source }
+        : undefined
+    );
+    eventStore.store(event);
+  });
 
   // Settings & identity (created first — injected into most other services)
   const settingsService = new SettingsService(dataDir);
@@ -931,6 +952,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     projectSlugResolver,
     deviationRuleService,
     topicBus,
+    eventStore,
     driftCheckInterval: null,
   };
 }

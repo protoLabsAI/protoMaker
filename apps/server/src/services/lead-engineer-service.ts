@@ -24,6 +24,7 @@ import type {
 } from '@protolabsai/types';
 import { FeatureState } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
+import { generateCorrelationId } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { ProjectService } from './project-service.js';
@@ -533,6 +534,16 @@ export class LeadEngineerService {
     logger.info(`[LeadEngineer] Processing feature ${featureId}`, {
       projectPath,
     });
+
+    // Inherit correlation context from the triggering event, or start a new chain.
+    const existingCtx = this.events.getCorrelationContext();
+    const correlationId = existingCtx?.correlationId ?? generateCorrelationId();
+    this.events.setCorrelationContext({
+      correlationId,
+      causationId: existingCtx?.causationId,
+      source: 'lead-engineer-service',
+    });
+
     this.activeFeatures.add(featureId);
     try {
       const feature = await this.featureLoader.get(projectPath, featureId);
@@ -755,6 +766,7 @@ export class LeadEngineerService {
       throw error;
     } finally {
       this.activeFeatures.delete(featureId);
+      this.events.clearCorrelationContext();
     }
   }
 

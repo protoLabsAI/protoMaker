@@ -7,6 +7,9 @@ describe('auto-mode-service.ts - Planning Mode', () => {
     subscribe: vi.fn(),
     emit: vi.fn(),
     on: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
+    setCorrelationContext: vi.fn(),
+    getCorrelationContext: vi.fn().mockReturnValue(undefined),
+    clearCorrelationContext: vi.fn(),
   };
 
   beforeEach(() => {

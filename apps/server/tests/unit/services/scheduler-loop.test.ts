@@ -393,6 +393,9 @@ describe('FeatureScheduler - loadPendingFeatures', () => {
     emit: vi.fn(),
     on: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
     broadcast: vi.fn(),
+    setCorrelationContext: vi.fn(),
+    getCorrelationContext: vi.fn().mockReturnValue(undefined),
+    clearCorrelationContext: vi.fn(),
   };
   const mockRunner: PipelineRunner = { run: vi.fn() };
   const mockCallbacks: SchedulerCallbacks = {
@@ -561,6 +564,9 @@ describe('AutoModeService - concurrency and race prevention', () => {
     subscribe: vi.fn(),
     emit: vi.fn(),
     on: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
+    setCorrelationContext: vi.fn(),
+    getCorrelationContext: vi.fn().mockReturnValue(undefined),
+    clearCorrelationContext: vi.fn(),
   };
 
   beforeEach(() => {
@@ -639,6 +645,9 @@ describe('FeatureScheduler - project affinity filtering', () => {
     emit: vi.fn(),
     on: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
     broadcast: vi.fn(),
+    setCorrelationContext: vi.fn(),
+    getCorrelationContext: vi.fn().mockReturnValue(undefined),
+    clearCorrelationContext: vi.fn(),
   };
   const mockRunner: PipelineRunner = { run: vi.fn() };
   const mockCallbacks: SchedulerCallbacks = {
@@ -789,6 +798,9 @@ describe('FeatureScheduler - human assignee filtering', () => {
     emit: vi.fn(),
     on: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
     broadcast: vi.fn(),
+    setCorrelationContext: vi.fn(),
+    getCorrelationContext: vi.fn().mockReturnValue(undefined),
+    clearCorrelationContext: vi.fn(),
   };
   const mockRunner: PipelineRunner = { run: vi.fn() };
   const mockCallbacks: SchedulerCallbacks = {

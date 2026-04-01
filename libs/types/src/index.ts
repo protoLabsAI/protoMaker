@@ -1055,3 +1055,6 @@ export type {
   TopicUnsubscribeFn,
   TopicBusInterface,
 } from './topic-bus.js';
+
+// Correlated event types (event bus traceability via correlation IDs)
+export type { CorrelatedEvent, EventMetadata, EventChain, EventQuery } from './correlated-event.js';
