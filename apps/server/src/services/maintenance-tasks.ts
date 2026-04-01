@@ -813,17 +813,46 @@ export async function scanWorktreesForCrashRecovery(
       });
       const hasUncommittedChanges = statusOutput.trim() !== '';
 
-      // Prune stale remote tracking refs before checking unpushed state.
-      // Without this, git rev-list may compare against a deleted remote branch,
-      // causing false "unpushed" results and infinite push retry loops.
-      try {
-        await execFileAsync('git', ['remote', 'prune', 'origin'], {
-          cwd: worktree.path,
-          encoding: 'utf-8',
-          timeout: 10_000,
-        });
-      } catch {
-        // Non-fatal — continue with potentially stale refs
+      // Fetch the integration branch and prune stale refs in one step.
+      // Using 'git fetch --prune origin <integrationBranch>' rather than 'git remote prune origin'
+      // ensures two things:
+      //   1. origin/<integrationBranch> is current — isBranchFullyMerged needs this to reliably
+      //      detect merged work when the remote feature branch has been deleted (PR merged).
+      //      'git remote prune origin' only removes stale tracking refs; it does NOT fetch new
+      //      commits, so origin/dev could be stale and the merge check would return a false negative.
+      //   2. Stale tracking refs for deleted branches are pruned — without this, git rev-list
+      //      compares against a deleted remote SHA and 'git push --force-with-lease' fails with
+      //      "stale info" on every retry.
+      if (integrationBranch) {
+        try {
+          await execFileAsync('git', ['fetch', '--prune', 'origin', integrationBranch], {
+            cwd: worktree.path,
+            encoding: 'utf-8',
+            timeout: 30_000,
+          });
+        } catch {
+          // Non-fatal — fall back to prune-only so stale tracking refs are at least cleared
+          try {
+            await execFileAsync('git', ['remote', 'prune', 'origin'], {
+              cwd: worktree.path,
+              encoding: 'utf-8',
+              timeout: 10_000,
+            });
+          } catch {
+            // Non-fatal — continue with potentially stale refs
+          }
+        }
+      } else {
+        // No integration branch — just prune stale tracking refs
+        try {
+          await execFileAsync('git', ['remote', 'prune', 'origin'], {
+            cwd: worktree.path,
+            encoding: 'utf-8',
+            timeout: 10_000,
+          });
+        } catch {
+          // Non-fatal — continue with potentially stale refs
+        }
       }
 
       // Check if remote branch still exists (ls-remote exits 2 if not found)
