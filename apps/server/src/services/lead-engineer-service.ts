@@ -17,7 +17,9 @@ import { createLogger } from '@protolabsai/utils';
 import type {
   EventType,
   EventSubscription,
+  FeatureStatus,
   LeadEngineerSession,
+  LeadRuleAction,
   PipelineResult,
 } from '@protolabsai/types';
 import { FeatureState } from '@protolabsai/types';
@@ -37,8 +39,10 @@ import type { LeadHandoffService } from './lead-handoff-service.js';
 import type { FactStoreService } from './fact-store-service.js';
 import type { TrajectoryStoreService } from './trajectory-store-service.js';
 import type { DeviationRuleService } from './deviation-rule-service.js';
-import { DEFAULT_RULES } from './lead-engineer-rules.js';
+import { DEFAULT_RULES, MECHANICAL_RULES, REASONING_RULES } from './lead-engineer-rules.js';
 import { getWorkflowSettings } from '../lib/settings-helpers.js';
+import { simpleQuery } from '../providers/simple-query-service.js';
+import { resolveModelString } from '@protolabsai/model-resolver';
 import { FeatureStateMachine } from './lead-engineer-state-machine.js';
 import { WorldStateBuilder } from './lead-engineer-world-state.js';
 import { ActionExecutor } from './lead-engineer-action-executor.js';
@@ -100,6 +104,14 @@ const WORLD_STATE_REFRESH_MS = 5 * 60 * 1000;
 const MAX_RULE_LOG_ENTRIES = 200;
 const SUPERVISOR_CHECK_MS = 30 * 1000;
 const PR_MERGE_POLL_MS = 2.5 * 60 * 1000;
+
+/** Maximum cost cap for a single LLM reasoning invocation */
+const MAX_REASONING_COST_USD = 0.50;
+/** Timeout for LLM reasoning path in milliseconds */
+const REASONING_TIMEOUT_MS = 60_000;
+// Haiku 4.5 pricing: $0.25/1M input + $1.25/1M output tokens (~4 chars/token avg)
+const HAIKU_INPUT_USD_PER_CHAR = 0.25 / (1_000_000 * 4);
+const HAIKU_OUTPUT_USD_PER_CHAR = 1.25 / (1_000_000 * 4);
 
 export class LeadEngineerService {
   private sessions = new Map<string, LeadEngineerSession>();
@@ -357,7 +369,7 @@ export class LeadEngineerService {
         );
         this.getActionExecutor(undefined, projectPath).evaluateAndExecute(
           s,
-          DEFAULT_RULES,
+          MECHANICAL_RULES,
           'lead-engineer:rule-evaluated',
           {},
           MAX_RULE_LOG_ENTRIES
@@ -889,11 +901,15 @@ export class LeadEngineerService {
         this.worldStateBuilder.updateFromEvent(session.worldState, type, payload);
         this.getActionExecutor(undefined, projectPath).evaluateAndExecute(
           session,
-          DEFAULT_RULES,
+          MECHANICAL_RULES,
           type,
           payload,
           MAX_RULE_LOG_ENTRIES
         );
+        // Invoke agent reasoning path for signals that reasoning rules would have handled
+        if (REASONING_RULES.some((r) => r.triggers.includes(type))) {
+          void this.invokeReasoningPath(session, type, payload);
+        }
       }
       return;
     }
@@ -918,11 +934,15 @@ export class LeadEngineerService {
         this.worldStateBuilder.updateFromEvent(session.worldState, type, payload);
         this.getActionExecutor(undefined, session.projectPath).evaluateAndExecute(
           session,
-          DEFAULT_RULES,
+          MECHANICAL_RULES,
           type,
           payload,
           MAX_RULE_LOG_ENTRIES
         );
+        // Invoke agent reasoning path for signals that reasoning rules would have handled
+        if (REASONING_RULES.some((r) => r.triggers.includes(type))) {
+          void this.invokeReasoningPath(session, type, payload);
+        }
         return;
       }
     }
@@ -980,4 +1000,376 @@ export class LeadEngineerService {
       }
     );
   }
+
+  /**
+   * Emit a reasoning path escalation signal.
+   * Called when reasoning path fails, times out, or exceeds cost cap.
+   */
+  private emitReasoningEscalation(
+    session: LeadEngineerSession,
+    eventType: string,
+    featureId: string | undefined,
+    reason: string,
+    details: string
+  ): void {
+    this.events.emit('escalation:signal-received' as EventType, {
+      source: 'lead_engineer_reasoning',
+      severity: 'medium',
+      type: reason,
+      context: {
+        eventType,
+        featureId,
+        projectPath: session.projectPath,
+        reason: details,
+      },
+      deduplicationKey: `reasoning_${reason}_${featureId ?? session.projectPath}_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Agent reasoning path: invoked when no mechanical rule matches an ambiguous signal.
+   *
+   * Packages signal context (event type, feature state, last 3 trajectory reflections,
+   * statusChangeReason history) and invokes LLM to decide next action.
+   *
+   * Guards:
+   * - Context validation: escalates immediately if featureId is absent
+   * - Cost cap: aborts if estimated prompt cost exceeds $0.50
+   * - Timeout: aborts if LLM call exceeds 60 seconds
+   * - Retry: retries once on malformed LLM response; escalates if still failing
+   */
+  private async invokeReasoningPath(
+    session: LeadEngineerSession,
+    eventType: string,
+    payload: unknown
+  ): Promise<void> {
+    const p = payload as Record<string, unknown> | null;
+    const featureId = p?.featureId as string | undefined;
+
+    // Guard: escalate immediately if signal context is missing required fields
+    if (!featureId) {
+      logger.warn('[Reasoning] Signal context incomplete: missing featureId — escalating', {
+        eventType,
+      });
+      this.emitReasoningEscalation(
+        session,
+        eventType,
+        undefined,
+        'context_incomplete',
+        'Signal context missing featureId — cannot invoke reasoning path'
+      );
+      return;
+    }
+
+    const feature = session.worldState.features[featureId];
+
+    // Load last 3 trajectory reflections for context
+    const trajectoryReflections: string[] = [];
+    if (this.trajectoryStoreService) {
+      try {
+        const trajectories = await this.trajectoryStoreService.loadTrajectories(
+          session.projectPath,
+          featureId
+        );
+        for (const t of trajectories.slice(-3)) {
+          const summary = t.escalationReason
+            ? `Attempt ${t.attemptNumber} (escalated): ${t.escalationReason}`
+            : `Attempt ${t.attemptNumber}: ${t.executionSummary.slice(0, 200)}`;
+          trajectoryReflections.push(summary);
+        }
+      } catch {
+        // Non-fatal: proceed without trajectory context
+      }
+    }
+
+    const reasoningContext = {
+      eventType,
+      payload,
+      featureState: feature ?? null,
+      statusChangeReason: feature?.statusChangeReason,
+      worldStateSummary: {
+        boardCounts: session.worldState.boardCounts,
+        agentCount: session.worldState.agents.length,
+        openPRCount: session.worldState.openPRs.length,
+        errorBudgetExhausted: session.worldState.errorBudgetExhausted ?? false,
+      },
+      trajectoryReflections,
+      recentRuleLog: session.ruleLog.slice(-5).map((e) => ({
+        timestamp: e.timestamp,
+        ruleName: e.ruleName,
+        eventType: e.eventType,
+        actionCount: e.actions.length,
+      })),
+    };
+
+    const prompt = buildReasoningPrompt(reasoningContext);
+
+    // Pre-call cost guard: abort if prompt is too large to stay under the cost cap
+    const estimatedInputCostUsd = prompt.length * HAIKU_INPUT_USD_PER_CHAR;
+    if (estimatedInputCostUsd > MAX_REASONING_COST_USD) {
+      logger.warn(
+        `[Reasoning] Cost cap: prompt too large — estimated $${estimatedInputCostUsd.toFixed(3)} exceeds $${MAX_REASONING_COST_USD}`,
+        { eventType, featureId }
+      );
+      this.emitReasoningEscalation(
+        session,
+        eventType,
+        featureId,
+        'cost_cap_exceeded',
+        `Prompt size (estimated $${estimatedInputCostUsd.toFixed(3)}) exceeds $${MAX_REASONING_COST_USD} cost cap`
+      );
+      return;
+    }
+
+    // 60-second timeout guard via AbortController
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => {
+      abortController.abort();
+    }, REASONING_TIMEOUT_MS);
+
+    let responseText = '';
+    let decision: ReasoningDecision | null = null;
+    let attemptCount = 0;
+
+    const model = resolveModelString('haiku');
+
+    const attemptQuery = async (): Promise<ReasoningDecision | null> => {
+      attemptCount++;
+      const result = await simpleQuery({
+        prompt,
+        model,
+        cwd: session.projectPath,
+        maxTurns: 1,
+        allowedTools: [],
+        abortController,
+        traceContext: {
+          featureId,
+          agentRole: 'lead-engineer-reasoning',
+          projectSlug: session.projectSlug,
+          phase: 'reasoning',
+        },
+      });
+      responseText = result.text;
+      return parseReasoningDecision(result.text);
+    };
+
+    try {
+      decision = await attemptQuery();
+
+      // Retry once on malformed response (per deviation rules)
+      if (!decision && attemptCount < 2) {
+        logger.warn('[Reasoning] First attempt produced malformed response — retrying once', {
+          eventType,
+          featureId,
+        });
+        decision = await attemptQuery();
+      }
+    } catch (err) {
+      clearTimeout(timeoutId);
+      const isTimeout = abortController.signal.aborted;
+      const reason = isTimeout ? 'reasoning_timeout' : 'reasoning_error';
+      const details = isTimeout
+        ? `Reasoning path timed out after ${REASONING_TIMEOUT_MS}ms`
+        : String(err instanceof Error ? err.message : err);
+      logger.warn(`[Reasoning] ${isTimeout ? 'Timeout' : 'Error'} — escalating`, {
+        eventType,
+        featureId,
+        details,
+      });
+      this.emitReasoningEscalation(session, eventType, featureId, reason, details);
+      return;
+    }
+
+    clearTimeout(timeoutId);
+
+    if (!decision) {
+      logger.warn(
+        '[Reasoning] Could not produce valid decision after retry — escalating',
+        { eventType, featureId }
+      );
+      this.emitReasoningEscalation(
+        session,
+        eventType,
+        featureId,
+        'malformed_response',
+        'LLM reasoning produced no valid action after retry'
+      );
+      return;
+    }
+
+    // Post-call cost tracking (informational — cost cap already enforced pre-call)
+    const estimatedOutputCostUsd = responseText.length * HAIKU_OUTPUT_USD_PER_CHAR;
+    const totalEstimatedCostUsd = estimatedInputCostUsd + estimatedOutputCostUsd;
+    if (totalEstimatedCostUsd > MAX_REASONING_COST_USD) {
+      logger.warn(
+        `[Reasoning] Post-call cost estimate $${totalEstimatedCostUsd.toFixed(3)} exceeded cap`,
+        { eventType, featureId }
+      );
+    }
+
+    logger.info(`[Reasoning] Decision: ${decision.action}`, {
+      eventType,
+      featureId,
+      reasoning: decision.reasoning?.slice(0, 150),
+    });
+
+    // Convert decision to actions and execute
+    const actions = convertDecisionToActions(decision, featureId);
+    if (actions.length === 0) return;
+
+    const executor = this.getActionExecutor(undefined, session.projectPath);
+    for (const action of actions) {
+      await executor.executeAction(session, action).catch((actionErr) =>
+        logger.error(`[Reasoning] Action execution failed (${action.type}):`, actionErr)
+      );
+    }
+  }
+}
+
+// ────────────────────────── Reasoning Path Helpers ──────────────────────────
+
+/**
+ * Structured decision returned by the LLM reasoning path.
+ * The reasoning prompt asks the LLM to return exactly this shape.
+ */
+interface ReasoningDecision {
+  action: 'reset_feature' | 'move_feature' | 'escalate' | 'no_action';
+  reasoning?: string;
+  featureId?: string;
+  toStatus?: string;
+  reason?: string;
+}
+
+/**
+ * Build the reasoning prompt from signal context.
+ *
+ * Context structure:
+ * - eventType: the triggering signal type (e.g. 'escalation:signal-received')
+ * - payload: raw signal payload
+ * - featureState: current feature snapshot from world state
+ * - statusChangeReason: last recorded reason for the feature's status
+ * - worldStateSummary: board counts, agent count, error budget state
+ * - trajectoryReflections: last 3 attempts' escalation/execution summaries
+ * - recentRuleLog: last 5 rule evaluations for recent activity context
+ */
+function buildReasoningPrompt(context: {
+  eventType: string;
+  payload: unknown;
+  featureState: unknown;
+  statusChangeReason?: string;
+  worldStateSummary: unknown;
+  trajectoryReflections: string[];
+  recentRuleLog: unknown;
+}): string {
+  return `You are the Lead Engineer AI reasoning about what action to take for an incoming signal.
+
+## Signal Context
+Event type: ${context.eventType}
+Payload: ${JSON.stringify(context.payload, null, 2).slice(0, 1000)}
+
+## Feature State
+${JSON.stringify(context.featureState, null, 2).slice(0, 1500)}
+
+## Status Change Reason
+${context.statusChangeReason ?? 'none'}
+
+## World State Summary
+${JSON.stringify(context.worldStateSummary, null, 2)}
+
+## Recent Trajectory (last 3 attempts)
+${context.trajectoryReflections.length > 0 ? context.trajectoryReflections.join('\n') : 'No previous attempts'}
+
+## Recent Rule Log (last 5 evaluations)
+${JSON.stringify(context.recentRuleLog, null, 2)}
+
+## Available Actions
+- reset_feature: Move the feature back to backlog for retry (transient failures)
+- move_feature: Move the feature to a specific status (toStatus required)
+- escalate: Escalate to human for intervention (persistent failures, unclear situations)
+- no_action: Take no action (signal does not require a response)
+
+## Instructions
+Reason about the signal, feature state, and history to decide the most appropriate action.
+Respond with ONLY valid JSON (no markdown, no code fences):
+{
+  "action": "reset_feature|move_feature|escalate|no_action",
+  "reasoning": "brief explanation of why",
+  "featureId": "the feature ID (required)",
+  "toStatus": "backlog|blocked|review|done|in_progress (only if action is move_feature)",
+  "reason": "human-readable reason for the action"
+}`;
+}
+
+/**
+ * Parse a JSON reasoning decision from LLM text output.
+ * Returns null if the response is malformed or contains an invalid action.
+ */
+function parseReasoningDecision(text: string): ReasoningDecision | null {
+  try {
+    const cleaned = text.replace(/```(?:json)?\n?/g, '').trim();
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+    const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+    if (!parsed.action || typeof parsed.action !== 'string') return null;
+    const validActions = new Set(['reset_feature', 'move_feature', 'escalate', 'no_action']);
+    if (!validActions.has(parsed.action)) return null;
+    return {
+      action: parsed.action as ReasoningDecision['action'],
+      reasoning: typeof parsed.reasoning === 'string' ? parsed.reasoning : undefined,
+      featureId: typeof parsed.featureId === 'string' ? parsed.featureId : undefined,
+      toStatus: typeof parsed.toStatus === 'string' ? parsed.toStatus : undefined,
+      reason: typeof parsed.reason === 'string' ? parsed.reason : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Convert a reasoning decision to LeadRuleAction[] for execution.
+ * Falls back to featureId from the signal context if decision.featureId is absent.
+ */
+function convertDecisionToActions(
+  decision: ReasoningDecision,
+  contextFeatureId: string
+): LeadRuleAction[] {
+  const actions: LeadRuleAction[] = [];
+  const targetFeatureId = decision.featureId ?? contextFeatureId;
+
+  switch (decision.action) {
+    case 'reset_feature':
+      actions.push({
+        type: 'reset_feature',
+        featureId: targetFeatureId,
+        reason:
+          decision.reason ??
+          `Reasoning path: ${decision.reasoning ?? 'LLM decided to retry'}`,
+      });
+      break;
+
+    case 'move_feature':
+      if (decision.toStatus) {
+        actions.push({
+          type: 'move_feature',
+          featureId: targetFeatureId,
+          toStatus: decision.toStatus as FeatureStatus,
+        });
+      }
+      break;
+
+    case 'escalate':
+      actions.push({
+        type: 'log',
+        level: 'warn',
+        message: `[Reasoning] Escalation decision for ${targetFeatureId}: ${decision.reason ?? decision.reasoning ?? 'LLM decided to escalate'}`,
+      });
+      break;
+
+    case 'no_action':
+    default:
+      break;
+  }
+
+  return actions;
 }

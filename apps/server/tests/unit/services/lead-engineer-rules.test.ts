@@ -19,6 +19,8 @@ import {
   errorBudgetExhausted,
   evaluateRules,
   DEFAULT_RULES,
+  MECHANICAL_RULES,
+  REASONING_RULES,
 } from '@/services/lead-engineer-rules.js';
 
 // ────────────────────────── Test Helpers ──────────────────────────
@@ -1018,5 +1020,159 @@ describe('staleDeps — foundation deps require done', () => {
     const actions = staleDeps.evaluate(ws, 'feature:status-changed', { featureId: 'dep-nf' });
     expect(actions).toHaveLength(1);
     expect(actions[0]).toEqual({ type: 'unblock_feature', featureId: 'blocked-nf' });
+  });
+});
+
+// ────────────────────────── Two-Tier Rule Classification ──────────────────────────
+
+describe('LeadFastPathRule.ruleType', () => {
+  it('every rule in DEFAULT_RULES has a ruleType field', () => {
+    for (const rule of DEFAULT_RULES) {
+      expect(rule.ruleType, `rule "${rule.name}" is missing ruleType`).toBeDefined();
+      expect(['mechanical', 'reasoning']).toContain(rule.ruleType);
+    }
+  });
+
+  it('MECHANICAL_RULES contains only mechanical rules', () => {
+    for (const rule of MECHANICAL_RULES) {
+      expect(rule.ruleType).toBe('mechanical');
+    }
+  });
+
+  it('REASONING_RULES contains only reasoning rules', () => {
+    for (const rule of REASONING_RULES) {
+      expect(rule.ruleType).toBe('reasoning');
+    }
+  });
+
+  it('DEFAULT_RULES is the union of MECHANICAL_RULES and REASONING_RULES', () => {
+    const allFromSets = [...MECHANICAL_RULES, ...REASONING_RULES];
+    expect(allFromSets).toHaveLength(DEFAULT_RULES.length);
+    for (const rule of DEFAULT_RULES) {
+      const inSets = allFromSets.some((r) => r.name === rule.name);
+      expect(inSets, `rule "${rule.name}" not in MECHANICAL_RULES or REASONING_RULES`).toBe(true);
+    }
+  });
+
+  it('classifiedRecovery is classified as reasoning', () => {
+    expect(classifiedRecovery.ruleType).toBe('reasoning');
+  });
+
+  it('classifiedRecovery is in REASONING_RULES', () => {
+    expect(REASONING_RULES.some((r) => r.name === 'classifiedRecovery')).toBe(true);
+  });
+
+  it('classifiedRecovery is NOT in MECHANICAL_RULES', () => {
+    expect(MECHANICAL_RULES.some((r) => r.name === 'classifiedRecovery')).toBe(false);
+  });
+
+  it('mergedNotDone is classified as mechanical', () => {
+    expect(mergedNotDone.ruleType).toBe('mechanical');
+  });
+
+  it('staleDeps is classified as mechanical', () => {
+    expect(staleDeps.ruleType).toBe('mechanical');
+  });
+
+  it('prApproved is classified as mechanical', () => {
+    expect(prApproved.ruleType).toBe('mechanical');
+  });
+
+  it('MECHANICAL_RULES has more rules than REASONING_RULES', () => {
+    expect(MECHANICAL_RULES.length).toBeGreaterThan(REASONING_RULES.length);
+  });
+
+  it('MECHANICAL_RULES count is at least 15', () => {
+    expect(MECHANICAL_RULES.length).toBeGreaterThanOrEqual(15);
+  });
+
+  it('REASONING_RULES count is exactly 1 (classifiedRecovery)', () => {
+    expect(REASONING_RULES.length).toBe(1);
+  });
+});
+
+// ────────────────────────── Mechanical Rule Behavior via MECHANICAL_RULES ──────────────────────────
+
+describe('MECHANICAL_RULES evaluation', () => {
+  it('mergedNotDone fires through MECHANICAL_RULES', () => {
+    const ws = createMockWorldState({
+      features: {
+        'feat-1': createFeature({
+          id: 'feat-1',
+          status: 'review',
+          prMergedAt: new Date().toISOString(),
+        }),
+      },
+    });
+
+    const actions = evaluateRules(
+      MECHANICAL_RULES,
+      ws,
+      'feature:pr-merged',
+      { featureId: 'feat-1' }
+    );
+
+    expect(actions).toHaveLength(1);
+    expect(actions[0]).toMatchObject({ type: 'move_feature', featureId: 'feat-1', toStatus: 'done' });
+  });
+
+  it('staleDeps fires through MECHANICAL_RULES', () => {
+    const ws = createMockWorldState({
+      features: {
+        'dep-1': createFeature({ id: 'dep-1', status: 'done' }),
+        'feat-blocked': createFeature({
+          id: 'feat-blocked',
+          status: 'blocked',
+          dependencies: ['dep-1'],
+        }),
+      },
+    });
+
+    const actions = evaluateRules(
+      MECHANICAL_RULES,
+      ws,
+      'feature:status-changed',
+      { featureId: 'dep-1' }
+    );
+
+    expect(actions.some((a) => a.type === 'unblock_feature' && a.featureId === 'feat-blocked')).toBe(true);
+  });
+
+  it('classifiedRecovery does NOT fire through MECHANICAL_RULES', () => {
+    const f = createFeature({ id: 'esc-1', status: 'blocked' });
+    const ws = createMockWorldState({ features: { 'esc-1': f } });
+    const payload = {
+      type: 'feature_escalated',
+      context: {
+        featureId: 'esc-1',
+        retryCount: 0,
+        failureAnalysis: {
+          category: 'transient',
+          isRetryable: true,
+          suggestedDelay: 1000,
+          maxRetries: 3,
+          explanation: 'Temporary failure',
+          confidence: 0.9,
+        },
+      },
+    };
+
+    const actions = evaluateRules(
+      MECHANICAL_RULES,
+      ws,
+      'escalation:signal-received',
+      payload
+    );
+
+    // classifiedRecovery is the only rule with this trigger, and it's reasoning — so no actions
+    expect(actions).toHaveLength(0);
+  });
+
+  it('escalation:signal-received IS a trigger in REASONING_RULES', () => {
+    expect(REASONING_RULES.some((r) => r.triggers.includes('escalation:signal-received'))).toBe(true);
+  });
+
+  it('escalation:signal-received is NOT a trigger in MECHANICAL_RULES', () => {
+    expect(MECHANICAL_RULES.some((r) => r.triggers.includes('escalation:signal-received'))).toBe(false);
   });
 });
