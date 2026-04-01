@@ -19,6 +19,7 @@ import type {
   StructuredPlan,
   VerifiedTrajectory,
 } from '@protolabsai/types';
+import { deriveVerificationTier } from '@protolabsai/types';
 import type {
   ProcessorServiceContext,
   StateContext,
@@ -604,9 +605,14 @@ export class ExecuteProcessor implements StateProcessor {
       logger.info('[EXECUTE] Execution gate passed', { featureId: ctx.feature.id });
     }
 
+    const verificationTier = deriveVerificationTier(
+      ctx.feature.complexity,
+      ctx.feature.failureCount ?? 0
+    );
     logger.info('[EXECUTE] Launching agent via autoModeService.executeFeature()', {
       featureId: ctx.feature.id,
       retryCount: ctx.retryCount,
+      verificationTier,
     });
 
     // Wait for agent completion via event listener

@@ -109,8 +109,9 @@ export type {
   StatusTransition,
   ExecutionRecord,
   RemediationHistoryEntry,
+  VerificationTier,
 } from './feature.js';
-export { normalizeFeatureStatus } from './feature.js';
+export { normalizeFeatureStatus, deriveVerificationTier } from './feature.js';
 
 // CI Reaction Engine types — split remediation budget enforcement
 export type {
