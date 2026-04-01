@@ -153,9 +153,27 @@ describe('EventStore', () => {
   describe('getChain', () => {
     it('should reconstruct a causal chain', () => {
       const corrId = 'chain-test';
-      store.store(makeEvent({ correlationId: corrId, eventId: 'e1', timestamp: 100, topic: 'start' }));
-      store.store(makeEvent({ correlationId: corrId, eventId: 'e2', timestamp: 200, causationId: 'e1', topic: 'middle' }));
-      store.store(makeEvent({ correlationId: corrId, eventId: 'e3', timestamp: 300, causationId: 'e2', topic: 'end' }));
+      store.store(
+        makeEvent({ correlationId: corrId, eventId: 'e1', timestamp: 100, topic: 'start' })
+      );
+      store.store(
+        makeEvent({
+          correlationId: corrId,
+          eventId: 'e2',
+          timestamp: 200,
+          causationId: 'e1',
+          topic: 'middle',
+        })
+      );
+      store.store(
+        makeEvent({
+          correlationId: corrId,
+          eventId: 'e3',
+          timestamp: 300,
+          causationId: 'e2',
+          topic: 'end',
+        })
+      );
 
       const chain = store.getChain(corrId);
       expect(chain.correlationId).toBe(corrId);
@@ -179,10 +197,18 @@ describe('EventStore', () => {
 
   describe('query (general purpose)', () => {
     beforeEach(() => {
-      store.store(makeEvent({ correlationId: 'c1', topic: 'a', timestamp: 100, payload: { featureId: 'f1' } }));
-      store.store(makeEvent({ correlationId: 'c1', topic: 'b', timestamp: 200, payload: { featureId: 'f1' } }));
-      store.store(makeEvent({ correlationId: 'c2', topic: 'a', timestamp: 300, payload: { featureId: 'f2' } }));
-      store.store(makeEvent({ correlationId: 'c2', topic: 'b', timestamp: 400, payload: { featureId: 'f2' } }));
+      store.store(
+        makeEvent({ correlationId: 'c1', topic: 'a', timestamp: 100, payload: { featureId: 'f1' } })
+      );
+      store.store(
+        makeEvent({ correlationId: 'c1', topic: 'b', timestamp: 200, payload: { featureId: 'f1' } })
+      );
+      store.store(
+        makeEvent({ correlationId: 'c2', topic: 'a', timestamp: 300, payload: { featureId: 'f2' } })
+      );
+      store.store(
+        makeEvent({ correlationId: 'c2', topic: 'b', timestamp: 400, payload: { featureId: 'f2' } })
+      );
       store.store(makeEvent({ correlationId: 'c3', topic: 'c', timestamp: 500, payload: {} }));
     });
 

@@ -8,15 +8,15 @@ The event store is an in-memory ring buffer (10,000 events, FIFO eviction). Even
 
 Each stored event includes:
 
-| Field           | Type     | Description                                    |
-| --------------- | -------- | ---------------------------------------------- |
-| `eventId`       | `string` | UUID v4, unique per event                      |
-| `correlationId` | `string` | UUID v4, shared across a causal chain          |
-| `causationId`   | `string` | eventId of the direct parent (optional)        |
-| `topic`         | `string` | Event type (e.g. `feature:started`)            |
-| `payload`       | `object` | Event data                                     |
-| `timestamp`     | `number` | Epoch milliseconds                             |
-| `source`        | `string` | Service that emitted (e.g. `github-webhook`)   |
+| Field           | Type     | Description                                  |
+| --------------- | -------- | -------------------------------------------- |
+| `eventId`       | `string` | UUID v4, unique per event                    |
+| `correlationId` | `string` | UUID v4, shared across a causal chain        |
+| `causationId`   | `string` | eventId of the direct parent (optional)      |
+| `topic`         | `string` | Event type (e.g. `feature:started`)          |
+| `payload`       | `object` | Event data                                   |
+| `timestamp`     | `number` | Epoch milliseconds                           |
+| `source`        | `string` | Service that emitted (e.g. `github-webhook`) |
 
 ## Endpoints
 
@@ -75,9 +75,26 @@ Returns all events sharing a correlation ID, ordered by timestamp, with chain me
   "chain": {
     "correlationId": "e5f6g7h8-...",
     "events": [
-      { "eventId": "a1", "topic": "webhook:github:pull_request", "timestamp": 1000, "source": "github-webhook" },
-      { "eventId": "a2", "topic": "feature:started", "timestamp": 1050, "causationId": "a1", "source": "lead-engineer-service" },
-      { "eventId": "a3", "topic": "feature:completed", "timestamp": 5000, "causationId": "a2", "source": "auto-mode-service" }
+      {
+        "eventId": "a1",
+        "topic": "webhook:github:pull_request",
+        "timestamp": 1000,
+        "source": "github-webhook"
+      },
+      {
+        "eventId": "a2",
+        "topic": "feature:started",
+        "timestamp": 1050,
+        "causationId": "a1",
+        "source": "lead-engineer-service"
+      },
+      {
+        "eventId": "a3",
+        "topic": "feature:completed",
+        "timestamp": 5000,
+        "causationId": "a2",
+        "source": "auto-mode-service"
+      }
     ],
     "startTime": 1000,
     "endTime": 5000,
@@ -102,12 +119,12 @@ When a service receives an event and triggers downstream actions, correlation co
 
 ### Services with Correlation Support
 
-| Service                  | Role                                           |
-| ------------------------ | ---------------------------------------------- |
-| GitHub Webhook Handler   | Generates new correlationId per delivery       |
-| LeadEngineerService      | Inherits or generates correlationId per feature |
-| AutoModeService          | Inherits or generates correlationId per exec    |
-| MaintenanceOrchestrator  | Generates new correlationId per sweep           |
+| Service                 | Role                                            |
+| ----------------------- | ----------------------------------------------- |
+| GitHub Webhook Handler  | Generates new correlationId per delivery        |
+| LeadEngineerService     | Inherits or generates correlationId per feature |
+| AutoModeService         | Inherits or generates correlationId per exec    |
+| MaintenanceOrchestrator | Generates new correlationId per sweep           |
 
 ### Deviation Rules
 

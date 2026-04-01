@@ -131,9 +131,7 @@ describe('GET /api/ops/events', () => {
       handler(req, res);
 
       expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ success: false })
-      );
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
     });
 
     it('should reject invalid offset parameter', () => {
@@ -149,7 +147,9 @@ describe('GET /api/ops/events', () => {
   describe('GET /chain/:correlationId', () => {
     it('should return a full causal chain', () => {
       store.store(makeEvent({ correlationId: 'chain-1', eventId: 'e1', timestamp: 100 }));
-      store.store(makeEvent({ correlationId: 'chain-1', eventId: 'e2', timestamp: 200, causationId: 'e1' }));
+      store.store(
+        makeEvent({ correlationId: 'chain-1', eventId: 'e2', timestamp: 200, causationId: 'e1' })
+      );
 
       const handler = getHandler(router, 'get', '/chain/:correlationId');
       const { req, res } = createMockExpressContext();
@@ -170,9 +170,7 @@ describe('GET /api/ops/events', () => {
       handler(req, res);
 
       expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ success: false })
-      );
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
     });
   });
 });
