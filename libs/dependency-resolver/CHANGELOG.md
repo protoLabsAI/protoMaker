@@ -1,5 +1,34 @@
 # @protolabsai/dependency-resolver
 
+## 0.93.0
+
+### Minor Changes
+
+- ### Features
+  - replace ASCII art with protoLabs studio figlet banner
+  - Ava Desktop — Tauri v2 overlay with macOS native titlebar
+  - add prompt-type Stop hook for LLM completion verification (#3192)
+  - workflow API, shared tools, and project orchestration threading (#3186)
+  - 12 built-in workflows, configurable processors, SWE-bench harness (#3185)
+
+  ### Bug Fixes
+  - fetch integration branch before stale-ref merge detection in crash recovery (#3204)
+  - remove data integrity gate from auto-mode startup
+  - set local git identity in new worktrees automatically (#3196)
+  - prevent zombie agent respawn when stop_agent is called with done status (#3190)
+
+  ### Refactors
+  - Bug: Agents waste budget trying to install tools in sandboxed containers (#3201)
+  - Bug: propose_alignment reports features created but stores none (#3200)
+  - Bug: Worktrees have no node_modules — agents can't build or test (#3198)
+  - Bug: MaintenanceTasks has no circuit breaker on failed push retries (#3197)
+  - Bug: Agent retries overwrite manually-set 'done' status (#3191)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.93.0
+
 ## 0.92.4
 
 ### Patch Changes
