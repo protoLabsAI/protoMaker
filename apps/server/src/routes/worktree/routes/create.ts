@@ -188,6 +188,16 @@ export function createCreateHandler(events: EventEmitter) {
         );
       }
 
+      // Set local git identity so commits work without global git config.
+      // Agent containers often run as node@container with no git user configured.
+      try {
+        await execGitCommand(['config', 'user.email', 'automaker@localhost'], worktreePath);
+        await execGitCommand(['config', 'user.name', 'Automaker'], worktreePath);
+        logger.debug(`Set local git identity in worktree: ${worktreePath}`);
+      } catch (err) {
+        logger.warn(`Failed to set local git identity in worktree (non-fatal): ${err}`);
+      }
+
       // Note: We intentionally do NOT symlink .automaker to worktrees
       // Features and config are always accessed from the main project path
       // This avoids symlink loop issues when activating worktrees
