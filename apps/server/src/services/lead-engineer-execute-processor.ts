@@ -227,6 +227,24 @@ export class ExecuteProcessor implements StateProcessor {
   }
 
   async process(ctx: StateContext): Promise<StateTransitionResult> {
+    // Guard: if the feature has been manually set to done or verified while this agent was
+    // running, bail out immediately without proceeding with retries or escalation.
+    const currentStatus = await this.serviceContext.featureLoader.get(
+      ctx.projectPath,
+      ctx.feature.id
+    );
+    if (currentStatus?.status === 'done' || currentStatus?.status === 'verified') {
+      logger.info(
+        `[EXECUTE] Feature ${ctx.feature.id} is already ${currentStatus.status} — aborting agent execution`,
+        { currentStatus: currentStatus.status, retryCount: ctx.retryCount }
+      );
+      return {
+        nextState: null,
+        shouldContinue: false,
+        reason: `Feature already ${currentStatus.status} — agent execution aborted`,
+      };
+    }
+
     // Check budget
     const totalCost = ctx.feature.costUsd || 0;
     if (totalCost > this.MAX_BUDGET_USD) {

@@ -32,6 +32,15 @@
       {
         "hooks": [
           {
+            "type": "prompt",
+            "prompt": "You are a completion verifier. Review the assistant's last message to determine if the requested work is actually done.\n\nCheck for these failure patterns:\n\n1. SILENT EXIT: The assistant stopped without producing a concrete outcome (no files modified, no answer provided, no clear result). Vague sign-offs after minimal work indicate early exit.\n\n2. PARTIAL WORK: The assistant mentioned tasks it planned to do but hasn't completed. Look for: remaining items in a list, \"I'll also need to\", \"next step\", \"TODO\", unchecked items, or numbered steps where later steps weren't executed.\n\n3. ERROR ABANDONMENT: The assistant hit an error and gave up instead of investigating. Look for: unresolved error messages followed by \"this might be complex\", \"I'm not sure how to\", or suggestions that the user handle it.\n\n4. UNTESTED CHANGES: The assistant wrote or modified code but never verified it works — no test run, no build check, no type check. Code changes without any verification step are incomplete.\n\nIMPORTANT: Normal conversation endings are FINE. If the user asked a question and got an answer, or the user said thanks, or the assistant completed all requested work with clear results — that is complete. Only flag genuinely incomplete work.\n\nIf incomplete: state exactly what remains unfinished.\nIf complete: respond with just \"Work is complete.\"",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.claude/hooks/evaluate-session.js\""
           }

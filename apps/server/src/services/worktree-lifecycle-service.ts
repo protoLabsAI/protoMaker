@@ -845,3 +845,127 @@ export async function symlinkBuildArtifacts(
 
   return symlinked;
 }
+
+/**
+ * Lockfile-to-install-command mapping.
+ *
+ * Checked in order of specificity: pnpm and yarn lockfiles are unambiguous,
+ * so they are checked before package-lock.json (which npm generates by default
+ * but may coexist with others). bun.lockb is last because Bun adoption is
+ * the least common.
+ */
+const LOCKFILE_COMMANDS: ReadonlyArray<{ lockfile: string; command: string; args: string[] }> = [
+  { lockfile: 'pnpm-lock.yaml', command: 'pnpm', args: ['install', '--frozen-lockfile'] },
+  { lockfile: 'yarn.lock', command: 'yarn', args: ['install', '--frozen-lockfile'] },
+  { lockfile: 'package-lock.json', command: 'npm', args: ['ci'] },
+  { lockfile: 'bun.lockb', command: 'bun', args: ['install', '--frozen-lockfile'] },
+];
+
+/**
+ * Detect the package manager for a project by inspecting the `packageManager`
+ * field in package.json (corepack convention) and falling back to lockfile
+ * presence in the project root.
+ *
+ * Detection checks the **main project path** (not the worktree), since
+ * lockfiles are committed to git and present in both locations, but
+ * package.json's `packageManager` field is the most authoritative signal.
+ *
+ * @param projectPath - Absolute path to the main project root
+ * @returns The binary name and install arguments, or null if no package
+ *          manager could be detected (e.g. not a Node.js project).
+ */
+export async function detectPackageManager(
+  projectPath: string
+): Promise<{ command: string; args: string[] } | null> {
+  // 1. Check package.json `packageManager` field (corepack convention: "pnpm@9.1.0")
+  try {
+    const pkgJsonPath = path.join(projectPath, 'package.json');
+    const raw = await fs.promises.readFile(pkgJsonPath, 'utf-8');
+    const pkg = JSON.parse(raw) as Record<string, unknown>;
+
+    if (typeof pkg.packageManager === 'string') {
+      const managerSpec = pkg.packageManager as string;
+      // Extract binary name from "pnpm@9.1.0" or just "pnpm"
+      const binaryName = managerSpec.split('@')[0].trim();
+
+      if (binaryName) {
+        const entry = LOCKFILE_COMMANDS.find((lc) => lc.command === binaryName);
+        if (entry) {
+          return { command: entry.command, args: entry.args };
+        }
+        // Unknown manager name in packageManager field — fall through to lockfile detection
+        logger.debug(
+          `packageManager field "${managerSpec}" specifies unknown manager "${binaryName}", falling back to lockfile detection`
+        );
+      }
+    }
+  } catch {
+    // No package.json or parse error — fall through to lockfile detection
+  }
+
+  // 2. Fall back to lockfile detection
+  for (const { lockfile, command, args } of LOCKFILE_COMMANDS) {
+    try {
+      await fs.promises.access(path.join(projectPath, lockfile));
+      return { command, args };
+    } catch {
+      // Lockfile not found — try next
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Install dependencies in a worktree after creation.
+ *
+ * Auto-detects the package manager from the main project (via `packageManager`
+ * field in package.json or lockfile presence) and runs the appropriate install
+ * command with the worktree as the working directory.
+ *
+ * This is intentionally fire-and-forget from the caller's perspective: install
+ * failures are logged but never propagated, so worktree creation is never
+ * blocked by a flaky install.
+ *
+ * @param projectPath - Absolute path to the main project root (for detection)
+ * @param worktreePath - Absolute path to the worktree (cwd for install)
+ * @returns true if install succeeded, false if it failed or was skipped
+ */
+export async function installWorktreeDependencies(
+  projectPath: string,
+  worktreePath: string
+): Promise<boolean> {
+  const detected = await detectPackageManager(projectPath);
+  if (!detected) {
+    logger.debug(
+      `No package manager detected for ${projectPath} — skipping dependency install in worktree`
+    );
+    return false;
+  }
+
+  const { command, args } = detected;
+  const fullCommand = [command, ...args].join(' ');
+
+  logger.info(
+    `Installing dependencies in worktree ${path.basename(worktreePath)} via: ${fullCommand}`
+  );
+
+  return new Promise<boolean>((resolve) => {
+    execFile(command, args, { cwd: worktreePath, timeout: 300_000 }, (error, stdout, stderr) => {
+      if (error) {
+        logger.warn(
+          `Dependency install failed in worktree ${path.basename(worktreePath)}: ${error.message}`
+        );
+        if (stderr) {
+          logger.debug(`Install stderr: ${stderr.slice(0, 500)}`);
+        }
+        resolve(false);
+      } else {
+        logger.info(
+          `Dependencies installed in worktree ${path.basename(worktreePath)} via ${command}`
+        );
+        resolve(true);
+      }
+    });
+  });
+}

@@ -25,6 +25,7 @@ import {
 import { trackBranch } from './branch-tracking.js';
 import { createLogger } from '@protolabsai/utils';
 import { runInitScript } from '../../../services/init-script-service.js';
+import { installWorktreeDependencies } from '../../../services/worktree-lifecycle-service.js';
 const logger = createLogger('Worktree');
 
 const execAsync = promisify(exec);
@@ -188,6 +189,16 @@ export function createCreateHandler(events: EventEmitter) {
         );
       }
 
+      // Set local git identity so commits work without global git config.
+      // Agent containers often run as node@container with no git user configured.
+      try {
+        await execGitCommand(['config', 'user.email', 'automaker@localhost'], worktreePath);
+        await execGitCommand(['config', 'user.name', 'Automaker'], worktreePath);
+        logger.debug(`Set local git identity in worktree: ${worktreePath}`);
+      } catch (err) {
+        logger.warn(`Failed to set local git identity in worktree (non-fatal): ${err}`);
+      }
+
       // Note: We intentionally do NOT symlink .automaker to worktrees
       // Features and config are always accessed from the main project path
       // This avoids symlink loop issues when activating worktrees
@@ -209,16 +220,27 @@ export function createCreateHandler(events: EventEmitter) {
         },
       });
 
-      // Trigger init script asynchronously after response
-      // runInitScript internally checks if script exists and hasn't already run
-      runInitScript({
-        projectPath,
-        worktreePath: absoluteWorktreePath,
-        branch: branchName,
-        emitter: events,
-      }).catch((err) => {
-        logger.error(`Init script failed for ${branchName}:`, err);
-      });
+      // Auto-install dependencies then run init script asynchronously after response.
+      // Install runs first so the init script can assume dependencies are available.
+      (async () => {
+        try {
+          await installWorktreeDependencies(projectPath, absoluteWorktreePath);
+        } catch (err) {
+          logger.debug(`Dependency install failed for ${branchName} (non-fatal):`, err);
+        }
+
+        // runInitScript internally checks if script exists and hasn't already run
+        try {
+          await runInitScript({
+            projectPath,
+            worktreePath: absoluteWorktreePath,
+            branch: branchName,
+            emitter: events,
+          });
+        } catch (err) {
+          logger.error(`Init script failed for ${branchName}:`, err);
+        }
+      })();
     } catch (error) {
       logError(error, 'Create worktree failed');
       res.status(500).json({ success: false, error: getErrorMessage(error) });

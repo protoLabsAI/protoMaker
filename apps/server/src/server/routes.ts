@@ -200,7 +200,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // --- UNAUTHENTICATED ROUTES (must come before authMiddleware) ---
   app.use('/api/health', createHealthRoutes());
   app.use('/api/auth', createAuthRoutes());
-  app.use('/api/setup', createSetupRoutes(settingsService));
+  app.use('/api/setup', createSetupRoutes(settingsService, featureLoader, events));
 
   // Prometheus metrics endpoint (unauthenticated for Prometheus scraping)
   app.use('/api/metrics', createPrometheusRoute());

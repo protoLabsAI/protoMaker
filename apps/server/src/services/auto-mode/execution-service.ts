@@ -12,6 +12,7 @@
  */
 
 import * as v8 from 'node:v8';
+import { existsSync, readFileSync } from 'node:fs';
 import { ProviderFactory } from '../../providers/provider-factory.js';
 import { TracedProvider } from '../../providers/traced-provider.js';
 import { simpleQuery } from '../../providers/simple-query-service.js';
@@ -147,6 +148,35 @@ export function getTurnsForFeature(feature: {
   }
 
   return baseTurns;
+}
+
+/**
+ * Detect whether the server is running inside a sandboxed container environment
+ * (Docker, LXC, Kubernetes pod, etc.).
+ *
+ * Agents running in containers cannot install global tools: the home directory is
+ * typically a small tmpfs and /tmp is mounted noexec. Detecting this upfront lets us
+ * inject a context message so agents don't burn turns on failed install attempts.
+ *
+ * Detection strategy (Linux-only; returns false on non-Linux):
+ *  1. /.dockerenv exists — canonical Docker indicator
+ *  2. /proc/1/cgroup contains "docker", "lxc", or "kubepods"
+ */
+export function detectSandboxEnvironment(): boolean {
+  try {
+    if (existsSync('/.dockerenv')) {
+      return true;
+    }
+    if (existsSync('/proc/1/cgroup')) {
+      const cgroup = readFileSync('/proc/1/cgroup', 'utf-8');
+      if (cgroup.includes('docker') || cgroup.includes('lxc') || cgroup.includes('kubepods')) {
+        return true;
+      }
+    }
+  } catch {
+    // Ignore errors — detection is best-effort
+  }
+  return false;
 }
 
 /**
@@ -778,6 +808,26 @@ export class ExecutionService {
             `- If build/test verification fails after 2 attempts, **stop** — commit your code and push. CI will verify the build.\n`;
           prompt = worktreeSection + '\n\n' + prompt;
           logger.debug(`Injected worktree build environment context for feature ${featureId}`);
+        }
+
+        // Pre-flight: inject sandbox constraints context when running in a container.
+        // Containers have a small tmpfs home directory and noexec on /tmp, so global
+        // tool installations always fail. Injecting this upfront stops agents from
+        // burning budget on repeated failed install attempts.
+        if (detectSandboxEnvironment()) {
+          const sandboxSection =
+            `## Sandbox Environment Constraints\n\n` +
+            `You are running inside a sandboxed container. The following constraints apply:\n` +
+            `- **Cannot install global tools** — the home directory is a limited tmpfs and /tmp is noexec\n` +
+            `- \`npm install -g\`, \`curl | bash\`, \`pip install\`, and similar global install commands will fail\n` +
+            `- Do NOT attempt to install missing tools. If a tool is absent, note it and move on\n\n` +
+            `**If a required tool is not available:**\n` +
+            `1. Do NOT retry the installation — one failed attempt is enough\n` +
+            `2. Note in your output: "Host prerequisite needed: [tool] must be installed on the host"\n` +
+            `3. Continue with the code/config changes you CAN make without the tool\n` +
+            `4. Skip verification steps that depend on the missing tool\n`;
+          prompt = sandboxSection + '\n\n' + prompt;
+          logger.debug(`Injected sandbox environment constraints for feature ${featureId}`);
         }
 
         // Add recovery context if this is a retry attempt

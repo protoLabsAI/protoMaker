@@ -130,7 +130,10 @@ import {
 import { AutoModeCoordinator } from './auto-mode/auto-mode-coordinator.js';
 import { FeatureStateManager } from './auto-mode/feature-state-manager.js';
 import { ExecutionService } from './auto-mode/execution-service.js';
-import { symlinkBuildArtifacts } from './worktree-lifecycle-service.js';
+import {
+  symlinkBuildArtifacts,
+  installWorktreeDependencies,
+} from './worktree-lifecycle-service.js';
 import type {
   RunningFeature,
   PendingApproval,
@@ -395,7 +398,9 @@ export class AutoModeService {
           logger.info(
             `Stopping agent for completed feature ${data.featureId} (→ ${data.newStatus})`
           );
-          void this.stopFeature(data.featureId);
+          // Pass the terminal status so stopFeature does NOT reset it back to 'backlog',
+          // which would cause the auto-mode loop to immediately respawn the agent.
+          void this.stopFeature(data.featureId, data.newStatus as string);
         }
       }
     });
@@ -800,29 +805,13 @@ export class AutoModeService {
    * Start the auto mode loop for a specific project/worktree (supports multiple concurrent projects and worktrees)
    * @param projectPath - The project to start auto mode for
    * @param branchName - The branch name for worktree scoping, null for main worktree
-   * @param forceStart - Skip data integrity check (default: false)
    */
   async startAutoLoopForProject(
     projectPath: string,
     branchName: string | null = null,
-    forceStart: boolean = false,
+    _forceStart: boolean = false,
     maxConcurrencyOverride?: number
   ): Promise<number> {
-    // Check data integrity before starting (unless force-start is enabled)
-    if (this.integrityWatchdogService) {
-      const canStart = await this.integrityWatchdogService.canStartAutoMode(
-        projectPath,
-        forceStart
-      );
-
-      if (!canStart) {
-        const status = await this.integrityWatchdogService.getStatus(projectPath);
-        throw new Error(
-          `Auto-mode blocked due to data integrity breach. Feature count dropped from ${status.lastKnownCount} to ${status.currentCount}. Use force-start flag to bypass.`
-        );
-      }
-    }
-
     // Compute key early so we can synchronously claim it before any await.
     // This prevents the TOCTOU race where concurrent callers all pass the
     // isRunning check before coordinator.startLoop() sets isRunning = true.
@@ -1366,7 +1355,7 @@ export class AutoModeService {
   /**
    * Stop a specific feature
    */
-  async stopFeature(featureId: string): Promise<boolean> {
+  async stopFeature(featureId: string, targetStatus?: string): Promise<boolean> {
     const running = this.runningFeatures.get(featureId);
     if (!running) {
       return false;
@@ -1377,11 +1366,19 @@ export class AutoModeService {
 
     running.abortController.abort();
 
-    // Reset feature status to backlog immediately so the board reflects reality.
+    // Update feature status so the board reflects reality.
     // Without this, the feature stays in 'in_progress' for ~100 seconds until
     // the health sweep catches the stale status.
+    //
+    // When targetStatus is a terminal state ('done' or 'verified'), preserve it —
+    // resetting to 'backlog' would cause the auto-mode loop to immediately respawn
+    // the agent (zombie agent bug). Only reset to 'backlog' when no terminal
+    // status is requested.
+    const terminalStatuses = new Set(['done', 'verified', 'completed']);
+    const statusToSet =
+      targetStatus && terminalStatuses.has(targetStatus) ? targetStatus : 'backlog';
     try {
-      await this.updateFeatureStatus(running.projectPath, featureId, 'backlog');
+      await this.updateFeatureStatus(running.projectPath, featureId, statusToSet);
     } catch (err) {
       logger.warn(`Failed to reset status for stopped feature ${featureId}: ${err}`);
     }
@@ -3113,6 +3110,21 @@ Format your response as a structured markdown document.`;
 
       logger.info(`Created worktree for branch "${branchName}" at: ${worktreePath}`);
 
+      // Set local git identity so commits work without global git config.
+      // Agent containers often run as node@container with no git user configured.
+      const resolvedWorktreePath = path.resolve(worktreePath);
+      try {
+        await execFileAsync('git', ['config', 'user.email', 'automaker@localhost'], {
+          cwd: resolvedWorktreePath,
+        });
+        await execFileAsync('git', ['config', 'user.name', 'Automaker'], {
+          cwd: resolvedWorktreePath,
+        });
+        logger.debug(`Set local git identity in worktree: ${resolvedWorktreePath}`);
+      } catch (err) {
+        logger.warn('Failed to set local git identity in worktree (non-fatal):', err);
+      }
+
       // Exclude .automaker/features/ from worktree git status to prevent
       // board state files from blocking rebases and polluting diffs
       try {
@@ -3165,6 +3177,16 @@ Format your response as a structured markdown document.`;
         await symlinkBuildArtifacts(projectPath, worktreePath);
       } catch (err) {
         logger.debug('Failed to symlink build artifacts into worktree (non-fatal):', err);
+      }
+
+      // Auto-install dependencies so agents can run build/test commands immediately.
+      // Runs AFTER symlink (symlink handles the common case for monorepos where the
+      // main project's node_modules can be shared; install handles standalone worktrees
+      // and workspace packages that need their own resolution).
+      try {
+        await installWorktreeDependencies(projectPath, worktreePath);
+      } catch (err) {
+        logger.debug('Failed to install dependencies in worktree (non-fatal):', err);
       }
 
       return path.resolve(worktreePath);
