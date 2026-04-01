@@ -289,6 +289,89 @@ export class ReviewProcessor implements StateProcessor {
       };
     }
 
+    if (reviewState === 'ci_failed') {
+      // Concurrency guard: defer if PRFeedbackService is already remediating this feature
+      if (this.serviceContext.prFeedbackService?.isFeatureRemediating(ctx.feature.id)) {
+        logger.info('[REVIEW] PRFeedbackService is already remediating this feature, deferring', {
+          featureId: ctx.feature.id,
+        });
+        await new Promise((r) => setTimeout(r, REVIEW_POLL_DELAY_MS));
+        return {
+          nextState: 'REVIEW',
+          shouldContinue: true,
+          reason: 'Deferring to PRFeedbackService remediation',
+        };
+      }
+
+      // Check CI remediation budget
+      const ciWorkflowSettings = await getWorkflowSettings(
+        ctx.projectPath,
+        this.serviceContext.settingsService,
+        '[ReviewProcessor]'
+      );
+      const ciReactionSettings =
+        ciWorkflowSettings.ciReactionSettings ?? DEFAULT_CI_REACTION_SETTINGS;
+
+      const persistedCiCount = (ctx.feature.ciRemediationCount as number | undefined) ?? 0;
+      const persistedReviewCount =
+        (ctx.feature.reviewRemediationCount as number | undefined) ?? ctx.remediationAttempts;
+      const legacyCount = (ctx.feature.remediationCycleCount as number | undefined) ?? 0;
+
+      const ciEnforcer = new RemediationBudgetEnforcer(ciReactionSettings);
+      const ciBudgetResult = ciEnforcer.checkAndIncrement({
+        type: 'ci',
+        ciRemediationCount: persistedCiCount,
+        reviewRemediationCount: persistedReviewCount,
+        remediationCycleCount: legacyCount,
+        settings: ciReactionSettings,
+      });
+
+      if (!ciBudgetResult.allowed) {
+        ctx.escalationReason = ciBudgetResult.message;
+        return {
+          nextState: 'ESCALATE',
+          shouldContinue: true,
+          reason: ctx.escalationReason,
+        };
+      }
+
+      // Check iteration budget
+      const ciTrackedPR = this.getTrackedPR(ctx);
+      if (ciTrackedPR && ciTrackedPR.iterationCount >= MAX_PR_ITERATIONS) {
+        ctx.escalationReason = `Max PR iterations exceeded (${MAX_PR_ITERATIONS})`;
+        return {
+          nextState: 'ESCALATE',
+          shouldContinue: true,
+          reason: ctx.escalationReason,
+        };
+      }
+
+      // Fetch failing CI check names for remediation context
+      let ciFailureNames: string[] = [];
+      try {
+        const { stdout } = await execAsync(
+          `gh pr view ${ctx.prNumber} --json statusCheckRollup --jq '[(.statusCheckRollup // [])[] | select(.conclusion == "FAILURE") | .context] | join(", ")'`,
+          { cwd: ctx.projectPath, timeout: 15000 }
+        );
+        const names = stdout.trim();
+        if (names) {
+          ciFailureNames = names.split(', ').filter(Boolean);
+          ctx.reviewFeedback = `CI checks failed: ${names}`;
+          logger.info(`[REVIEW] CI check failures: ${names}`);
+        }
+      } catch (err) {
+        logger.warn('[REVIEW] Failed to fetch CI check failure names:', err);
+      }
+
+      ctx.remediationAttempts++;
+      return {
+        nextState: 'EXECUTE',
+        shouldContinue: true,
+        reason: `CI checks failed${ciFailureNames.length > 0 ? ': ' + ciFailureNames.join(', ') : ''}, remediating`,
+        context: { remediation: true, ciFailures: ciFailureNames },
+      };
+    }
+
     // CLI/API error — check if PR is already merged before escalating.
     // Merged PRs can return 'error' review state when the GitHub API returns
     // unclear status on closed PRs. The merged check in getPRReviewState handles
@@ -688,6 +771,18 @@ export class ReviewProcessor implements StateProcessor {
           prNumber: ctx.prNumber,
           softChecks: softCheckFailures.map((c) => `${c.name}=${c.conclusion}`),
         });
+      }
+
+      // Check for hard CI failures before evaluating approval.
+      // Any CI check (non-CodeRabbit, non-soft) with conclusion FAILURE triggers
+      // a transition back to EXECUTE so the agent can fix the issue.
+      const ciFailures = ciChecks.filter((c) => c.conclusion === 'FAILURE');
+      if (ciFailures.length > 0) {
+        logger.info(`[REVIEW] CI check(s) failed — transitioning to ci_failed`, {
+          prNumber: ctx.prNumber,
+          ciFailures: ciFailures.map((c) => `${c.name}=${c.conclusion}`),
+        });
+        return 'ci_failed';
       }
 
       // Require at least one human APPROVED review — CI passing alone is not sufficient.
