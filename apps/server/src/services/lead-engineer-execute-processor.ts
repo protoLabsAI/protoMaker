@@ -390,7 +390,12 @@ export class ExecuteProcessor implements StateProcessor {
             )
           : [];
 
-        ftsResults = results.map((r) => r.chunk.content);
+        const PER_CHUNK_MAX_CHARS = 3_000;
+        ftsResults = results.map((r) =>
+          r.chunk.content.length > PER_CHUNK_MAX_CHARS
+            ? r.chunk.content.slice(0, PER_CHUNK_MAX_CHARS) + '\n...[truncated]'
+            : r.chunk.content
+        );
         if (ftsResults.length > 0) {
           ctx.siblingReflections = ftsResults;
           logger.info(`[EXECUTE] Loaded ${ftsResults.length} relevant reflections via FTS5 search`);
@@ -1711,8 +1716,17 @@ export class ExecuteProcessor implements StateProcessor {
         contextParts.push(ctx.projectKnowledge);
       }
       if (ctx.siblingReflections && ctx.siblingReflections.length > 0) {
+        const REFLECTION_BUDGET_CHARS = 12_000;
+        let budget = REFLECTION_BUDGET_CHARS;
+        const capped: string[] = [];
+        for (const r of ctx.siblingReflections) {
+          if (budget <= 0) break;
+          const slice = r.slice(0, Math.min(r.length, budget));
+          capped.push(slice);
+          budget -= slice.length;
+        }
         contextParts.push(
-          `## Learnings from Prior Features\n\nApply relevant lessons:\n\n${ctx.siblingReflections.join('\n\n---\n\n')}`
+          `## Learnings from Prior Features\n\nApply relevant lessons:\n\n${capped.join('\n\n---\n\n')}`
         );
       }
 

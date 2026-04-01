@@ -259,7 +259,8 @@ describe('ReviewProcessor', () => {
       expect(result.reason).toMatch(/budget exhausted/i);
     });
 
-    it('does NOT treat CodeRabbit failures as CI failures', { timeout: 35_000 }, async () => {
+    it('does NOT treat CodeRabbit failures as CI failures', async () => {
+      vi.useFakeTimers();
       mockExec.mockReset();
       mockExec
         // Call 1: normalizePR fails
@@ -283,10 +284,15 @@ describe('ReviewProcessor', () => {
         .mockImplementation(execSuccess({ stdout: '{}', stderr: '' }));
 
       const ctx = makeCtx({ feature: makeFeature() as any });
-      const result = await processor.process(ctx);
+      // Start processing — hits 'pending' path which sleeps for REVIEW_POLL_DELAY_MS (30s)
+      const resultPromise = processor.process(ctx);
+      // Advance fake timers past the 30s poll delay so the promise resolves instantly
+      await vi.advanceTimersByTimeAsync(30_000);
+      const result = await resultPromise;
 
       // CodeRabbit failures should be treated as transient — stay in REVIEW (pending)
       expect(result.nextState).toBe('REVIEW');
+      vi.useRealTimers();
     });
   });
 });
