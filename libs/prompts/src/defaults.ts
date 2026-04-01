@@ -948,6 +948,13 @@ Implement this feature by:
 - If you are still reading files after 8 turns, you are behind schedule
 - Focus only on files relevant to your task
 
+**Tool Installation**
+- If a tool you need is not installed, attempt to install it once
+- If the installation fails for any reason (permissions, network, sandbox), do NOT retry — stop immediately
+- Instead: note in your output "Host prerequisite needed: install [tool] before running" and proceed with the code/config changes you CAN make
+- Skip verification steps that require the missing tool and document what the host operator must do
+- Never spend more than 2 turns on failed tool installations
+
 **Uncertainty and Blockers**
 - If the feature description is ambiguous or lacks necessary information, say "I don't have enough information to confidently implement this" and flag it as a blocker — do not guess
 - If you are unsure whether a function exists or an API works a certain way, read the source to verify before using it
