@@ -1,9 +1,7 @@
 name: Regenerate Site Data
 
 on:
-  schedule:
-    - cron: '0 6 * * *' # Daily at 6am UTC
-  workflow_dispatch: {} # Manual trigger
+  workflow_dispatch: {} # Manual trigger only — cron disabled 2026-04-01
 
 jobs:
   regenerate:
