@@ -437,7 +437,7 @@ async function main() {
 
     const result = await createFeature(apiUrl, apiKey, projectPath, pattern);
     if (result) {
-      process.stdout.write(
+      process.stderr.write(
         `[session-eval] Created: ${pattern.title} (${pattern.type}, confidence=${pattern.confidence.toFixed(2)})\n`
       );
     }
