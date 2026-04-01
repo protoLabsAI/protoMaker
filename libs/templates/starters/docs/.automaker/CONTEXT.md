@@ -20,6 +20,7 @@ public/            ← Static assets (images, favicons)
 ## Routing
 
 VitePress generates routes from the file tree:
+
 - `index.md` → `/`
 - `getting-started/quick-start.md` → `/getting-started/quick-start`
 - `guides/add-a-page.md` → `/guides/add-a-page`
@@ -64,14 +65,14 @@ Theme customization lives in `.vitepress/theme/custom.css`. Override VitePress C
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start local dev server |
-| `npm run build` | Build production site to `.vitepress/dist/` |
-| `npm run preview` | Preview the production build |
-| `npm run format` | Format all files with Prettier |
-| `npm run format:check` | Check formatting (used in CI) |
-| `npm run lint:md` | Lint markdown content with markdownlint-cli2 |
+| Command                | Description                                  |
+| ---------------------- | -------------------------------------------- |
+| `npm run dev`          | Start local dev server                       |
+| `npm run build`        | Build production site to `.vitepress/dist/`  |
+| `npm run preview`      | Preview the production build                 |
+| `npm run format`       | Format all files with Prettier               |
+| `npm run format:check` | Check formatting (used in CI)                |
+| `npm run lint:md`      | Lint markdown content with markdownlint-cli2 |
 
 ## CI/CD
 

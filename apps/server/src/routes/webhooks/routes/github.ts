@@ -276,7 +276,11 @@ async function handleGlobalCheckRunEvent(
   logger.debug(`[global] Processed check_run ${check_run.id} (${check_run.name})`);
 }
 
-export function createGitHubWebhookHandler(events: EventEmitter, settingsService: SettingsService, topicBus?: TopicBus) {
+export function createGitHubWebhookHandler(
+  events: EventEmitter,
+  settingsService: SettingsService,
+  topicBus?: TopicBus
+) {
   const featureLoader = new FeatureLoader();
   const stagingPromotionService = new StagingPromotionService();
 
@@ -330,7 +334,11 @@ export function createGitHubWebhookHandler(events: EventEmitter, settingsService
 
       // Handle check_suite events — CI failure routing
       if (eventType === 'check_suite') {
-        await handleGlobalCheckSuiteEvent(req.body as GitHubCheckSuiteWebhookPayload, events, topicBus);
+        await handleGlobalCheckSuiteEvent(
+          req.body as GitHubCheckSuiteWebhookPayload,
+          events,
+          topicBus
+        );
         res.json({ success: true, message: 'check_suite event processed' });
         return;
       }

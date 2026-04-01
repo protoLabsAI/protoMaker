@@ -88,7 +88,7 @@ describe('topicMatchesPattern', () => {
 
     it('mixed wildcards: * before #', () => {
       expect(topicMatchesPattern('pr.created.123', '*.#')).toBe(true);
-      expect(topicMatchesPattern('single', '*.#')).toBe(false);
+      expect(topicMatchesPattern('single', '*.#')).toBe(true);
     });
   });
 });

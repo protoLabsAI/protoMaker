@@ -6,11 +6,11 @@ This guide shows you how to add a new page to your documentation site.
 
 Every page is a `.md` file. The directory path maps directly to the URL:
 
-| File path                   | URL                   |
-| --------------------------- | --------------------- |
-| `guides/add-a-page.md`     | `/guides/add-a-page`  |
-| `reference/configuration.md`| `/reference/configuration` |
-| `index.md`                  | `/`                   |
+| File path                    | URL                        |
+| ---------------------------- | -------------------------- |
+| `guides/add-a-page.md`       | `/guides/add-a-page`       |
+| `reference/configuration.md` | `/reference/configuration` |
+| `index.md`                   | `/`                        |
 
 To add a page under **How-to Guides**, create `guides/my-task.md`.
 
