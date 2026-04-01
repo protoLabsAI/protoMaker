@@ -106,7 +106,7 @@ const SUPERVISOR_CHECK_MS = 30 * 1000;
 const PR_MERGE_POLL_MS = 2.5 * 60 * 1000;
 
 /** Maximum cost cap for a single LLM reasoning invocation */
-const MAX_REASONING_COST_USD = 0.50;
+const MAX_REASONING_COST_USD = 0.5;
 /** Timeout for LLM reasoning path in milliseconds */
 const REASONING_TIMEOUT_MS = 60_000;
 // Haiku 4.5 pricing: $0.25/1M input + $1.25/1M output tokens (~4 chars/token avg)
@@ -1184,10 +1184,10 @@ export class LeadEngineerService {
     clearTimeout(timeoutId);
 
     if (!decision) {
-      logger.warn(
-        '[Reasoning] Could not produce valid decision after retry — escalating',
-        { eventType, featureId }
-      );
+      logger.warn('[Reasoning] Could not produce valid decision after retry — escalating', {
+        eventType,
+        featureId,
+      });
       this.emitReasoningEscalation(
         session,
         eventType,
@@ -1220,9 +1220,11 @@ export class LeadEngineerService {
 
     const executor = this.getActionExecutor(undefined, session.projectPath);
     for (const action of actions) {
-      await executor.executeAction(session, action).catch((actionErr) =>
-        logger.error(`[Reasoning] Action execution failed (${action.type}):`, actionErr)
-      );
+      await executor
+        .executeAction(session, action)
+        .catch((actionErr) =>
+          logger.error(`[Reasoning] Action execution failed (${action.type}):`, actionErr)
+        );
     }
   }
 }
@@ -1343,8 +1345,7 @@ function convertDecisionToActions(
         type: 'reset_feature',
         featureId: targetFeatureId,
         reason:
-          decision.reason ??
-          `Reasoning path: ${decision.reasoning ?? 'LLM decided to retry'}`,
+          decision.reason ?? `Reasoning path: ${decision.reasoning ?? 'LLM decided to retry'}`,
       });
       break;
 

@@ -1153,12 +1153,9 @@ describe('Two-tier rule routing', () => {
       maxConcurrency: 2,
     };
 
-    const actions = evaluateRules(
-      MECHANICAL_RULES,
-      worldState as any,
-      'feature:pr-merged',
-      { featureId: 'feat-merged' }
-    );
+    const actions = evaluateRules(MECHANICAL_RULES, worldState as any, 'feature:pr-merged', {
+      featureId: 'feat-merged',
+    });
 
     expect(actions.some((a) => a.type === 'move_feature')).toBe(true);
   });

@@ -1105,15 +1105,16 @@ describe('MECHANICAL_RULES evaluation', () => {
       },
     });
 
-    const actions = evaluateRules(
-      MECHANICAL_RULES,
-      ws,
-      'feature:pr-merged',
-      { featureId: 'feat-1' }
-    );
+    const actions = evaluateRules(MECHANICAL_RULES, ws, 'feature:pr-merged', {
+      featureId: 'feat-1',
+    });
 
     expect(actions).toHaveLength(1);
-    expect(actions[0]).toMatchObject({ type: 'move_feature', featureId: 'feat-1', toStatus: 'done' });
+    expect(actions[0]).toMatchObject({
+      type: 'move_feature',
+      featureId: 'feat-1',
+      toStatus: 'done',
+    });
   });
 
   it('staleDeps fires through MECHANICAL_RULES', () => {
@@ -1128,14 +1129,13 @@ describe('MECHANICAL_RULES evaluation', () => {
       },
     });
 
-    const actions = evaluateRules(
-      MECHANICAL_RULES,
-      ws,
-      'feature:status-changed',
-      { featureId: 'dep-1' }
-    );
+    const actions = evaluateRules(MECHANICAL_RULES, ws, 'feature:status-changed', {
+      featureId: 'dep-1',
+    });
 
-    expect(actions.some((a) => a.type === 'unblock_feature' && a.featureId === 'feat-blocked')).toBe(true);
+    expect(
+      actions.some((a) => a.type === 'unblock_feature' && a.featureId === 'feat-blocked')
+    ).toBe(true);
   });
 
   it('classifiedRecovery does NOT fire through MECHANICAL_RULES', () => {
@@ -1157,22 +1157,21 @@ describe('MECHANICAL_RULES evaluation', () => {
       },
     };
 
-    const actions = evaluateRules(
-      MECHANICAL_RULES,
-      ws,
-      'escalation:signal-received',
-      payload
-    );
+    const actions = evaluateRules(MECHANICAL_RULES, ws, 'escalation:signal-received', payload);
 
     // classifiedRecovery is the only rule with this trigger, and it's reasoning — so no actions
     expect(actions).toHaveLength(0);
   });
 
   it('escalation:signal-received IS a trigger in REASONING_RULES', () => {
-    expect(REASONING_RULES.some((r) => r.triggers.includes('escalation:signal-received'))).toBe(true);
+    expect(REASONING_RULES.some((r) => r.triggers.includes('escalation:signal-received'))).toBe(
+      true
+    );
   });
 
   it('escalation:signal-received is NOT a trigger in MECHANICAL_RULES', () => {
-    expect(MECHANICAL_RULES.some((r) => r.triggers.includes('escalation:signal-received'))).toBe(false);
+    expect(MECHANICAL_RULES.some((r) => r.triggers.includes('escalation:signal-received'))).toBe(
+      false
+    );
   });
 });
