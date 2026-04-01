@@ -41,6 +41,7 @@ export const mergedNotDone: LeadFastPathRule = {
   name: 'mergedNotDone',
   description: 'Feature in review with merged PR → move to done',
   triggers: ['feature:pr-merged', 'feature:status-changed'],
+  ruleType: 'mechanical',
 
   evaluate(worldState, _eventType, payload): LeadRuleAction[] {
     const feature = featureFromPayload(worldState, payload);
@@ -60,6 +61,7 @@ export const orphanedInProgress: LeadFastPathRule = {
   name: 'orphanedInProgress',
   description: 'In-progress >4h with no running agent → reset to backlog',
   triggers: ['feature:error', 'feature:stopped', 'lead-engineer:rule-evaluated'],
+  ruleType: 'mechanical',
 
   evaluate(worldState, _eventType, payload): LeadRuleAction[] {
     const actions: LeadRuleAction[] = [];
@@ -113,6 +115,7 @@ export const staleDeps: LeadFastPathRule = {
   name: 'staleDeps',
   description: 'Blocked + all deps done → unblock',
   triggers: ['feature:status-changed'],
+  ruleType: 'mechanical',
 
   evaluate(worldState, _eventType, payload): LeadRuleAction[] {
     const actions: LeadRuleAction[] = [];
@@ -174,6 +177,7 @@ export const autoModeHealth: LeadFastPathRule = {
   name: 'autoModeHealth',
   description: 'Backlog >0 + auto-mode not running → restart auto-mode',
   triggers: ['auto-mode:stopped', 'auto-mode:idle'],
+  ruleType: 'mechanical',
 
   evaluate(worldState): LeadRuleAction[] {
     // Debounce: don't restart if recently restarted (5-minute window)
@@ -204,6 +208,7 @@ export const staleReview: LeadFastPathRule = {
   name: 'staleReview',
   description: 'In review >30min + no auto-merge → enable auto-merge',
   triggers: ['feature:status-changed', 'lead-engineer:rule-evaluated'],
+  ruleType: 'mechanical',
 
   evaluate(worldState, _eventType, payload): LeadRuleAction[] {
     const actions: LeadRuleAction[] = [];
@@ -244,6 +249,7 @@ export const stuckAgent: LeadFastPathRule = {
   name: 'stuckAgent',
   description: 'Agent running >2h → abort and resume with wrap-up guidance',
   triggers: ['lead-engineer:rule-evaluated'],
+  ruleType: 'mechanical',
 
   evaluate(worldState): LeadRuleAction[] {
     const actions: LeadRuleAction[] = [];
@@ -272,6 +278,7 @@ export const capacityRestart: LeadFastPathRule = {
   name: 'capacityRestart',
   description: 'Agents < max + backlog > 0 + auto-mode stopped → restart',
   triggers: ['feature:completed', 'feature:pr-merged'],
+  ruleType: 'mechanical',
 
   evaluate(worldState): LeadRuleAction[] {
     // Debounce: don't restart if recently restarted (5-minute window)
@@ -305,6 +312,7 @@ export const projectCompleting: LeadFastPathRule = {
   name: 'projectCompleting',
   description: 'All features done → trigger project completion',
   triggers: ['project:completed'],
+  ruleType: 'mechanical',
 
   evaluate(worldState): LeadRuleAction[] {
     const total = worldState.metrics.totalFeatures;
@@ -323,6 +331,7 @@ export const prApproved: LeadFastPathRule = {
   name: 'prApproved',
   description: 'PR approved → enable auto-merge + resolve unresolved threads',
   triggers: ['pr:approved', 'github:pr:approved'],
+  ruleType: 'mechanical',
 
   evaluate(worldState, _eventType, payload): LeadRuleAction[] {
     const actions: LeadRuleAction[] = [];
@@ -361,6 +370,7 @@ export const threadsBlocking: LeadFastPathRule = {
   name: 'threadsBlocking',
   description: 'Merge blocked by critical threads → resolve directly',
   triggers: ['pr:merge-blocked-critical-threads'],
+  ruleType: 'mechanical',
 
   evaluate(worldState, _eventType, payload): LeadRuleAction[] {
     const feature = featureFromPayload(worldState, payload);
@@ -384,6 +394,7 @@ export const remediationStalled: LeadFastPathRule = {
   name: 'remediationStalled',
   description: 'Remediation in-progress >1h → reset to backlog',
   triggers: ['lead-engineer:rule-evaluated'],
+  ruleType: 'mechanical',
 
   evaluate(worldState): LeadRuleAction[] {
     const actions: LeadRuleAction[] = [];
@@ -421,6 +432,7 @@ export const classifiedRecovery: LeadFastPathRule = {
   name: 'classifiedRecovery',
   description: 'Escalated feature with retryable failure → auto-retry',
   triggers: ['escalation:signal-received'],
+  ruleType: 'reasoning',
 
   evaluate(worldState, _eventType, payload): LeadRuleAction[] {
     const event = payload as Record<string, unknown> | null;
@@ -482,6 +494,7 @@ export const hitlFormResponse: LeadFastPathRule = {
   name: 'hitlFormResponse',
   description: 'HITL form response from lead_engineer caller → retry/provide_context/skip/close',
   triggers: ['lead-engineer:hitl-response'],
+  ruleType: 'mechanical',
 
   evaluate(worldState, _eventType, payload): LeadRuleAction[] {
     const event = payload as Record<string, unknown> | null;
@@ -571,6 +584,7 @@ export const missingCIChecks: LeadFastPathRule = {
   description:
     'PR waiting >30min for required CI checks that never registered → log diagnostic warning',
   triggers: ['pr:missing-ci-checks'],
+  ruleType: 'mechanical',
 
   evaluate(_worldState, _eventType, payload): LeadRuleAction[] {
     const event = payload as Record<string, unknown> | null;
@@ -619,6 +633,7 @@ export const errorBudgetExhausted: LeadFastPathRule = {
     'pr:remediation-started',
     'lead-engineer:rule-evaluated',
   ],
+  ruleType: 'mechanical',
 
   evaluate(worldState): LeadRuleAction[] {
     if (!worldState.errorBudgetExhausted) return [];
@@ -696,6 +711,7 @@ export const reviewQueueSaturated: LeadFastPathRule = {
   description:
     'Review queue depth >= maxPendingReviews → log saturation (pickup paused by scheduler)',
   triggers: ['feature:status-changed', 'feature:pr-merged', 'lead-engineer:rule-evaluated'],
+  ruleType: 'mechanical',
 
   evaluate(worldState, _eventType, _payload): LeadRuleAction[] {
     const reviewCount = Object.values(worldState.features).filter(
@@ -760,3 +776,13 @@ export function evaluateRules(
   }
   return actions;
 }
+
+/** Fast-path rules that execute deterministically with no LLM invocation */
+export const MECHANICAL_RULES: LeadFastPathRule[] = DEFAULT_RULES.filter(
+  (r) => r.ruleType === 'mechanical'
+);
+
+/** Rules for ambiguous signals — removed from the fast-path engine and handled by the LLM reasoning path */
+export const REASONING_RULES: LeadFastPathRule[] = DEFAULT_RULES.filter(
+  (r) => r.ruleType === 'reasoning'
+);

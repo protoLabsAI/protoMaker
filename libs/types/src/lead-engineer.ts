@@ -256,6 +256,14 @@ export interface LeadFastPathRule {
   description: string;
   /** Event types that trigger this rule */
   triggers: string[];
+  /**
+   * Classification that controls how this rule is evaluated:
+   * - `mechanical`: deterministic, zero-ambiguity, no LLM invocation.
+   *   Runs instantly in the fast-path engine on every matching event.
+   * - `reasoning`: ambiguous signal that requires judgment. Removed from the
+   *   fast-path engine and routed through the LLM reasoning path instead.
+   */
+  ruleType: 'mechanical' | 'reasoning';
   /** Pure function: given world state + event, return actions (or empty array) */
   evaluate: (
     worldState: LeadWorldState,
