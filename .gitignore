@@ -132,9 +132,19 @@ labs/
 # Ava local workspace
 .ava/
 
+# Ava Desktop — Tauri build artifacts
+apps/desktop/src-tauri/target/
+
+# Root-level ephemeral files (reports, research outputs, local planning)
+/protoLabs.report.html
+/research-*.json
+/spec.md
+
 # Gource visualization (render locally, don't commit)
 gource.mp4
 .gource/
 
 # Test fixture runtime artifacts
 test/fixtures/**/.automaker/
+# Worktree directories (managed by protoLabs Studio)
+.claude/worktrees/

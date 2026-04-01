@@ -23,12 +23,15 @@ export interface ChatOverlayContentProps {
   isModal?: boolean;
   /** Whether the panel is currently visible — gates keyboard shortcuts to prevent interference when hidden */
   isOpen?: boolean;
+  /** When true, adds extra padding for macOS overlay titlebar (traffic lights) */
+  nativeTitlebar?: boolean;
 }
 
 export function ChatOverlayContent({
   onHide,
   isModal = false,
   isOpen = true,
+  nativeTitlebar = false,
 }: ChatOverlayContentProps) {
   const currentProject = useAppStore((s) => s.currentProject);
 
@@ -111,7 +114,10 @@ export function ChatOverlayContent({
     <div data-slot="chat-overlay-content" className="flex h-full w-full flex-col overflow-hidden">
       {/* Header */}
       <div
-        className={cn('flex items-center justify-between border-b border-border px-3 py-2')}
+        className={cn(
+          'flex items-center justify-between border-b border-border px-3 py-2',
+          nativeTitlebar && 'pt-7 pl-20'
+        )}
         {...(!isModal && { 'data-tauri-drag-region': true })}
       >
         <div className={cn('flex items-center gap-2 min-w-0', !isModal && 'pointer-events-none')}>

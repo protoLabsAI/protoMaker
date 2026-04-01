@@ -12,7 +12,7 @@ export function ChatOverlayView() {
       data-slot="chat-overlay"
       className="flex h-screen w-screen flex-col bg-background overflow-hidden rounded-xl border border-border"
     >
-      <ChatOverlayContent onHide={() => {}} />
+      <ChatOverlayContent onHide={() => {}} nativeTitlebar />
     </div>
   );
 }

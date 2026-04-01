@@ -15,13 +15,14 @@
       {
         "label": "main",
         "title": "Ava",
-        "url": "http://localhost:3007",
+        "url": "http://localhost:3007/chat-overlay",
         "width": 440,
         "height": 720,
         "minWidth": 360,
         "minHeight": 500,
-        "decorations": true,
-        "transparent": false,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "backgroundColor": "#1c1c22",
         "alwaysOnTop": true,
         "skipTaskbar": false,
         "visible": true,
@@ -30,7 +31,7 @@
       }
     ],
     "trayIcon": {
-      "iconPath": "icons/icon.png",
+      "iconPath": "icons/tray-icon.png",
       "iconAsTemplate": true,
       "tooltip": "Ava"
     },

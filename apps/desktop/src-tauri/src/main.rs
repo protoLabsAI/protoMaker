@@ -19,6 +19,9 @@ fn toggle_window(app: &tauri::AppHandle) {
         if window.is_visible().unwrap_or(false) {
             let _ = window.hide();
         } else {
+            // Activate the app process first — required on macOS when the app
+            // is in the background, otherwise show()+set_focus() silently no-op.
+            let _ = app.show();
             let _ = window.show();
             let _ = window.set_focus();
         }
@@ -46,6 +49,7 @@ fn main() {
 
             TrayIconBuilder::new()
                 .menu(&menu)
+                .show_menu_on_left_click(false)
                 .tooltip("Ava")
                 .on_menu_event(|app, event| match event.id().as_ref() {
                     "show_hide" => toggle_window(app),
@@ -55,7 +59,12 @@ fn main() {
                     _ => {}
                 })
                 .on_tray_icon_event(|tray, event| {
-                    if let tauri::tray::TrayIconEvent::Click { .. } = event {
+                    // Left-click toggles window; right-click falls through to show the menu
+                    if let tauri::tray::TrayIconEvent::Click {
+                        button: tauri::tray::MouseButton::Left,
+                        ..
+                    } = event
+                    {
                         toggle_window(tray.app_handle());
                     }
                 })
