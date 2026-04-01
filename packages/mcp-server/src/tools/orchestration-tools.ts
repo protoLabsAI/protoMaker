@@ -69,12 +69,6 @@ export const orchestrationTools: Tool[] = [
           type: 'string',
           description: 'Optional branch/worktree name to run auto-mode on',
         },
-        forceStart: {
-          type: 'boolean',
-          description:
-            'Bypass data integrity check. Use when feature count dropped intentionally (e.g., cleanup).',
-          default: false,
-        },
       },
       required: ['projectPath'],
     },

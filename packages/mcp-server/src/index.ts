@@ -544,7 +544,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectPath: args.projectPath,
         maxConcurrency: args.maxConcurrency || 1,
         branchName: args.branchName || null,
-        forceStart: args.forceStart || false,
       });
 
     case 'stop_auto_mode':

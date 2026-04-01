@@ -805,29 +805,13 @@ export class AutoModeService {
    * Start the auto mode loop for a specific project/worktree (supports multiple concurrent projects and worktrees)
    * @param projectPath - The project to start auto mode for
    * @param branchName - The branch name for worktree scoping, null for main worktree
-   * @param forceStart - Skip data integrity check (default: false)
    */
   async startAutoLoopForProject(
     projectPath: string,
     branchName: string | null = null,
-    forceStart: boolean = false,
+    _forceStart: boolean = false,
     maxConcurrencyOverride?: number
   ): Promise<number> {
-    // Check data integrity before starting (unless force-start is enabled)
-    if (this.integrityWatchdogService) {
-      const canStart = await this.integrityWatchdogService.canStartAutoMode(
-        projectPath,
-        forceStart
-      );
-
-      if (!canStart) {
-        const status = await this.integrityWatchdogService.getStatus(projectPath);
-        throw new Error(
-          `Auto-mode blocked due to data integrity breach. Feature count dropped from ${status.lastKnownCount} to ${status.currentCount}. Use force-start flag to bypass.`
-        );
-      }
-    }
-
     // Compute key early so we can synchronously claim it before any await.
     // This prevents the TOCTOU race where concurrent callers all pass the
     // isRunning check before coordinator.startLoop() sets isRunning = true.
