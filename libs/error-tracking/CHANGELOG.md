@@ -1,5 +1,13 @@
 # @protolabsai/error-tracking
 
+## 0.53.42
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.95.0
+  - @protolabsai/utils@0.95.0
+
 ## 0.53.41
 
 ### Patch Changes
