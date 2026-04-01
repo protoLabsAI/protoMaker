@@ -221,7 +221,6 @@ import { utilityTools } from './tools/utility-tools.js';
 import { schedulerTools } from './tools/scheduler-tools.js';
 import { quarantineTools } from './tools/quarantine-tools.js';
 import { gitOpsTools } from './tools/git-ops-tools.js';
-import { promotionTools } from './tools/promotion-tools.js';
 import { leadEngineerTools } from './tools/lead-engineer-tools.js';
 import { knowledgeTools } from './tools/knowledge-tools.js';
 import { qaTools } from './tools/qa-tools.js';
@@ -244,7 +243,6 @@ const tools: Tool[] = [
   ...utilityTools,
   ...schedulerTools,
   ...quarantineTools,
-  ...promotionTools,
   ...leadEngineerTools,
   ...knowledgeTools,
   ...qaTools,
@@ -1347,36 +1345,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
 
       return { success: true, ...results };
     }
-
-    // Promotion Pipeline
-    case 'list_staging_candidates':
-      return apiCall(
-        '/promotions/candidates',
-        { projectPath: args.projectPath, status: args.status },
-        'GET'
-      );
-
-    case 'create_promotion_batch':
-      return apiCall('/promotions/batch', {
-        projectPath: args.projectPath,
-        candidateIds: args.candidateIds,
-        batchId: args.batchId,
-      });
-
-    case 'promote_to_staging':
-      return apiCall('/promotions/promote-to-staging', {
-        projectPath: args.projectPath,
-        batchId: args.batchId,
-      });
-
-    case 'promote_to_main':
-      return apiCall('/promotions/promote-to-main', {
-        projectPath: args.projectPath,
-        batchId: args.batchId,
-      });
-
-    case 'list_promotion_batches':
-      return apiCall('/promotions/batches', {}, 'GET');
 
     // Lead Engineer Handoffs
     case 'get_feature_handoff':
