@@ -13,9 +13,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock child_process.exec before imports so all execAsync calls are intercepted
 const { mockExec } = vi.hoisted(() => ({ mockExec: vi.fn() }));
-vi.mock('child_process', () => ({
-  exec: mockExec,
-}));
+vi.mock('child_process', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('child_process')>();
+  return {
+    ...actual,
+    exec: mockExec,
+  };
+});
 vi.mock('util', async (importOriginal) => {
   const actual = await importOriginal<typeof import('util')>();
   return {
