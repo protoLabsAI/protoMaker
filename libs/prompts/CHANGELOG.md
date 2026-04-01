@@ -1,5 +1,16 @@
 # @protolabsai/prompts
 
+## 0.93.1
+
+### Patch Changes
+
+- ### Bug Fixes
+  - route evaluate-session.js output to stderr to avoid JSON parse error
+  - update Stop hook prompt with Automaker execution model context
+- Updated dependencies
+  - @protolabsai/types@0.93.1
+  - @protolabsai/utils@0.93.1
+
 ## 0.93.0
 
 ### Minor Changes
