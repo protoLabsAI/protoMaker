@@ -51,8 +51,14 @@ import { createReportHandler } from './routes/report.js';
 import { createOpenReportHandler } from './routes/open-report.js';
 import { createDeliverHandler } from './routes/deliver.js';
 import type { SettingsService } from '../../services/settings-service.js';
+import type { FeatureLoader } from '../../services/feature-loader.js';
+import type { EventEmitter } from '../../lib/events.js';
 
-export function createSetupRoutes(settingsService: SettingsService): Router {
+export function createSetupRoutes(
+  settingsService: SettingsService,
+  featureLoader?: FeatureLoader,
+  events?: EventEmitter
+): Router {
   const router = Router();
 
   router.get('/claude-status', createClaudeStatusHandler());
@@ -106,7 +112,7 @@ export function createSetupRoutes(settingsService: SettingsService): Router {
   // Setup pipeline routes
   router.post('/research', createResearchHandler());
   router.post('/gap-analysis', createGapAnalysisHandler());
-  router.post('/propose', createProposeHandler());
+  router.post('/propose', createProposeHandler(featureLoader, events));
   router.post('/report', createReportHandler());
   router.post('/open-report', createOpenReportHandler());
   router.post('/discord-provision', createDiscordProvisionHandler());
