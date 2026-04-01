@@ -16,6 +16,7 @@ import type { WebhookSecrets } from '../../../lib/webhook-signature.js';
 
 const execAsync = promisify(exec);
 import type { EventEmitter } from '../../../lib/events.js';
+import type { TopicBus } from '../../../lib/topic-bus.js';
 import type { SettingsService } from '../../../services/settings-service.js';
 import { FeatureLoader } from '../../../services/feature-loader.js';
 import { StagingPromotionService } from '../../../services/staging-promotion-service.js';
@@ -190,7 +191,8 @@ async function findFeatureByBranch(
  */
 async function handleGlobalCheckSuiteEvent(
   payload: GitHubCheckSuiteWebhookPayload,
-  events: EventEmitter
+  events: EventEmitter,
+  topicBus?: TopicBus
 ): Promise<void> {
   const { action, check_suite, repository } = payload;
 
@@ -227,6 +229,17 @@ async function handleGlobalCheckSuiteEvent(
       repository: repository.full_name,
       checksUrl: check_suite.check_runs_url,
     });
+
+    // Publish to TopicBus (hierarchical routing)
+    if (topicBus) {
+      topicBus.publish(`pr.checks.${pr.number}.ci-failure`, {
+        prNumber: pr.number,
+        headBranch: pr.head.ref,
+        headSha: check_suite.head_sha,
+        checkSuiteId: check_suite.id,
+        repository: repository.full_name,
+      });
+    }
   }
 }
 
@@ -263,7 +276,11 @@ async function handleGlobalCheckRunEvent(
   logger.debug(`[global] Processed check_run ${check_run.id} (${check_run.name})`);
 }
 
-export function createGitHubWebhookHandler(events: EventEmitter, settingsService: SettingsService) {
+export function createGitHubWebhookHandler(
+  events: EventEmitter,
+  settingsService: SettingsService,
+  topicBus?: TopicBus
+) {
   const featureLoader = new FeatureLoader();
   const stagingPromotionService = new StagingPromotionService();
 
@@ -317,7 +334,11 @@ export function createGitHubWebhookHandler(events: EventEmitter, settingsService
 
       // Handle check_suite events — CI failure routing
       if (eventType === 'check_suite') {
-        await handleGlobalCheckSuiteEvent(req.body as GitHubCheckSuiteWebhookPayload, events);
+        await handleGlobalCheckSuiteEvent(
+          req.body as GitHubCheckSuiteWebhookPayload,
+          events,
+          topicBus
+        );
         res.json({ success: true, message: 'check_suite event processed' });
         return;
       }
@@ -549,6 +570,19 @@ export function createGitHubWebhookHandler(events: EventEmitter, settingsService
           branchName,
           projectPath,
         });
+
+        // Publish to TopicBus (hierarchical routing)
+        if (topicBus) {
+          topicBus.publish(`pr.merged.${prNumber}`, {
+            featureId: feature.featureId,
+            title: feature.title,
+            prNumber,
+            prTitle,
+            branchName,
+            baseBranch,
+            projectPath,
+          });
+        }
       }
 
       // Dev-merge detection: create a staging promotion candidate when the PR

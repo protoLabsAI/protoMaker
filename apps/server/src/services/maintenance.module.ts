@@ -137,6 +137,11 @@ export function register(container: ServiceContainer): void {
   maintenanceOrchestrator.register(resourceUsageCheck);
   maintenanceOrchestrator.register(webhookHealthCheck);
 
+  // Wire TopicBus for hierarchical event routing of sweep results
+  if (container.topicBus) {
+    maintenanceOrchestrator.setTopicBus(container.topicBus);
+  }
+
   maintenanceOrchestrator.start(schedulerService, events, eventHistoryService, () => {
     const paths = new Set<string>();
     for (const p of autoModeService.getActiveAutoLoopProjects()) {

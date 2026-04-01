@@ -4,6 +4,7 @@
 
 import { Router } from 'express';
 import type { EventEmitter } from '../../lib/events.js';
+import type { TopicBus } from '../../lib/topic-bus.js';
 import type { SettingsService } from '../../services/settings-service.js';
 import { createRateLimiter } from '../../middleware/rate-limiter.js';
 import { createGitHubWebhookHandler } from './routes/github.js';
@@ -13,7 +14,8 @@ const webhookRateLimiter = createRateLimiter();
 
 export function createWebhooksRoutes(
   events: EventEmitter,
-  settingsService: SettingsService
+  settingsService: SettingsService,
+  topicBus?: TopicBus
 ): Router {
   const router = Router();
 
@@ -22,7 +24,7 @@ export function createWebhooksRoutes(
   router.post(
     '/github',
     webhookRateLimiter.middleware,
-    createGitHubWebhookHandler(events, settingsService)
+    createGitHubWebhookHandler(events, settingsService, topicBus)
   );
 
   return router;

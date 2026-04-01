@@ -23,7 +23,10 @@ vi.mock('node:child_process', async (importOriginal) => {
   return { ...actual, exec: mockExec };
 });
 
-import { MergeProcessor } from '../../../src/services/lead-engineer-review-merge-processors.js';
+import {
+  MergeProcessor,
+  ReviewProcessor,
+} from '../../../src/services/lead-engineer-review-merge-processors.js';
 import type {
   ProcessorServiceContext,
   StateContext,
@@ -48,8 +51,8 @@ function makeCtx(overrides: Partial<StateContext> = {}): StateContext {
   return {
     feature: makeFeature() as any,
     projectPath: '/test/project',
-    options: {},
     retryCount: 0,
+    infraRetryCount: 0,
     planRequired: false,
     remediationAttempts: 0,
     mergeRetryCount: 0,
@@ -66,7 +69,7 @@ function makeServiceContext(
     featureLoader: {
       update: vi.fn().mockResolvedValue(undefined),
       getAll: vi.fn(),
-      get: vi.fn(),
+      get: vi.fn().mockResolvedValue(undefined),
       findByTitle: vi.fn(),
       create: vi.fn(),
       delete: vi.fn(),
@@ -81,15 +84,40 @@ function makeServiceContext(
       on: vi.fn(),
     } as any,
     autoModeService: {} as any,
-    settingsService: {} as any,
+    settingsService: {
+      getGlobalSettings: vi.fn().mockResolvedValue({ gitWorkflow: { softChecks: [] } }),
+      getProjectSettings: vi.fn().mockResolvedValue({}),
+    } as any,
     projectService: {} as any,
     metricsService: {} as any,
-    prFeedbackService: { getTrackedPRs: vi.fn().mockReturnValue([]) } as any,
+    prFeedbackService: {
+      getTrackedPRs: vi.fn().mockReturnValue([]),
+      isFeatureRemediating: vi.fn().mockReturnValue(false),
+    } as any,
     ...overrides,
   };
 }
 
 // ── exec mock helper ─────────────────────────────────────────────────────────
+
+/**
+ * Creates a promisified exec mock implementation that calls cb(null, result).
+ */
+function execSuccess(result: { stdout: string; stderr: string }) {
+  return (
+    _cmd: string,
+    _opts: unknown,
+    cb: (err: null, result: { stdout: string; stderr: string }) => void
+  ) => {
+    cb(null, result);
+  };
+}
+
+function execFailure(err: Error) {
+  return (_cmd: string, _opts: unknown, cb: (err: Error) => void) => {
+    cb(err);
+  };
+}
 
 /**
  * Sets up the exec mock to simulate:
@@ -133,6 +161,135 @@ function setupExecMock(mergeResult: string) {
 }
 
 // ── tests ────────────────────────────────────────────────────────────────────
+
+// ── ReviewProcessor tests ────────────────────────────────────────────────────
+
+describe('ReviewProcessor', () => {
+  let serviceContext: ProcessorServiceContext;
+  let processor: ReviewProcessor;
+
+  beforeEach(() => {
+    mockExec.mockReset();
+    serviceContext = makeServiceContext();
+    processor = new ReviewProcessor(serviceContext);
+  });
+
+  describe('CI failure handling', () => {
+    /**
+     * Sets up exec mocks for the ReviewProcessor.process() call sequence when
+     * CI checks fail on the PR:
+     *
+     *   Call 1 — normalizePR: gh pr view body/autoMerge → fail (caught, returns early)
+     *   Call 2 — getPRReviewState merge check: PR is OPEN (not merged)
+     *   Call 3 — getPRReviewState main: decision=null, CI check FAILURE
+     *   Call 4 — ci_failed handler: fetch failing check names
+     */
+    function setupCiFailureExecMock(ciCheckName = 'CI / test') {
+      mockExec.mockReset();
+      mockExec
+        // Call 1: normalizePR fails → caught, returns early
+        .mockImplementationOnce(execFailure(new Error('normalizePR network error')))
+        // Call 2: merge check — PR is OPEN
+        .mockImplementationOnce(
+          execSuccess({ stdout: JSON.stringify({ state: 'OPEN', mergedAt: null }), stderr: '' })
+        )
+        // Call 3: main review state check — CI failure
+        .mockImplementationOnce(
+          execSuccess({
+            stdout: JSON.stringify({
+              decision: null,
+              checks: [{ name: ciCheckName, conclusion: 'FAILURE' }],
+              approvedCount: 0,
+            }),
+            stderr: '',
+          })
+        )
+        // Call 4: fetch CI failure names
+        .mockImplementationOnce(execSuccess({ stdout: ciCheckName, stderr: '' }));
+    }
+
+    it('transitions to EXECUTE when CI checks fail', async () => {
+      setupCiFailureExecMock('CI / build');
+      const ctx = makeCtx({ feature: makeFeature() as any });
+
+      const result = await processor.process(ctx);
+
+      expect(result.nextState).toBe('EXECUTE');
+      expect(result.shouldContinue).toBe(true);
+    });
+
+    it('includes failing check names in the transition reason', async () => {
+      setupCiFailureExecMock('CI / lint');
+      const ctx = makeCtx({ feature: makeFeature() as any });
+
+      const result = await processor.process(ctx);
+
+      expect(result.reason).toMatch(/CI\/lint|CI \/ lint/);
+    });
+
+    it('includes ciFailures in the transition context', async () => {
+      setupCiFailureExecMock('CI / test');
+      const ctx = makeCtx({ feature: makeFeature() as any });
+
+      const result = await processor.process(ctx);
+
+      expect((result.context as Record<string, unknown>)?.remediation).toBe(true);
+    });
+
+    it('increments remediationAttempts on CI failure', async () => {
+      setupCiFailureExecMock('CI / test');
+      const ctx = makeCtx({ feature: makeFeature() as any, remediationAttempts: 0 });
+
+      await processor.process(ctx);
+
+      expect(ctx.remediationAttempts).toBe(1);
+    });
+
+    it('escalates when CI remediation budget is exhausted', async () => {
+      setupCiFailureExecMock('CI / test');
+      // Exhaust the CI remediation budget (default maxCiRemediationCycles = 2)
+      const ctx = makeCtx({
+        feature: makeFeature({ ciRemediationCount: 2 }) as any,
+        remediationAttempts: 0,
+      });
+
+      const result = await processor.process(ctx);
+
+      expect(result.nextState).toBe('ESCALATE');
+      expect(result.reason).toMatch(/budget exhausted/i);
+    });
+
+    it('does NOT treat CodeRabbit failures as CI failures', { timeout: 35_000 }, async () => {
+      mockExec.mockReset();
+      mockExec
+        // Call 1: normalizePR fails
+        .mockImplementationOnce(execFailure(new Error('network')))
+        // Call 2: merge check
+        .mockImplementationOnce(
+          execSuccess({ stdout: JSON.stringify({ state: 'OPEN', mergedAt: null }), stderr: '' })
+        )
+        // Call 3: CodeRabbit fails, no human approval yet
+        .mockImplementationOnce(
+          execSuccess({
+            stdout: JSON.stringify({
+              decision: null,
+              checks: [{ name: 'coderabbit-review', conclusion: 'FAILURE' }],
+              approvedCount: 0,
+            }),
+            stderr: '',
+          })
+        )
+        // Fallback for any additional exec calls (e.g., CI detail queries)
+        .mockImplementation(execSuccess({ stdout: '{}', stderr: '' }));
+
+      const ctx = makeCtx({ feature: makeFeature() as any });
+      const result = await processor.process(ctx);
+
+      // CodeRabbit failures should be treated as transient — stay in REVIEW (pending)
+      expect(result.nextState).toBe('REVIEW');
+    });
+  });
+});
 
 describe('MergeProcessor', () => {
   let serviceContext: ProcessorServiceContext;

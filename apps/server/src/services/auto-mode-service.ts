@@ -79,6 +79,7 @@ import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import { randomUUID } from 'crypto';
 import path from 'path';
+import { generateCorrelationId } from '../lib/events.js';
 import * as secureFs from '../lib/secure-fs.js';
 import type { EventEmitter } from '../lib/events.js';
 import { TypedEventBus } from './auto-mode/typed-event-bus.js';
@@ -1338,6 +1339,17 @@ export class AutoModeService {
       this.concurrencyManager.release(featureId);
       throw new Error(`Feature ${featureId} is already running (runtime: ${runtime}s)`);
     }
+
+    // Set correlation context for this feature execution.
+    // Inherit from caller (e.g. LeadEngineerService) or start a new chain.
+    const existingCtx = this.events.getCorrelationContext();
+    const correlationId = existingCtx?.correlationId ?? generateCorrelationId();
+    this.events.setCorrelationContext({
+      correlationId,
+      causationId: existingCtx?.causationId,
+      source: 'auto-mode-service',
+    });
+
     try {
       return await this.executionService.executeFeature(
         projectPath,
@@ -1349,6 +1361,7 @@ export class AutoModeService {
       );
     } finally {
       this.concurrencyManager.release(featureId);
+      this.events.clearCorrelationContext();
     }
   }
 

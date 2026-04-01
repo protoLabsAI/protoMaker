@@ -171,6 +171,13 @@ export function createMockEventEmitter(
     on: vi.fn((_type: EventType, _cb: TypedEventCallback<EventType>) => {
       return makeUnsub(() => {});
     }),
+    broadcast: vi.fn((type: EventType, payload: unknown) => {
+      dispatch(type, payload);
+    }),
+    setRemoteBroadcaster: vi.fn(),
+    setCorrelationContext: vi.fn(),
+    getCorrelationContext: vi.fn().mockReturnValue(undefined),
+    clearCorrelationContext: vi.fn(),
     // _fire is an alias for dispatch — useful when you want to inject events
     // without adding a spy call to emit's history.
     _fire(type: EventType, payload: unknown) {

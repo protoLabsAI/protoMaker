@@ -12,10 +12,10 @@ export default defineConfig({
 });
 ```
 
-| Option        | Type     | Description                                                   |
-| ------------- | -------- | ------------------------------------------------------------- |
-| `title`       | `string` | Site name shown in the header and browser tab.                |
-| `description` | `string` | Default `<meta name="description">` for pages.               |
+| Option        | Type     | Description                                    |
+| ------------- | -------- | ---------------------------------------------- |
+| `title`       | `string` | Site name shown in the header and browser tab. |
+| `description` | `string` | Default `<meta name="description">` for pages. |
 
 ## Sidebar
 
