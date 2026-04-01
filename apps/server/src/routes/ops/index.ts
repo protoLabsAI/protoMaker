@@ -5,6 +5,7 @@
  * /api/ops/deliveries   - Webhook delivery tracking (list, detail, retry)
  * /api/ops/audit        - Tool execution audit log (recent entries with filtering)
  * /api/ops/concurrency  - Concurrency resolution overview (precedence chain + active loops)
+ * /api/ops/events       - Correlated event store (query, chain reconstruction)
  */
 
 import { Router } from 'express';
@@ -15,10 +16,12 @@ import type { EventRouterService } from '../../services/event-router-service.js'
 import type { AuditService } from '../../services/audit-service.js';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
 import type { SettingsService } from '../../services/settings-service.js';
+import type { EventStore } from '../../lib/event-store.js';
 import { createTimersRoutes } from './routes/timers.js';
 import { createDeliveriesRoutes } from './routes/deliveries.js';
 import { createAuditRoutes } from './routes/audit.js';
 import { createConcurrencyRoutes } from './routes/concurrency.js';
+import { createEventsRoutes } from './routes/events.js';
 
 export function createOpsRoutes(
   schedulerService: SchedulerService,
@@ -26,7 +29,8 @@ export function createOpsRoutes(
   eventRouterService: EventRouterService,
   auditService: AuditService,
   autoModeService: AutoModeService,
-  settingsService: SettingsService
+  settingsService: SettingsService,
+  eventStore: EventStore
 ): Router {
   const router = Router();
 
@@ -34,6 +38,7 @@ export function createOpsRoutes(
   router.use('/deliveries', createDeliveriesRoutes(eventRouterService));
   router.use('/audit', createAuditRoutes(auditService));
   router.use('/concurrency', createConcurrencyRoutes(autoModeService, settingsService));
+  router.use('/events', createEventsRoutes(eventStore));
 
   return router;
 }

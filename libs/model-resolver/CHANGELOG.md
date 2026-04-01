@@ -1,5 +1,23 @@
 # @protolabsai/model-resolver
 
+## 0.94.0
+
+### Minor Changes
+
+- ### Features
+  - merge correlation IDs event traceability into dev
+  - add correlation IDs to event bus for full event traceability
+
+  ### Bug Fixes
+  - increase CodeRabbit test timeout to accommodate 30s poll delay
+  - add fallback mock to prevent CodeRabbit test timeout
+  - add missing correlation context methods to mock events in tests
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.94.0
+
 ## 0.93.1
 
 ### Patch Changes

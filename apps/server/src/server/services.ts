@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { createLogger } from '@protolabsai/utils';
 import { loadProtoConfig } from '@protolabsai/platform';
 import { createEventEmitter, type EventEmitter } from '../lib/events.js';
+import { TopicBus } from '../lib/topic-bus.js';
 
 import { AgentService } from '../services/agent-service.js';
 import { FeatureLoader } from '../services/feature-loader.js';
@@ -119,6 +120,7 @@ import { DeviationRuleService } from '../services/deviation-rule-service.js';
 import { createDefaultProcessorRegistry } from '../services/processor-registry.js';
 import { WorkflowLoader } from '../services/workflow-loader.js';
 import { setToolExecutionLogger } from '../lib/sdk-options.js';
+import { EventStore } from '../lib/event-store.js';
 
 const logger = createLogger('Server:Services');
 
@@ -305,6 +307,12 @@ export interface ServiceContainer {
   // Deviation rule evaluation (agent scope constraints)
   deviationRuleService: DeviationRuleService;
 
+  // TopicBus (hierarchical pub/sub, coexists with EventEmitter)
+  topicBus: TopicBus;
+
+  // Correlated event store (in-memory ring buffer for event traceability)
+  eventStore: EventStore;
+
   // Drift detection interval (set by wireServices, cleared by shutdown)
   driftCheckInterval: ReturnType<typeof setInterval> | null;
 }
@@ -317,6 +325,26 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Create shared event emitter for streaming
   const events: EventEmitter = createEventEmitter();
 
+  // Create hierarchical topic bus (coexists with EventEmitter)
+  const topicBus = new TopicBus();
+
+  // Create correlated event store (in-memory ring buffer, 10k capacity)
+  const eventStore = new EventStore();
+
+  // Wire event emitter to auto-store all events as correlated events
+  events.subscribe((type, payload) => {
+    const ctx = events.getCorrelationContext();
+    const event = eventStore.createEvent(
+      type,
+      payload,
+      ctx?.source ?? 'unknown',
+      ctx
+        ? { correlationId: ctx.correlationId, causationId: ctx.causationId, source: ctx.source }
+        : undefined
+    );
+    eventStore.store(event);
+  });
+
   // Settings & identity (created first — injected into most other services)
   const settingsService = new SettingsService(dataDir);
   // Wire settingsService into the contentFlowService singleton for model resolution
@@ -325,6 +353,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Features are local to each instance — no CRDT sync.
   const featureLoader = new FeatureLoader();
   featureLoader.setEventEmitter(events);
+  featureLoader.setTopicBus(topicBus);
 
   // Trust Tier Service for quarantine pipeline
   const trustTierService = new TrustTierService(dataDir);
@@ -922,6 +951,8 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     checkpointService,
     projectSlugResolver,
     deviationRuleService,
+    topicBus,
+    eventStore,
     driftCheckInterval: null,
   };
 }

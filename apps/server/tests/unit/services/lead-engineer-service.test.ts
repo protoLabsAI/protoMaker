@@ -1100,3 +1100,80 @@ describe('FeatureStateMachine — pipeline state transitions', () => {
     );
   });
 });
+
+// ────────────────────────── Two-Tier Rule Routing Tests ──────────────────────────
+
+describe('Two-tier rule routing', () => {
+  it('MECHANICAL_RULES do not include classifiedRecovery', async () => {
+    const { MECHANICAL_RULES } = await import('@/services/lead-engineer-rules.js');
+    expect(MECHANICAL_RULES.some((r) => r.name === 'classifiedRecovery')).toBe(false);
+  });
+
+  it('REASONING_RULES include classifiedRecovery', async () => {
+    const { REASONING_RULES } = await import('@/services/lead-engineer-rules.js');
+    expect(REASONING_RULES.some((r) => r.name === 'classifiedRecovery')).toBe(true);
+  });
+
+  it('escalation:signal-received is a reasoning trigger', async () => {
+    const { REASONING_RULES } = await import('@/services/lead-engineer-rules.js');
+    const hasEscalationTrigger = REASONING_RULES.some((r) =>
+      r.triggers.includes('escalation:signal-received')
+    );
+    expect(hasEscalationTrigger).toBe(true);
+  });
+
+  it('escalation:signal-received is NOT a mechanical trigger', async () => {
+    const { MECHANICAL_RULES } = await import('@/services/lead-engineer-rules.js');
+    const hasMechanicalEscalation = MECHANICAL_RULES.some((r) =>
+      r.triggers.includes('escalation:signal-received')
+    );
+    expect(hasMechanicalEscalation).toBe(false);
+  });
+
+  it('evaluateRules with MECHANICAL_RULES produces correct actions synchronously', async () => {
+    const { MECHANICAL_RULES, evaluateRules } = await import('@/services/lead-engineer-rules.js');
+
+    const worldState = {
+      projectPath: '/test/project',
+      projectSlug: 'test',
+      updatedAt: new Date().toISOString(),
+      boardCounts: { backlog: 0, in_progress: 0, review: 0, done: 0, blocked: 0 },
+      features: {
+        'feat-merged': {
+          id: 'feat-merged',
+          status: 'review',
+          prMergedAt: new Date().toISOString(),
+        },
+      },
+      agents: [],
+      openPRs: [],
+      milestones: [],
+      metrics: { totalFeatures: 0, completedFeatures: 0, totalCostUsd: 0 },
+      autoModeRunning: false,
+      maxConcurrency: 2,
+    };
+
+    const actions = evaluateRules(MECHANICAL_RULES, worldState as any, 'feature:pr-merged', {
+      featureId: 'feat-merged',
+    });
+
+    expect(actions.some((a) => a.type === 'move_feature')).toBe(true);
+  });
+
+  it('all rules in DEFAULT_RULES have valid ruleType', async () => {
+    const { DEFAULT_RULES } = await import('@/services/lead-engineer-rules.js');
+    for (const rule of DEFAULT_RULES) {
+      expect(['mechanical', 'reasoning']).toContain(rule.ruleType);
+    }
+  });
+
+  it('MECHANICAL_RULES count is at least 15', async () => {
+    const { MECHANICAL_RULES } = await import('@/services/lead-engineer-rules.js');
+    expect(MECHANICAL_RULES.length).toBeGreaterThanOrEqual(15);
+  });
+
+  it('REASONING_RULES count is exactly 1 (classifiedRecovery)', async () => {
+    const { REASONING_RULES } = await import('@/services/lead-engineer-rules.js');
+    expect(REASONING_RULES.length).toBe(1);
+  });
+});

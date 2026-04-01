@@ -4,8 +4,13 @@
  * Implements the EventBus interface for pluggable event transport.
  * Current implementation is in-memory (Set<Callback>). Future implementations
  * (NATS, Redis) can be swapped in for hivemind distribution.
+ *
+ * Supports correlation context for full event chain traceability.
+ * Use setCorrelationContext() / getCorrelationContext() to propagate
+ * correlation IDs across handler boundaries within the same async flow.
  */
 
+import { randomUUID } from 'crypto';
 import type {
   EventType,
   EventCallback,
@@ -13,6 +18,7 @@ import type {
   EventSubscription,
   EventPayload,
   TypedEventCallback,
+  EventMetadata,
 } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
 
@@ -37,12 +43,39 @@ export interface EventEmitter extends EventBus {
    * Called once during service wiring. Replaces any previously registered broadcaster.
    */
   setRemoteBroadcaster(fn: RemoteBroadcastFn): void;
+
+  /**
+   * Set the correlation context for the current execution flow.
+   * All subsequent emitCorrelated() calls will inherit this context.
+   */
+  setCorrelationContext(ctx: EventMetadata): void;
+
+  /**
+   * Get the current correlation context, if any.
+   */
+  getCorrelationContext(): EventMetadata | undefined;
+
+  /**
+   * Clear the current correlation context.
+   */
+  clearCorrelationContext(): void;
+}
+
+/** Generate a UUID v4 for event IDs and correlation IDs. */
+export function generateEventId(): string {
+  return randomUUID();
+}
+
+/** Generate a UUID v4 for correlation IDs. */
+export function generateCorrelationId(): string {
+  return randomUUID();
 }
 
 export function createEventEmitter(): EventEmitter {
   const subscribers = new Set<EventCallback>();
   const typedHandlers = new Map<EventType, Set<(payload: unknown) => void>>();
   let remoteBroadcaster: RemoteBroadcastFn | null = null;
+  let correlationContext: EventMetadata | undefined;
 
   function makeUnsub(fn: () => void): UnsubscribeFn {
     const unsub = fn as UnsubscribeFn;
@@ -104,6 +137,18 @@ export function createEventEmitter(): EventEmitter {
 
     setRemoteBroadcaster(fn: RemoteBroadcastFn) {
       remoteBroadcaster = fn;
+    },
+
+    setCorrelationContext(ctx: EventMetadata) {
+      correlationContext = ctx;
+    },
+
+    getCorrelationContext(): EventMetadata | undefined {
+      return correlationContext;
+    },
+
+    clearCorrelationContext() {
+      correlationContext = undefined;
     },
   };
 

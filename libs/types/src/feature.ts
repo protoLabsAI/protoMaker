@@ -63,6 +63,8 @@ export interface StatusTransition {
   timestamp: string;
   /** Optional reason for the status change (e.g., error message, PR merged) */
   reason?: string;
+  /** Correlation ID linking this transition to the causal event chain that triggered it */
+  correlationId?: string;
 }
 
 /**

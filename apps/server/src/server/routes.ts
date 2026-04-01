@@ -156,6 +156,8 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     schedulerService,
     eventRouterService,
     pipelineCheckpointService,
+    topicBus,
+    eventStore,
   } = services;
 
   // Run stale validation cleanup every hour to prevent memory leaks from crashed validations
@@ -206,7 +208,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/metrics', createPrometheusRoute());
 
   // Webhooks at root level (unauthenticated - uses signature verification)
-  app.use('/webhooks', createWebhooksRoutes(events, settingsService));
+  app.use('/webhooks', createWebhooksRoutes(events, settingsService, topicBus));
   // Alerts webhook routes (unauthenticated - Grafana webhooks)
   app.use('/webhooks/alerts', createAlertsRoutes(settingsService, discordBotService));
   // --- AUTHENTICATION MIDDLEWARE ---
@@ -442,7 +444,8 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
       eventRouterService,
       auditService,
       autoModeService,
-      settingsService
+      settingsService,
+      eventStore
     )
   );
   logger.info('Ops routes mounted at /api/ops');
