@@ -209,18 +209,35 @@ export class GitHubStateChecker {
     const drifts: Drift[] = [];
 
     try {
-      // Load all features that could have drift: review, in_progress, and blocked (merged PR).
+      // Load ALL non-done features. We need to check backlog, blocked, in_progress, and review
+      // because PRs can merge while a feature is in any of these states:
+      //   - backlog: webhook fired but branch-to-feature match failed
+      //   - blocked: crash-recovery push failed AFTER the PR was already merged
+      //   - in_progress: agent completed, PR auto-merged before status was updated
+      //   - review: normal path — caught here as a safety net
       const features = await this.featureLoader.getAll(projectPath);
-      const reviewFeatures = features.filter(
-        (f) => f.status === 'review' || f.status === 'in_progress' || f.status === 'blocked'
-      );
+      const activeFeatures = features.filter((f) => f.status !== 'done');
 
-      for (const feature of reviewFeatures) {
-        if (!feature.branchName) continue;
+      for (const feature of activeFeatures) {
+        if (!feature.branchName && !feature.prNumber) continue;
 
         try {
-          // Find PR for this branch
-          const pr = await this.findPRForBranch(projectPath, feature.branchName);
+          // Find PR: try branch name first, then fall back to prNumber.
+          // Fallback is needed when the branch was rebased/renamed after the PR was created
+          // (changing head.ref) so a branch-based lookup returns nothing but the prNumber is set.
+          let pr = feature.branchName
+            ? await this.findPRForBranch(projectPath, feature.branchName)
+            : null;
+
+          if (!pr && feature.prNumber) {
+            pr = await this.findPRByNumber(projectPath, feature.prNumber);
+            if (pr) {
+              logger.info(
+                `Feature ${feature.id} (status=${feature.status}): branch lookup missed, found PR #${feature.prNumber} by number`
+              );
+            }
+          }
+
           if (!pr) continue;
 
           // Get CI status for open PRs
@@ -232,8 +249,13 @@ export class GitHubStateChecker {
           // Check and emit state change events
           this.checkAndEmitStateChanges(projectPath, feature.id, pr, ciStatus);
 
-          // Check if merged (catches both review and blocked features with landed PRs)
-          if (pr.merged && (feature.status === 'review' || feature.status === 'blocked')) {
+          // Check if merged — applies to ALL non-done features regardless of current status.
+          // This is the core fix: previously only 'review' and 'blocked' were checked, causing
+          // features in 'backlog' or 'in_progress' to stay stuck even after their PR merged.
+          if (pr.merged) {
+            logger.info(
+              `Feature "${feature.title}" (${feature.id}) has merged PR #${pr.number} but status is "${feature.status}" — queuing reconciliation`
+            );
             drifts.push({
               type: 'pr-merged-status-stale',
               severity: 'high',
@@ -243,6 +265,7 @@ export class GitHubStateChecker {
               details: {
                 mergedAt: pr.merged_at,
                 branchName: feature.branchName,
+                previousStatus: feature.status,
               },
             });
           }
@@ -351,6 +374,39 @@ export class GitHubStateChecker {
     } catch (error) {
       // gh CLI not authenticated or repo not found
       logger.debug(`Could not find PR for branch ${branchName}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Find PR by number using gh CLI.
+   * Used as a fallback when branch-name lookup returns nothing (e.g., after a rebase).
+   */
+  private async findPRByNumber(projectPath: string, prNumber: number): Promise<GitHubPR | null> {
+    try {
+      const { stdout } = await execAsync(
+        `gh pr view ${prNumber} --json number,state,merged,mergedAt,headRefName,updatedAt`,
+        { cwd: projectPath }
+      );
+
+      const pr = JSON.parse(stdout);
+      if (!pr || !pr.number) {
+        return null;
+      }
+
+      const reviews = await this.getReviews(projectPath, pr.number);
+
+      return {
+        number: pr.number,
+        state: pr.state,
+        merged: pr.merged,
+        merged_at: pr.mergedAt,
+        head: { ref: pr.headRefName },
+        reviews,
+        updated_at: pr.updatedAt,
+      };
+    } catch (error) {
+      logger.debug(`Could not find PR #${prNumber}:`, error);
       return null;
     }
   }

@@ -373,9 +373,13 @@ export class ReconciliationService {
       throw new Error('featureId required for pr-merged-status-stale');
     }
 
-    logger.info(`Moving feature ${drift.featureId} to 'done' - PR merged`);
-
     const feature = await this.featureLoader.get(drift.projectPath, drift.featureId);
+    const previousStatus = feature?.status ?? 'unknown';
+
+    logger.info(
+      `Moving feature ${drift.featureId} to 'done' — PR #${drift.prNumber ?? '?'} merged (was: ${previousStatus})`
+    );
+
     const prMergedAt = new Date().toISOString();
     const updates: Record<string, unknown> = {
       status: 'done',
