@@ -278,7 +278,9 @@ describe('ReviewProcessor', () => {
             }),
             stderr: '',
           })
-        );
+        )
+        // Fallback for any additional exec calls (e.g., CI detail queries)
+        .mockImplementation(execSuccess({ stdout: '{}', stderr: '' }));
 
       const ctx = makeCtx({ feature: makeFeature() as any });
       const result = await processor.process(ctx);
