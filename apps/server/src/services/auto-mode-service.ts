@@ -3123,6 +3123,21 @@ Format your response as a structured markdown document.`;
 
       logger.info(`Created worktree for branch "${branchName}" at: ${worktreePath}`);
 
+      // Set local git identity so commits work without global git config.
+      // Agent containers often run as node@container with no git user configured.
+      const resolvedWorktreePath = path.resolve(worktreePath);
+      try {
+        await execFileAsync('git', ['config', 'user.email', 'automaker@localhost'], {
+          cwd: resolvedWorktreePath,
+        });
+        await execFileAsync('git', ['config', 'user.name', 'Automaker'], {
+          cwd: resolvedWorktreePath,
+        });
+        logger.debug(`Set local git identity in worktree: ${resolvedWorktreePath}`);
+      } catch (err) {
+        logger.warn('Failed to set local git identity in worktree (non-fatal):', err);
+      }
+
       // Exclude .automaker/features/ from worktree git status to prevent
       // board state files from blocking rebases and polluting diffs
       try {
