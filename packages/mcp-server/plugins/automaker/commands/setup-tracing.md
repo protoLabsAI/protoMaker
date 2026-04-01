@@ -40,6 +40,7 @@ test -f ~/.claude/hooks/langfuse_hook.py && echo "EXISTS" || echo "MISSING"
 ```
 
 If missing, inform the user:
+
 ```
 The Langfuse hook script is not installed. Run:
   pip3 install langfuse
@@ -64,6 +65,7 @@ AskUserQuestion:
 ```
 
 Then ask for keys:
+
 ```
 I need your Langfuse API keys. Get them from your Langfuse dashboard → Settings → API Keys.
 
@@ -151,6 +153,7 @@ View traces at: <host-url>
 ## Disabling Tracing
 
 To disable without removing config:
+
 ```bash
 # In settings.local.json, set:
 "TRACE_TO_LANGFUSE": "false"
