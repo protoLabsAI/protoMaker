@@ -114,11 +114,7 @@ function execSuccess(result: { stdout: string; stderr: string }) {
 }
 
 function execFailure(err: Error) {
-  return (
-    _cmd: string,
-    _opts: unknown,
-    cb: (err: Error) => void
-  ) => {
+  return (_cmd: string, _opts: unknown, cb: (err: Error) => void) => {
     cb(err);
   };
 }
