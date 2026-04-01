@@ -165,6 +165,9 @@ export { getFrankPrompt } from './agents/frank.js';
 export { getKaiPrompt } from './agents/kai.js';
 export { getPmPrompt } from './agents/pm-prompt.js';
 
+// Verification tier instructions
+export { getVerificationTierInstructions } from './verification-tier.js';
+
 // Prompt quality linter
 export { lintPrompt, lintAllPrompts } from './lint.js';
 export type { LintResult, LintWarning, LintError, LintSummary } from './lint.js';
