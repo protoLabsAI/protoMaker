@@ -350,6 +350,33 @@ export function createCreatePRHandler(settingsService?: SettingsService) {
 
         // Only create a new PR if one doesn't already exist
         if (!prUrl) {
+          // Pre-flight: ensure gh has a default repo set so `gh pr create` works in worktrees.
+          // Worktrees don't inherit gh's default repo context from the parent repo, causing
+          // "No default remote repository has been set." errors. Detect this and fix it
+          // using the parsed origin remote URL.
+          if (!upstreamRepo && repoUrl) {
+            try {
+              await execAsync('gh repo set-default --view', { cwd: worktreePath, env: execEnv });
+            } catch {
+              // No default set — try to configure it from the origin remote
+              if (originOwner) {
+                // repoUrl is https://github.com/owner/repo — extract owner/repo
+                const repoMatch = repoUrl.match(/github\.com\/([^/]+\/[^\s/]+)$/);
+                if (repoMatch) {
+                  try {
+                    await execFileAsync('gh', ['repo', 'set-default', repoMatch[1]], {
+                      cwd: worktreePath,
+                      env: execEnv,
+                    });
+                    logger.debug(`Set gh default repo to ${repoMatch[1]} (pre-flight fix)`);
+                  } catch (setDefaultErr) {
+                    logger.warn('Failed to set gh default repo (pre-flight):', setDefaultErr);
+                  }
+                }
+              }
+            }
+          }
+
           try {
             // Build gh pr create args - use array to avoid shell injection
             // with backticks, $(), !, and other special chars in LLM-generated PR bodies
