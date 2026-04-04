@@ -27,6 +27,7 @@ import type { GitWorkflowSettings } from './git-settings.js';
 import { DEFAULT_GIT_WORKFLOW_SETTINGS } from './git-settings.js';
 import type {
   ClaudeCompatibleProvider,
+  LiteLLMGatewayConfig,
   MCPServerConfig,
   OpenAICompatibleConfig,
 } from './provider-settings.js';
@@ -517,6 +518,13 @@ export interface GlobalSettings {
    */
   openaiCompatibleProviders?: OpenAICompatibleConfig[];
 
+  // LiteLLM Gateway Configuration
+  /**
+   * LiteLLM Gateway configuration for proxying requests through a unified LLM gateway.
+   * When enabled, auto-discovers available models from the gateway's /models endpoint.
+   */
+  litellmGateway?: LiteLLMGatewayConfig;
+
   /**
    * Per-worktree auto mode settings
    * Key: "${projectId}::${branchName ?? '__main__'}"
@@ -748,6 +756,13 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   // New provider system
   claudeCompatibleProviders: [],
   openaiCompatibleProviders: [],
+  litellmGateway: {
+    enabled: false,
+    baseUrl: 'http://localhost:4000',
+    apiKeySource: 'inline',
+    autoDiscoverModels: true,
+    modelPrefix: 'litellm/',
+  },
   autoModeByWorktree: {},
   // Git workflow automation (enabled by default)
   gitWorkflow: DEFAULT_GIT_WORKFLOW_SETTINGS,
