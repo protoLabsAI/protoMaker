@@ -32,10 +32,7 @@ import type {
   OpenAICompatibleConfig,
 } from './provider-settings.js';
 import type { EventHook } from './event-settings.js';
-import type {
-  DiscordSettings,
-  ErrorTrackingSettings,
-} from './integration-settings.js';
+import type { DiscordSettings, ErrorTrackingSettings } from './integration-settings.js';
 import type { ProjectRef, TrashedProjectRef } from './project-settings.js';
 import type { TrustBoundaryConfig } from './workflow-settings.js';
 import type { PromotionConfig } from './promotion.js';

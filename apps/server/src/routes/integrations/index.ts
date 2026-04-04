@@ -350,11 +350,17 @@ export function createIntegrationRoutes(
       }
 
       if (!config?.baseUrl) {
-        res.status(400).json({ error: 'No LiteLLM gateway config found. Provide config or configure via settings.' });
+        res
+          .status(400)
+          .json({
+            error: 'No LiteLLM gateway config found. Provide config or configure via settings.',
+          });
         return;
       }
 
-      const result = await litellmGatewayService.testConnection(config as { baseUrl: string; apiKey?: string });
+      const result = await litellmGatewayService.testConnection(
+        config as { baseUrl: string; apiKey?: string }
+      );
       res.json(result);
     } catch (error) {
       logger.error('Failed to test LiteLLM gateway:', error);
@@ -386,7 +392,11 @@ export function createIntegrationRoutes(
       }
 
       if (!config?.baseUrl) {
-        res.status(400).json({ error: 'No LiteLLM gateway config found. Provide baseUrl or configure via settings.' });
+        res
+          .status(400)
+          .json({
+            error: 'No LiteLLM gateway config found. Provide baseUrl or configure via settings.',
+          });
         return;
       }
 
