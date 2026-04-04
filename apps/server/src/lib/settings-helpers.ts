@@ -831,6 +831,7 @@ export async function getWorkflowSettings(
           ...projectSettings.workflow.gitWorkflow,
         },
         ciClassification: projectSettings.workflow.ciClassification,
+        heartbeat: projectSettings.workflow.heartbeat,
       };
     }
     return DEFAULT_WORKFLOW_SETTINGS;

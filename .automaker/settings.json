@@ -89,6 +89,12 @@
     },
     "gitWorkflow": {
       "prBaseBranch": "dev"
+    },
+    "heartbeat": {
+      "enabled": true,
+      "intervalMinutes": 30,
+      "model": "haiku",
+      "target": "escalation-router"
     }
   },
   "docsPath": "docs/internal"
