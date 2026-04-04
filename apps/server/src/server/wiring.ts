@@ -20,6 +20,7 @@ import { register as registerMaintenance } from '../services/maintenance.module.
 import { register as registerSignalDictionary } from '../services/signal-dictionary.module.js';
 import { register as registerProjectHealth } from '../services/project-health.module.js';
 import { register as registerTrajectoryQuery } from '../services/trajectory-query.module.js';
+import { register as registerLiteLLMGateway } from '../services/litellm-gateway.module.js';
 
 /**
  * Wire all cross-service dependencies by invoking each module's register() in order.
@@ -49,6 +50,7 @@ export async function wireServices(services: ServiceContainer): Promise<void> {
   registerSignalDictionary(services);
   registerProjectHealth(services);
   registerTrajectoryQuery(services);
+  registerLiteLLMGateway(services);
 
   // Start built-in sensors (websocket-clients) after all wiring is complete.
   // This ensures the sensor registry is fully initialised before polling begins.

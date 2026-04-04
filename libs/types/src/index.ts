@@ -358,6 +358,7 @@ export type {
   DiscordIntegrationConfig,
   ProjectIntegrations,
   IntegrationEventMapping,
+  LiteLLMGatewayConfig,
   // Trust boundary types
   PRDCategory,
   PRDComplexity,
