@@ -58,6 +58,13 @@ jobs:
           git fetch origin staging
           git reset --hard origin/staging
 
+          # Ensure Infisical CLI is available (install if missing)
+          if ! command -v infisical &>/dev/null; then
+            curl -1sLf 'https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.deb.sh' \
+              | sudo -E bash
+            sudo apt-get install -y infisical
+          fi
+
           # Pull secrets from Infisical (replaces .env.staging plaintext file)
           infisical export \
             --domain https://secrets.proto-labs.ai/api \
