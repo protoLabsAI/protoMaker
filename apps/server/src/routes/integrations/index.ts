@@ -368,7 +368,9 @@ export function createIntegrationRoutes(
         return;
       }
 
-      const result = await litellmGatewayService.testConnection(toGatewayConfig(config));
+      const result = await litellmGatewayService.testConnection(
+        toGatewayConfig(config as { baseUrl: string; apiKey?: string })
+      );
       res.json(result);
     } catch (error) {
       logger.error('Failed to test LiteLLM gateway:', error);
