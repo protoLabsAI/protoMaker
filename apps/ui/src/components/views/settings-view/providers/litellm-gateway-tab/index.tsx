@@ -1,15 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
-import {
-  Key,
-  Globe,
-  CheckCircle2,
-  XCircle,
-  Loader2,
-  Info,
-  RefreshCw,
-  Network,
-} from 'lucide-react';
+import { Key, Globe, CheckCircle2, XCircle, Loader2, Info, RefreshCw, Network } from 'lucide-react';
 import { Button } from '@protolabsai/ui/atoms';
 import { Switch } from '@protolabsai/ui/atoms';
 import { Label } from '@protolabsai/ui/atoms';
@@ -51,7 +42,7 @@ export function LiteLLMGatewayTab() {
     const loadConfig = async () => {
       try {
         const api = getHttpApiClient();
-      const result = await api.settings.getGlobal();
+        const result = await api.settings.getGlobal();
         if (result.success && result.settings?.litellmGateway) {
           setConfig(result.settings.litellmGateway);
         }
@@ -97,7 +88,11 @@ export function LiteLLMGatewayTab() {
         headers['Authorization'] = `Bearer ${config.apiKey}`;
       }
 
-      const response = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(5000) });
+      const response = await fetch(url, {
+        method: 'GET',
+        headers,
+        signal: AbortSignal.timeout(5000),
+      });
       if (response.ok) {
         setConnectionStatus('connected');
         setTestResult({ success: true, message: 'Connected successfully to LiteLLM Gateway.' });
@@ -112,7 +107,8 @@ export function LiteLLMGatewayTab() {
       setConnectionStatus('error');
       setTestResult({
         success: false,
-        message: error instanceof Error ? `Connection failed: ${error.message}` : 'Connection failed.',
+        message:
+          error instanceof Error ? `Connection failed: ${error.message}` : 'Connection failed.',
       });
     } finally {
       setIsTesting(false);
@@ -134,12 +130,16 @@ export function LiteLLMGatewayTab() {
         headers['Authorization'] = `Bearer ${config.apiKey}`;
       }
 
-      const response = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(10000) });
+      const response = await fetch(url, {
+        method: 'GET',
+        headers,
+        signal: AbortSignal.timeout(10000),
+      });
       if (response.ok) {
         const data = await response.json();
-        const models: string[] = (data?.data ?? []).map(
-          (m: { id?: string }) => m.id ?? ''
-        ).filter(Boolean);
+        const models: string[] = (data?.data ?? [])
+          .map((m: { id?: string }) => m.id ?? '')
+          .filter(Boolean);
         setDiscoveredModels(models);
         toast.success(`Discovered ${models.length} model${models.length !== 1 ? 's' : ''}`);
       } else {
@@ -232,7 +232,10 @@ export function LiteLLMGatewayTab() {
         <div className="p-4 space-y-5">
           {/* Base URL */}
           <div className="space-y-2">
-            <Label htmlFor="litellm-base-url" className="text-sm font-medium flex items-center gap-1.5">
+            <Label
+              htmlFor="litellm-base-url"
+              className="text-sm font-medium flex items-center gap-1.5"
+            >
               <Globe className="h-3.5 w-3.5 text-muted-foreground" />
               Base URL
             </Label>
@@ -315,9 +318,7 @@ export function LiteLLMGatewayTab() {
                 id="litellm-env-var"
                 placeholder="LITELLM_API_KEY"
                 value={config.envVar ?? ''}
-                onChange={(e) =>
-                  setConfig((c) => ({ ...c, envVar: e.target.value || undefined }))
-                }
+                onChange={(e) => setConfig((c) => ({ ...c, envVar: e.target.value || undefined }))}
                 className="font-mono text-sm"
                 data-testid="litellm-env-var"
               />
@@ -454,8 +455,8 @@ export function LiteLLMGatewayTab() {
               Discovered Models
             </h2>
             <p className="text-sm text-muted-foreground/80 mt-0.5">
-              {discoveredModels.length} model{discoveredModels.length !== 1 ? 's' : ''} found on
-              the gateway.
+              {discoveredModels.length} model{discoveredModels.length !== 1 ? 's' : ''} found on the
+              gateway.
             </p>
           </div>
           <div className="p-4 grid grid-cols-1 gap-2 max-h-64 overflow-y-auto">
