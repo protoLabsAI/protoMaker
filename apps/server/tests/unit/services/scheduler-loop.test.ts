@@ -400,8 +400,12 @@ describe('FeatureScheduler - loadPendingFeatures', () => {
   const mockRunner: PipelineRunner = { run: vi.fn() };
   const mockCallbacks: SchedulerCallbacks = {
     getRunningCountForWorktree: vi.fn().mockResolvedValue(0),
+    getGlobalRunningCount: vi.fn().mockReturnValue(0),
+    canProjectAcquireGlobalSlot: vi.fn().mockResolvedValue(true),
     hasInProgressFeatures: vi.fn().mockResolvedValue(false),
     isFeatureRunning: vi.fn().mockReturnValue(false),
+    getRunningFeatureIds: vi.fn().mockReturnValue([]),
+    isFeatureActiveInPipeline: vi.fn().mockReturnValue(false),
     isFeatureFinished: vi.fn().mockReturnValue(false),
     emitAutoModeEvent: vi.fn(),
     getHeapUsagePercent: vi.fn().mockReturnValue(0),
