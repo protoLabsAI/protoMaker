@@ -23,6 +23,10 @@ log() {
 }
 
 start_server() {
+  # Gate: only run npm install if node_modules is missing or corrupted.
+  # This prevents an unconditional install on every restart from being interrupted
+  # by SIGKILL (e.g. after an OOM event), which would leave tsx unrunnable.
+  check_node_modules_health
   log "Starting headless server..."
   cd "$SERVER_DIR"
   NODE_ENV=production AUTO_MODE=true node dist/index.js &
@@ -55,6 +59,27 @@ stop_server() {
   wait "$SERVER_PID" 2>/dev/null || true
   log "Server stopped."
   SERVER_PID=""
+}
+
+check_node_modules_health() {
+  # Verify that critical node_modules binaries exist before starting the server.
+  # tsx/dist/preflight.cjs is the known corruption indicator: if it is missing,
+  # an npm install was killed mid-way (e.g. by SIGKILL from a prior OOM event).
+  # Only run npm install when the file is actually absent — not on every restart —
+  # to avoid triggering another install that could itself be killed under memory
+  # pressure.
+  local tsx_preflight="$REPO_ROOT/node_modules/tsx/dist/preflight.cjs"
+  if [[ ! -f "$tsx_preflight" ]]; then
+    log "WARN: Critical binary missing: $tsx_preflight"
+    log "node_modules appears corrupted (likely mid-install SIGKILL). Running npm install to repair..."
+    cd "$REPO_ROOT"
+    if ! npm install; then
+      log "ERROR: npm install failed. Cannot start server."
+      log "Manual intervention required: delete node_modules and re-run npm install."
+      exit 1
+    fi
+    log "node_modules repaired successfully."
+  fi
 }
 
 rebuild() {
