@@ -441,6 +441,34 @@ export const CLAUDE_API_PROFILE_TEMPLATES: ClaudeApiProfileTemplate[] = [
 ];
 
 // ============================================================================
+// LiteLLM Gateway Configuration - Unified LLM proxy gateway support
+// ============================================================================
+
+/**
+ * LiteLLMGatewayConfig - Configuration for a LiteLLM Gateway proxy
+ *
+ * LiteLLM Gateway proxies requests to multiple LLM providers through a single
+ * OpenAI-compatible endpoint. Supports automatic model discovery from the
+ * gateway's /models endpoint.
+ */
+export interface LiteLLMGatewayConfig {
+  /** Whether the LiteLLM Gateway integration is enabled */
+  enabled: boolean;
+  /** Base URL for the LiteLLM Gateway (default: http://localhost:4000) */
+  baseUrl: string;
+  /** API key value (only required when apiKeySource = 'inline') */
+  apiKey?: string;
+  /** Strategy for sourcing the API key */
+  apiKeySource: ApiKeySource;
+  /** Environment variable name when apiKeySource = 'env' */
+  envVar?: string;
+  /** Automatically discover available models from the gateway on startup */
+  autoDiscoverModels: boolean;
+  /** Prefix added to model IDs in UI for grouping (default: "litellm/") */
+  modelPrefix: string;
+}
+
+// ============================================================================
 // MCP Server Configuration - Model Context Protocol server definitions
 // ============================================================================
 
