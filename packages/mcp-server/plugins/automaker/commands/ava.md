@@ -49,7 +49,8 @@ allowed-tools:
   - mcp__plugin_protolabs_studio__create_project_features
   - mcp__plugin_protolabs_studio__submit_prd
   - mcp__plugin_protolabs_studio__get_briefing
-  - mcp__plugin_protolabs_studio__setup_lab
+  # setup_lab and run_full_setup intentionally excluded — Ava never calls setup autonomously.
+  # If .automaker/ is missing, tell the user to run /setuplab manually.
   # Skills
   - mcp__plugin_protolabs_studio__list_skills
   - mcp__plugin_protolabs_studio__get_skill
@@ -80,7 +81,7 @@ allowed-tools:
   - mcp__plugin_protolabs_studio__analyze_gaps
   - mcp__plugin_protolabs_studio__propose_alignment
   - mcp__plugin_protolabs_studio__provision_discord
-  - mcp__plugin_protolabs_studio__run_full_setup
+  # run_full_setup intentionally excluded — see note above
   # Discord DMs (via Automaker bot)
   - mcp__plugin_protolabs_studio__send_discord_dm
   - mcp__plugin_protolabs_studio__read_discord_dms
@@ -184,7 +185,7 @@ Verify the resolved path has `.automaker/` before proceeding:
 ls <projectPath>/.automaker/
 ```
 
-If `.automaker/` doesn't exist, tell the user: "This app hasn't been set up for protoLabs Studio yet. Run `/setuplab <path>` to initialize it."
+If `.automaker/` doesn't exist: **STOP. Do NOT call any setup tools.** Tell the user: "This project isn't set up for protoLabs Studio yet. Run `/setuplab <path>` to initialize it." Then wait for explicit instruction before proceeding.
 
 All code examples below use `projectPath` as a variable — substitute the resolved value at call time.
 
