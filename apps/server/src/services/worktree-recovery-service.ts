@@ -208,8 +208,10 @@ export async function checkAndRecoverUncommittedWork(
     }
 
     // Step 4: Push to remote with -u
+    // --no-verify skips pre-push hooks (e.g. turbo build) that fail in worktrees
+    // due to symlinked node_modules. CI is the verification layer for worktree pushes.
     const forceFlag = useForceWithLease ? ' --force-with-lease' : '';
-    await execAsync(`git push${forceFlag} -u origin "${branchName}"`, {
+    await execAsync(`git push --no-verify${forceFlag} -u origin "${branchName}"`, {
       cwd: worktreePath,
       env: execEnv,
     });
