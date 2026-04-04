@@ -369,7 +369,10 @@ export class AutoModeService {
       },
       hasInProgressFeatures: this.hasInProgressFeatures.bind(this),
       isFeatureRunning: this.isFeatureRunning.bind(this),
-      getRunningFeatureIds: () => [...this.runningFeatures.keys()],
+      getRunningFeatureIds: (projectPath: string) =>
+        [...this.runningFeatures.entries()]
+          .filter(([, rf]) => rf.projectPath === projectPath)
+          .map(([id]) => id),
       isFeatureActiveInPipeline: (featureId: string) =>
         this.leadEngineerService?.isFeatureActive(featureId) ?? false,
       isFeatureFinished: this.isFeatureFinished.bind(this),

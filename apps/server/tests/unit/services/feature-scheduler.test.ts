@@ -644,4 +644,84 @@ describe('feature-scheduler.ts', () => {
       expect(mockFeatureLoader.update).toHaveBeenCalledTimes(2);
     });
   });
+
+  describe('getHotFileOverlap — cross-project isolation', () => {
+    it('only queries featureLoader for the owning projectPath, never for unrelated projects', async () => {
+      const APP_A = '/projects/app-a';
+      const APP_B = '/projects/app-b';
+      const featureInAppA = 'feature-1774840120082-appafeat';
+
+      // Simulate: a feature from App A is running (registered via getRunningFeatureIds).
+      // App B's scheduler loop asks for hot-file overlap — it must only look up features
+      // in App B's project path, not in App A.
+      mockCallbacks.getRunningFeatureIds = vi.fn((projectPath: string) => {
+        // Return App A's running feature only when asked for App A — not for App B
+        if (projectPath === APP_A) return [featureInAppA];
+        return [];
+      });
+
+      // featureLoader.get should never be called with APP_A's featureId under APP_B
+      mockFeatureLoader.get = vi.fn().mockResolvedValue(null);
+
+      const candidateForAppB: Partial<Feature> = {
+        id: 'feature-candidate-appb',
+        title: 'Candidate in App B',
+        status: 'backlog',
+        filesToModify: ['src/wiring.ts'], // hot file
+      };
+
+      // Invoke getHotFileOverlap via private access (cast to any for testing)
+      const result = await (scheduler as any).getHotFileOverlap(
+        APP_B,
+        candidateForAppB,
+        new Set<string>()
+      );
+
+      // No overlap — App B has no running features, App A's features are invisible
+      expect(result).toEqual([]);
+
+      // getRunningFeatureIds must have been called with APP_B, not APP_A
+      expect(mockCallbacks.getRunningFeatureIds).toHaveBeenCalledWith(APP_B);
+      expect(mockCallbacks.getRunningFeatureIds).not.toHaveBeenCalledWith(APP_A);
+
+      // featureLoader.get must NOT have been called with APP_B + App A's featureId
+      const getCalls = (mockFeatureLoader.get as ReturnType<typeof vi.fn>).mock.calls;
+      const crossProjectCall = getCalls.find(
+        ([path, id]: [string, string]) => path === APP_B && id === featureInAppA
+      );
+      expect(crossProjectCall).toBeUndefined();
+    });
+
+    it('does detect hot-file overlap within the same project', async () => {
+      const PROJECT = '/projects/my-app';
+      const runningFeatureId = 'feature-running-1';
+
+      mockCallbacks.getRunningFeatureIds = vi.fn((_projectPath: string) => [runningFeatureId]);
+
+      // The running feature modifies wiring.ts
+      mockFeatureLoader.get = vi.fn().mockResolvedValue({
+        id: runningFeatureId,
+        filesToModify: ['src/wiring.ts'],
+      });
+
+      const candidate: Partial<Feature> = {
+        id: 'feature-candidate-1',
+        title: 'Candidate',
+        status: 'backlog',
+        filesToModify: ['src/wiring.ts'],
+      };
+
+      const result = await (scheduler as any).getHotFileOverlap(
+        PROJECT,
+        candidate,
+        new Set<string>()
+      );
+
+      // Should detect the hot-file overlap
+      expect(result).toContain('wiring.ts');
+
+      // featureLoader.get must be called with the correct projectPath
+      expect(mockFeatureLoader.get).toHaveBeenCalledWith(PROJECT, runningFeatureId);
+    });
+  });
 });

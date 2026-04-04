@@ -90,8 +90,8 @@ export interface SchedulerCallbacks {
   canProjectAcquireGlobalSlot(projectPath: string, startingCount: number): Promise<boolean>;
   hasInProgressFeatures(projectPath: string, branchName: string | null): Promise<boolean>;
   isFeatureRunning(featureId: string): boolean;
-  /** Returns IDs of all currently running features (for hot-file overlap checks). */
-  getRunningFeatureIds(): string[];
+  /** Returns IDs of running features scoped to the given project path (for hot-file overlap checks). */
+  getRunningFeatureIds(projectPath: string): string[];
   isFeatureActiveInPipeline(featureId: string): boolean;
   isFeatureFinished(feature: Feature): boolean;
   emitAutoModeEvent(eventType: string, data: Record<string, unknown>): void;
@@ -218,8 +218,11 @@ export class FeatureScheduler {
       .filter((b) => HOT_FILE_BASENAMES.has(b));
     if (candidateHotFiles.length === 0) return [];
 
-    // Collect IDs of all active features (running + starting)
-    const activeIds = new Set([...this.callbacks.getRunningFeatureIds(), ...startingFeatureIds]);
+    // Collect IDs of active features scoped to this project (running + starting)
+    const activeIds = new Set([
+      ...this.callbacks.getRunningFeatureIds(projectPath),
+      ...startingFeatureIds,
+    ]);
     activeIds.delete(candidate.id); // exclude self
 
     if (activeIds.size === 0) return [];
