@@ -57,6 +57,10 @@ COPY apps/ui/package.json ./apps/ui/
 RUN npm ci --ignore-scripts && \
     npm rebuild node-pty better-sqlite3
 
+# Cache-bust: changes every commit so source compilation never uses a stale cache.
+# Placed AFTER npm ci so the expensive install step remains cached.
+ARG GIT_COMMIT_SHA=unknown
+
 # Copy all source files
 COPY libs ./libs
 COPY apps/server ./apps/server

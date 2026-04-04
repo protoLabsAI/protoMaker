@@ -285,10 +285,28 @@ jobs:
         env:
           DISCORD_ALERTS_WEBHOOK: ${{ secrets.DISCORD_ALERTS_WEBHOOK }}
 
+      - name: Configure LiteLLM gateway settings
+        if: success()
+        run: |
+          # Read key from Infisical .env — strip single quotes produced by dotenv format
+          LITELLM_KEY=$(grep -oP "LITELLM_MASTER_KEY=\K.*" "$DEPLOY_DIR/.env" | tr -d "'" || echo "")
+          AUTOMAKER_API_KEY=$(grep -oP "AUTOMAKER_API_KEY=\K.*" "$DEPLOY_DIR/.env" | tr -d "'" || echo "")
+          echo "::add-mask::$LITELLM_KEY"
+          echo "::add-mask::$AUTOMAKER_API_KEY"
+          if [ -n "$LITELLM_KEY" ]; then
+            curl -sf -X PUT http://localhost:3008/api/settings/global \
+              -H "Content-Type: application/json" \
+              -H "X-API-Key: $AUTOMAKER_API_KEY" \
+              -d "{\"litellmGateway\":{\"enabled\":true,\"baseUrl\":\"http://ava:4000\",\"apiKeySource\":\"inline\",\"apiKey\":\"${LITELLM_KEY}\",\"autoDiscoverModels\":true,\"modelPrefix\":\"litellm/\"}}" \
+              --max-time 10 && echo "LiteLLM gateway configured" || echo "WARN: LiteLLM gateway config skipped (server may not expose settings endpoint)"
+          else
+            echo "WARN: LITELLM_MASTER_KEY not found in .env — skipping gateway config"
+          fi
+
       - name: Record deployment success
         if: success()
         run: |
-          AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' "$DEPLOY_DIR/.env" || echo "")
+          AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' "$DEPLOY_DIR/.env" | tr -d "'" || echo "")
           echo "::add-mask::$AUTOMAKER_API_KEY"
           DEPLOYMENT_ID="${DEPLOYMENT_ID:-}"
           if [ -n "$DEPLOYMENT_ID" ]; then
