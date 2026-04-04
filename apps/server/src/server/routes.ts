@@ -92,6 +92,7 @@ import { createAgentRoutes } from '../routes/agents.js';
 import { createOpsRoutes } from '../routes/ops/index.js';
 import { createQaRoutes } from '../routes/qa/index.js';
 import { createContextEngineRoutes } from '../routes/context-engine.js';
+import { createA2ARoutes, createA2AHandlerRoutes } from '../routes/a2a/index.js';
 
 const logger = createLogger('Server:Routes');
 
@@ -211,6 +212,12 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/webhooks', createWebhooksRoutes(events, settingsService, topicBus));
   // Alerts webhook routes (unauthenticated - Grafana webhooks)
   app.use('/webhooks/alerts', createAlertsRoutes(settingsService, discordBotService));
+
+  // A2A agent discovery — unauthenticated (spec requires open discovery)
+  app.use('/.well-known', createA2ARoutes());
+  // A2A message handler — manual X-API-Key check inside (same pattern as /webhooks)
+  app.use('/a2a', createA2AHandlerRoutes(repoRoot));
+
   // --- AUTHENTICATION MIDDLEWARE ---
   // Apply authentication to all /api/* routes
   app.use('/api', authMiddleware);
