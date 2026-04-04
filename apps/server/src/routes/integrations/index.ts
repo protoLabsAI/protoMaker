@@ -6,10 +6,22 @@ import { Router, Request, Response } from 'express';
 import { createLogger } from '@protolabsai/utils';
 import type { SettingsService } from '../../services/settings-service.js';
 import type {
+  LiteLLMGatewayConfig,
   ProjectIntegrations,
   ReactionAbility,
   DiscordChannelSignalConfig,
 } from '@protolabsai/types';
+
+/** Build a full LiteLLMGatewayConfig from a partial override, filling required fields with defaults. */
+function toGatewayConfig(partial: { baseUrl: string; apiKey?: string }): LiteLLMGatewayConfig {
+  return {
+    enabled: true,
+    apiKeySource: 'inline',
+    autoDiscoverModels: true,
+    modelPrefix: 'litellm/',
+    ...partial,
+  };
+}
 import { integrationService } from '../../services/integration-service.js';
 import { litellmGatewayService } from '../../services/litellm-gateway-service.js';
 import type { IntegrationRegistryService } from '../../services/integration-registry-service.js';
@@ -356,9 +368,7 @@ export function createIntegrationRoutes(
         return;
       }
 
-      const result = await litellmGatewayService.testConnection(
-        config as { baseUrl: string; apiKey?: string }
-      );
+      const result = await litellmGatewayService.testConnection(toGatewayConfig(config));
       res.json(result);
     } catch (error) {
       logger.error('Failed to test LiteLLM gateway:', error);
@@ -396,7 +406,7 @@ export function createIntegrationRoutes(
         return;
       }
 
-      const models = await litellmGatewayService.fetchModels(config);
+      const models = await litellmGatewayService.fetchModels(toGatewayConfig(config));
       res.json({ models });
     } catch (error) {
       logger.error('Failed to fetch LiteLLM models:', error);
