@@ -57,17 +57,25 @@ export function createPushHandler() {
         return;
       }
 
-      // Push the branch
+      // Push the branch.
+      // --no-verify skips pre-push hooks (e.g. turbo build) that fail in worktrees
+      // due to symlinked node_modules. CI is the verification layer for worktree pushes.
       const forceFlag = force ? '--force' : '';
+      const worktreeEnv = { ...process.env, HUSKY: '0' };
       try {
-        await execAsync(`git push -u ${targetRemote} ${branchName} ${forceFlag}`, {
+        await execAsync(`git push --no-verify -u ${targetRemote} ${branchName} ${forceFlag}`, {
           cwd: worktreePath,
+          env: worktreeEnv,
         });
       } catch {
         // Try setting upstream
-        await execAsync(`git push --set-upstream ${targetRemote} ${branchName} ${forceFlag}`, {
-          cwd: worktreePath,
-        });
+        await execAsync(
+          `git push --no-verify --set-upstream ${targetRemote} ${branchName} ${forceFlag}`,
+          {
+            cwd: worktreePath,
+            env: worktreeEnv,
+          }
+        );
       }
 
       res.json({

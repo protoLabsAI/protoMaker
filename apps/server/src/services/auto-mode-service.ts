@@ -3603,6 +3603,43 @@ You can use the Read tool to view these images at any time during implementation
   }
 
   /**
+   * Check whether a project has any features in backlog status that are potentially
+   * ready to be scheduled. Used by startup to skip auto-mode for idle projects.
+   *
+   * This is intentionally a lightweight check — it only looks for `status === 'backlog'`
+   * without full dependency resolution. The scheduler performs the deeper eligibility
+   * check (blocked dependencies, cooldowns, open PRs) when it actually dispatches work.
+   *
+   * @returns `true` if at least one backlog feature exists for the given project.
+   */
+  async hasReadyBacklogFeatures(projectPath: string): Promise<boolean> {
+    const featuresDir = getFeaturesDir(projectPath);
+    try {
+      const entries = await secureFs.readdir(featuresDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const featurePath = path.join(featuresDir, entry.name, 'feature.json');
+        try {
+          const content = (await secureFs.readFile(featurePath, 'utf-8')) as string;
+          const feature = JSON.parse(content) as Feature;
+          if (feature.status === 'backlog') {
+            return true;
+          }
+        } catch {
+          // Skip unreadable or malformed features
+        }
+      }
+      return false;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+        return false;
+      }
+      logger.warn(`[hasReadyBacklogFeatures] Failed to scan ${projectPath}:`, err);
+      return false;
+    }
+  }
+
+  /**
    * Clear execution state (called on successful shutdown or when auto-loop stops)
    */
   private async clearExecutionState(
@@ -3746,9 +3783,25 @@ You can use the Read tool to view these images at any time during implementation
         })),
       });
 
-      // Resume each interrupted feature
+      // Resume each interrupted feature — respect global system cap to prevent OOM on restart.
+      // Features that cannot be resumed immediately are reset to backlog so the scheduler
+      // picks them up once capacity is available.
       for (const feature of interruptedFeatures) {
         try {
+          // Global cap gate: prevents spawning more agents than systemMaxConcurrency allows.
+          // Each call to resumeFeature bypasses the scheduler's fair-share check, so we
+          // must enforce the hard ceiling here before launching any agent process.
+          const globalRunning = this.concurrencyManager.size;
+          if (globalRunning >= MAX_SYSTEM_CONCURRENCY) {
+            logger.warn(
+              `[RESUME] Global concurrency cap (${MAX_SYSTEM_CONCURRENCY}) reached ` +
+                `(${globalRunning} running). Resetting feature ${feature.id} (${feature.title}) ` +
+                `to backlog — scheduler will pick it up once capacity is available.`
+            );
+            await this.updateFeatureStatus(projectPath, feature.id, 'backlog');
+            continue;
+          }
+
           logger.info(`Resuming feature: ${feature.id} (${feature.title})`);
           // Use resumeFeature which will detect the existing context and continue
           await this.resumeFeature(projectPath, feature.id, true);

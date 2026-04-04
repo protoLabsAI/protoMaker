@@ -336,6 +336,96 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
     ).rejects.toThrow(alreadyExistsError);
   });
 
+  it('skips PR creation when feature already has a prNumber set', async () => {
+    // Feature already has prNumber from a previous (incomplete) run
+    const featureWithPR: Feature = {
+      ...FAKE_FEATURE,
+      prNumber: 77,
+      prUrl: 'https://github.com/org/repo/pull/77',
+    };
+
+    // exec/execFile mocks — only gh available check and git remote -v should run.
+    // No gh pr list or gh pr create calls should happen.
+    vi.mocked(exec).mockImplementation(
+      makeExecQueue([
+        { stdout: '/usr/bin/gh\n' }, // command -v gh
+        { stdout: 'origin\thttps://github.com/org/repo.git (fetch)\n' }, // git remote -v
+      ]) as ReturnType<typeof exec>
+    );
+    // No execFile calls expected (no gh pr list, no gh pr create)
+    vi.mocked(execFile).mockImplementation(makeExecFileQueue([]) as ReturnType<typeof execFile>);
+
+    const result = await service.createPullRequest(
+      WORK_DIR,
+      PROJECT_PATH,
+      featureWithPR,
+      BRANCH_NAME,
+      BASE_BRANCH
+    );
+
+    expect(result).toMatchObject({
+      prNumber: 77,
+      prUrl: 'https://github.com/org/repo/pull/77',
+      prAlreadyExisted: true,
+    });
+    // No execFile calls — gh pr list and gh pr create were both skipped
+    expect(vi.mocked(execFile)).not.toHaveBeenCalled();
+  });
+
+  it('persists prNumber to featureStore after successful PR creation', async () => {
+    const mockFeatureStore = {
+      update: vi.fn().mockResolvedValue({ ...FAKE_FEATURE, prNumber: 88 }),
+    };
+
+    const mod = await import('@/services/git-workflow-service.js');
+    const { GitWorkflowService } = mod as unknown as {
+      GitWorkflowService: new () => typeof service & {
+        validateCIWorkflowTriggers: () => Promise<void>;
+        setFeatureStore: (store: unknown) => void;
+      };
+    };
+    const instance = new GitWorkflowService();
+    vi.spyOn(instance as never, 'validateCIWorkflowTriggers').mockResolvedValue(undefined);
+    instance.setFeatureStore(mockFeatureStore);
+    const svc = instance as unknown as typeof service;
+
+    vi.mocked(exec).mockImplementation(
+      makeExecQueue([
+        { stdout: '/usr/bin/gh\n' }, // command -v gh
+        { stdout: 'origin\thttps://github.com/org/repo.git (fetch)\n' }, // git remote -v
+      ]) as ReturnType<typeof exec>
+    );
+    vi.mocked(execFile).mockImplementation(
+      makeExecFileQueue([
+        { stdout: '[]' }, // pre-check: no open PRs
+        { stdout: '1\n' }, // diff check: rev-list --count (has commits)
+        { stdout: 'https://github.com/org/repo/pull/88\n' }, // gh pr create
+        { error: new Error('auto-merge not needed') }, // gh pr merge --auto (non-fatal)
+      ]) as ReturnType<typeof execFile>
+    );
+
+    const result = await svc.createPullRequest(
+      WORK_DIR,
+      PROJECT_PATH,
+      FAKE_FEATURE,
+      BRANCH_NAME,
+      BASE_BRANCH
+    );
+
+    expect(result).toMatchObject({
+      prUrl: 'https://github.com/org/repo/pull/88',
+      prNumber: 88,
+      prAlreadyExisted: false,
+    });
+
+    // featureStore.update should have been called with prNumber
+    expect(mockFeatureStore.update).toHaveBeenCalledWith(
+      PROJECT_PATH,
+      FAKE_FEATURE.id,
+      expect.objectContaining({ prNumber: 88, prUrl: 'https://github.com/org/repo/pull/88' })
+    );
+  });
+
   it('rethrows the original error when recovery gh pr list itself throws', async () => {
     const alreadyExistsError = new Error(
       'a pull request for branch "feat-test-recovery" already exists'
