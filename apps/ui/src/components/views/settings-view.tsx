@@ -32,6 +32,7 @@ import {
   OpencodeSettingsTab,
   GroqSettingsTab,
   OpenAICompatibleTab,
+  LiteLLMGatewayTab,
 } from './settings-view/providers';
 import { MCPServersSection } from './settings-view/mcp-servers';
 import { PromptCustomizationSection } from './settings-view/prompts';
@@ -127,6 +128,8 @@ export function SettingsView() {
         return <GroqSettingsTab />;
       case 'openai-compatible-provider':
         return <OpenAICompatibleTab />;
+      case 'litellm-gateway-provider':
+        return <LiteLLMGatewayTab />;
       case 'providers':
       case 'claude': // Backwards compatibility - redirect to claude-provider
         return <ClaudeSettingsTab />;

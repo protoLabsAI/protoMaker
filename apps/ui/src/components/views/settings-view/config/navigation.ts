@@ -21,6 +21,7 @@ import {
   Zap,
   Radio,
   GitMerge,
+  Network,
 } from 'lucide-react';
 import {
   AnthropicIcon,
@@ -61,6 +62,7 @@ export const GLOBAL_NAV_GROUPS: NavigationGroup[] = [
           { id: 'opencode-provider', label: 'OpenCode', icon: OpenCodeIcon },
           { id: 'groq-provider', label: 'Groq', icon: Zap },
           { id: 'openai-compatible-provider', label: 'OpenAI-Compatible', icon: Server },
+          { id: 'litellm-gateway-provider', label: 'LiteLLM Gateway', icon: Network },
         ],
       },
       { id: 'api-keys', label: 'API Keys', icon: Key },

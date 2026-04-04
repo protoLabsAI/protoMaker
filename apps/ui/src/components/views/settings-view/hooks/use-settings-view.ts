@@ -30,7 +30,8 @@ export type SettingsViewId =
   | 'workflow'
   | 'automations'
   | 'sensors'
-  | 'git-workflow-defaults';
+  | 'git-workflow-defaults'
+  | 'litellm-gateway-provider';
 
 interface UseSettingsViewOptions {
   initialView?: SettingsViewId;
