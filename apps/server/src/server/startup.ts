@@ -329,6 +329,18 @@ export async function runStartup(
           const { projectPath, branchName } = projectConfig;
           const worktreeDesc = branchName ? `worktree ${branchName}` : 'main worktree';
 
+          // Guard: skip auto-mode start if the project has no ready backlog features.
+          // Starting loops for idle projects wastes memory and contributes to OOM on
+          // restart when multiple apps are configured. The loop can be started later
+          // when new work arrives via the normal start-auto-mode API call.
+          const hasWork = await autoModeService.hasReadyBacklogFeatures(projectPath);
+          if (!hasWork) {
+            logger.info(
+              `[AUTO-START] No ready backlog features in ${projectPath} — skipping auto-mode start to conserve memory`
+            );
+            continue;
+          }
+
           logger.info(`[AUTO-START] Starting auto-mode for ${worktreeDesc} in ${projectPath}...`);
 
           const resolvedMaxConcurrency = await autoModeService.startAutoLoopForProject(
