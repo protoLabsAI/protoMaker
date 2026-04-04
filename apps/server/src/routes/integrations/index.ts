@@ -350,11 +350,9 @@ export function createIntegrationRoutes(
       }
 
       if (!config?.baseUrl) {
-        res
-          .status(400)
-          .json({
-            error: 'No LiteLLM gateway config found. Provide config or configure via settings.',
-          });
+        res.status(400).json({
+          error: 'No LiteLLM gateway config found. Provide config or configure via settings.',
+        });
         return;
       }
 
@@ -392,11 +390,9 @@ export function createIntegrationRoutes(
       }
 
       if (!config?.baseUrl) {
-        res
-          .status(400)
-          .json({
-            error: 'No LiteLLM gateway config found. Provide baseUrl or configure via settings.',
-          });
+        res.status(400).json({
+          error: 'No LiteLLM gateway config found. Provide baseUrl or configure via settings.',
+        });
         return;
       }
 
