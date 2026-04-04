@@ -38,11 +38,11 @@ jobs:
       - name: Setup persistent deploy directory
         env:
           GH_TOKEN: ${{ github.token }}
+          INFISICAL_MACHINE_IDENTITY_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
+          INFISICAL_MACHINE_IDENTITY_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
         run: |
           export DEPLOY_DIR="$HOME/staging-deploy/automaker"
-          export ENV_SOURCE="$HOME/staging-deploy/.env.staging"
           echo "DEPLOY_DIR=$DEPLOY_DIR" >> "$GITHUB_ENV"
-          echo "ENV_SOURCE=$ENV_SOURCE" >> "$GITHUB_ENV"
 
           REPO_URL="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
 
@@ -58,19 +58,14 @@ jobs:
           git fetch origin staging
           git reset --hard origin/staging
 
-          # Copy .env from persistent staging config
-          # Uses dedicated .env.staging (not dev .env) to prevent accidental breakage
-          if [ -f "$ENV_SOURCE" ]; then
-            cp "$ENV_SOURCE" "$DEPLOY_DIR/.env"
-            echo "Copied .env from $ENV_SOURCE"
-          elif [ -f "$HOME/staging-deploy/.env" ]; then
-            echo "WARN: No staging env at $ENV_SOURCE — copying from dev .env as initial seed"
-            cp "$HOME/staging-deploy/.env" "$ENV_SOURCE"
-            cp "$ENV_SOURCE" "$DEPLOY_DIR/.env"
-          else
-            echo "ERROR: No .env found at $ENV_SOURCE or $HOME/staging-deploy/.env"
-            exit 1
-          fi
+          # Pull secrets from Infisical (replaces .env.staging plaintext file)
+          infisical export \
+            --domain https://secrets.proto-labs.ai/api \
+            --env staging \
+            --format dotenv \
+            --silent \
+            > "$DEPLOY_DIR/.env"
+          echo "Loaded $(wc -l < "$DEPLOY_DIR/.env") secrets from Infisical"
 
       - name: Disk space pre-check
         run: |
@@ -104,7 +99,7 @@ jobs:
 
       - name: Record deployment start
         run: |
-          AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' "$ENV_SOURCE" || echo "")
+          AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' "$DEPLOY_DIR/.env" || echo "")
           echo "::add-mask::$AUTOMAKER_API_KEY"
           COMMIT="${{ github.sha }}"
           COMMIT_SHORT="${COMMIT:0:8}"
@@ -126,7 +121,7 @@ jobs:
         run: |
           # Gracefully stop auto-mode and wait for agents to finish.
           # Uses the API key from .env (same machine as staging server).
-          AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' "$ENV_SOURCE" || echo "")
+          AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' "$DEPLOY_DIR/.env" || echo "")
           echo "::add-mask::$AUTOMAKER_API_KEY"
           curl -sf -X POST http://localhost:3008/api/deploy/drain \
             -H "Content-Type: application/json" \
@@ -286,7 +281,7 @@ jobs:
       - name: Record deployment success
         if: success()
         run: |
-          AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' "$ENV_SOURCE" || echo "")
+          AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' "$DEPLOY_DIR/.env" || echo "")
           echo "::add-mask::$AUTOMAKER_API_KEY"
           DEPLOYMENT_ID="${DEPLOYMENT_ID:-}"
           if [ -n "$DEPLOYMENT_ID" ]; then
@@ -356,7 +351,7 @@ jobs:
           # Record deployment failure (server may be back up after rollback)
           DEPLOYMENT_ID="${DEPLOYMENT_ID:-}"
           if [ -n "$DEPLOYMENT_ID" ]; then
-            AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' "$ENV_SOURCE" || echo "")
+            AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' "$DEPLOY_DIR/.env" || echo "")
             echo "::add-mask::$AUTOMAKER_API_KEY"
             curl -sf -X POST http://localhost:3008/api/deploy/complete \
               -H "Content-Type: application/json" \
