@@ -128,6 +128,11 @@ services:
       - ${PROJECTS_MOUNT:-/home/josh/dev}:${PROJECTS_MOUNT:-/home/josh/dev}:rw
       - ${LABS_MOUNT:-/home/josh/labs}:${LABS_MOUNT:-/home/josh/labs}:rw
 
+    # Allow container to reach host-bound services (e.g. LiteLLM gateway at ava:4000)
+    # host-gateway is a Docker special value that resolves to the Docker host IP on Linux
+    extra_hosts:
+      - 'ava:host-gateway'
+
     # Run as the automaker user so entrypoint works without CHOWN/SETUID caps
     user: '${UID:-1001}:${GID:-1001}'
 
