@@ -13,7 +13,12 @@ import type {
 } from '@protolabsai/types';
 
 /** Build a full LiteLLMGatewayConfig from a partial override, filling required fields with defaults. */
-function toGatewayConfig(partial: { baseUrl: string; apiKey?: string }): LiteLLMGatewayConfig {
+function toGatewayConfig(partial: {
+  baseUrl: string;
+  apiKey?: string;
+  apiKeySource?: LiteLLMGatewayConfig['apiKeySource'];
+  envVar?: string;
+}): LiteLLMGatewayConfig {
   return {
     enabled: true,
     apiKeySource: 'inline',
@@ -353,24 +358,33 @@ export function createIntegrationRoutes(
    */
   router.post('/litellm/test', async (req: Request, res: Response) => {
     try {
-      const { config: bodyConfig } = req.body as { config?: { baseUrl?: string; apiKey?: string } };
+      const { config: bodyConfig } = req.body as {
+        config?: Partial<LiteLLMGatewayConfig> & { baseUrl?: string };
+      };
 
-      let config = bodyConfig;
-      if (!config?.baseUrl) {
+      let gatewayConfig: LiteLLMGatewayConfig | undefined;
+
+      if (bodyConfig?.baseUrl) {
+        // Body config provided — merge over defaults, preserving apiKeySource/envVar
+        gatewayConfig = toGatewayConfig({
+          baseUrl: bodyConfig.baseUrl,
+          apiKey: bodyConfig.apiKey,
+          apiKeySource: bodyConfig.apiKeySource,
+          envVar: bodyConfig.envVar,
+        });
+      } else {
         const settings = await settingsService.getGlobalSettings();
-        config = settings.litellmGateway ?? undefined;
+        gatewayConfig = settings.litellmGateway ?? undefined;
       }
 
-      if (!config?.baseUrl) {
+      if (!gatewayConfig?.baseUrl) {
         res.status(400).json({
           error: 'No LiteLLM gateway config found. Provide config or configure via settings.',
         });
         return;
       }
 
-      const result = await litellmGatewayService.testConnection(
-        toGatewayConfig(config as { baseUrl: string; apiKey?: string })
-      );
+      const result = await litellmGatewayService.testConnection(gatewayConfig);
       res.json(result);
     } catch (error) {
       logger.error('Failed to test LiteLLM gateway:', error);
@@ -390,25 +404,23 @@ export function createIntegrationRoutes(
         apiKey?: string;
       };
 
-      let config: { baseUrl: string; apiKey?: string } | undefined;
+      let gatewayConfig: LiteLLMGatewayConfig | undefined;
 
       if (queryBaseUrl) {
-        config = { baseUrl: queryBaseUrl, apiKey: queryApiKey };
+        gatewayConfig = toGatewayConfig({ baseUrl: queryBaseUrl, apiKey: queryApiKey });
       } else {
         const settings = await settingsService.getGlobalSettings();
-        config = settings.litellmGateway?.baseUrl
-          ? (settings.litellmGateway as { baseUrl: string; apiKey?: string })
-          : undefined;
+        gatewayConfig = settings.litellmGateway?.baseUrl ? settings.litellmGateway : undefined;
       }
 
-      if (!config?.baseUrl) {
+      if (!gatewayConfig?.baseUrl) {
         res.status(400).json({
           error: 'No LiteLLM gateway config found. Provide baseUrl or configure via settings.',
         });
         return;
       }
 
-      const models = await litellmGatewayService.fetchModels(toGatewayConfig(config));
+      const models = await litellmGatewayService.fetchModels(gatewayConfig);
       res.json({ models });
     } catch (error) {
       logger.error('Failed to fetch LiteLLM models:', error);

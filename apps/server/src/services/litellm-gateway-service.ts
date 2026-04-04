@@ -32,8 +32,12 @@ export class LiteLLMGatewayService {
    */
   private buildHeaders(config: LiteLLMGatewayConfig): Record<string, string> {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (config.apiKey) {
-      headers['Authorization'] = `Bearer ${config.apiKey}`;
+    let apiKey = config.apiKey;
+    if (!apiKey && config.apiKeySource === 'env' && config.envVar) {
+      apiKey = process.env[config.envVar];
+    }
+    if (apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
     }
     return headers;
   }
