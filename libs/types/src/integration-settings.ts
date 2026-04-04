@@ -287,25 +287,6 @@ export interface ProjectIntegrations {
 }
 
 // ============================================================================
-// LiteLLM Gateway - Configuration for LiteLLM proxy integration
-// ============================================================================
-
-/**
- * LiteLLMGatewayConfig - Configuration for connecting to a LiteLLM proxy gateway
- *
- * LiteLLM exposes an OpenAI-compatible API that proxies requests to multiple
- * upstream LLM providers. This config stores the connection details for the gateway.
- */
-export interface LiteLLMGatewayConfig {
-  /** Base URL for the LiteLLM proxy (e.g., http://localhost:4000) */
-  baseUrl: string;
-  /** Optional API key for authenticating with the proxy */
-  apiKey?: string;
-  /** Whether the gateway integration is enabled */
-  enabled?: boolean;
-}
-
-// ============================================================================
 // Error Tracking Settings - Sentry Integration
 // ============================================================================
 

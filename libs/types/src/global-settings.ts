@@ -35,7 +35,6 @@ import type { EventHook } from './event-settings.js';
 import type {
   DiscordSettings,
   ErrorTrackingSettings,
-  LiteLLMGatewayConfig,
 } from './integration-settings.js';
 import type { ProjectRef, TrashedProjectRef } from './project-settings.js';
 import type { TrustBoundaryConfig } from './workflow-settings.js';
@@ -594,13 +593,6 @@ export interface GlobalSettings {
    * @see ErrorTrackingSettings in integration-settings.ts
    */
   errorTracking?: ErrorTrackingSettings;
-
-  /**
-   * LiteLLM proxy gateway configuration.
-   * When configured, routes LLM requests through the LiteLLM proxy.
-   * @see LiteLLMGatewayConfig in integration-settings.ts
-   */
-  litellmGateway?: LiteLLMGatewayConfig;
 
   /**
    * Trust boundary configuration for PRD approval gates.
