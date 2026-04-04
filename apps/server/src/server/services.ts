@@ -355,6 +355,10 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   featureLoader.setEventEmitter(events);
   featureLoader.setTopicBus(topicBus);
 
+  // Wire featureLoader into gitWorkflowService so it can persist prNumber immediately
+  // after PR creation, preventing duplicate PR attempts on retry.
+  gitWorkflowService.setFeatureStore(featureLoader);
+
   // Trust Tier Service for quarantine pipeline
   const trustTierService = new TrustTierService(dataDir);
   const agentService = new AgentService(dataDir, events, settingsService, featureLoader);

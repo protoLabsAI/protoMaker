@@ -26,6 +26,7 @@ import type { EventEmitter } from '../lib/events.js';
 import { buildPROwnershipWatermark } from '../routes/github/utils/pr-ownership.js';
 import { createGitExecEnv, extractTitleFromDescription } from '@protolabsai/git-utils';
 import type { ActionableItemService } from './actionable-item-service.js';
+import type { FeatureStore } from '@protolabsai/types';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -164,12 +165,21 @@ export class GitWorkflowService {
   private recentOperations: RecentOperation[] = [];
   private readonly MAX_RECENT_OPERATIONS = 10;
   private actionableItemService?: ActionableItemService;
+  private featureStore?: FeatureStore;
 
   /**
    * Wire in the ActionableItemService for creating oversized-PR actionable items.
    */
   setActionableItemService(service: ActionableItemService): void {
     this.actionableItemService = service;
+  }
+
+  /**
+   * Wire in the FeatureStore so the service can persist prNumber immediately
+   * after PR creation, preventing duplicate PR attempts on retry.
+   */
+  setFeatureStore(store: FeatureStore): void {
+    this.featureStore = store;
   }
 
   /**
@@ -1619,6 +1629,21 @@ export class GitWorkflowService {
     // which would cause checks to stay "pending" indefinitely on the new PR.
     await this.validateCIWorkflowTriggers(projectPath, baseBranch);
 
+    // Guard: if feature already has a prNumber persisted, skip creation entirely.
+    // This prevents duplicate PR attempts on retry when a previous run created the
+    // PR successfully but crashed before the caller could persist prNumber.
+    if (feature.prNumber) {
+      logger.info(
+        `[createPullRequest] Feature ${feature.id} already has PR #${feature.prNumber} — skipping creation`
+      );
+      // Return the known prNumber; prUrl may be missing but callers handle null gracefully.
+      return {
+        prUrl: feature.prUrl ?? null,
+        prNumber: feature.prNumber,
+        prAlreadyExisted: true,
+      };
+    }
+
     try {
       const listArgs = [
         'pr',
@@ -1730,6 +1755,24 @@ export class GitWorkflowService {
           state: 'OPEN',
           createdAt: prCreatedAt,
         });
+
+        // Immediately persist prNumber to feature.json so retries skip PR creation.
+        // This is a best-effort write — if it fails we log and continue.
+        if (this.featureStore) {
+          try {
+            await this.featureStore.update(projectPath, feature.id, {
+              prNumber,
+              prUrl,
+            });
+            logger.info(
+              `[createPullRequest] Persisted prNumber #${prNumber} to feature ${feature.id}`
+            );
+          } catch (persistError) {
+            logger.warn(
+              `[createPullRequest] Failed to persist prNumber #${prNumber} to feature ${feature.id}: ${persistError instanceof Error ? persistError.message : String(persistError)}`
+            );
+          }
+        }
 
         // Enable auto-merge so PRs don't sit BLOCKED waiting for manual intervention
         // Use --merge for promotion/epic PRs to preserve DAG integrity
