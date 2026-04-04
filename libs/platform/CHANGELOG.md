@@ -1,5 +1,25 @@
 # @protolabsai/platform
 
+## 0.96.1
+
+### Patch Changes
+
+- ### Bug Fixes
+  - persist prNumber after PR creation to prevent duplicate PR attempts (#3241)
+  - exclude node_modules from tsx watch to prevent restart loops
+  - skip pre-push hooks in worktree pushes with --no-verify (#3239)
+  - add tsx as root devDependency to prevent preflight.cjs crash
+  - guard run_full_setup and setup_lab behind explicit user intent (#3237)
+  - call gh repo set-default in worktree setup to fix pr create (#3236)
+  - scope getRunningFeatureIds to owning projectPath (#3235)
+
+  ### Refactors
+  - bug: server OOM crash — no global agent cap across apps, blind auto-resu (#3240)
+  - LiteLLM Gateway: Add LiteLLMGatewayConfig types and defaults (#3232)
+
+- Updated dependencies
+  - @protolabsai/types@0.96.1
+
 ## 0.96.0
 
 ### Minor Changes
