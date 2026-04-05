@@ -376,10 +376,10 @@ export async function handleStalePRCheck(deps: AvaCronTaskDeps): Promise<void> {
   for (const project of activeProjects) {
     const repo = project.github!;
     try {
-      const output = execSync(
-        `python3 ${boardMonitorPath} stale_prs --repo ${repo}`,
-        { encoding: 'utf8', timeout: 30_000 }
-      );
+      const output = execSync(`python3 ${boardMonitorPath} stale_prs --repo ${repo}`, {
+        encoding: 'utf8',
+        timeout: 30_000,
+      });
       const stalePRs: StalePR[] = JSON.parse(output);
 
       for (const pr of stalePRs) {
@@ -426,7 +426,10 @@ export async function handleStalePRCheck(deps: AvaCronTaskDeps): Promise<void> {
   let summaryText: string;
   if (allStale.length > 0) {
     const prLines = allStale
-      .map(({ repo, pr }) => `- ${repo}#${pr.number}: ${pr.title} (${pr.hoursOpen}h open, CI: ${pr.ciState ?? 'unknown'})`)
+      .map(
+        ({ repo, pr }) =>
+          `- ${repo}#${pr.number}: ${pr.title} (${pr.hoursOpen}h open, CI: ${pr.ciState ?? 'unknown'})`
+      )
       .join('\n');
 
     summaryText =
@@ -502,7 +505,9 @@ export async function registerAvaCronTasks(deps: AvaCronTaskDeps): Promise<void>
     true
   );
 
-  logger.info('[AvaCronTasks] Registered 2 deterministic cron tasks (staging-ping, stale-pr-check)');
+  logger.info(
+    '[AvaCronTasks] Registered 2 deterministic cron tasks (staging-ping, stale-pr-check)'
+  );
 
   // Load workflow settings once for the remaining opt-in tasks
   const workflowSettings = await getWorkflowSettings(deps.projectPath, deps.settingsService);
