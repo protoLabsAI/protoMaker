@@ -755,6 +755,18 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
           agentExecutionModel: migratePhaseModelEntry(
             serverSettings.phaseModels.agentExecutionModel
           ),
+          complexitySmallModel: migratePhaseModelEntry(
+            serverSettings.phaseModels.complexitySmallModel
+          ),
+          complexityMediumModel: migratePhaseModelEntry(
+            serverSettings.phaseModels.complexityMediumModel
+          ),
+          complexityLargeModel: migratePhaseModelEntry(
+            serverSettings.phaseModels.complexityLargeModel
+          ),
+          complexityArchitecturalModel: migratePhaseModelEntry(
+            serverSettings.phaseModels.complexityArchitecturalModel
+          ),
         }
       : undefined;
 

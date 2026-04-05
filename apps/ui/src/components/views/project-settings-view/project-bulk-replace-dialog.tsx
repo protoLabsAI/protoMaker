@@ -49,6 +49,10 @@ const PHASE_LABELS: Record<PhaseModelKey, string> = {
   memoryExtractionModel: 'Memory Extraction',
   ceremonyModel: 'Ceremonies & Retrospectives',
   agentExecutionModel: 'Agent Execution',
+  complexitySmallModel: 'Small Features',
+  complexityMediumModel: 'Medium Features',
+  complexityLargeModel: 'Large Features',
+  complexityArchitecturalModel: 'Architectural Features',
 };
 
 const ALL_PHASES = Object.keys(PHASE_LABELS) as PhaseModelKey[];

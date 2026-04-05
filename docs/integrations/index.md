@@ -10,6 +10,14 @@ Use protoLabs directly from Chrome without switching windows.
 | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | [Browser extension](./browser-extension) | Chrome extension for side panel chat, right-click context menu, GitHub PR integration, and a badge indicator showing server status. | Optional |
 
+## AI Providers
+
+Connect protoLabs to AI models from any provider. All configured models appear in every model dropdown.
+
+| Integration                    | Description                                                                                                                               | Status   |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| [AI Providers](./ai-providers) | Configure Claude Compatible providers, OpenAI Compatible endpoints, and the LiteLLM Gateway. Includes model routing and complexity tiers. | Optional |
+
 ## AI Control Plane
 
 Configure and control the AI agents that power your development studio.
