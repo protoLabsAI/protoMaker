@@ -1,5 +1,20 @@
 # @protolabsai/utils
 
+## 0.97.1
+
+### Patch Changes
+
+- ### Bug Fixes
+  - enforce global agent cap across all project loops to prevent OOM (#3261)
+  - use explicit promise wrapper for execFile to fix test mock and TS compatibility
+  - use node:child_process/promises in restart-safety-check-service to fix test mock
+  - blind auto-resume on restart causes agent chaos (#3262)
+  - safety-check in-progress features before auto-resuming on server restart (#3260)
+  - create parent dir before atomic write in secure-fs to prevent ENOENT (#3259)
+- Updated dependencies
+  - @protolabsai/types@0.97.1
+  - @protolabsai/platform@0.97.1
+
 ## 0.97.0
 
 ### Minor Changes
