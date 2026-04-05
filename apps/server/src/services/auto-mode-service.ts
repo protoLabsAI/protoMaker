@@ -125,6 +125,7 @@ import type { LeadEngineerService } from './lead-engineer-service.js';
 import { gitWorkflowService } from './git-workflow-service.js';
 import type { KnowledgeStoreService } from './knowledge-store-service.js';
 import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
+import { RestartSafetyCheckService } from './restart-safety-check-service.js';
 import {
   AutoLoopCoordinator,
   type LoopState,
@@ -212,6 +213,8 @@ export class AutoModeService {
   private knowledgeStoreService: KnowledgeStoreService | null = null;
   // Pipeline Checkpoint service for crash recovery checkpoint cleanup (optional)
   private pipelineCheckpointService: PipelineCheckpointService | null = null;
+  // Restart safety check service (lazy-initialized)
+  private restartSafetyCheckService: RestartSafetyCheckService = new RestartSafetyCheckService();
   // ExecutionService handles feature execution logic
   private executionService!: ExecutionService;
   // FeatureScheduler owns the loop, feature loading, and concurrency resolution
@@ -1585,7 +1588,14 @@ export class AutoModeService {
   /**
    * Reconcile feature states after server restart.
    * Finds features stuck in transient states (in_progress, interrupted)
-   * with no running agent and resets them to backlog.
+   * with no running agent and performs a safety check before deciding how to
+   * reconcile each one.
+   *
+   * Safety check outcomes:
+   * - `resume`    → reset to backlog (safe to re-run)
+   * - `to_review` → set to review (PR already exists, don't re-run)
+   * - `block`     → set to blocked with reason (dirty/conflicted worktree)
+   *
    * Emits events for each reconciled feature and a batch summary.
    */
   async reconcileFeatureStates(
@@ -1604,13 +1614,38 @@ export class AutoModeService {
     for (const feature of stuckFeatures) {
       const previousStatus = feature.status || 'unknown';
       try {
-        await this.featureLoader.update(projectPath, feature.id, {
-          status: 'backlog',
-          startedAt: undefined,
-        });
+        // Run safety check to determine correct action for this feature
+        const safetyResult = await this.restartSafetyCheckService.check(feature, projectPath);
 
-        // Delete checkpoint for this feature (crash recovery cleanup)
-        if (this.pipelineCheckpointService) {
+        let newStatus: string;
+        let reconcileReason: string;
+
+        switch (safetyResult.action) {
+          case 'to_review':
+            newStatus = 'review';
+            reconcileReason = safetyResult.reason ?? 'PR already exists — moved to review';
+            break;
+          case 'block':
+            newStatus = 'blocked';
+            reconcileReason = safetyResult.reason ?? 'Unsafe to resume after restart';
+            break;
+          case 'resume':
+          default:
+            newStatus = 'backlog';
+            reconcileReason = 'Reconciled after server restart';
+            break;
+        }
+
+        const updatePayload: Partial<Feature> =
+          newStatus === 'backlog'
+            ? { status: 'backlog', startedAt: undefined }
+            : { status: newStatus as Feature['status'], statusChangeReason: reconcileReason };
+
+        await this.featureLoader.update(projectPath, feature.id, updatePayload);
+
+        // Delete checkpoint for features that are being reset to backlog (crash recovery cleanup).
+        // Do not delete checkpoints for blocked/review features — they may still be useful.
+        if (newStatus === 'backlog' && this.pipelineCheckpointService) {
           try {
             await this.pipelineCheckpointService.delete(projectPath, feature.id);
             logger.debug(`[RECONCILE] Deleted checkpoint for feature ${feature.id}`);
@@ -1623,23 +1658,23 @@ export class AutoModeService {
         reconciled.push({
           featureId: feature.id,
           from: previousStatus,
-          to: 'backlog',
+          to: newStatus,
         });
 
         this.emitAutoModeEvent('feature_status_changed', {
           featureId: feature.id,
           previousStatus,
-          newStatus: 'backlog',
-          reason: 'Reconciled after server restart',
+          newStatus,
+          reason: reconcileReason,
           projectPath,
         });
 
         logger.info(
-          `[RECONCILE] Reset feature "${feature.title || feature.id}" from "${previousStatus}" to "backlog"`,
+          `[RECONCILE] Feature "${feature.title || feature.id}" from "${previousStatus}" to "${newStatus}" (${reconcileReason})`,
           { projectPath, featureId: feature.id }
         );
       } catch (error) {
-        logger.warn(`[RECONCILE] Failed to reset feature ${feature.id}:`, error);
+        logger.warn(`[RECONCILE] Failed to reconcile feature ${feature.id}:`, error);
       }
     }
 
@@ -1649,7 +1684,7 @@ export class AutoModeService {
         features: reconciled,
         projectPath,
       });
-      logger.info(`[RECONCILE] Reset ${reconciled.length} stuck feature(s) for ${projectPath}`);
+      logger.info(`[RECONCILE] Reconciled ${reconciled.length} stuck feature(s) for ${projectPath}`);
     }
 
     return { reconciled };
