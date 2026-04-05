@@ -1684,7 +1684,9 @@ export class AutoModeService {
         features: reconciled,
         projectPath,
       });
-      logger.info(`[RECONCILE] Reconciled ${reconciled.length} stuck feature(s) for ${projectPath}`);
+      logger.info(
+        `[RECONCILE] Reconciled ${reconciled.length} stuck feature(s) for ${projectPath}`
+      );
     }
 
     return { reconciled };
@@ -3707,6 +3709,115 @@ You can use the Read tool to view these images at any time during implementation
   }
 
   /**
+   * Safety check performed before resuming a feature on server restart.
+   * Prevents duplicate commits, double PR creation, and conflicting git state.
+   *
+   * Returns an action describing what to do with the feature:
+   * - 'resume':      safe to resume normally
+   * - 'skip-review': feature has a live/open PR — set to review, do not re-run
+   * - 'skip-done':   feature's PR is merged — set to done, do not re-run
+   * - 'block':       worktree is dirty or conflicted — block with reason
+   */
+  private async checkRestartSafety(
+    projectPath: string,
+    feature: Feature
+  ): Promise<{ action: 'resume' | 'skip-review' | 'skip-done' | 'block'; reason?: string }> {
+    // ── 1. PR check: if prNumber is set, verify current state via gh CLI ──
+    if (feature.prNumber) {
+      try {
+        const prNum = String(feature.prNumber).replace(/[^0-9]/g, '');
+        const { stdout } = await execAsync(`gh pr view ${prNum} --json state --jq '.state'`, {
+          cwd: projectPath,
+          timeout: 15000,
+        });
+        const state = stdout.trim().toUpperCase();
+        if (state === 'MERGED') {
+          logger.info(
+            `[RESTART-SAFETY] Feature ${feature.id} PR #${feature.prNumber} is merged — marking done`
+          );
+          return { action: 'skip-done' };
+        }
+        // OPEN or CLOSED — either way, do not re-run and risk a duplicate PR
+        logger.info(
+          `[RESTART-SAFETY] Feature ${feature.id} has live PR #${feature.prNumber} (state: ${state}) — skipping re-run`
+        );
+        return {
+          action: 'skip-review',
+          reason: `PR #${feature.prNumber} is ${state} — not re-running to prevent duplicate`,
+        };
+      } catch (err) {
+        // Can't verify PR state (gh not available, network error, etc.).
+        // Err on the safe side: assume the PR is open to prevent a duplicate creation.
+        logger.warn(
+          `[RESTART-SAFETY] Could not verify PR #${feature.prNumber} for feature ${feature.id} — assuming open`,
+          err
+        );
+        return {
+          action: 'skip-review',
+          reason: `Could not verify PR #${feature.prNumber} state — assumed open to prevent duplicate PR creation`,
+        };
+      }
+    }
+
+    // ── 2. Worktree dirty/conflict check ──
+    if (feature.branchName) {
+      const sanitizedBranch = feature.branchName.replace(/[^a-zA-Z0-9_-]/g, '-');
+      const worktreePath = path.join(projectPath, '.worktrees', sanitizedBranch);
+
+      try {
+        await secureFs.access(worktreePath);
+
+        // Worktree directory exists — inspect git status
+        try {
+          const { stdout: gitStatus } = await execAsync('git status --porcelain', {
+            cwd: worktreePath,
+            timeout: 10000,
+          });
+
+          if (gitStatus.trim()) {
+            const lines = gitStatus.trim().split('\n');
+            // Conflict markers in porcelain v1 output: UU AA DD AU UA DU UD
+            const conflictPattern = /^(UU|AA|DD|AU|UA|DU|UD)/;
+            const hasConflicts = lines.some((line) => conflictPattern.test(line));
+
+            if (hasConflicts) {
+              const reason = `Worktree has unresolved merge conflicts (${lines.length} file(s)) in ${worktreePath}`;
+              logger.warn(`[RESTART-SAFETY] Feature ${feature.id}: ${reason}`);
+              return { action: 'block', reason };
+            }
+
+            // Dirty (uncommitted changes) but no merge conflicts
+            const reason = `Worktree has uncommitted changes (${lines.length} file(s)) in ${worktreePath} — manual review needed before resuming`;
+            logger.warn(`[RESTART-SAFETY] Feature ${feature.id}: ${reason}`);
+            return { action: 'block', reason };
+          }
+
+          // Worktree is clean — safe to resume
+          logger.debug(`[RESTART-SAFETY] Feature ${feature.id}: worktree is clean, will resume`);
+        } catch (gitErr) {
+          // git status itself failed — worktree may be corrupted; block for safety
+          const reason = `git status check failed in worktree ${worktreePath}: ${gitErr instanceof Error ? gitErr.message : String(gitErr)}`;
+          logger.warn(`[RESTART-SAFETY] Feature ${feature.id}: ${reason}`);
+          return { action: 'block', reason };
+        }
+      } catch (accessErr) {
+        // Worktree directory does not exist (ENOENT) or is inaccessible.
+        // No worktree → nothing to check; let the agent create a fresh one.
+        if ((accessErr as NodeJS.ErrnoException).code !== 'ENOENT') {
+          logger.warn(
+            `[RESTART-SAFETY] Unexpected error accessing worktree for feature ${feature.id}:`,
+            accessErr
+          );
+        }
+        // Fall through to resume (no worktree is fine)
+      }
+    }
+
+    // ── 3. No live PR and no dirty/conflicted worktree — safe to resume ──
+    return { action: 'resume' };
+  }
+
+  /**
    * Check for and resume interrupted features after server restart
    * This should be called during server initialization
    */
@@ -3834,6 +3945,44 @@ You can use the Read tool to view these images at any time during implementation
                 `to backlog — scheduler will pick it up once capacity is available.`
             );
             await this.updateFeatureStatus(projectPath, feature.id, 'backlog');
+            continue;
+          }
+
+          // Safety check: verify the feature is in a safe state before resuming.
+          // Prevents duplicate commits, double PR creation, and conflicting git state.
+          const safetyCheck = await this.checkRestartSafety(projectPath, feature);
+          if (safetyCheck.action === 'skip-done') {
+            logger.info(
+              `[RESUME] Feature ${feature.id} (${feature.title}) PR is merged — marking done`
+            );
+            await this.featureLoader.update(projectPath, feature.id, {
+              status: 'done',
+              statusChangeReason: 'PR merged — detected on server restart safety check',
+            });
+            continue;
+          }
+          if (safetyCheck.action === 'skip-review') {
+            logger.info(
+              `[RESUME] Feature ${feature.id} (${feature.title}) has live PR — setting to review, skipping re-run`
+            );
+            await this.featureLoader.update(projectPath, feature.id, {
+              status: 'review',
+              statusChangeReason:
+                safetyCheck.reason ??
+                'Live PR detected on server restart — not re-running to prevent duplicate',
+            });
+            continue;
+          }
+          if (safetyCheck.action === 'block') {
+            logger.warn(
+              `[RESUME] Feature ${feature.id} (${feature.title}) has dirty/conflicted worktree — blocking`
+            );
+            await this.featureLoader.update(projectPath, feature.id, {
+              status: 'blocked',
+              statusChangeReason:
+                safetyCheck.reason ??
+                'Dirty or conflicted worktree detected on server restart — manual review needed',
+            });
             continue;
           }
 
