@@ -2,7 +2,10 @@
  * Unit tests for secure-fs throttling and retry logic
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import * as secureFs from '../src/secure-fs.js';
 
 describe('secure-fs throttling', () => {
@@ -132,5 +135,49 @@ describe('retry logic behavior', () => {
     expect(config.maxRetries).toBe(5);
     expect(config.baseDelay).toBe(200);
     expect(config.maxDelay).toBe(10000);
+  });
+});
+
+describe('atomicWriteFile', () => {
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'secure-fs-test-'));
+  });
+
+  afterEach(async () => {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  it('should write data to the destination file', async () => {
+    const destPath = path.join(tmpDir, 'output.txt');
+    await secureFs.atomicWriteFile(destPath, 'hello world');
+    const content = await fs.readFile(destPath, 'utf-8');
+    expect(content).toBe('hello world');
+  });
+
+  it('should create parent directories that do not exist', async () => {
+    const destPath = path.join(tmpDir, 'nested', 'deep', 'output.txt');
+    await secureFs.atomicWriteFile(destPath, 'nested content');
+    const content = await fs.readFile(destPath, 'utf-8');
+    expect(content).toBe('nested content');
+  });
+
+  it('should not leave a .tmp file behind after a successful write', async () => {
+    const destPath = path.join(tmpDir, 'output.txt');
+    await secureFs.atomicWriteFile(destPath, 'data');
+    const tmpExists = await fs
+      .access(`${destPath}.tmp`)
+      .then(() => true)
+      .catch(() => false);
+    expect(tmpExists).toBe(false);
+  });
+
+  it('should overwrite an existing file atomically', async () => {
+    const destPath = path.join(tmpDir, 'output.txt');
+    await fs.writeFile(destPath, 'original');
+    await secureFs.atomicWriteFile(destPath, 'updated');
+    const content = await fs.readFile(destPath, 'utf-8');
+    expect(content).toBe('updated');
   });
 });
