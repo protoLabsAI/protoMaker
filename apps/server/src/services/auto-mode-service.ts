@@ -137,6 +137,7 @@ import {
   symlinkBuildArtifacts,
   installWorktreeDependencies,
 } from './worktree-lifecycle-service.js';
+import { checkFeatureRestartOutcome } from './startup-recovery-service.js';
 import type {
   RunningFeature,
   PendingApproval,
@@ -3738,27 +3739,11 @@ You can use the Read tool to view these images at any time during implementation
               continue;
             }
 
-            // Server crash: collect for resumption
-            // Verify it has existing context (agent-output.md)
-            const featureDir = getFeatureDir(projectPath, feature.id);
-            const contextPath = path.join(featureDir, 'agent-output.md');
-            try {
-              await secureFs.access(contextPath);
-              interruptedFeatures.push(feature);
-              logger.info(
-                `Found interrupted feature: ${feature.id} (${feature.title}) - status: ${feature.status}`
-              );
-            } catch {
-              // No context file — include all interrupted/in_progress features so they
-              // are either resumed (if context materialises later) or restarted fresh.
-              // Previously, in_progress features without agent-output.md were silently
-              // skipped, leaving them stuck as in_progress forever and blocking the
-              // auto-loop capacity check (hasInProgressFeatures).
-              interruptedFeatures.push(feature);
-              logger.info(
-                `Feature ${feature.id} (${feature.status}) has no context file, will restart fresh`
-              );
-            }
+            // Server crash: collect for resumption after safety check
+            interruptedFeatures.push(feature);
+            logger.info(
+              `Found interrupted feature: ${feature.id} (${feature.title}) - status: ${feature.status}`
+            );
           }
         }
       }
@@ -3768,14 +3753,78 @@ You can use the Read tool to view these images at any time during implementation
         return;
       }
 
-      logger.info(`Found ${interruptedFeatures.length} interrupted feature(s) to resume`);
+      logger.info(`Found ${interruptedFeatures.length} interrupted feature(s) to safety-check`);
+
+      // Resolve the configured base branch once for this project
+      const baseBranch = await getEffectivePrBaseBranch(projectPath, this.settingsService);
+
+      // Safety-check each feature before deciding whether to spawn an agent.
+      // This prevents duplicate commits, double PR creation, and dirty-worktree conflicts.
+      const safeToResume: Feature[] = [];
+      for (const feature of interruptedFeatures) {
+        try {
+          const check = await checkFeatureRestartOutcome(projectPath, feature, baseBranch);
+
+          switch (check.outcome) {
+            case 'SKIP_HAS_PR':
+              // PR is open — leave feature as in_progress so the PR watcher can handle it.
+              // Do NOT move to review here; the PR feedback service will do that when polled.
+              logger.info(
+                `[STARTUP-RECOVERY] Feature ${feature.id} skipped (live PR #${feature.prNumber})`
+              );
+              break;
+
+            case 'RESET_DIRTY':
+              // Dirty/conflicted worktree — block and require human intervention
+              logger.warn(`[STARTUP-RECOVERY] Blocking feature ${feature.id}: ${check.reason}`);
+              await this.featureLoader.update(projectPath, feature.id, {
+                status: 'blocked',
+                statusChangeReason: check.reason,
+              });
+              this.emitAutoModeEvent('feature_status_changed', {
+                featureId: feature.id,
+                previousStatus: feature.status ?? 'in_progress',
+                newStatus: 'blocked',
+                reason: check.reason,
+                projectPath,
+              });
+              break;
+
+            case 'SAFE_TO_RESUME':
+              // Clean worktree with commits ahead of base — safe to continue
+              safeToResume.push(feature);
+              break;
+
+            case 'RESTART_FRESH':
+              // No worktree or no commits ahead — safe to start fresh
+              safeToResume.push(feature);
+              break;
+          }
+        } catch (checkError) {
+          // Safety check failed — fall back to resuming (same as previous behaviour)
+          logger.warn(
+            `[STARTUP-RECOVERY] Safety check failed for ${feature.id}, falling back to resume:`,
+            checkError
+          );
+          safeToResume.push(feature);
+        }
+      }
+
+      if (safeToResume.length === 0) {
+        logger.info(
+          '[STARTUP-RECOVERY] No features eligible for agent resumption after safety check'
+        );
+        return;
+      }
+
+      logger.info(`[STARTUP-RECOVERY] ${safeToResume.length} feature(s) cleared for resumption`);
 
       // Emit event to notify UI
       this.emitAutoModeEvent('auto_mode_resuming_features', {
-        message: `Resuming ${interruptedFeatures.length} interrupted feature(s) after server restart`,
+        message: `Resuming ${safeToResume.length} interrupted feature(s) after server restart`,
         projectPath,
-        featureIds: interruptedFeatures.map((f) => f.id),
-        features: interruptedFeatures.map((f) => ({
+        featureIds: safeToResume.map((f) => f.id),
+        features: safeToResume.map((f) => ({
           id: f.id,
           title: f.title,
           status: f.status,
@@ -3783,10 +3832,10 @@ You can use the Read tool to view these images at any time during implementation
         })),
       });
 
-      // Resume each interrupted feature — respect global system cap to prevent OOM on restart.
+      // Resume each cleared feature — respect global system cap to prevent OOM on restart.
       // Features that cannot be resumed immediately are reset to backlog so the scheduler
       // picks them up once capacity is available.
-      for (const feature of interruptedFeatures) {
+      for (const feature of safeToResume) {
         try {
           // Global cap gate: prevents spawning more agents than systemMaxConcurrency allows.
           // Each call to resumeFeature bypasses the scheduler's fair-share check, so we
