@@ -1675,6 +1675,25 @@ export class GitWorkflowService {
           createdAt: new Date().toISOString(),
         });
 
+        // Persist prNumber to feature.json so subsequent poll cycles don't re-enter blocked state.
+        // This path (pre-check found an existing PR) is the most common cause of the cycle bug:
+        // a previous run created the PR but crashed before persisting prNumber to the feature record.
+        if (this.featureStore) {
+          try {
+            await this.featureStore.update(projectPath, feature.id, {
+              prNumber: existingPr.number,
+              prUrl: existingPr.url,
+            });
+            logger.info(
+              `[createPullRequest] Persisted pre-existing prNumber #${existingPr.number} to feature ${feature.id}`
+            );
+          } catch (persistError) {
+            logger.warn(
+              `[createPullRequest] Failed to persist pre-existing prNumber #${existingPr.number} to feature ${feature.id}: ${persistError instanceof Error ? persistError.message : String(persistError)}`
+            );
+          }
+        }
+
         return {
           prUrl: existingPr.url,
           prNumber: existingPr.number,
@@ -1829,6 +1848,26 @@ export class GitWorkflowService {
               state: prState,
               createdAt: new Date().toISOString(),
             });
+
+            // Persist recovered prNumber to feature.json so subsequent poll cycles find it.
+            // Without this, the poll cycle sees no prNumber on the feature record and repeatedly
+            // re-enters blocked state even though the PR exists on GitHub.
+            if (this.featureStore) {
+              try {
+                await this.featureStore.update(projectPath, feature.id, {
+                  prNumber: existingPr.number,
+                  prUrl: existingPr.url,
+                });
+                logger.info(
+                  `[createPullRequest] Recovery: persisted prNumber #${existingPr.number} to feature ${feature.id}`
+                );
+              } catch (persistError) {
+                logger.warn(
+                  `[createPullRequest] Recovery: failed to persist prNumber #${existingPr.number} to feature ${feature.id}: ${persistError instanceof Error ? persistError.message : String(persistError)}`
+                );
+              }
+            }
+
             if (prState === 'MERGED') {
               logger.info(
                 `[createPullRequest] Recovery: PR #${existingPr.number} for "${branchName}" is already MERGED — treating as done`
