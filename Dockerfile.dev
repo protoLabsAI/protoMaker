@@ -35,6 +35,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Claude CLI globally
 RUN npm install -g @anthropic-ai/claude-code
 
+# Install agent-browser CLI globally (binary available to all users via npm global bin)
+# Chrome download is deferred to the automaker user step below so it lands in the correct cache
+RUN npm install -g agent-browser@0.24.1
+
 # Build arguments for user ID matching (allows matching host user for mounted volumes)
 # Override at build time: docker-compose build --build-arg UID=$(id -u) --build-arg GID=$(id -g)
 ARG UID=1001
@@ -53,6 +57,12 @@ RUN groupadd -o -g ${GID} automaker && \
 USER automaker
 ENV HOME=/home/automaker
 RUN curl https://cursor.com/install -fsS | bash || true
+
+# Download Chrome for Testing as the automaker user.
+# agent-browser resolves Chrome from the runtime user's home cache (~/.cache/agent-browser).
+# Running this as root would place Chrome in /root/.cache and leave it unreachable at runtime
+# because the container drops to UID 1001 (automaker) before starting the server.
+RUN agent-browser install
 USER root
 
 # Add PATH to profile for Cursor CLI
