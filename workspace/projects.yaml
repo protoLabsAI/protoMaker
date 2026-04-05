@@ -1,0 +1,15 @@
+# workspace/projects.yaml — protoLabs Studio Project Routing Index
+#
+# Each entry represents a GitHub repository onboarded into this Studio instance.
+# This file is updated by the onboard_project skill when a new repo is added.
+#
+# Fields:
+#   slug          — kebab-case identifier derived from <owner>-<repo>
+#   title         — human-readable project name (from GitHub repo .name)
+#   github        — <owner>/<repo> slug
+#   defaultBranch — default branch at time of onboarding
+#   status        — active | archived | suspended
+#   onboardedAt   — ISO 8601 timestamp
+#   discord       — Discord channel names/IDs for this project
+
+projects: []
