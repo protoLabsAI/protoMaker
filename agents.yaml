@@ -1,0 +1,44 @@
+# agents.yaml — A2A Skill Registry for protoLabs Studio
+#
+# Maps skill names to the agent that owns them and how they are triggered.
+# Used by Ava and the Discord bot to route incoming A2A requests.
+#
+# Trigger types:
+#   discord_slash  — Discord /slash command
+#   discord_dm     — Direct message to the Ava bot
+#   a2a_message    — Agent-to-Agent send (internal orchestration)
+#
+# Skill files live under .claude/skills/<name>.md
+
+agents:
+  ava:
+    description: Autonomous orchestrator. Owns high-level operational skills.
+    skills:
+      - name: onboard_project
+        description: >
+          Onboard a GitHub repository into protoLabs Studio.
+          Fetches repo metadata, scaffolds .automaker project files,
+          provisions Discord channels, updates workspace/projects.yaml,
+          and posts a kickoff message.
+        skill_file: .claude/skills/onboard_project.md
+        argument: "<owner>/<repo>"
+        triggers:
+          - type: discord_slash
+            command: /onboard_project
+            example: /onboard_project protoLabsAI/protoWorkstacean
+          - type: a2a_message
+            action: onboard_project
+
+  quinn:
+    description: QA Engineer. Validates releases, tests endpoints, runs regression checks.
+    skills:
+      - name: provision_discord
+        description: >
+          Provision Discord channels for a new project.
+          Creates a category with #general, #updates, and #dev channels.
+          Returns channel IDs for writing back to project settings.
+        skill_file: .claude/skills/provision_discord.md
+        argument: "projectTitle=<title> projectSlug=<slug>"
+        triggers:
+          - type: a2a_message
+            action: provision_discord
