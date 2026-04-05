@@ -17,8 +17,31 @@ interface PhaseConfig {
 const AGENT_TASKS: PhaseConfig[] = [
   {
     key: 'agentExecutionModel',
-    label: 'Agent Execution',
-    description: 'Model used when agents implement features (auto-mode)',
+    label: 'Agent Execution (default)',
+    description: 'Fallback model for features with no complexity set',
+  },
+];
+
+const COMPLEXITY_TIER_TASKS: PhaseConfig[] = [
+  {
+    key: 'complexitySmallModel',
+    label: 'Small',
+    description: 'Trivial tasks — fast, cheap (default: Haiku)',
+  },
+  {
+    key: 'complexityMediumModel',
+    label: 'Medium',
+    description: 'Standard feature work (default: Sonnet)',
+  },
+  {
+    key: 'complexityLargeModel',
+    label: 'Large',
+    description: 'Complex multi-file changes (default: Sonnet)',
+  },
+  {
+    key: 'complexityArchitecturalModel',
+    label: 'Architectural',
+    description: 'System design, core infrastructure — most capable (default: Opus)',
   },
 ];
 
@@ -179,10 +202,17 @@ export function ModelDefaultsSection() {
 
       {/* Content */}
       <div className="p-6 space-y-8">
+        {/* Complexity Tiers */}
+        <PhaseGroup
+          title="Complexity Tiers"
+          subtitle="Route features to the right model by complexity — overrides Agent Execution default"
+          phases={COMPLEXITY_TIER_TASKS}
+        />
+
         {/* Agent Execution */}
         <PhaseGroup
           title="Agent Execution"
-          subtitle="The model that implements features in worktrees"
+          subtitle="Fallback model for features with no complexity set"
           phases={AGENT_TASKS}
         />
 

@@ -201,6 +201,16 @@ export interface PhaseModelConfig {
   /** Model for agent feature execution (auto-mode and manual agent launches) */
   agentExecutionModel: PhaseModelEntry;
 
+  // Complexity tier models - per-complexity model routing for auto-mode
+  /** Model for small/trivial features (fast, cheap) */
+  complexitySmallModel: PhaseModelEntry;
+  /** Model for medium complexity features */
+  complexityMediumModel: PhaseModelEntry;
+  /** Model for large/complex features */
+  complexityLargeModel: PhaseModelEntry;
+  /** Model for architectural features (full reasoning, most capable) */
+  complexityArchitecturalModel: PhaseModelEntry;
+
   // Flow-specific models - per-flow model overrides for LangGraph flows
   /**
    * Per-flow model configuration for LangGraph flows.
@@ -246,6 +256,12 @@ export const DEFAULT_PHASE_MODELS: PhaseModelConfig = {
 
   // Agent execution - default to sonnet for reliable feature implementation
   agentExecutionModel: { model: 'claude-sonnet' },
+
+  // Complexity tiers - route features to the right model by complexity
+  complexitySmallModel: { model: 'claude-haiku' },
+  complexityMediumModel: { model: 'claude-sonnet' },
+  complexityLargeModel: { model: 'claude-sonnet' },
+  complexityArchitecturalModel: { model: 'claude-opus' },
 };
 
 /**
