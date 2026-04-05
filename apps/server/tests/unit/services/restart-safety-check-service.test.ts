@@ -7,20 +7,33 @@ vi.mock('node:fs/promises', () => ({
   access: vi.fn(),
 }));
 
-// Mock node:child_process/promises execFile (used by service directly — no promisify wrapper)
-vi.mock('node:child_process/promises', () => ({
-  execFile: vi.fn(),
-}));
+// Mock child_process execFileCb (the service wraps it in an explicit promise)
+vi.mock('child_process', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('child_process')>();
+  return { ...actual, execFile: vi.fn() };
+});
 
 import { access } from 'node:fs/promises';
-import { execFile } from 'node:child_process/promises';
+import { execFile } from 'child_process';
 
 function mockExecFileWithOutput(stdout: string): void {
-  vi.mocked(execFile).mockResolvedValue({ stdout, stderr: '' } as never);
+  vi.mocked(execFile).mockImplementation((...args: unknown[]) => {
+    const callback = args[args.length - 1] as (
+      err: null | Error,
+      stdout: string,
+      stderr: string
+    ) => void;
+    callback(null, stdout, '');
+    return {} as ReturnType<typeof execFile>;
+  });
 }
 
 function mockExecFileError(err: Error): void {
-  vi.mocked(execFile).mockRejectedValue(err);
+  vi.mocked(execFile).mockImplementation((...args: unknown[]) => {
+    const callback = args[args.length - 1] as (err: Error) => void;
+    callback(err);
+    return {} as ReturnType<typeof execFile>;
+  });
 }
 
 function makeFeature(overrides: Partial<Feature> = {}): Feature {

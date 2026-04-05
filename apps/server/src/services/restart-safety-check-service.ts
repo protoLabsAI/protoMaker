@@ -12,13 +12,32 @@
  *                 Set to blocked with a human-readable reason.
  */
 
-import { execFile } from 'node:child_process/promises';
+import { execFile as execFileCb } from 'child_process';
 import { access } from 'node:fs/promises';
 import path from 'path';
+import type { ExecFileOptions } from 'child_process';
 import type { Feature } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('RestartSafetyCheck');
+
+/**
+ * Explicit promise wrapper for execFile that always resolves with { stdout, stderr }.
+ * Avoids `promisify` which loses the util.promisify.custom behavior when mocked in tests,
+ * and avoids `node:child_process/promises` which isn't available in all Vitest environments.
+ */
+function execFile(
+  cmd: string,
+  args: string[],
+  opts: ExecFileOptions
+): Promise<{ stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    execFileCb(cmd, args, opts, (err, stdout, stderr) => {
+      if (err) reject(err);
+      else resolve({ stdout: stdout as string, stderr: stderr as string });
+    });
+  });
+}
 
 export type SafetyCheckAction = 'resume' | 'block' | 'to_review';
 
