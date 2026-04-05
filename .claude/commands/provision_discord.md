@@ -83,6 +83,7 @@ After all steps complete successfully, output the result as a JSON block so the 
 ## Error Handling
 
 If any step fails:
+
 - Report the failure with the exact error message returned by the tool
 - Do not continue to subsequent steps
 - Output the error as:
