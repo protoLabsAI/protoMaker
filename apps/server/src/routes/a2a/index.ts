@@ -98,6 +98,22 @@ function buildAgentCard(host: string) {
         outputModes: ['text/markdown'],
         examples: ["what's blocked?", 'check board health', 'any stalled agents?'],
       },
+      {
+        id: 'provision_discord',
+        name: 'Provision Discord Channels',
+        description:
+          'Provision Discord channels for a new project. ' +
+          'Creates a category with standard project channels (#dev, #alerts, #releases). ' +
+          'Called by Ava during onboard_project to set up team communication infrastructure. ' +
+          'Returns channel IDs for writing back to project settings.',
+        tags: ['discord', 'onboarding', 'provisioning'],
+        inputModes: ['text/plain'],
+        outputModes: ['application/json'],
+        examples: [
+          'provision discord channels for project MyApp',
+          'set up discord for projectSlug=my-app projectTitle=My App',
+        ],
+      },
     ],
     securitySchemes: {
       apiKey: {
