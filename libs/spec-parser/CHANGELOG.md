@@ -1,5 +1,32 @@
 # @protolabsai/spec-parser
 
+## 0.97.0
+
+### Minor Changes
+
+- ### Features
+  - per-complexity model tier settings for auto-mode routing
+  - sync LiteLLM gateway models to openaiCompatibleProviders on boot
+  - replace .env.staging with Infisical secrets management (#3243)
+
+  ### Bug Fixes
+  - add complexity tier keys to exhaustive PhaseModelKey maps + AI providers docs
+  - persist prNumber atomically after PR creation, sync dotenv dependency (#3254)
+  - prNumber not persisted after PR creation causes repeated blocked cycles (#3255)
+  - allow server container to reach LiteLLM gateway at ava:4000
+  - bust Docker build cache per-commit + auto-configure LiteLLM gateway on deploy
+  - pass LITELLM_MASTER_KEY into server container via docker-compose
+  - resolve env var API keys in LiteLLM gateway service
+  - install infisical CLI on runner if missing in deploy workflow
+
+  ### Refactors
+  - bug: board reconciliation does not mark review features done when PR mer (#3252)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.97.0
+
 ## 0.96.1
 
 ### Patch Changes
