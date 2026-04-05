@@ -119,14 +119,17 @@ function buildAgentCard(host: string) {
         id: 'onboard_project',
         name: 'Onboard Project',
         description:
-          'Onboard a GitHub repository into protoLabs Studio. ' +
-          'Fetches repo metadata, scaffolds .automaker project files, ' +
-          'provisions Discord channels, updates workspace/projects.yaml, ' +
-          'and posts a kickoff message.',
-        tags: ['ops', 'onboarding'],
+          'Onboard a new GitHub repo: scaffold .automaker board entry, patch .gitignore, ' +
+          'create worktree-init hook, provision Discord category + channels via Quinn, ' +
+          'and register the project in the Workstacean routing index.',
+        tags: ['onboarding', 'projects'],
         inputModes: ['text/plain'],
         outputModes: ['text/markdown'],
-        examples: ['onboard protoLabsAI/protoWorkstacean', '/onboard_project protoLabsAI/my-repo'],
+        examples: [
+          'onboard protoLabsAI/protoWorkstacean',
+          '/onboard protoLabsAI/quinn',
+          'set up protoLabsAI/myapp as a new project',
+        ],
       },
       {
         id: 'provision_discord',
