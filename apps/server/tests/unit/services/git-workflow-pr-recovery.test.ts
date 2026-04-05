@@ -620,7 +620,11 @@ describe('GitWorkflowService – createPullRequest recovery path', () => {
     // Full happy path: PR is created, prNumber is persisted to featureStore immediately.
     // A subsequent reload (simulating the poll cycle) returns the persisted prNumber.
     // This test verifies the end-to-end contract that prevents the blocked cycle.
-    const persistedFeature = { ...FAKE_FEATURE, prNumber: 88, prUrl: 'https://github.com/org/repo/pull/88' };
+    const persistedFeature = {
+      ...FAKE_FEATURE,
+      prNumber: 88,
+      prUrl: 'https://github.com/org/repo/pull/88',
+    };
     const mockFeatureStore = {
       update: vi.fn().mockResolvedValue(persistedFeature),
       get: vi.fn().mockResolvedValue(persistedFeature),
