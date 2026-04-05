@@ -279,6 +279,31 @@ export async function appendFile(
 }
 
 /**
+ * Write data to a file atomically by writing to a .tmp file first, then renaming.
+ * Creates the parent directory if it does not exist.
+ * This prevents partial writes from leaving a corrupted destination file.
+ */
+export async function atomicWriteFile(
+  destPath: string,
+  data: string | Buffer,
+  optionsOrEncoding?: BufferEncoding | WriteFileOptions
+): Promise<void> {
+  const validatedDest = validatePath(destPath);
+  const parentDir = path.dirname(validatedDest);
+  const tmpPath = `${validatedDest}.tmp`;
+
+  await executeWithRetry(() => fs.mkdir(parentDir, { recursive: true }), `mkdir(${parentDir})`);
+  await executeWithRetry(
+    () => fs.writeFile(tmpPath, data, optionsOrEncoding),
+    `writeFile(${tmpPath})`
+  );
+  await executeWithRetry(
+    () => fs.rename(tmpPath, validatedDest),
+    `rename(${tmpPath}, ${validatedDest})`
+  );
+}
+
+/**
  * Wrapper around fs.rename that validates both paths first
  */
 export async function rename(oldPath: string, newPath: string): Promise<void> {

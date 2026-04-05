@@ -420,6 +420,63 @@ describe('ConcurrencyManager — fair-share allocation', () => {
         manager.canProjectAcquireSlot('/project-b', globalCap, reservations, pendingWork, 0)
       ).toBe(true);
     });
+
+    it('enforces global cap when multiple projects are simultaneously starting (OOM fix)', () => {
+      // Reproduces the OOM crash scenario: globalCap=2, no running leases yet.
+      // Project A has 1 feature in its startingFeatures (added before acquiring a lease).
+      // Project B now asks: "can I start?" Without the fix, each project saw:
+      //   globalRunning(0) + projectStarting(1) = 1 < 2 → both pass → N×M agents launched.
+      // With the fix, B sees the full globalStartingCount (A's 1 + B's 1 = 2):
+      //   globalRunning(0) + globalStarting(2) = 2 >= 2 → BLOCKED.
+      const globalCap = 2;
+      // Only Project A has pending work — so A is the only competing project
+      // and gets the full fair-share allocation of globalCap(2).
+      const reservations = new Map<string, { min: number; max: number }>();
+      reservations.set('/project-a', { min: 1, max: 2 });
+      const pendingWork = new Set(['/project-a']);
+
+      // Project A: 1 starting, globalStartingCount=1. Global check: 0+1<2 → pass.
+      // Per-project: fairShare=2 (sole competing project), 0+1<2 → ALLOWED.
+      expect(
+        manager.canProjectAcquireSlot(
+          '/project-a',
+          globalCap,
+          reservations,
+          pendingWork,
+          1, // projectStartingCount (A's own)
+          1 // globalStartingCount (just A's feature so far)
+        )
+      ).toBe(true);
+
+      // Project B checks simultaneously. Now globalStartingCount=2 (A's 1 + B's pending 1).
+      // Global check: 0 + 2 = 2 >= 2 → BLOCKED. This is the fix.
+      // Without the fix (using only B's projectStarting=1): 0+1=1 < 2 → would incorrectly pass.
+      expect(
+        manager.canProjectAcquireSlot(
+          '/project-b',
+          globalCap,
+          reservations,
+          pendingWork,
+          1, // projectStartingCount (B's own)
+          2 // globalStartingCount (A's 1 + B's 1)
+        )
+      ).toBe(false);
+    });
+
+    it('uses projectStartingCount as default for globalStartingCount (backward compat)', () => {
+      // When globalStartingCount is not provided, defaults to projectStartingCount.
+      // This preserves existing behavior for callers that don't pass globalStartingCount.
+      manager.acquire('f1', '/project-a', null, null);
+      const globalCap = 4;
+      const reservations = new Map<string, { min: number; max: number }>();
+      reservations.set('/project-a', { min: 1, max: 4 });
+      const pendingWork = new Set(['/project-a']);
+
+      // 1 running + 0 starting < 4 → allowed
+      expect(
+        manager.canProjectAcquireSlot('/project-a', globalCap, reservations, pendingWork, 0)
+      ).toBe(true);
+    });
   });
 
   // ── Integration: starvation prevention ──────────────────────────────────

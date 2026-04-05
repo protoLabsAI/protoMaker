@@ -94,6 +94,7 @@ import { getAgentManifestService } from '../agent-manifest-service.js';
 
 import { TypedEventBus } from './typed-event-bus.js';
 import { PostExecutionMiddleware } from './post-execution-middleware.js';
+import { globalAgentSemaphore } from './global-agent-semaphore.js';
 import { TrajectoryQueryService } from '../trajectory-query-service.js';
 import { symlinkBuildArtifacts } from '../worktree-lifecycle-service.js';
 import type {
@@ -2577,6 +2578,12 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
     const streamObserver = loopDetectionEnabled ? new StreamObserver() : null;
     let loopDetected = false;
 
+    // Acquire a global semaphore slot before spawning the agent process.
+    // This caps total concurrent agents across ALL projects at systemMaxConcurrency
+    // to prevent OOM crashes when multiple apps run auto-mode simultaneously.
+    // If the cap is reached the call suspends here until a slot is freed.
+    const releaseSemaphore = await globalAgentSemaphore.acquire(this.settingsService);
+
     // Wrap stream processing in try/finally to ensure timeout cleanup on any error/abort
     try {
       streamLoop: for await (const msg of stream) {
@@ -3243,6 +3250,9 @@ After generating the revised spec, output:
         }
       }
     } finally {
+      // Release global concurrency slot so queued launches can proceed.
+      releaseSemaphore();
+
       clearInterval(streamHeartbeat);
       clearInterval(memoryHeartbeat);
       // ALWAYS clear pending timeouts to prevent memory leaks
