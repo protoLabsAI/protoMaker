@@ -1,7 +1,7 @@
 /**
  * Init Script Service - Executes worktree initialization scripts
  *
- * Runs the .automaker/worktree-init.sh script after worktree creation.
+ * Runs the .automaker/settings/worktree-init script after worktree creation.
  * Uses Git Bash on Windows for cross-platform shell script compatibility.
  */
 
@@ -45,7 +45,7 @@ export class InitScriptService {
    * Get the path to the init script for a project
    */
   getInitScriptPath(projectPath: string): string {
-    return path.join(projectPath, '.automaker', 'worktree-init.sh');
+    return path.join(projectPath, '.automaker', 'settings', 'worktree-init');
   }
 
   /**

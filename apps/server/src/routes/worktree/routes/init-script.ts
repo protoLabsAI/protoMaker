@@ -1,5 +1,5 @@
 /**
- * Init Script routes - Read/write/run the worktree-init.sh file
+ * Init Script routes - Read/write/run the .automaker/settings/worktree-init file
  *
  * POST /init-script - Read the init script content
  * PUT /init-script - Write content to the init script file
@@ -17,9 +17,6 @@ import { forceRunInitScript } from '../../../services/init-script-service.js';
 
 const logger = createLogger('InitScript');
 
-/** Fixed path for init script within .automaker directory */
-const INIT_SCRIPT_FILENAME = 'worktree-init.sh';
-
 /** Maximum allowed size for init scripts (1MB) */
 const MAX_SCRIPT_SIZE_BYTES = 1024 * 1024;
 
@@ -27,7 +24,7 @@ const MAX_SCRIPT_SIZE_BYTES = 1024 * 1024;
  * Get the full path to the init script for a project
  */
 function getInitScriptPath(projectPath: string): string {
-  return path.join(projectPath, '.automaker', INIT_SCRIPT_FILENAME);
+  return path.join(projectPath, '.automaker', 'settings', 'worktree-init');
 }
 
 /**
