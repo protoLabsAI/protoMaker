@@ -1280,8 +1280,22 @@ export class ExecutionService {
             if (gitWorkflowResult.prUrl) {
               const updates: Record<string, unknown> = {
                 prUrl: gitWorkflowResult.prUrl,
-                prNumber: gitWorkflowResult.prNumber,
               };
+
+              // Resolve prNumber: prefer the value already extracted by the git-workflow
+              // service, fall back to parsing from the PR URL.  Never assign `undefined`
+              // — doing so would spread `prNumber: undefined` onto the feature object and
+              // silently delete a previously-persisted prNumber from feature.json (because
+              // JSON.stringify drops keys with undefined values).
+              const resolvedPrNumber =
+                gitWorkflowResult.prNumber ??
+                (() => {
+                  const m = gitWorkflowResult.prUrl!.match(/\/pull\/(\d+)/);
+                  return m ? parseInt(m[1], 10) : undefined;
+                })();
+              if (resolvedPrNumber != null) {
+                updates.prNumber = resolvedPrNumber;
+              }
 
               // Set PR creation timestamp
               if (gitWorkflowResult.prCreatedAt) {
