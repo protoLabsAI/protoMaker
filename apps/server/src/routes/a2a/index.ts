@@ -98,6 +98,23 @@ function buildAgentCard(host: string) {
         outputModes: ['text/markdown'],
         examples: ["what's blocked?", 'check board health', 'any stalled agents?'],
       },
+      {
+        id: 'bug_triage',
+        name: 'Bug Triage',
+        description:
+          'Triage an incoming bug report from GitHub. Classifies severity and category, ' +
+          'applies labels, and creates a board feature. Trust-tier-aware: external submissions ' +
+          '(tier 0/1) are wrapped in untrusted framing and quarantined for human review before ' +
+          'auto-mode picks them up.',
+        tags: ['bugs', 'triage', 'github'],
+        inputModes: ['text/plain'],
+        outputModes: ['text/markdown'],
+        examples: [
+          'triage GitHub issue #42',
+          'classify and label this bug report',
+          'create a board feature for this external bug',
+        ],
+      },
     ],
     securitySchemes: {
       apiKey: {
