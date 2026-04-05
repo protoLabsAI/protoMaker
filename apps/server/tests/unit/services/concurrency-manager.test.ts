@@ -444,7 +444,7 @@ describe('ConcurrencyManager — fair-share allocation', () => {
           reservations,
           pendingWork,
           1, // projectStartingCount (A's own)
-          1  // globalStartingCount (just A's feature so far)
+          1 // globalStartingCount (just A's feature so far)
         )
       ).toBe(true);
 
@@ -458,7 +458,7 @@ describe('ConcurrencyManager — fair-share allocation', () => {
           reservations,
           pendingWork,
           1, // projectStartingCount (B's own)
-          2  // globalStartingCount (A's 1 + B's 1)
+          2 // globalStartingCount (A's 1 + B's 1)
         )
       ).toBe(false);
     });
