@@ -109,10 +109,7 @@ function buildAgentCard(host: string) {
         tags: ['ops', 'onboarding'],
         inputModes: ['text/plain'],
         outputModes: ['text/markdown'],
-        examples: [
-          'onboard protoLabsAI/protoWorkstacean',
-          '/onboard_project protoLabsAI/my-repo',
-        ],
+        examples: ['onboard protoLabsAI/protoWorkstacean', '/onboard_project protoLabsAI/my-repo'],
       },
     ],
     securitySchemes: {
