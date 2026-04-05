@@ -2,7 +2,7 @@
 name: onboard_project
 description: Onboard a new GitHub repository into protoLabs Studio. Fetches repo metadata, scaffolds .automaker project files, provisions Discord channels, updates the workspace routing index, and posts a kickoff message.
 category: ops
-argument-hint: "<owner>/<repo> (e.g. protoLabsAI/protoWorkstacean)"
+argument-hint: '<owner>/<repo> (e.g. protoLabsAI/protoWorkstacean)'
 allowed-tools:
   - Read
   - Glob
@@ -38,6 +38,7 @@ project in the workspace routing index.
 You receive a GitHub repo slug: `<owner>/<repo>` (e.g. `protoLabsAI/protoWorkstacean`).
 
 Derive:
+
 - `repoOwner` — the org or user (e.g. `protoLabsAI`)
 - `repoName` — the repository name (e.g. `protoWorkstacean`)
 - `projectSlug` — lowercase, hyphens: `protolabsai-protoworkstacean`
@@ -216,6 +217,7 @@ gh api repos/<owner>/<repo>/contents/.automaker/settings/worktree-init \
 ## Step 6 — Chain to provision_discord
 
 Call `mcp__plugin_protolabs_studio__provision_discord` with:
+
 - `projectPath` — the current project path (automakerRoot's parent)
 - `projectName` — `repoMeta.name`
 - `guildId` — the Discord Guild ID from settings (`DISCORD_GUILD_ID` env or `1070606339363049492`)
@@ -267,17 +269,17 @@ If the file does not exist, create it with the header comment.
 Append (or add to the `projects` list):
 
 ```yaml
-  - slug: <projectSlug>
-    title: <repoMeta.name>
-    github: <repoOwner>/<repoName>
-    defaultBranch: <repoMeta.defaultBranch>
-    status: active
-    onboardedAt: <ISO timestamp>
-    discord:
-      channels:
-        general: <general channel name or ID>
-        updates: <updates channel name or ID>
-        dev: <dev channel name or ID>
+- slug: <projectSlug>
+  title: <repoMeta.name>
+  github: <repoOwner>/<repoName>
+  defaultBranch: <repoMeta.defaultBranch>
+  status: active
+  onboardedAt: <ISO timestamp>
+  discord:
+    channels:
+      general: <general channel name or ID>
+      updates: <updates channel name or ID>
+      dev: <dev channel name or ID>
 ```
 
 Read the file first. If it already contains a `slug: <projectSlug>` entry, update it

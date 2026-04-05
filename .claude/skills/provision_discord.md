@@ -2,7 +2,7 @@
 name: provision_discord
 description: Provision Discord channels for a new project. Creates a category with #general, #updates, and #dev channels. Returns channel names for writing back to project settings.json.
 category: ops
-argument-hint: "projectTitle=<title> projectSlug=<slug>"
+argument-hint: 'projectTitle=<title> projectSlug=<slug>'
 allowed-tools:
   - Read
   - Bash
@@ -20,6 +20,7 @@ sub-task from onboard_project). You create Discord channels for a newly onboarde
 ## Input
 
 You receive two arguments:
+
 - `projectTitle` — human-readable project name (e.g. `protoWorkstacean`)
 - `projectSlug` — kebab-case slug (e.g. `protolabsai-protoworkstacean`)
 
@@ -34,11 +35,13 @@ guildId = DISCORD_GUILD_ID env var ?? "1070606339363049492"
 ## Step 2 — Call provision_discord MCP Tool
 
 Call `mcp__plugin_protolabs_studio__provision_discord` with:
+
 - `projectPath` — the current project path (resolve from context)
 - `projectName` — `projectTitle`
 - `guildId` — from Step 1
 
 The tool returns:
+
 ```json
 {
   "success": true,
