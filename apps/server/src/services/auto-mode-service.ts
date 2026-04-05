@@ -363,12 +363,25 @@ export class AutoModeService {
           }
         }
 
+        // Compute global starting count: sum startingFeatures across ALL active
+        // loop states (not just the requesting project's loop). This prevents
+        // multiple project loops from simultaneously passing the global cap gate
+        // when only one slot remains — the root cause of the OOM crash.
+        let globalStartingCount = 0;
+        for (const loopState of this.coordinator.loops.values()) {
+          const loopStarting = [...loopState.startingFeatures].filter(
+            (id) => !this.isFeatureRunning(id)
+          ).length;
+          globalStartingCount += loopStarting;
+        }
+
         return this.concurrencyManager.canProjectAcquireSlot(
           projectPath,
           effectiveCap,
           reservations,
           projectsWithPendingWork,
-          startingCount
+          startingCount,
+          globalStartingCount
         );
       },
       hasInProgressFeatures: this.hasInProgressFeatures.bind(this),

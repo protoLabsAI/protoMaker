@@ -318,6 +318,13 @@ export class ConcurrencyManager {
    * This replaces the simple `globalRunning >= MAX_SYSTEM_CONCURRENCY`
    * gate with a per-project aware check.
    *
+   * @param projectStartingCount - Features being started by THIS project's loop
+   *   (not yet tracked by the ConcurrencyManager). Used for the per-project
+   *   fair-share check.
+   * @param globalStartingCount - Features being started across ALL project loops.
+   *   Used for the global cap check to prevent multiple projects from racing
+   *   through the global gate simultaneously. Defaults to `projectStartingCount`
+   *   for backward compatibility (single-project scenarios).
    * @returns true if the project has room to start another agent.
    */
   canProjectAcquireSlot(
@@ -325,17 +332,21 @@ export class ConcurrencyManager {
     globalCap: number,
     projectReservations: Map<string, { min: number; max: number }>,
     projectsWithPendingWork: Set<string>,
-    startingCount: number
+    projectStartingCount: number,
+    globalStartingCount = projectStartingCount
   ): boolean {
-    // Global capacity check: total running + starting across ALL projects must be below globalCap
+    // Global capacity check: total running + ALL starting across ALL projects.
+    // Using globalStartingCount (not just this project's starting count) prevents
+    // multiple project loops from simultaneously passing the global gate when
+    // only one slot remains — the root cause of the OOM crash.
     const globalRunning = this.size;
-    if (globalRunning + startingCount >= globalCap) {
+    if (globalRunning + globalStartingCount >= globalCap) {
       return false;
     }
 
     // Per-project fair-share check
     const currentRunning = this.getRunningCountForProject(projectPath);
-    const totalOccupied = currentRunning + startingCount;
+    const totalOccupied = currentRunning + projectStartingCount;
     const fairShare = this.calculateFairShareForProject(
       projectPath,
       globalCap,
