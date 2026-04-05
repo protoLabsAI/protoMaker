@@ -3,6 +3,12 @@
 # Maps skill names to the agent that owns them and how they are triggered.
 # Used by Ava and the Discord bot to route incoming A2A requests.
 #
+# NOTE: This file is FALLBACK-ONLY for skill discovery.
+# The live agent card at /.well-known/agent.json (built by buildAgentCard() in
+# apps/server/src/routes/a2a/index.ts) always takes priority. Workstacean reads
+# agent.json at startup and overwrites any agents.yaml entries with the live
+# skill list. Keep both in sync when adding or removing skills.
+#
 # Trigger types:
 #   discord_slash  — Discord /slash command
 #   discord_dm     — Direct message to the Ava bot
