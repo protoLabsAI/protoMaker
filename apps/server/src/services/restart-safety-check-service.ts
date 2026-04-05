@@ -12,14 +12,12 @@
  *                 Set to blocked with a human-readable reason.
  */
 
-import { execFile } from 'child_process';
-import { promisify } from 'util';
+import { execFile } from 'node:child_process/promises';
 import { access } from 'node:fs/promises';
 import path from 'path';
 import type { Feature } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
 
-const execFileAsync = promisify(execFile);
 const logger = createLogger('RestartSafetyCheck');
 
 export type SafetyCheckAction = 'resume' | 'block' | 'to_review';
@@ -106,7 +104,7 @@ export class RestartSafetyCheckService {
     worktreePath: string
   ): Promise<{ isDirty: boolean; hasConflicts: boolean }> {
     try {
-      const { stdout } = await execFileAsync('git', ['status', '--porcelain'], {
+      const { stdout } = await execFile('git', ['status', '--porcelain'], {
         cwd: worktreePath,
         timeout: 10_000,
       });

@@ -7,36 +7,20 @@ vi.mock('node:fs/promises', () => ({
   access: vi.fn(),
 }));
 
-// Mock child_process execFile
-vi.mock('child_process', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('child_process')>();
-  return { ...actual, execFile: vi.fn() };
-});
+// Mock node:child_process/promises execFile (used by service directly — no promisify wrapper)
+vi.mock('node:child_process/promises', () => ({
+  execFile: vi.fn(),
+}));
 
 import { access } from 'node:fs/promises';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
+import { execFile } from 'node:child_process/promises';
 
-// execFileAsync is promisify(execFile) inside the service, so we need to mock execFile
-// and make it call the callback with our desired output
 function mockExecFileWithOutput(stdout: string): void {
-  vi.mocked(execFile).mockImplementation((...args: unknown[]) => {
-    const callback = args[args.length - 1] as (
-      err: null | Error,
-      stdout: string,
-      stderr: string
-    ) => void;
-    callback(null, stdout, '');
-    return {} as ReturnType<typeof execFile>;
-  });
+  vi.mocked(execFile).mockResolvedValue({ stdout, stderr: '' } as never);
 }
 
 function mockExecFileError(err: Error): void {
-  vi.mocked(execFile).mockImplementation((...args: unknown[]) => {
-    const callback = args[args.length - 1] as (err: Error) => void;
-    callback(err);
-    return {} as ReturnType<typeof execFile>;
-  });
+  vi.mocked(execFile).mockRejectedValue(err);
 }
 
 function makeFeature(overrides: Partial<Feature> = {}): Feature {
