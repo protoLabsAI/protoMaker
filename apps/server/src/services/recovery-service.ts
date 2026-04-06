@@ -604,7 +604,8 @@ ${this.generateCategoryGuidance(category, successRate, strategies)}
   }
 
   /**
-   * Calculate delay before retry with exponential backoff
+   * Calculate delay before retry with exponential backoff and jitter.
+   * Formula: min(base * 2^retryCount + jitter (up to 25% of exponential delay), maxDelay)
    */
   private calculateDelay(category: FailureCategory, retryCount: number): number {
     let baseDelay = this.config.baseDelayMs;
@@ -615,10 +616,12 @@ ${this.generateCategoryGuidance(category, successRate, strategies)}
     }
 
     // Exponential backoff: base * 2^retryCount
-    const delay = baseDelay * Math.pow(2, retryCount);
+    const exponentialDelay = baseDelay * Math.pow(2, retryCount);
 
-    // Cap at max delay
-    return Math.min(delay, this.config.maxDelayMs);
+    // Add up to 25% jitter to spread out concurrent retries, then cap
+    const jitter = Math.random() * exponentialDelay * 0.25;
+
+    return Math.min(Math.floor(exponentialDelay + jitter), this.config.maxDelayMs);
   }
 
   /**

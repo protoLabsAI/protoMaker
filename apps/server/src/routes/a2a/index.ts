@@ -21,10 +21,14 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { Router, type Request, type Response } from 'express';
 import { createLogger } from '@protolabsai/utils';
 import { validateApiKey } from '../../lib/auth.js';
 import { getVersion } from '../../lib/version.js';
+import { ProviderFactory } from '../../providers/provider-factory.js';
+import { resolveModelString } from '@protolabsai/model-resolver';
 
 const logger = createLogger('A2ARoutes');
 
@@ -98,6 +102,55 @@ function buildAgentCard(host: string) {
         outputModes: ['text/markdown'],
         examples: ["what's blocked?", 'check board health', 'any stalled agents?'],
       },
+      {
+        id: 'bug_triage',
+        name: 'Bug Triage',
+        description:
+          'Triage an incoming bug report from GitHub. Classifies severity and category, ' +
+          'applies labels, and creates a board feature. Trust-tier-aware: external submissions ' +
+          '(tier 0/1) are wrapped in untrusted framing and quarantined for human review before ' +
+          'auto-mode picks them up.',
+        tags: ['bugs', 'triage', 'github'],
+        inputModes: ['text/plain'],
+        outputModes: ['text/markdown'],
+        examples: [
+          'triage GitHub issue #42',
+          'classify and label this bug report',
+          'create a board feature for this external bug',
+        ],
+      },
+      {
+        id: 'onboard_project',
+        name: 'Onboard Project',
+        description:
+          'Onboard a new GitHub repo: scaffold .automaker board entry, patch .gitignore, ' +
+          'create worktree-init hook, provision Discord category + channels via Quinn, ' +
+          'and register the project in the Workstacean routing index.',
+        tags: ['onboarding', 'projects'],
+        inputModes: ['text/plain'],
+        outputModes: ['text/markdown'],
+        examples: [
+          'onboard protoLabsAI/protoWorkstacean',
+          '/onboard protoLabsAI/quinn',
+          'set up protoLabsAI/myapp as a new project',
+        ],
+      },
+      {
+        id: 'provision_discord',
+        name: 'Provision Discord Channels',
+        description:
+          'Provision Discord channels for a new project. ' +
+          'Creates a category with standard project channels (#dev, #alerts, #releases). ' +
+          'Called by Ava during onboard_project to set up team communication infrastructure. ' +
+          'Returns channel IDs for writing back to project settings.',
+        tags: ['discord', 'onboarding', 'provisioning'],
+        inputModes: ['text/plain'],
+        outputModes: ['application/json'],
+        examples: [
+          'provision discord channels for project MyApp',
+          'set up discord for projectSlug=my-app projectTitle=My App',
+        ],
+      },
     ],
     securitySchemes: {
       apiKey: {
@@ -128,6 +181,7 @@ async function collectChatResponse(chatResponse: globalThis.Response): Promise<s
 
   const decoder = new TextDecoder();
   const chunks: string[] = [];
+  const seenTypes = new Set<string>();
 
   while (true) {
     const { done, value } = await reader.read();
@@ -139,6 +193,7 @@ async function collectChatResponse(chatResponse: globalThis.Response): Promise<s
       if (!trimmed.startsWith('data: ')) continue;
       try {
         const payload = JSON.parse(trimmed.slice(6));
+        if (payload.type) seenTypes.add(String(payload.type));
         if (payload.type === 'text-delta' && typeof payload.delta === 'string') {
           chunks.push(payload.delta);
         }
@@ -148,7 +203,11 @@ async function collectChatResponse(chatResponse: globalThis.Response): Promise<s
     }
   }
 
-  return chunks.join('');
+  const result = chunks.join('');
+  if (result.length === 0) {
+    logger.warn(`collectChatResponse: 0 chars — event types seen: [${[...seenTypes].join(', ')}]`);
+  }
+  return result;
 }
 
 // ─── Route factory ───────────────────────────────────────────────────────────
@@ -167,6 +226,141 @@ export function createA2ARoutes(): Router {
   });
 
   return router;
+}
+
+// ─── Native-tool skill execution ─────────────────────────────────────────────
+
+/** Claude Code native tool names — skills that list only these need executeQuery */
+const CLAUDE_CODE_NATIVE_TOOLS = new Set([
+  'Read',
+  'Write',
+  'Edit',
+  'Bash',
+  'Glob',
+  'Grep',
+  'WebFetch',
+  'WebSearch',
+  'Task',
+  'TodoRead',
+  'TodoWrite',
+  'NotebookRead',
+  'NotebookEdit',
+]);
+
+interface SkillMeta {
+  body: string;
+  allowedTools: string[];
+  isNativeTool: boolean;
+}
+
+/** Load a skill file and parse its frontmatter. Returns null if not found. */
+async function loadSkill(projectPath: string, skillName: string): Promise<SkillMeta | null> {
+  const skillPath = join(projectPath, '.claude', 'skills', `${skillName}.md`);
+  let raw: string;
+  try {
+    raw = await readFile(skillPath, 'utf-8');
+  } catch {
+    return null;
+  }
+
+  // Parse YAML frontmatter between --- delimiters
+  const fmMatch = raw.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  if (!fmMatch) return { body: raw, allowedTools: [], isNativeTool: false };
+
+  const [, frontmatter, body] = fmMatch;
+
+  // Extract allowed-tools list (simple line-by-line parse, no full YAML library needed)
+  const toolLines: string[] = [];
+  let inTools = false;
+  for (const line of frontmatter.split('\n')) {
+    if (/^allowed-tools\s*:/.test(line)) {
+      inTools = true;
+      continue;
+    }
+    if (inTools) {
+      const itemMatch = line.match(/^\s+-\s+(.+)/);
+      if (itemMatch) {
+        toolLines.push(itemMatch[1].trim());
+      } else if (/^\S/.test(line)) {
+        inTools = false;
+      }
+    }
+  }
+
+  const isNativeTool =
+    toolLines.length > 0 && toolLines.every((t) => CLAUDE_CODE_NATIVE_TOOLS.has(t));
+
+  return { body: body.trim(), allowedTools: toolLines, isNativeTool };
+}
+
+/**
+ * Execute a skill using the Claude Code SDK (ProviderFactory.executeQuery).
+ * Used when the skill's allowed-tools are all native Claude Code tools
+ * (Bash, Read, Write, etc.) which are not available in Ava's Vercel AI SDK path.
+ */
+async function executeNativeSkill(
+  projectPath: string,
+  skill: SkillMeta,
+  userText: string
+): Promise<string> {
+  const resolvedModel = resolveModelString('claude-sonnet');
+  const provider = ProviderFactory.getProviderForModel(resolvedModel);
+  const stream = provider.executeQuery({
+    prompt: userText,
+    model: resolvedModel,
+    systemPrompt: skill.body,
+    cwd: projectPath,
+    maxTurns: 30,
+    allowedTools: skill.allowedTools,
+  });
+
+  let responseText = '';
+  for await (const msg of stream) {
+    const m = msg as unknown as Record<string, unknown>;
+    if (m['type'] === 'assistant' && m['message']) {
+      const message = m['message'] as Record<string, unknown>;
+      if (Array.isArray(message['content'])) {
+        for (const block of message['content'] as Array<Record<string, unknown>>) {
+          if (block['type'] === 'text' && typeof block['text'] === 'string') {
+            responseText += block['text'];
+          }
+        }
+      }
+    } else if (m['type'] === 'result') {
+      if (typeof m['result'] === 'string') {
+        responseText = m['result'];
+      }
+    }
+  }
+
+  return responseText;
+}
+
+/** Call /api/chat and collect the SSE text-delta response. */
+async function callChatEndpoint(
+  apiKey: string,
+  projectPath: string,
+  userText: string,
+  skillOverride?: string
+): Promise<string> {
+  const baseUrl = `http://localhost:${process.env['PORT'] ?? 3008}`;
+  const chatRes = await fetch(`${baseUrl}/api/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-API-Key': apiKey },
+    body: JSON.stringify({
+      messages: [{ id: randomUUID(), role: 'user', parts: [{ type: 'text', text: userText }] }],
+      projectPath,
+      ...(skillOverride ? { skillOverride } : {}),
+    }),
+  });
+
+  if (!chatRes.ok) {
+    const errorText = await chatRes.text();
+    logger.error(`A2A chat call failed: ${chatRes.status} ${errorText}`);
+    throw new Error(`chat endpoint returned ${chatRes.status}`);
+  }
+
+  return collectChatResponse(chatRes);
 }
 
 export function createA2AHandlerRoutes(projectPath: string): Router {
@@ -203,6 +397,7 @@ export function createA2AHandlerRoutes(projectPath: string): Router {
           parts?: Array<{ kind?: string; type?: string; text?: string }>;
         };
         metadata?: Record<string, unknown>;
+        contextId?: string;
       };
     };
 
@@ -223,6 +418,7 @@ export function createA2AHandlerRoutes(projectPath: string): Router {
 
     const parts = body.params?.message?.parts ?? [];
     const userText = extractText(parts);
+    const skillOverride = body.params?.metadata?.skillHint as string | undefined;
 
     if (!userText) {
       res.status(200).json({
@@ -241,43 +437,26 @@ export function createA2AHandlerRoutes(projectPath: string): Router {
     );
 
     try {
-      // Call the existing /api/chat endpoint internally.
-      // This reuses all tool registration, auth, sitrep injection, and
-      // model configuration without duplicating any of that logic here.
-      const baseUrl = `http://localhost:${process.env.PORT ?? 3008}`;
-      const chatRes = await fetch(`${baseUrl}/api/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': key,
-        },
-        body: JSON.stringify({
-          messages: [
-            {
-              id: randomUUID(),
-              role: 'user',
-              parts: [{ type: 'text', text: userText }],
-            },
-          ],
-          projectPath,
-        }),
-      });
+      let responseText: string;
 
-      if (!chatRes.ok) {
-        const errorText = await chatRes.text();
-        logger.error(`A2A chat call failed: ${chatRes.status} ${errorText}`);
-        res.status(200).json({
-          jsonrpc: '2.0',
-          id: rpcId,
-          error: {
-            code: -32603,
-            message: `Internal error: chat endpoint returned ${chatRes.status}`,
-          },
-        });
-        return;
+      // When a skill is requested, check if it needs Claude Code native tools (Bash,
+      // Read, Write, etc.). If so, bypass /api/chat and run via ProviderFactory.executeQuery
+      // which has the full Claude Code SDK tool set. Otherwise use /api/chat as before.
+      if (skillOverride) {
+        const skill = await loadSkill(projectPath, skillOverride);
+        if (skill?.isNativeTool) {
+          logger.info(
+            `A2A skill "${skillOverride}" uses native tools [${skill.allowedTools.join(', ')}] — routing via executeQuery`
+          );
+          responseText = await executeNativeSkill(projectPath, skill, userText);
+        } else {
+          // Skill not found, has no tool restrictions, or uses Ava board tools → /api/chat
+          responseText = await callChatEndpoint(key, projectPath, userText, skillOverride);
+        }
+      } else {
+        responseText = await callChatEndpoint(key, projectPath, userText, undefined);
       }
 
-      const responseText = await collectChatResponse(chatRes);
       const taskId = randomUUID();
       const contextId = randomUUID();
 

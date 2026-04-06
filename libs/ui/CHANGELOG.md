@@ -1,5 +1,35 @@
 # @protolabsai/ui
 
+## 0.98.0
+
+### Minor Changes
+
+- ### Features
+  - skill-override intent routing — eliminate fragile slash matching
+  - add sanitizeIssueBody module for GitHub issue body scrubbing (#3273)
+  - add exponential backoff with jitter to agent execution retries (#3271)
+  - add GitHub integration and alerts/releases Discord channels
+
+  ### Bug Fixes
+  - native-tool execution path for skills using Bash/Read/Write
+  - native-tool execution path for skills requiring Bash/Read/Write
+  - onboard_project — drop unavailable MCP tools, add gh tooling note
+  - onboard_project — hard defaults table, clone step, no questions
+  - onboard_project — fully autonomous, no intake questions
+  - add onboard_project to buildAgentCard skills array (#3279)
+  - register external projects with GitHubStateChecker on startup (#3269)
+
+  ### Refactors
+  - Quinn: fix browser tool - Chrome inaccessible to sandbox user (#3278)
+  - Add provision_discord to Quinn agent card (#3277)
+  - Worktree init hook — discover and run per-repo setup script on worktree (#3270)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.98.0
+  - @protolabsai/utils@0.98.0
+
 ## 0.97.1
 
 ### Patch Changes

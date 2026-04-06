@@ -119,6 +119,6 @@ export const DEFAULT_RECOVERY_CONFIG: RecoveryConfig = {
   maxTransientRetries: 3,
   maxTestFailureRetries: 2,
   baseDelayMs: 1000,
-  maxDelayMs: 30000,
+  maxDelayMs: 60000,
   preserveContext: true,
 };

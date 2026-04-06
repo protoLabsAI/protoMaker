@@ -1,0 +1,32 @@
+# workspace/projects.yaml — protoLabs Studio Project Routing Index
+#
+# Each entry represents a GitHub repository onboarded into this Studio instance.
+# This file is updated by the onboard_project skill when a new repo is added.
+# Workstacean's A2APlugin reads this file at startup and rebuilds the index
+# every 5 seconds when the file changes — no restart required.
+#
+# Fields:
+#   slug          — kebab-case identifier derived from <owner>-<repo>
+#   title         — human-readable project name (from GitHub repo .name)
+#   github        — <owner>/<repo> slug (used as the lookup key)
+#   defaultBranch — default branch at time of onboarding
+#   status        — active | archived | suspended
+#                   archived and suspended entries are excluded from the index
+#   onboardedAt   — ISO 8601 timestamp
+#   discord       — Discord channel IDs for routing GitHub events:
+#     dev           — general dev activity (@mentions, PRs, issues)
+#     alerts        — CI failures, error spikes, infra alerts
+#     releases      — release tags, deploy notifications
+
+projects:
+  - slug: protolabsai-quinn
+    title: quinn
+    github: protoLabsAI/quinn
+    defaultBranch: main
+    status: active
+    onboardedAt: '2026-04-06T00:00:00.000Z'
+    discord:
+      channels:
+        general: ''
+        updates: ''
+        dev: ''

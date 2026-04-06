@@ -210,6 +210,10 @@ export interface DiscordChannelMap {
   ceremonies?: string;
   /** Content briefs channel */
   contentBriefs?: string;
+  /** CI/CD failures and system alerts */
+  alerts?: string;
+  /** Release announcements */
+  releases?: string;
 }
 
 // ============================================================================
@@ -276,6 +280,17 @@ export const DEFAULT_DISCORD_INTEGRATION: DiscordIntegrationConfig = {
 // ============================================================================
 
 /**
+ * ProjectGitHubIntegration - GitHub repository association for a project
+ *
+ * Links a project to one or more GitHub repositories.
+ * Used by Workstacean for routing GitHub events to project-specific Discord channels.
+ */
+export interface ProjectGitHubIntegration {
+  /** GitHub repository slugs (e.g. ["protoLabsAI/protoWorkstacean"]) */
+  repos: string[];
+}
+
+/**
  * ProjectIntegrations - Container for all per-project integration configurations
  *
  * Extensible structure for adding new integrations (Slack, Jira, etc.) in the future.
@@ -284,6 +299,8 @@ export const DEFAULT_DISCORD_INTEGRATION: DiscordIntegrationConfig = {
 export interface ProjectIntegrations {
   /** Discord team communication integration */
   discord?: DiscordIntegrationConfig;
+  /** GitHub repository association */
+  github?: ProjectGitHubIntegration;
 }
 
 // ============================================================================

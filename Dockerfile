@@ -115,6 +115,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Claude CLI globally (available to all users via npm global bin)
 RUN npm install -g @anthropic-ai/claude-code
 
+# Install agent-browser CLI globally (binary available to all users via npm global bin)
+# Chrome download is deferred to the automaker user step below so it lands in the correct cache
+RUN npm install -g agent-browser@0.24.1
+
 # Create non-root user with home directory BEFORE installing Cursor CLI
 # Uses UID/GID build args to match host user for mounted volume permissions
 # Use -o flag to allow non-unique IDs (GID 1000 may already exist as 'node' group)
@@ -140,6 +144,12 @@ RUN curl -fsSL https://opencode.ai/install | bash && \
     echo "=== Checking OpenCode CLI installation ===" && \
     ls -la /home/automaker/.local/bin/ && \
     (which opencode && opencode --version) || echo "opencode installed (may need auth setup)"
+
+# Download Chrome for Testing as the automaker user.
+# agent-browser resolves Chrome from the runtime user's home cache (~/.cache/agent-browser).
+# Running this as root would place Chrome in /root/.cache and leave it unreachable at runtime
+# because the container drops to UID 1001 (automaker) before starting the server.
+RUN agent-browser install
 USER root
 
 # Add PATH to profile so it's available in all interactive shells (for login shells)
