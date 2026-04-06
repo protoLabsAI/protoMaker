@@ -271,7 +271,7 @@ print(json.dumps(payload))
 
 A2A_RESULT=$(curl -sf -X POST "http://localhost:${PORT:-3008}/a2a" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer ${AUTOMAKER_API_KEY}" \
+  -H "X-API-Key: ${AUTOMAKER_API_KEY}" \
   -d "$A2A_PAYLOAD" 2>&1)
 echo "provision_discord A2A result: $A2A_RESULT"
 ```
