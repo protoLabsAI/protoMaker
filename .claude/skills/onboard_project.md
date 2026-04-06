@@ -246,31 +246,63 @@ gh api repos/<owner>/<repo>/contents/.automaker/settings/worktree-init \
   -f branch="<repoMeta.defaultBranch>"
 ```
 
-## Step 6 — Chain to provision_discord
+## Step 6 — Chain to provision_discord via A2A
 
-Call `mcp__plugin_protolabs_studio__provision_discord` with:
+`provision_discord` needs Discord MCP tools not available in the native execution path.
+Call it via Ava's A2A endpoint using `Bash`:
 
-- `projectPath` — the current project path (automakerRoot's parent)
-- `projectName` — `repoMeta.name`
-- `guildId` — the Discord Guild ID from settings (`DISCORD_GUILD_ID` env or `1070606339363049492`)
-
-Capture the result. Expected shape:
-
-```json
-{
-  "success": true,
-  "result": {
-    "channels": {
-      "general": "<projectName>-general",
-      "updates": "<projectName>-updates",
-      "dev": "<projectName>-dev"
-    }
+```bash
+A2A_PAYLOAD=$(python3 -c "
+import json
+payload = {
+  'jsonrpc': '2.0',
+  'id': 1,
+  'method': 'message/send',
+  'params': {
+    'message': {
+      'role': 'user',
+      'parts': [{'kind': 'text', 'text': 'projectTitle=<repoName> projectSlug=<projectSlug>'}]
+    },
+    'metadata': {'skillHint': 'provision_discord'}
   }
 }
+print(json.dumps(payload))
+")
+
+A2A_RESULT=$(curl -sf -X POST "http://localhost:${PORT:-3008}/a2a" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: ${AUTOMAKER_API_KEY}" \
+  -d "$A2A_PAYLOAD" 2>&1)
+echo "provision_discord A2A result: $A2A_RESULT"
 ```
 
-If `provision_discord` is not available or fails, log a warning and continue — Discord
-provisioning is not blocking for project onboarding.
+Parse channel IDs from the A2A response:
+
+```bash
+CHANNELS=$(echo "$A2A_RESULT" | python3 -c "
+import sys, json, re
+try:
+    d = json.load(sys.stdin)
+    text = ''
+    for artifact in d.get('result', {}).get('artifacts', []):
+        for part in artifact.get('parts', []):
+            if part.get('kind') == 'text':
+                text += part.get('text', '')
+    # provision_discord returns a JSON block with discord.channels
+    m = re.search(r'\{[^{}]*\"discord\"[^{}]*\{[^{}]*\"channels\"[^{}]*\}[^{}]*\}', text, re.DOTALL)
+    if m:
+        ch = json.loads(m.group(0))
+        print(json.dumps(ch.get('discord', {}).get('channels', {})))
+    else:
+        print('{}')
+except Exception as e:
+    print('{}')
+" 2>/dev/null || echo '{}')
+echo "Provisioned channels: $CHANNELS"
+```
+
+If the A2A call fails or returns empty channels `{}`, log a warning and continue —
+Discord provisioning is not blocking for project onboarding.
 
 ## Step 7 — Write Discord Channel IDs Back to settings.json
 
@@ -293,7 +325,24 @@ and update `integrations.discord.channels` with the returned channel names/IDs:
 
 Write the updated settings.json back to disk.
 
-## Step 8 — Append Entry to workspace/projects.yaml
+## Step 8 — Register Project in protoLabs Studio
+
+Call the setup endpoint to register the project in the UI project list and initialize its
+`.automaker/` directory structure. This is what makes the project appear in the project
+switcher — it writes to the global settings volume (`/data/settings.json`).
+
+```bash
+SETUP_RESULT=$(curl -sf -X POST "http://localhost:${PORT:-3008}/api/setup/project" \
+  -H "Content-Type: application/json" \
+  -d "{\"projectPath\": \"${HOME}/dev/labs/<repoName>\"}" 2>&1)
+echo "Setup result: $SETUP_RESULT"
+```
+
+This call is **unauthenticated** (the `/api/setup` path is open). If it fails (e.g., the
+project path doesn't exist yet because the clone failed), log a warning and continue —
+the user can register manually by opening protoLabs Studio and adding the project.
+
+## Step 9 — Append Entry to workspace/projects.yaml
 
 The routing index lives at `workspace/projects.yaml` in the protoLabs Studio repo root.
 If the file does not exist, create it with the header comment.
@@ -317,25 +366,14 @@ Append (or add to the `projects` list):
 Read the file first. If it already contains a `slug: <projectSlug>` entry, update it
 in-place instead of appending.
 
-## Step 9 — Post Kickoff Message to #dev Channel
+## Step 10 — Kickoff Message
 
-Send a kickoff message to the project's provisioned dev channel.
+The `provision_discord` subskill (Step 6) sends the kickoff message to the project's
+#dev channel as part of its own execution. No additional action needed here if Step 6
+succeeded.
 
-Use the `discord_send` tool with the dev channel from Step 6:
-
-```
-Project <repoMeta.name> is now onboarded to protoLabs Studio.
-
-Repo: <repoMeta.htmlUrl>
-Branch: <repoMeta.defaultBranch>
-Slug: <projectSlug>
-
-.automaker/ is excluded from git. Worktree init script is installed.
-Discord channels are ready. Ready for agent work.
-```
-
-If the provisioned dev channel is not available (provision_discord failed or returned
-no dev channel), fall back to posting to the global `#dev` channel (ID: `1469080556720623699`).
+If Step 6 failed or was skipped, log: "Kickoff message skipped — provision_discord
+did not run. Post manually to the project's #dev channel once Discord is provisioned."
 
 ## Completion
 
@@ -353,6 +391,7 @@ Target repo:
   - .gitignore updated (or already had .automaker/)
   - .automaker/settings/worktree-init created
 Discord: <provisioned channel names or "skipped">
+protoLabs Studio: registered (or "skipped — path not cloned")
 Routing index: workspace/projects.yaml updated
 Kickoff message: posted
 ```
@@ -361,8 +400,9 @@ Kickoff message: posted
 
 - If GitHub API returns 404 for the repo slug, stop and report: "Repo <owner>/<repo> not found or not accessible."
 - If any file write fails, report the specific step and error.
-- If Discord provisioning fails, log a warning but continue to Steps 8 and 9.
+- If Discord provisioning fails, log a warning but continue to Steps 9 and 10.
 - If `workspace/projects.yaml` cannot be written, report it but do not block the Discord kickoff.
+- If the setup endpoint call fails (Step 8), log a warning — the project is still partially onboarded and can be registered manually in the UI.
 
 ## Notes
 

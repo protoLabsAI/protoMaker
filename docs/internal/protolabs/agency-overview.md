@@ -26,33 +26,38 @@ The gap between "AI can write code" and "AI can run a development organization" 
 
 protoLabs is organized into two branches — **Operations** and **Engineering** — with clear boundaries, quality guardrails, and domain tools that enable orchestration at scale.
 
-### Operations
+### Operations (GTM Team)
 
-Signal triage, quality gates, team health, and external communication. Orchestration agents use domain tools and subagents to manage tasks, distill information, and maintain context.
+Market positioning, content strategy, and external communication. Agents on this team evaluate ideas through a customer/business lens and produce outward-facing content.
 
 | Agent               | Type         | Responsibilities                                                       |
 | ------------------- | ------------ | ---------------------------------------------------------------------- |
 | **Project Owner**   | Human (CEO)  | Ideas, direction, final approval                                       |
-| **Ava** (CoS)       | AI Orchestr. | Signal triage, antagonistic review, ceremonies, Discord comms          |
+| **Ava** (CoS)       | AI Orchestr. | Signal triage, planning pipeline, antagonistic review, ceremonies      |
 | **Jon** (GTM)       | AI Agent     | Market perspective, content strategy, positioning, antagonistic review |
 | **Cindi** (Content) | AI Agent     | Blog posts, technical docs, SEO, content pipeline                      |
 
-### Engineering
+### Engineering (Dev Team)
 
-Production orchestration, auto-mode execution, and code quality. The Lead Engineer uses fast-path rules (pure functions, no LLM) for routine decisions and escalates to full agent execution only when needed.
+Production orchestration, auto-mode execution, QA, infrastructure, and code quality. The Lead Engineer uses fast-path rules (pure functions, no LLM) for routine decisions and escalates to full agent execution only when needed.
 
-| Agent                | Type        | Responsibilities                                                        |
-| -------------------- | ----------- | ----------------------------------------------------------------------- |
-| **Lead Engineer**    | Service     | Production orchestrator — fast-path rules, auto-mode management, events |
-| **Frontend**         | AI Agent    | React 19, design systems, Storybook, component architecture             |
-| **Infrastructure**   | AI Agent    | LangGraph flows, LLM providers, observability, multi-agent coordination |
-| **DevOps**           | AI Agent    | Infrastructure health, deploys, monitoring, system reliability          |
-| **Backend**          | AI Agent    | Server-side features, API design, database, services                    |
-| **Auto-mode Agents** | Sonnet/Opus | Feature implementation in isolated git worktrees                        |
+| Agent                | Type         | A2A Endpoint | Responsibilities                                                        |
+| -------------------- | ------------ | ------------ | ----------------------------------------------------------------------- |
+| **Ava** (CoS)        | AI Orchestr. | `:3008`      | Planning, board health, auto-mode, feature management                   |
+| **Quinn** (QA)       | AI Agent     | `:7870`      | Bug triage, PR review, QA reports, board audits                         |
+| **Frank** (DevOps)   | AI Agent     | `:7880`      | Infrastructure, deploys, monitoring, system reliability                 |
+| **Lead Engineer**    | Service      | internal     | Production orchestrator — fast-path rules, auto-mode management, events |
+| **Auto-mode Agents** | Sonnet/Opus  | —            | Feature implementation in isolated git worktrees                        |
 
-## Two Surfaces, Clear Separation
+### Knowledge
 
-protoLabs operates across two systems that each own a distinct layer:
+| Agent          | Type     | Responsibilities                                               |
+| -------------- | -------- | -------------------------------------------------------------- |
+| **Researcher** | AI Agent | Deep research, entity extraction, knowledge graph construction |
+
+## Three Surfaces, Clear Separation
+
+protoLabs operates across three systems that each own a distinct layer:
 
 ### protoLabs Board — Tactical Layer (Source of Truth)
 
@@ -61,44 +66,60 @@ protoLabs operates across two systems that each own a distinct layer:
 - Agent worktrees, auto-mode, dependency chains
 - The "dev team" view
 
-### Discord — Communication Layer
+### Workstacean — Routing + Registry Layer (Spine)
 
-- Async team coordination
-- Status updates, alerts, ceremonies
-- Josh / Ava primary channel
-- The "office" view
+- `workspace/agents.yaml` — authoritative agent registry
+- `workspace/projects.yaml` — authoritative project registry
+- `GET /api/agents`, `GET /api/projects` — consumed by Quinn, protoMaker, and any future service
+- `POST /publish` — external services inject messages onto the bus
+- correlationId is minted here and carried through every downstream artifact
 
-**Rule: Never mix the layers.** The board owns all project state. Discord doesn't store state.
+### Interface Plugins — Communication Layer
+
+Any number of interface plugins can connect to the bus. Each plugin owns its native rendering (embeds, voice prompts, buttons, etc.) and implements three responsibilities: publish with `source`/`reply` metadata, render HITLRequest natively, and send HITLResponse back.
+
+| Plugin  | Status  | Notes                                        |
+| ------- | ------- | -------------------------------------------- |
+| Discord | Active  | Primary — embeds, threads, webhooks          |
+| Voice   | Planned | Voice-in/voice-out via Whisper + Kokoro      |
+| GitHub  | Active  | Webhooks, issue/PR comments via bot accounts |
+| Plane   | Planned | Board-native interface                       |
+| Slack   | Planned | Workspace integration                        |
+| API     | Active  | `POST /publish` for programmatic injection   |
+
+**Rule: Never mix the layers.** The board owns all project state. Interface plugins don't store state. Workstacean owns routing and registry.
 
 ## The Flow
 
-### 1. Idea Intake
+### 1. Idea Intake (via Interface Plugins)
 
-Ideas arrive from anywhere:
+Ideas arrive from any connected interface plugin:
 
-- Josh types in Discord or creates a board feature
-- Ava identifies operational improvements during execution
-- Jon identifies market opportunities from content/social
-- External stakeholders file GitHub issues
-- Agents surface improvement opportunities from retros
+- **Discord** — Josh types a message, Ava or Quinn mentioned
+- **Voice** — spoken idea transcribed via Whisper, injected to bus
+- **GitHub** — issue opened, PR comment, webhook event
+- **Plane** — board feature created
+- **Slack** — workspace message (planned)
+- **API** — `POST /publish` for programmatic injection (scripts, cron, other services)
+- **Agent signals** — Ava identifies operational improvements, Jon spots market opportunities, retros surface improvement tickets
 
-All signals funnel through communication channels into the planning pipeline.
+Every signal enters the Workstacean bus with `source` metadata (which interface, which channel, which user) and a `reply` field (topic and format for sending responses back). Workstacean mints a `correlationId` at intake that follows the signal through its entire lifecycle.
 
 ### 2. PRD Consolidation + Antagonistic Review
 
-Every idea gets a SPARC PRD (Situation, Problem, Approach, Results, Constraints). Two agents review it from opposing perspectives:
+Workstacean routes ideas to Ava's `plan` skill. Every idea gets a SPARC PRD (Situation, Problem, Approach, Results, Constraints). Two agents review it from opposing perspectives:
 
-- **Ava (CoS)**: Is this operationally feasible? Does it align with current capacity? What's the risk?
-- **Jon (GTM)**: Does this create customer value? Can we sell this? Does it strengthen our positioning?
+- **Ava (operational feasibility)**: Is this technically feasible? Does it align with current capacity? What's the risk?
+- **Jon (strategic value)**: Does this create customer value? Can we sell this? Does it strengthen our positioning?
 
-They challenge each other in a 3-stage sequential review. The output is a consolidated plan that has survived cross-functional scrutiny.
+They challenge each other in a 3-stage sequential review. The output is a consolidated plan that has survived cross-functional scrutiny. This antagonistic relationship is a core org principle — it's how the system avoids confirmation bias.
 
-### 3. Approval Gate
+### 3. Approval Gate (HITL via Bus)
 
-Josh reviews the PRD. Two modes:
+Two paths based on antagonistic review scores:
 
-- **Standard**: Josh reviews, comments, approves or requests changes
-- **preApproved**: Low-risk items (small scope, operational improvements) auto-pass based on trust boundaries
+- **Auto-approved**: Both Ava (operational) and Jon (strategic) score > 4.0 — project and features are created immediately. No human in the loop.
+- **HITL path**: Ava publishes an `HITLRequest` to the `reply.topic` from the original signal. The message flows back through the bus to the originating interface plugin, which renders it natively (Discord embed with approve/reject buttons, voice prompt, Slack interactive message, etc.). The A2A call returns immediately with `{ status: "pending_approval", correlationId }`. When the human responds, an `HITLResponse` is published on the bus, routed back to Ava's `plan_resume` skill, which restores state from a SQLite checkpoint (`plans.db`, 7-day TTL) and creates the project + features.
 
 ### 4. Planning & Research
 
@@ -153,6 +174,22 @@ When an epic completes:
 - **Changelog**: Generate human-readable summary of what shipped
 
 The reflection loop is what makes this a **learning system**, not just an execution engine. Every project makes the next project better.
+
+## CorrelationId Lineage
+
+Every signal that enters the system gets a `correlationId` minted by Workstacean at intake. This ID is the spine that connects every artifact produced from that signal:
+
+| Artifact        | Where correlationId lives                                  |
+| --------------- | ---------------------------------------------------------- |
+| Bus message     | `message.correlationId` — minted at intake                 |
+| SPARC PRD       | `prd.metadata.correlationId`                               |
+| Board project   | `project.metadata.correlationId`                           |
+| Board features  | `feature.metadata.correlationId`                           |
+| Pull requests   | PR body watermark                                          |
+| Langfuse traces | `trace.metadata.correlationId`                             |
+| HITL round-trip | `HITLRequest.correlationId` / `HITLResponse.correlationId` |
+
+This enables end-to-end traceability: given any PR, you can trace back to the original idea, through the PRD, through the approval decision, to every feature that was created and every agent turn that executed.
 
 ## The Revenue Model
 

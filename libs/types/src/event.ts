@@ -368,7 +368,11 @@ export type EventType =
   | 'deploy:succeeded'
   | 'deploy:failed'
   // Signal dictionary events (portfolio attention engine)
-  | 'signal:triggered';
+  | 'signal:triggered'
+  // Planning pipeline events (A2A plan + plan_resume skills)
+  | 'plan:hitl-requested'
+  | 'plan:created'
+  | 'plan:rejected';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 

@@ -29,6 +29,7 @@ import { validateApiKey } from '../../lib/auth.js';
 import { getVersion } from '../../lib/version.js';
 import { ProviderFactory } from '../../providers/provider-factory.js';
 import { resolveModelString } from '@protolabsai/model-resolver';
+import type { PlanningService } from '../../services/planning-service.js';
 
 const logger = createLogger('A2ARoutes');
 
@@ -149,6 +150,36 @@ function buildAgentCard(host: string) {
         examples: [
           'provision discord channels for project MyApp',
           'set up discord for projectSlug=my-app projectTitle=My App',
+        ],
+      },
+      {
+        id: 'plan',
+        name: 'Plan — SPARC PRD + Antagonistic Review',
+        description:
+          'Draft a SPARC PRD from a raw idea, run antagonistic review (Ava vs Jon), ' +
+          'and publish a HITL gate for human approval. Returns immediately with ' +
+          'status "pending_approval" and a correlationId. Use plan_resume to approve or reject.',
+        tags: ['planning', 'prd', 'review', 'hitl'],
+        inputModes: ['text/plain'],
+        outputModes: ['application/json'],
+        examples: [
+          'plan: add a knowledge graph service to Ava',
+          'plan: build a Grafana dashboard for seedbox metrics',
+        ],
+      },
+      {
+        id: 'plan_resume',
+        name: 'Plan Resume — HITL Decision',
+        description:
+          'Resume a pending plan after human approval. Pass the correlationId and ' +
+          'a decision (approve / reject / modify). If approved, creates the project ' +
+          'and features on the board.',
+        tags: ['planning', 'hitl', 'approval'],
+        inputModes: ['application/json'],
+        outputModes: ['application/json'],
+        examples: [
+          '{"correlationId":"ws-abc123","decision":"approve"}',
+          '{"correlationId":"ws-abc123","decision":"modify","feedback":"reduce scope to MVP"}',
         ],
       },
     ],
@@ -363,7 +394,12 @@ async function callChatEndpoint(
   return collectChatResponse(chatRes);
 }
 
-export function createA2AHandlerRoutes(projectPath: string): Router {
+/** Optional services for planning pipeline skills */
+export interface A2AHandlerDeps {
+  planningService?: PlanningService;
+}
+
+export function createA2AHandlerRoutes(projectPath: string, deps?: A2AHandlerDeps): Router {
   const router = Router();
 
   /**
@@ -419,8 +455,10 @@ export function createA2AHandlerRoutes(projectPath: string): Router {
     const parts = body.params?.message?.parts ?? [];
     const userText = extractText(parts);
     const skillOverride = body.params?.metadata?.skillHint as string | undefined;
+    const contextId = body.params?.contextId;
+    const metadata = body.params?.metadata ?? {};
 
-    if (!userText) {
+    if (!userText && skillOverride !== 'plan_resume') {
       res.status(200).json({
         jsonrpc: '2.0',
         id: rpcId,
@@ -433,8 +471,162 @@ export function createA2AHandlerRoutes(projectPath: string): Router {
     }
 
     logger.info(
-      `A2A message/send received: "${userText.slice(0, 80)}${userText.length > 80 ? '…' : ''}"`
+      `A2A message/send received: "${(userText || '').slice(0, 80)}${(userText || '').length > 80 ? '…' : ''}" (skill=${skillOverride ?? 'none'})`
     );
+
+    // ─── Planning pipeline skills (plan / plan_resume) ──────────────────
+    // These return immediately and do not go through /api/chat.
+
+    if (skillOverride === 'plan') {
+      if (!deps?.planningService) {
+        res.status(200).json({
+          jsonrpc: '2.0',
+          id: rpcId,
+          error: { code: -32603, message: 'PlanningService not available' },
+        });
+        return;
+      }
+
+      const correlationId = contextId || randomUUID();
+      const replyTopic = metadata.replyTopic as string | undefined;
+      const source = metadata.source as
+        | { interface: string; channelId?: string; userId?: string }
+        | undefined;
+
+      // Fire-and-forget: start the plan pipeline asynchronously.
+      // The A2A response returns immediately with pending_approval status.
+      // If the plan auto-approves (both Ava + Jon high confidence), the
+      // PlanningService creates the project in the background.
+      deps.planningService
+        .startPlan({
+          correlationId,
+          idea: userText,
+          replyTopic,
+          source,
+          projectPath,
+        })
+        .then((result) => {
+          logger.info(
+            `Plan skill completed for correlationId=${correlationId}: status=${result.status}`
+          );
+        })
+        .catch((err) => {
+          logger.error(`Plan skill failed for correlationId=${correlationId}:`, err);
+        });
+
+      const taskId = randomUUID();
+      res.status(200).json({
+        jsonrpc: '2.0',
+        id: rpcId,
+        result: {
+          id: taskId,
+          contextId: correlationId,
+          status: { state: 'working' },
+          artifacts: [
+            {
+              artifactId: randomUUID(),
+              parts: [
+                {
+                  kind: 'text',
+                  text: JSON.stringify({
+                    status: 'pending_approval',
+                    correlationId,
+                    message:
+                      'Plan pipeline started. PRD drafting + antagonistic review in progress. ' +
+                      'A HITLRequest will be published when ready for approval.',
+                  }),
+                },
+              ],
+            },
+          ],
+        },
+      });
+      return;
+    }
+
+    if (skillOverride === 'plan_resume') {
+      if (!deps?.planningService) {
+        res.status(200).json({
+          jsonrpc: '2.0',
+          id: rpcId,
+          error: { code: -32603, message: 'PlanningService not available' },
+        });
+        return;
+      }
+
+      // Parse decision from text body (JSON) or metadata
+      let decision: 'approve' | 'reject' | 'modify' = 'approve';
+      let feedback: string | undefined;
+      let resumeCorrelationId = contextId || '';
+
+      try {
+        // Try parsing userText as JSON first (Workstacean sends structured payloads)
+        const parsed = JSON.parse(userText || '{}') as {
+          correlationId?: string;
+          decision?: string;
+          feedback?: string;
+        };
+        resumeCorrelationId = parsed.correlationId || resumeCorrelationId;
+        decision = (parsed.decision as typeof decision) || decision;
+        feedback = parsed.feedback;
+      } catch {
+        // Not JSON — use metadata fields
+        decision = (metadata.decision as typeof decision) || decision;
+        feedback = metadata.feedback as string | undefined;
+        resumeCorrelationId = (metadata.correlationId as string) || resumeCorrelationId;
+      }
+
+      if (!resumeCorrelationId) {
+        res.status(200).json({
+          jsonrpc: '2.0',
+          id: rpcId,
+          error: {
+            code: -32602,
+            message: 'Invalid params: contextId or correlationId required for plan_resume',
+          },
+        });
+        return;
+      }
+
+      try {
+        const result = await deps.planningService.resumePlan({
+          correlationId: resumeCorrelationId,
+          decision,
+          feedback,
+          projectPath,
+        });
+
+        const taskId = randomUUID();
+        res.status(200).json({
+          jsonrpc: '2.0',
+          id: rpcId,
+          result: {
+            id: taskId,
+            contextId: resumeCorrelationId,
+            status: { state: 'completed' },
+            artifacts: [
+              {
+                artifactId: randomUUID(),
+                parts: [{ kind: 'text', text: JSON.stringify(result) }],
+              },
+            ],
+          },
+        });
+      } catch (err) {
+        logger.error(`plan_resume failed for correlationId=${resumeCorrelationId}:`, err);
+        res.status(200).json({
+          jsonrpc: '2.0',
+          id: rpcId,
+          error: {
+            code: -32603,
+            message: err instanceof Error ? err.message : 'plan_resume failed',
+          },
+        });
+      }
+      return;
+    }
+
+    // ─── Standard skill routing (existing behaviour) ────────────────────
 
     try {
       let responseText: string;
@@ -458,14 +650,14 @@ export function createA2AHandlerRoutes(projectPath: string): Router {
       }
 
       const taskId = randomUUID();
-      const contextId = randomUUID();
+      const responseContextId = randomUUID();
 
       res.status(200).json({
         jsonrpc: '2.0',
         id: rpcId,
         result: {
           id: taskId,
-          contextId,
+          contextId: responseContextId,
           status: { state: 'completed' },
           artifacts: [
             {

@@ -30,3 +30,27 @@ projects:
         general: ''
         updates: ''
         dev: ''
+
+  - slug: protolabsai-protoworkstacean
+    title: protoWorkstacean
+    github: protoLabsAI/protoWorkstacean
+    defaultBranch: master
+    status: active
+    onboardedAt: '2026-04-06T00:00:00.000Z'
+    discord:
+      channels:
+        general: ''
+        updates: ''
+        dev: ''
+
+  - slug: protolabsai-protoui
+    title: protoUI
+    github: protoLabsAI/protoUI
+    defaultBranch: main
+    status: active
+    onboardedAt: '2026-04-06T00:00:00.000Z'
+    discord:
+      channels:
+        general: '1490601617567912050'
+        updates: '1490601619300286525'
+        dev: '1490601620927418428'
