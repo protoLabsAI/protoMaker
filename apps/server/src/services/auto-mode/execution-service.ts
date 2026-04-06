@@ -1136,9 +1136,13 @@ export class ExecutionService {
           trigger: isAutoMode ? (tempRunningFeature.retryCount > 0 ? 'retry' : 'auto') : 'manual',
         };
         const history = currentFeature?.executionHistory ?? [];
-        await this.featureLoader.update(projectPath, featureId, {
-          executionHistory: [...history, record],
-        });
+        const successUpdates: Record<string, unknown> = { executionHistory: [...history, record] };
+        // Reset failure counter on success so the next run starts fresh
+        if ((currentFeature?.failureCount ?? 0) > 0) {
+          successUpdates.failureCount = 0;
+          logger.info(`Feature ${featureId} succeeded — resetting failureCount to 0`);
+        }
+        await this.featureLoader.update(projectPath, featureId, successUpdates);
 
         // Increment Prometheus metrics
         if (record.costUsd) {
@@ -1551,9 +1555,10 @@ export class ExecutionService {
         );
 
         if (recoveryResult.shouldRetry && failureAnalysis.isRetryable && tempRunningFeature) {
+          const delaySec = (failureAnalysis.suggestedDelay / 1000).toFixed(1);
           // Recovery suggests retry - schedule it with context
           logger.info(
-            `Recovery for feature ${featureId}: scheduling retry (attempt ${tempRunningFeature.retryCount + 1}/${failureAnalysis.maxRetries})`
+            `Recovery for feature ${featureId}: scheduling retry (attempt ${tempRunningFeature.retryCount + 1}/${failureAnalysis.maxRetries}, delay ${delaySec}s)`
           );
 
           this.typedEventBus.emitAutoModeEvent('auto_mode_progress', {

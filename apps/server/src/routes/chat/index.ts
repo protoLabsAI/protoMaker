@@ -11,7 +11,7 @@
  *   (NOT .automaker/context/ — that's for dev agents, not the orchestrator)
  * - Fetches a live sitrep via getSitrep() when sitrepInjection is true
  * - Builds tool set from buildAvaTools() gated by config.toolGroups
- * - Passes tools to streamText with maxSteps: 10
+ * - Passes tools to streamText with maxSteps: 30 (allows complex multi-step skills)
  *
  * Citation extraction:
  * - After the AI response text is complete, [[feature:id]] and [[doc:path]]
@@ -341,12 +341,14 @@ export function createChatRoutes(services: ServiceContainer): Router {
         system,
         context,
         projectPath,
+        skillOverride,
       } = req.body as {
         messages: UIMessage[];
         model?: string;
         system?: string;
         context?: NotesContext;
         projectPath?: string;
+        skillOverride?: string;
       };
 
       if (!rawMessages || !Array.isArray(rawMessages) || rawMessages.length === 0) {
@@ -386,15 +388,20 @@ export function createChatRoutes(services: ServiceContainer): Router {
       const resolvedModelId = resolveModelString(modelAlias, 'sonnet');
       const aiModel = await getAnthropicModel(resolvedModelId);
 
+      // For A2A skill calls (skillOverride set), skip context and sitrep injection.
+      // The skill is the sole system prompt — injecting board state would cause the
+      // model to default to Ava's board management behavior instead of the skill.
+      const isA2ASkillCall = !!skillOverride;
+
       // Load Ava-level context (project root CLAUDE.md + Ava skill prompt)
       let projectContext: string | undefined;
-      if (avaConfig.contextInjection && projectPath) {
+      if (!isA2ASkillCall && avaConfig.contextInjection && projectPath) {
         projectContext = await loadAvaContext(projectPath);
       }
 
       // Conditionally fetch live sitrep
       let sitrep: string | undefined;
-      if (avaConfig.sitrepInjection && projectPath) {
+      if (!isA2ASkillCall && avaConfig.sitrepInjection && projectPath) {
         try {
           sitrep = await getSitrep(projectPath);
         } catch (err) {
@@ -492,57 +499,75 @@ export function createChatRoutes(services: ServiceContainer): Router {
       );
       const tools = applyToolCompaction(withCheckpoints) as typeof rawTools;
 
-      // ── Slash command expansion ─────────────────────────────────────────────
-      // If the last user message starts with a slash command, intercept it:
-      //   1. Look up the command body from CommandRegistryService
-      //   2. Expand placeholders ($ARGUMENTS, $1/$2, @file, `!cmd`)
-      //   3. Prepend the expanded body to the system prompt for this turn
-      //   4. Restrict tools to the command's allowed-tools (if specified)
-      // Unknown slash commands pass through as normal messages (no-op).
+      // ── Skill loading ────────────────────────────────────────────────────────
+      // Two paths, same outcome — load skill body as system prompt prefix:
+      //   A2A path:  skillOverride from Workstacean metadata (takes priority)
+      //   UI path:   /command-name slash prefix in user message text
+      //
+      // When skillOverride is set, the full user message is passed as the
+      // argument string so the skill can extract what it needs (e.g. repo slug).
+      // Unknown skill names pass through as normal messages (no-op).
 
       let commandSystemPrefix: string | undefined;
-      // Start with the full tool set; may be narrowed by command frontmatter
+      // Start with the full tool set; may be narrowed by skill frontmatter
       let activeTools: typeof tools = tools;
 
-      if (lastUserMessage) {
-        const lastText = extractMessageText(lastUserMessage);
-        const parsed = parseSlashCommand(lastText);
+      let skillToLoad: string | undefined = skillOverride;
+      let slashArgumentString: string | undefined;
 
+      if (!skillToLoad && lastUserMessage) {
+        const parsed = parseSlashCommand(extractMessageText(lastUserMessage));
         if (parsed) {
-          const command = services.commandRegistryService?.get(parsed.name);
-
-          if (command?.body) {
-            try {
-              commandSystemPrefix = await expandCommandBody(command.body, {
-                argumentString: parsed.argumentString,
-                positionalArgs: parsed.positionalArgs,
-                projectPath: projectPath,
-              });
-              logger.info(
-                `Slash command /${parsed.name} expanded (${commandSystemPrefix?.length} chars)`
-              );
-            } catch (err) {
-              logger.warn(`Command expansion failed for /${parsed.name}:`, err);
-            }
-
-            // Apply tool restrictions from command frontmatter
-            if (command.allowedTools && command.allowedTools.length > 0) {
-              const allowedSet = new Set(command.allowedTools);
-              activeTools = Object.fromEntries(
-                Object.entries(tools).filter(([name]) => allowedSet.has(name))
-              ) as typeof tools;
-              logger.info(
-                `Tool set restricted to [${[...allowedSet].join(', ')}] for /${parsed.name}`
-              );
-            }
-          }
-          // If command not found or has no body, pass through as a normal message
+          skillToLoad = parsed.name;
+          slashArgumentString = parsed.argumentString;
         }
       }
 
-      // Prepend the expanded command body to the system prompt for this turn
+      if (skillToLoad) {
+        const command = services.commandRegistryService?.get(skillToLoad);
+
+        if (command?.body) {
+          try {
+            const argumentString = skillOverride
+              ? extractMessageText(
+                  lastUserMessage ?? (rawMessages[rawMessages.length - 1] as UIMessage)
+                )
+              : (slashArgumentString ?? '');
+
+            commandSystemPrefix = await expandCommandBody(command.body, {
+              argumentString,
+              positionalArgs: argumentString ? argumentString.split(/\s+/) : [],
+              projectPath: projectPath,
+            });
+            logger.info(
+              `Skill "${skillToLoad}" loaded (${commandSystemPrefix?.length} chars)${skillOverride ? ' [A2A]' : ''}`
+            );
+          } catch (err) {
+            logger.warn(`Skill expansion failed for "${skillToLoad}":`, err);
+          }
+
+          // Apply tool restrictions from skill frontmatter
+          if (command.allowedTools && command.allowedTools.length > 0) {
+            const allowedSet = new Set(command.allowedTools);
+            activeTools = Object.fromEntries(
+              Object.entries(tools).filter(([name]) => allowedSet.has(name))
+            ) as typeof tools;
+            logger.info(
+              `Tool set restricted to [${[...allowedSet].join(', ')}] for "${skillToLoad}"`
+            );
+          }
+        }
+        // Unknown skill name — pass through as normal message
+      }
+
+      // Build the final system prompt for this turn:
+      //   A2A skill call (skillOverride set): use ONLY the skill body — Ava's persona
+      //     would compete with and override the skill's explicit instructions.
+      //   UI slash command / normal chat: prepend skill body to Ava's full persona.
       const finalSystemPrompt = commandSystemPrefix
-        ? `${commandSystemPrefix}\n\n---\n\n${systemPrompt}`
+        ? skillOverride
+          ? commandSystemPrefix
+          : `${commandSystemPrefix}\n\n---\n\n${systemPrompt}`
         : systemPrompt;
       // Enable extended thinking for models that support it (opus / sonnet).
       // Uses adaptive thinking with effort level from the client UI.
@@ -572,6 +597,11 @@ export function createChatRoutes(services: ServiceContainer): Router {
       const messagesJson = JSON.stringify(messages);
       const messagesChars = messagesJson.length;
       const estimatedInputTokens = Math.ceil((systemPromptChars + messagesChars) / 4);
+      if (skillOverride) {
+        logger.info(
+          `A2A skill context: finalSystemPrompt=${finalSystemPrompt.length} chars, activeTools=[${Object.keys(activeTools).join(', ')}]`
+        );
+      }
       const requestStartTime = Date.now();
 
       logger.info(
@@ -589,9 +619,9 @@ export function createChatRoutes(services: ServiceContainer): Router {
       const result = streamText({
         model: aiModel,
         messages,
-        system: systemPrompt,
-        tools,
-        stopWhen: stepCountIs(10),
+        system: finalSystemPrompt,
+        tools: activeTools,
+        stopWhen: stepCountIs(30),
         providerOptions: {
           anthropic: {
             ...(extendedThinking && {

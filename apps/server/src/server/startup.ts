@@ -88,6 +88,7 @@ export async function runStartup(
     prFeedbackService,
     leadEngineerService,
     worktreeLifecycleService,
+    githubStateChecker,
     agentService,
     knowledgeStoreService,
     projectAssignmentService,
@@ -265,6 +266,8 @@ export async function runStartup(
         try {
           // Register project for periodic monitoring
           worktreeLifecycleService.registerProject(projectPath);
+          // Register with GitHub state checker so drift detection runs for external projects
+          githubStateChecker.registerProject(projectPath);
 
           // Prune phantom worktrees
           await worktreeLifecycleService.prunePhantomWorktrees(projectPath);

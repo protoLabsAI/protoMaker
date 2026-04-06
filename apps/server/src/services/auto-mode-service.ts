@@ -138,6 +138,7 @@ import {
   symlinkBuildArtifacts,
   installWorktreeDependencies,
 } from './worktree-lifecycle-service.js';
+import { runInitScript } from './init-script-service.js';
 import { checkFeatureRestartOutcome } from './startup-recovery-service.js';
 import type {
   RunningFeature,
@@ -3256,6 +3257,19 @@ Format your response as a structured markdown document.`;
         await installWorktreeDependencies(projectPath, worktreePath);
       } catch (err) {
         logger.debug('Failed to install dependencies in worktree (non-fatal):', err);
+      }
+
+      // Run the per-repo worktree init script (.automaker/settings/worktree-init) if present.
+      // Runs after dependency install so the script can assume dependencies are available.
+      try {
+        await runInitScript({
+          projectPath,
+          worktreePath: path.resolve(worktreePath),
+          branch: branchName,
+          emitter: this.events,
+        });
+      } catch (err) {
+        logger.debug('Init script failed in worktree (non-fatal):', err);
       }
 
       // Set gh CLI default repo so `gh pr create` works inside the worktree.
