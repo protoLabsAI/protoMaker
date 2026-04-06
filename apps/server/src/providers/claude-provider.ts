@@ -91,6 +91,11 @@ const SYSTEM_ENV_VARS = [
   // GitHub CLI
   'GH_TOKEN',
   'GITHUB_TOKEN',
+  // Plane integration (plane-mcp-server and plane_board skill)
+  'PLANE_API_KEY',
+  'PLANE_BASE_URL',
+  'PLANE_WORKSPACE_SLUG',
+  'PLANE_WORKSPACE_ID',
 ];
 
 /**
