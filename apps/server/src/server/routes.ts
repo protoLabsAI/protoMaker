@@ -93,6 +93,7 @@ import { createOpsRoutes } from '../routes/ops/index.js';
 import { createQaRoutes } from '../routes/qa/index.js';
 import { createContextEngineRoutes } from '../routes/context-engine.js';
 import { createA2ARoutes, createA2AHandlerRoutes } from '../routes/a2a/index.js';
+import { PlanningService } from '../services/planning-service.js';
 
 const logger = createLogger('Server:Routes');
 
@@ -215,8 +216,17 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
 
   // A2A agent discovery — unauthenticated (spec requires open discovery)
   app.use('/.well-known', createA2ARoutes());
+
+  // Planning pipeline: PlanningService orchestrates plan + plan_resume A2A skills
+  const planningService = new PlanningService({
+    antagonisticReview: antagonisticReviewService,
+    projectService,
+    featureLoader,
+    events,
+  });
+
   // A2A message handler — manual X-API-Key check inside (same pattern as /webhooks)
-  app.use('/a2a', createA2AHandlerRoutes(repoRoot));
+  app.use('/a2a', createA2AHandlerRoutes(repoRoot, { planningService }));
 
   // --- AUTHENTICATION MIDDLEWARE ---
   // Apply authentication to all /api/* routes
