@@ -1,5 +1,28 @@
 # @protolabsai/dependency-resolver
 
+## 0.99.0
+
+### Minor Changes
+
+- ### Features
+  - sqlite-backed plan persistence for server restarts
+  - register project via setup endpoint, enriched projects.yaml schema
+  - plan + plan_resume skills — SPARC PRD + antagonistic review + HITL via bus
+
+  ### Bug Fixes
+  - pass AUTOMAKER_API_KEY, DISCORD_TOKEN, GH_TOKEN to SDK subprocess
+  - add AUTOMAKER_API_KEY, DISCORD_TOKEN, GH_TOKEN to SDK env allowlist
+  - provision_discord — use Discord REST API directly, drop MCP dependency
+  - use X-API-Key header for self-A2A chain (not Authorization: Bearer)
+  - use AUTOMAKER_API_KEY for self-A2A chain in onboard_project
+  - onboard_project chains to provision_discord via A2A
+  - native-tool execution path for skills using Bash/Read/Write
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.99.0
+
 ## 0.98.0
 
 ### Minor Changes

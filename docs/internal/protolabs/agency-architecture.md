@@ -4,51 +4,73 @@
 
 ```mermaid
 graph TB
-    subgraph INTAKE["1. SIGNAL INTAKE"]
-        D_MSG[Discord Message]
-        BOARD_ISS[Board Feature]
-        GH_ISS[GitHub Issue]
-        HUMAN[Human CLI/Chat]
+    subgraph INTERFACES["1. INTERFACE PLUGINS"]
+        DC[Discord Plugin]
+        VOICE[Voice Plugin]
+        GH_PLUG[GitHub Plugin]
+        PLANE[Plane Plugin]
+        SLACK[Slack Plugin]
+        API[API Plugin<br/>POST /publish]
         AGENT_SIG[Agent Signal<br/>retro findings, escalations]
     end
 
-    subgraph TRIAGE["2. TRIAGE & ROUTING"]
-        AVA_TRIAGE["Ava (CoS)<br/>Signal Classification"]
-        AVA_TRIAGE -->|idea| IDEA_PROC
-        AVA_TRIAGE -->|bug| BUG_FAST["Fast-track:<br/>Create feature → Agent"]
-        AVA_TRIAGE -->|gtm/content| JON_ROUTE["Route to Jon"]
+    subgraph BUS["2. WORKSTACEAN BUS"]
+        WS_IN["message.inbound.*<br/>source: interface, channelId, userId<br/>reply: topic, format"]
+        REG["Registry<br/>workspace/agents.yaml<br/>workspace/projects.yaml"]
+        CORR["correlationId born here<br/>flows through everything"]
+        SKILL_RT["Skill Router<br/>hint / keyword / default"]
     end
 
-    subgraph PIPELINE["3. IDEA → PRODUCTION PIPELINE"]
-        IDEA_PROC["process_idea<br/>LangGraph Flow"]
-        IDEA_PROC --> INITIATE["initiate_project<br/>Dedup + create project"]
-        INITIATE --> GEN_PRD["generate_project_prd<br/>SPARC PRD Creation"]
-        GEN_PRD --> ANTAG["Antagonistic Review<br/>Ava (ops) + Jon (market)"]
-        ANTAG --> APPROVE["approve_project_prd<br/>Board features created"]
-        APPROVE --> LAUNCH["launch_project<br/>Project → started"]
+    subgraph FLEET["AGENT FLEET"]
+        subgraph DEV_TEAM["Dev Team"]
+            AVA["Ava :3008<br/>CoS + Planning"]
+            QUINN["Quinn :7870<br/>QA + Triage"]
+            FRANK["Frank :7880<br/>DevOps + Infra"]
+        end
+        subgraph GTM_TEAM["GTM Team"]
+            JON["Jon<br/>Strategy + Market"]
+            CINDI["Cindi<br/>Content + SEO"]
+        end
+        subgraph KNOWLEDGE_TEAM["Knowledge"]
+            RESEARCHER["Researcher<br/>Deep Research"]
+        end
+    end
+
+    subgraph PLANNING["3. PLANNING PIPELINE"]
+        PLAN_SKILL["Ava: plan skill<br/>SPARC PRD generation"]
+        ANTAG_REVIEW["Antagonistic Review<br/>Ava operational x Jon strategic"]
+        AUTO_APPROVE{Both score > 4.0?}
+        HITL_REQ["HITLRequest<br/>publish to reply.topic"]
+        HITL_WAIT["A2A returns immediately<br/>status: pending_approval<br/>correlationId"]
+        IFACE_RENDER["Interface plugin renders<br/>Discord embed / voice prompt<br/>Slack button / etc."]
+        HUMAN_DECIDE["Human responds"]
+        HITL_RESP["HITLResponse on bus<br/>correlationId"]
+        PLAN_RESUME["Ava: plan_resume skill<br/>SQLite checkpoint restore"]
+        CREATE_PROJ["Create project + features<br/>correlationId stamped"]
     end
 
     subgraph PRODUCTION["4. PRODUCTION PHASE"]
+        CREATE_PROJ --> LAUNCH["launch_project<br/>Project started"]
         LAUNCH --> LEAD_ENG["Lead Engineer<br/>auto-starts on launch event"]
         LEAD_ENG --> FAST_PATH["Fast-Path Rules<br/>no-LLM reactive orchestration"]
         LEAD_ENG --> AUTO_MODE["Auto-Mode<br/>Tick Loop"]
         AUTO_MODE --> PICK["Pick Unblocked<br/>Feature"]
         PICK --> WORKTREE["Create Worktree"]
-        WORKTREE --> AGENT["Agent Implements<br/>(Sonnet/Opus)"]
-        AGENT --> TESTS{Tests Pass?}
+        WORKTREE --> AGENT_EXEC["Agent Implements<br/>Sonnet/Opus"]
+        AGENT_EXEC --> TESTS{Tests Pass?}
         TESTS -->|no| ITERATE["Iterate / Escalate"]
-        ITERATE --> AGENT
+        ITERATE --> AGENT_EXEC
         TESTS -->|yes| VERIFIED["Verified"]
     end
 
     subgraph PR_PIPELINE["5. PR PIPELINE"]
         VERIFIED --> REBASE["Rebase + Format"]
-        REBASE --> PR_CREATE["Push + PR"]
+        REBASE --> PR_CREATE["Push + PR<br/>correlationId in watermark"]
         PR_CREATE --> CI["CI Checks<br/>build, test, format, audit"]
         CI --> CODERABBIT["CodeRabbit Review"]
         CODERABBIT --> RESOLVE["Resolve Threads"]
         RESOLVE --> MERGE["Squash-Merge<br/>to Main"]
-        MERGE --> DONE["Feature → Done"]
+        MERGE --> DONE["Feature Done"]
     end
 
     subgraph REFLECTION["6. REFLECTION LOOP"]
@@ -60,12 +82,43 @@ graph TB
         RETRO --> IMPROVEMENTS["Spawn Improvement<br/>Tickets"]
         RETRO --> CHANGELOG["Generate Changelog"]
         METRICS --> STRATEGY["Strategy Regroup"]
-        IMPROVEMENTS --> INTAKE
-        STRATEGY --> INTAKE
+        IMPROVEMENTS --> INTERFACES
+        STRATEGY --> INTERFACES
     end
 
-    %% Cross-cutting connections
-    INTAKE --> AVA_TRIAGE
+    %% Interface → Bus
+    DC --> WS_IN
+    VOICE --> WS_IN
+    GH_PLUG --> WS_IN
+    PLANE --> WS_IN
+    SLACK --> WS_IN
+    API --> WS_IN
+    AGENT_SIG --> WS_IN
+
+    %% Bus routing
+    WS_IN --> SKILL_RT
+    SKILL_RT -->|"plan, plan_resume"| AVA
+    SKILL_RT -->|"bug_triage, pr_review"| QUINN
+    SKILL_RT -->|"infra, deploy"| FRANK
+    SKILL_RT -->|"gtm, content"| JON
+    SKILL_RT -->|"blog, seo"| CINDI
+    SKILL_RT -->|"research"| RESEARCHER
+    SKILL_RT -->|default| AVA
+
+    %% Planning flow
+    AVA -->|"skillHint: plan"| PLAN_SKILL
+    PLAN_SKILL --> ANTAG_REVIEW
+    ANTAG_REVIEW --> AUTO_APPROVE
+    AUTO_APPROVE -->|yes| CREATE_PROJ
+    AUTO_APPROVE -->|no| HITL_REQ
+    HITL_REQ --> HITL_WAIT
+    HITL_REQ --> IFACE_RENDER
+    IFACE_RENDER --> HUMAN_DECIDE
+    HUMAN_DECIDE --> HITL_RESP
+    HITL_RESP --> PLAN_RESUME
+    PLAN_RESUME --> CREATE_PROJ
+
+    %% Cross-cutting
     DONE --> LEAD_ENG
     FAST_PATH -->|"mergedNotDone, staleReview,<br/>stuckAgent, capacityRestart"| AUTO_MODE
 ```
@@ -109,31 +162,50 @@ Production orchestration, auto-mode execution, and code quality.
 ## Agent Communication Topology
 
 ```
-                    Josh (Human)
-                    ↕ Discord / Board
-                   Ava (CoS)
+                         Josh (Human)
+                    ↕ Any Interface Plugin
+                   (Discord / Voice / Slack / GitHub / Plane / API)
+                              │
+                    ┌─────────┴─────────┐
+                    │  Workstacean Bus   │
+                    │  correlationId     │
+                    │  agents.yaml       │
+                    │  projects.yaml     │
+                    └─────────┬─────────┘
+                              │
+                         Ava (CoS)
               ╱         │         ╲
-      Operations    Cross-cut    Engineering
-       ╱    ╲          │          ╱      ╲
-    GTM   Content   Antag.    Lead Eng    DevOps
-  (agent) (agent)  Review   (Orchestr.) (agent)
+     Dev Team      Cross-cut     GTM Team
+      ╱    ╲          │           ╱    ╲
+  Quinn   Frank    Antag.      Jon    Cindi
+   (QA)  (DevOps) Review     (GTM) (Content)
                                │
-                           Auto-mode
-                          ╱    │    ╲
-                      Agent₁ Agent₂ Agent₃
-                     (Sonnet)(Sonnet)(Haiku)
-                          ╲    │    ╱
-                           PR Pipeline
-                          (Lead Engineer)
+                          Researcher
+                         (Knowledge)
+                              │
+                         Lead Eng
+                        (Orchestr.)
+                              │
+                         Auto-mode
+                        ╱    │    ╲
+                    Agent₁ Agent₂ Agent₃
+                   (Sonnet)(Sonnet)(Haiku)
+                        ╲    │    ╱
+                         PR Pipeline
+                        (Lead Engineer)
 ```
 
-Ava is the hub. All strategic decisions flow through her. Communication channels:
+Ava is the hub. All strategic decisions flow through her. Workstacean is the spine — it routes signals from any interface plugin to the right agent and carries the correlationId through the entire lifecycle.
 
+Communication channels:
+
+- **Workstacean bus** for all inter-agent routing (`message.inbound.*`, `message.outbound.*`)
+- **Interface plugins** for human-facing I/O (Discord, voice, Slack, GitHub, Plane, raw API)
 - **MCP tools** for system operations (48+ tools)
-- **Discord** for human-facing updates and Josh coordination
 - **Events** for system-to-system (`feature:completed`, `project:lifecycle:launched`, etc.)
 - **Agent memory** for persistent cross-session learning
 - **Domain tools** for feature management, git ops, and project orchestration
+- **HITL loop** via bus — HITLRequest/HITLResponse flow through interface plugins back to Ava
 
 ## Component Inventory
 
@@ -180,9 +252,10 @@ Uses LangGraph flows with Langfuse tracing. 3-minute timeout for the entire pipe
 
 ### 2. HITL Gates
 
-- Human scope review at milestone boundaries
+- **Bus-routed approval** — HITLRequest published to originating interface plugin's reply.topic; human responds via the same interface (Discord embed, voice prompt, Slack button, etc.); HITLResponse flows back through bus to Ava's `plan_resume` skill
+- **Auto-approval path** — when both Ava (operational) and Jon (strategic) score > 4.0, HITL is skipped and project is created immediately
+- **correlationId continuity** — the same correlationId from intake flows through HITL round-trip and into the created project
 - Optional interrupt-before in LangGraph flows
-- Josh reviews PRDs (standard path)
 - preApproved path for low-risk operational items
 
 ### 3. CI Pipeline
@@ -208,6 +281,13 @@ Required checks on every PR before merge:
 
 ```
 ┌──────────────────────────────────────────────────────┐
+│         WORKSTACEAN (Bus + Registry)                  │
+│  workspace/agents.yaml — authoritative agent registry │
+│  workspace/projects.yaml — project registry           │
+│  GET /api/agents, GET /api/projects — consumed by fleet│
+│  POST /publish — external services inject messages    │
+│  correlationId minted here, flows through all systems │
+├──────────────────────────────────────────────────────┤
 │           AUTOMAKER BOARD (Source of Truth)            │
 │  Projects, Features, Agents, Worktrees, Dependencies  │
 │  Auto-mode, Milestones, Roadmap                       │
@@ -217,9 +297,15 @@ Required checks on every PR before merge:
 │  Repository, Branches, PRs, CI, CodeRabbit            │
 │  ↕ Webhooks + API (status updates, PR events)         │
 ├──────────────────────────────────────────────────────┤
-│                   DISCORD (Comms)                      │
+│              INTERFACE PLUGINS (Comms)                 │
+│  Discord, Voice, Slack, GitHub, Plane, API            │
 │  Status updates, Ceremonies, Alerts, Conversations    │
+│  HITL rendering — each plugin owns its native UX      │
 │  Read-only state — no persistent data                 │
+├──────────────────────────────────────────────────────┤
+│                 LANGFUSE (Observability)               │
+│  Traces, costs, correlationId linkage                 │
+│  Every agent execution traced end-to-end              │
 └──────────────────────────────────────────────────────┘
 ```
 

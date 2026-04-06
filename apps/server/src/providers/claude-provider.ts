@@ -54,6 +54,15 @@ const _ALLOWED_ENV_VARS = [
   'ANTHROPIC_DEFAULT_OPUS_MODEL',
   // Traffic control
   'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC',
+  // Self-service API access (skills that call back to the server via A2A)
+  'AUTOMAKER_API_KEY',
+  'PORT',
+  // Discord integration (provision_discord skill)
+  'DISCORD_TOKEN',
+  'DISCORD_GUILD_ID',
+  // GitHub CLI
+  'GH_TOKEN',
+  'GITHUB_TOKEN',
   // System vars (always from process.env)
   'PATH',
   'HOME',
@@ -65,7 +74,24 @@ const _ALLOWED_ENV_VARS = [
 ];
 
 // System vars are always passed from process.env regardless of profile
-const SYSTEM_ENV_VARS = ['PATH', 'HOME', 'SHELL', 'TERM', 'USER', 'LANG', 'LC_ALL'];
+const SYSTEM_ENV_VARS = [
+  'PATH',
+  'HOME',
+  'SHELL',
+  'TERM',
+  'USER',
+  'LANG',
+  'LC_ALL',
+  // Self-service API access (skills that call back to the server via A2A)
+  'AUTOMAKER_API_KEY',
+  'PORT',
+  // Discord integration (provision_discord skill uses Discord REST API)
+  'DISCORD_TOKEN',
+  'DISCORD_GUILD_ID',
+  // GitHub CLI
+  'GH_TOKEN',
+  'GITHUB_TOKEN',
+];
 
 /**
  * Check if the config is a ClaudeCompatibleProvider (new system)
