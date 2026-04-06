@@ -1,101 +1,110 @@
 ---
 name: provision_discord
-description: Provision Discord channels for a new project. Creates a category with #general, #updates, and #dev channels. Returns channel names for writing back to project settings.json.
+description: Provision Discord channels for a new project. Creates a category with #general, #updates, and #dev channels. Returns channel names/IDs for writing back to project settings.json.
 category: ops
 argument-hint: 'projectTitle=<title> projectSlug=<slug>'
 allowed-tools:
   - Read
   - Bash
-  - mcp__plugin_protolabs_studio__provision_discord
-  - mcp__plugin_protolabs_studio__get_settings
-  - mcp__plugin_protolabs_discord__discord_send
-  - mcp__plugin_protolabs_discord__discord_get_server_info
 ---
 
 # provision_discord — Discord Channel Provisioning Skill
 
-You are executing the `provision_discord` A2A skill on behalf of Quinn (or as a chained
-sub-task from onboard_project). You create Discord channels for a newly onboarded project.
+You are executing the `provision_discord` skill. Create Discord channels for a newly
+onboarded project using the Discord REST API via `Bash`.
+
+**EXECUTE IMMEDIATELY. No questions. All values derived from input or env vars.**
 
 ## Input
 
-You receive two arguments:
+You receive:
 
-- `projectTitle` — human-readable project name (e.g. `protoWorkstacean`)
-- `projectSlug` — kebab-case slug (e.g. `protolabsai-protoworkstacean`)
+- `projectTitle` — human-readable project name (e.g. `protoUI`)
+- `projectSlug` — kebab-case slug (e.g. `protolabsai-protoui`)
 
-## Step 1 — Resolve Guild ID
+## Step 1 — Resolve Config
 
-Read the Guild ID from settings or environment:
+```bash
+GUILD_ID=${DISCORD_GUILD_ID:-1070606339363049492}
+DISCORD_API="https://discord.com/api/v10"
+AUTH_HEADER="Authorization: Bot ${DISCORD_TOKEN}"
 
-```
-guildId = DISCORD_GUILD_ID env var ?? "1070606339363049492"
-```
-
-## Step 2 — Call provision_discord MCP Tool
-
-Call `mcp__plugin_protolabs_studio__provision_discord` with:
-
-- `projectPath` — the current project path (resolve from context)
-- `projectName` — `projectTitle`
-- `guildId` — from Step 1
-
-The tool returns:
-
-```json
-{
-  "success": true,
-  "result": {
-    "channels": {
-      "general": "<projectName>-general",
-      "updates": "<projectName>-updates",
-      "dev": "<projectName>-dev"
-    }
-  }
-}
+echo "Guild: $GUILD_ID"
+echo "Token set: $([ -n "$DISCORD_TOKEN" ] && echo yes || echo NO — aborting)"
+[ -z "$DISCORD_TOKEN" ] && exit 1
 ```
 
-## Step 3 — Send Kickoff Message
+## Step 2 — Create Project Category
 
-After channels are created, post a kickoff message to the #dev channel using
-`mcp__plugin_protolabs_discord__discord_send`:
+```bash
+CATEGORY_RESP=$(curl -sf -X POST "${DISCORD_API}/guilds/${GUILD_ID}/channels" \
+  -H "${AUTH_HEADER}" \
+  -H "Content-Type: application/json" \
+  -d "{\"name\": \"<projectTitle>\", \"type\": 4}" 2>&1)
 
+CATEGORY_ID=$(echo "$CATEGORY_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])" 2>/dev/null)
+echo "Category ID: $CATEGORY_ID"
+[ -z "$CATEGORY_ID" ] && echo "Failed to create category: $CATEGORY_RESP" && exit 1
 ```
-🚀 **<projectTitle>** is now onboarded to protoLabs Studio.
 
-Discord channels are ready. Agents can start working.
+## Step 3 — Create Channels Under Category
+
+Create #general, #updates, and #dev text channels (type 0) under the category:
+
+```bash
+for CHAN_NAME in general updates dev; do
+  RESP=$(curl -sf -X POST "${DISCORD_API}/guilds/${GUILD_ID}/channels" \
+    -H "${AUTH_HEADER}" \
+    -H "Content-Type: application/json" \
+    -d "{\"name\": \"${CHAN_NAME}\", \"type\": 0, \"parent_id\": \"${CATEGORY_ID}\"}" 2>&1)
+  CHAN_ID=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])" 2>/dev/null)
+  echo "Created #${CHAN_NAME}: $CHAN_ID"
+  eval "CHAN_${CHAN_NAME^^}=$CHAN_ID"
+done
 ```
 
-Use the dev channel ID/name returned in Step 2. If `discord_send` fails, log a warning
-and continue — the kickoff message is not blocking.
+## Step 4 — Post Kickoff Message to #dev
 
-## Step 4 — Return Channel Info
+```bash
+curl -sf -X POST "${DISCORD_API}/channels/${CHAN_DEV}/messages" \
+  -H "${AUTH_HEADER}" \
+  -H "Content-Type: application/json" \
+  -d "{\"content\": \"🚀 **<projectTitle>** is now onboarded to protoLabs Studio. Discord channels are ready. Agents can start working.\"}" 2>&1
+echo "Kickoff message sent to #dev ($CHAN_DEV)"
+```
 
-Return the channel map to the caller:
+## Step 5 — Return Channel Map
+
+Output the channel map as JSON so the caller can parse it:
 
 ```json
 {
   "projectSlug": "<projectSlug>",
   "discord": {
     "channels": {
-      "general": "<returned general>",
-      "updates": "<returned updates>",
-      "dev": "<returned dev>"
+      "general": "<CHAN_GENERAL ID>",
+      "updates": "<CHAN_UPDATES ID>",
+      "dev": "<CHAN_DEV ID>"
     }
   }
 }
 ```
 
+Print it as the final output — the caller extracts this with `python3 -c "... re.search ..."`.
+
 ## Error Handling
 
-- If `provision_discord` returns `success: false` or throws, return:
+- If `DISCORD_TOKEN` is not set, exit 1 immediately.
+- If category creation fails (e.g. already exists with that name), log the error and exit 1.
+- If a channel creation fails, log and continue — partial results are better than nothing.
+- On any failure, output the error JSON:
   ```json
   { "error": "<message>", "projectSlug": "<projectSlug>", "discord": { "channels": {} } }
   ```
-- Never block the calling skill on a Discord provisioning failure.
 
 ## Notes
 
-- This skill is called by `onboard_project` (Step 6) via A2A and should be fast — no
-  interactive prompts or confirmation loops.
-- The caller (onboard_project) is responsible for writing returned channel IDs to settings.json.
+- Uses Discord REST API v10 directly via `Bash` — no MCP tools required.
+- `DISCORD_TOKEN` and `DISCORD_GUILD_ID` are available as env vars in the container.
+- Category name = `projectTitle`. Channel names are always `general`, `updates`, `dev`.
+- This skill is called by `onboard_project` Step 6 via A2A and should complete in <10s.
