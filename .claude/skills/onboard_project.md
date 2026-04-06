@@ -29,31 +29,46 @@ allowed-tools:
 
 # onboard_project — New Repo Onboarding Skill
 
-You are executing the `onboard_project` A2A skill. You onboard a GitHub repository into
-protoLabs Studio **autonomously** — do NOT ask the user any questions. All required
-information is derived from the repo slug and the GitHub API.
+**EXECUTE IMMEDIATELY. DO NOT ASK ANY QUESTIONS.**
 
-## Rules
+All information is derived from the repo slug and GitHub API. Every unknown has a
+hard-coded default below. Start executing Step 0 right now.
 
-- **Never ask for a local path.** It is always `~/dev/labs/{repoName}`.
-  e.g. `protoLabsAI/protoWorkstacean` → `~/dev/labs/protoWorkstacean`
-- **Never ask what the project is.** Fetch the GitHub README (Step 1b) — that is your spec.
-- **Never ask about onboarding goals.** Default goal: implement features, fix bugs,
-  build roadmap — agents can do all of it. Proceed with this assumption.
-- Execute all steps in order without pausing for input. If a step fails, log the error
-  and continue to the next step.
+## Hard-Coded Defaults (never ask — always use these)
+
+| What agent might ask          | Answer                                            |
+| ----------------------------- | ------------------------------------------------- |
+| Where is the repo cloned?     | `~/dev/labs/{repoName}` — clone it if missing     |
+| What is the project?          | Fetch README from GitHub API                      |
+| What is the branch strategy?  | `feature/* → dev → staging → main`                |
+| What is the onboarding scope? | Full — features, bugs, roadmap, auto-mode capable |
+| Any existing work to capture? | Check open GitHub issues/PRs via API              |
+| What model tier?              | sonnet                                            |
 
 ## Input
 
-You receive a GitHub repo slug: `<owner>/<repo>` (e.g. `protoLabsAI/protoWorkstacean`).
+You receive a GitHub repo slug: `<owner>/<repo>` (e.g. `protoLabsAI/quinn`).
 
-Derive:
+Derive immediately — no questions:
 
-- `repoOwner` — the org or user (e.g. `protoLabsAI`)
-- `repoName` — the repository name (e.g. `protoWorkstacean`)
-- `projectPath` — always `~/dev/labs/{repoName}` (e.g. `~/dev/labs/protoWorkstacean`)
-- `projectSlug` — lowercase, hyphens: `protolabsai-protoworkstacean`
-  Rule: `${repoOwner}-${repoName}`.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+- `repoOwner` — e.g. `protoLabsAI`
+- `repoName` — e.g. `quinn`
+- `projectPath` — **always** `~/dev/labs/{repoName}` e.g. `~/dev/labs/quinn`
+- `projectSlug` — `${repoOwner}-${repoName}`.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+
+## Step 0 — Clone Repo if Not Present
+
+```bash
+if [ ! -d ~/dev/labs/<repoName>/.git ]; then
+  mkdir -p ~/dev/labs
+  git clone <cloneUrl> ~/dev/labs/<repoName>
+  echo "Cloned to ~/dev/labs/<repoName>"
+else
+  echo "Already present at ~/dev/labs/<repoName>"
+fi
+```
+
+If clone fails, log the error and continue — all remaining steps use GitHub API.
 
 ## Step 1 — Fetch GitHub Repo Metadata
 
