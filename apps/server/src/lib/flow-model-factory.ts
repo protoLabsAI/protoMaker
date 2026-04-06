@@ -106,7 +106,13 @@ export async function createFlowModel(
 
     logger.debug(`createFlowModel: using ChatAnthropic for model=${resolvedModel}`);
     return {
-      model: new ChatAnthropic(config) as unknown as BaseChatModel,
+      // topP and topK must be explicitly undefined — LangChain's ChatAnthropic
+      // defaults both to -1 as sentinels, which Anthropic rejects with 400.
+      model: new ChatAnthropic({
+        ...config,
+        topP: undefined,
+        topK: undefined,
+      }) as unknown as BaseChatModel,
       modelName: resolvedModel,
     };
   }
