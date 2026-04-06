@@ -77,7 +77,8 @@ export interface StartPlanResult {
 }
 
 export interface ResumePlanResult {
-  status: 'created' | 'rejected';
+  status: 'created' | 'rejected' | 'pending_approval';
+  correlationId?: string;
   projectSlug?: string;
   featureCount?: number;
 }
@@ -354,23 +355,125 @@ export class PlanningService {
       return { status: 'rejected' };
     }
 
-    // For "modify": apply feedback to the PRD approach/constraints
-    let prd = planState.prd;
+    // For "modify": re-draft PRD with feedback, re-run antagonistic review, re-emit HITL gate
     if (decision === 'modify' && feedback) {
-      prd = {
-        ...prd,
-        approach: `${prd.approach}\n\n---\n**Modification from review feedback:**\n${feedback}`,
-        constraints: prd.constraints
-          ? `${prd.constraints}\n\n**Additional constraints from review:**\n${feedback}`
-          : feedback,
+      logger.info(
+        `[plan_resume] Modify requested for correlationId=${correlationId}, re-running pipeline`
+      );
+
+      const resolvedProjectPath = projectPath || planState.projectPath;
+
+      // Re-draft PRD incorporating feedback
+      let prd: SPARCPrd;
+      try {
+        prd = await draftPRD(
+          `${planState.idea}\n\n---\nModification feedback from review:\n${feedback}`,
+          resolvedProjectPath
+        );
+        logger.info(
+          `[plan_resume] PRD re-drafted with feedback for correlationId=${correlationId}`
+        );
+      } catch (err) {
+        logger.error(`[plan_resume] PRD re-draft failed for correlationId=${correlationId}:`, err);
+        throw err;
+      }
+
+      // Re-run antagonistic review
+      const prdId = `plan-${correlationId}-mod`;
+      let review: ConsolidatedReview;
+      try {
+        review = await this.antagonisticReview.executeReview({
+          prd,
+          prdId,
+          projectPath: resolvedProjectPath,
+        });
+        logger.info(
+          `[plan_resume] Re-review completed for correlationId=${correlationId}, success=${review.success}`
+        );
+      } catch (err) {
+        logger.error(`[plan_resume] Re-review failed for correlationId=${correlationId}:`, err);
+        throw err;
+      }
+
+      // Check if both reviewers now auto-approve
+      const avaApproves =
+        review.success && review.avaReview.success && isAutoApprove(review.avaReview);
+      const jonApproves =
+        review.success && review.jonReview.success && isAutoApprove(review.jonReview);
+
+      if (avaApproves && jonApproves) {
+        logger.info(
+          `[plan_resume] Both reviewers auto-approved after modify for correlationId=${correlationId}`
+        );
+        this.planStore.delete(correlationId);
+        const result = await this.createBoardArtifacts(
+          correlationId,
+          prd,
+          review,
+          resolvedProjectPath
+        );
+        this.events.emit('plan:created', {
+          correlationId,
+          projectSlug: result.projectSlug,
+          featureCount: result.featureCount,
+        });
+        return {
+          status: 'created',
+          correlationId,
+          projectSlug: result.projectSlug,
+          featureCount: result.featureCount,
+        };
+      }
+
+      // Update stored state with new PRD and review
+      const updatedState: PlanState = {
+        ...planState,
+        prd,
+        review,
+        projectPath: resolvedProjectPath,
+        createdAt: new Date().toISOString(),
       };
-      logger.info(`[plan_resume] PRD modified with feedback for correlationId=${correlationId}`);
+      this.planStore.save(correlationId, updatedState);
+
+      // Re-emit HITLRequest
+      const hitlRequest: HITLRequest = {
+        type: 'hitl_request',
+        correlationId,
+        title: `Plan Review (modified): ${planState.idea.slice(0, 50)}${planState.idea.length > 50 ? '...' : ''}`,
+        summary: review.resolution || 'Modified review completed. Awaiting human decision.',
+        avaVerdict: {
+          score: estimateScore(review.avaReview),
+          concerns: review.avaReview.concerns ?? [],
+          verdict: review.avaReview.verdict || 'unknown',
+        },
+        jonVerdict: {
+          score: estimateScore(review.jonReview),
+          concerns: review.jonReview.concerns ?? [],
+          verdict: review.jonReview.verdict || 'unknown',
+        },
+        options: ['approve', 'reject', 'modify'],
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        replyTopic: planState.replyTopic || `plan.hitl.${correlationId}`,
+        sourceMeta: planState.source,
+      };
+
+      if (planState.replyTopic) {
+        await publishToBus(planState.replyTopic, hitlRequest);
+      }
+
+      this.events.emit('plan:hitl-requested', {
+        correlationId,
+        title: hitlRequest.title,
+        summary: hitlRequest.summary,
+      });
+
+      return { status: 'pending_approval', correlationId };
     }
 
-    // Create board artifacts
+    // For "approve" (or "modify" without feedback — treat as approve):
     const result = await this.createBoardArtifacts(
       correlationId,
-      prd,
+      planState.prd,
       planState.review,
       projectPath || planState.projectPath
     );
@@ -390,6 +493,7 @@ export class PlanningService {
 
     return {
       status: 'created',
+      correlationId,
       projectSlug: result.projectSlug,
       featureCount: result.featureCount,
     };
