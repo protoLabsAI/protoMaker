@@ -11,7 +11,7 @@
  *   (NOT .automaker/context/ — that's for dev agents, not the orchestrator)
  * - Fetches a live sitrep via getSitrep() when sitrepInjection is true
  * - Builds tool set from buildAvaTools() gated by config.toolGroups
- * - Passes tools to streamText with maxSteps: 10
+ * - Passes tools to streamText with maxSteps: 30 (allows complex multi-step skills)
  *
  * Citation extraction:
  * - After the AI response text is complete, [[feature:id]] and [[doc:path]]
@@ -388,15 +388,20 @@ export function createChatRoutes(services: ServiceContainer): Router {
       const resolvedModelId = resolveModelString(modelAlias, 'sonnet');
       const aiModel = await getAnthropicModel(resolvedModelId);
 
+      // For A2A skill calls (skillOverride set), skip context and sitrep injection.
+      // The skill is the sole system prompt — injecting board state would cause the
+      // model to default to Ava's board management behavior instead of the skill.
+      const isA2ASkillCall = !!skillOverride;
+
       // Load Ava-level context (project root CLAUDE.md + Ava skill prompt)
       let projectContext: string | undefined;
-      if (avaConfig.contextInjection && projectPath) {
+      if (!isA2ASkillCall && avaConfig.contextInjection && projectPath) {
         projectContext = await loadAvaContext(projectPath);
       }
 
       // Conditionally fetch live sitrep
       let sitrep: string | undefined;
-      if (avaConfig.sitrepInjection && projectPath) {
+      if (!isA2ASkillCall && avaConfig.sitrepInjection && projectPath) {
         try {
           sitrep = await getSitrep(projectPath);
         } catch (err) {
@@ -555,9 +560,14 @@ export function createChatRoutes(services: ServiceContainer): Router {
         // Unknown skill name — pass through as normal message
       }
 
-      // Prepend the expanded command body to the system prompt for this turn
+      // Build the final system prompt for this turn:
+      //   A2A skill call (skillOverride set): use ONLY the skill body — Ava's persona
+      //     would compete with and override the skill's explicit instructions.
+      //   UI slash command / normal chat: prepend skill body to Ava's full persona.
       const finalSystemPrompt = commandSystemPrefix
-        ? `${commandSystemPrefix}\n\n---\n\n${systemPrompt}`
+        ? skillOverride
+          ? commandSystemPrefix
+          : `${commandSystemPrefix}\n\n---\n\n${systemPrompt}`
         : systemPrompt;
       // Enable extended thinking for models that support it (opus / sonnet).
       // Uses adaptive thinking with effort level from the client UI.
@@ -587,6 +597,11 @@ export function createChatRoutes(services: ServiceContainer): Router {
       const messagesJson = JSON.stringify(messages);
       const messagesChars = messagesJson.length;
       const estimatedInputTokens = Math.ceil((systemPromptChars + messagesChars) / 4);
+      if (skillOverride) {
+        logger.info(
+          `A2A skill context: finalSystemPrompt=${finalSystemPrompt.length} chars, activeTools=[${Object.keys(activeTools).join(', ')}]`
+        );
+      }
       const requestStartTime = Date.now();
 
       logger.info(
@@ -604,9 +619,9 @@ export function createChatRoutes(services: ServiceContainer): Router {
       const result = streamText({
         model: aiModel,
         messages,
-        system: systemPrompt,
-        tools,
-        stopWhen: stepCountIs(10),
+        system: finalSystemPrompt,
+        tools: activeTools,
+        stopWhen: stepCountIs(30),
         providerOptions: {
           anthropic: {
             ...(extendedThinking && {
