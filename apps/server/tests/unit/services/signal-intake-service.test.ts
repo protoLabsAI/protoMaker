@@ -368,23 +368,77 @@ describe('SignalIntakeService', () => {
   });
 
   describe('deduplication logic', () => {
-    it('should prevent duplicate GitHub signals by event ID', async () => {
+    it('should prevent duplicate GitHub issue signals by repo+issueNumber', async () => {
+      // Same repo + issue number → same dedup key, regardless of author
       const signal = createTestSignal({
         source: 'github',
         author: {
-          id: 'event-456',
-          name: 'GitHub Event',
+          id: 'mabry1985',
+          name: 'mabry1985',
         },
         content: 'Issue created',
+        channelContext: {
+          issueNumber: 3299,
+          repository: 'protoLabsAI/protoMaker',
+        },
       });
 
-      // Send same signal twice
+      // Send same signal twice (simulates two webhook registrations firing)
       mockEmitter.emit('signal:received', signal);
       mockEmitter.emit('signal:received', signal);
 
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       // Feature should only be created once
+      expect(mockFeatureLoader.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('should NOT deduplicate two different GitHub issues from the same author', async () => {
+      // Same author, different issue numbers → different dedup keys → both should create features
+      const signal1 = createTestSignal({
+        source: 'github',
+        author: { id: 'mabry1985', name: 'mabry1985' },
+        content: 'First issue',
+        channelContext: { issueNumber: 100, repository: 'protoLabsAI/protoMaker' },
+      });
+      const signal2 = createTestSignal({
+        source: 'github',
+        author: { id: 'mabry1985', name: 'mabry1985' },
+        content: 'Second issue',
+        channelContext: { issueNumber: 101, repository: 'protoLabsAI/protoMaker' },
+      });
+
+      mockEmitter.emit('signal:received', signal1);
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      mockEmitter.emit('signal:received', signal2);
+      await new Promise((resolve) => setTimeout(resolve, 30));
+
+      // Both should create features
+      expect(mockFeatureLoader.create).toHaveBeenCalledTimes(2);
+    });
+
+    it('should deduplicate GitHub issue even when author fields differ between duplicate deliveries', async () => {
+      // Simulates global handler (with author) vs per-project handler (author=undefined)
+      // firing for the same issue — old bug: different author.id → different keys → 2 features
+      const signalWithAuthor = createTestSignal({
+        source: 'github',
+        author: { id: 'mabry1985', name: 'mabry1985' },
+        content: 'Bug report',
+        channelContext: { issueNumber: 3300, repository: 'protoLabsAI/protoMaker' },
+      });
+      const signalWithoutAuthor = createTestSignal({
+        source: 'github',
+        author: { id: undefined as unknown as string, name: '' },
+        content: 'Bug report',
+        channelContext: { issueNumber: 3300, repository: 'protoLabsAI/protoMaker' },
+      });
+
+      mockEmitter.emit('signal:received', signalWithAuthor);
+      mockEmitter.emit('signal:received', signalWithoutAuthor);
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Only one feature should be created despite different author fields
       expect(mockFeatureLoader.create).toHaveBeenCalledTimes(1);
     });
 

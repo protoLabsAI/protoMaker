@@ -19,6 +19,7 @@ import type { EventEmitter } from '../../../lib/events.js';
 import type { TopicBus } from '../../../lib/topic-bus.js';
 import type { SettingsService } from '../../../services/settings-service.js';
 import { FeatureLoader } from '../../../services/feature-loader.js';
+import { getWebhookDeliveryService } from '../../../services/webhook-delivery-service.js';
 import { StagingPromotionService } from '../../../services/staging-promotion-service.js';
 import { getPRWatcherService } from '../../../services/pr-watcher-service.js';
 import type {
@@ -366,6 +367,25 @@ export function createGitHubWebhookHandler(
         const issuePayload = req.body as GitHubIssuePayload;
 
         if (issuePayload.action === 'opened') {
+          // Idempotency guard: reject duplicate webhook deliveries before emitting any events.
+          // GitHub sends a unique X-GitHub-Delivery UUID per delivery attempt (shared across
+          // retries of the same event). Checking it here prevents duplicate features when
+          // multiple webhook registrations fire for the same issue (e.g., GitHub App +
+          // repository webhook), or when GitHub retries a delivery.
+          const deliveryId = req.headers['x-github-delivery'] as string | undefined;
+          if (deliveryId) {
+            const deliveryService = getWebhookDeliveryService();
+            const deduplicationKey = `issues:opened:${deliveryId}`;
+            if (deliveryService.isDuplicate('github', 'issues', deduplicationKey)) {
+              logger.info(
+                `[idempotency] Duplicate delivery ${deliveryId} for issue #${issuePayload.issue.number} — skipping`
+              );
+              res.json({ success: true, message: 'Duplicate delivery ignored' });
+              return;
+            }
+            deliveryService.trackDelivery('github', 'issues', undefined, { deduplicationKey });
+          }
+
           logger.info(
             `GitHub issue #${issuePayload.issue.number} created: ${issuePayload.issue.title}`
           );
