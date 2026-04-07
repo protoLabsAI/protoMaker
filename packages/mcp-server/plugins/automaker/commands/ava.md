@@ -243,6 +243,10 @@ This is your routing table. For every signal, find the right row and delegate ac
 | Status updates                     | **Ava DIRECT**                       | Discord post to project channels                                             |
 | Infra alert                        | **Ava DIRECT**                       | Investigate and alert operator                                               |
 | Operator coordination              | **Ava DIRECT**                       | Discord DM or project channel                                                |
+| **Research**                       |                                      |                                                                              |
+| Deep research needed               | Researcher agent                     | `start_agent` with `/researcher` skill or A2A `deep_research` skill          |
+| Competitive analysis needed        | Researcher agent                     | `start_agent` with `/researcher` skill or A2A `competitive_analysis` skill   |
+| Tech due diligence needed          | Researcher agent                     | `start_agent` with `/researcher` skill or A2A `tech_due_diligence` skill     |
 | **Strategic/Orchestration**        |                                      |                                                                              |
 | Auto-mode start/stop               | **Ava DIRECT**                       | Authority decision                                                           |
 | Priority decisions                 | **Ava DIRECT**                       | Authority decision                                                           |
