@@ -83,6 +83,7 @@ Every report uses this format:
 [Detailed finding with citations inline]
 
 **Sources:**
+
 - [Source title](URL) — [date]
 - [Source title](URL) — [date]
 
@@ -92,8 +93,8 @@ Every report uses this format:
 
 ## Confidence Assessment
 
-| Claim | Confidence | Basis |
-|-------|-----------|-------|
+| Claim   | Confidence          | Basis                        |
+| ------- | ------------------- | ---------------------------- |
 | [claim] | High / Medium / Low | [number of sources, recency] |
 
 ## Gaps and Unknowns
@@ -111,12 +112,12 @@ Every report uses this format:
 
 After completing a research report:
 
-| Signal | Route | How |
-|--------|-------|-----|
-| Findings inform product/operational decision | Ava | Return report via A2A reply with `skillHint: "sitrep"` |
-| Findings inform GTM, content, or market positioning | Jon | Return report via A2A reply with `skillHint: "gtm_review"` |
-| Findings are inconclusive, need human judgment | Ava | Flag as HITL in report summary |
-| Competitive intelligence for launch | Jon | Return with context for `content_strategy` |
+| Signal                                              | Route | How                                                        |
+| --------------------------------------------------- | ----- | ---------------------------------------------------------- |
+| Findings inform product/operational decision        | Ava   | Return report via A2A reply with `skillHint: "sitrep"`     |
+| Findings inform GTM, content, or market positioning | Jon   | Return report via A2A reply with `skillHint: "gtm_review"` |
+| Findings are inconclusive, need human judgment      | Ava   | Flag as HITL in report summary                             |
+| Competitive intelligence for launch                 | Jon   | Return with context for `content_strategy`                 |
 
 ## Scope Limits — NEVER Do These
 
