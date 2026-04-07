@@ -39,11 +39,21 @@ export function createFlagExternalDepHandler(featureLoader: FeatureLoader) {
     try {
       const parsed = FlagBodySchema.safeParse(req.body);
       if (!parsed.success) {
-        res.status(400).json({ success: false, error: 'Validation failed', details: parsed.error.issues });
+        res
+          .status(400)
+          .json({ success: false, error: 'Validation failed', details: parsed.error.issues });
         return;
       }
 
-      const { projectPath, featureId, dependencyAppPath, dependencyFeatureId, description, dependencyType, prNumber } = parsed.data;
+      const {
+        projectPath,
+        featureId,
+        dependencyAppPath,
+        dependencyFeatureId,
+        description,
+        dependencyType,
+        prNumber,
+      } = parsed.data;
 
       const feature = await featureLoader.get(projectPath, featureId);
       if (!feature) {
@@ -94,7 +104,9 @@ export function createResolveExternalDepHandler(featureLoader: FeatureLoader) {
     try {
       const parsed = ResolveBodySchema.safeParse(req.body);
       if (!parsed.success) {
-        res.status(400).json({ success: false, error: 'Validation failed', details: parsed.error.issues });
+        res
+          .status(400)
+          .json({ success: false, error: 'Validation failed', details: parsed.error.issues });
         return;
       }
 
@@ -112,7 +124,9 @@ export function createResolveExternalDepHandler(featureLoader: FeatureLoader) {
       );
 
       if (depIndex === -1) {
-        res.status(404).json({ success: false, error: 'External dependency not found on this feature' });
+        res
+          .status(404)
+          .json({ success: false, error: 'External dependency not found on this feature' });
         return;
       }
 

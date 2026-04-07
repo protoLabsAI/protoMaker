@@ -59,7 +59,8 @@ export const crossRepoTools: Tool[] = [
         },
         description: {
           type: 'string',
-          description: 'Human-readable description of what this feature needs (e.g. "requires new /api/portfolio endpoint")',
+          description:
+            'Human-readable description of what this feature needs (e.g. "requires new /api/portfolio endpoint")',
         },
         dependencyType: {
           type: 'string',
@@ -68,10 +69,18 @@ export const crossRepoTools: Tool[] = [
         },
         prNumber: {
           type: 'number',
-          description: 'Optional PR number for traceability (e.g. the PR that introduced the breaking change)',
+          description:
+            'Optional PR number for traceability (e.g. the PR that introduced the breaking change)',
         },
       },
-      required: ['projectPath', 'featureId', 'dependencyAppPath', 'dependencyFeatureId', 'description', 'dependencyType'],
+      required: [
+        'projectPath',
+        'featureId',
+        'dependencyAppPath',
+        'dependencyFeatureId',
+        'description',
+        'dependencyType',
+      ],
     },
   },
   {

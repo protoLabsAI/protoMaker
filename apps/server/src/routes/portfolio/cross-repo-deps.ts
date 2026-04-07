@@ -85,7 +85,10 @@ export function createCrossRepoDepsRoutes({
       const blockedFeatureIds: string[] = [];
 
       // Accumulate cross-repo blocker counts per (appPath, featureId) pair
-      const blockerCounts = new Map<string, { appPath: string; featureId: string; description: string; count: number }>();
+      const blockerCounts = new Map<
+        string,
+        { appPath: string; featureId: string; description: string; count: number }
+      >();
 
       for (const projectPath of projectPaths) {
         try {
@@ -93,7 +96,8 @@ export function createCrossRepoDepsRoutes({
           let crossRepoBlocked = 0;
 
           for (const feature of allFeatures) {
-            if (!feature.externalDependencies || feature.externalDependencies.length === 0) continue;
+            if (!feature.externalDependencies || feature.externalDependencies.length === 0)
+              continue;
 
             const hasUnsatisfied = feature.externalDependencies.some(
               (d) => d.status !== 'satisfied'
@@ -159,7 +163,9 @@ export function createCrossRepoDepsRoutes({
 
       // Simple circular risk detection: find A→B→A chains in edges
       const circularRisks: Array<{ chain: string[] }> = [];
-      const edgePairs = new Set(edges.map((e) => `${e.fromAppPath}::${e.fromFeatureId}→${e.toAppPath}::${e.toFeatureId}`));
+      const edgePairs = new Set(
+        edges.map((e) => `${e.fromAppPath}::${e.fromFeatureId}→${e.toAppPath}::${e.toFeatureId}`)
+      );
       for (const edge of edges) {
         const reverseKey = `${edge.toAppPath}::${edge.toFeatureId}→${edge.fromAppPath}::${edge.fromFeatureId}`;
         if (edgePairs.has(reverseKey)) {
