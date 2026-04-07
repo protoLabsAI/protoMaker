@@ -95,7 +95,13 @@ export class PortfolioWorldStateBuilder {
   private readonly automakerBaseUrl: string;
   private readonly apiKey: string;
 
-  constructor({ projectPaths, automakerBaseUrl }: { projectPaths: string[]; automakerBaseUrl: string }) {
+  constructor({
+    projectPaths,
+    automakerBaseUrl,
+  }: {
+    projectPaths: string[];
+    automakerBaseUrl: string;
+  }) {
     this.projectPaths = projectPaths;
     this.automakerBaseUrl = automakerBaseUrl;
     this.apiKey = process.env.AUTOMAKER_API_KEY || DEFAULT_API_KEY;
@@ -207,7 +213,10 @@ export class PortfolioWorldStateBuilder {
     if (sitrep.board.blocked > 0 || errorBudgetStatus === 'exhausted') {
       return 'red';
     }
-    if (sitrep.board.backlog > 10 || (sitrep.autoMode.runningCount === 0 && sitrep.board.backlog > 0)) {
+    if (
+      sitrep.board.backlog > 10 ||
+      (sitrep.autoMode.runningCount === 0 && sitrep.board.backlog > 0)
+    ) {
       return 'yellow';
     }
     return 'green';
@@ -255,7 +264,9 @@ export class PortfolioWorldStateBuilder {
     return `${maxBlocked} feature${maxBlocked !== 1 ? 's' : ''} blocked in ${slug}${reasonSuffix}`;
   }
 
-  private aggregatePendingDecisions(results: FetchResult[]): PortfolioSitrep['pendingHumanDecisions'] {
+  private aggregatePendingDecisions(
+    results: FetchResult[]
+  ): PortfolioSitrep['pendingHumanDecisions'] {
     const decisions: PortfolioSitrep['pendingHumanDecisions'] = [];
 
     for (const { projectPath, sitrep, error } of results) {
