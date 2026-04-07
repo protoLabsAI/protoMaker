@@ -226,6 +226,7 @@ import { knowledgeTools } from './tools/knowledge-tools.js';
 import { qaTools } from './tools/qa-tools.js';
 import { discordTools } from './tools/discord-tools.js';
 import { portfolioTools } from './tools/portfolio-tools.js';
+import { contentTools } from './tools/content-tools.js';
 
 // Aggregate all tools
 const tools: Tool[] = [
@@ -249,6 +250,7 @@ const tools: Tool[] = [
   ...qaTools,
   ...discordTools,
   ...portfolioTools,
+  ...contentTools,
 ];
 
 // Tool implementations
@@ -1390,6 +1392,60 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
     case 'knowledge_stats':
       return apiCall('/knowledge/stats', {
         projectPath: args.projectPath,
+      });
+
+    // Content Pipeline (Cindi)
+    case 'create_content':
+      return apiCall('/content/create', {
+        projectPath: args.projectPath,
+        topic: args.topic,
+        contentConfig: {
+          ...(args.format && { format: args.format }),
+          ...(args.tone && { tone: args.tone }),
+          ...(args.audience && { audience: args.audience }),
+          ...(args.outputFormats && { outputFormats: args.outputFormats }),
+          ...(args.enableHITL !== undefined && { enableHITL: args.enableHITL }),
+          ...(args.maxRetries !== undefined && { maxRetries: args.maxRetries }),
+        },
+      });
+
+    case 'get_content_status':
+      return apiCall('/content/status', {
+        runId: args.runId,
+      });
+
+    case 'list_content':
+      return apiCall('/content/list', {
+        projectPath: args.projectPath,
+        filters: {
+          ...(args.status && { status: args.status }),
+          ...(args.contentType && { contentType: args.contentType }),
+        },
+      });
+
+    case 'review_content':
+      return apiCall('/content/review', {
+        projectPath: args.projectPath,
+        runId: args.runId,
+        gate: args.gate,
+        decision: args.decision,
+        ...(args.feedback && { feedback: args.feedback }),
+      });
+
+    case 'export_content':
+      return apiCall('/content/export', {
+        projectPath: args.projectPath,
+        runId: args.runId,
+        format: args.format,
+      });
+
+    case 'execute_antagonistic_review':
+      return apiCall('/content/antagonistic-review', {
+        projectPath: args.projectPath,
+        content: args.content,
+        ...(args.topic && { topic: args.topic }),
+        ...(args.format && { format: args.format }),
+        ...(args.audience && { audience: args.audience }),
       });
 
     default:
