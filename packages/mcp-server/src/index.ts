@@ -225,6 +225,7 @@ import { leadEngineerTools } from './tools/lead-engineer-tools.js';
 import { knowledgeTools } from './tools/knowledge-tools.js';
 import { qaTools } from './tools/qa-tools.js';
 import { discordTools } from './tools/discord-tools.js';
+import { portfolioTools } from './tools/portfolio-tools.js';
 
 // Aggregate all tools
 const tools: Tool[] = [
@@ -247,6 +248,7 @@ const tools: Tool[] = [
   ...knowledgeTools,
   ...qaTools,
   ...discordTools,
+  ...portfolioTools,
 ];
 
 // Tool implementations
@@ -1379,6 +1381,32 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
     case 'knowledge_stats':
       return apiCall('/knowledge/stats', {
         projectPath: args.projectPath,
+      });
+
+    // Cross-repo portfolio dependency tools
+    case 'get_cross_repo_dependencies':
+      return apiCall('/portfolio/cross-repo-dependencies', {
+        projectPath: args.projectPath,
+        includeAllStatuses: args.includeAllStatuses,
+      });
+
+    case 'flag_cross_repo_dependency':
+      return apiCall('/portfolio/flag-cross-repo-dependency', {
+        projectPath: args.projectPath,
+        sourceRepo: args.sourceRepo,
+        mergedPrId: args.mergedPrId,
+        changedInterfaces: args.changedInterfaces,
+        affectedRepos: args.affectedRepos,
+        severity: args.severity,
+        autoCreateFollowUp: args.autoCreateFollowUp,
+      });
+
+    case 'resolve_cross_repo_dependency':
+      return apiCall('/portfolio/resolve-cross-repo-dependency', {
+        projectPath: args.projectPath,
+        featureId: args.featureId,
+        externalAppPath: args.externalAppPath,
+        externalFeatureId: args.externalFeatureId,
       });
 
     default:
