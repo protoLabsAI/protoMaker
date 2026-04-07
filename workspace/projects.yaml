@@ -256,4 +256,3 @@ projects:
       priorityWeight: 1.0
       minConcurrency: 1
       maxConcurrency: 3
-
