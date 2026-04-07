@@ -17,7 +17,12 @@
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { z } from 'zod';
 import { createLogger } from '@protolabsai/utils';
-import { executeWithFallback } from './classify-topic.js';
+import {
+  executeWithFallback,
+  extractXmlTag,
+  extractXmlItems,
+  stripMarkdownFences,
+} from './classify-topic.js';
 import {
   ReviewerPerspectiveSchema,
   type ReviewerPerspective,
@@ -93,21 +98,26 @@ Note: Consider Ava's operational concerns in your business assessment. If Ava ra
     : ''
 }
 
-Provide your review in the following JSON format:
-{
-  "reviewer": "Jon",
-  "verdict": "approve" | "approve-with-concerns" | "revise" | "reject",
-  "sections": [
-    {
-      "area": "Customer Impact" | "ROI" | "Market Positioning" | "Priority",
-      "assessment": "Brief assessment of this area",
-      "concerns": ["List of specific concerns"],
-      "recommendations": ["Optional list of recommendations"]
-    }
-  ],
-  "comments": "Overall summary and final thoughts",
-  "timestamp": "${new Date().toISOString()}"
-}
+Provide your review in the following XML format. Use this exact structure — no markdown fences, no JSON:
+
+<review>
+  <reviewer>Jon</reviewer>
+  <verdict>approve|approve-with-concerns|revise|reject</verdict>
+  <sections>
+    <section>
+      <area>Customer Impact|ROI|Market Positioning|Priority</area>
+      <assessment>Brief assessment of this area</assessment>
+      <concerns>
+        <item>Specific concern</item>
+      </concerns>
+      <recommendations>
+        <item>Optional recommendation</item>
+      </recommendations>
+    </section>
+  </sections>
+  <comments>Overall summary and final thoughts</comments>
+  <timestamp>${new Date().toISOString()}</timestamp>
+</review>
 
 Verdict guidelines:
 - approve: Strong business case, clear customer value, ready to proceed
@@ -115,7 +125,7 @@ Verdict guidelines:
 - revise: Needs changes to business case or scope before approval
 - reject: Insufficient business value, wrong priority, or poor market fit
 
-Be strategic, business-focused, and consider customer impact above all. Return ONLY the JSON object, no additional text.`,
+Be strategic, business-focused, and consider customer impact above all. Return ONLY the XML, no additional text.`,
           },
         ]);
 
@@ -154,7 +164,7 @@ Be strategic, business-focused, and consider customer impact above all. Return O
 }
 
 /**
- * Parse and validate LLM output as ReviewerPerspective
+ * Parse and validate LLM output as ReviewerPerspective (XML format).
  *
  * @param output - Raw LLM output string
  * @param nodeName - Node name for error messages
@@ -163,20 +173,40 @@ Be strategic, business-focused, and consider customer impact above all. Return O
  */
 function parseAndValidateReview(output: string, nodeName: string): ReviewerPerspective {
   try {
-    // Extract JSON from potential markdown code blocks
-    let jsonStr = output.trim();
-    const jsonMatch = jsonStr.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
-    if (jsonMatch) {
-      jsonStr = jsonMatch[1];
+    const cleaned = stripMarkdownFences(output);
+    const root = extractXmlTag(cleaned, 'review');
+    if (!root) {
+      throw new Error(`Missing <review> root element. Output preview: ${cleaned.slice(0, 200)}`);
     }
 
-    // Parse JSON
-    const parsed = JSON.parse(jsonStr);
+    const reviewer = extractXmlTag(root, 'reviewer') ?? 'Jon';
+    const verdict = extractXmlTag(root, 'verdict');
+    const comments = extractXmlTag(root, 'comments');
+    const timestamp = extractXmlTag(root, 'timestamp');
+    const sectionsBlock = extractXmlTag(root, 'sections') ?? '';
 
-    // Validate with Zod
-    const validated = ReviewerPerspectiveSchema.parse(parsed);
+    const sectionMatches = [...sectionsBlock.matchAll(/<section[^>]*>([\s\S]*?)<\/section>/gi)];
+    const sections = sectionMatches.map((m) => {
+      const block = m[1];
+      const concernsBlock = extractXmlTag(block, 'concerns') ?? '';
+      const recsBlock = extractXmlTag(block, 'recommendations') ?? '';
+      return {
+        area: extractXmlTag(block, 'area') ?? '',
+        assessment: extractXmlTag(block, 'assessment') ?? '',
+        concerns: extractXmlItems(concernsBlock),
+        recommendations:
+          extractXmlItems(recsBlock).length > 0 ? extractXmlItems(recsBlock) : undefined,
+      };
+    });
 
-    return validated;
+    const parsed = {
+      reviewer,
+      verdict,
+      sections,
+      comments: comments ?? '',
+      timestamp: timestamp ?? new Date().toISOString(),
+    };
+    return ReviewerPerspectiveSchema.parse(parsed);
   } catch (error) {
     logger.error(`[${nodeName}] Failed to parse/validate LLM output:`, output);
     if (error instanceof z.ZodError) {
@@ -184,7 +214,7 @@ function parseAndValidateReview(output: string, nodeName: string): ReviewerPersp
       throw new Error(`[${nodeName}] Invalid review format: ${issues}`);
     }
     throw new Error(
-      `[${nodeName}] Failed to parse JSON: ${error instanceof Error ? error.message : String(error)}`
+      `[${nodeName}] Failed to parse XML: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 }

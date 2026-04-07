@@ -20,7 +20,12 @@
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { z } from 'zod';
 import { createLogger } from '@protolabsai/utils';
-import { executeWithFallback } from './classify-topic.js';
+import {
+  executeWithFallback,
+  extractXmlTag,
+  extractXmlItems,
+  stripMarkdownFences,
+} from './classify-topic.js';
 import { type ReviewerPerspective, type NodeTokenUsage } from './ava-review.js';
 
 const logger = createLogger('consolidate');
@@ -143,20 +148,25 @@ Verdict guidelines:
 - REJECT: Fundamental issues identified, cannot proceed
   - Example: One or both say "reject", or irreconcilable conflicts
 
-Provide your consolidation in the following JSON format:
-{
-  "verdict": "PROCEED" | "MODIFY" | "REJECT",
-  "consensusAnalysis": {
-    "agreement": ["List points where reviewers agree"],
-    "disagreement": ["List points where reviewers disagree"],
-    "resolution": "How conflicts were resolved and why this verdict was chosen"
-  },
-  "finalPRD": "Updated PRD text (with changes if MODIFY, original if PROCEED/REJECT)",
-  "summary": "Executive summary of the consolidated decision",
-  "timestamp": "${new Date().toISOString()}"
-}
+Provide your consolidation in the following XML format. Use this exact structure — no markdown fences, no JSON:
 
-Be thorough, fair, and prioritize both customer value (Jon's focus) and execution feasibility (Ava's focus). Return ONLY the JSON object, no additional text.`,
+<consolidation>
+  <verdict>PROCEED|MODIFY|REJECT</verdict>
+  <consensus_analysis>
+    <agreement>
+      <item>Point where reviewers agree</item>
+    </agreement>
+    <disagreement>
+      <item>Point where reviewers disagree</item>
+    </disagreement>
+    <resolution>How conflicts were resolved and why this verdict was chosen</resolution>
+  </consensus_analysis>
+  <final_prd>Updated PRD text (with changes if MODIFY, original if PROCEED/REJECT)</final_prd>
+  <summary>Executive summary of the consolidated decision</summary>
+  <timestamp>${new Date().toISOString()}</timestamp>
+</consolidation>
+
+Be thorough, fair, and prioritize both customer value (Jon's focus) and execution feasibility (Ava's focus). Return ONLY the XML, no additional text.`,
           },
         ]);
 
@@ -195,7 +205,7 @@ Be thorough, fair, and prioritize both customer value (Jon's focus) and executio
 }
 
 /**
- * Parse and validate LLM output as ConsolidatedReview
+ * Parse and validate LLM output as ConsolidatedReview (XML format).
  *
  * @param output - Raw LLM output string
  * @param nodeName - Node name for error messages
@@ -204,20 +214,39 @@ Be thorough, fair, and prioritize both customer value (Jon's focus) and executio
  */
 function parseAndValidateConsolidation(output: string, nodeName: string): ConsolidatedReview {
   try {
-    // Extract JSON from potential markdown code blocks
-    let jsonStr = output.trim();
-    const jsonMatch = jsonStr.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
-    if (jsonMatch) {
-      jsonStr = jsonMatch[1];
+    const cleaned = stripMarkdownFences(output);
+    const root = extractXmlTag(cleaned, 'consolidation');
+    if (!root) {
+      throw new Error(
+        `Missing <consolidation> root element. Output preview: ${cleaned.slice(0, 200)}`
+      );
     }
 
-    // Parse JSON
-    const parsed = JSON.parse(jsonStr);
+    const verdict = extractXmlTag(root, 'verdict');
+    const summary = extractXmlTag(root, 'summary');
+    const timestamp = extractXmlTag(root, 'timestamp');
+    const finalPRD = extractXmlTag(root, 'final_prd');
 
-    // Validate with Zod
-    const validated = ConsolidatedReviewSchema.parse(parsed);
+    // consensus_analysis block — extract from nested block or fall back to root scope
+    const consensusBlock = extractXmlTag(root, 'consensus_analysis') ?? root;
+    const agreementBlock = extractXmlTag(consensusBlock, 'agreement') ?? '';
+    const disagreementBlock = extractXmlTag(consensusBlock, 'disagreement') ?? '';
+    const resolution =
+      extractXmlTag(consensusBlock, 'resolution') ?? extractXmlTag(root, 'resolution');
 
-    return validated;
+    const parsed = {
+      verdict,
+      consensusAnalysis: {
+        agreement: extractXmlItems(agreementBlock),
+        disagreement: extractXmlItems(disagreementBlock),
+        resolution: resolution ?? '',
+      },
+      finalPRD: finalPRD ?? '',
+      summary: summary ?? '',
+      timestamp: timestamp ?? new Date().toISOString(),
+    };
+
+    return ConsolidatedReviewSchema.parse(parsed);
   } catch (error) {
     logger.error(`[${nodeName}] Failed to parse/validate LLM output:`, output);
     if (error instanceof z.ZodError) {
@@ -225,7 +254,7 @@ function parseAndValidateConsolidation(output: string, nodeName: string): Consol
       throw new Error(`[${nodeName}] Invalid consolidation format: ${issues}`);
     }
     throw new Error(
-      `[${nodeName}] Failed to parse JSON: ${error instanceof Error ? error.message : String(error)}`
+      `[${nodeName}] Failed to parse XML: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 }
