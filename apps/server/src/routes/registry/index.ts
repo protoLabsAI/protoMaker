@@ -93,7 +93,9 @@ export function createRegistryRoutes(settingsService: SettingsService): Router {
       // Build lookup maps
       const refsByPath = new Map<string, ProjectRef>(currentRefs.map((r) => [r.path, r]));
       const registryByPath = new Map<string, ProjectRegistryEntry>(
-        registryProjects.map((p: ProjectRegistryEntry) => [p.projectPath, p])
+        registryProjects
+          .filter((p): p is ProjectRegistryEntry & { projectPath: string } => !!p.projectPath)
+          .map((p) => [p.projectPath, p])
       );
 
       // Find registry projects missing from settings
@@ -106,10 +108,14 @@ export function createRegistryRoutes(settingsService: SettingsService): Router {
 
         const newRef: ProjectRef = {
           id: randomUUID(),
-          name: project.title,
-          path: project.projectPath,
+          name: project.title ?? project.slug,
+          path: project.projectPath as string,
         };
-        added.push({ slug: project.slug, title: project.title, path: project.projectPath });
+        added.push({
+          slug: project.slug,
+          title: project.title ?? project.slug,
+          path: project.projectPath as string,
+        });
         refsToAdd.push(newRef);
       }
 

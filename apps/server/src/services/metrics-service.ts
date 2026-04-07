@@ -660,6 +660,7 @@ export class MetricsService {
         }
 
         const completedCount = features.length;
+        const totalFeatureCount = allFeatures.length;
         const throughputPerDay = completedCount / windowDays;
         const errorBudgetPercent = 10;
         const failureRate = completedCount > 0 ? (failedCount / completedCount) * 100 : 0;
@@ -671,6 +672,7 @@ export class MetricsService {
           slug,
           totalCostUsd,
           completedCount,
+          totalFeatureCount,
           throughputPerDay,
           totalCycleTimeMs,
           cycleTimeCount,
@@ -710,7 +712,9 @@ export class MetricsService {
 
     const portfolioThroughputPerDay = totalFeaturesCompleted / windowDays;
     const avgCycleTimeMs = totalCycleTimeCount > 0 ? totalCycleTimeMs / totalCycleTimeCount : 0;
-    const portfolioFlowEfficiency = await this.getPortfolioFlowEfficiency(projectPaths);
+    const totalFeatureCount = perProject.reduce((s, p) => s + p.totalFeatureCount, 0);
+    const portfolioFlowEfficiency =
+      totalFeatureCount > 0 ? totalFeaturesCompleted / totalFeatureCount : 0;
 
     return {
       generatedAt: new Date().toISOString(),
