@@ -442,12 +442,27 @@ export class SignalIntakeService {
 
   private async handleSignal(signal: SignalPayload): Promise<void> {
     // Deduplicate by source + unique identifier.
-    // For integration sources (GitHub), use author.id which is the issue/event ID.
+    // For GitHub issues, key on repo+issueNumber (canonical issue identity, not author).
+    // Keying on author.id would allow the same issue to slip through if two webhook
+    // registrations fire simultaneously with different payloads (e.g., global /github
+    // handler vs. per-project /github/webhook handler produce author:undefined on the
+    // latter, resulting in a different dedup key and a second feature being created).
     // For UI/MCP sources, include timestamp to allow repeat submissions.
     const isUserSource = signal.source.startsWith('ui:') || signal.source.startsWith('mcp:');
-    const dedupeKey = isUserSource
-      ? `${signal.source}:${signal.timestamp}`
-      : `${signal.source}:${signal.author.id}`;
+    let dedupeKey: string;
+    if (
+      signal.source === 'github' &&
+      signal.channelContext?.issueNumber !== undefined &&
+      signal.channelContext?.repository !== undefined
+    ) {
+      // Canonical dedup key: repo + issue number. Stable across duplicate webhook
+      // deliveries regardless of which handler received the event or who the author is.
+      dedupeKey = `github:${signal.channelContext.repository as string}#${signal.channelContext.issueNumber as number}`;
+    } else if (isUserSource) {
+      dedupeKey = `${signal.source}:${signal.timestamp}`;
+    } else {
+      dedupeKey = `${signal.source}:${signal.author.id}`;
+    }
     if (this.processedSignals.has(dedupeKey)) {
       logger.debug(`Skipping duplicate signal: ${dedupeKey}`);
       return;
