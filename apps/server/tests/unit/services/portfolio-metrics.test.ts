@@ -3,11 +3,11 @@
  *
  * Covers:
  * - Empty project list returns zero-value metrics
- * - Single project aggregation
- * - Multi-project aggregation (throughput sum, cost sum)
- * - Flow efficiency calculation across projects
- * - Top constraint identification (project with most blocked + escalations)
- * - Per-project summary in output
+ * - Single project aggregation (cost, throughput, flow efficiency)
+ * - Multi-project aggregation (totals sum correctly)
+ * - Flow efficiency calculation (completedInWindow / totalFeatures)
+ * - highestCostProject / lowestThroughputProject identification
+ * - windowDays parameter scoping (features outside window not counted)
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -63,11 +63,11 @@ describe('MetricsService.getPortfolioMetrics()', () => {
 
     const result = await service.getPortfolioMetrics([]);
 
-    expect(result.totalThroughputPerDay).toBe(0);
     expect(result.totalCostUsd).toBe(0);
-    expect(result.flowEfficiency).toBe(0);
-    expect(result.topConstraint).toBeNull();
-    expect(result.perProject).toHaveLength(0);
+    expect(result.totalFeaturesCompleted).toBe(0);
+    expect(result.portfolioThroughputPerDay).toBe(0);
+    expect(result.portfolioFlowEfficiency).toBe(0);
+    expect(result.errorBudgetsByProject).toEqual({});
   });
 
   it('returns single project metrics when one path provided', async () => {
@@ -86,14 +86,15 @@ describe('MetricsService.getPortfolioMetrics()', () => {
 
     const result = await service.getPortfolioMetrics(['/projects/alpha']);
 
-    expect(result.perProject).toHaveLength(1);
-    expect(result.perProject[0].projectPath).toBe('/projects/alpha');
     expect(result.totalCostUsd).toBeCloseTo(2.5, 1);
-    expect(result.flowEfficiency).toBeGreaterThan(0); // 1 done / 2 total = 0.5
-    expect(result.flowEfficiency).toBeLessThanOrEqual(1);
+    expect(result.totalFeaturesCompleted).toBe(1);
+    expect(result.highestCostProject).toBe('alpha');
+    expect(result.portfolioFlowEfficiency).toBeGreaterThan(0); // 1 done / 2 total = 0.5
+    expect(result.portfolioFlowEfficiency).toBeLessThanOrEqual(1);
+    expect(result.errorBudgetsByProject['alpha']).toBeDefined();
   });
 
-  it('sums throughput and cost across multiple projects', async () => {
+  it('sums cost across multiple projects', async () => {
     const alpha = [
       makeFeature({
         status: 'done',
@@ -117,35 +118,39 @@ describe('MetricsService.getPortfolioMetrics()', () => {
     const result = await service.getPortfolioMetrics(projectPaths);
 
     expect(result.totalCostUsd).toBeCloseTo(4.0, 1);
-    expect(result.perProject).toHaveLength(2);
+    expect(result.totalFeaturesCompleted).toBe(2);
+    expect(result.errorBudgetsByProject['alpha']).toBeDefined();
+    expect(result.errorBudgetsByProject['beta']).toBeDefined();
   });
 
-  it('calculates flow efficiency as completed / total features across all projects', async () => {
+  it('calculates flow efficiency as completedInWindow / totalFeatures across projects', async () => {
     const alpha = [
       makeFeature({ status: 'done', createdAt: daysAgo(5), completedAt: daysAgo(1) }),
       makeFeature({ status: 'done', createdAt: daysAgo(5), completedAt: daysAgo(1) }),
       makeFeature({ status: 'backlog' }),
       makeFeature({ status: 'backlog' }),
     ];
-    // 2 done / 4 total = 0.5
+    // 2 completed (within 7-day window) / 4 total = 0.5
 
     const loader = makeLoader({ '/projects/alpha': alpha });
     service = new MetricsService(loader as never);
 
     const result = await service.getPortfolioMetrics(['/projects/alpha']);
 
-    // flowEfficiency is based on completedFeatures/totalFeatures
-    expect(result.flowEfficiency).toBeCloseTo(0.5, 1);
+    expect(result.portfolioFlowEfficiency).toBeCloseTo(0.5, 1);
   });
 
-  it('identifies top constraint as project with most blocked + escalated features', async () => {
+  it('identifies highestCostProject correctly', async () => {
     const alpha = [
-      makeFeature({ status: 'blocked', failureCount: 1 }),
-      makeFeature({ status: 'blocked', failureCount: 1 }),
+      makeFeature({
+        status: 'done',
+        costUsd: 10.0,
+        createdAt: daysAgo(3),
+        completedAt: daysAgo(1),
+      }),
     ];
     const beta = [
-      makeFeature({ status: 'blocked', failureCount: 1 }),
-      makeFeature({ status: 'backlog' }),
+      makeFeature({ status: 'done', costUsd: 1.0, createdAt: daysAgo(3), completedAt: daysAgo(1) }),
     ];
 
     const loader = makeLoader({ '/projects/alpha': alpha, '/projects/beta': beta });
@@ -153,37 +158,44 @@ describe('MetricsService.getPortfolioMetrics()', () => {
 
     const result = await service.getPortfolioMetrics(projectPaths);
 
-    // alpha has 2 blocked + 2 escalations = score 4
-    // beta has 1 blocked + 1 escalation = score 2
-    expect(result.topConstraint).toContain('alpha');
+    expect(result.highestCostProject).toBe('alpha');
   });
 
-  it('returns null topConstraint when no blocked or escalated features exist', async () => {
-    const features = [makeFeature({ status: 'backlog' }), makeFeature({ status: 'in_progress' })];
+  it('identifies lowestThroughputProject correctly', async () => {
+    const alpha = [
+      makeFeature({ status: 'done', costUsd: 1.0, createdAt: daysAgo(3), completedAt: daysAgo(1) }),
+      makeFeature({ status: 'done', costUsd: 1.0, createdAt: daysAgo(3), completedAt: daysAgo(1) }),
+    ];
+    const beta: Feature[] = []; // no completed features → lowest throughput
 
-    const loader = makeLoader({ '/projects/alpha': features, '/projects/beta': [] });
+    const loader = makeLoader({ '/projects/alpha': alpha, '/projects/beta': beta });
     service = new MetricsService(loader as never);
 
     const result = await service.getPortfolioMetrics(projectPaths);
 
-    expect(result.topConstraint).toBeNull();
+    expect(result.lowestThroughputProject).toBe('beta');
   });
 
-  it('includes per-project blockedCount and escalationCount in perProject summary', async () => {
+  it('only counts features completed within the windowDays', async () => {
     const features = [
-      makeFeature({ status: 'blocked' }),
-      makeFeature({ status: 'blocked', failureCount: 2 }),
-      makeFeature({ status: 'done', createdAt: daysAgo(3), completedAt: daysAgo(1) }),
+      // Within window (last 7 days)
+      makeFeature({ status: 'done', costUsd: 1.0, createdAt: daysAgo(5), completedAt: daysAgo(1) }),
+      // Outside window (completed 10 days ago)
+      makeFeature({
+        status: 'done',
+        costUsd: 50.0,
+        createdAt: daysAgo(20),
+        completedAt: daysAgo(10),
+      }),
     ];
 
     const loader = makeLoader({ '/projects/alpha': features });
     service = new MetricsService(loader as never);
 
-    const result = await service.getPortfolioMetrics(['/projects/alpha']);
+    const result = await service.getPortfolioMetrics(['/projects/alpha'], 7);
 
-    const entry = result.perProject.find((p) => p.projectPath === '/projects/alpha');
-    expect(entry).toBeDefined();
-    expect(entry!.blockedCount).toBe(2);
-    expect(entry!.escalationCount).toBeGreaterThan(0); // features with failureCount > 0
+    // Only 1 feature within window; old feature excluded from cost and count
+    expect(result.totalFeaturesCompleted).toBe(1);
+    expect(result.totalCostUsd).toBeCloseTo(1.0, 1);
   });
 });
