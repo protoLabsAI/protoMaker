@@ -157,6 +157,24 @@ async function buildSitrep(projectPath: string): Promise<string> {
   lines.push(`**Status:** ${autoModeActive ? '🟢 Running' : '⚪ Stopped'}`);
   lines.push('');
 
+  // Cross-repo blocked features
+  const crossRepoBlocked = features.filter(
+    (f) =>
+      f.status === 'blocked' &&
+      typeof f.statusChangeReason === 'string' &&
+      f.statusChangeReason.startsWith('cross-repo dependency pending:')
+  );
+  if (crossRepoBlocked.length > 0) {
+    lines.push('## Cross-Repo Blocked Features');
+    lines.push('');
+    for (const feature of crossRepoBlocked) {
+      const title = feature.title ?? feature.id;
+      const reason = feature.statusChangeReason ?? 'cross-repo dependency pending';
+      lines.push(`- **${title}** (\`${feature.id}\`) — ${reason} _(crossRepoBlocked: true)_`);
+    }
+    lines.push('');
+  }
+
   // Recent escalations from audit log
   try {
     const router = getEscalationRouter();

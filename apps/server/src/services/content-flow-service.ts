@@ -884,6 +884,183 @@ ${content}`;
       return { success: false, error: message };
     }
   }
+
+  /**
+   * Run a standalone antagonistic review on content text.
+   *
+   * Scores across 6 dimensions on a 1-10 scale:
+   *   Accuracy, Usefulness, Clarity, Engagement, Depth, Actionability
+   *
+   * Passes if overall average >= 7.5 and no dimension < 5.
+   * Used by Cindi as a quality gate before publishing content.
+   */
+  async executeAntagonisticReview(
+    projectPath: string,
+    content: string,
+    options?: { topic?: string; format?: string; audience?: string }
+  ): Promise<{
+    success: boolean;
+    scores: {
+      accuracy: number;
+      usefulness: number;
+      clarity: number;
+      engagement: number;
+      depth: number;
+      actionability: number;
+    };
+    overallScore: number;
+    passed: boolean;
+    feedback: {
+      accuracy: string;
+      usefulness: string;
+      clarity: string;
+      engagement: string;
+      depth: string;
+      actionability: string;
+    };
+    verdict: string;
+    error?: string;
+  }> {
+    const topic = options?.topic || 'unspecified';
+    const format = options?.format || 'guide';
+    const audience = options?.audience || 'intermediate';
+
+    logger.info(
+      `Running antagonistic review for topic "${topic}" (format: ${format}, audience: ${audience})`
+    );
+
+    try {
+      const { smartModel } = await this.createModels(projectPath);
+
+      const prompt = `You are an antagonistic content reviewer. Your job is to critically evaluate content quality. Be harsh — assume content is mediocre until proven excellent.
+
+## Content to Review
+Topic: ${topic}
+Format: ${format}
+Audience: ${audience}
+
+<content>
+${content.slice(0, 8000)}
+</content>
+
+## Scoring Instructions
+
+Score this content across 6 dimensions on a 1-10 scale. Be critical and precise.
+
+Dimensions:
+1. **Accuracy** (1-10): Factual correctness, claims substantiated, no misinformation
+2. **Usefulness** (1-10): Reader value, actionable insights, practical application
+3. **Clarity** (1-10): Readability, logical structure, clear explanations, flow
+4. **Engagement** (1-10): Hook quality, pacing, storytelling, reader retention
+5. **Depth** (1-10): Detail level, nuance, complexity handling for target audience
+6. **Actionability** (1-10): Clear next steps, implementation guidance, CTA strength
+
+## Response Format
+
+Respond with ONLY valid JSON in this exact format:
+{
+  "scores": {
+    "accuracy": <1-10>,
+    "usefulness": <1-10>,
+    "clarity": <1-10>,
+    "engagement": <1-10>,
+    "depth": <1-10>,
+    "actionability": <1-10>
+  },
+  "feedback": {
+    "accuracy": "<specific critique for accuracy>",
+    "usefulness": "<specific critique for usefulness>",
+    "clarity": "<specific critique for clarity>",
+    "engagement": "<specific critique for engagement>",
+    "depth": "<specific critique for depth>",
+    "actionability": "<specific critique for actionability>"
+  },
+  "verdict": "<one sentence overall assessment>"
+}`;
+
+      const response = await smartModel.invoke([{ role: 'user', content: prompt }]);
+      const responseText =
+        typeof response.content === 'string' ? response.content : String(response.content);
+
+      // Extract JSON from response (handle markdown code blocks)
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('Model returned non-JSON response');
+      }
+
+      const parsed = JSON.parse(jsonMatch[0]) as {
+        scores: Record<string, number>;
+        feedback: Record<string, string>;
+        verdict: string;
+      };
+
+      const scores = {
+        accuracy: Number(parsed.scores.accuracy) || 5,
+        usefulness: Number(parsed.scores.usefulness) || 5,
+        clarity: Number(parsed.scores.clarity) || 5,
+        engagement: Number(parsed.scores.engagement) || 5,
+        depth: Number(parsed.scores.depth) || 5,
+        actionability: Number(parsed.scores.actionability) || 5,
+      };
+
+      const values = Object.values(scores);
+      const overallScore = values.reduce((sum, v) => sum + v, 0) / values.length;
+      // Passing criteria (from Cindi's quality standards):
+      //   1. Overall average >= 7.5 (75%)
+      //   2. No dimension < 5 (no critical failures)
+      //   3. At least 3 dimensions >= 8 (80%)
+      const strongDimensions = values.filter((v) => v >= 8).length;
+      const passed = overallScore >= 7.5 && Math.min(...values) >= 5 && strongDimensions >= 3;
+
+      const feedback = {
+        accuracy: parsed.feedback.accuracy || '',
+        usefulness: parsed.feedback.usefulness || '',
+        clarity: parsed.feedback.clarity || '',
+        engagement: parsed.feedback.engagement || '',
+        depth: parsed.feedback.depth || '',
+        actionability: parsed.feedback.actionability || '',
+      };
+
+      logger.info(
+        `Antagonistic review complete: overall ${overallScore.toFixed(1)}/10, passed=${passed}`
+      );
+
+      return {
+        success: true,
+        scores,
+        overallScore: Math.round(overallScore * 10) / 10,
+        passed,
+        feedback,
+        verdict: parsed.verdict || '',
+      };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error('Antagonistic review failed:', error);
+      return {
+        success: false,
+        scores: {
+          accuracy: 0,
+          usefulness: 0,
+          clarity: 0,
+          engagement: 0,
+          depth: 0,
+          actionability: 0,
+        },
+        overallScore: 0,
+        passed: false,
+        feedback: {
+          accuracy: '',
+          usefulness: '',
+          clarity: '',
+          engagement: '',
+          depth: '',
+          actionability: '',
+        },
+        verdict: '',
+        error: message,
+      };
+    }
+  }
 }
 
 // Singleton instance
