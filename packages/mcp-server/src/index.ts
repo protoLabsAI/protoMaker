@@ -1400,12 +1400,12 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectPath: args.projectPath,
         topic: args.topic,
         contentConfig: {
-          ...(args.format && { format: args.format }),
-          ...(args.tone && { tone: args.tone }),
-          ...(args.audience && { audience: args.audience }),
-          ...(args.outputFormats && { outputFormats: args.outputFormats }),
-          ...(args.enableHITL !== undefined && { enableHITL: args.enableHITL }),
-          ...(args.maxRetries !== undefined && { maxRetries: args.maxRetries }),
+          ...(args.format ? { format: args.format } : {}),
+          ...(args.tone ? { tone: args.tone } : {}),
+          ...(args.audience ? { audience: args.audience } : {}),
+          ...(args.outputFormats ? { outputFormats: args.outputFormats } : {}),
+          ...(args.enableHITL !== undefined ? { enableHITL: args.enableHITL } : {}),
+          ...(args.maxRetries !== undefined ? { maxRetries: args.maxRetries } : {}),
         },
       });
 
@@ -1418,8 +1418,8 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/content/list', {
         projectPath: args.projectPath,
         filters: {
-          ...(args.status && { status: args.status }),
-          ...(args.contentType && { contentType: args.contentType }),
+          ...(args.status ? { status: args.status } : {}),
+          ...(args.contentType ? { contentType: args.contentType } : {}),
         },
       });
 
@@ -1429,7 +1429,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         runId: args.runId,
         gate: args.gate,
         decision: args.decision,
-        ...(args.feedback && { feedback: args.feedback }),
+        ...(args.feedback ? { feedback: args.feedback } : {}),
       });
 
     case 'export_content':
@@ -1443,9 +1443,9 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/content/antagonistic-review', {
         projectPath: args.projectPath,
         content: args.content,
-        ...(args.topic && { topic: args.topic }),
-        ...(args.format && { format: args.format }),
-        ...(args.audience && { audience: args.audience }),
+        ...(args.topic ? { topic: args.topic } : {}),
+        ...(args.format ? { format: args.format } : {}),
+        ...(args.audience ? { audience: args.audience } : {}),
       });
 
     default:
