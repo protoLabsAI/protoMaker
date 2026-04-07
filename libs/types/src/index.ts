@@ -110,6 +110,7 @@ export type {
   ExecutionRecord,
   RemediationHistoryEntry,
   VerificationTier,
+  ExternalDependency,
 } from './feature.js';
 export { normalizeFeatureStatus, deriveVerificationTier } from './feature.js';
 
