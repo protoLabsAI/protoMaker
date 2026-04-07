@@ -23,6 +23,10 @@ import { createAssignAgentHandler } from './routes/assign-agent.js';
 import { createSummaryHandler } from './routes/summary.js';
 import { createRollbackHandler, RollbackRequestSchema } from './routes/rollback.js';
 import { createHandoffHandler, HandoffRequestSchema } from './routes/handoff.js';
+import {
+  createFlagExternalDepHandler,
+  createResolveExternalDepHandler,
+} from './routes/external-deps.js';
 import type { FeatureHealthService } from '../../services/feature-health-service.js';
 import type { TrustTierService } from '../../services/trust-tier-service.js';
 import type { PipelineCheckpointService } from '../../services/pipeline-checkpoint-service.js';
@@ -111,6 +115,10 @@ export function createFeaturesRoutes(
     validateBody(HandoffRequestSchema),
     createHandoffHandler()
   );
+
+  // Cross-repo dependency management
+  router.post('/external-deps/flag', createFlagExternalDepHandler(featureLoader));
+  router.post('/external-deps/resolve', createResolveExternalDepHandler(featureLoader));
 
   return router;
 }

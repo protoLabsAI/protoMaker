@@ -76,6 +76,11 @@ export interface PortfolioSitrep {
     crossRepoBlockedCount: number;
     portfolioFlowEfficiency: number;
     topConstraint: string | null;
+    /**
+     * Plain-English summary of the top cross-repo blocker for the executive dashboard.
+     * Only present when there is at least one cross-repo blocked feature.
+     */
+    topCrossRepoBlocker?: string;
   };
   pendingHumanDecisions: Array<{
     projectSlug: string;
@@ -172,6 +177,9 @@ export class PortfolioWorldStateBuilder {
     const topConstraint = this.deriveTopConstraint(results);
     const pendingHumanDecisions = this.aggregatePendingDecisions(results);
 
+    // Fetch cross-repo dependency data from the local API to surface the top blocker
+    const topCrossRepoBlocker = await this.fetchTopCrossRepoBlocker(this.projectPaths);
+
     return {
       generatedAt: new Date().toISOString(),
       projects,
@@ -181,6 +189,7 @@ export class PortfolioWorldStateBuilder {
         crossRepoBlockedCount,
         portfolioFlowEfficiency,
         topConstraint,
+        ...(topCrossRepoBlocker ? { topCrossRepoBlocker } : {}),
       },
       pendingHumanDecisions,
     };
@@ -335,5 +344,49 @@ export class PortfolioWorldStateBuilder {
 
     // Sort by ageMs descending (oldest first)
     return decisions.sort((a, b) => b.ageMs - a.ageMs);
+  }
+
+  /**
+   * Fetches the cross-repo dependency graph from the local API and returns
+   * a plain-English summary of the top blocker for the executive dashboard.
+   * Returns null if there are no cross-repo blocked features or on error.
+   */
+  private async fetchTopCrossRepoBlocker(projectPaths: string[]): Promise<string | null> {
+    try {
+      const params =
+        projectPaths.length > 0
+          ? `?projectPaths=${projectPaths.map(encodeURIComponent).join(',')}`
+          : '';
+      const response = await fetch(
+        `${this.automakerBaseUrl}/api/portfolio/cross-repo-deps${params}`,
+        {
+          headers: { 'X-API-Key': this.apiKey },
+          signal: AbortSignal.timeout(10_000),
+        }
+      );
+      if (!response.ok) return null;
+
+      const data = (await response.json()) as {
+        totalCrossRepoBlocked?: number;
+        topBlocker?: {
+          appPath: string;
+          featureId: string;
+          description: string;
+          blockedFeatureCount: number;
+        } | null;
+      };
+
+      if (!data.totalCrossRepoBlocked || data.totalCrossRepoBlocked === 0) return null;
+
+      const top = data.topBlocker;
+      if (!top)
+        return `${data.totalCrossRepoBlocked} feature(s) blocked by cross-repo dependencies`;
+
+      const appName = path.basename(top.appPath);
+      return `${top.blockedFeatureCount} feature(s) blocked waiting on ${appName}:${top.featureId} — ${top.description}`;
+    } catch {
+      // Non-critical — silently return null
+      return null;
+    }
   }
 }
