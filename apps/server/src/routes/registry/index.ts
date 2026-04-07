@@ -8,7 +8,10 @@
 import { Router, type Request, type Response } from 'express';
 import { randomUUID } from 'node:crypto';
 import { createLogger } from '@protolabsai/utils';
-import { getProjectRegistryService, type RegistryProject } from '../../services/project-registry-service.js';
+import {
+  getProjectRegistryService,
+  type RegistryProject,
+} from '../../services/project-registry-service.js';
 import { SettingsService } from '../../services/settings-service.js';
 import type { ProjectRef } from '../../types/settings.js';
 

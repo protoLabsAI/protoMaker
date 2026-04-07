@@ -145,7 +145,9 @@ export class ProjectRegistryService {
 
     const body = (await res.json()) as WorkstaceanProjectsResponse;
     if (!body.success || !Array.isArray(body.data)) {
-      throw new Error(`Unexpected Workstacean response shape: ${JSON.stringify(body).slice(0, 200)}`);
+      throw new Error(
+        `Unexpected Workstacean response shape: ${JSON.stringify(body).slice(0, 200)}`
+      );
     }
 
     logger.info(`Loaded ${body.data.length} projects from Workstacean`);
