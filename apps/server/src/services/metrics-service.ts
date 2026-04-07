@@ -81,30 +81,6 @@ export interface CapacityMetrics {
   utilizationPercent: number; // Current capacity utilization (0-100)
 }
 
-export interface PortfolioMetrics {
-  // Aggregated throughput across all projects (features completed per day)
-  totalThroughputPerDay: number;
-
-  // Total cost across all projects
-  totalCostUsd: number;
-
-  // Weighted average flow efficiency (ratio of completed to total features)
-  flowEfficiency: number;
-
-  // Top constraint: project path with highest blocked+escalation count, plain language
-  topConstraint: string | null;
-
-  // Per-project summary for drill-down
-  perProject: Array<{
-    projectPath: string;
-    throughputPerDay: number;
-    totalCostUsd: number;
-    successRate: number;
-    blockedCount: number;
-    escalationCount: number;
-  }>;
-}
-
 export class MetricsService {
   private featureLoader: FeatureLoader;
 

@@ -117,7 +117,7 @@ export class PortfolioWorldStateBuilder {
           totalActiveAgents: 0,
           globalWipUtilization: 0,
           crossRepoBlockedCount: 0,
-          portfolioFlowEfficiency,
+          portfolioFlowEfficiency: 0,
           topConstraint: null,
         },
         pendingHumanDecisions: [],
