@@ -1202,9 +1202,17 @@ export class FeatureScheduler {
 
         if (isEligibleStatus) {
           if (feature.isEpic) {
-            logger.info(
-              `[loadPendingFeatures] Skipping epic feature ${feature.id} - ${feature.title}`
-            );
+            if (feature.epicId) {
+              // Contradictory state: a feature cannot be both an epic container and a child of
+              // another epic. This was likely caused by a direct write bypassing API validation.
+              logger.warn(
+                `[loadPendingFeatures] Feature ${feature.id} ("${feature.title}") is marked as an epic but also has a parent epic assigned (epicId: ${feature.epicId}) — it will not be scheduled. Fix the feature configuration to proceed.`
+              );
+            } else {
+              logger.info(
+                `[loadPendingFeatures] Skipping epic feature ${feature.id} - ${feature.title}`
+              );
+            }
             continue;
           }
 
