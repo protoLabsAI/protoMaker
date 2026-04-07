@@ -219,7 +219,7 @@ interface Feature {
 
 **Estimated hours:** Derived from the median of actual `executionHistory.durationMs` values for completed features of the same complexity. Falls back to defaults (small=0.5h, medium=2h, large=5h, architectural=10h) until ≥3 samples exist per bucket.
 
-See [Metrics — WSJF Prioritization](../internal/dev/metrics.md#wsjf-prioritization) for the full scoring reference.
+See the server's `MetricsService` (`apps/server/src/services/metrics-service.ts`) for the full scoring implementation.
 
 ---
 
