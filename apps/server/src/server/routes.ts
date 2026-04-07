@@ -80,6 +80,7 @@ import { createNotesRoutes } from '../routes/notes/index.js';
 import { createTodoRoutes } from '../routes/todo/index.js';
 import { createSitrepRoutes } from '../routes/sitrep/index.js';
 import { createPortfolioSitrepRoutes } from '../routes/portfolio/sitrep.js';
+import { createPortfolioMetricsRoutes } from '../routes/portfolio/metrics.js';
 import { createLeadEngineerRoutes } from '../routes/lead-engineer/index.js';
 import { createPrometheusRoute } from '../routes/metrics/prometheus.js';
 import { createAutomationsRoutes } from '../routes/automations/index.js';
@@ -413,6 +414,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/todos', createTodoRoutes(todoService));
   app.use('/api/sitrep', createSitrepRoutes({ featureLoader, autoModeService, repoRoot }));
   app.use('/api/portfolio/sitrep', createPortfolioSitrepRoutes({ settingsService }));
+  app.use('/api/portfolio/metrics', createPortfolioMetricsRoutes({ settingsService, metricsService }));
   // Knowledge store routes (chunked retrieval)
   if (knowledgeStoreService) {
     app.use('/api/knowledge', createKnowledgeRoutes(knowledgeStoreService));

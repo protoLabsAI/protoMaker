@@ -810,6 +810,9 @@ export type {
   AgenticMetricsDocument,
 } from './metrics.js';
 
+// Portfolio metrics types — aggregated cost, throughput, and flow efficiency
+export type { PortfolioMetrics } from './portfolio.js';
+
 // Lead Engineer types (production-phase nerve center)
 export { FeatureState, WorldStateDomain } from './lead-engineer.js';
 export type {

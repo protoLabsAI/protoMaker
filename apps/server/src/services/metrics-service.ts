@@ -3,7 +3,8 @@
  * Provides analytics for project performance, cost tracking, and capacity planning
  */
 
-import type { Feature } from '@protolabsai/types';
+import path from 'node:path';
+import type { Feature, PortfolioMetrics } from '@protolabsai/types';
 import { FeatureLoader } from './feature-loader.js';
 
 /**
@@ -494,6 +495,199 @@ export class MetricsService {
       return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
     }
     return `${seconds}s`;
+  }
+
+  /**
+   * Aggregate cost, throughput, and flow efficiency across all registered projects.
+   * Uses a rolling window (default 7 days) scoped to features completed within that window.
+   */
+  async getPortfolioMetrics(
+    projectPaths: string[],
+    windowDays: number = 7
+  ): Promise<PortfolioMetrics> {
+    const windowMs = windowDays * 24 * 60 * 60 * 1000;
+    const windowStart = Date.now() - windowMs;
+
+    // Load windowed features for each project in parallel
+    const perProject = await Promise.all(
+      projectPaths.map(async (projectPath) => {
+        const slug = path.basename(projectPath);
+        const allFeatures = await this.featureLoader.getAll(projectPath);
+
+        // Filter to features completed within the rolling window
+        const features = allFeatures.filter((f) => {
+          const isDone = f.status === 'done' || f.status === 'verified';
+          if (!isDone || !f.completedAt) return false;
+          return new Date(f.completedAt).getTime() >= windowStart;
+        });
+
+        let totalCostUsd = 0;
+        let totalCycleTimeMs = 0;
+        let cycleTimeCount = 0;
+        let failedCount = 0;
+
+        for (const feature of features) {
+          // Cost from execution history or feature-level fallback
+          if (feature.executionHistory?.length) {
+            for (const exec of feature.executionHistory) {
+              if (exec.costUsd != null) totalCostUsd += exec.costUsd;
+            }
+          } else if (feature.costUsd) {
+            totalCostUsd += feature.costUsd;
+          }
+
+          // Cycle time
+          if (feature.createdAt && feature.completedAt) {
+            const cycleTime =
+              new Date(feature.completedAt).getTime() - new Date(feature.createdAt).getTime();
+            if (cycleTime > 0) {
+              totalCycleTimeMs += cycleTime;
+              cycleTimeCount++;
+            }
+          }
+
+          // Track failures (any execution that did not succeed)
+          if (feature.executionHistory?.some((exec) => !exec.success)) {
+            failedCount++;
+          }
+        }
+
+        const completedCount = features.length;
+        const throughputPerDay = completedCount / windowDays;
+
+        // Error budget: SLO target = 90% success rate (10% error budget)
+        const errorBudgetPercent = 10;
+        const failureRate =
+          completedCount > 0 ? (failedCount / completedCount) * 100 : 0;
+        const remaining = Math.max(0, (errorBudgetPercent - failureRate) / errorBudgetPercent);
+        const errorBudgetStatus: 'healthy' | 'warning' | 'exhausted' =
+          remaining > 0.5 ? 'healthy' : remaining > 0 ? 'warning' : 'exhausted';
+
+        return {
+          slug,
+          totalCostUsd,
+          completedCount,
+          throughputPerDay,
+          totalCycleTimeMs,
+          cycleTimeCount,
+          errorBudget: { remaining, status: errorBudgetStatus },
+        };
+      })
+    );
+
+    // Aggregate across all projects
+    let totalCostUsd = 0;
+    let totalFeaturesCompleted = 0;
+    let totalCycleTimeMs = 0;
+    let totalCycleTimeCount = 0;
+    const errorBudgetsByProject: PortfolioMetrics['errorBudgetsByProject'] = {};
+
+    let highestCostSlug = '';
+    let highestCost = -1;
+    let lowestThroughputSlug = '';
+    let lowestThroughput = Infinity;
+
+    for (const proj of perProject) {
+      totalCostUsd += proj.totalCostUsd;
+      totalFeaturesCompleted += proj.completedCount;
+      totalCycleTimeMs += proj.totalCycleTimeMs;
+      totalCycleTimeCount += proj.cycleTimeCount;
+      errorBudgetsByProject[proj.slug] = proj.errorBudget;
+
+      if (proj.totalCostUsd > highestCost) {
+        highestCost = proj.totalCostUsd;
+        highestCostSlug = proj.slug;
+      }
+
+      if (proj.throughputPerDay < lowestThroughput) {
+        lowestThroughput = proj.throughputPerDay;
+        lowestThroughputSlug = proj.slug;
+      }
+    }
+
+    const portfolioThroughputPerDay = totalFeaturesCompleted / windowDays;
+    const avgCycleTimeMs =
+      totalCycleTimeCount > 0 ? totalCycleTimeMs / totalCycleTimeCount : 0;
+
+    const portfolioFlowEfficiency = await this.getPortfolioFlowEfficiency(projectPaths);
+
+    return {
+      generatedAt: new Date().toISOString(),
+      windowDays,
+      totalCostUsd,
+      totalFeaturesCompleted,
+      portfolioThroughputPerDay,
+      avgCycleTimeMs,
+      portfolioFlowEfficiency,
+      errorBudgetsByProject,
+      highestCostProject: highestCostSlug,
+      lowestThroughputProject: lowestThroughputSlug,
+    };
+  }
+
+  /**
+   * Compute flow efficiency for a single project.
+   * Flow efficiency = value-add time (agent execution) / total elapsed time (0–1).
+   * A ratio <0.4 means >60% of time is queue/wait.
+   */
+  async computeFlowEfficiency(projectPath: string): Promise<number> {
+    const features = await this.featureLoader.getAll(projectPath);
+    const completed = features.filter((f) => f.status === 'done' || f.status === 'verified');
+    return this.computeFlowEfficiencyFromFeatures(completed);
+  }
+
+  /**
+   * Weighted average of per-project flow efficiency, weighted by completed feature volume.
+   */
+  async getPortfolioFlowEfficiency(projectPaths: string[]): Promise<number> {
+    const results = await Promise.all(
+      projectPaths.map(async (projectPath) => {
+        const features = await this.featureLoader.getAll(projectPath);
+        const completedFeatures = features.filter(
+          (f) => f.status === 'done' || f.status === 'verified'
+        );
+        const efficiency = this.computeFlowEfficiencyFromFeatures(completedFeatures);
+        return { efficiency, weight: completedFeatures.length };
+      })
+    );
+
+    const totalWeight = results.reduce((sum, r) => sum + r.weight, 0);
+    if (totalWeight === 0) return 0;
+
+    const weightedSum = results.reduce((sum, r) => sum + r.efficiency * r.weight, 0);
+    return weightedSum / totalWeight;
+  }
+
+  /**
+   * Compute flow efficiency from an already-loaded array of completed features.
+   */
+  private computeFlowEfficiencyFromFeatures(features: Feature[]): number {
+    let totalValueAddMs = 0;
+    let totalElapsedMs = 0;
+
+    for (const feature of features) {
+      if (!feature.createdAt || !feature.completedAt) continue;
+
+      const elapsed =
+        new Date(feature.completedAt).getTime() - new Date(feature.createdAt).getTime();
+      if (elapsed <= 0) continue;
+
+      let valueAdd = 0;
+      if (feature.executionHistory?.length) {
+        for (const exec of feature.executionHistory) {
+          if (exec.durationMs && exec.durationMs > 0) {
+            valueAdd += exec.durationMs;
+          }
+        }
+      }
+
+      if (valueAdd <= elapsed) {
+        totalValueAddMs += valueAdd;
+        totalElapsedMs += elapsed;
+      }
+    }
+
+    return totalElapsedMs > 0 ? totalValueAddMs / totalElapsedMs : 0;
   }
 
   /**
