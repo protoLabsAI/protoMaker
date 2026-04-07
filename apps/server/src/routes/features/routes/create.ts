@@ -63,6 +63,16 @@ export function createCreateHandler(
         return;
       }
 
+      // Reject contradictory epic state: a feature cannot be both an epic container and a child
+      if (feature.isEpic && feature.epicId) {
+        res.status(400).json({
+          success: false,
+          error:
+            'A feature cannot be both an epic (isEpic: true) and a member of another epic (epicId set). Set either isEpic or epicId, not both.',
+        });
+        return;
+      }
+
       // Check for duplicate title if title is provided
       if (feature.title && feature.title.trim()) {
         const duplicate = await featureLoader.findDuplicateTitle(projectPath, feature.title);

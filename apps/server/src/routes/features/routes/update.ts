@@ -86,6 +86,20 @@ export function createUpdateHandler(
       const previousStatus = currentFeature?.status as FeatureStatus | undefined;
       const newStatus = updates.status as FeatureStatus | undefined;
 
+      // Reject contradictory epic state: check effective state after applying the update
+      const effectiveIsEpic =
+        updates.isEpic !== undefined ? updates.isEpic : currentFeature?.isEpic;
+      const effectiveEpicId =
+        updates.epicId !== undefined ? updates.epicId : currentFeature?.epicId;
+      if (effectiveIsEpic && effectiveEpicId) {
+        res.status(400).json({
+          success: false,
+          error:
+            'A feature cannot be both an epic (isEpic: true) and a member of another epic (epicId set). Set either isEpic or epicId, not both.',
+        });
+        return;
+      }
+
       // Authority system policy check: gate status changes when enabled
       if (newStatus && previousStatus !== newStatus && settingsService && authorityService) {
         try {

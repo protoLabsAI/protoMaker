@@ -95,6 +95,7 @@ import { createOpsRoutes } from '../routes/ops/index.js';
 import { createQaRoutes } from '../routes/qa/index.js';
 import { createContextEngineRoutes } from '../routes/context-engine.js';
 import { createA2ARoutes, createA2AHandlerRoutes } from '../routes/a2a/index.js';
+import { createRegistryRoutes } from '../routes/registry/index.js';
 import { PlanningService } from '../services/planning-service.js';
 
 const logger = createLogger('Server:Routes');

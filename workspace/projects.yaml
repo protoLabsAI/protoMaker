@@ -1,9 +1,8 @@
 # workspace/projects.yaml — protoLabs Studio Project Routing Index
 #
-# Each entry represents a GitHub repository onboarded into this Studio instance.
-# This file is updated by the onboard_project skill when a new repo is added.
-# Workstacean's A2APlugin reads this file at startup and rebuilds the index
-# every 5 seconds when the file changes — no restart required.
+# AUTO-GENERATED SNAPSHOT — Do not edit manually.
+# This file is refreshed from the Workstacean registry (GET /api/projects).
+# Edit the authoritative source: protoWorkstacean/workspace/projects.yaml
 #
 # NOTE: This file is synced from the authoritative Workstacean registry
 # (protoWorkstacean/workspace/projects.yaml). After P2 this will be read
@@ -36,6 +35,7 @@ projects:
     planeProjectId: 'fe0a95b6-63a9-4a78-a0eb-36bad44228f2'
     planeIdentifier: PRMKR
     projectPath: /home/josh/dev/ava
+    studioUrl: 'http://localhost:3008'
     agents: [ava, quinn, frank]
     discord:
       dev: '1469080556720623699'
