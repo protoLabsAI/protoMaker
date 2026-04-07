@@ -884,7 +884,6 @@ ${content}`;
       return { success: false, error: message };
     }
   }
-}
 
   /**
    * Run a standalone antagonistic review on content text.
