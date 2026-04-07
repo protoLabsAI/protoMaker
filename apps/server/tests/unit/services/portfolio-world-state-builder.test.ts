@@ -97,7 +97,10 @@ describe('PortfolioWorldStateBuilder', () => {
   });
 
   it('returns empty portfolio sitrep for zero project paths', async () => {
-    const builder = new PortfolioWorldStateBuilder({ projectPaths: [], automakerBaseUrl: BASE_URL });
+    const builder = new PortfolioWorldStateBuilder({
+      projectPaths: [],
+      automakerBaseUrl: BASE_URL,
+    });
     const result = await builder.aggregate();
 
     expect(result.projects).toHaveLength(0);
@@ -113,11 +116,21 @@ describe('PortfolioWorldStateBuilder', () => {
     fetchMock
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(makeSitrep({ board: { blocked: 3, total: 5, backlog: 0, inProgress: 1, review: 0, done: 1 } })),
+        json: () =>
+          Promise.resolve(
+            makeSitrep({
+              board: { blocked: 3, total: 5, backlog: 0, inProgress: 1, review: 0, done: 1 },
+            })
+          ),
       } as Response)
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(makeSitrep({ board: { blocked: 2, total: 5, backlog: 1, inProgress: 1, review: 0, done: 1 } })),
+        json: () =>
+          Promise.resolve(
+            makeSitrep({
+              board: { blocked: 2, total: 5, backlog: 1, inProgress: 1, review: 0, done: 1 },
+            })
+          ),
       } as Response);
 
     const builder = new PortfolioWorldStateBuilder({
@@ -135,12 +148,22 @@ describe('PortfolioWorldStateBuilder', () => {
     fetchMock
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(makeSitrep({ board: { done: 2, total: 4, backlog: 2, inProgress: 0, review: 0, blocked: 0 } })),
+        json: () =>
+          Promise.resolve(
+            makeSitrep({
+              board: { done: 2, total: 4, backlog: 2, inProgress: 0, review: 0, blocked: 0 },
+            })
+          ),
       } as Response)
       // beta: 2 done / 4 total
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(makeSitrep({ board: { done: 2, total: 4, backlog: 2, inProgress: 0, review: 0, blocked: 0 } })),
+        json: () =>
+          Promise.resolve(
+            makeSitrep({
+              board: { done: 2, total: 4, backlog: 2, inProgress: 0, review: 0, blocked: 0 },
+            })
+          ),
       } as Response);
 
     const builder = new PortfolioWorldStateBuilder({
