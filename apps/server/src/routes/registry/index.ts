@@ -9,8 +9,8 @@ import { Router, type Request, type Response } from 'express';
 import { randomUUID } from 'node:crypto';
 import { createLogger } from '@protolabsai/utils';
 import {
-  getProjectRegistryService,
-  type RegistryProject,
+  ProjectRegistryService,
+  type ProjectRegistryEntry,
 } from '../../services/project-registry-service.js';
 import { SettingsService } from '../../services/settings-service.js';
 import type { ProjectRef } from '../../types/settings.js';
@@ -35,13 +35,15 @@ export function createRegistryRoutes(settingsService: SettingsService): Router {
     }
 
     try {
-      const registryService = getProjectRegistryService();
-      const result = await registryService.getProjects(projectPath);
+      const svc = new ProjectRegistryService({ projectRoot: projectPath });
+      await svc.start();
+      const projects = svc.getProjects();
+      svc.stop();
       res.json({
         success: true,
-        source: result.source,
-        count: result.projects.length,
-        projects: result.projects,
+        source: 'workstacean',
+        count: projects.length,
+        projects,
       });
     } catch (err) {
       logger.error('Failed to fetch registry projects', err);
@@ -79,16 +81,19 @@ export function createRegistryRoutes(settingsService: SettingsService): Router {
     }
 
     try {
-      const registryService = getProjectRegistryService();
-      const { projects: registryProjects, source } = await registryService.getProjects(projectPath);
+      const svc = new ProjectRegistryService({ projectRoot: projectPath });
+      await svc.start();
+      const registryProjects = svc.getProjects();
+      const source = 'workstacean';
+      svc.stop();
 
       const settings = await settingsService.getGlobalSettings();
       const currentRefs: ProjectRef[] = settings.projects ?? [];
 
       // Build lookup maps
       const refsByPath = new Map<string, ProjectRef>(currentRefs.map((r) => [r.path, r]));
-      const registryByPath = new Map<string, RegistryProject>(
-        registryProjects.map((p) => [p.projectPath, p])
+      const registryByPath = new Map<string, ProjectRegistryEntry>(
+        registryProjects.map((p: ProjectRegistryEntry) => [p.projectPath, p])
       );
 
       // Find registry projects missing from settings

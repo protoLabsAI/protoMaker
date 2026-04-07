@@ -1063,3 +1063,4 @@ export type {
 
 // Correlated event types (event bus traceability via correlation IDs)
 export type { CorrelatedEvent, EventMetadata, EventChain, EventQuery } from './correlated-event.js';
+export type { PortfolioMetrics } from './portfolio.js';
