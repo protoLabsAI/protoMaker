@@ -226,6 +226,7 @@ import { knowledgeTools } from './tools/knowledge-tools.js';
 import { qaTools } from './tools/qa-tools.js';
 import { discordTools } from './tools/discord-tools.js';
 import { portfolioTools } from './tools/portfolio-tools.js';
+import { contentTools } from './tools/content-tools.js';
 
 // Aggregate all tools
 const tools: Tool[] = [
@@ -249,6 +250,7 @@ const tools: Tool[] = [
   ...qaTools,
   ...discordTools,
   ...portfolioTools,
+  ...contentTools,
 ];
 
 // Tool implementations
@@ -1404,30 +1406,58 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectPath: args.projectPath,
       });
 
-    // Cross-repo portfolio dependency tools
-    case 'get_cross_repo_dependencies':
-      return apiCall('/portfolio/cross-repo-dependencies', {
+    // Content Pipeline (Cindi)
+    case 'create_content':
+      return apiCall('/content/create', {
         projectPath: args.projectPath,
-        includeAllStatuses: args.includeAllStatuses,
+        topic: args.topic,
+        contentConfig: {
+          ...(args.format ? { format: args.format } : {}),
+          ...(args.tone ? { tone: args.tone } : {}),
+          ...(args.audience ? { audience: args.audience } : {}),
+          ...(args.outputFormats ? { outputFormats: args.outputFormats } : {}),
+          ...(args.enableHITL !== undefined ? { enableHITL: args.enableHITL } : {}),
+          ...(args.maxRetries !== undefined ? { maxRetries: args.maxRetries } : {}),
+        },
       });
 
-    case 'flag_cross_repo_dependency':
-      return apiCall('/portfolio/flag-cross-repo-dependency', {
-        projectPath: args.projectPath,
-        sourceRepo: args.sourceRepo,
-        mergedPrId: args.mergedPrId,
-        changedInterfaces: args.changedInterfaces,
-        affectedRepos: args.affectedRepos,
-        severity: args.severity,
-        autoCreateFollowUp: args.autoCreateFollowUp,
+    case 'get_content_status':
+      return apiCall('/content/status', {
+        runId: args.runId,
       });
 
-    case 'resolve_cross_repo_dependency':
-      return apiCall('/portfolio/resolve-cross-repo-dependency', {
+    case 'list_content':
+      return apiCall('/content/list', {
         projectPath: args.projectPath,
-        featureId: args.featureId,
-        externalAppPath: args.externalAppPath,
-        externalFeatureId: args.externalFeatureId,
+        filters: {
+          ...(args.status ? { status: args.status } : {}),
+          ...(args.contentType ? { contentType: args.contentType } : {}),
+        },
+      });
+
+    case 'review_content':
+      return apiCall('/content/review', {
+        projectPath: args.projectPath,
+        runId: args.runId,
+        gate: args.gate,
+        decision: args.decision,
+        ...(args.feedback ? { feedback: args.feedback } : {}),
+      });
+
+    case 'export_content':
+      return apiCall('/content/export', {
+        projectPath: args.projectPath,
+        runId: args.runId,
+        format: args.format,
+      });
+
+    case 'execute_antagonistic_review':
+      return apiCall('/content/antagonistic-review', {
+        projectPath: args.projectPath,
+        content: args.content,
+        ...(args.topic ? { topic: args.topic } : {}),
+        ...(args.format ? { format: args.format } : {}),
+        ...(args.audience ? { audience: args.audience } : {}),
       });
 
     default:
