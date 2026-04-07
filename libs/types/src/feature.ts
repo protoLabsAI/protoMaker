@@ -613,6 +613,30 @@ export interface Feature {
    * Customer context for this feature: who it's for, the problem, and expected benefit.
    */
   customerContext?: CustomerContext;
+
+  /**
+   * Cross-repository dependencies for this feature.
+   * Each entry tracks a dependency on a feature in another app managed by a separate
+   * Automaker server instance. The scheduler checks these before dispatching the feature.
+   */
+  externalDependencies?: ExternalDependency[];
+}
+
+/**
+ * Represents a dependency on a feature in a different application (cross-repo dependency).
+ * Used to coordinate work across multiple Automaker server instances.
+ */
+export interface ExternalDependency {
+  /** Absolute path to the dependent application's project root */
+  appPath: string;
+  /** Feature ID in the dependent application */
+  featureId: string;
+  /** Human-readable description of why this dependency exists */
+  description: string;
+  /** Type of cross-repo dependency */
+  dependencyType: 'api_contract' | 'shared_type' | 'deployment_order' | 'data_migration';
+  /** Current status of this dependency */
+  status: 'pending' | 'satisfied' | 'broken';
 }
 
 /**

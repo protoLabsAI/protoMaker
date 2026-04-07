@@ -63,6 +63,73 @@ interface ModelFallbackConfig {
 }
 
 /**
+ * Extract JSON object string from raw LLM output.
+ *
+ * Strategy (in order):
+ * 1. Content inside a markdown code fence (```json ... ``` or ``` ... ```)
+ * 2. Substring from the first '{' to the last '}' in the output
+ *
+ * Returns the best candidate string, or the original trimmed string if neither heuristic fires.
+ */
+export function extractJson(output: string): string {
+  const trimmed = output.trim();
+
+  // Strategy 1: fenced code block
+  const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (fenceMatch) {
+    const inner = fenceMatch[1].trim();
+    // Only use the fence match if it looks like an object or array
+    if (inner.startsWith('{') || inner.startsWith('[')) {
+      return inner;
+    }
+  }
+
+  // Strategy 2: first '{' to last '}'
+  const start = trimmed.indexOf('{');
+  const end = trimmed.lastIndexOf('}');
+  if (start !== -1 && end > start) {
+    return trimmed.slice(start, end + 1);
+  }
+
+  return trimmed;
+}
+
+/**
+ * Extract text content of an XML tag from a string.
+ *
+ * Uses greedy matching to capture everything between the first open tag and last
+ * close tag, then falls back to open-to-end-of-string if no closing tag is found.
+ */
+export function extractXmlTag(xml: string, tag: string): string | undefined {
+  // Greedy: captures from first <tag> to last </tag>
+  const withClose = xml.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*)<\\/${tag}>`, 'i'));
+  if (withClose) return withClose[1].trim();
+
+  // Fallback: no closing tag — take everything after the opening tag
+  const withoutClose = xml.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*)$`, 'i'));
+  if (withoutClose) return withoutClose[1].trim();
+
+  return undefined;
+}
+
+/**
+ * Extract all <item> text values from an XML block string.
+ */
+export function extractXmlItems(block: string): string[] {
+  return [...block.matchAll(/<item[^>]*>([\s\S]*?)<\/item>/gi)].map((m) => m[1].trim());
+}
+
+/**
+ * Strip markdown code fences (```xml ... ``` or ``` ... ```) from LLM output.
+ */
+export function stripMarkdownFences(output: string): string {
+  return output
+    .trim()
+    .replace(/^```(?:\w+)?\s*/i, '')
+    .replace(/\s*```\s*$/i, '');
+}
+
+/**
  * Executes an LLM call with model fallback chain: smart → fast
  *
  * @param config - Model fallback configuration
@@ -177,14 +244,7 @@ Return ONLY the JSON object, no additional text.`,
  */
 function parseAndValidateClassification(output: string, nodeName: string): ClassificationResult {
   try {
-    // Extract JSON from potential markdown code blocks
-    let jsonStr = output.trim();
-    const jsonMatch = jsonStr.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
-    if (jsonMatch) {
-      jsonStr = jsonMatch[1];
-    }
-
-    // Parse JSON
+    const jsonStr = extractJson(output);
     const parsed = JSON.parse(jsonStr);
 
     // Validate with Zod

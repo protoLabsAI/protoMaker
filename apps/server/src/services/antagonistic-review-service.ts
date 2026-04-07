@@ -48,25 +48,27 @@ export class AntagonisticReviewService {
   }
 
   /**
-   * Initialize Langfuse client and adapter
+   * Initialize adapter (always) and optional Langfuse tracing
    */
   private async initializeLangfuse(): Promise<void> {
     try {
       const langfuseClient = getLangfuseInstance();
+      const langfuseAvailable = langfuseClient.isAvailable();
 
-      if (langfuseClient.isAvailable()) {
-        this.adapter = new AntagonisticReviewAdapter({
-          smartModel: resolveModelString('sonnet'),
-          enableHITL: false,
-          langfuseClient,
-        });
+      // Always create the adapter — Langfuse tracing is optional
+      this.adapter = new AntagonisticReviewAdapter({
+        smartModel: resolveModelString('sonnet'),
+        enableHITL: false,
+        langfuseClient: langfuseAvailable ? langfuseClient : undefined,
+      });
 
-        logger.info('Langfuse tracing initialized for antagonistic reviews');
+      if (langfuseAvailable) {
+        logger.info('AntagonisticReviewAdapter initialized with Langfuse tracing');
       } else {
-        logger.info('Langfuse not available, tracing disabled for antagonistic reviews');
+        logger.info('AntagonisticReviewAdapter initialized (Langfuse tracing disabled)');
       }
     } catch (error) {
-      logger.error('Failed to initialize Langfuse:', error);
+      logger.error('Failed to initialize AntagonisticReviewAdapter:', error);
     }
   }
 

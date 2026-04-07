@@ -10,6 +10,7 @@ export {
   AntagonisticReviewStateSchema,
   type AntagonisticReviewState,
   type AntagonisticReviewStateType,
+  type AgentQueryOptions,
 } from './state.js';
 
 export {
@@ -26,6 +27,7 @@ export {
 
 export {
   avaReviewNode,
+  parseReviewXml,
   ReviewVerdictSchema,
   ReviewSectionSchema,
   ReviewerPerspectiveSchema,

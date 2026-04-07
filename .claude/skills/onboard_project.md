@@ -342,7 +342,50 @@ This call is **unauthenticated** (the `/api/setup` path is open). If it fails (e
 project path doesn't exist yet because the clone failed), log a warning and continue —
 the user can register manually by opening protoLabs Studio and adding the project.
 
-## Step 9 — Append Entry to workspace/projects.yaml
+## Step 9 — Create Plane Project
+
+Create a corresponding Plane project so the repo appears in the strategic layer.
+
+```bash
+PLANE_RESULT=$(infisical run --domain https://secrets.proto-labs.ai/api --env=prod -- bash -c '
+  curl -sf -X POST "http://ava:3002/api/v1/workspaces/protolabsai/projects/" \
+    -H "X-Api-Key: ${PLANE_API_KEY}" \
+    -H "Content-Type: application/json" \
+    -d "{
+      \"name\": \"<repoMeta.name>\",
+      \"identifier\": \"<3-5 char uppercase abbreviation of project name>\",
+      \"description\": \"<repoMeta.description>\",
+      \"network\": 2
+    }" 2>&1
+')
+PLANE_PROJECT_ID=$(echo "$PLANE_RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])" 2>/dev/null)
+echo "Plane project ID: $PLANE_PROJECT_ID"
+```
+
+If the call succeeds, write `plane_project_id` to the project's settings.json:
+
+```json
+{
+  "integrations": {
+    "plane": {
+      "projectId": "<PLANE_PROJECT_ID>",
+      "identifier": "<identifier used above>"
+    }
+  }
+}
+```
+
+Also update `workspace/projects.yaml` entry (in Step 10 below) to include:
+
+```yaml
+plane:
+  projectId: <PLANE_PROJECT_ID>
+  identifier: <identifier>
+```
+
+If the Plane API call fails (Plane not available, auth error), log a warning and continue — Plane integration is non-blocking.
+
+## Step 10 — Append Entry to workspace/projects.yaml
 
 The routing index lives at `workspace/projects.yaml` in the protoLabs Studio repo root.
 If the file does not exist, create it with the header comment.
@@ -361,12 +404,15 @@ Append (or add to the `projects` list):
       general: <general channel name or ID>
       updates: <updates channel name or ID>
       dev: <dev channel name or ID>
+  plane:
+    projectId: <PLANE_PROJECT_ID or "not provisioned">
+    identifier: <identifier or "not provisioned">
 ```
 
 Read the file first. If it already contains a `slug: <projectSlug>` entry, update it
 in-place instead of appending.
 
-## Step 10 — Kickoff Message
+## Step 11 — Kickoff Message
 
 The `provision_discord` subskill (Step 6) sends the kickoff message to the project's
 #dev channel as part of its own execution. No additional action needed here if Step 6
@@ -391,6 +437,7 @@ Target repo:
   - .gitignore updated (or already had .automaker/)
   - .automaker/settings/worktree-init created
 Discord: <provisioned channel names or "skipped">
+Plane: <project ID or "skipped — Plane not available">
 protoLabs Studio: registered (or "skipped — path not cloned")
 Routing index: workspace/projects.yaml updated
 Kickoff message: posted
@@ -400,7 +447,8 @@ Kickoff message: posted
 
 - If GitHub API returns 404 for the repo slug, stop and report: "Repo <owner>/<repo> not found or not accessible."
 - If any file write fails, report the specific step and error.
-- If Discord provisioning fails, log a warning but continue to Steps 9 and 10.
+- If Discord provisioning fails, log a warning but continue to Steps 10 and 11.
+- If Plane project creation fails (Step 9), log a warning and continue — Plane integration is non-blocking.
 - If `workspace/projects.yaml` cannot be written, report it but do not block the Discord kickoff.
 - If the setup endpoint call fails (Step 8), log a warning — the project is still partially onboarded and can be registered manually in the UI.
 

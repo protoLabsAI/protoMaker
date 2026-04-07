@@ -105,8 +105,16 @@ export async function createFlowModel(
     }
 
     logger.debug(`createFlowModel: using ChatAnthropic for model=${resolvedModel}`);
+    // LangChain's ChatAnthropic defaults topP and topK to -1 as sentinels.
+    // For newer models (opus-4-1, sonnet-4-5, haiku-4-5) the constructor handles
+    // null → undefined, but for older models (opus-4-6 etc.) the `??` branch
+    // falls back to -1 even when undefined is passed. Mutate after construction
+    // to guarantee the sentinel is cleared for all model versions.
+    const anthropicModel = new ChatAnthropic(config);
+    (anthropicModel as unknown as Record<string, unknown>).topP = undefined;
+    (anthropicModel as unknown as Record<string, unknown>).topK = undefined;
     return {
-      model: new ChatAnthropic(config) as unknown as BaseChatModel,
+      model: anthropicModel as unknown as BaseChatModel,
       modelName: resolvedModel,
     };
   }

@@ -26,7 +26,11 @@ import {
   DEFAULT_BACKUP_COUNT,
   classifyError,
 } from '@protolabsai/utils';
-import { resolveDependencies, areDependenciesSatisfied } from '@protolabsai/dependency-resolver';
+import {
+  resolveDependencies,
+  areDependenciesSatisfied,
+  checkExternalDependencies,
+} from '@protolabsai/dependency-resolver';
 import { getFeaturesDir } from '@protolabsai/platform';
 import { isWorktreeLocked } from '../lib/worktree-lock.js';
 import { getEffectivePrBaseBranch } from '../lib/settings-helpers.js';
@@ -1500,10 +1504,58 @@ export class FeatureScheduler {
         }
       }
 
+      // ── Cross-repo external dependency check ──
+      // For features with externalDependencies, check that all foreign features are done.
+      // Features with unsatisfied cross-repo deps are blocked here; others proceed normally.
+      const automakerBaseUrl = process.env.AUTOMAKER_API_URL || 'http://localhost:3008';
+      const crossRepoReadyFeatures: Feature[] = [];
+      for (const feature of gatedFeatures) {
+        if (!feature.externalDependencies || feature.externalDependencies.length === 0) {
+          crossRepoReadyFeatures.push(feature);
+          continue;
+        }
+        try {
+          const checkResult = await checkExternalDependencies(feature, automakerBaseUrl);
+          if (checkResult.allSatisfied) {
+            crossRepoReadyFeatures.push(feature);
+          } else {
+            const firstUnsatisfied = checkResult.unsatisfied[0];
+            const reason = `cross-repo dependency pending: ${firstUnsatisfied.description}`;
+            logger.info(
+              `[loadPendingFeatures] Feature ${feature.id} blocked by cross-repo dep: ${reason}`
+            );
+            // Persist the blocked status so the scheduler and sitrep can surface it
+            await this.featureLoader
+              .update(projectPath, feature.id, {
+                status: 'blocked',
+                statusChangeReason: reason,
+              })
+              .catch((err: unknown) => {
+                logger.warn(
+                  `[loadPendingFeatures] Failed to persist cross-repo block for ${feature.id}:`,
+                  err
+                );
+              });
+          }
+        } catch (err) {
+          // Fail open: if the check itself throws, let the feature through
+          logger.warn(
+            `[loadPendingFeatures] cross-repo dep check threw for ${feature.id} — treating as satisfied:`,
+            err
+          );
+          crossRepoReadyFeatures.push(feature);
+        }
+      }
+      if (crossRepoReadyFeatures.length < gatedFeatures.length) {
+        logger.info(
+          `[loadPendingFeatures] Cross-repo check: ${gatedFeatures.length - crossRepoReadyFeatures.length} feature(s) blocked, ${crossRepoReadyFeatures.length} remaining`
+        );
+      }
+
       // ── Project affinity filtering and sorting ──
       // Only applied when instance identity is configured (multi-instance deployments).
       // Single-instance setups with no proto.config.yaml identity pass through unmodified.
-      let affinityFilteredFeatures = gatedFeatures;
+      let affinityFilteredFeatures = crossRepoReadyFeatures;
       if (this.instanceId && this.getAssignedProjectSlugs) {
         try {
           const assignedSlugs = await this.getAssignedProjectSlugs(projectPath);
@@ -1518,8 +1570,8 @@ export class FeatureScheduler {
             return 2;
           };
 
-          const beforeCount = gatedFeatures.length;
-          affinityFilteredFeatures = gatedFeatures.filter((f) => {
+          const beforeCount = crossRepoReadyFeatures.length;
+          affinityFilteredFeatures = crossRepoReadyFeatures.filter((f) => {
             const tier = affinityTier(f);
             if (tier === 2 && !this.overflowEnabled) {
               logger.debug(
@@ -1548,7 +1600,7 @@ export class FeatureScheduler {
             '[loadPendingFeatures] Affinity filtering failed, using unfiltered list:',
             err
           );
-          affinityFilteredFeatures = gatedFeatures;
+          affinityFilteredFeatures = crossRepoReadyFeatures;
         }
       }
 

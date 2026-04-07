@@ -1,19 +1,19 @@
 # Antagonistic Review Pattern
 
-A multi-perspective review pipeline combining **G-Eval chain-of-thought scoring**, **Constitutional AI critique-revision loops**, and **configurable dimension rubrics** to produce high-quality deliverables through adversarial review.
+A multi-perspective PRD review pipeline where **Ava and Jon run as full agent loops** — not single LLM calls. Each reviewer gets the board's current state, can investigate the codebase with Read/Glob/Grep tools, and applies their canonical persona before rendering a structured XML verdict. This means they can push back on timeline conflicts, capacity overload, or misaligned business cases using real project data.
 
 ## Overview
 
-The antagonistic review pattern orchestrates dual-perspective reviews where agents evaluate deliverables from different viewpoints (e.g., optimistic vs. critical, operational vs. strategic). The pattern resolves conflicting perspectives through a resolution agent that synthesizes feedback into actionable improvements.
+The antagonistic review pattern orchestrates dual-perspective reviews where agents evaluate deliverables from different viewpoints (operational vs. strategic). The pattern resolves conflicting perspectives through a consolidation LLM call that synthesizes feedback into PROCEED/MODIFY/REJECT + an updated SPARC PRD.
 
 ### Key Characteristics
 
-- **Multi-perspective evaluation**: Two or more agents review from different viewpoints
-- **Chain-of-thought scoring**: Reviewers provide detailed reasoning before judgments (G-Eval)
-- **Critique-revision loops**: Iterative refinement based on Constitutional AI principles
-- **Configurable dimensions**: Custom evaluation rubrics for different deliverable types
-- **Structured output**: XML/JSON format for machine-parseable results
-- **LangGraph integration**: Drop-in nodes for any state graph workflow
+- **Agent-loop reviewers**: Ava and Jon run as multi-turn agents (up to 10 turns each) with tool access, not single-pass LLM calls
+- **Board-aware**: Both reviewers receive serialized board state (in-flight + backlog) so they can flag capacity and timeline conflicts
+- **Canonical personas**: `getAvaPrompt()` (Chief of Staff) and `getJonPrompt()` (GTM Specialist) drive the agent identities — same prompts used across the whole system
+- **Codebase research**: Read/Glob/Grep tools available during review for technical feasibility checks
+- **Structured XML output**: Verdicts parsed deterministically — no fallbacks, no swallowed errors
+- **LangGraph integration**: Drop-in adapter nodes with state injection pattern
 - **Observability**: Full Langfuse tracing for review analytics
 
 ## Architecture
@@ -21,26 +21,40 @@ The antagonistic review pattern orchestrates dual-perspective reviews where agen
 ### High-Level Flow
 
 ```
-Input Deliverable
+PRD in
     ↓
-┌─────────────────────────────────┐
-│   Parallel Review (Send())      │
-│  ┌─────────┐      ┌──────────┐ │
-│  │ Ava     │      │ Jon      │ │
-│  │ Review  │      │ Review   │ │
-│  └─────────┘      └──────────┘ │
-└─────────────────────────────────┘
+Board Context (FeatureLoader.getAll)
     ↓
-Resolution Agent (Ava as CoS)
+┌─────────────────────────────────────────────────┐
+│  Ava Review (agent loop, 10 turns max)           │
+│  tools: Read / Glob / Grep                       │
+│  context: board state, PRD                       │
+│  persona: getAvaPrompt() — Chief of Staff        │
+│  areas: Capacity, Risk, Tech Debt, Feasibility,  │
+│         Alignment (timeline / in-flight)         │
+└─────────────────────────────────────────────────┘
     ↓
-Consolidated PRD / Deliverable
+┌─────────────────────────────────────────────────┐
+│  Jon Review (agent loop, 10 turns max)           │
+│  tools: Read / Glob / Grep                       │
+│  context: board state, PRD, Ava's verdict        │
+│  persona: getJonPrompt() — GTM Specialist        │
+│  areas: Customer Impact, ROI, Market Positioning │
+│         Priority (vs. other board commitments)   │
+└─────────────────────────────────────────────────┘
+    ↓
+Consolidate (single LLM call) → PROCEED / MODIFY / REJECT
+    ↓
+HITLRequest or auto-approve
+    ↓
+Updated SPARC PRD
 ```
 
 ### Three-Stage Pipeline
 
-1. **Stage 1: Primary Review** - First reviewer evaluates from their perspective
-2. **Stage 2: Secondary Review** - Second reviewer evaluates with access to first review
-3. **Stage 3: Resolution** - Resolution agent synthesizes both perspectives
+1. **Stage 1: Ava review** — Operational agent loop; can read source files, queries board context; pushes back on overcommitment
+2. **Stage 2: Jon review** — GTM agent loop; applies protoLabs brand filter; checks ROI vs. existing commitments
+3. **Stage 3: Consolidation** — Single LLM call synthesizes both verdicts into final verdict + PRD
 
 ### State Machine
 
@@ -73,10 +87,12 @@ interface ReviewDimension {
 }
 ```
 
-**Example PRD dimensions:**
+**PRD review areas:**
 
-- **Ava (Operational)**: Capacity (0.25), Technical Risk (0.30), Technical Debt (0.20), Feasibility (0.25)
-- **Jon (Strategic)**: Customer Impact (0.35), ROI (0.20), Market Positioning (0.30), Priority (0.15)
+- **Ava (Operational)**: Capacity, Risk, Tech Debt, Feasibility, Alignment (timeline / in-flight conflicts)
+- **Jon (Strategic)**: Customer Impact, ROI, Market Positioning, Priority (vs. existing board commitments)
+
+The agent-loop approach replaces fixed numeric weights with reasoning — each reviewer decides what matters most given the specific PRD and current project context.
 
 ### Chain-of-Thought Review Format
 

@@ -51,12 +51,21 @@ export class PlanStore {
         idea           TEXT NOT NULL,
         reply_topic    TEXT,
         source         TEXT,
+        metadata       TEXT,
         project_path   TEXT NOT NULL,
         status         TEXT NOT NULL DEFAULT 'pending',
         created_at     INTEGER NOT NULL,
         expires_at     INTEGER NOT NULL
       );
     `);
+
+    // Migration: add metadata column to existing tables (no-op if column already exists)
+    try {
+      this.db.exec(`ALTER TABLE plans ADD COLUMN metadata TEXT`);
+    } catch {
+      // Column already exists — expected on subsequent starts
+    }
+
     logger.info('Plan store schema ready');
   }
 
@@ -66,9 +75,9 @@ export class PlanStore {
   save(correlationId: string, state: PlanState): void {
     const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO plans
-        (correlation_id, prd, review, idea, reply_topic, source, project_path, status, created_at, expires_at)
+        (correlation_id, prd, review, idea, reply_topic, source, metadata, project_path, status, created_at, expires_at)
       VALUES
-        (@correlationId, @prd, @review, @idea, @replyTopic, @source, @projectPath, @status, @createdAt, @expiresAt)
+        (@correlationId, @prd, @review, @idea, @replyTopic, @source, @metadata, @projectPath, @status, @createdAt, @expiresAt)
     `);
 
     const createdMs = new Date(state.createdAt).getTime();
@@ -80,6 +89,7 @@ export class PlanStore {
       idea: state.idea,
       replyTopic: state.replyTopic ?? null,
       source: state.source ? JSON.stringify(state.source) : null,
+      metadata: state.metadata ? JSON.stringify(state.metadata) : null,
       projectPath: state.projectPath,
       status: 'pending',
       createdAt: createdMs,
@@ -150,6 +160,7 @@ interface StoredRow {
   idea: string;
   reply_topic: string | null;
   source: string | null;
+  metadata: string | null;
   project_path: string;
   status: string;
   created_at: number;
@@ -165,6 +176,7 @@ function rowToPlanState(row: StoredRow): PlanState {
     projectPath: row.project_path,
     replyTopic: row.reply_topic ?? undefined,
     source: row.source ? JSON.parse(row.source) : undefined,
+    metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
     createdAt: new Date(row.created_at).toISOString(),
   };
 }
