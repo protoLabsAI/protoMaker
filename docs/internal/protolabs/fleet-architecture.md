@@ -37,6 +37,18 @@ Three core responsibilities:
 
 The Discord plugin is one of many plugins connected to the bus. Workstacean is indifferent to which interface a signal came from — it routes based on skill, not surface.
 
+### Portfolio Metrics (P1 Portfolio Visibility — shipped 2026-04-07)
+
+`MetricsService` is now active in `apps/server/src/services/metrics-service.ts`. It computes per-app and portfolio-level metrics from feature data without requiring external telemetry.
+
+Key surfaces:
+
+- `GET /api/metrics/{projectPath}` — `ProjectMetrics` + `CapacityMetrics` for a single app
+- `PortfolioWorldStateBuilder` now includes metrics in every world state snapshot
+- Ava's `SKILL.md` updated to use `costByModel` and `utilizationPercent` as capacity signals
+
+Metrics data feeds the portfolio brief produced during fleet-first activation. No manual instrumentation required — all metrics derive from `feature.json` timestamps and cost fields.
+
 ### Registry Files
 
 Both files live in the protoWorkstacean repo under `workspace/`:

@@ -33,6 +33,35 @@ The `sitrep` skill queries all registered apps and returns:
 - Active agent count and concurrency headroom
 - Cost burn for current window
 
+**Portfolio metrics (P1 Portfolio Visibility — shipped 2026-04-07):**
+
+`MetricsService` is now live and provides richer per-app data via `GET /api/metrics/{projectPath}`:
+
+| Metric              | Description                                 |
+| ------------------- | ------------------------------------------- |
+| `avgCycleTimeMs`    | Average time from feature start to done     |
+| `avgAgentTimeMs`    | Average agent execution time                |
+| `avgPrReviewTimeMs` | Average PR review wait time                 |
+| `totalCostUsd`      | Total cost across all features              |
+| `costByModel`       | Cost breakdown by model (sonnet/opus/haiku) |
+| `costPerFeature`    | Average cost per completed feature          |
+| `successRate`       | Percentage of features that succeeded       |
+| `throughputPerDay`  | Average features completed per day          |
+| `escalationRate`    | Percentage of features that were escalated  |
+| `modelDistribution` | Usage percentage by model                   |
+
+Capacity snapshot (also live):
+
+| Metric               | Description                          |
+| -------------------- | ------------------------------------ |
+| `currentConcurrency` | Features currently in progress       |
+| `maxConcurrency`     | Configured concurrency ceiling       |
+| `backlogSize`        | Features waiting to be started       |
+| `blockedCount`       | Features currently blocked           |
+| `utilizationPercent` | Current capacity utilization (0–100) |
+
+The sitrep now incorporates this data when computing health table rows. `costByModel` and `utilizationPercent` are the two primary capacity signals Ava uses to decide whether to escalate to opus or stay on sonnet.
+
 ### Drilling Into RED/YELLOW
 
 For each flagged app, Ava reads:

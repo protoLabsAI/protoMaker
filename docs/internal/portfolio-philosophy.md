@@ -151,6 +151,8 @@ The `agents` list tells Workstacean which agents can receive signals about this 
 
 Invisible blockers between repos are the number one source of latency in the portfolio. A feature in protoMaker that depends on a schema change in protoWorkstacean cannot be executed until that schema change lands — but if the dependency is not recorded, auto-mode will attempt it anyway, fail, and consume error budget.
 
+**Status: implemented** ([P3] Cross-Repo Dependencies — shipped 2026-04-07).
+
 ### Why Invisible Blockers Are the #1 Latency Source
 
 1. Agent executes feature, hits missing API or schema
@@ -165,33 +167,74 @@ Total latency: investigation time + upstream execution time + requeue time. All 
 
 ### The Fix: Declare Cross-Repo Dependencies
 
-Features support an `externalDependencies` field that records explicit cross-repo dependencies:
+Features support an `externalDependencies` field that records explicit cross-repo dependencies. The full schema (from `libs/types/src/feature.ts`):
+
+```typescript
+interface ExternalDependency {
+  appPath: string; // Absolute path to the foreign app (e.g. "/home/josh/dev/protoWorkstacean")
+  featureId: string; // Feature ID in the foreign app
+  description: string; // Human-readable description of what this feature needs
+  dependencyType: // Category of the inter-app contract
+    | 'api_contract' //   depends on a specific REST/RPC endpoint shape
+    | 'shared_type' //   depends on a TypeScript type exported by the foreign app
+    | 'deployment_order' //   must deploy after the foreign app feature (timing only)
+    | 'data_migration'; //   requires a database migration in the foreign app first
+  status: 'pending' | 'satisfied' | 'broken';
+}
+```
+
+**Example — feature waiting on a type export in protoWorkstacean:**
 
 ```json
 {
   "externalDependencies": [
     {
-      "repo": "protoWorkstacean",
+      "appPath": "/home/josh/dev/protoWorkstacean",
+      "featureId": "feature-1775552607529-abc123",
       "description": "projects.yaml must include plane.projectId field before this feature can execute",
+      "dependencyType": "shared_type",
       "status": "pending"
     }
   ]
 }
 ```
 
-The dependency resolver checks `externalDependencies` before auto-mode picks up a feature. Features with unresolved external dependencies are held in `backlog` with a `statusChangeReason` explaining the blocker.
+The `cross-repo-resolver` (`libs/dependency-resolver/src/cross-repo-resolver.ts`) checks `externalDependencies` before auto-mode picks up a feature. Features with unsatisfied dependencies are held in `backlog` with a `statusChangeReason` explaining the blocker.
 
 ### Cross-Repo Dependency Resolution Flow
 
 ```
 1. Feature created with externalDependencies
-2. Dependency resolver marks feature as "waiting on external dep"
-3. Ava creates a corresponding feature in the upstream repo (if not already queued)
-4. When upstream feature merges, Ava updates externalDependency.status = "resolved"
-5. Feature becomes eligible for pickup
+2. Feature scheduler calls cross-repo-resolver before pickup
+3. Resolver calls GET /api/features/get on foreign app for each dependency
+   → foreign feature status in {done, review, completed, verified} → satisfied
+   → foreign feature not found (404) → broken
+   → foreign app unreachable → broken
+   → otherwise → pending
+4. If any dependency is pending or broken → feature stays in backlog
+   statusChangeReason describes the first blocking dependency
+5. When foreign feature reaches done/review → status becomes satisfied
+6. Feature becomes eligible for pickup on next auto-mode cycle
 ```
 
 This makes the dependency graph visible and actionable. Portfolio health reports surface pending external dependencies as a first-class signal.
+
+### Portfolio API
+
+`GET /api/portfolio/cross-repo-deps` returns a dependency graph across all registered apps:
+
+- **Nodes**: apps with feature counts and cross-repo-blocked counts
+- **Edges**: `ExternalDependency` entries with type, status, and description
+- **Top blocker**: the foreign app/feature blocking the most features
+- **Circular risks**: detected circular dependency chains
+
+### MCP Tools
+
+| Tool                            | Description                                  |
+| ------------------------------- | -------------------------------------------- |
+| `get_cross_repo_dependencies`   | List all external dependencies for a feature |
+| `flag_cross_repo_dependency`    | Add an external dependency to a feature      |
+| `resolve_cross_repo_dependency` | Mark an external dependency as satisfied     |
 
 ---
 
