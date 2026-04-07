@@ -98,22 +98,21 @@ describe('consolidate node', () => {
       };
 
       const smartModel = new TestChatModel([
-        JSON.stringify({
-          verdict: 'PROCEED',
-          consensusAnalysis: {
-            agreement: [
-              'Both reviewers approve',
-              'No blocking concerns identified',
-              'Clear execution path and business value',
-            ],
-            disagreement: [],
-            resolution:
-              'Full consensus to proceed. Both operational and business perspectives aligned.',
-          },
-          finalPRD: 'Add loading spinner to submit button',
-          summary: 'Approved by both Ava and Jon. Ready to proceed with implementation.',
-          timestamp: '2024-01-01T00:00:00.000Z',
-        }),
+        `<consolidation>
+  <verdict>PROCEED</verdict>
+  <consensus_analysis>
+    <agreement>
+      <item>Both reviewers approve</item>
+      <item>No blocking concerns identified</item>
+      <item>Clear execution path and business value</item>
+    </agreement>
+    <disagreement></disagreement>
+    <resolution>Full consensus to proceed. Both operational and business perspectives aligned.</resolution>
+  </consensus_analysis>
+  <final_prd>Add loading spinner to submit button</final_prd>
+  <summary>Approved by both Ava and Jon. Ready to proceed with implementation.</summary>
+  <timestamp>2024-01-01T00:00:00.000Z</timestamp>
+</consolidation>`,
       ]);
 
       const state: ConsolidateState = {
@@ -165,22 +164,23 @@ describe('consolidate node', () => {
       };
 
       const smartModel = new TestChatModel([
-        JSON.stringify({
-          verdict: 'PROCEED',
-          consensusAnalysis: {
-            agreement: [
-              'Both support moving forward',
-              'High customer value (Jon)',
-              'Execution is feasible (Ava)',
-            ],
-            disagreement: ['Ava notes capacity is tight but not blocking'],
-            resolution: 'Minor concerns do not warrant blocking. Proceed with monitoring plan.',
-          },
-          finalPRD: 'Add loading spinner to submit button',
-          summary:
-            'Approved with minor operational concerns. Monitor sprint velocity as recommended by Ava.',
-          timestamp: '2024-01-01T00:00:00.000Z',
-        }),
+        `<consolidation>
+  <verdict>PROCEED</verdict>
+  <consensus_analysis>
+    <agreement>
+      <item>Both support moving forward</item>
+      <item>High customer value (Jon)</item>
+      <item>Execution is feasible (Ava)</item>
+    </agreement>
+    <disagreement>
+      <item>Ava notes capacity is tight but not blocking</item>
+    </disagreement>
+    <resolution>Minor concerns do not warrant blocking. Proceed with monitoring plan.</resolution>
+  </consensus_analysis>
+  <final_prd>Add loading spinner to submit button</final_prd>
+  <summary>Approved with minor operational concerns. Monitor sprint velocity as recommended by Ava.</summary>
+  <timestamp>2024-01-01T00:00:00.000Z</timestamp>
+</consolidation>`,
       ]);
 
       const state: ConsolidateState = {
@@ -235,23 +235,24 @@ describe('consolidate node', () => {
       };
 
       const smartModel = new TestChatModel([
-        JSON.stringify({
-          verdict: 'MODIFY',
-          consensusAnalysis: {
-            agreement: ['Both see value in the initiative'],
-            disagreement: [
-              'Ava: serious capacity and risk concerns',
-              'Jon: wants to proceed due to market timing',
-            ],
-            resolution:
-              "PRD needs modification to address Ava's operational concerns while preserving Jon's business objectives. Reduce scope or adjust timeline.",
-          },
-          finalPRD:
-            'MODIFIED: Launch real-time collaborative editing - PHASE 1 (reduced scope)\n\nAddress capacity by reducing initial scope to basic editing only. Full feature set deferred to Q2. Rollback plan documented in deployment guide.',
-          summary:
-            'Modified PRD to address capacity and risk concerns while maintaining business value. Phased approach reduces operational burden.',
-          timestamp: '2024-01-01T00:00:00.000Z',
-        }),
+        `<consolidation>
+  <verdict>MODIFY</verdict>
+  <consensus_analysis>
+    <agreement>
+      <item>Both see value in the initiative</item>
+    </agreement>
+    <disagreement>
+      <item>Ava: serious capacity and risk concerns</item>
+      <item>Jon: wants to proceed due to market timing</item>
+    </disagreement>
+    <resolution>PRD needs modification to address Ava's operational concerns while preserving Jon's business objectives. Reduce scope or adjust timeline.</resolution>
+  </consensus_analysis>
+  <final_prd>MODIFIED: Launch real-time collaborative editing - PHASE 1 (reduced scope)
+
+Address capacity by reducing initial scope to basic editing only. Full feature set deferred to Q2. Rollback plan documented in deployment guide.</final_prd>
+  <summary>Modified PRD to address capacity and risk concerns while maintaining business value. Phased approach reduces operational burden.</summary>
+  <timestamp>2024-01-01T00:00:00.000Z</timestamp>
+</consolidation>`,
       ]);
 
       const state: ConsolidateState = {
@@ -300,23 +301,28 @@ describe('consolidate node', () => {
       };
 
       const smartModel = new TestChatModel([
-        JSON.stringify({
-          verdict: 'MODIFY',
-          consensusAnalysis: {
-            agreement: ['Both support the concept'],
-            disagreement: [
-              'Both raised concerns that need addressing',
-              'Ava: technical risk mitigation needed',
-              'Jon: business metrics unclear',
-            ],
-            resolution:
-              'While both approve conceptually, the combined concerns warrant PRD updates to de-risk and clarify expectations.',
-          },
-          finalPRD:
-            'MODIFIED: Integrate payment gateway\n\nUpdates:\n- Add circuit breaker pattern (Ava)\n- Define success metrics: 95% uptime, <2s latency (Jon)\n- Cost projection: $50K dev + $10K/mo operational',
-          summary: 'PRD updated to address both operational risk and business metrics concerns.',
-          timestamp: '2024-01-01T00:00:00.000Z',
-        }),
+        `<consolidation>
+  <verdict>MODIFY</verdict>
+  <consensus_analysis>
+    <agreement>
+      <item>Both support the concept</item>
+    </agreement>
+    <disagreement>
+      <item>Both raised concerns that need addressing</item>
+      <item>Ava: technical risk mitigation needed</item>
+      <item>Jon: business metrics unclear</item>
+    </disagreement>
+    <resolution>While both approve conceptually, the combined concerns warrant PRD updates to de-risk and clarify expectations.</resolution>
+  </consensus_analysis>
+  <final_prd>MODIFIED: Integrate payment gateway
+
+Updates:
+- Add circuit breaker pattern (Ava)
+- Define success metrics: 95% uptime, &lt;2s latency (Jon)
+- Cost projection: $50K dev + $10K/mo operational</final_prd>
+  <summary>PRD updated to address both operational risk and business metrics concerns.</summary>
+  <timestamp>2024-01-01T00:00:00.000Z</timestamp>
+</consolidation>`,
       ]);
 
       const state: ConsolidateState = {
@@ -373,23 +379,21 @@ describe('consolidate node', () => {
       };
 
       const smartModel = new TestChatModel([
-        JSON.stringify({
-          verdict: 'REJECT',
-          consensusAnalysis: {
-            agreement: [
-              'Both reviewers recommend rejection',
-              'Ava: operationally not feasible',
-              'Jon: business case insufficient',
-            ],
-            disagreement: [],
-            resolution:
-              'Clear consensus to reject. Both operational and business perspectives align that this PRD should not proceed.',
-          },
-          finalPRD: 'Build internal tool for rarely-used workflow',
-          summary:
-            'Rejected by both reviewers. Operationally infeasible and poor business case. Recommend exploring alternative solutions.',
-          timestamp: '2024-01-01T00:00:00.000Z',
-        }),
+        `<consolidation>
+  <verdict>REJECT</verdict>
+  <consensus_analysis>
+    <agreement>
+      <item>Both reviewers recommend rejection</item>
+      <item>Ava: operationally not feasible</item>
+      <item>Jon: business case insufficient</item>
+    </agreement>
+    <disagreement></disagreement>
+    <resolution>Clear consensus to reject. Both operational and business perspectives align that this PRD should not proceed.</resolution>
+  </consensus_analysis>
+  <final_prd>Build internal tool for rarely-used workflow</final_prd>
+  <summary>Rejected by both reviewers. Operationally infeasible and poor business case. Recommend exploring alternative solutions.</summary>
+  <timestamp>2024-01-01T00:00:00.000Z</timestamp>
+</consolidation>`,
       ]);
 
       const state: ConsolidateState = {
@@ -442,22 +446,22 @@ describe('consolidate node', () => {
       };
 
       const smartModel = new TestChatModel([
-        JSON.stringify({
-          verdict: 'REJECT',
-          consensusAnalysis: {
-            agreement: ['Technical execution is feasible (Ava)'],
-            disagreement: [
-              'Jon identifies fundamental business issues',
-              'Strategic misalignment and no customer value',
-            ],
-            resolution:
-              "Jon's rejection based on fundamental business concerns overrides Ava's operational approval. Cannot proceed with strategically misaligned initiative.",
-          },
-          finalPRD: 'Feature X',
-          summary:
-            'Rejected due to fundamental business concerns. Even though technically feasible, strategic misalignment and lack of customer value make this a non-starter.',
-          timestamp: '2024-01-01T00:00:00.000Z',
-        }),
+        `<consolidation>
+  <verdict>REJECT</verdict>
+  <consensus_analysis>
+    <agreement>
+      <item>Technical execution is feasible (Ava)</item>
+    </agreement>
+    <disagreement>
+      <item>Jon identifies fundamental business issues</item>
+      <item>Strategic misalignment and no customer value</item>
+    </disagreement>
+    <resolution>Jon's rejection based on fundamental business concerns overrides Ava's operational approval. Cannot proceed with strategically misaligned initiative.</resolution>
+  </consensus_analysis>
+  <final_prd>Feature X</final_prd>
+  <summary>Rejected due to fundamental business concerns. Even though technically feasible, strategic misalignment and lack of customer value make this a non-starter.</summary>
+  <timestamp>2024-01-01T00:00:00.000Z</timestamp>
+</consolidation>`,
       ]);
 
       const state: ConsolidateState = {
@@ -521,20 +525,27 @@ describe('consolidate node', () => {
       ];
 
       const smartModel = new TestChatModel([
-        JSON.stringify({
-          verdict: 'MODIFY',
-          consensusAnalysis: {
-            agreement: ['All approve the initiative', 'Ava and Jon have no concerns'],
-            disagreement: ['Security Team raises PII handling concerns'],
-            resolution:
-              "While Ava and Jon approve, Security Team's concerns about PII handling must be addressed. Modify PRD to include security requirements.",
-          },
-          finalPRD:
-            'MODIFIED: User profile feature\n\nAdded security section:\n- Encrypt PII at rest\n- Document data retention policy\n- Security review before launch',
-          summary:
-            'PRD modified to address security concerns while maintaining business and operational approval.',
-          timestamp: '2024-01-01T00:00:00.000Z',
-        }),
+        `<consolidation>
+  <verdict>MODIFY</verdict>
+  <consensus_analysis>
+    <agreement>
+      <item>All approve the initiative</item>
+      <item>Ava and Jon have no concerns</item>
+    </agreement>
+    <disagreement>
+      <item>Security Team raises PII handling concerns</item>
+    </disagreement>
+    <resolution>While Ava and Jon approve, Security Team's concerns about PII handling must be addressed. Modify PRD to include security requirements.</resolution>
+  </consensus_analysis>
+  <final_prd>MODIFIED: User profile feature
+
+Added security section:
+- Encrypt PII at rest
+- Document data retention policy
+- Security review before launch</final_prd>
+  <summary>PRD modified to address security concerns while maintaining business and operational approval.</summary>
+  <timestamp>2024-01-01T00:00:00.000Z</timestamp>
+</consolidation>`,
       ]);
 
       const state: ConsolidateState = {
@@ -588,17 +599,20 @@ describe('consolidate node', () => {
       ];
 
       const smartModel = new TestChatModel([
-        JSON.stringify({
-          verdict: 'PROCEED',
-          consensusAnalysis: {
-            agreement: ['All four reviewers approve', 'No concerns from any perspective'],
-            disagreement: [],
-            resolution: 'Full consensus across all reviewers. Ready to proceed.',
-          },
-          finalPRD: 'Feature with full approval',
-          summary: 'Approved by Ava, Jon, Security, and Legal. No concerns.',
-          timestamp: '2024-01-01T00:00:00.000Z',
-        }),
+        `<consolidation>
+  <verdict>PROCEED</verdict>
+  <consensus_analysis>
+    <agreement>
+      <item>All four reviewers approve</item>
+      <item>No concerns from any perspective</item>
+    </agreement>
+    <disagreement></disagreement>
+    <resolution>Full consensus across all reviewers. Ready to proceed.</resolution>
+  </consensus_analysis>
+  <final_prd>Feature with full approval</final_prd>
+  <summary>Approved by Ava, Jon, Security, and Legal. No concerns.</summary>
+  <timestamp>2024-01-01T00:00:00.000Z</timestamp>
+</consolidation>`,
       ]);
 
       const state: ConsolidateState = {
@@ -628,7 +642,7 @@ describe('consolidate node', () => {
       await expect(consolidateNode(state)).rejects.toThrow('No reviews available');
     });
 
-    it('should throw error on invalid JSON', async () => {
+    it('should throw error on missing consolidation root element', async () => {
       const avaReview: ReviewerPerspective = {
         reviewer: 'Ava',
         verdict: 'approve',
@@ -637,7 +651,7 @@ describe('consolidate node', () => {
         timestamp: '2024-01-01T00:00:00.000Z',
       };
 
-      const smartModel = new TestChatModel(['This is not valid JSON']);
+      const smartModel = new TestChatModel(['This is not valid XML']);
 
       const state: ConsolidateState = {
         prd: 'Some PRD',
@@ -645,7 +659,7 @@ describe('consolidate node', () => {
         smartModel,
       };
 
-      await expect(consolidateNode(state)).rejects.toThrow('Failed to parse JSON');
+      await expect(consolidateNode(state)).rejects.toThrow('Failed to parse XML');
     });
 
     it('should throw error on missing required fields', async () => {
@@ -658,10 +672,15 @@ describe('consolidate node', () => {
       };
 
       const smartModel = new TestChatModel([
-        JSON.stringify({
-          verdict: 'PROCEED',
-          // missing consensusAnalysis, finalPRD, summary
-        }),
+        `<consolidation>
+  <consensus_analysis>
+    <agreement></agreement>
+    <disagreement></disagreement>
+    <resolution>Test</resolution>
+  </consensus_analysis>
+  <final_prd>Test</final_prd>
+  <summary>Test</summary>
+</consolidation>`,
       ]);
 
       const state: ConsolidateState = {
@@ -683,17 +702,17 @@ describe('consolidate node', () => {
       };
 
       const smartModel = new TestChatModel([
-        JSON.stringify({
-          verdict: 'MAYBE', // invalid value
-          consensusAnalysis: {
-            agreement: [],
-            disagreement: [],
-            resolution: 'Test',
-          },
-          finalPRD: 'Test',
-          summary: 'Test',
-          timestamp: '2024-01-01T00:00:00.000Z',
-        }),
+        `<consolidation>
+  <verdict>MAYBE</verdict>
+  <consensus_analysis>
+    <agreement></agreement>
+    <disagreement></disagreement>
+    <resolution>Test</resolution>
+  </consensus_analysis>
+  <final_prd>Test</final_prd>
+  <summary>Test</summary>
+  <timestamp>2024-01-01T00:00:00.000Z</timestamp>
+</consolidation>`,
       ]);
 
       const state: ConsolidateState = {
@@ -705,7 +724,7 @@ describe('consolidate node', () => {
       await expect(consolidateNode(state)).rejects.toThrow('Invalid consolidation format');
     });
 
-    it('should handle JSON in markdown code blocks', async () => {
+    it('should handle XML in markdown code blocks', async () => {
       const avaReview: ReviewerPerspective = {
         reviewer: 'Ava',
         verdict: 'approve',
@@ -715,19 +734,7 @@ describe('consolidate node', () => {
       };
 
       const smartModel = new TestChatModel([
-        '```json\n' +
-          JSON.stringify({
-            verdict: 'PROCEED',
-            consensusAnalysis: {
-              agreement: ['All good'],
-              disagreement: [],
-              resolution: 'Proceed',
-            },
-            finalPRD: 'Test PRD',
-            summary: 'Approved',
-            timestamp: '2024-01-01T00:00:00.000Z',
-          }) +
-          '\n```',
+        '```xml\n<consolidation>\n  <verdict>PROCEED</verdict>\n  <consensus_analysis>\n    <agreement><item>All good</item></agreement>\n    <disagreement></disagreement>\n    <resolution>Proceed</resolution>\n  </consensus_analysis>\n  <final_prd>Test PRD</final_prd>\n  <summary>Approved</summary>\n  <timestamp>2024-01-01T00:00:00.000Z</timestamp>\n</consolidation>\n```',
       ]);
 
       const state: ConsolidateState = {
@@ -757,17 +764,19 @@ describe('consolidate node', () => {
 
       // Fast model provides valid response
       const fastModel = new TestChatModel([
-        JSON.stringify({
-          verdict: 'PROCEED',
-          consensusAnalysis: {
-            agreement: ['From fast model - consensus reached'],
-            disagreement: [],
-            resolution: 'Fallback model resolved successfully',
-          },
-          finalPRD: 'Feature X',
-          summary: 'Consolidated by fast model',
-          timestamp: '2024-01-01T00:00:00.000Z',
-        }),
+        `<consolidation>
+  <verdict>PROCEED</verdict>
+  <consensus_analysis>
+    <agreement>
+      <item>From fast model - consensus reached</item>
+    </agreement>
+    <disagreement></disagreement>
+    <resolution>Fallback model resolved successfully</resolution>
+  </consensus_analysis>
+  <final_prd>Feature X</final_prd>
+  <summary>Consolidated by fast model</summary>
+  <timestamp>2024-01-01T00:00:00.000Z</timestamp>
+</consolidation>`,
       ]);
 
       const state: ConsolidateState = {
@@ -817,17 +826,19 @@ describe('consolidate node', () => {
       };
 
       const smartModel = new TestChatModel([
-        JSON.stringify({
-          verdict: 'PROCEED',
-          consensusAnalysis: {
-            agreement: ['All approved'],
-            disagreement: [],
-            resolution: 'Ready to proceed',
-          },
-          finalPRD: 'Simple update',
-          summary: 'All good',
-          timestamp: '2024-01-01T00:00:00.000Z',
-        }),
+        `<consolidation>
+  <verdict>PROCEED</verdict>
+  <consensus_analysis>
+    <agreement>
+      <item>All approved</item>
+    </agreement>
+    <disagreement></disagreement>
+    <resolution>Ready to proceed</resolution>
+  </consensus_analysis>
+  <final_prd>Simple update</final_prd>
+  <summary>All good</summary>
+  <timestamp>2024-01-01T00:00:00.000Z</timestamp>
+</consolidation>`,
       ]);
 
       const state: ConsolidateState = {

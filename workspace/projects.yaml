@@ -33,21 +33,21 @@ projects:
     defaultBranch: main
     status: active
     onboardedAt: '2026-04-07T00:00:00.000Z'
-    planeProjectId: "fe0a95b6-63a9-4a78-a0eb-36bad44228f2"
+    planeProjectId: 'fe0a95b6-63a9-4a78-a0eb-36bad44228f2'
     planeIdentifier: PRMKR
     projectPath: /home/josh/dev/ava
     agents: [ava, quinn, frank]
     discord:
-      dev: "1469080556720623699"
-      bug-reports: "1477837770704814162"
-      release: "1490893509337550859"
+      dev: '1469080556720623699'
+      bug-reports: '1477837770704814162'
+      release: '1490893509337550859'
     infisical:
-      projectId: ""
+      projectId: ''
     observability:
-      langfuseProjectId: ""
+      langfuseProjectId: ''
     googleWorkspace:
-      driveFolderId: ""
-      sharedDocId: ""
+      driveFolderId: ''
+      sharedDocId: ''
     capacity:
       priorityWeight: 1.0
       minConcurrency: 1
@@ -60,22 +60,22 @@ projects:
     defaultBranch: main
     status: active
     onboardedAt: '2026-04-06T00:00:00.000Z'
-    planeProjectId: ""
-    planeIdentifier: ""
+    planeProjectId: ''
+    planeIdentifier: ''
     projectPath: /home/josh/dev/labs/quinn
     agents: [ava, quinn]
     discord:
-      dev: "1490974550169485413"
-      release: "1490974552161783828"
+      dev: '1490974550169485413'
+      release: '1490974552161783828'
     webhooks:
-      release: "https://discord.com/api/webhooks/1490974745062146129/klLlR_jQkuJD2jbUXe-e9AQU6FBSvKXtADGAZWIAu5uVcMOBWcFYJ1vENCcSKxmFoZBn"
+      release: 'https://discord.com/api/webhooks/1490974745062146129/klLlR_jQkuJD2jbUXe-e9AQU6FBSvKXtADGAZWIAu5uVcMOBWcFYJ1vENCcSKxmFoZBn'
     infisical:
-      projectId: ""
+      projectId: ''
     observability:
-      langfuseProjectId: ""
+      langfuseProjectId: ''
     googleWorkspace:
-      driveFolderId: ""
-      sharedDocId: ""
+      driveFolderId: ''
+      sharedDocId: ''
     capacity:
       priorityWeight: 1.0
       minConcurrency: 1
@@ -88,22 +88,22 @@ projects:
     defaultBranch: main
     status: active
     onboardedAt: '2026-04-06T00:00:00.000Z'
-    planeProjectId: ""
-    planeIdentifier: ""
+    planeProjectId: ''
+    planeIdentifier: ''
     projectPath: /home/josh/dev/protoWorkstacean
     agents: [ava, quinn, frank]
     discord:
-      dev: "1490978896911405208"
-      release: "1490978898568286329"
+      dev: '1490978896911405208'
+      release: '1490978898568286329'
     webhooks:
-      release: "https://discord.com/api/webhooks/1490978900719964344/l2p3QUvp79kYpJFB6JsDpP6oSwwDBoNTwy8xmBfz2VX-edM7pT-q2XZYpJIILL_ScmCt"
+      release: 'https://discord.com/api/webhooks/1490978900719964344/l2p3QUvp79kYpJFB6JsDpP6oSwwDBoNTwy8xmBfz2VX-edM7pT-q2XZYpJIILL_ScmCt'
     infisical:
-      projectId: ""
+      projectId: ''
     observability:
-      langfuseProjectId: ""
+      langfuseProjectId: ''
     googleWorkspace:
-      driveFolderId: ""
-      sharedDocId: ""
+      driveFolderId: ''
+      sharedDocId: ''
     capacity:
       priorityWeight: 1.0
       minConcurrency: 1
@@ -116,21 +116,21 @@ projects:
     defaultBranch: main
     status: active
     onboardedAt: '2026-04-06T00:00:00.000Z'
-    planeProjectId: ""
-    planeIdentifier: ""
+    planeProjectId: ''
+    planeIdentifier: ''
     projectPath: /home/josh/dev/labs/protoUI
     agents: [ava, quinn]
     discord:
-      general: "1490601617567912050"
-      updates: "1490601619300286525"
-      dev: "1490601620927418428"
+      general: '1490601617567912050'
+      updates: '1490601619300286525'
+      dev: '1490601620927418428'
     infisical:
-      projectId: ""
+      projectId: ''
     observability:
-      langfuseProjectId: ""
+      langfuseProjectId: ''
     googleWorkspace:
-      driveFolderId: ""
-      sharedDocId: ""
+      driveFolderId: ''
+      sharedDocId: ''
     capacity:
       priorityWeight: 1.0
       minConcurrency: 1
@@ -143,20 +143,20 @@ projects:
     defaultBranch: main
     status: active
     onboardedAt: '2026-04-06T00:00:00.000Z'
-    planeProjectId: ""
-    planeIdentifier: ""
+    planeProjectId: ''
+    planeIdentifier: ''
     projectPath: /home/josh/dev/labs/protoContent
     agents: [jon, cindi]
     discord:
-      general: ""
-      dev: ""
+      general: ''
+      dev: ''
     infisical:
-      projectId: ""
+      projectId: ''
     observability:
-      langfuseProjectId: ""
+      langfuseProjectId: ''
     googleWorkspace:
-      driveFolderId: ""
-      sharedDocId: ""
+      driveFolderId: ''
+      sharedDocId: ''
     capacity:
       priorityWeight: 1.0
       minConcurrency: 1
@@ -169,22 +169,22 @@ projects:
     defaultBranch: main
     status: active
     onboardedAt: '2026-04-06T00:00:00.000Z'
-    planeProjectId: ""
-    planeIdentifier: ""
+    planeProjectId: ''
+    planeIdentifier: ''
     projectPath: /home/josh/dev/labs/protoResearcher
     agents: [ava, quinn]
     discord:
-      dev: "1490974553394905231"
-      release: "1490974554699599883"
+      dev: '1490974553394905231'
+      release: '1490974554699599883'
     webhooks:
-      release: "https://discord.com/api/webhooks/1490974746517700680/XIM4L7LfIvs0z49Ok_OBEMiThsfsRcgKt7LaiGkVku1be2J1uAWPv8JpbIzkIBERl3Pd"
+      release: 'https://discord.com/api/webhooks/1490974746517700680/XIM4L7LfIvs0z49Ok_OBEMiThsfsRcgKt7LaiGkVku1be2J1uAWPv8JpbIzkIBERl3Pd'
     infisical:
-      projectId: ""
+      projectId: ''
     observability:
-      langfuseProjectId: ""
+      langfuseProjectId: ''
     googleWorkspace:
-      driveFolderId: ""
-      sharedDocId: ""
+      driveFolderId: ''
+      sharedDocId: ''
     capacity:
       priorityWeight: 1.0
       minConcurrency: 1
@@ -197,22 +197,22 @@ projects:
     defaultBranch: main
     status: active
     onboardedAt: '2026-04-06T00:00:00.000Z'
-    planeProjectId: ""
-    planeIdentifier: ""
+    planeProjectId: ''
+    planeIdentifier: ''
     projectPath: /home/josh/dev/labs/protoCLI
     agents: [ava, quinn]
     discord:
-      dev: "1490974556306014290"
-      release: "1490974557920563312"
+      dev: '1490974556306014290'
+      release: '1490974557920563312'
     webhooks:
-      release: "https://discord.com/api/webhooks/1490974748841349290/ugcG9nNKyxqKOUoEzm3jNJnwDp4fNSZXd82iWcAomwpG-cMS9IpX5Q2CKEsdEHq2jmUi"
+      release: 'https://discord.com/api/webhooks/1490974748841349290/ugcG9nNKyxqKOUoEzm3jNJnwDp4fNSZXd82iWcAomwpG-cMS9IpX5Q2CKEsdEHq2jmUi'
     infisical:
-      projectId: ""
+      projectId: ''
     observability:
-      langfuseProjectId: ""
+      langfuseProjectId: ''
     googleWorkspace:
-      driveFolderId: ""
-      sharedDocId: ""
+      driveFolderId: ''
+      sharedDocId: ''
     capacity:
       priorityWeight: 1.0
       minConcurrency: 1
@@ -225,22 +225,22 @@ projects:
     defaultBranch: main
     status: active
     onboardedAt: '2026-04-06T00:00:00.000Z'
-    planeProjectId: ""
-    planeIdentifier: ""
+    planeProjectId: ''
+    planeIdentifier: ''
     projectPath: /home/josh/dev/labs/rabbit-hole.io
     agents: [ava, quinn]
     discord:
-      dev: "1490978889596539093"
-      release: "1490978891207282718"
+      dev: '1490978889596539093'
+      release: '1490978891207282718'
     webhooks:
-      release: "https://discord.com/api/webhooks/1490978892847120395/ftfQMs4Ys-XscwIdClRIp7tbWvKKMRjzZk5Nbqm_A-1-OBu54GIRcHiERWbIYU_K90Hj"
+      release: 'https://discord.com/api/webhooks/1490978892847120395/ftfQMs4Ys-XscwIdClRIp7tbWvKKMRjzZk5Nbqm_A-1-OBu54GIRcHiERWbIYU_K90Hj'
     infisical:
-      projectId: ""
+      projectId: ''
     observability:
-      langfuseProjectId: ""
+      langfuseProjectId: ''
     googleWorkspace:
-      driveFolderId: ""
-      sharedDocId: ""
+      driveFolderId: ''
+      sharedDocId: ''
     capacity:
       priorityWeight: 1.0
       minConcurrency: 1
@@ -253,22 +253,22 @@ projects:
     defaultBranch: main
     status: active
     onboardedAt: '2026-04-06T00:00:00.000Z'
-    planeProjectId: ""
-    planeIdentifier: ""
+    planeProjectId: ''
+    planeIdentifier: ''
     projectPath: /home/josh/dev/labs/mythxengine
     agents: [ava, quinn]
     discord:
-      dev: "1490978905371312179"
-      release: "1490978906419761262"
+      dev: '1490978905371312179'
+      release: '1490978906419761262'
     webhooks:
-      release: "https://discord.com/api/webhooks/1490978907862732871/cBKRdYSy7B-dUIVtDne-HOZ9pDarZItF2k8XXvR5UFlW2naSedCo09NMkeletFSEgKub"
+      release: 'https://discord.com/api/webhooks/1490978907862732871/cBKRdYSy7B-dUIVtDne-HOZ9pDarZItF2k8XXvR5UFlW2naSedCo09NMkeletFSEgKub'
     infisical:
-      projectId: ""
+      projectId: ''
     observability:
-      langfuseProjectId: ""
+      langfuseProjectId: ''
     googleWorkspace:
-      driveFolderId: ""
-      sharedDocId: ""
+      driveFolderId: ''
+      sharedDocId: ''
     capacity:
       priorityWeight: 1.0
       minConcurrency: 1
