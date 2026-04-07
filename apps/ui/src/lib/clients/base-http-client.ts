@@ -108,7 +108,7 @@ export class BaseHttpClient {
         credentials: 'include',
         cache: NO_STORE_CACHE_MODE,
       });
-      if (response.status === 401 || response.status === 403) {
+      if (response.status === 401) {
         handleUnauthorized();
         return null;
       }
@@ -321,7 +321,7 @@ export class BaseHttpClient {
       credentials: 'include',
       body: body ? JSON.stringify(body) : undefined,
     });
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) {
       handleUnauthorized();
       throw new Error('Unauthorized');
     }
@@ -345,7 +345,7 @@ export class BaseHttpClient {
       credentials: 'include',
       cache: NO_STORE_CACHE_MODE,
     });
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) {
       handleUnauthorized();
       throw new Error('Unauthorized');
     }
@@ -370,7 +370,7 @@ export class BaseHttpClient {
       credentials: 'include',
       body: body ? JSON.stringify(body) : undefined,
     });
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) {
       handleUnauthorized();
       throw new Error('Unauthorized');
     }
@@ -395,7 +395,7 @@ export class BaseHttpClient {
       credentials: 'include',
       body: body ? JSON.stringify(body) : undefined,
     });
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) {
       handleUnauthorized();
       throw new Error('Unauthorized');
     }
@@ -428,7 +428,7 @@ export class BaseHttpClient {
       credentials: 'include',
       body: data,
     });
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) {
       handleUnauthorized();
       throw new Error('Unauthorized');
     }
