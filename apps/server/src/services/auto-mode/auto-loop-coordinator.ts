@@ -328,6 +328,33 @@ export class AutoLoopCoordinator {
     };
   }
 
+  // ── Capacity adjustment ─────────────────────────────────────────────────
+
+  /**
+   * Adjust the maxConcurrency limit for a running loop.
+   * Used by PortfolioScheduler to dynamically reallocate capacity.
+   *
+   * - Allows current in-flight agents to finish (no kill)
+   * - New dispatches will respect the updated limit
+   * - Returns true if the adjustment was applied, false if no loop found
+   */
+  updateMaxConcurrency(key: string, newMax: number, rationale?: string): boolean {
+    const state = this.loops.get(key);
+    if (!state) return false;
+
+    const oldMax = state.config.maxConcurrency;
+    if (oldMax === newMax) return true; // No change needed
+
+    state.config.maxConcurrency = newMax;
+
+    logger.info(
+      `[AutoLoopCoordinator] maxConcurrency adjusted for ${key}: ${oldMax} → ${newMax}` +
+        (rationale ? ` (${rationale})` : '')
+    );
+
+    return true;
+  }
+
   // ── Shutdown ──────────────────────────────────────────────────────────────
 
   /**

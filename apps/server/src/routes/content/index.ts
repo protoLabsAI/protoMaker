@@ -148,6 +148,33 @@ export function createContentRoutes(settingsService: SettingsService): Router {
   });
 
   /**
+   * POST /api/content/antagonistic-review
+   * Run a standalone antagonistic review on content text.
+   * Returns dimension scores, pass/fail verdict, and per-dimension feedback.
+   */
+  router.post('/antagonistic-review', async (req: Request, res: Response) => {
+    try {
+      const { projectPath, content, topic, format, audience } = req.body;
+
+      if (!projectPath || !content) {
+        res.status(400).json({ error: 'projectPath and content are required' });
+        return;
+      }
+
+      const result = await contentFlowService.executeAntagonisticReview(projectPath, content, {
+        topic,
+        format,
+        audience,
+      });
+
+      res.json(result);
+    } catch (error: unknown) {
+      logger.error('Antagonistic review error:', error);
+      res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  /**
    * POST /api/content/export
    * Export content in specific format
    */

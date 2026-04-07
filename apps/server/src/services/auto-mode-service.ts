@@ -226,6 +226,8 @@ export class AutoModeService {
   private resumeCheckedProjects = new Set<string>();
   // Cached backlog count refreshed asynchronously on each capacity read.
   private _backlogCountCache = 0;
+  // Portfolio scheduler for cross-project capacity allocation (optional, set externally)
+  private _portfolioScheduler: import('./portfolio-scheduler.js').PortfolioScheduler | null = null;
   /**
    * Pending CI failure messages to inject into running agent sessions.
    * Keyed by featureId. Consumed by executeFeature continuation after the
@@ -2723,6 +2725,54 @@ Format your response as a structured markdown document.`;
       }
     }
     return Array.from(activeProjects);
+  }
+
+  // ── Portfolio scheduler integration ──────────────────────────────────────
+
+  /**
+   * Set the portfolio scheduler instance for cross-project capacity management.
+   */
+  setPortfolioScheduler(scheduler: import('./portfolio-scheduler.js').PortfolioScheduler): void {
+    this._portfolioScheduler = scheduler;
+  }
+
+  /**
+   * Get the portfolio scheduler instance if set.
+   */
+  getPortfolioScheduler(): import('./portfolio-scheduler.js').PortfolioScheduler | null {
+    return this._portfolioScheduler;
+  }
+
+  /**
+   * Get auto-mode status when scope is 'portfolio'.
+   * Returns PortfolioScheduler state if running, otherwise falls back to
+   * standard per-project status.
+   */
+  getPortfolioStatus(): {
+    scope: 'portfolio' | 'project';
+    isRunning: boolean;
+    portfolioState: import('./portfolio-scheduler.js').PortfolioSchedulerState | null;
+    runningFeatures: string[];
+    runningCount: number;
+  } {
+    if (this._portfolioScheduler?.isRunning()) {
+      const state = this._portfolioScheduler.getState();
+      return {
+        scope: 'portfolio',
+        isRunning: true,
+        portfolioState: state,
+        runningFeatures: Array.from(this.runningFeatures.keys()),
+        runningCount: this.runningFeatures.size,
+      };
+    }
+
+    return {
+      scope: 'project',
+      isRunning: this.runningFeatures.size > 0,
+      portfolioState: null,
+      runningFeatures: Array.from(this.runningFeatures.keys()),
+      runningCount: this.runningFeatures.size,
+    };
   }
 
   /**

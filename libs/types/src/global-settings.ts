@@ -570,6 +570,12 @@ export interface GlobalSettings {
   autoModeAlwaysOn?: {
     /** Whether auto-mode always-on is enabled globally */
     enabled: boolean;
+    /**
+     * Scope of auto-mode:
+     * - 'portfolio': PortfolioScheduler manages all project loops with WSJF-based allocation
+     * - Array of project configs: legacy per-project mode (default)
+     */
+    scope?: 'portfolio' | 'project';
     /** Per-project auto-mode configuration */
     projects: Array<{
       /** Absolute path to the project directory */
