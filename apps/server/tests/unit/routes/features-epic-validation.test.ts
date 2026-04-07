@@ -80,10 +80,7 @@ describe('POST /features/create — epic invariant', () => {
       },
     };
 
-    const handler = createCreateHandler(
-      mockFeatureLoader as any,
-      mockTrustTierService as any
-    );
+    const handler = createCreateHandler(mockFeatureLoader as any, mockTrustTierService as any);
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
@@ -108,10 +105,7 @@ describe('POST /features/create — epic invariant', () => {
       },
     };
 
-    const handler = createCreateHandler(
-      mockFeatureLoader as any,
-      mockTrustTierService as any
-    );
+    const handler = createCreateHandler(mockFeatureLoader as any, mockTrustTierService as any);
     await handler(req, res);
 
     // The epic invariant check must not fire
@@ -131,10 +125,7 @@ describe('POST /features/create — epic invariant', () => {
       },
     };
 
-    const handler = createCreateHandler(
-      mockFeatureLoader as any,
-      mockTrustTierService as any
-    );
+    const handler = createCreateHandler(mockFeatureLoader as any, mockTrustTierService as any);
     await handler(req, res);
 
     // The epic invariant check must not fire

@@ -190,12 +190,8 @@ describe('feature-scheduler.ts — loadPendingFeatures epic contradiction', () =
     expect(mockWarn).toHaveBeenCalledWith(
       expect.stringContaining('Fix the feature configuration to proceed')
     );
-    expect(mockWarn).toHaveBeenCalledWith(
-      expect.stringContaining('feat-contradiction-1')
-    );
-    expect(mockWarn).toHaveBeenCalledWith(
-      expect.stringContaining('parent-epic-123')
-    );
+    expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('feat-contradiction-1'));
+    expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('parent-epic-123'));
   });
 
   it('emits info-level log (not warn) for a normal epic container without epicId', async () => {
