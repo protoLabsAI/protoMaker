@@ -152,6 +152,7 @@ export {
   AntagonisticReviewStateSchema,
   type AntagonisticReviewState,
   type AntagonisticReviewStateType,
+  type AgentQueryOptions,
   createAntagonisticReviewGraph,
   antagonisticReviewGraph,
 } from './antagonistic-review/index.js';

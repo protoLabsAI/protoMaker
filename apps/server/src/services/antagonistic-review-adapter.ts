@@ -8,13 +8,17 @@
 
 import { createLogger } from '@protolabsai/utils';
 import { createAntagonisticReviewGraph } from '@protolabsai/flows';
-import type { SPARCPrd } from '@protolabsai/types';
+import type { AgentQueryOptions } from '@protolabsai/flows';
+import type { SPARCPrd, Feature } from '@protolabsai/types';
 import type { ReviewResult, ConsolidatedReview, ReviewRequest } from '@protolabsai/types';
 import { extractPRDFromText } from '@protolabsai/types';
 import { LangfuseClient, calculateCost } from '@protolabsai/observability';
 import { v4 as uuidv4 } from 'uuid';
 import { createFlowModel } from '../lib/flow-model-factory.js';
 import type { SettingsService } from './settings-service.js';
+import { streamingQuery } from '../providers/simple-query-service.js';
+import { FeatureLoader } from './feature-loader.js';
+import { resolveModelString } from '@protolabsai/model-resolver';
 
 const logger = createLogger('AntagonisticReviewAdapter');
 
@@ -61,6 +65,51 @@ interface ActiveReview {
   traceId: string;
   startTime: number;
   prd: SPARCPrd;
+}
+
+// ── Board context helpers ─────────────────────────────────────────────────────
+
+/** Priority label map for board context display */
+const PRIORITY_LABELS: Record<number, string> = { 1: 'Urgent', 2: 'High', 3: 'Normal', 4: 'Low' };
+
+/**
+ * Serialize board features into a compact text block for review context.
+ * Groups by status so reviewers understand current load and commitments.
+ */
+function serializeBoardContext(features: Feature[]): string {
+  if (!features.length) return 'No features on board.';
+
+  const IN_FLIGHT_STATUSES = new Set(['active', 'in-progress', 'review', 'blocked']);
+  const BACKLOG_STATUSES = new Set(['backlog', 'pending', 'todo', 'queued']);
+
+  const active = features.filter((f) => IN_FLIGHT_STATUSES.has(f.status ?? ''));
+  const backlog = features.filter((f) => BACKLOG_STATUSES.has(f.status ?? ''));
+
+  const lines: string[] = [];
+
+  if (active.length) {
+    lines.push(`### IN FLIGHT (${active.length} feature${active.length !== 1 ? 's' : ''})`);
+    for (const f of active) {
+      const priority = f.priority ? ` [${PRIORITY_LABELS[f.priority] ?? ''}]` : '';
+      lines.push(`- **${f.title ?? f.id}**${priority} (${f.status})`);
+      if (f.description) lines.push(`  ${f.description.slice(0, 150)}`);
+    }
+  } else {
+    lines.push('### IN FLIGHT\nNone — team capacity available.');
+  }
+
+  if (backlog.length) {
+    lines.push(
+      `\n### BACKLOG (${backlog.length} total${backlog.length > 8 ? ', showing top 8' : ''})`
+    );
+    const sorted = [...backlog].sort((a, b) => (a.priority ?? 3) - (b.priority ?? 3));
+    for (const f of sorted.slice(0, 8)) {
+      const priority = f.priority ? ` [${PRIORITY_LABELS[f.priority] ?? ''}]` : '';
+      lines.push(`- **${f.title ?? f.id}**${priority}`);
+    }
+  }
+
+  return lines.join('\n');
 }
 
 /**
@@ -127,17 +176,44 @@ export class AntagonisticReviewAdapter {
         }
       );
 
+      // Fetch board context so reviewers know current capacity and commitments
+      let boardContext: string | undefined;
+      if (projectPath) {
+        try {
+          const featureLoader = new FeatureLoader();
+          const features = await featureLoader.getAll(projectPath);
+          boardContext = serializeBoardContext(features);
+          logger.info(`[${prdId}] Board context loaded: ${features.length} features`);
+        } catch (err) {
+          logger.warn(`[${prdId}] Failed to load board context:`, err);
+        }
+      }
+
+      // Build agent query function: Ava + Jon run as multi-turn agents with tools
+      const agentQueryFn = projectPath
+        ? async (options: AgentQueryOptions) =>
+            streamingQuery({
+              ...options,
+              cwd: options.cwd || projectPath,
+              model: options.model ?? resolveModelString('sonnet'),
+              traceContext: { agentRole: 'reviewer', projectSlug: projectPath },
+            })
+        : undefined;
+
       // Use thread ID for checkpointing (required for HITL resume)
       const threadId = uuidv4();
       const config = { configurable: { thread_id: threadId } };
 
-      // Execute the flow with PRD state + injected models
+      // Execute the flow with PRD state + injected models + agent loop support
       const result = await graph.invoke(
         {
           prd,
           hitlRequired: this.config.enableHITL,
           smartModel,
           fastModel: undefined,
+          projectPath: projectPath || undefined,
+          boardContext,
+          agentQueryFn,
         },
         config
       );

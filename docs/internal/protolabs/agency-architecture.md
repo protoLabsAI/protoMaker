@@ -38,12 +38,14 @@ graph TB
 
     subgraph PLANNING["3. PLANNING PIPELINE"]
         PLAN_SKILL["Ava: plan skill<br/>SPARC PRD generation"]
-        ANTAG_REVIEW["Antagonistic Review<br/>Ava operational x Jon strategic"]
-        AUTO_APPROVE{Both score > 4.0?}
-        HITL_REQ["HITLRequest<br/>publish to reply.topic"]
+        BOARD_CTX["Board Context<br/>FeatureLoader.getAll()<br/>active + backlog features"]
+        ANTAG_REVIEW["Antagonistic Review<br/>Ava: ops agent-loop · Read/Glob/Grep tools<br/>pushes back on capacity + timeline conflicts<br/>Jon: GTM agent-loop · brand filter<br/>checks positioning + ROI vs board load"]
+        AUTO_APPROVE{"auto-approve?<br/>(both approve or 'auto' label)"}
+        PLANE_HITL["plane-hitl plugin<br/>posts Plane comment<br/>enriches HITLRequest → Discord #dev"]
+        HITL_REQ["HITLRequest<br/>plane.reply.{issueId}"]
         HITL_WAIT["A2A returns immediately<br/>status: pending_approval<br/>correlationId"]
-        IFACE_RENDER["Interface plugin renders<br/>Discord embed / voice prompt<br/>Slack button / etc."]
-        HUMAN_DECIDE["Human responds"]
+        IFACE_RENDER["Discord #dev embed<br/>approve / reject / modify"]
+        HUMAN_DECIDE["Human responds in Discord"]
         HITL_RESP["HITLResponse on bus<br/>correlationId"]
         PLAN_RESUME["Ava: plan_resume skill<br/>SQLite checkpoint restore"]
         CREATE_PROJ["Create project + features<br/>correlationId stamped"]
@@ -107,12 +109,14 @@ graph TB
 
     %% Planning flow
     AVA -->|"skillHint: plan"| PLAN_SKILL
-    PLAN_SKILL --> ANTAG_REVIEW
+    PLAN_SKILL --> BOARD_CTX
+    BOARD_CTX --> ANTAG_REVIEW
     ANTAG_REVIEW --> AUTO_APPROVE
     AUTO_APPROVE -->|yes| CREATE_PROJ
     AUTO_APPROVE -->|no| HITL_REQ
-    HITL_REQ --> HITL_WAIT
-    HITL_REQ --> IFACE_RENDER
+    HITL_REQ --> PLANE_HITL
+    PLANE_HITL --> HITL_WAIT
+    PLANE_HITL --> IFACE_RENDER
     IFACE_RENDER --> HUMAN_DECIDE
     HUMAN_DECIDE --> HITL_RESP
     HITL_RESP --> PLAN_RESUME
@@ -136,7 +140,7 @@ The agency is organized into two branches with clear boundaries:
 Signal triage, quality gates, team health, and external communication.
 
 - **Signal classification** — Routes incoming ideas, bugs, ops improvements, GTM work
-- **Antagonistic review** — Challenges every PRD alongside Jon before approval
+- **Antagonistic review** — Ava runs as an ops agent-loop (Read/Glob/Grep tools, board context) alongside Jon (GTM agent-loop, brand filter); both can push back on capacity conflicts, timeline misalignment, or weak business case before approval
 - **Lead Engineer** — Event-driven orchestrator with fast-path rules, state machine
 - **Ceremonies** — Standup, retro, project-retro via Discord
 - **Discord comms** — Status updates, alerts, Josh coordination

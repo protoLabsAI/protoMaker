@@ -156,7 +156,7 @@ Be direct, practical, and focus on execution realities. Return ONLY the XML, no 
     );
 
     // Parse and validate the LLM response
-    const avaReview = parseAndValidateReview(result.content, nodeName);
+    const avaReview = parseReviewXml(result.content, nodeName);
 
     logger.info(
       `[${nodeName}] Review complete: ${avaReview.verdict} (${avaReview.sections.length} sections)`
@@ -171,13 +171,14 @@ Be direct, practical, and focus on execution realities. Return ONLY the XML, no 
 
 /**
  * Parse and validate LLM output as ReviewerPerspective (XML format).
+ * Exported so graph adapters can reuse this when running agent-loop paths.
  *
  * @param output - Raw LLM output string
  * @param nodeName - Node name for error messages
  * @returns Validated ReviewerPerspective
  * @throws Error if parsing or validation fails
  */
-function parseAndValidateReview(output: string, nodeName: string): ReviewerPerspective {
+export function parseReviewXml(output: string, nodeName: string): ReviewerPerspective {
   try {
     const cleaned = stripMarkdownFences(output);
     const root = extractXmlTag(cleaned, 'review');
