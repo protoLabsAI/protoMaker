@@ -1,29 +1,11 @@
 # workspace/projects.yaml — protoLabs Studio Project Routing Index
 #
-# Each entry represents a GitHub repository onboarded into this Studio instance.
-# This file is updated by the onboard_project skill when a new repo is added.
-# Workstacean's A2APlugin reads this file at startup and rebuilds the index
-# every 5 seconds when the file changes — no restart required.
+# AUTO-GENERATED SNAPSHOT — Do not edit manually.
+# This file is refreshed from the Workstacean registry (GET /api/projects).
+# Edit the authoritative source: protoWorkstacean/workspace/projects.yaml
 #
-# NOTE: This file is synced from the authoritative Workstacean registry
-# (protoWorkstacean/workspace/projects.yaml). After P2 this will be read
-# from the Workstacean API directly — no more manual updates.
-#
-# Fields:
-#   slug          — kebab-case identifier derived from <owner>-<repo>
-#   title         — human-readable project name
-#   github        — <owner>/<repo> slug (used as the lookup key)
-#   defaultBranch — default branch at time of onboarding
-#   status        — active | archived | suspended
-#   onboardedAt   — ISO 8601 timestamp
-#   planeProjectId — Plane project ID (empty = pending OnboardingPlugin)
-#   planeIdentifier — Plane project identifier
-#   projectPath   — absolute path on this host
-#   discord       — Discord channel IDs for routing GitHub events
-#   infisical     — Infisical integration config
-#   observability — Observability config (Langfuse)
-#   googleWorkspace — Google Drive integration config
-#   capacity      — Scheduler capacity settings
+# Consumed by: Workstacean (routing), Quinn (portfolio monitoring), protoMaker (project registration)
+# After P2 this file is used as a local cache / offline fallback only.
 
 projects:
   - slug: protolabsai-protomaker
@@ -36,6 +18,7 @@ projects:
     planeProjectId: 'fe0a95b6-63a9-4a78-a0eb-36bad44228f2'
     planeIdentifier: PRMKR
     projectPath: /home/josh/dev/ava
+    studioUrl: 'http://localhost:3008'
     agents: [ava, quinn, frank]
     discord:
       dev: '1469080556720623699'
@@ -121,10 +104,9 @@ projects:
     projectPath: /home/josh/dev/labs/protoUI
     agents: [ava, quinn]
     discord:
-      channels:
-        general: '1490601617567912050'
-        updates: '1490601619300286525'
-        dev: '1490601620927418428'
+      general: '1490601617567912050'
+      updates: '1490601619300286525'
+      dev: '1490601620927418428'
     infisical:
       projectId: ''
     observability:
@@ -275,17 +257,3 @@ projects:
       minConcurrency: 1
       maxConcurrency: 3
 
-  - slug: protolabsai-protomaker
-    title: protoMaker
-    github: protoLabsAI/protoMaker
-    defaultBranch: main
-    status: active
-    onboardedAt: '2026-04-07T00:00:00.000Z'
-    discord:
-      channels:
-        general: '1490957797406408746'
-        updates: '1490957799151239368'
-        dev: '1490957800711393333'
-    plane:
-      projectId: not provisioned
-      identifier: not provisioned

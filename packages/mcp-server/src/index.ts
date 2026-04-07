@@ -779,6 +779,12 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectSlug: args.projectSlug,
       });
 
+    case 'sync_registry':
+      return apiCall('/registry/sync', {
+        projectPath: args.projectPath,
+        dryRun: args.dryRun !== false, // default true
+      });
+
     case 'get_portfolio_sitrep':
       return apiCall(
         '/portfolio/sitrep',

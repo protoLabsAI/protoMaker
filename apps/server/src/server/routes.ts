@@ -94,6 +94,7 @@ import { createOpsRoutes } from '../routes/ops/index.js';
 import { createQaRoutes } from '../routes/qa/index.js';
 import { createContextEngineRoutes } from '../routes/context-engine.js';
 import { createA2ARoutes, createA2AHandlerRoutes } from '../routes/a2a/index.js';
+import { createRegistryRoutes } from '../routes/registry/index.js';
 import { PlanningService } from '../services/planning-service.js';
 
 const logger = createLogger('Server:Routes');
@@ -413,6 +414,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/todos', createTodoRoutes(todoService));
   app.use('/api/sitrep', createSitrepRoutes({ featureLoader, autoModeService, repoRoot }));
   app.use('/api/portfolio/sitrep', createPortfolioSitrepRoutes({ settingsService }));
+  app.use('/api/registry', createRegistryRoutes(settingsService));
   // Knowledge store routes (chunked retrieval)
   if (knowledgeStoreService) {
     app.use('/api/knowledge', createKnowledgeRoutes(knowledgeStoreService));
