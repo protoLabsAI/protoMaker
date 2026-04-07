@@ -22,6 +22,26 @@ export const portfolioTools: Tool[] = [
     },
   },
   {
+    name: 'get_portfolio_metrics',
+    description:
+      'Get aggregated cost, throughput, and flow efficiency metrics across all registered projects over a rolling window. Returns total cost, features completed, throughput per day, average cycle time, flow efficiency (value-add time / total elapsed), error budgets per project, and identifies the highest-cost and lowest-throughput projects (bottleneck signal). Use this to understand portfolio-level delivery economics and surface waste.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPaths: {
+          type: 'array',
+          items: { type: 'string' },
+          description:
+            'Optional list of project paths to include. When provided, overrides GlobalSettings.projects[] and scopes the report to only these paths.',
+        },
+        windowDays: {
+          type: 'number',
+          description: 'Rolling window in days for completed feature aggregation. Defaults to 7.',
+        },
+      },
+    },
+  },
+  {
     name: 'get_cross_repo_dependencies',
     description:
       'Scan all features across all registered apps for cross-repo external dependencies. Returns a dependency graph with nodes (repos), edges (dependency relationships with status), critical path (longest dependency chain), and circular dependency risks.',

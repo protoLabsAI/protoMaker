@@ -788,6 +788,18 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         'GET'
       );
 
+    case 'get_portfolio_metrics': {
+      const metricsParams: Record<string, unknown> = {};
+      if (args.projectPaths !== undefined) {
+        metricsParams.projectPaths = (args.projectPaths as string[]).join(',');
+      }
+      if (args.windowDays !== undefined) {
+        metricsParams.windowDays = args.windowDays;
+      }
+      return apiCall('/portfolio/metrics', metricsParams, 'GET');
+    }
+
+
     // QA Tools
     case 'run_qa_check':
       return apiCall('/qa/check', { projectPath: String(args.projectPath ?? '') }, 'GET');
