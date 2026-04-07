@@ -207,9 +207,9 @@ Features carry optional fields used by the WSJF (Weighted Shortest Job First) sc
 
 ```typescript
 interface Feature {
-  businessValue?: number;       // 1–10; how valuable is this feature to the business
-  timeDecayDeadline?: string;   // ISO date; drives urgency multiplier (3× at deadline)
-  wsjfScore?: number;           // Computed: (businessValue × timeDecayFactor) / estimatedHours
+  businessValue?: number; // 1–10; how valuable is this feature to the business
+  timeDecayDeadline?: string; // ISO date; drives urgency multiplier (3× at deadline)
+  wsjfScore?: number; // Computed: (businessValue × timeDecayFactor) / estimatedHours
 }
 ```
 
