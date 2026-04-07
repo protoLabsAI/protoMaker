@@ -11,13 +11,7 @@
  */
 
 /** Category of exported symbol that may affect downstream consumers */
-export type SymbolKind =
-  | 'interface'
-  | 'type'
-  | 'class'
-  | 'function'
-  | 'rest_endpoint'
-  | 'cli_flag';
+export type SymbolKind = 'interface' | 'type' | 'class' | 'function' | 'rest_endpoint' | 'cli_flag';
 
 /** A detected exported symbol in a changed file */
 export interface DetectedSymbol {
@@ -97,7 +91,9 @@ export function detectExportedSymbols(source: string): DetectedSymbol[] {
     }
 
     // Exported const arrow function
-    const arrowMatch = line.match(/^export\s+(?:declare\s+)?const\s+(\w+)\s*(?::\s*\S+\s*)?=\s*(?:async\s+)?\(/);
+    const arrowMatch = line.match(
+      /^export\s+(?:declare\s+)?const\s+(\w+)\s*(?::\s*\S+\s*)?=\s*(?:async\s+)?\(/
+    );
     if (arrowMatch) {
       symbols.push({
         name: arrowMatch[1],
@@ -125,9 +121,7 @@ export function detectExportedSymbols(source: string): DetectedSymbol[] {
     }
 
     // CLI flag definitions (commander/yargs style)
-    const cliMatch = line.match(
-      /\.(?:option|argument|command)\s*\(\s*['"`](--?[\w-]+)['"`]/
-    );
+    const cliMatch = line.match(/\.(?:option|argument|command)\s*\(\s*['"`](--?[\w-]+)['"`]/);
     if (cliMatch) {
       symbols.push({
         name: cliMatch[1],

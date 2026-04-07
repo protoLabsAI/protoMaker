@@ -168,9 +168,7 @@ export class PortfolioScheduler {
     }
 
     if (Date.now() - startTime >= GRACEFUL_SHUTDOWN_TIMEOUT_MS) {
-      logger.warn(
-        '[PortfolioScheduler] Graceful shutdown timeout reached, force stopping'
-      );
+      logger.warn('[PortfolioScheduler] Graceful shutdown timeout reached, force stopping');
     }
 
     this.running = false;
@@ -287,9 +285,7 @@ export class PortfolioScheduler {
 
     // Update state
     this.state.lastTickAt = now.toISOString();
-    this.state.nextTickAt = new Date(
-      now.getTime() + DEFAULT_TICK_INTERVAL_MS
-    ).toISOString();
+    this.state.nextTickAt = new Date(now.getTime() + DEFAULT_TICK_INTERVAL_MS).toISOString();
     this.state.tickCount++;
 
     // Update project states snapshot
@@ -297,8 +293,7 @@ export class PortfolioScheduler {
       projectSlug: a.projectSlug,
       projectPath: a.projectPath,
       currentAllocation: a.proposedMax,
-      isPaused:
-        sitrep.projects.find((p) => p.projectPath === a.projectPath)?.isPaused ?? false,
+      isPaused: sitrep.projects.find((p) => p.projectPath === a.projectPath)?.isPaused ?? false,
       lastWsjfTotal: projectWsjfTotals.get(a.projectSlug) ?? 0,
     }));
 
@@ -307,9 +302,7 @@ export class PortfolioScheduler {
 
     const tickDuration = Date.now() - tickStart;
     if (tickDuration > 5000) {
-      logger.warn(
-        `[PortfolioScheduler] Tick took ${tickDuration}ms (>5s threshold)`
-      );
+      logger.warn(`[PortfolioScheduler] Tick took ${tickDuration}ms (>5s threshold)`);
     }
   }
 
@@ -320,7 +313,10 @@ export class PortfolioScheduler {
    * the most downstream features.
    */
   private async applyTocTiebreaker(
-    sitrep: { projects: Array<{ projectPath: string; queueDepth: number }>; global: { totalCapacityUsed: number; totalCapacityAvailable: number } },
+    sitrep: {
+      projects: Array<{ projectPath: string; queueDepth: number }>;
+      global: { totalCapacityUsed: number; totalCapacityAvailable: number };
+    },
     allocations: Array<{ projectSlug: string; projectPath: string; proposedMax: number }>
   ): Promise<void> {
     const { totalCapacityUsed, totalCapacityAvailable } = sitrep.global;
@@ -336,9 +332,7 @@ export class PortfolioScheduler {
     }> = [];
 
     for (const alloc of allocations) {
-      const project = sitrep.projects.find(
-        (p) => p.projectPath === alloc.projectPath
-      );
+      const project = sitrep.projects.find((p) => p.projectPath === alloc.projectPath);
       if (!project || project.queueDepth === 0) continue;
 
       const features = await this.featureLoader.getAll(alloc.projectPath);
@@ -348,9 +342,7 @@ export class PortfolioScheduler {
 
       // Compute downstream impact for top feature
       const { downstreamImpact } = resolveDependencies(features);
-      const topFeature = backlog.sort(
-        (a, b) => (b.wsjfScore ?? 0) - (a.wsjfScore ?? 0)
-      )[0];
+      const topFeature = backlog.sort((a, b) => (b.wsjfScore ?? 0) - (a.wsjfScore ?? 0))[0];
 
       candidates.push({
         slug: alloc.projectSlug,

@@ -2732,9 +2732,7 @@ Format your response as a structured markdown document.`;
   /**
    * Set the portfolio scheduler instance for cross-project capacity management.
    */
-  setPortfolioScheduler(
-    scheduler: import('./portfolio-scheduler.js').PortfolioScheduler
-  ): void {
+  setPortfolioScheduler(scheduler: import('./portfolio-scheduler.js').PortfolioScheduler): void {
     this._portfolioScheduler = scheduler;
   }
 

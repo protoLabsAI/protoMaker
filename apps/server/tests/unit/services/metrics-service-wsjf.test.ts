@@ -144,9 +144,7 @@ describe('MetricsService — WSJF scoring', () => {
         businessValue: 5,
         complexity: 'architectural',
       });
-      expect(
-        service.computeWsjfScore(small, defaultDurations, now)
-      ).toBeGreaterThan(
+      expect(service.computeWsjfScore(small, defaultDurations, now)).toBeGreaterThan(
         service.computeWsjfScore(arch, defaultDurations, now)
       );
     });
@@ -171,14 +169,28 @@ describe('MetricsService — WSJF scoring', () => {
           status: 'done',
           complexity: 'small',
           executionHistory: [
-            { id: '1', startedAt: '', model: 'sonnet', success: true, trigger: 'auto', durationMs: 3600000 },
+            {
+              id: '1',
+              startedAt: '',
+              model: 'sonnet',
+              success: true,
+              trigger: 'auto',
+              durationMs: 3600000,
+            },
           ],
         }),
         makeFeature({
           status: 'done',
           complexity: 'small',
           executionHistory: [
-            { id: '2', startedAt: '', model: 'sonnet', success: true, trigger: 'auto', durationMs: 1800000 },
+            {
+              id: '2',
+              startedAt: '',
+              model: 'sonnet',
+              success: true,
+              trigger: 'auto',
+              durationMs: 1800000,
+            },
           ],
         }),
       ];

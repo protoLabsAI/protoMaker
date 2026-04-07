@@ -11,7 +11,10 @@ export interface PortfolioMetrics {
   portfolioThroughputPerDay: number;
   avgCycleTimeMs: number;
   portfolioFlowEfficiency: number;
-  errorBudgetsByProject: Record<string, { remaining: number; status: 'healthy' | 'warning' | 'exhausted' }>;
+  errorBudgetsByProject: Record<
+    string,
+    { remaining: number; status: 'healthy' | 'warning' | 'exhausted' }
+  >;
   highestCostProject: string;
   lowestThroughputProject: string;
 }

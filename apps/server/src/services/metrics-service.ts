@@ -112,8 +112,8 @@ export class MetricsService {
   static readonly DEFAULT_HOURS_BY_COMPLEXITY: Record<string, number> = {
     small: 0.5,
     medium: 2,
-    large: 4,
-    architectural: 8,
+    large: 5,
+    architectural: 10,
   };
 
   constructor(featureLoader: FeatureLoader) {
@@ -124,9 +124,7 @@ export class MetricsService {
    * Get average execution duration (in hours) grouped by complexity bucket.
    * Falls back to DEFAULT_HOURS_BY_COMPLEXITY if insufficient data (<3 samples).
    */
-  async getAvgDurationByComplexity(
-    projectPath: string
-  ): Promise<Record<string, number>> {
+  async getAvgDurationByComplexity(projectPath: string): Promise<Record<string, number>> {
     const features = await this.featureLoader.getAll(projectPath);
     const buckets: Record<string, number[]> = {
       small: [],
@@ -155,9 +153,7 @@ export class MetricsService {
         const sorted = [...durations].sort((a, b) => a - b);
         const mid = Math.floor(sorted.length / 2);
         result[bucket] =
-          sorted.length % 2 === 0
-            ? (sorted[mid - 1] + sorted[mid]) / 2
-            : sorted[mid];
+          sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
       } else {
         result[bucket] = MetricsService.DEFAULT_HOURS_BY_COMPLEXITY[bucket] ?? 2;
       }
@@ -173,8 +169,7 @@ export class MetricsService {
     if (!timeDecayDeadline) return 0.5;
     const currentTime = now ?? new Date();
     const deadline = new Date(timeDecayDeadline);
-    const daysUntilDeadline =
-      (deadline.getTime() - currentTime.getTime()) / (1000 * 60 * 60 * 24);
+    const daysUntilDeadline = (deadline.getTime() - currentTime.getTime()) / (1000 * 60 * 60 * 24);
     if (daysUntilDeadline <= 0) return 3.0;
     if (daysUntilDeadline > 30) return 1.0;
     return 1.0 + (2.0 * (30 - daysUntilDeadline)) / 30;

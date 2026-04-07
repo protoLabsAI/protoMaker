@@ -64,8 +64,20 @@ function createMockSitrepService(projectSitreps: any[] = []) {
 function createMockPortfolioTools() {
   return {
     allocateCapacity: vi.fn().mockResolvedValue([
-      { projectSlug: 'alpha', projectPath: '/projects/alpha', currentMax: 1, proposedMax: 2, rationale: 'test' },
-      { projectSlug: 'beta', projectPath: '/projects/beta', currentMax: 1, proposedMax: 1, rationale: 'test' },
+      {
+        projectSlug: 'alpha',
+        projectPath: '/projects/alpha',
+        currentMax: 1,
+        proposedMax: 2,
+        rationale: 'test',
+      },
+      {
+        projectSlug: 'beta',
+        projectPath: '/projects/beta',
+        currentMax: 1,
+        proposedMax: 1,
+        rationale: 'test',
+      },
     ]),
     prioritizePortfolio: vi.fn().mockResolvedValue({ reorderings: [], applied: false }),
     getPortfolioForecast: vi.fn().mockResolvedValue([]),
@@ -91,16 +103,38 @@ describe('PortfolioScheduler', () => {
         makeFeature({ id: 'a1', businessValue: 8, complexity: 'small' }),
         makeFeature({ id: 'a2', businessValue: 3, complexity: 'large' }),
       ],
-      '/projects/beta': [
-        makeFeature({ id: 'b1', businessValue: 5, complexity: 'medium' }),
-      ],
+      '/projects/beta': [makeFeature({ id: 'b1', businessValue: 5, complexity: 'medium' })],
     });
     metricsService = new MetricsService(featureLoader);
     coordinator = new AutoLoopCoordinator();
     settingsService = createMockSettingsService();
     sitrepService = createMockSitrepService([
-      { projectPath: '/projects/alpha', projectSlug: 'alpha', activeAgentCount: 0, inFlightFeatures: [], queueDepth: 2, blockedCount: 0, reviewCount: 0, lastCompletionTime: null, isPaused: false, pauseReason: null, timePausedMs: 0 },
-      { projectPath: '/projects/beta', projectSlug: 'beta', activeAgentCount: 0, inFlightFeatures: [], queueDepth: 1, blockedCount: 0, reviewCount: 0, lastCompletionTime: null, isPaused: false, pauseReason: null, timePausedMs: 0 },
+      {
+        projectPath: '/projects/alpha',
+        projectSlug: 'alpha',
+        activeAgentCount: 0,
+        inFlightFeatures: [],
+        queueDepth: 2,
+        blockedCount: 0,
+        reviewCount: 0,
+        lastCompletionTime: null,
+        isPaused: false,
+        pauseReason: null,
+        timePausedMs: 0,
+      },
+      {
+        projectPath: '/projects/beta',
+        projectSlug: 'beta',
+        activeAgentCount: 0,
+        inFlightFeatures: [],
+        queueDepth: 1,
+        blockedCount: 0,
+        reviewCount: 0,
+        lastCompletionTime: null,
+        isPaused: false,
+        pauseReason: null,
+        timePausedMs: 0,
+      },
     ]);
     portfolioTools = createMockPortfolioTools();
 
@@ -119,7 +153,9 @@ describe('PortfolioScheduler', () => {
     scheduler.forceStop();
     try {
       fs.rmSync(tmpDir, { recursive: true });
-    } catch { /* cleanup best-effort */ }
+    } catch {
+      /* cleanup best-effort */
+    }
   });
 
   // ── Lifecycle ──────────────────────────────────────────────────────────
@@ -264,8 +300,32 @@ describe('PortfolioScheduler', () => {
       // Set up at-ceiling scenario
       sitrepService.getPortfolioSitrep.mockResolvedValue({
         projects: [
-          { projectPath: '/projects/alpha', projectSlug: 'alpha', activeAgentCount: 2, inFlightFeatures: ['a1'], queueDepth: 1, blockedCount: 0, reviewCount: 0, lastCompletionTime: null, isPaused: false, pauseReason: null, timePausedMs: 0 },
-          { projectPath: '/projects/beta', projectSlug: 'beta', activeAgentCount: 2, inFlightFeatures: ['b1'], queueDepth: 1, blockedCount: 0, reviewCount: 0, lastCompletionTime: null, isPaused: false, pauseReason: null, timePausedMs: 0 },
+          {
+            projectPath: '/projects/alpha',
+            projectSlug: 'alpha',
+            activeAgentCount: 2,
+            inFlightFeatures: ['a1'],
+            queueDepth: 1,
+            blockedCount: 0,
+            reviewCount: 0,
+            lastCompletionTime: null,
+            isPaused: false,
+            pauseReason: null,
+            timePausedMs: 0,
+          },
+          {
+            projectPath: '/projects/beta',
+            projectSlug: 'beta',
+            activeAgentCount: 2,
+            inFlightFeatures: ['b1'],
+            queueDepth: 1,
+            blockedCount: 0,
+            reviewCount: 0,
+            lastCompletionTime: null,
+            isPaused: false,
+            pauseReason: null,
+            timePausedMs: 0,
+          },
         ],
         global: { totalCapacityUsed: 4, totalCapacityAvailable: 4, bottleneckTrend: null },
         timestamp: new Date().toISOString(),
@@ -280,9 +340,7 @@ describe('PortfolioScheduler', () => {
             makeFeature({ id: 'a3', businessValue: 3, wsjfScore: 3, dependencies: ['a1'] }),
           ];
         }
-        return [
-          makeFeature({ id: 'b1', businessValue: 5, wsjfScore: 5 }),
-        ];
+        return [makeFeature({ id: 'b1', businessValue: 5, wsjfScore: 5 })];
       });
 
       await scheduler.start(projectPaths);

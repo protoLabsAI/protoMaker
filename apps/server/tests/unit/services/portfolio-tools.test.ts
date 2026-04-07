@@ -68,9 +68,7 @@ describe('PortfolioToolsService', () => {
     makeFeature({ id: 'a3', businessValue: 5, complexity: 'medium' }),
   ];
 
-  const projectBFeatures = [
-    makeFeature({ id: 'b1', businessValue: 2, complexity: 'medium' }),
-  ];
+  const projectBFeatures = [makeFeature({ id: 'b1', businessValue: 2, complexity: 'medium' })];
 
   beforeEach(() => {
     featureLoader = createMockFeatureLoader({
@@ -95,7 +93,12 @@ describe('PortfolioToolsService', () => {
       const result = await service.prioritizePortfolio(
         {
           initiatives: [
-            { id: 'init-1', projectSlugs: ['alpha'], businessValue: 7, timeDecayDaysToDeadline: 10 },
+            {
+              id: 'init-1',
+              projectSlugs: ['alpha'],
+              businessValue: 7,
+              timeDecayDaysToDeadline: 10,
+            },
           ],
           dryRun: true,
         },
@@ -113,9 +116,7 @@ describe('PortfolioToolsService', () => {
     it('applies priority updates when dryRun=false', async () => {
       const result = await service.prioritizePortfolio(
         {
-          initiatives: [
-            { id: 'init-1', projectSlugs: ['alpha'], businessValue: 7 },
-          ],
+          initiatives: [{ id: 'init-1', projectSlugs: ['alpha'], businessValue: 7 }],
           dryRun: false,
         },
         new Map([['alpha', '/projects/alpha']])
@@ -129,9 +130,7 @@ describe('PortfolioToolsService', () => {
     it('handles unknown project slug gracefully', async () => {
       const result = await service.prioritizePortfolio(
         {
-          initiatives: [
-            { id: 'init-1', projectSlugs: ['nonexistent'], businessValue: 5 },
-          ],
+          initiatives: [{ id: 'init-1', projectSlugs: ['nonexistent'], businessValue: 5 }],
         },
         new Map()
       );
@@ -142,9 +141,7 @@ describe('PortfolioToolsService', () => {
     it('sorts by WSJF score descending in after array', async () => {
       const result = await service.prioritizePortfolio(
         {
-          initiatives: [
-            { id: 'init-1', projectSlugs: ['alpha'], businessValue: 5 },
-          ],
+          initiatives: [{ id: 'init-1', projectSlugs: ['alpha'], businessValue: 5 }],
         },
         new Map([['alpha', '/projects/alpha']])
       );
@@ -160,10 +157,7 @@ describe('PortfolioToolsService', () => {
 
   describe('allocate_capacity', () => {
     it('returns allocations for all projects', async () => {
-      const allocations = await service.allocateCapacity([
-        '/projects/alpha',
-        '/projects/beta',
-      ]);
+      const allocations = await service.allocateCapacity(['/projects/alpha', '/projects/beta']);
 
       expect(allocations).toHaveLength(2);
       expect(allocations[0].projectSlug).toBe('alpha');
@@ -180,10 +174,7 @@ describe('PortfolioToolsService', () => {
         },
       });
 
-      const allocations = await service.allocateCapacity([
-        '/projects/alpha',
-        '/projects/beta',
-      ]);
+      const allocations = await service.allocateCapacity(['/projects/alpha', '/projects/beta']);
 
       // Both should get at least 1
       for (const a of allocations) {
@@ -207,10 +198,7 @@ describe('PortfolioToolsService', () => {
 
   describe('get_portfolio_forecast', () => {
     it('returns forecast for each project', async () => {
-      const forecasts = await service.getPortfolioForecast([
-        '/projects/alpha',
-        '/projects/beta',
-      ]);
+      const forecasts = await service.getPortfolioForecast(['/projects/alpha', '/projects/beta']);
 
       expect(forecasts).toHaveLength(2);
       expect(forecasts[0].slug).toBe('alpha');

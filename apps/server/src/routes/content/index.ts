@@ -161,11 +161,11 @@ export function createContentRoutes(settingsService: SettingsService): Router {
         return;
       }
 
-      const result = await contentFlowService.executeAntagonisticReview(
-        projectPath,
-        content,
-        { topic, format, audience }
-      );
+      const result = await contentFlowService.executeAntagonisticReview(projectPath, content, {
+        topic,
+        format,
+        audience,
+      });
 
       res.json(result);
     } catch (error: unknown) {

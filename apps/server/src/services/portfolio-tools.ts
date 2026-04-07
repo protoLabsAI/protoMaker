@@ -11,10 +11,7 @@ import type { Feature } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
 import type { FeatureLoader } from './feature-loader.js';
 import type { MetricsService } from './metrics-service.js';
-import type {
-  PortfolioSitrepService,
-  BottleneckType,
-} from './portfolio-sitrep.js';
+import type { PortfolioSitrepService, BottleneckType } from './portfolio-sitrep.js';
 import type { SettingsService } from './settings-service.js';
 
 const logger = createLogger('PortfolioTools');
@@ -134,9 +131,7 @@ export class PortfolioToolsService {
           f.wsjfScore = this.metricsService.computeWsjfScore(f, durationByComplexity, now);
         }
 
-        const sorted = [...backlogFeatures].sort(
-          (a, b) => (b.wsjfScore ?? 0) - (a.wsjfScore ?? 0)
-        );
+        const sorted = [...backlogFeatures].sort((a, b) => (b.wsjfScore ?? 0) - (a.wsjfScore ?? 0));
 
         const after = sorted.map((f) => ({
           id: f.id,
@@ -174,9 +169,7 @@ export class PortfolioToolsService {
    * Compute priority-weighted capacity allocation across projects.
    * Does NOT mutate settings — returns a proposal.
    */
-  async allocateCapacity(
-    projectPaths: string[]
-  ): Promise<CapacityAllocation[]> {
+  async allocateCapacity(projectPaths: string[]): Promise<CapacityAllocation[]> {
     const settings = await this.settingsService.getGlobalSettings();
     const totalCapacity = settings.systemMaxConcurrency ?? settings.maxConcurrency ?? 2;
     const now = new Date();
@@ -261,9 +254,7 @@ export class PortfolioToolsService {
   /**
    * Per-project backlog forecast with bottleneck classification.
    */
-  async getPortfolioForecast(
-    projectPaths: string[]
-  ): Promise<PortfolioForecast[]> {
+  async getPortfolioForecast(projectPaths: string[]): Promise<PortfolioForecast[]> {
     const forecasts: PortfolioForecast[] = [];
 
     for (const projectPath of projectPaths) {
@@ -275,8 +266,7 @@ export class PortfolioToolsService {
       const bottleneck = this.sitrepService.classifyBottleneck(features);
 
       const throughput = metrics.throughputPerDay;
-      const estimatedClearDays =
-        throughput > 0 ? backlog.length / throughput : backlog.length * 2; // Fallback estimate
+      const estimatedClearDays = throughput > 0 ? backlog.length / throughput : backlog.length * 2; // Fallback estimate
 
       // Confidence based on error rate
       const errorRate = metrics.failureRate / 100;

@@ -85,10 +85,7 @@ describe('PortfolioSitrepService', () => {
     });
 
     it('returns agent_capacity as default', () => {
-      const features = [
-        makeFeature({ status: 'in_progress' }),
-        makeFeature({ status: 'backlog' }),
-      ];
+      const features = [makeFeature({ status: 'in_progress' }), makeFeature({ status: 'backlog' })];
       expect(service.classifyBottleneck(features)).toBe('agent_capacity');
     });
   });
@@ -97,10 +94,7 @@ describe('PortfolioSitrepService', () => {
 
   describe('getPortfolioSitrep', () => {
     it('returns sitrep for all projects', async () => {
-      const sitrep = await service.getPortfolioSitrep([
-        '/projects/alpha',
-        '/projects/beta',
-      ]);
+      const sitrep = await service.getPortfolioSitrep(['/projects/alpha', '/projects/beta']);
 
       expect(sitrep.projects).toHaveLength(2);
       expect(sitrep.global.totalCapacityAvailable).toBe(4);
@@ -122,12 +116,16 @@ describe('PortfolioSitrepService', () => {
 
     it('reports paused status from coordinator', async () => {
       const key = coordinator.makeKey('/projects/alpha', null);
-      coordinator.startLoop(key, {
-        maxConcurrency: 1,
-        useWorktrees: true,
-        projectPath: '/projects/alpha',
-        branchName: null,
-      }, async () => {});
+      coordinator.startLoop(
+        key,
+        {
+          maxConcurrency: 1,
+          useWorktrees: true,
+          projectPath: '/projects/alpha',
+          branchName: null,
+        },
+        async () => {}
+      );
       coordinator.pauseLoop(key);
 
       const sitrep = await service.getPortfolioSitrep(['/projects/alpha']);
@@ -135,10 +133,7 @@ describe('PortfolioSitrepService', () => {
     });
 
     it('aggregates total capacity used', async () => {
-      const sitrep = await service.getPortfolioSitrep([
-        '/projects/alpha',
-        '/projects/beta',
-      ]);
+      const sitrep = await service.getPortfolioSitrep(['/projects/alpha', '/projects/beta']);
       expect(sitrep.global.totalCapacityUsed).toBe(1); // 1 in_progress in alpha
     });
   });

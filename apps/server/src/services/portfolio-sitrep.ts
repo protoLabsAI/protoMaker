@@ -13,11 +13,7 @@ import type { SettingsService } from './settings-service.js';
 
 const logger = createLogger('PortfolioSitrep');
 
-export type BottleneckType =
-  | 'agent_capacity'
-  | 'pr_review'
-  | 'cross_repo_blocked'
-  | 'human_input';
+export type BottleneckType = 'agent_capacity' | 'pr_review' | 'cross_repo_blocked' | 'human_input';
 
 export interface ProjectSitrep {
   projectPath: string;
@@ -66,9 +62,7 @@ export class PortfolioSitrepService {
     const inProgress = features.filter((f) => f.status === 'in_progress').length;
     const inReview = features.filter((f) => f.status === 'review').length;
     const blocked = features.filter((f) => f.status === 'blocked');
-    const humanBlocked = blocked.filter(
-      (f) => f.assignee && f.assignee !== 'agent'
-    ).length;
+    const humanBlocked = blocked.filter((f) => f.assignee && f.assignee !== 'agent').length;
     const crossRepoBlocked = blocked.filter(
       (f) => f.blockingReason?.includes('cross-repo') || f.blockingReason?.includes('external')
     ).length;

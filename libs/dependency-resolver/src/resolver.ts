@@ -97,9 +97,7 @@ export async function checkExternalDependencies(
     }
 
     const isSatisfied =
-      remoteStatus === 'done' ||
-      remoteStatus === 'verified' ||
-      remoteStatus === 'completed';
+      remoteStatus === 'done' || remoteStatus === 'verified' || remoteStatus === 'completed';
 
     if (!isSatisfied) {
       unsatisfied.push({ ...dep, status: 'pending' });

@@ -168,7 +168,7 @@ export const contentTools: Tool[] = [
   {
     name: 'execute_antagonistic_review',
     description:
-      "Run an antagonistic quality review on content text. Scores across 6 dimensions on a 1-10 scale: Accuracy (factual correctness), Usefulness (reader value), Clarity (readability/structure), Engagement (hook quality), Depth (detail/nuance), Actionability (clear next steps). Passes if overall average >= 7.5 and no dimension < 5. Use this before publishing or after creating content to validate quality.",
+      'Run an antagonistic quality review on content text. Scores across 6 dimensions on a 1-10 scale: Accuracy (factual correctness), Usefulness (reader value), Clarity (readability/structure), Engagement (hook quality), Depth (detail/nuance), Actionability (clear next steps). Passes if overall average >= 7.5 and no dimension < 5. Use this before publishing or after creating content to validate quality.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -182,14 +182,12 @@ export const contentTools: Tool[] = [
         },
         topic: {
           type: 'string',
-          description:
-            'The intended topic of the content (helps evaluate accuracy and relevance)',
+          description: 'The intended topic of the content (helps evaluate accuracy and relevance)',
         },
         format: {
           type: 'string',
           enum: ['tutorial', 'reference', 'guide', 'blog-post', 'documentation'],
-          description:
-            'Content format type for context-appropriate evaluation (default: guide)',
+          description: 'Content format type for context-appropriate evaluation (default: guide)',
         },
         audience: {
           type: 'string',

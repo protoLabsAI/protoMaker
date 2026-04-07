@@ -83,12 +83,13 @@ export function analyzeContractChanges(
 
   // Modified symbols — severity depends on kind
   for (const name of diff.modified) {
-    const sym = afterMap.get(name) ?? beforeMap.get(name) ?? {
-      name,
-      kind: 'function' as const,
-      line: 0,
-      declaration: '',
-    };
+    const sym = afterMap.get(name) ??
+      beforeMap.get(name) ?? {
+        name,
+        kind: 'function' as const,
+        line: 0,
+        declaration: '',
+      };
     let severity: ImpactSeverity;
     let reason: string;
     switch (sym.kind) {
@@ -144,10 +145,7 @@ export function analyzeContractChanges(
   const rankToSeverity = ['UNKNOWN', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const;
   const overallSeverity: ImpactSeverity = rankToSeverity[maxRank] ?? 'UNKNOWN';
 
-  const changedInterfaces = [
-    ...diff.removed,
-    ...diff.modified,
-  ].filter((name) => {
+  const changedInterfaces = [...diff.removed, ...diff.modified].filter((name) => {
     const sym = beforeMap.get(name) ?? afterMap.get(name);
     return sym && (sym.kind === 'interface' || sym.kind === 'type' || sym.kind === 'rest_endpoint');
   });

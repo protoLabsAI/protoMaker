@@ -71,7 +71,9 @@ export function detectCrossRepoCycles(edges: CrossRepoDependencyEdge[]): CycleDe
     adjacency.get(edge.fromAppPath)!.add(edge.toAppPath);
   }
 
-  const WHITE = 0, GRAY = 1, BLACK = 2;
+  const WHITE = 0,
+    GRAY = 1,
+    BLACK = 2;
   const color = new Map<string, number>();
   const parent = new Map<string, string | null>();
   const cycles: string[][] = [];
