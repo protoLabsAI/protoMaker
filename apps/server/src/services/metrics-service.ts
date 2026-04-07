@@ -77,6 +77,30 @@ export interface CapacityMetrics {
   utilizationPercent: number; // Current capacity utilization (0-100)
 }
 
+export interface PortfolioMetrics {
+  // Aggregated throughput across all projects (features completed per day)
+  totalThroughputPerDay: number;
+
+  // Total cost across all projects
+  totalCostUsd: number;
+
+  // Weighted average flow efficiency (ratio of completed to total features)
+  flowEfficiency: number;
+
+  // Top constraint: project path with highest blocked+escalation count, plain language
+  topConstraint: string | null;
+
+  // Per-project summary for drill-down
+  perProject: Array<{
+    projectPath: string;
+    throughputPerDay: number;
+    totalCostUsd: number;
+    successRate: number;
+    blockedCount: number;
+    escalationCount: number;
+  }>;
+}
+
 export class MetricsService {
   private featureLoader: FeatureLoader;
 
@@ -494,6 +518,86 @@ export class MetricsService {
       return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
     }
     return `${seconds}s`;
+  }
+
+  /**
+   * Compute aggregated portfolio metrics across multiple projects.
+   * Calls getProjectMetrics() and getCapacityMetrics() per project and combines
+   * into a portfolio-level view without modifying per-project logic.
+   */
+  async getPortfolioMetrics(projectPaths: string[]): Promise<PortfolioMetrics> {
+    if (projectPaths.length === 0) {
+      return {
+        totalThroughputPerDay: 0,
+        totalCostUsd: 0,
+        flowEfficiency: 0,
+        topConstraint: null,
+        perProject: [],
+      };
+    }
+
+    const perProjectResults = await Promise.all(
+      projectPaths.map(async (projectPath) => {
+        const [metrics, capacity] = await Promise.all([
+          this.getProjectMetrics(projectPath),
+          this.getCapacityMetrics(projectPath),
+        ]);
+        return { projectPath, metrics, capacity };
+      })
+    );
+
+    let totalThroughputPerDay = 0;
+    let totalCostUsd = 0;
+    let totalCompletedFeatures = 0;
+    let totalAllFeatures = 0;
+
+    let topConstraintPath: string | null = null;
+    let topConstraintScore = 0;
+
+    const perProject: PortfolioMetrics['perProject'] = [];
+
+    for (const { projectPath, metrics, capacity } of perProjectResults) {
+      totalThroughputPerDay += metrics.throughputPerDay;
+      totalCostUsd += metrics.totalCostUsd;
+      totalCompletedFeatures += metrics.completedFeatures;
+      totalAllFeatures += metrics.totalFeatures;
+
+      // Constraint score = blocked + escalations (higher = worse bottleneck)
+      const constraintScore = capacity.blockedCount + metrics.escalationCount;
+      if (constraintScore > topConstraintScore) {
+        topConstraintScore = constraintScore;
+        topConstraintPath = projectPath;
+      }
+
+      perProject.push({
+        projectPath,
+        throughputPerDay: metrics.throughputPerDay,
+        totalCostUsd: metrics.totalCostUsd,
+        successRate: metrics.successRate,
+        blockedCount: capacity.blockedCount,
+        escalationCount: metrics.escalationCount,
+      });
+    }
+
+    const flowEfficiency = totalAllFeatures > 0 ? totalCompletedFeatures / totalAllFeatures : 0;
+
+    let topConstraint: string | null = null;
+    if (topConstraintPath && topConstraintScore > 0) {
+      const slug = topConstraintPath.split('/').at(-1) ?? topConstraintPath;
+      const entry = perProject.find((p) => p.projectPath === topConstraintPath);
+      const detail = entry
+        ? `${entry.blockedCount} blocked, ${entry.escalationCount} escalations`
+        : `${topConstraintScore} issues`;
+      topConstraint = `${slug}: ${detail}`;
+    }
+
+    return {
+      totalThroughputPerDay,
+      totalCostUsd,
+      flowEfficiency,
+      topConstraint,
+      perProject,
+    };
   }
 
   /**

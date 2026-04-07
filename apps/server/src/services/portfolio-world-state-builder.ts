@@ -73,6 +73,7 @@ export interface PortfolioSitrep {
   portfolioMetrics: {
     totalActiveAgents: number;
     globalWipUtilization: number;
+    crossRepoBlockedCount: number;
     portfolioFlowEfficiency: number;
     topConstraint: string | null;
   };
@@ -115,6 +116,7 @@ export class PortfolioWorldStateBuilder {
         portfolioMetrics: {
           totalActiveAgents: 0,
           globalWipUtilization: 0,
+          crossRepoBlockedCount: 0,
           portfolioFlowEfficiency: 0,
           topConstraint: null,
         },
@@ -161,10 +163,12 @@ export class PortfolioWorldStateBuilder {
     });
 
     const totalActiveAgents = projects.reduce((sum, p) => sum + p.activeAgents, 0);
+    const crossRepoBlockedCount = projects.reduce((sum, p) => sum + p.blockedCount, 0);
     const systemMaxConcurrency = this.deriveSystemMaxConcurrency(results);
     const globalWipUtilization =
       systemMaxConcurrency > 0 ? totalActiveAgents / systemMaxConcurrency : 0;
 
+    const portfolioFlowEfficiency = this.computeFlowEfficiency(results);
     const topConstraint = this.deriveTopConstraint(results);
     const pendingHumanDecisions = this.aggregatePendingDecisions(results);
 
@@ -174,7 +178,8 @@ export class PortfolioWorldStateBuilder {
       portfolioMetrics: {
         totalActiveAgents,
         globalWipUtilization,
-        portfolioFlowEfficiency: 0,
+        crossRepoBlockedCount,
+        portfolioFlowEfficiency,
         topConstraint,
       },
       pendingHumanDecisions,
@@ -262,6 +267,24 @@ export class PortfolioWorldStateBuilder {
     const firstBlockedReason = topSitrep.blockedFeatures[0]?.reason;
     const reasonSuffix = firstBlockedReason ? ` — ${firstBlockedReason}` : '';
     return `${maxBlocked} feature${maxBlocked !== 1 ? 's' : ''} blocked in ${slug}${reasonSuffix}`;
+  }
+
+  /**
+   * Flow efficiency = done / total across all projects.
+   * Represents the fraction of work that has been completed (throughput / total work visible).
+   * Returns 0 when no sitrep data is available.
+   */
+  private computeFlowEfficiency(results: FetchResult[]): number {
+    let totalDone = 0;
+    let totalFeatures = 0;
+
+    for (const { sitrep } of results) {
+      if (!sitrep) continue;
+      totalDone += sitrep.board.done;
+      totalFeatures += sitrep.board.total;
+    }
+
+    return totalFeatures > 0 ? totalDone / totalFeatures : 0;
   }
 
   private aggregatePendingDecisions(
