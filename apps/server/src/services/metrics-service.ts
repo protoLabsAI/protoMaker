@@ -4,7 +4,10 @@
  */
 
 import type { Feature } from '@protolabsai/types';
+import { createLogger } from '@protolabsai/utils';
 import { FeatureLoader } from './feature-loader.js';
+
+const logger = createLogger('MetricsService');
 
 /**
  * Normalize model identifiers to canonical short names (sonnet, opus, haiku).
@@ -298,6 +301,146 @@ export class MetricsService {
       return new Date(feature.completedAt).getTime();
     }
     return null;
+  }
+
+  // ── WSJF Scoring ──────────────────────────────────────────────────────────
+
+  /**
+   * Default estimated agent hours per complexity bucket.
+   * Used as fallback when insufficient historical data exists.
+   */
+  private static readonly DEFAULT_HOURS_BY_COMPLEXITY: Record<string, number> = {
+    small: 0.5,
+    medium: 2,
+    large: 5,
+    architectural: 10,
+  };
+
+  /**
+   * Get average execution duration (in hours) grouped by complexity bucket.
+   * Queries completed features with execution history to compute median duration per bucket.
+   * Falls back to DEFAULT_HOURS_BY_COMPLEXITY if insufficient data (<3 samples).
+   */
+  async getAvgDurationByComplexity(
+    projectPath: string
+  ): Promise<Record<string, number>> {
+    const features = await this.featureLoader.getAll(projectPath);
+    const buckets: Record<string, number[]> = {
+      small: [],
+      medium: [],
+      large: [],
+      architectural: [],
+    };
+
+    for (const feature of features) {
+      const isDone = feature.status === 'done' || feature.status === 'verified';
+      if (!isDone || !feature.executionHistory?.length) continue;
+
+      const complexity = feature.complexity ?? 'medium';
+      if (!buckets[complexity]) continue;
+
+      const totalMs = feature.executionHistory.reduce(
+        (sum, exec) => sum + (exec.durationMs ?? 0),
+        0
+      );
+      if (totalMs > 0) {
+        buckets[complexity].push(totalMs / (1000 * 60 * 60)); // ms → hours
+      }
+    }
+
+    const result: Record<string, number> = {};
+    for (const [bucket, durations] of Object.entries(buckets)) {
+      if (durations.length >= 3) {
+        // Use median for robustness against outliers
+        const sorted = [...durations].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        result[bucket] =
+          sorted.length % 2 === 0
+            ? (sorted[mid - 1] + sorted[mid]) / 2
+            : sorted[mid];
+      } else {
+        result[bucket] = MetricsService.DEFAULT_HOURS_BY_COMPLEXITY[bucket] ?? 2;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Compute time decay factor based on deadline proximity.
+   * - No deadline → 0.5 (lowest urgency)
+   * - >30 days out → 1.0
+   * - 0-30 days → linear escalation from 1.0 to 3.0
+   * - Past deadline → 3.0 (maximum urgency)
+   */
+  computeTimeDecayFactor(timeDecayDeadline: string | undefined, now?: Date): number {
+    if (!timeDecayDeadline) return 0.5;
+
+    const currentTime = now ?? new Date();
+    const deadline = new Date(timeDecayDeadline);
+    const daysUntilDeadline =
+      (deadline.getTime() - currentTime.getTime()) / (1000 * 60 * 60 * 24);
+
+    if (daysUntilDeadline <= 0) return 3.0; // Past deadline
+    if (daysUntilDeadline > 30) return 1.0; // Far from deadline
+
+    // Linear interpolation: 30 days → 1.0, 0 days → 3.0
+    return 1.0 + (2.0 * (30 - daysUntilDeadline)) / 30;
+  }
+
+  /**
+   * Compute WSJF score for a single feature.
+   * Formula: (businessValue x timeDecayFactor) / estimatedAgentHours
+   *
+   * Returns 0 if businessValue is not set.
+   */
+  computeWsjfScore(
+    feature: Feature,
+    durationByComplexity: Record<string, number>,
+    now?: Date
+  ): number {
+    const businessValue = feature.businessValue;
+    if (!businessValue || businessValue <= 0) return 0;
+
+    const complexity = feature.complexity ?? 'medium';
+    const estimatedHours =
+      durationByComplexity[complexity] ??
+      MetricsService.DEFAULT_HOURS_BY_COMPLEXITY[complexity] ??
+      2;
+
+    // Guard against division by zero
+    const safeHours = Math.max(estimatedHours, 0.1);
+    const timeDecayFactor = this.computeTimeDecayFactor(feature.timeDecayDeadline, now);
+
+    return (businessValue * timeDecayFactor) / safeHours;
+  }
+
+  /**
+   * Propagate epic businessValue to child features.
+   * Children without an explicit businessValue inherit their parent epic's value.
+   * Modifies features in place and returns the count of propagated values.
+   */
+  propagateEpicBusinessValue(features: Feature[]): number {
+    const epicMap = new Map<string, Feature>();
+    for (const f of features) {
+      if (f.isEpic) epicMap.set(f.id, f);
+    }
+
+    let propagated = 0;
+    for (const feature of features) {
+      if (feature.businessValue != null) continue; // Already has explicit value
+      if (!feature.epicId) continue;
+
+      const epic = epicMap.get(feature.epicId);
+      if (epic?.businessValue != null) {
+        feature.businessValue = epic.businessValue;
+        propagated++;
+      }
+    }
+
+    if (propagated > 0) {
+      logger.info(`[WSJF] Propagated businessValue from epics to ${propagated} child features`);
+    }
+    return propagated;
   }
 
   /**

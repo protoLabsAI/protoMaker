@@ -620,6 +620,29 @@ export interface Feature {
    * Automaker server instance. The scheduler checks these before dispatching the feature.
    */
   externalDependencies?: ExternalDependency[];
+
+  // WSJF (Weighted Shortest Job First) scoring fields
+  /**
+   * Business value score for this feature (1-10 scale).
+   * Used by WSJF scoring to compute priority-weighted scheduling.
+   * Higher values indicate greater business impact.
+   * Epic businessValue propagates to child features that don't set their own.
+   */
+  businessValue?: number;
+
+  /**
+   * Deadline for time decay calculation in WSJF scoring (ISO 8601 date string).
+   * Features closer to their deadline get higher time decay factors.
+   * No deadline = time decay factor of 0.5 (lowest urgency).
+   */
+  timeDecayDeadline?: string;
+
+  /**
+   * Computed WSJF score: (businessValue x timeDecayFactor) / estimatedAgentHours.
+   * Not persisted — recomputed by PortfolioScheduler on each tick cycle.
+   * Higher scores indicate higher scheduling priority.
+   */
+  wsjfScore?: number;
 }
 
 /**

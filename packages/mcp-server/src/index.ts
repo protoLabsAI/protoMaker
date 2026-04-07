@@ -779,6 +779,15 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectSlug: args.projectSlug,
       });
 
+    case 'get_portfolio_sitrep':
+      return apiCall(
+        '/portfolio/sitrep',
+        args.projectPaths !== undefined
+          ? { projectPaths: (args.projectPaths as string[]).join(',') }
+          : {},
+        'GET'
+      );
+
     // QA Tools
     case 'run_qa_check':
       return apiCall('/qa/check', { projectPath: String(args.projectPath ?? '') }, 'GET');
