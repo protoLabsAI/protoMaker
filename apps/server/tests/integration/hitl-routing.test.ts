@@ -58,7 +58,10 @@ describe('HITLGateService', () => {
       expect(result).toBe(true);
       expect(globalThis.fetch).toHaveBeenCalledOnce();
 
-      const [url, init] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit];
+      const [url, init] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [
+        string,
+        RequestInit,
+      ];
       expect(url).toBe('http://workstacean-test:8082/publish');
       expect(init.method).toBe('POST');
 

@@ -81,7 +81,10 @@ describe('discord-webhook.service', () => {
 
       expect(result).toBe(true);
       expect(globalThis.fetch).toHaveBeenCalledOnce();
-      const [url, init] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit];
+      const [url, init] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [
+        string,
+        RequestInit,
+      ];
       expect(url).toBe(WEBHOOK_INFRA);
       expect(init.method).toBe('POST');
       const body = JSON.parse(init.body as string);
@@ -107,7 +110,8 @@ describe('discord-webhook.service', () => {
       await sendToChannelViaWebhook(CHANNEL_INFRA, longContent);
 
       const body = JSON.parse(
-        ((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit])[1].body as string
+        ((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit])[1]
+          .body as string
       );
       expect(body.content.length).toBe(2000);
       expect(body.content.endsWith('...')).toBe(true);
@@ -130,7 +134,8 @@ describe('discord-webhook.service', () => {
 
       expect(result).toBe(true);
       const body = JSON.parse(
-        ((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit])[1].body as string
+        ((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit])[1]
+          .body as string
       );
       expect(body.embeds).toHaveLength(1);
       expect(body.embeds[0].title).toBe('Test embed');

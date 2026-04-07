@@ -76,9 +76,7 @@ export class HITLGateService {
       });
       logger.info(`Gate-hold request published for feature ${featureId}`);
     } else {
-      logger.error(
-        `Failed to publish gate-hold for feature ${featureId}: ${result.error}`
-      );
+      logger.error(`Failed to publish gate-hold for feature ${featureId}: ${result.error}`);
     }
 
     return result.ok;
@@ -109,9 +107,7 @@ export class HITLGateService {
     this.pending.delete(featureId);
 
     if (!result.ok) {
-      logger.warn(
-        `Failed to cancel gate-hold for feature ${featureId}: ${result.error}`
-      );
+      logger.warn(`Failed to cancel gate-hold for feature ${featureId}: ${result.error}`);
     } else {
       logger.info(`Gate-hold cancel published for feature ${featureId}`);
     }

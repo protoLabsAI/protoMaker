@@ -35,7 +35,9 @@ export interface WorkstaceanPublishResponse {
  * Publish an event to Workstacean's plugin pipeline.
  * Returns { ok: true } on success, { ok: false, error } on failure.
  */
-export async function publish(payload: WorkstaceanPublishPayload): Promise<WorkstaceanPublishResponse> {
+export async function publish(
+  payload: WorkstaceanPublishPayload
+): Promise<WorkstaceanPublishResponse> {
   const url = `${getBaseUrl()}/publish`;
 
   try {
