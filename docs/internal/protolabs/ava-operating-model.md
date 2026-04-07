@@ -121,12 +121,12 @@ Job Duration  = estimated effort (complexity field: small=1, medium=3, large=8, 
 
 ### Mapping to protoLabs Feature Schema
 
-| WSJF Component | Feature Field | How Ava scores it |
-| --- | --- | --- |
-| User/Business Value | `priority` | urgent=4, high=3, medium=2, low=1 |
-| Time Criticality | `dueDate` | overdue=+3, due in 3d=+2, due in 7d=+1, no date=0 |
-| Risk Reduction | `complexity` | architectural=+2, isFoundation=+1, else=0 |
-| Job Duration | `complexity` | small=1, medium=3, large=8, architectural=13 |
+| WSJF Component      | Feature Field | How Ava scores it                                 |
+| ------------------- | ------------- | ------------------------------------------------- |
+| User/Business Value | `priority`    | urgent=4, high=3, medium=2, low=1                 |
+| Time Criticality    | `dueDate`     | overdue=+3, due in 3d=+2, due in 7d=+1, no date=0 |
+| Risk Reduction      | `complexity`  | architectural=+2, isFoundation=+1, else=0         |
+| Job Duration        | `complexity`  | small=1, medium=3, large=8, architectural=13      |
 
 ### WSJF in Practice
 
@@ -150,13 +150,13 @@ Ava manages concurrency allocation across apps subject to operator-configured bo
 
 ### Ava's Actions
 
-| Condition | Auto-Action | Requires Approval |
-| --- | --- | --- |
-| App idle, another app has queued work | Release slot to pool | No |
-| App WIP at limit | Block new feature pickup for that app | No |
-| App error budget >80% | Halve concurrency, freeze non-bug releases | Yes (Trust L1+) |
-| System cap reached | Block all new pickups | No |
-| Feature at 100% cost cap | Kill agent, mark feature blocked | No |
+| Condition                             | Auto-Action                                | Requires Approval |
+| ------------------------------------- | ------------------------------------------ | ----------------- |
+| App idle, another app has queued work | Release slot to pool                       | No                |
+| App WIP at limit                      | Block new feature pickup for that app      | No                |
+| App error budget >80%                 | Halve concurrency, freeze non-bug releases | Yes (Trust L1+)   |
+| System cap reached                    | Block all new pickups                      | No                |
+| Feature at 100% cost cap              | Kill agent, mark feature blocked           | No                |
 
 ---
 
@@ -196,11 +196,11 @@ Ava receives signal
 
 The Lead Engineer emits portfolio-level signals that Ava monitors:
 
-| Signal | Ava Action |
-| --- | --- |
-| `feature:blocked` | Check constraint, attempt unblock, or queue Decision |
-| `project:milestone:late` | Drill app, compute WSJF, surface to operator if at-risk |
-| `agent:stuck` | Kill and requeue (Trust L1+) or queue Exception |
-| `pr:stale` | Assign reviewer or enable auto-merge (Trust L1+) |
-| `budget:breach` | Freeze releases, queue Exception |
-| `project:completed` | Trigger reflection, generate changelog, surface to operator |
+| Signal                   | Ava Action                                                  |
+| ------------------------ | ----------------------------------------------------------- |
+| `feature:blocked`        | Check constraint, attempt unblock, or queue Decision        |
+| `project:milestone:late` | Drill app, compute WSJF, surface to operator if at-risk     |
+| `agent:stuck`            | Kill and requeue (Trust L1+) or queue Exception             |
+| `pr:stale`               | Assign reviewer or enable auto-merge (Trust L1+)            |
+| `budget:breach`          | Freeze releases, queue Exception                            |
+| `project:completed`      | Trigger reflection, generate changelog, surface to operator |

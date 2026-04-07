@@ -82,12 +82,12 @@ Calendar, email, and docs integration planned for the Google Workspace plugin in
 
 Tunnels terminate in the homelab Docker network and forward to internal services. All public hostnames use HTTPS; internal traffic is plain HTTP.
 
-| Public Hostname | Internal Target | Service |
-| --- | --- | --- |
-| `ava.protoLabs.studio` | `automaker-server:3008` | protoMaker API + WebSocket |
-| `chat.protoLabs.studio` | `openwebui:3000` | OpenWebUI chat interface |
-| `search.protoLabs.studio` | `searxng:8080` | SearXNG metasearch |
-| `llm.protoLabs.studio` | `litellm:4000` | LiteLLM proxy |
+| Public Hostname           | Internal Target         | Service                    |
+| ------------------------- | ----------------------- | -------------------------- |
+| `ava.protoLabs.studio`    | `automaker-server:3008` | protoMaker API + WebSocket |
+| `chat.protoLabs.studio`   | `openwebui:3000`        | OpenWebUI chat interface   |
+| `search.protoLabs.studio` | `searxng:8080`          | SearXNG metasearch         |
+| `llm.protoLabs.studio`    | `litellm:4000`          | LiteLLM proxy              |
 
 **Config lives in**: `homelab-iac/stacks/cloudflare/` (Cloudflare tunnel credentials in Infisical).
 
@@ -147,24 +147,24 @@ It is NOT a Discord bot. Discord is one of several interface plugins connected t
 
 ### Bus Topics
 
-| Topic | Direction | Purpose |
-| --- | --- | --- |
-| `agent.request` | Plugin → Bus | Incoming signal from any interface |
-| `agent.response` | Bus → Plugin | Agent reply routed back to originating interface |
-| `hitl.request` | Bus → Plugin | Human-in-the-loop prompt |
-| `hitl.response` | Plugin → Bus | Human response to HITL prompt |
-| `event.internal` | Service → Bus | Internal system events (webhooks, cron signals) |
+| Topic            | Direction     | Purpose                                          |
+| ---------------- | ------------- | ------------------------------------------------ |
+| `agent.request`  | Plugin → Bus  | Incoming signal from any interface               |
+| `agent.response` | Bus → Plugin  | Agent reply routed back to originating interface |
+| `hitl.request`   | Bus → Plugin  | Human-in-the-loop prompt                         |
+| `hitl.response`  | Plugin → Bus  | Human response to HITL prompt                    |
+| `event.internal` | Service → Bus | Internal system events (webhooks, cron signals)  |
 
 ### Plugins
 
-| Plugin | Status | Transport | Notes |
-| --- | --- | --- | --- |
-| **Discord** | Active | WebSocket (discord.js) | Primary interface — embeds, threads, reactions |
-| **GitHub** | Active | Webhooks (`POST /webhook/github`) | Issue/PR events, bot comments |
-| **A2A** | Active | HTTP JSON-RPC 2.0 | Inter-agent communication |
-| **Plane** | Planned | Webhooks | Board-native intake |
-| **Onboarding** | Active | Internal | Runs `/setuplab` pipeline on new project signals |
-| **Google Workspace** | Roadmap | OAuth + API | Gmail intake, Calendar context |
+| Plugin               | Status  | Transport                         | Notes                                            |
+| -------------------- | ------- | --------------------------------- | ------------------------------------------------ |
+| **Discord**          | Active  | WebSocket (discord.js)            | Primary interface — embeds, threads, reactions   |
+| **GitHub**           | Active  | Webhooks (`POST /webhook/github`) | Issue/PR events, bot comments                    |
+| **A2A**              | Active  | HTTP JSON-RPC 2.0                 | Inter-agent communication                        |
+| **Plane**            | Planned | Webhooks                          | Board-native intake                              |
+| **Onboarding**       | Active  | Internal                          | Runs `/setuplab` pipeline on new project signals |
+| **Google Workspace** | Roadmap | OAuth + API                       | Gmail intake, Calendar context                   |
 
 ### OnboardingPlugin Pipeline
 
@@ -190,11 +190,11 @@ Single source of truth for all project metadata: team assignments, agent binding
 
 ### API Endpoints
 
-| Endpoint | Method | Description |
-| --- | --- | --- |
-| `/api/agents` | GET | Full agent registry |
-| `/api/projects` | GET | Full project registry |
-| `/publish` | POST | Inject message onto bus |
+| Endpoint        | Method | Description             |
+| --------------- | ------ | ----------------------- |
+| `/api/agents`   | GET    | Full agent registry     |
+| `/api/projects` | GET    | Full project registry   |
+| `/publish`      | POST   | Inject message onto bus |
 
 ### Deployment
 
@@ -268,14 +268,14 @@ The board engine and agent execution environment. Manages the full feature lifec
 
 ### Components
 
-| Component | Description |
-| --- | --- |
-| **Board** | Kanban-style feature tracker. Statuses: `backlog → in_progress → review → done / blocked` |
-| **Auto-mode** | Autonomous feature pickup loop. Processes features in dependency order. |
-| **Worktrees** | Isolated git worktrees per feature in `{projectPath}/.worktrees/{branch}` |
-| **Lead Engineer** | Production orchestrator. Fast-path rules (pure functions) for routine decisions. |
-| **PR Pipeline** | Automated PR creation, CI check monitoring, CodeRabbit review, auto-merge |
-| **Portfolio Scheduler** | Planned — roadmap integration with Plane for cross-project scheduling |
+| Component               | Description                                                                               |
+| ----------------------- | ----------------------------------------------------------------------------------------- |
+| **Board**               | Kanban-style feature tracker. Statuses: `backlog → in_progress → review → done / blocked` |
+| **Auto-mode**           | Autonomous feature pickup loop. Processes features in dependency order.                   |
+| **Worktrees**           | Isolated git worktrees per feature in `{projectPath}/.worktrees/{branch}`                 |
+| **Lead Engineer**       | Production orchestrator. Fast-path rules (pure functions) for routine decisions.          |
+| **PR Pipeline**         | Automated PR creation, CI check monitoring, CodeRabbit review, auto-merge                 |
+| **Portfolio Scheduler** | Planned — roadmap integration with Plane for cross-project scheduling                     |
 
 ### Key Services
 
@@ -303,12 +303,12 @@ Project management for strategic work items. Plane is used for the human-visible
 
 ### Workspace Structure
 
-| Identifier | Description |
-| --- | --- |
-| `protolabs` | Primary workspace |
-| `PROTO` | Core platform features |
-| `GTM` | Go-to-market initiatives |
-| `INFRA` | Infrastructure work |
+| Identifier  | Description              |
+| ----------- | ------------------------ |
+| `protolabs` | Primary workspace        |
+| `PROTO`     | Core platform features   |
+| `GTM`       | Go-to-market initiatives |
+| `INFRA`     | Infrastructure work      |
 
 ### Sync with Workstacean
 
@@ -420,10 +420,10 @@ Remote seedbox. Handles media and large file transfers.
 
 Three repos, three responsibilities. No overlap.
 
-| Boundary | Repo | Owns |
-| --- | --- | --- |
-| **Deployment** | `homelab-iac` | Docker Compose, volume mounts, env vars, network config, port mappings |
-| **Bus + Registry** | `protoWorkstacean` | Message routing, skill matching, interface plugins, `agents.yaml`, `projects.yaml`, correlationId minting |
+| Boundary                 | Repo               | Owns                                                                                                            |
+| ------------------------ | ------------------ | --------------------------------------------------------------------------------------------------------------- |
+| **Deployment**           | `homelab-iac`      | Docker Compose, volume mounts, env vars, network config, port mappings                                          |
+| **Bus + Registry**       | `protoWorkstacean` | Message routing, skill matching, interface plugins, `agents.yaml`, `projects.yaml`, correlationId minting       |
 | **Planning + Execution** | `ava` (protoMaker) | Planning pipeline, PRD generation, antagonistic review, board management, Lead Engineer, auto-mode, PR pipeline |
 
 ### What each repo does NOT own

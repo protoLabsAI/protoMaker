@@ -87,12 +87,12 @@ Cost of Delay captures the value destroyed by waiting. Job Duration captures the
 
 ### Mapping to protoLabs Feature Schema
 
-| WSJF Component | Feature Field | Scoring |
-| --- | --- | --- |
-| User/Business Value | `priority` | urgent=4, high=3, medium=2, low=1 |
-| Time Criticality | `dueDate` | overdue=+3, due ≤3d=+2, due ≤7d=+1, none=0 |
-| Risk Reduction | `complexity`, `isFoundation` | architectural=+2, isFoundation=+1, else=0 |
-| Job Duration | `complexity` | small=1, medium=3, large=8, architectural=13 |
+| WSJF Component      | Feature Field                | Scoring                                      |
+| ------------------- | ---------------------------- | -------------------------------------------- |
+| User/Business Value | `priority`                   | urgent=4, high=3, medium=2, low=1            |
+| Time Criticality    | `dueDate`                    | overdue=+3, due ≤3d=+2, due ≤7d=+1, none=0   |
+| Risk Reduction      | `complexity`, `isFoundation` | architectural=+2, isFoundation=+1, else=0    |
+| Job Duration        | `complexity`                 | small=1, medium=3, large=8, architectural=13 |
 
 ### Why Not SAFe Ceremonies?
 
@@ -107,6 +107,7 @@ SAFe's PI Planning, Program Increments, and Inspect & Adapt events are designed 
 ### The Problem With Distributed Registries
 
 Before unification, project metadata lived in three places:
+
 - Agent memory files (what Ava knew about a project)
 - Board features (what protoMaker tracked)
 - Discord channel config (what Workstacean used for routing)
@@ -116,6 +117,7 @@ When these diverged — and they always diverge — routing breaks. Quinn gets s
 ### The Solution: One Registry, Many Consumers
 
 `projects.yaml` is the authoritative record. Every consumer reads from it:
+
 - Workstacean reads it for skill routing and channel mapping
 - protoMaker reads it (via `/api/projects`) for board-level context
 - Quinn reads it for triage routing
@@ -132,8 +134,8 @@ No agent, service, or plugin maintains its own copy of project metadata. They al
   team: dev
   agents: [ava, quinn, frank]
   discord:
-    dev: "1469080556720623699"
-    bugReports: "1477837770704814162"
+    dev: '1469080556720623699'
+    bugReports: '1477837770704814162'
   repo:
     owner: protolabsai
     name: protoMaker
@@ -223,11 +225,12 @@ Flow efficiency > 40% is the practical target for an AI-driven portfolio. Human 
 ### Flow Efficiency in Practice
 
 Flow efficiency is computable from existing feature timestamps:
+
 - `startedAt` — when an agent began executing
 - `completedAt` / `blockedAt` — when execution stopped
 - Status transition history
 
-The DORA metrics system tracks lead time and deployment frequency. Flow efficiency is the complementary metric that explains *why* lead time is long when it is — it points directly to the constraint.
+The DORA metrics system tracks lead time and deployment frequency. Flow efficiency is the complementary metric that explains _why_ lead time is long when it is — it points directly to the constraint.
 
 ---
 

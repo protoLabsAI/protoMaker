@@ -6,14 +6,14 @@ Cross-links: [Org Architecture](../org-architecture.md) | [Ava Operating Model](
 
 Six agents organized into three teams. All A2A agents expose `/.well-known/agent.json` and accept JSON-RPC 2.0 `message/send` calls.
 
-| Agent          | Team      | Role                                                             | A2A Endpoint                       | Discord Bot      | Key Skills                                                                                        |
-| -------------- | --------- | ---------------------------------------------------------------- | ---------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------- |
-| **Ava**        | Dev       | Portfolio orchestrator — planning, board management, cross-app authority | `http://automaker-server:3008/a2a` | `protoava[bot]` | `plan`, `plan_resume`, `sitrep`, `manage_feature`, `auto_mode`, `board_health`, `onboard_project` |
-| **Quinn**      | Dev       | QA Engineer — triage, review, audits                             | `http://quinn:7870/a2a`            | `protoquinn[bot]` | `bug_triage`, `pr_review`, `qa_report`, `board_audit`                                             |
-| **Frank**      | Dev       | DevOps — infrastructure, deploys, monitoring                     | `http://frank:7880/a2a`            | `protofrank[bot]` (roadmap) | `infra_health`, `deploy`, `monitoring`                                                            |
-| **Jon**        | GTM       | Strategy — market positioning, ROI analysis, antagonistic review | internal (called by Ava)           | `protojon[bot]` (roadmap) | `market_review`, `positioning`, `antagonistic_review`                                             |
-| **Cindi**      | GTM       | Content — blog posts, technical docs, SEO                        | internal (called by Ava)           | `protocindi[bot]` (roadmap) | `blog`, `seo`, `content_review`                                                                   |
-| **Researcher** | Knowledge | Deep research — entity extraction, knowledge graph               | internal (called by Ava)           | — | `research`, `entity_extract`                                                                      |
+| Agent          | Team      | Role                                                                     | A2A Endpoint                       | Discord Bot                 | Key Skills                                                                                        |
+| -------------- | --------- | ------------------------------------------------------------------------ | ---------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------- |
+| **Ava**        | Dev       | Portfolio orchestrator — planning, board management, cross-app authority | `http://automaker-server:3008/a2a` | `protoava[bot]`             | `plan`, `plan_resume`, `sitrep`, `manage_feature`, `auto_mode`, `board_health`, `onboard_project` |
+| **Quinn**      | Dev       | QA Engineer — triage, review, audits                                     | `http://quinn:7870/a2a`            | `protoquinn[bot]`           | `bug_triage`, `pr_review`, `qa_report`, `board_audit`                                             |
+| **Frank**      | Dev       | DevOps — infrastructure, deploys, monitoring                             | `http://frank:7880/a2a`            | `protofrank[bot]` (roadmap) | `infra_health`, `deploy`, `monitoring`                                                            |
+| **Jon**        | GTM       | Strategy — market positioning, ROI analysis, antagonistic review         | internal (called by Ava)           | `protojon[bot]` (roadmap)   | `market_review`, `positioning`, `antagonistic_review`                                             |
+| **Cindi**      | GTM       | Content — blog posts, technical docs, SEO                                | internal (called by Ava)           | `protocindi[bot]` (roadmap) | `blog`, `seo`, `content_review`                                                                   |
+| **Researcher** | Knowledge | Deep research — entity extraction, knowledge graph                       | internal (called by Ava)           | —                           | `research`, `entity_extract`                                                                      |
 
 ### Per-Agent Discord Bot Pool (Roadmap)
 
@@ -73,17 +73,17 @@ Any interface plugin can connect to the bus. The plugin contract has three respo
 
 ### Interface Plugins
 
-| Plugin             | Status   | Transport                            | Notes                                                               |
-| ------------------ | -------- | ------------------------------------ | ------------------------------------------------------------------- |
-| Discord            | Active   | WebSocket (discord.js)               | Primary interface — embeds, threads, reactions, webhooks            |
-| GitHub             | Active   | Webhooks (POST /webhook/github)      | Issue/PR events, bot comments via protoava[bot] and protoquinn[bot] |
-| A2A                | Active   | HTTP JSON-RPC 2.0                    | Inter-agent calls following the A2A spec                            |
-| API                | Active   | HTTP (POST /publish)                 | Programmatic injection for scripts, cron, external services         |
-| Onboarding         | Active   | Internal                             | Runs `/setuplab` 5-phase pipeline when `skillHint: "onboard_project"` arrives |
-| Voice              | Planned  | WebSocket (Whisper STT + Kokoro TTS) | Voice-in/voice-out via gateway audio models                         |
-| Plane              | Planned  | Webhooks                             | Board-native interface for project management                       |
-| Slack              | Planned  | Slack Events API                     | Workspace integration                                               |
-| Google Workspace   | Roadmap  | OAuth + Google APIs                  | Gmail intake, Calendar context, Docs read. Config: `workspace/plugins/google.yaml` |
+| Plugin           | Status  | Transport                            | Notes                                                                              |
+| ---------------- | ------- | ------------------------------------ | ---------------------------------------------------------------------------------- |
+| Discord          | Active  | WebSocket (discord.js)               | Primary interface — embeds, threads, reactions, webhooks                           |
+| GitHub           | Active  | Webhooks (POST /webhook/github)      | Issue/PR events, bot comments via protoava[bot] and protoquinn[bot]                |
+| A2A              | Active  | HTTP JSON-RPC 2.0                    | Inter-agent calls following the A2A spec                                           |
+| API              | Active  | HTTP (POST /publish)                 | Programmatic injection for scripts, cron, external services                        |
+| Onboarding       | Active  | Internal                             | Runs `/setuplab` 5-phase pipeline when `skillHint: "onboard_project"` arrives      |
+| Voice            | Planned | WebSocket (Whisper STT + Kokoro TTS) | Voice-in/voice-out via gateway audio models                                        |
+| Plane            | Planned | Webhooks                             | Board-native interface for project management                                      |
+| Slack            | Planned | Slack Events API                     | Workspace integration                                                              |
+| Google Workspace | Roadmap | OAuth + Google APIs                  | Gmail intake, Calendar context, Docs read. Config: `workspace/plugins/google.yaml` |
 
 ### OnboardingPlugin Pipeline
 
