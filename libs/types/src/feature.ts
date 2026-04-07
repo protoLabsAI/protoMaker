@@ -140,6 +140,42 @@ export interface RemediationHistoryEntry {
   changesSummary?: string;
 }
 
+/**
+ * Type of inter-app contract that creates the cross-repo dependency.
+ */
+export type ExternalDependencyType =
+  | 'api_contract' // Feature depends on a specific REST/RPC endpoint shape
+  | 'shared_type' // Feature depends on a TypeScript type exported by the foreign app
+  | 'deployment_order' // Feature must deploy after the foreign app feature (timing only)
+  | 'data_migration'; // Feature requires a database migration in the foreign app first
+
+/**
+ * Satisfaction status of a single cross-repo dependency.
+ */
+export type ExternalDependencyStatus = 'pending' | 'satisfied' | 'broken';
+
+/**
+ * A single cross-repository dependency reference.
+ * Declares that this feature depends on a specific feature in another app/repo.
+ */
+export interface ExternalDependency {
+  /** Absolute filesystem path to the foreign app (e.g. "/home/josh/dev/labs/protoMaker") */
+  appPath: string;
+  /** Feature ID in the foreign app */
+  featureId: string;
+  /** Human-readable description of what this feature needs from the foreign app */
+  description: string;
+  /** Category of the contract creating this dependency */
+  dependencyType: ExternalDependencyType;
+  /**
+   * Current satisfaction status.
+   * - pending: foreign feature not yet done/review
+   * - satisfied: foreign feature has reached done/review status
+   * - broken: foreign app unreachable or feature deleted
+   */
+  status: ExternalDependencyStatus;
+}
+
 export interface Feature {
   id: string;
   title?: string;
@@ -156,6 +192,12 @@ export interface Feature {
   priority?: 0 | 1 | 2 | 3 | 4;
   status?: FeatureStatus | string; // Allow string for extensibility
   dependencies?: string[];
+  /**
+   * Cross-repository dependencies. Declares that this feature requires features
+   * in other apps/repos to reach a satisfied state before this feature can run.
+   * Checked by the auto-mode scheduler before dispatching this feature.
+   */
+  externalDependencies?: ExternalDependency[];
   /**
    * Reason why this feature is blocked by dependencies.
    * Populated by dependency resolver when getBlockingInfo detects unsatisfied dependencies.
