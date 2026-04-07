@@ -225,6 +225,7 @@ import { leadEngineerTools } from './tools/lead-engineer-tools.js';
 import { knowledgeTools } from './tools/knowledge-tools.js';
 import { qaTools } from './tools/qa-tools.js';
 import { discordTools } from './tools/discord-tools.js';
+import { portfolioTools } from './tools/portfolio-tools.js';
 
 // Aggregate all tools
 const tools: Tool[] = [
@@ -247,6 +248,7 @@ const tools: Tool[] = [
   ...knowledgeTools,
   ...qaTools,
   ...discordTools,
+  ...portfolioTools,
 ];
 
 // Tool implementations
@@ -776,6 +778,15 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectPath: args.projectPath,
         projectSlug: args.projectSlug,
       });
+
+    case 'get_portfolio_sitrep':
+      return apiCall(
+        '/portfolio/sitrep',
+        args.projectPaths !== undefined
+          ? { projectPaths: (args.projectPaths as string[]).join(',') }
+          : {},
+        'GET'
+      );
 
     // QA Tools
     case 'run_qa_check':
