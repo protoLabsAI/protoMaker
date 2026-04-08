@@ -311,20 +311,35 @@ describe('Worktree fallback guard', () => {
   });
 
   describe('when branchName is missing and useWorktrees is true', () => {
-    it('blocks the feature with a clear error', async () => {
+    it('generates a fallback branch name and blocks if worktree creation fails', async () => {
       const noBranchFeature = makeFeature({ branchName: null });
-      const callbacks = makeCallbacks(noBranchFeature);
+      const callbacks = makeCallbacks(noBranchFeature, {
+        findExistingWorktreeForBranch: vi.fn(async () => null),
+        createWorktreeForBranch: vi.fn(async () => null), // creation fails
+      });
       const noBranchLoader = makeFeatureLoader(noBranchFeature);
       const service = makeService(callbacks, noBranchLoader, recoveryService, events);
 
       await service.executeFeature(PROJECT_PATH, FEATURE_ID, true);
 
-      expect(noBranchLoader.update).toHaveBeenCalledWith(
+      // First: branch name is persisted (fallback slug when no settingsService)
+      expect(noBranchLoader.update).toHaveBeenNthCalledWith(
+        1,
+        PROJECT_PATH,
+        FEATURE_ID,
+        expect.objectContaining({
+          branchName: expect.stringMatching(/^feature\//),
+        })
+      );
+
+      // Second: blocked because worktree creation failed
+      expect(noBranchLoader.update).toHaveBeenNthCalledWith(
+        2,
         PROJECT_PATH,
         FEATURE_ID,
         expect.objectContaining({
           status: 'blocked',
-          statusChangeReason: expect.stringContaining('no branchName'),
+          statusChangeReason: expect.stringContaining('Worktree creation failed'),
         })
       );
 
@@ -332,7 +347,7 @@ describe('Worktree fallback guard', () => {
         'feature:error',
         expect.objectContaining({
           featureId: FEATURE_ID,
-          error: expect.stringContaining('no branchName'),
+          error: expect.stringContaining('Worktree creation failed'),
         })
       );
     });
