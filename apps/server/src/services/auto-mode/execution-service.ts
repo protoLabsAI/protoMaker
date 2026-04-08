@@ -55,7 +55,11 @@ import {
   DEFAULT_MODELS,
 } from '@protolabsai/model-resolver';
 import { getFeatureDir } from '@protolabsai/platform';
-import { rebaseWorktreeOnMain, extractTitleFromDescription } from '@protolabsai/git-utils';
+import {
+  rebaseWorktreeOnMain,
+  ensureCleanMergeState,
+  extractTitleFromDescription,
+} from '@protolabsai/git-utils';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { randomUUID } from 'crypto';
@@ -935,6 +939,11 @@ export class ExecutionService {
             `[PreFlight] git fetch failed: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}. Continuing.`
           );
         }
+
+        // Clear any leftover in-progress merge state before attempting the merge.
+        // A stuck MERGE_HEAD (from a previous failed merge attempt) causes git merge
+        // to refuse with "you have unmerged files", creating a recurring failure loop.
+        await ensureCleanMergeState(workDir);
 
         try {
           await execAsync(`git merge origin/${preFlightBaseBranch}`, {

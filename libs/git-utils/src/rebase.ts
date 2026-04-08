@@ -10,6 +10,67 @@ const execAsync = promisify(exec);
 const logger = createLogger('GitMerge');
 
 /**
+ * Ensure the worktree is not stuck in an in-progress merge state.
+ *
+ * When a previous `git merge` fails with conflicts and `git merge --abort` is not
+ * called (or fails silently), the worktree is left with MERGE_HEAD present and
+ * unmerged index entries. Any subsequent `git merge` attempt will immediately fail
+ * with "Merging is not possible because you have unmerged files." — producing a
+ * recurring merge_conflict failure that is impossible to auto-recover from without
+ * clearing the leftover state first.
+ *
+ * This function detects and resolves that stuck state before the caller proceeds
+ * with a new merge attempt. It must be called before any `git stash` or `git merge`
+ * operation, because `git stash` also refuses to operate on an index with unmerged
+ * entries.
+ *
+ * @param worktreePath - Path to the worktree to check and clean
+ */
+export async function ensureCleanMergeState(worktreePath: string): Promise<void> {
+  // `git rev-parse --verify MERGE_HEAD` exits 0 when MERGE_HEAD exists (merge in progress),
+  // non-zero when it does not.  We only act when exit code is 0.
+  try {
+    await execAsync('git rev-parse --verify MERGE_HEAD', {
+      cwd: worktreePath,
+      timeout: 5_000,
+    });
+  } catch {
+    // MERGE_HEAD does not exist — worktree is clean, nothing to do.
+    return;
+  }
+
+  // MERGE_HEAD exists: a previous merge was left incomplete.
+  logger.warn(
+    `[ensureCleanMergeState] Detected in-progress merge in ${worktreePath} — attempting cleanup before next merge`
+  );
+
+  // First attempt: git merge --abort (cleans up MERGE_HEAD and restores the index)
+  try {
+    await execAsync('git merge --abort', { cwd: worktreePath, timeout: 15_000 });
+    logger.info(`[ensureCleanMergeState] Aborted in-progress merge cleanly in ${worktreePath}`);
+    return;
+  } catch (abortError) {
+    logger.warn(
+      `[ensureCleanMergeState] git merge --abort failed in ${worktreePath}: ${abortError instanceof Error ? abortError.message : String(abortError)} — trying git reset --merge`
+    );
+  }
+
+  // Second attempt: git reset --merge (resets index to HEAD, clears merge state,
+  // preserves working-tree changes that are not involved in the merge)
+  try {
+    await execAsync('git reset --merge', { cwd: worktreePath, timeout: 15_000 });
+    logger.info(
+      `[ensureCleanMergeState] Cleared merge state via git reset --merge in ${worktreePath}`
+    );
+  } catch (resetError) {
+    logger.error(
+      `[ensureCleanMergeState] Failed to clear merge state in ${worktreePath}: ${resetError instanceof Error ? resetError.message : String(resetError)}`
+    );
+    // Surface the failure — callers may still attempt the merge, but they now know about it.
+  }
+}
+
+/**
  * Result of a merge operation
  */
 export interface RebaseResult {
@@ -37,6 +98,11 @@ export async function rebaseWorktreeOnMain(
   targetBranch: string = 'origin/main'
 ): Promise<RebaseResult> {
   try {
+    // Step 0: Ensure no in-progress merge is left over from a previous failed attempt.
+    // Must run before stash and before the merge itself — git stash refuses to operate
+    // on an index with unmerged entries.
+    await ensureCleanMergeState(worktreePath);
+
     // Step 1: Fetch latest remote state
     logger.info(`Fetching latest remote state for worktree: ${worktreePath}`);
     try {
