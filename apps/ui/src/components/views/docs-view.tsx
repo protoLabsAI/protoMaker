@@ -5,6 +5,14 @@ import { useAppStore } from '@/store/app-store';
 import { PanelHeader } from '@/components/shared/panel-header';
 import { DocsFileTree } from './docs-view/docs-file-tree';
 import { DocsContentPanel } from './docs-view/docs-content-panel';
+import { getApiKey, getSessionToken } from '@/lib/http-api-client';
+
+function getAuthHeaders(): Record<string, string> {
+  const apiKey = getApiKey();
+  if (apiKey) return { 'X-API-Key': apiKey };
+  const sessionToken = getSessionToken();
+  return sessionToken ? { 'X-Session-Token': sessionToken } : {};
+}
 
 interface DocsConfig {
   docsPath?: string;
@@ -27,7 +35,10 @@ function useDocsConfig(projectPath: string | undefined) {
     let cancelled = false;
     setIsLoading(true);
 
-    fetch(`/api/docs/config?projectPath=${encodeURIComponent(projectPath)}`)
+    fetch(`/api/docs/config?projectPath=${encodeURIComponent(projectPath)}`, {
+      headers: getAuthHeaders(),
+      credentials: 'include',
+    })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Failed'))))
       .then((data) => {
         if (!cancelled) setConfig(data);
