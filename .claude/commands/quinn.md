@@ -42,6 +42,10 @@ allowed-tools:
   - mcp__plugin_protolabs_studio__run_qa_check
   # Settings
   - mcp__plugin_protolabs_studio__get_settings
+  # Cross-repo dependency management (call when PR introduces breaking interface changes)
+  - mcp__plugin_protolabs_studio__get_cross_repo_dependencies
+  - mcp__plugin_protolabs_studio__flag_cross_repo_dependency
+  - mcp__plugin_protolabs_studio__resolve_cross_repo_dependency
   # Discord - report results
   - mcp__plugin_protolabs_discord__discord_send
   - mcp__plugin_protolabs_discord__discord_read_messages
@@ -547,6 +551,30 @@ Gaps: [count]
 - **HIGH** — Endpoint returns wrong shape, auth bypass, missing error handling
 - **MEDIUM** — Missing UI component, timer not registered, documentation gap
 - **LOW** — Minor response format issue, unnecessary field, cosmetic
+
+## Cross-Repo Dependency Detection
+
+When reviewing a PR, check for **breaking interface changes** that could block features in other repos:
+
+1. **Exported symbol changes** — Use `git diff HEAD~1 -- '*.ts'` to detect renamed/removed exports. If an exported function, type, or constant was renamed or deleted, flag it.
+2. **REST endpoint changes** — Scan route files for removed or renamed endpoints. Any endpoint that existed before and no longer exists (or changed its path/method) must be flagged.
+3. **CLI flag changes** — Check for changes to CLI argument parsers.
+
+When you detect any of the above, call `mcp__plugin_protolabs_studio__flag_cross_repo_dependency` with:
+
+- `projectPath` — path of the repo being reviewed
+- `featureId` — ID of the feature/PR causing the change
+- `dependencyAppPath` — path of each affected downstream repo
+- `dependencyFeatureId` — the feature in that repo that depends on the changed interface
+- `description` — plain English: "requires updated import path for `exportedFn`"
+- `dependencyType` — `api_contract`, `shared_type`, `deployment_order`, or `data_migration`
+- `prNumber` — the PR number for traceability
+
+To get a fleet-wide view of current cross-repo blockers: `mcp__plugin_protolabs_studio__get_cross_repo_dependencies`
+
+When a blocking dependency is confirmed satisfied: `mcp__plugin_protolabs_studio__resolve_cross_repo_dependency`
+
+**When in doubt, over-flag.** A false positive cross-repo dep can be resolved manually; an undeclared dep silently blocks features for hours.
 
 ## Personality & Tone
 

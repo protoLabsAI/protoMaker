@@ -18,3 +18,12 @@ export {
   type AncestorContext,
   type BlockingInfo,
 } from './resolver.js';
+
+export {
+  checkExternalDependencies,
+  buildLocalForeignFeatureFetcher,
+  type ForeignFeatureFetcher,
+  type ForeignFeatureResult,
+  type ExternalDepCheckResult,
+  type ExternalDepsCheckResult,
+} from './cross-repo-resolver.js';

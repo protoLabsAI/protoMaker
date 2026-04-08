@@ -155,7 +155,10 @@ export function ProjectSettingsView() {
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         project={currentProject}
-        onConfirm={moveProjectToTrash}
+        onConfirm={(projectId) => {
+          moveProjectToTrash(projectId);
+          void navigate({ to: '/dashboard' });
+        }}
       />
     </div>
   );

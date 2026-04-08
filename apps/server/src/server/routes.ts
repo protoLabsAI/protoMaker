@@ -79,6 +79,9 @@ import { createAIRoutes } from '../routes/ai/index.js';
 import { createNotesRoutes } from '../routes/notes/index.js';
 import { createTodoRoutes } from '../routes/todo/index.js';
 import { createSitrepRoutes } from '../routes/sitrep/index.js';
+import { createPortfolioSitrepRoutes } from '../routes/portfolio/sitrep.js';
+import { createCrossRepoDepsRoutes } from '../routes/portfolio/cross-repo-deps.js';
+import { createPortfolioSyncRegistryRoutes } from '../routes/portfolio/sync-registry.js';
 import { createLeadEngineerRoutes } from '../routes/lead-engineer/index.js';
 import { createPrometheusRoute } from '../routes/metrics/prometheus.js';
 import { createAutomationsRoutes } from '../routes/automations/index.js';
@@ -411,6 +414,12 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/notes', createNotesRoutes(events));
   app.use('/api/todos', createTodoRoutes(todoService));
   app.use('/api/sitrep', createSitrepRoutes({ featureLoader, autoModeService, repoRoot }));
+  app.use('/api/portfolio/sitrep', createPortfolioSitrepRoutes({ settingsService }));
+  app.use(
+    '/api/portfolio/cross-repo-deps',
+    createCrossRepoDepsRoutes({ settingsService, featureLoader })
+  );
+  app.use('/api/portfolio/sync-registry', createPortfolioSyncRegistryRoutes({ settingsService }));
   // Knowledge store routes (chunked retrieval)
   if (knowledgeStoreService) {
     app.use('/api/knowledge', createKnowledgeRoutes(knowledgeStoreService));

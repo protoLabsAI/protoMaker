@@ -24,6 +24,7 @@ import { generateCorrelationId } from '../../../lib/events.js';
 import { getPRWatcherService } from '../../../services/pr-watcher-service.js';
 import { projectPathSchema } from '../../../lib/validation.js';
 import { verifySingleSecret } from '../../../lib/webhook-signature.js';
+import { getWebhookDeliveryService } from '../../../services/webhook-delivery-service.js';
 
 const logger = createLogger('GitHubWebhook');
 
@@ -66,13 +67,30 @@ async function handlePingEvent(payload: GitHubPingWebhookPayload): Promise<void>
 async function handleIssueEvent(
   payload: GitHubIssueWebhookPayload,
   projectPath: string,
-  events: EventEmitter
-): Promise<void> {
+  events: EventEmitter,
+  deliveryId?: string
+): Promise<boolean> {
   const { action, issue, repository } = payload;
 
   logger.info(
     `Received issue event: ${action} on ${repository.full_name}#${issue.number} - ${issue.title}`
   );
+
+  // Idempotency guard for issues.opened: reject duplicate X-GitHub-Delivery IDs before
+  // emitting any events. This prevents double-triage when both the global /github handler
+  // and this per-project /github/webhook handler receive the same webhook event (e.g., two
+  // GitHub webhook registrations for the same repo), or when GitHub retries a delivery.
+  if (action === 'opened' && deliveryId) {
+    const deliveryService = getWebhookDeliveryService();
+    const deduplicationKey = `issues:opened:${deliveryId}`;
+    if (deliveryService.isDuplicate('github', 'issues', deduplicationKey)) {
+      logger.info(
+        `[idempotency] Duplicate delivery ${deliveryId} for issue #${issue.number} — skipping`
+      );
+      return false; // signal: skip, already processed
+    }
+    deliveryService.trackDelivery('github', 'issues', undefined, { deduplicationKey });
+  }
 
   // Emit event for logging and potential auto-creation
   events.emit('webhook:github:issue', {
@@ -86,8 +104,7 @@ async function handleIssueEvent(
     labels: issue.labels?.map((l) => l.name) || [],
   });
 
-  // Future: Auto-create features from issues when webhookSettings.autoCreateFromIssues is enabled
-  // This would integrate with the feature creation logic
+  return true; // processed
 }
 
 /**
@@ -336,8 +353,9 @@ export function createWebhookHandler(
         return;
       }
 
-      // Get event type from header
+      // Get event type and delivery ID from headers
       const eventType = req.headers['x-github-event'] as string | undefined;
+      const deliveryId = req.headers['x-github-delivery'] as string | undefined;
 
       if (!eventType) {
         res.status(400).json({
@@ -375,9 +393,20 @@ export function createWebhookHandler(
           await handlePingEvent(payload as GitHubPingWebhookPayload);
           break;
 
-        case 'issues':
-          await handleIssueEvent(payload as GitHubIssueWebhookPayload, projectPath, events);
+        case 'issues': {
+          const processed = await handleIssueEvent(
+            payload as GitHubIssueWebhookPayload,
+            projectPath,
+            events,
+            deliveryId
+          );
+          if (!processed) {
+            events.clearCorrelationContext();
+            res.status(200).json({ message: 'Duplicate delivery ignored' });
+            return;
+          }
           break;
+        }
 
         case 'pull_request':
           await handlePullRequestEvent(

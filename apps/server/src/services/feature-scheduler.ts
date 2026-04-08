@@ -26,7 +26,12 @@ import {
   DEFAULT_BACKUP_COUNT,
   classifyError,
 } from '@protolabsai/utils';
-import { resolveDependencies, areDependenciesSatisfied } from '@protolabsai/dependency-resolver';
+import {
+  resolveDependencies,
+  areDependenciesSatisfied,
+  checkExternalDependencies,
+  buildLocalForeignFeatureFetcher,
+} from '@protolabsai/dependency-resolver';
 import { getFeaturesDir } from '@protolabsai/platform';
 import { isWorktreeLocked } from '../lib/worktree-lock.js';
 import { getEffectivePrBaseBranch } from '../lib/settings-helpers.js';
@@ -1202,9 +1207,17 @@ export class FeatureScheduler {
 
         if (isEligibleStatus) {
           if (feature.isEpic) {
-            logger.info(
-              `[loadPendingFeatures] Skipping epic feature ${feature.id} - ${feature.title}`
-            );
+            if (feature.epicId) {
+              // Contradictory state: a feature cannot be both an epic container and a child of
+              // another epic. This was likely caused by a direct write bypassing API validation.
+              logger.warn(
+                `[loadPendingFeatures] Feature ${feature.id} ("${feature.title}") is marked as an epic but also has a parent epic assigned (epicId: ${feature.epicId}) — it will not be scheduled. Fix the feature configuration to proceed.`
+              );
+            } else {
+              logger.info(
+                `[loadPendingFeatures] Skipping epic feature ${feature.id} - ${feature.title}`
+              );
+            }
             continue;
           }
 
@@ -1411,11 +1424,15 @@ export class FeatureScheduler {
       const readyFeatures: Feature[] = [];
       const blockedFeatures: Array<{ feature: Feature; reason: string }> = [];
 
+      // Build cross-repo fetcher once (same API server, different projectPath)
+      const apiKey = process.env.AUTOMAKER_API_KEY || 'protoLabs_studio_key';
+      const apiPort = process.env.PORT || '3008';
+      const apiBaseUrl = `http://localhost:${apiPort}`;
+      const foreignFeatureFetcher = buildLocalForeignFeatureFetcher(apiBaseUrl, apiKey);
+
       for (const feature of orderedFeatures) {
         const isSatisfied = areDependenciesSatisfied(feature, allFeatures, { skipVerification });
-        if (isSatisfied) {
-          readyFeatures.push(feature);
-        } else {
+        if (!isSatisfied) {
           const blockingDeps =
             feature.dependencies?.filter((depId) => {
               const dep = allFeatures.find((f) => f.id === depId);
@@ -1445,7 +1462,63 @@ export class FeatureScheduler {
             feature,
             reason: reason ? `Blocked by dependencies: ${reason}` : 'Unknown dependency issue',
           });
+          continue;
         }
+
+        // Check cross-repo (external) dependencies when internal deps are satisfied
+        if (feature.externalDependencies && feature.externalDependencies.length > 0) {
+          try {
+            const extCheck = await checkExternalDependencies(
+              feature.externalDependencies,
+              foreignFeatureFetcher
+            );
+
+            if (!extCheck.satisfied) {
+              const reason = extCheck.firstBlockingReason ?? 'unsatisfied cross-repo dependency';
+              blockedFeatures.push({ feature, reason });
+
+              // Update the feature's externalDependencies statuses and set it blocked
+              const updatedExtDeps = feature.externalDependencies.map((dep, idx) => ({
+                ...dep,
+                status: extCheck.results[idx]?.resolvedStatus ?? dep.status,
+              }));
+              try {
+                await this.featureLoader.update(projectPath, feature.id, {
+                  status: 'blocked',
+                  statusChangeReason: reason,
+                  externalDependencies: updatedExtDeps,
+                });
+              } catch (updateErr) {
+                logger.warn(
+                  `[loadPendingFeatures] Could not persist cross-repo block for feature ${feature.id}:`,
+                  updateErr
+                );
+              }
+              continue;
+            }
+
+            // All external deps satisfied — persist the resolved statuses
+            const updatedExtDeps = feature.externalDependencies.map((dep, idx) => ({
+              ...dep,
+              status: extCheck.results[idx]?.resolvedStatus ?? dep.status,
+            }));
+            try {
+              await this.featureLoader.update(projectPath, feature.id, {
+                externalDependencies: updatedExtDeps,
+              });
+            } catch {
+              // Non-critical — continue
+            }
+          } catch (extErr) {
+            logger.warn(
+              `[loadPendingFeatures] Cross-repo dependency check failed for feature ${feature.id} (non-fatal):`,
+              extErr
+            );
+            // Treat as satisfied on error to avoid silently blocking features
+          }
+        }
+
+        readyFeatures.push(feature);
       }
 
       if (blockedFeatures.length > 0) {

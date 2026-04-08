@@ -57,34 +57,34 @@ describe('ava-review node', () => {
   describe('normal case', () => {
     it('should return approve verdict for low-risk PRD', async () => {
       const smartModel = new TestChatModel([
-        JSON.stringify({
-          reviewer: 'Ava',
-          verdict: 'approve',
-          sections: [
-            {
-              area: 'Capacity',
-              assessment: 'Team has sufficient bandwidth',
-              concerns: [],
-            },
-            {
-              area: 'Risk',
-              assessment: 'Low risk, well-understood domain',
-              concerns: [],
-            },
-            {
-              area: 'Tech Debt',
-              assessment: 'Neutral impact on tech debt',
-              concerns: [],
-            },
-            {
-              area: 'Feasibility',
-              assessment: 'Straightforward implementation',
-              concerns: [],
-            },
-          ],
-          comments: 'Clean, low-risk change. Ready to proceed.',
-          timestamp: '2024-01-01T00:00:00.000Z',
-        }),
+        `<review>
+  <reviewer>Ava</reviewer>
+  <verdict>approve</verdict>
+  <sections>
+    <section>
+      <area>Capacity</area>
+      <assessment>Team has sufficient bandwidth</assessment>
+      <concerns></concerns>
+    </section>
+    <section>
+      <area>Risk</area>
+      <assessment>Low risk, well-understood domain</assessment>
+      <concerns></concerns>
+    </section>
+    <section>
+      <area>Tech Debt</area>
+      <assessment>Neutral impact on tech debt</assessment>
+      <concerns></concerns>
+    </section>
+    <section>
+      <area>Feasibility</area>
+      <assessment>Straightforward implementation</assessment>
+      <concerns></concerns>
+    </section>
+  </sections>
+  <comments>Clean, low-risk change. Ready to proceed.</comments>
+  <timestamp>2024-01-01T00:00:00.000Z</timestamp>
+</review>`,
       ]);
 
       const state: AvaReviewState = {
@@ -104,37 +104,53 @@ describe('ava-review node', () => {
 
     it('should return approve-with-concerns verdict with recommendations', async () => {
       const smartModel = new TestChatModel([
-        JSON.stringify({
-          reviewer: 'Ava',
-          verdict: 'approve-with-concerns',
-          sections: [
-            {
-              area: 'Capacity',
-              assessment: 'Tight timeline but manageable',
-              concerns: ['May require overtime during peak sprint'],
-              recommendations: ['Add 1 week buffer to timeline'],
-            },
-            {
-              area: 'Risk',
-              assessment: 'Moderate risk with third-party API',
-              concerns: ['API rate limits not documented', 'No fallback mechanism'],
-              recommendations: ['Implement rate limiting', 'Add circuit breaker pattern'],
-            },
-            {
-              area: 'Tech Debt',
-              assessment: 'Will add some technical debt',
-              concerns: ['Quick implementation may skip best practices'],
-              recommendations: ['Schedule refactoring in next sprint'],
-            },
-            {
-              area: 'Feasibility',
-              assessment: 'Feasible with caveats',
-              concerns: ['Dependency on external team deliverable'],
-            },
-          ],
-          comments: 'Can proceed but monitor the identified concerns closely.',
-          timestamp: '2024-01-01T00:00:00.000Z',
-        }),
+        `<review>
+  <reviewer>Ava</reviewer>
+  <verdict>approve-with-concerns</verdict>
+  <sections>
+    <section>
+      <area>Capacity</area>
+      <assessment>Tight timeline but manageable</assessment>
+      <concerns>
+        <item>May require overtime during peak sprint</item>
+      </concerns>
+      <recommendations>
+        <item>Add 1 week buffer to timeline</item>
+      </recommendations>
+    </section>
+    <section>
+      <area>Risk</area>
+      <assessment>Moderate risk with third-party API</assessment>
+      <concerns>
+        <item>API rate limits not documented</item>
+        <item>No fallback mechanism</item>
+      </concerns>
+      <recommendations>
+        <item>Implement rate limiting</item>
+        <item>Add circuit breaker pattern</item>
+      </recommendations>
+    </section>
+    <section>
+      <area>Tech Debt</area>
+      <assessment>Will add some technical debt</assessment>
+      <concerns>
+        <item>Quick implementation may skip best practices</item>
+      </concerns>
+      <recommendations>
+        <item>Schedule refactoring in next sprint</item>
+      </recommendations>
+    </section>
+    <section>
+      <area>Feasibility</area>
+      <assessment>Feasible with caveats</assessment>
+      <concerns>
+        <item>Dependency on external team deliverable</item>
+      </concerns>
+    </section>
+  </sections>
+  <comments>Can proceed but monitor the identified concerns closely.</comments>
+  <timestamp>2024-01-01T00:00:00.000Z</timestamp>
+</review>`,
       ]);
 
       const state: AvaReviewState = {
@@ -156,38 +172,55 @@ describe('ava-review node', () => {
 
     it('should return revise verdict for PRDs needing changes', async () => {
       const smartModel = new TestChatModel([
-        JSON.stringify({
-          reviewer: 'Ava',
-          verdict: 'revise',
-          sections: [
-            {
-              area: 'Capacity',
-              assessment: 'Insufficient team capacity',
-              concerns: ['Team already at 120% capacity', 'No clear resource allocation plan'],
-              recommendations: ['Defer to next quarter', 'Hire additional engineer'],
-            },
-            {
-              area: 'Risk',
-              assessment: 'High risk, unclear requirements',
-              concerns: ['Vague success criteria', 'No rollback plan defined'],
-              recommendations: ['Define specific KPIs', 'Document rollback procedure'],
-            },
-            {
-              area: 'Tech Debt',
-              assessment: 'Will significantly increase tech debt',
-              concerns: ['Proposed shortcut will make future features harder'],
-            },
-            {
-              area: 'Feasibility',
-              assessment: 'Not feasible without infrastructure upgrade',
-              concerns: ['Current database cannot handle projected load'],
-              recommendations: ['Upgrade to scalable database solution first'],
-            },
-          ],
-          comments:
-            'PRD needs revision before we can commit resources. Address capacity, requirements clarity, and infrastructure concerns.',
-          timestamp: '2024-01-01T00:00:00.000Z',
-        }),
+        `<review>
+  <reviewer>Ava</reviewer>
+  <verdict>revise</verdict>
+  <sections>
+    <section>
+      <area>Capacity</area>
+      <assessment>Insufficient team capacity</assessment>
+      <concerns>
+        <item>Team already at 120% capacity</item>
+        <item>No clear resource allocation plan</item>
+      </concerns>
+      <recommendations>
+        <item>Defer to next quarter</item>
+        <item>Hire additional engineer</item>
+      </recommendations>
+    </section>
+    <section>
+      <area>Risk</area>
+      <assessment>High risk, unclear requirements</assessment>
+      <concerns>
+        <item>Vague success criteria</item>
+        <item>No rollback plan defined</item>
+      </concerns>
+      <recommendations>
+        <item>Define specific KPIs</item>
+        <item>Document rollback procedure</item>
+      </recommendations>
+    </section>
+    <section>
+      <area>Tech Debt</area>
+      <assessment>Will significantly increase tech debt</assessment>
+      <concerns>
+        <item>Proposed shortcut will make future features harder</item>
+      </concerns>
+    </section>
+    <section>
+      <area>Feasibility</area>
+      <assessment>Not feasible without infrastructure upgrade</assessment>
+      <concerns>
+        <item>Current database cannot handle projected load</item>
+      </concerns>
+      <recommendations>
+        <item>Upgrade to scalable database solution first</item>
+      </recommendations>
+    </section>
+  </sections>
+  <comments>PRD needs revision before we can commit resources. Address capacity, requirements clarity, and infrastructure concerns.</comments>
+  <timestamp>2024-01-01T00:00:00.000Z</timestamp>
+</review>`,
       ]);
 
       const state: AvaReviewState = {
@@ -204,42 +237,47 @@ describe('ava-review node', () => {
 
     it('should return reject verdict for unfeasible PRDs', async () => {
       const smartModel = new TestChatModel([
-        JSON.stringify({
-          reviewer: 'Ava',
-          verdict: 'reject',
-          sections: [
-            {
-              area: 'Capacity',
-              assessment: 'No available capacity',
-              concerns: [
-                'Would require 3 full-time engineers for 6 months',
-                'No engineers available',
-              ],
-            },
-            {
-              area: 'Risk',
-              assessment: 'Extreme risk',
-              concerns: [
-                'Would require complete system rewrite',
-                'High probability of data loss',
-                'Cannot guarantee backward compatibility',
-              ],
-            },
-            {
-              area: 'Tech Debt',
-              assessment: 'Would create massive technical debt',
-              concerns: ['Legacy approach being proposed', 'Will block future initiatives'],
-            },
-            {
-              area: 'Feasibility',
-              assessment: 'Not feasible with current technology',
-              concerns: ['Required technology does not exist', 'Physics constraints'],
-            },
-          ],
-          comments:
-            'Cannot recommend proceeding with this PRD. Fundamental issues with capacity, risk, and feasibility.',
-          timestamp: '2024-01-01T00:00:00.000Z',
-        }),
+        `<review>
+  <reviewer>Ava</reviewer>
+  <verdict>reject</verdict>
+  <sections>
+    <section>
+      <area>Capacity</area>
+      <assessment>No available capacity</assessment>
+      <concerns>
+        <item>Would require 3 full-time engineers for 6 months</item>
+        <item>No engineers available</item>
+      </concerns>
+    </section>
+    <section>
+      <area>Risk</area>
+      <assessment>Extreme risk</assessment>
+      <concerns>
+        <item>Would require complete system rewrite</item>
+        <item>High probability of data loss</item>
+        <item>Cannot guarantee backward compatibility</item>
+      </concerns>
+    </section>
+    <section>
+      <area>Tech Debt</area>
+      <assessment>Would create massive technical debt</assessment>
+      <concerns>
+        <item>Legacy approach being proposed</item>
+        <item>Will block future initiatives</item>
+      </concerns>
+    </section>
+    <section>
+      <area>Feasibility</area>
+      <assessment>Not feasible with current technology</assessment>
+      <concerns>
+        <item>Required technology does not exist</item>
+        <item>Physics constraints</item>
+      </concerns>
+    </section>
+  </sections>
+  <comments>Cannot recommend proceeding with this PRD. Fundamental issues with capacity, risk, and feasibility.</comments>
+  <timestamp>2024-01-01T00:00:00.000Z</timestamp>
+</review>`,
       ]);
 
       const state: AvaReviewState = {
@@ -253,23 +291,9 @@ describe('ava-review node', () => {
       expect(result.avaReview?.verdict).toBe('reject');
     });
 
-    it('should handle JSON in markdown code blocks', async () => {
+    it('should handle XML in markdown code blocks', async () => {
       const smartModel = new TestChatModel([
-        '```json\n' +
-          JSON.stringify({
-            reviewer: 'Ava',
-            verdict: 'approve',
-            sections: [
-              {
-                area: 'Capacity',
-                assessment: 'Good',
-                concerns: [],
-              },
-            ],
-            comments: 'Looks good',
-            timestamp: '2024-01-01T00:00:00.000Z',
-          }) +
-          '\n```',
+        '```xml\n<review>\n  <reviewer>Ava</reviewer>\n  <verdict>approve</verdict>\n  <sections>\n    <section>\n      <area>Capacity</area>\n      <assessment>Good</assessment>\n      <concerns></concerns>\n    </section>\n  </sections>\n  <comments>Looks good</comments>\n  <timestamp>2024-01-01T00:00:00.000Z</timestamp>\n</review>\n```',
       ]);
 
       const state: AvaReviewState = {
@@ -285,24 +309,31 @@ describe('ava-review node', () => {
   });
 
   describe('malformed LLM output', () => {
-    it('should throw error on invalid JSON', async () => {
-      const smartModel = new TestChatModel(['This is not valid JSON']);
+    it('should throw error on missing review root element', async () => {
+      const smartModel = new TestChatModel(['This is not valid XML']);
 
       const state: AvaReviewState = {
         prd: 'Some PRD',
         smartModel,
       };
 
-      await expect(avaReviewNode(state)).rejects.toThrow('Failed to parse JSON');
+      await expect(avaReviewNode(state)).rejects.toThrow('Failed to parse XML');
     });
 
-    it('should throw error on missing required fields', async () => {
+    it('should throw error on missing verdict field', async () => {
       const smartModel = new TestChatModel([
-        JSON.stringify({
-          reviewer: 'Ava',
-          verdict: 'approve',
-          // missing sections and comments
-        }),
+        `<review>
+  <reviewer>Ava</reviewer>
+  <sections>
+    <section>
+      <area>Capacity</area>
+      <assessment>Good</assessment>
+      <concerns></concerns>
+    </section>
+  </sections>
+  <comments>Test</comments>
+  <timestamp>2024-01-01T00:00:00.000Z</timestamp>
+</review>`,
       ]);
 
       const state: AvaReviewState = {
@@ -315,13 +346,19 @@ describe('ava-review node', () => {
 
     it('should throw error on invalid verdict value', async () => {
       const smartModel = new TestChatModel([
-        JSON.stringify({
-          reviewer: 'Ava',
-          verdict: 'maybe', // invalid value
-          sections: [],
-          comments: 'Test',
-          timestamp: '2024-01-01T00:00:00.000Z',
-        }),
+        `<review>
+  <reviewer>Ava</reviewer>
+  <verdict>maybe</verdict>
+  <sections>
+    <section>
+      <area>Capacity</area>
+      <assessment>Good</assessment>
+      <concerns></concerns>
+    </section>
+  </sections>
+  <comments>Test</comments>
+  <timestamp>2024-01-01T00:00:00.000Z</timestamp>
+</review>`,
       ]);
 
       const state: AvaReviewState = {
@@ -332,28 +369,15 @@ describe('ava-review node', () => {
       await expect(avaReviewNode(state)).rejects.toThrow('Invalid review format');
     });
 
-    it('should throw error on invalid section structure', async () => {
-      const smartModel = new TestChatModel([
-        JSON.stringify({
-          reviewer: 'Ava',
-          verdict: 'approve',
-          sections: [
-            {
-              // missing area and assessment
-              concerns: [],
-            },
-          ],
-          comments: 'Test',
-          timestamp: '2024-01-01T00:00:00.000Z',
-        }),
-      ]);
+    it('should throw error on empty review content', async () => {
+      const smartModel = new TestChatModel([`<review></review>`]);
 
       const state: AvaReviewState = {
         prd: 'Some PRD',
         smartModel,
       };
 
-      await expect(avaReviewNode(state)).rejects.toThrow('Invalid review format');
+      await expect(avaReviewNode(state)).rejects.toThrow('Failed to parse XML');
     });
   });
 
@@ -364,19 +388,21 @@ describe('ava-review node', () => {
 
       // Fast model provides valid response
       const fastModel = new TestChatModel([
-        JSON.stringify({
-          reviewer: 'Ava',
-          verdict: 'approve-with-concerns',
-          sections: [
-            {
-              area: 'Capacity',
-              assessment: 'From fast model - adequate capacity',
-              concerns: ['Minor concern'],
-            },
-          ],
-          comments: 'Fallback review from fast model',
-          timestamp: '2024-01-01T00:00:00.000Z',
-        }),
+        `<review>
+  <reviewer>Ava</reviewer>
+  <verdict>approve-with-concerns</verdict>
+  <sections>
+    <section>
+      <area>Capacity</area>
+      <assessment>From fast model - adequate capacity</assessment>
+      <concerns>
+        <item>Minor concern</item>
+      </concerns>
+    </section>
+  </sections>
+  <comments>Fallback review from fast model</comments>
+  <timestamp>2024-01-01T00:00:00.000Z</timestamp>
+</review>`,
       ]);
 
       const state: AvaReviewState = {
@@ -408,19 +434,19 @@ describe('ava-review node', () => {
 
     it('should work with only smart model provided', async () => {
       const smartModel = new TestChatModel([
-        JSON.stringify({
-          reviewer: 'Ava',
-          verdict: 'approve',
-          sections: [
-            {
-              area: 'Feasibility',
-              assessment: 'Looks good',
-              concerns: [],
-            },
-          ],
-          comments: 'All good',
-          timestamp: '2024-01-01T00:00:00.000Z',
-        }),
+        `<review>
+  <reviewer>Ava</reviewer>
+  <verdict>approve</verdict>
+  <sections>
+    <section>
+      <area>Feasibility</area>
+      <assessment>Looks good</assessment>
+      <concerns></concerns>
+    </section>
+  </sections>
+  <comments>All good</comments>
+  <timestamp>2024-01-01T00:00:00.000Z</timestamp>
+</review>`,
       ]);
 
       const state: AvaReviewState = {

@@ -255,6 +255,122 @@ Snapshots are appended to `.automaker/metrics/agentic.json` on each significant 
 
 ---
 
+---
+
+## WSJF Prioritization
+
+WSJF (Weighted Shortest Job First) is used to auto-rank backlog features by business value per unit of effort, adjusted for time urgency.
+
+### Score Formula
+
+```
+wsjfScore = (businessValue × timeDecayFactor) / estimatedAgentHours
+```
+
+| Factor                | Description                                                                                  |
+| --------------------- | -------------------------------------------------------------------------------------------- |
+| `businessValue`       | 1–10 rating set on the feature (or inherited from parent epic)                               |
+| `timeDecayFactor`     | 0.5 (no deadline) → 1.0 (>30 days out) → 3.0 (at/past deadline), linear in the 30-day window |
+| `estimatedAgentHours` | Median actual execution time per complexity bucket (falls back to defaults if <3 samples)    |
+
+### Default Hours by Complexity
+
+When fewer than 3 historical samples exist for a complexity tier, these defaults apply:
+
+| Complexity      | Default Hours |
+| --------------- | ------------- |
+| `small`         | 0.5           |
+| `medium`        | 2             |
+| `large`         | 5             |
+| `architectural` | 10            |
+
+Defaults are replaced by the **median of actual `executionHistory.durationMs`** values once ≥3 completed features exist for a given complexity bucket. This means estimates self-calibrate over time — an `architectural` feature that consistently finishes in 45 minutes will use ~0.75h, not 10h.
+
+### Feature Fields
+
+```typescript
+// On the Feature type (libs/types/src/feature.ts)
+businessValue?: number;        // 1–10; set manually or propagated from epic
+timeDecayDeadline?: string;    // ISO date; drives urgency multiplier
+wsjfScore?: number;            // Computed and written back by MetricsService
+```
+
+### Epic Propagation
+
+If a feature belongs to an epic (`epicId`) and has no explicit `businessValue`, the epic's `businessValue` is propagated down automatically via `propagateEpicBusinessValue()`.
+
+### API
+
+WSJF scores are computed by `MetricsService` and used by `PortfolioScheduler` to sort the backlog before agent dispatch. There is no dedicated WSJF endpoint — scores are visible on each feature's JSON and in the board summary.
+
+---
+
+## Portfolio Metrics
+
+Aggregated cost, throughput, and flow efficiency across all registered projects.
+
+### Endpoint
+
+```
+GET /api/portfolio/metrics
+```
+
+Query parameters:
+
+- `projectPaths?: string` — comma-separated list of project root paths; omit to use all registered projects from global settings
+- `windowDays?: number` — rolling window for throughput/cost aggregation (default: 7)
+
+### Response Shape
+
+```typescript
+interface PortfolioMetrics {
+  generatedAt: string; // ISO timestamp
+  windowDays: number; // Window used for aggregation
+  totalCostUsd: number; // Sum of agent cost across all projects in window
+  totalFeaturesCompleted: number; // Features moved to done within window
+  portfolioThroughputPerDay: number; // totalFeaturesCompleted / windowDays
+  avgCycleTimeMs: number; // Weighted average cycle time (createdAt → completedAt)
+  portfolioFlowEfficiency: number; // completedInWindow / totalFeatures across all projects
+  errorBudgetsByProject: Record<
+    string,
+    {
+      remaining: number; // 0.0–1.0 (fraction of budget left)
+      status: 'healthy' | 'warning' | 'exhausted';
+    }
+  >;
+  highestCostProject: string; // Slug of the most expensive project in window
+  lowestThroughputProject: string; // Slug of the lowest-throughput project in window
+}
+```
+
+---
+
+## Project Registry
+
+The project registry provides a fleet-wide list of all registered apps, sourced from Workstacean with local fallback.
+
+### Endpoints
+
+#### List Projects
+
+```
+GET /api/registry/projects?projectPath=/path/to/app
+```
+
+Returns the full registry, with a `source` field indicating whether data came from Workstacean or a local cache.
+
+#### Sync Settings
+
+```
+POST /api/registry/sync
+```
+
+Body: `{ projectPath: string, dryRun?: boolean }`
+
+Reconciles `settings.projects[]` with the Workstacean registry. Returns `added`, `orphaned`, and `unchanged` counts. Set `dryRun: false` to apply changes.
+
+---
+
 ## Related Documentation
 
 - [Flow Control](./flow-control.md) — WIP limits, error budget freeze, cost caps, and runtime timeouts

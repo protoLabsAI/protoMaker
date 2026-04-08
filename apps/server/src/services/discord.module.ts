@@ -4,15 +4,20 @@ import type { ServiceContainer } from '../server/services.js';
 import { DiscordDMChannel } from './escalation-channels/discord-dm-channel.js';
 import { eventHookService } from './event-hook-service.js';
 import { DiscordMonitor } from './discord-monitor.js';
+import { hasWebhooksConfigured } from './discord-webhook.service.js';
 
 const logger = createLogger('Server:Wiring');
 
 /**
- * Wires Discord bot service, Ava Gateway (bot connection), event hook service,
- * agent Discord router, headsdown Discord integration, and DiscordDM escalation channel.
+ * Wires Discord webhook-based outbound notifications, Ava Gateway, event hook service,
+ * and DiscordDM escalation channel.
  *
- * DiscordDMChannel is registered here (not in escalation-channels.module.ts) because it
- * requires the Discord bot service to be initialized first.
+ * protoBot now runs exclusively in Workstacean's bot pool (Phase 1 of migration).
+ * protomaker sends outbound notifications via Discord webhook HTTP POSTs.
+ * Interactive Discord flows (gate holds, HITL) are routed through Workstacean.
+ *
+ * The discord-monitor is kept for structural compatibility but its read operations
+ * return empty results in webhook mode (no bot token = no message reads).
  */
 export async function register(container: ServiceContainer): Promise<void> {
   const {
@@ -22,7 +27,6 @@ export async function register(container: ServiceContainer): Promise<void> {
     discordBotService,
     avaGatewayService,
     escalationRouter,
-    agentDiscordRouter,
     headsdownService,
     eventHistoryService,
     ceremonyAuditLog,
@@ -38,23 +42,31 @@ export async function register(container: ServiceContainer): Promise<void> {
     discordBotService
   );
 
-  // Skip all Discord wiring when no token is configured.
-  // DiscordBotService methods gracefully no-op when uninitialized,
-  // but there's no reason to wire event subscriptions, escalation channels,
-  // or agent routers that will never fire.
-  const hasDiscordToken = !!(process.env.DISCORD_BOT_TOKEN || process.env.DISCORD_TOKEN);
-  if (!hasDiscordToken) {
-    logger.info('Discord integration disabled (DISCORD_BOT_TOKEN / DISCORD_TOKEN not set)');
+  // Skip Discord-specific wiring when neither webhooks nor legacy bot token are configured.
+  const hasDiscordWebhooks = hasWebhooksConfigured();
+  const hasLegacyToken = !!(process.env.DISCORD_BOT_TOKEN || process.env.DISCORD_TOKEN);
+
+  if (!hasDiscordWebhooks && !hasLegacyToken) {
+    logger.info(
+      'Discord integration disabled — set DISCORD_WEBHOOK_* env vars to enable webhook delivery'
+    );
     return;
   }
 
-  // Discord Bot Service initialization
-  void discordBotService.initialize();
+  if (hasDiscordWebhooks) {
+    logger.info('Discord webhook delivery enabled');
+  }
+  if (hasLegacyToken) {
+    logger.warn(
+      'DISCORD_BOT_TOKEN / DISCORD_TOKEN detected — these should be removed from protomaker. ' +
+        'protoBot should run only in Workstacean.'
+    );
+  }
 
-  // Wire Discord bot service to Ava Gateway
+  // Wire Discord bot service (now a webhook stub) to Ava Gateway
   avaGatewayService.setDiscordBot(discordBotService);
 
-  // Bridge integration:discord events to Discord bot service
+  // Bridge integration:discord events to the webhook-based Discord bot service
   events.subscribe(async (type, payload) => {
     if (type !== 'integration:discord') return;
     const p = payload as {
@@ -98,14 +110,12 @@ export async function register(container: ServiceContainer): Promise<void> {
     }
   });
 
-  // Agent Discord Router wiring
-  agentDiscordRouter.start();
-
-  // Wire Discord bot service to headsdown service
+  // Wire Discord bot service (webhook stub) to headsdown service
   headsdownService.setDiscordBotService(discordBotService);
 
-  // Register Discord DM escalation channel (requires discordBotService)
-  // Read DM recipients from user profile settings
+  // Register Discord DM escalation channel.
+  // In webhook mode, sendDM() returns false — DMs are not supported without a bot session.
+  // The channel remains registered so the escalation router can attempt delivery.
   const dmRecipients: string[] = [];
   try {
     const globalSettings = await settingsService.getGlobalSettings();
@@ -125,14 +135,17 @@ export async function register(container: ServiceContainer): Promise<void> {
     )
   );
 
-  // Start Discord channel signal monitoring.
+  // Discord monitor wiring is kept for structural compatibility.
+  // In webhook mode, readMessages() returns [] — no messages are actually polled.
   const discordMonitor = new DiscordMonitor(events);
   discordMonitor.setDiscordBotService(discordBotService);
 
   const configs = integrationRegistryService.getAllEnabledChannelConfigs();
-  void discordMonitor.startChannelMonitoring(configs).catch((err) => {
-    logger.error('Failed to start Discord channel signal monitoring:', err);
-  });
+  if (configs.length > 0) {
+    logger.debug(
+      `Discord channel monitor configured (${configs.length} channel(s)) — message polling disabled in webhook mode`
+    );
+  }
 
-  logger.info(`Discord channel signal monitor started (${configs.length} channel(s) configured)`);
+  logger.info('Discord wiring complete (webhook mode)');
 }

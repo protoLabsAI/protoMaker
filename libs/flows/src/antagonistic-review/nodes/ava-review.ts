@@ -16,7 +16,12 @@
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { z } from 'zod';
 import { createLogger } from '@protolabsai/utils';
-import { executeWithFallback } from './classify-topic.js';
+import {
+  executeWithFallback,
+  extractXmlTag,
+  extractXmlItems,
+  stripMarkdownFences,
+} from './classify-topic.js';
 
 const logger = createLogger('ava-review');
 
@@ -99,21 +104,26 @@ Focus on these key areas:
 PRD to review:
 ${prd}
 
-Provide your review in the following JSON format:
-{
-  "reviewer": "Ava",
-  "verdict": "approve" | "approve-with-concerns" | "revise" | "reject",
-  "sections": [
-    {
-      "area": "Capacity" | "Risk" | "Tech Debt" | "Feasibility",
-      "assessment": "Brief assessment of this area",
-      "concerns": ["List of specific concerns"],
-      "recommendations": ["Optional list of recommendations"]
-    }
-  ],
-  "comments": "Overall summary and final thoughts",
-  "timestamp": "${new Date().toISOString()}"
-}
+Provide your review in the following XML format. Use this exact structure — no markdown fences, no JSON:
+
+<review>
+  <reviewer>Ava</reviewer>
+  <verdict>approve|approve-with-concerns|revise|reject</verdict>
+  <sections>
+    <section>
+      <area>Capacity|Risk|Tech Debt|Feasibility</area>
+      <assessment>Brief assessment of this area</assessment>
+      <concerns>
+        <item>Specific concern</item>
+      </concerns>
+      <recommendations>
+        <item>Optional recommendation</item>
+      </recommendations>
+    </section>
+  </sections>
+  <comments>Overall summary and final thoughts</comments>
+  <timestamp>${new Date().toISOString()}</timestamp>
+</review>
 
 Verdict guidelines:
 - approve: Ready to proceed, no significant concerns
@@ -121,7 +131,7 @@ Verdict guidelines:
 - revise: Needs changes before approval
 - reject: Cannot proceed, fundamental issues
 
-Be direct, practical, and focus on execution realities. Return ONLY the JSON object, no additional text.`,
+Be direct, practical, and focus on execution realities. Return ONLY the XML, no additional text.`,
           },
         ]);
 
@@ -146,7 +156,7 @@ Be direct, practical, and focus on execution realities. Return ONLY the JSON obj
     );
 
     // Parse and validate the LLM response
-    const avaReview = parseAndValidateReview(result.content, nodeName);
+    const avaReview = parseReviewXml(result.content, nodeName);
 
     logger.info(
       `[${nodeName}] Review complete: ${avaReview.verdict} (${avaReview.sections.length} sections)`
@@ -160,29 +170,50 @@ Be direct, practical, and focus on execution realities. Return ONLY the JSON obj
 }
 
 /**
- * Parse and validate LLM output as ReviewerPerspective
+ * Parse and validate LLM output as ReviewerPerspective (XML format).
+ * Exported so graph adapters can reuse this when running agent-loop paths.
  *
  * @param output - Raw LLM output string
  * @param nodeName - Node name for error messages
  * @returns Validated ReviewerPerspective
  * @throws Error if parsing or validation fails
  */
-function parseAndValidateReview(output: string, nodeName: string): ReviewerPerspective {
+export function parseReviewXml(output: string, nodeName: string): ReviewerPerspective {
   try {
-    // Extract JSON from potential markdown code blocks
-    let jsonStr = output.trim();
-    const jsonMatch = jsonStr.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
-    if (jsonMatch) {
-      jsonStr = jsonMatch[1];
+    const cleaned = stripMarkdownFences(output);
+    const root = extractXmlTag(cleaned, 'review');
+    if (!root) {
+      throw new Error(`Missing <review> root element. Output preview: ${cleaned.slice(0, 200)}`);
     }
 
-    // Parse JSON
-    const parsed = JSON.parse(jsonStr);
+    const reviewer = extractXmlTag(root, 'reviewer') ?? 'Ava';
+    const verdict = extractXmlTag(root, 'verdict');
+    const comments = extractXmlTag(root, 'comments');
+    const timestamp = extractXmlTag(root, 'timestamp');
+    const sectionsBlock = extractXmlTag(root, 'sections') ?? '';
 
-    // Validate with Zod
-    const validated = ReviewerPerspectiveSchema.parse(parsed);
+    const sectionMatches = [...sectionsBlock.matchAll(/<section[^>]*>([\s\S]*?)<\/section>/gi)];
+    const sections = sectionMatches.map((m) => {
+      const block = m[1];
+      const concernsBlock = extractXmlTag(block, 'concerns') ?? '';
+      const recsBlock = extractXmlTag(block, 'recommendations') ?? '';
+      return {
+        area: extractXmlTag(block, 'area') ?? '',
+        assessment: extractXmlTag(block, 'assessment') ?? '',
+        concerns: extractXmlItems(concernsBlock),
+        recommendations:
+          extractXmlItems(recsBlock).length > 0 ? extractXmlItems(recsBlock) : undefined,
+      };
+    });
 
-    return validated;
+    const parsed = {
+      reviewer,
+      verdict,
+      sections,
+      comments: comments ?? '',
+      timestamp: timestamp ?? new Date().toISOString(),
+    };
+    return ReviewerPerspectiveSchema.parse(parsed);
   } catch (error) {
     logger.error(`[${nodeName}] Failed to parse/validate LLM output:`, output);
     if (error instanceof z.ZodError) {
@@ -190,7 +221,7 @@ function parseAndValidateReview(output: string, nodeName: string): ReviewerPersp
       throw new Error(`[${nodeName}] Invalid review format: ${issues}`);
     }
     throw new Error(
-      `[${nodeName}] Failed to parse JSON: ${error instanceof Error ? error.message : String(error)}`
+      `[${nodeName}] Failed to parse XML: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 }

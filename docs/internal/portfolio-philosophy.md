@@ -49,6 +49,234 @@ Instance (server process)
 
 ---
 
+Cross-links: [Org Architecture](./org-architecture.md) | [Fleet Architecture](./protolabs/fleet-architecture.md) | [Ava Operating Model](./protolabs/ava-operating-model.md)
+
+## Operating Lens: Theory of Constraints
+
+The protoLabs portfolio operates through the Theory of Constraints (ToC) lens — not SAFe ceremonies, not sprint planning, not OKR theater.
+
+ToC's core insight: **a system's throughput is determined by its constraint.** Improving anything that is not the constraint does not improve the system's output. The job is to find the constraint, exploit it, subordinate everything else to it, and then elevate it.
+
+### The Five Focusing Steps (applied to protoLabs)
+
+1. **Identify the constraint** — What is preventing more features from shipping? Common constraints: review queue depth, concurrency limit, blocked dependencies, error budget breach, HITL approval backlog.
+2. **Exploit the constraint** — Get maximum throughput from the constraint without spending more. If the constraint is review queue depth, enable auto-merge for low-risk PRs. If it's concurrency, prioritize highest-WSJF features.
+3. **Subordinate everything else** — Don't start work that will pile up in front of the constraint. WIP limits enforce this.
+4. **Elevate the constraint** — If exploitation isn't enough, increase capacity. Raise concurrency limit, add a reviewer, split a large feature.
+5. **Repeat** — The constraint moves when you elevate it. Find the new one.
+
+### How This Changes Ava's Behavior
+
+Ava's primary job at activation is to find the portfolio constraint, not to enumerate all work in progress. The portfolio briefing format is structured around this: health table first, then **top constraint** per layer.
+
+Ava does not optimize individual app throughput in isolation. She asks: "What is the single thing preventing the most value from flowing through the system right now?"
+
+---
+
+## WSJF: Sequencing Within the Constraint
+
+When the constraint is capacity (more work queued than agents can process), features are sequenced by WSJF (Weighted Shortest Job First) — not by creation date or arbitrary priority.
+
+### Formula
+
+```
+WSJF = Cost of Delay / Job Duration
+```
+
+Cost of Delay captures the value destroyed by waiting. Job Duration captures the effort required.
+
+### Mapping to protoLabs Feature Schema
+
+| WSJF Component      | Feature Field                | Scoring                                      |
+| ------------------- | ---------------------------- | -------------------------------------------- |
+| User/Business Value | `priority`                   | urgent=4, high=3, medium=2, low=1            |
+| Time Criticality    | `dueDate`                    | overdue=+3, due ≤3d=+2, due ≤7d=+1, none=0   |
+| Risk Reduction      | `complexity`, `isFoundation` | architectural=+2, isFoundation=+1, else=0    |
+| Job Duration        | `complexity`                 | small=1, medium=3, large=8, architectural=13 |
+
+### Why Not SAFe Ceremonies?
+
+SAFe's PI Planning, Program Increments, and Inspect & Adapt events are designed for large teams that need coordination rituals. protoLabs has one human operator and a fleet of AI agents. The coordination overhead of SAFe would consume more capacity than it creates. WSJF is the only SAFe artifact worth keeping — it makes sequencing decisions explicit and measurable.
+
+---
+
+## Registry Unification Rationale
+
+`workspace/projects.yaml` in protoWorkstacean is the single source of truth for all project metadata. This is not an accident.
+
+### The Problem With Distributed Registries
+
+Before unification, project metadata lived in three places:
+
+- Agent memory files (what Ava knew about a project)
+- Board features (what protoMaker tracked)
+- Discord channel config (what Workstacean used for routing)
+
+When these diverged — and they always diverge — routing breaks. Quinn gets signals meant for Frank. Ava creates features on the wrong board. Discord threads appear in the wrong channels.
+
+### The Solution: One Registry, Many Consumers
+
+`projects.yaml` is the authoritative record. Every consumer reads from it:
+
+- Workstacean reads it for skill routing and channel mapping
+- protoMaker reads it (via `/api/projects`) for board-level context
+- Quinn reads it for triage routing
+- The OnboardingPlugin writes to it when a new project is registered
+
+No agent, service, or plugin maintains its own copy of project metadata. They all query the registry.
+
+### Registry Fields That Matter for Routing
+
+```yaml
+# workspace/projects.yaml
+- slug: proto-maker
+  name: protoMaker
+  team: dev
+  agents: [ava, quinn, frank]
+  discord:
+    dev: '1469080556720623699'
+    bugReports: '1477837770704814162'
+  repo:
+    owner: protolabsai
+    name: protoMaker
+  plane:
+    projectId: PROTO
+```
+
+The `agents` list tells Workstacean which agents can receive signals about this project. The `discord` map tells interface plugins where to send responses.
+
+---
+
+## Cross-Repo Dependency Model
+
+Invisible blockers between repos are the number one source of latency in the portfolio. A feature in protoMaker that depends on a schema change in protoWorkstacean cannot be executed until that schema change lands — but if the dependency is not recorded, auto-mode will attempt it anyway, fail, and consume error budget.
+
+**Status: implemented** ([P3] Cross-Repo Dependencies — shipped 2026-04-07).
+
+### Why Invisible Blockers Are the #1 Latency Source
+
+1. Agent executes feature, hits missing API or schema
+2. Feature fails, is marked blocked
+3. Ava or operator investigates
+4. Discovers the upstream dependency
+5. Creates a new feature in the upstream repo
+6. Waits for it to land
+7. Requeues the original feature
+
+Total latency: investigation time + upstream execution time + requeue time. All of it preventable.
+
+### The Fix: Declare Cross-Repo Dependencies
+
+Features support an `externalDependencies` field that records explicit cross-repo dependencies. The full schema (from `libs/types/src/feature.ts`):
+
+```typescript
+interface ExternalDependency {
+  appPath: string; // Absolute path to the foreign app (e.g. "/home/josh/dev/protoWorkstacean")
+  featureId: string; // Feature ID in the foreign app
+  description: string; // Human-readable description of what this feature needs
+  dependencyType: // Category of the inter-app contract
+    | 'api_contract' //   depends on a specific REST/RPC endpoint shape
+    | 'shared_type' //   depends on a TypeScript type exported by the foreign app
+    | 'deployment_order' //   must deploy after the foreign app feature (timing only)
+    | 'data_migration'; //   requires a database migration in the foreign app first
+  status: 'pending' | 'satisfied' | 'broken';
+}
+```
+
+**Example — feature waiting on a type export in protoWorkstacean:**
+
+```json
+{
+  "externalDependencies": [
+    {
+      "appPath": "/home/josh/dev/protoWorkstacean",
+      "featureId": "feature-1775552607529-abc123",
+      "description": "projects.yaml must include plane.projectId field before this feature can execute",
+      "dependencyType": "shared_type",
+      "status": "pending"
+    }
+  ]
+}
+```
+
+The `cross-repo-resolver` (`libs/dependency-resolver/src/cross-repo-resolver.ts`) checks `externalDependencies` before auto-mode picks up a feature. Features with unsatisfied dependencies are held in `backlog` with a `statusChangeReason` explaining the blocker.
+
+### Cross-Repo Dependency Resolution Flow
+
+```
+1. Feature created with externalDependencies
+2. Feature scheduler calls cross-repo-resolver before pickup
+3. Resolver calls GET /api/features/get on foreign app for each dependency
+   → foreign feature status in {done, review, completed, verified} → satisfied
+   → foreign feature not found (404) → broken
+   → foreign app unreachable → broken
+   → otherwise → pending
+4. If any dependency is pending or broken → feature stays in backlog
+   statusChangeReason describes the first blocking dependency
+5. When foreign feature reaches done/review → status becomes satisfied
+6. Feature becomes eligible for pickup on next auto-mode cycle
+```
+
+This makes the dependency graph visible and actionable. Portfolio health reports surface pending external dependencies as a first-class signal.
+
+### Portfolio API
+
+`GET /api/portfolio/cross-repo-deps` returns a dependency graph across all registered apps:
+
+- **Nodes**: apps with feature counts and cross-repo-blocked counts
+- **Edges**: `ExternalDependency` entries with type, status, and description
+- **Top blocker**: the foreign app/feature blocking the most features
+- **Circular risks**: detected circular dependency chains
+
+### MCP Tools
+
+| Tool                            | Description                                  |
+| ------------------------------- | -------------------------------------------- |
+| `get_cross_repo_dependencies`   | List all external dependencies for a feature |
+| `flag_cross_repo_dependency`    | Add an external dependency to a feature      |
+| `resolve_cross_repo_dependency` | Mark an external dependency as satisfied     |
+
+---
+
+## Portfolio Flow Efficiency
+
+**Portfolio flow efficiency** is the key metric: what fraction of the total value-delivery pipeline is spent doing actual work vs. waiting?
+
+### Definition
+
+```
+Flow Efficiency = Active Time / (Active Time + Wait Time)
+
+Active Time = time features spend with an agent executing work
+Wait Time   = time features spend in queue (backlog), blocked, or in review without action
+```
+
+A portfolio with 90% flow efficiency has agents executing almost all the time. A portfolio with 20% efficiency has features sitting idle most of the time — usually due to WIP overload, blocked dependencies, or review queue depth.
+
+### Target
+
+Flow efficiency > 40% is the practical target for an AI-driven portfolio. Human teams average 5-15%. AI agents can run at higher efficiency because they don't have context-switch costs or calendar constraints — but they still block on PRs, CI, and HITL approvals.
+
+### How Ava Improves Flow Efficiency
+
+1. **WIP limits** — prevent new work from starting when the system is already saturated
+2. **WSJF sequencing** — ensure the highest-value work is always next in line
+3. **Constraint focus** — unblock the one thing preventing the most flow, not the ten things that are merely slow
+4. **Auto-merge** — reduce review wait time for low-risk changes
+5. **Dependency visibility** — surface invisible blockers before agents hit them
+
+### Flow Efficiency in Practice
+
+Flow efficiency is computable from existing feature timestamps:
+
+- `startedAt` — when an agent began executing
+- `completedAt` / `blockedAt` — when execution stopped
+- Status transition history
+
+The DORA metrics system tracks lead time and deployment frequency. Flow efficiency is the complementary metric that explains _why_ lead time is long when it is — it points directly to the constraint.
+
+---
+
 ## Core Decisions
 
 Three architectural decisions shape the entire operating model:

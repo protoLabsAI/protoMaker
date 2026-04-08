@@ -1,31 +1,53 @@
 # protoLabs Fleet Architecture
 
+Cross-links: [Org Architecture](../org-architecture.md) | [Ava Operating Model](./ava-operating-model.md) | [Agency Overview](./agency-overview.md)
+
 ## Agent Fleet
 
 Six agents organized into three teams. All A2A agents expose `/.well-known/agent.json` and accept JSON-RPC 2.0 `message/send` calls.
 
-| Agent          | Team      | Role                                                             | A2A Endpoint                       | Key Skills                                                                                        |
-| -------------- | --------- | ---------------------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------- |
-| **Ava**        | Dev       | Chief of Staff — planning, orchestration, board management       | `http://automaker-server:3008/a2a` | `plan`, `plan_resume`, `sitrep`, `manage_feature`, `auto_mode`, `board_health`, `onboard_project` |
-| **Quinn**      | Dev       | QA Engineer — triage, review, audits                             | `http://quinn:7870/a2a`            | `bug_triage`, `pr_review`, `qa_report`, `board_audit`                                             |
-| **Frank**      | Dev       | DevOps — infrastructure, deploys, monitoring                     | `http://frank:7880/a2a`            | `infra_health`, `deploy`, `monitoring`                                                            |
-| **Jon**        | GTM       | Strategy — market positioning, ROI analysis, antagonistic review | internal (called by Ava)           | `market_review`, `positioning`, `antagonistic_review`                                             |
-| **Cindi**      | GTM       | Content — blog posts, technical docs, SEO                        | internal (called by Ava)           | `blog`, `seo`, `content_review`                                                                   |
-| **Researcher** | Knowledge | Deep research — entity extraction, knowledge graph               | internal (called by Ava)           | `research`, `entity_extract`                                                                      |
+| Agent          | Team      | Role                                                                     | A2A Endpoint                       | Discord Bot                 | Key Skills                                                                                        |
+| -------------- | --------- | ------------------------------------------------------------------------ | ---------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------- |
+| **Ava**        | Dev       | Portfolio orchestrator — planning, board management, cross-app authority | `http://automaker-server:3008/a2a` | `protoava[bot]`             | `plan`, `plan_resume`, `sitrep`, `manage_feature`, `auto_mode`, `board_health`, `onboard_project` |
+| **Quinn**      | Dev       | QA Engineer — triage, review, audits                                     | `http://quinn:7870/a2a`            | `protoquinn[bot]`           | `bug_triage`, `pr_review`, `qa_report`, `board_audit`                                             |
+| **Frank**      | Dev       | DevOps — infrastructure, deploys, monitoring                             | `http://frank:7880/a2a`            | `protofrank[bot]` (roadmap) | `infra_health`, `deploy`, `monitoring`                                                            |
+| **Jon**        | GTM       | Strategy — market positioning, ROI analysis, antagonistic review         | internal (called by Ava)           | `protojon[bot]` (roadmap)   | `market_review`, `positioning`, `antagonistic_review`                                             |
+| **Cindi**      | GTM       | Content — blog posts, technical docs, SEO                                | internal (called by Ava)           | `protocindi[bot]` (roadmap) | `blog`, `seo`, `content_review`                                                                   |
+| **Researcher** | Knowledge | Deep research — entity extraction, knowledge graph                       | internal (called by Ava)           | —                           | `research`, `entity_extract`                                                                      |
+
+### Per-Agent Discord Bot Pool (Roadmap)
+
+Each agent will eventually have its own Discord bot identity. This makes it clear which agent is speaking in any channel. Currently `protoava[bot]` and `protoquinn[bot]` are active; all others share the Ava bot token. Full bot pool activation is a roadmap item tracked in `workspace/projects.yaml` under `discord-bot-pool`.
 
 ### Team Boundaries
 
 - **Dev team** (Ava, Quinn, Frank): A2A-addressable services with their own endpoints. Workstacean routes directly to them based on skill matching.
-- **GTM team** (Jon, Cindi): Called by Ava as sub-agents during planning and content pipelines. Not directly addressable via the bus (yet).
+- **GTM team** (Jon, Cindi): Called by Ava as sub-agents during planning and content pipelines. Not directly addressable via the bus yet — planned for the per-agent bot pool phase.
 - **Knowledge** (Researcher): Called by Ava or Quinn when deep research is needed before planning or triage.
 
-## Workstacean -- The Shared Spine
+## Workstacean — The Orchestration Backbone
 
-protoWorkstacean is the central message bus and registry service. It has three jobs:
+protoWorkstacean is the central orchestration backbone — not just a Discord bot. It connects every interface to every agent through a unified bus, serves the authoritative agent and project registries, and ensures every signal is traceable end-to-end.
+
+Three core responsibilities:
 
 1. **Route messages** from interface plugins to the correct agent based on skill matching
 2. **Serve the registry** so any service can discover agents and projects
 3. **Mint correlationIds** that flow through every downstream artifact
+
+The Discord plugin is one of many plugins connected to the bus. Workstacean is indifferent to which interface a signal came from — it routes based on skill, not surface.
+
+### Portfolio Metrics (P1 Portfolio Visibility — shipped 2026-04-07)
+
+`MetricsService` is now active in `apps/server/src/services/metrics-service.ts`. It computes per-app and portfolio-level metrics from feature data without requiring external telemetry.
+
+Key surfaces:
+
+- `GET /api/metrics/{projectPath}` — `ProjectMetrics` + `CapacityMetrics` for a single app
+- `PortfolioWorldStateBuilder` now includes metrics in every world state snapshot
+- Ava's `SKILL.md` updated to use `costByModel` and `utilizationPercent` as capacity signals
+
+Metrics data feeds the portfolio brief produced during fleet-first activation. No manual instrumentation required — all metrics derive from `feature.json` timestamps and cost fields.
 
 ### Registry Files
 
@@ -63,18 +85,46 @@ Any interface plugin can connect to the bus. The plugin contract has three respo
 
 ### Interface Plugins
 
-| Plugin  | Status  | Transport                            | Notes                                                               |
-| ------- | ------- | ------------------------------------ | ------------------------------------------------------------------- |
-| Discord | Active  | WebSocket (discord.js)               | Primary interface — embeds, threads, reactions, webhooks            |
-| GitHub  | Active  | Webhooks (POST /webhook/github)      | Issue/PR events, bot comments via protoava[bot] and protoquinn[bot] |
-| API     | Active  | HTTP (POST /publish)                 | Programmatic injection for scripts, cron, external services         |
-| Voice   | Planned | WebSocket (Whisper STT + Kokoro TTS) | Voice-in/voice-out via gateway audio models                         |
-| Plane   | Planned | Webhooks                             | Board-native interface for project management                       |
-| Slack   | Planned | Slack Events API                     | Workspace integration                                               |
+| Plugin           | Status  | Transport                            | Notes                                                                              |
+| ---------------- | ------- | ------------------------------------ | ---------------------------------------------------------------------------------- |
+| Discord          | Active  | WebSocket (discord.js)               | Primary interface — embeds, threads, reactions, webhooks                           |
+| GitHub           | Active  | Webhooks (POST /webhook/github)      | Issue/PR events, bot comments via protoava[bot] and protoquinn[bot]                |
+| A2A              | Active  | HTTP JSON-RPC 2.0                    | Inter-agent calls following the A2A spec                                           |
+| API              | Active  | HTTP (POST /publish)                 | Programmatic injection for scripts, cron, external services                        |
+| Onboarding       | Active  | Internal                             | Runs `/setuplab` 5-phase pipeline when `skillHint: "onboard_project"` arrives      |
+| Voice            | Planned | WebSocket (Whisper STT + Kokoro TTS) | Voice-in/voice-out via gateway audio models                                        |
+| Plane            | Planned | Webhooks                             | Board-native interface for project management                                      |
+| Slack            | Planned | Slack Events API                     | Workspace integration                                                              |
+| Google Workspace | Roadmap | OAuth + Google APIs                  | Gmail intake, Calendar context, Docs read. Config: `workspace/plugins/google.yaml` |
+
+### OnboardingPlugin Pipeline
+
+When a signal arrives with `skillHint: "onboard_project"`, the OnboardingPlugin executes a 5-phase pipeline:
+
+```
+1. scan       — detect tech stack, dependencies, project structure
+2. analyze    — compare against quality standard (CI, types, testing, tooling)
+3. initialize — create .automaker/ context files, register in projects.yaml
+4. propose    — create alignment features on the protoMaker board
+5. execute    — launch auto-mode to implement alignment work
+```
+
+Output: the project is registered in `workspace/projects.yaml`, its features are on the board, and auto-mode begins executing alignment work. No manual scaffolding required.
+
+Config: `workspace/plugins/onboarding.yaml`
+
+### Google Workspace Plugin (Roadmap)
+
+Planned integration with Google Workspace to add two new signal sources:
+
+- **Gmail intake**: Emails tagged with a specific label are injected as signals onto the bus
+- **Calendar context**: Upcoming deadlines and events are surfaced as context when Ava is planning
+
+Config will live in `workspace/plugins/google.yaml`. OAuth credentials managed by Infisical.
 
 ### Key Principle
 
-**The bus is dumb.** Interface plugins own rendering. Ava owns plan state. `correlationId` is the spine. Adding a new interface (e.g., Slack) requires only implementing the three plugin responsibilities above -- no changes to Ava, the bus, or any other plugin.
+**The bus is dumb.** Interface plugins own rendering. Ava owns plan state. `correlationId` is the spine. Adding a new interface (e.g., Slack) requires only implementing the three plugin responsibilities above — no changes to Ava, the bus, or any other plugin.
 
 ## CorrelationId Lineage
 

@@ -493,6 +493,14 @@ export function createA2AHandlerRoutes(projectPath: string, deps?: A2AHandlerDep
         | { interface: string; channelId?: string; userId?: string }
         | undefined;
 
+      // Plane context forwarded by workstacean when the plan was triggered
+      // from a Plane issue webhook — used to update the issue state on approval.
+      const planeIssueId = metadata.planeIssueId as string | undefined;
+      const planeProjectId = metadata.planeProjectId as string | undefined;
+      const planeMeta = planeIssueId
+        ? { plane_issue_id: planeIssueId, plane_project_id: planeProjectId ?? '' }
+        : undefined;
+
       // Fire-and-forget: start the plan pipeline asynchronously.
       // The A2A response returns immediately with pending_approval status.
       // If the plan auto-approves (both Ava + Jon high confidence), the
@@ -504,6 +512,7 @@ export function createA2AHandlerRoutes(projectPath: string, deps?: A2AHandlerDep
           replyTopic,
           source,
           projectPath,
+          metadata: planeMeta,
         })
         .then((result) => {
           logger.info(

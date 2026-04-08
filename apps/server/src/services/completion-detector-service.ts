@@ -212,6 +212,20 @@ export class CompletionDetectorService {
       const feature = await this.featureLoader!.get(projectPath, featureId);
       if (!feature) return;
 
+      // TODO: Plane bidirectional sync — when a feature completes, update the
+      // corresponding Plane issue to "completed" state. Requires mapping from
+      // feature → Plane issue. Options:
+      //   a) Store plane_issue_id + plane_project_id in feature metadata fields
+      //   b) Use correlationId convention (e.g. "plane-{issueId}") from the
+      //      feature description's <!-- correlationId: ... --> comment
+      //   c) Look up the Plane project from workspace/projects.yaml by matching
+      //      the GitHub repo associated with the feature's projectSlug
+      //
+      // Once mapped, call:
+      //   import { updatePlaneIssue } from './planning-service.js';
+      //   await updatePlaneIssue(issueId, projectId, 'completed',
+      //     `Feature "${feature.title}" completed.${feature.prUrl ? ` PR: ${feature.prUrl}` : ''}`);
+
       // 1. Epic completion check
       if (feature.epicId) {
         await this.checkEpicCompletion(projectPath, feature.epicId);

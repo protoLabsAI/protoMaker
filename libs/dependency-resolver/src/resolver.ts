@@ -5,7 +5,115 @@
  * Uses a modified Kahn's algorithm that respects both dependencies and priorities.
  */
 
-import type { Feature } from '@protolabsai/types';
+import type { Feature, ExternalDependency } from '@protolabsai/types';
+
+// ── Cross-repo dependency resolver ───────────────────────────────────────────
+
+/** Result of a cross-repo dependency check for a single feature */
+export interface ExternalDependencyCheckResult {
+  /** Whether all external dependencies are satisfied */
+  allSatisfied: boolean;
+  /** Dependencies that are not yet satisfied */
+  unsatisfied: ExternalDependency[];
+}
+
+// Module-level TTL cache: cacheKey → { status, expiresAt }
+const externalDepCache = new Map<string, { status: string; expiresAt: number }>();
+const CACHE_TTL_MS = 30_000; // 30-second TTL
+
+/**
+ * Check whether all cross-repo external dependencies of a feature are satisfied.
+ *
+ * For each externalDependency, issues an HTTP GET to:
+ *   {automakerBaseUrl}/api/features/{featureId}?projectPath={appPath}
+ *
+ * A dependency is considered satisfied when the foreign feature status is 'done' or 'verified'.
+ * Results are cached for 30 seconds per (appPath, featureId) pair.
+ *
+ * Fail-open behaviour: if the remote server is unreachable (timeout or network error),
+ * the dependency is treated as satisfied and a warning is logged. This prevents a down
+ * sibling server from blocking all local work.
+ *
+ * @param feature - The feature whose external dependencies should be checked
+ * @param automakerBaseUrl - Base URL of the Automaker server that owns the foreign apps
+ * @returns Result containing allSatisfied flag and list of unsatisfied dependencies
+ */
+export async function checkExternalDependencies(
+  feature: Feature,
+  automakerBaseUrl: string
+): Promise<ExternalDependencyCheckResult> {
+  const externalDeps = feature.externalDependencies;
+  if (!externalDeps || externalDeps.length === 0) {
+    return { allSatisfied: true, unsatisfied: [] };
+  }
+
+  const unsatisfied: ExternalDependency[] = [];
+
+  for (const dep of externalDeps) {
+    // Already marked satisfied or broken locally — respect local state
+    if (dep.status === 'satisfied') {
+      continue;
+    }
+
+    const cacheKey = `${dep.appPath}::${dep.featureId}`;
+    const now = Date.now();
+    const cached = externalDepCache.get(cacheKey);
+
+    let remoteStatus: string;
+
+    if (cached && cached.expiresAt > now) {
+      remoteStatus = cached.status;
+    } else {
+      // Fetch from remote with 2-second timeout
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2_000);
+
+        const url = `${automakerBaseUrl}/api/features/${encodeURIComponent(dep.featureId)}?projectPath=${encodeURIComponent(dep.appPath)}`;
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          console.warn(
+            `[checkExternalDependencies] Remote check failed for ${dep.featureId} (${dep.appPath}): HTTP ${response.status} — treating as satisfied (fail open)`
+          );
+          remoteStatus = 'done'; // fail open
+        } else {
+          const data = (await response.json()) as { feature?: { status?: string } };
+          remoteStatus = data?.feature?.status ?? 'unknown';
+        }
+      } catch (err) {
+        const isTimeout =
+          err instanceof Error && (err.name === 'AbortError' || err.message.includes('abort'));
+        console.warn(
+          `[checkExternalDependencies] ${isTimeout ? 'Timeout' : 'Network error'} checking ${dep.featureId} (${dep.appPath}) at ${automakerBaseUrl} — treating as satisfied (fail open). ` +
+            `Timestamp: ${new Date().toISOString()}, appPath: ${dep.appPath}`
+        );
+        remoteStatus = 'done'; // fail open
+      }
+
+      // Cache the result
+      externalDepCache.set(cacheKey, { status: remoteStatus, expiresAt: now + CACHE_TTL_MS });
+    }
+
+    const isSatisfied =
+      remoteStatus === 'done' || remoteStatus === 'verified' || remoteStatus === 'completed';
+
+    if (!isSatisfied) {
+      unsatisfied.push({ ...dep, status: 'pending' });
+    }
+  }
+
+  return { allSatisfied: unsatisfied.length === 0, unsatisfied };
+}
+
+/**
+ * Invalidate the external dependency cache for a specific (appPath, featureId) pair.
+ * Call this when a dependency is manually resolved via resolve_cross_repo_dependency.
+ */
+export function invalidateExternalDepCache(appPath: string, featureId: string): void {
+  externalDepCache.delete(`${appPath}::${featureId}`);
+}
 
 export interface DependencyResolutionResult {
   orderedFeatures: Feature[]; // Features in dependency-aware order

@@ -336,10 +336,15 @@ describe('CeremonyService', () => {
         milestoneNumber: 1,
       });
 
-      await new Promise((r) => setTimeout(r, 20));
-
-      expect(createRetroFlow).toHaveBeenCalledWith(
-        expect.objectContaining({ projectPath: '/test', discordChannelId: 'channel-123' })
+      // Use vi.waitFor for robust polling — 20ms was too tight for CI under load
+      // (applyTransition does real fs ops that fail with EACCES, adding latency)
+      await vi.waitFor(
+        () => {
+          expect(createRetroFlow).toHaveBeenCalledWith(
+            expect.objectContaining({ projectPath: '/test', discordChannelId: 'channel-123' })
+          );
+        },
+        { timeout: 2000, interval: 50 }
       );
 
       // Discord adapter emits integration:discord when flow calls sendMessage

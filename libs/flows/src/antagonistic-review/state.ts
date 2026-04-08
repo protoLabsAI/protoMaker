@@ -18,6 +18,20 @@ import {
 } from '@protolabsai/types';
 
 /**
+ * Minimal query options for agent-loop review invocation.
+ * Injected by the server layer; kept here to avoid a server→lib dependency.
+ */
+export interface AgentQueryOptions {
+  prompt: string;
+  systemPrompt?: string;
+  model?: string;
+  cwd: string;
+  maxTurns?: number;
+  allowedTools?: string[];
+  readOnly?: boolean;
+}
+
+/**
  * Token usage captured from a single LLM node invocation
  */
 export interface NodeTokenUsage {
@@ -36,6 +50,12 @@ export const AntagonisticReviewStateSchema = z.object({
   // Review configuration
   topicComplexity: z.enum(['simple', 'moderate', 'complex']).optional(),
   distillationDepth: z.nativeEnum(DistillationDepth).optional(),
+
+  // Agent-loop injection fields
+  projectPath: z.string().optional(),
+  boardContext: z.string().optional(),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  agentQueryFn: z.custom<(options: AgentQueryOptions) => Promise<{ text: string }>>().optional(),
 
   // Individual reviewer perspectives
   avaReview: z.custom<ReviewerPerspective>().optional(),
@@ -113,6 +133,19 @@ export interface AntagonisticReviewState {
   /** Fast LLM model for fallback (injected by adapter) */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fastModel?: any;
+
+  /** Project path for codebase access during agent-loop review */
+  projectPath?: string;
+
+  /** Serialized board context (features by status) for capacity/timeline assessment */
+  boardContext?: string;
+
+  /**
+   * Injected query function for agent-loop review.
+   * When present, Ava and Jon run as multi-turn agents with tool access
+   * instead of single LangChain model.invoke() calls.
+   */
+  agentQueryFn?: (options: AgentQueryOptions) => Promise<{ text: string }>;
 }
 
 /**
@@ -159,6 +192,12 @@ export const AntagonisticReviewStateAnnotation = Annotation.Root({
   smartModel: Annotation<any>,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fastModel: Annotation<any>,
+
+  // Agent-loop injection (replace semantics)
+  projectPath: Annotation<string | undefined>,
+  boardContext: Annotation<string | undefined>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  agentQueryFn: Annotation<((options: AgentQueryOptions) => Promise<{ text: string }>) | undefined>,
 });
 
 /**

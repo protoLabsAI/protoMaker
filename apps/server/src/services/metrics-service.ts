@@ -3,8 +3,12 @@
  * Provides analytics for project performance, cost tracking, and capacity planning
  */
 
-import type { Feature } from '@protolabsai/types';
+import path from 'node:path';
+import type { Feature, PortfolioMetrics } from '@protolabsai/types';
+import { createLogger } from '@protolabsai/utils';
 import { FeatureLoader } from './feature-loader.js';
+
+const logger = createLogger('MetricsService');
 
 /**
  * Normalize model identifiers to canonical short names (sonnet, opus, haiku).
@@ -80,8 +84,117 @@ export interface CapacityMetrics {
 export class MetricsService {
   private featureLoader: FeatureLoader;
 
+  /** Default agent hours per complexity bucket (used when <3 samples exist). */
+  static readonly DEFAULT_HOURS_BY_COMPLEXITY: Record<string, number> = {
+    small: 0.5,
+    medium: 2,
+    large: 5,
+    architectural: 10,
+  };
+
   constructor(featureLoader: FeatureLoader) {
     this.featureLoader = featureLoader;
+  }
+
+  /**
+   * Get average execution duration (in hours) grouped by complexity bucket.
+   * Falls back to DEFAULT_HOURS_BY_COMPLEXITY if insufficient data (<3 samples).
+   */
+  async getAvgDurationByComplexity(projectPath: string): Promise<Record<string, number>> {
+    const features = await this.featureLoader.getAll(projectPath);
+    const buckets: Record<string, number[]> = {
+      small: [],
+      medium: [],
+      large: [],
+      architectural: [],
+    };
+
+    for (const feature of features) {
+      const isDone = feature.status === 'done' || feature.status === 'verified';
+      if (!isDone || !feature.executionHistory?.length) continue;
+      const complexity = feature.complexity ?? 'medium';
+      if (!buckets[complexity]) continue;
+      const totalMs = feature.executionHistory.reduce(
+        (sum, exec) => sum + (exec.durationMs ?? 0),
+        0
+      );
+      if (totalMs > 0) {
+        buckets[complexity].push(totalMs / (1000 * 60 * 60));
+      }
+    }
+
+    const result: Record<string, number> = {};
+    for (const [bucket, durations] of Object.entries(buckets)) {
+      if (durations.length >= 3) {
+        const sorted = [...durations].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        result[bucket] =
+          sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+      } else {
+        result[bucket] = MetricsService.DEFAULT_HOURS_BY_COMPLEXITY[bucket] ?? 2;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Compute time decay factor based on deadline proximity.
+   * - No deadline → 0.5 | >30 days → 1.0 | 0-30 days → 1.0-3.0 | past → 3.0
+   */
+  computeTimeDecayFactor(timeDecayDeadline: string | undefined, now?: Date): number {
+    if (!timeDecayDeadline) return 0.5;
+    const currentTime = now ?? new Date();
+    const deadline = new Date(timeDecayDeadline);
+    const daysUntilDeadline = (deadline.getTime() - currentTime.getTime()) / (1000 * 60 * 60 * 24);
+    if (daysUntilDeadline <= 0) return 3.0;
+    if (daysUntilDeadline > 30) return 1.0;
+    return 1.0 + (2.0 * (30 - daysUntilDeadline)) / 30;
+  }
+
+  /**
+   * Compute WSJF score: (businessValue × timeDecayFactor) / estimatedAgentHours.
+   * Returns 0 if businessValue is not set.
+   */
+  computeWsjfScore(
+    feature: Feature,
+    durationByComplexity: Record<string, number>,
+    now?: Date
+  ): number {
+    const businessValue = feature.businessValue;
+    if (!businessValue || businessValue <= 0) return 0;
+    const complexity = feature.complexity ?? 'medium';
+    const estimatedHours =
+      durationByComplexity[complexity] ??
+      MetricsService.DEFAULT_HOURS_BY_COMPLEXITY[complexity] ??
+      2;
+    const safeHours = Math.max(estimatedHours, 0.1);
+    const timeDecayFactor = this.computeTimeDecayFactor(feature.timeDecayDeadline, now);
+    return (businessValue * timeDecayFactor) / safeHours;
+  }
+
+  /**
+   * Propagate epic businessValue to child features that don't have an explicit value.
+   * Returns count of propagated values.
+   */
+  propagateEpicBusinessValue(features: Feature[]): number {
+    const epicMap = new Map<string, Feature>();
+    for (const f of features) {
+      if (f.isEpic) epicMap.set(f.id, f);
+    }
+    let propagated = 0;
+    for (const feature of features) {
+      if (feature.businessValue != null) continue;
+      if (!feature.epicId) continue;
+      const epic = epicMap.get(feature.epicId);
+      if (epic?.businessValue != null) {
+        feature.businessValue = epic.businessValue;
+        propagated++;
+      }
+    }
+    if (propagated > 0) {
+      logger.info(`[WSJF] Propagated businessValue from epics to ${propagated} child features`);
+    }
+    return propagated;
   }
 
   /**
@@ -494,6 +607,127 @@ export class MetricsService {
       return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
     }
     return `${seconds}s`;
+  }
+
+  /**
+   * Compute aggregated portfolio metrics across all projects over a rolling window.
+   * Returns cost, throughput, flow efficiency, error budgets, and bottleneck signals.
+   */
+  async getPortfolioMetrics(
+    projectPaths: string[],
+    windowDays: number = 7
+  ): Promise<PortfolioMetrics> {
+    const windowMs = windowDays * 24 * 60 * 60 * 1000;
+    const windowStart = Date.now() - windowMs;
+
+    const perProject = await Promise.all(
+      projectPaths.map(async (projectPath) => {
+        const slug = path.basename(projectPath);
+        const allFeatures = await this.featureLoader.getAll(projectPath);
+
+        const features = allFeatures.filter((f) => {
+          const isDone = f.status === 'done' || f.status === 'verified';
+          if (!isDone || !f.completedAt) return false;
+          return new Date(f.completedAt).getTime() >= windowStart;
+        });
+
+        let totalCostUsd = 0;
+        let totalCycleTimeMs = 0;
+        let cycleTimeCount = 0;
+        let failedCount = 0;
+
+        for (const feature of features) {
+          if (feature.executionHistory?.length) {
+            for (const exec of feature.executionHistory) {
+              if (exec.costUsd != null) totalCostUsd += exec.costUsd;
+            }
+          } else if (feature.costUsd) {
+            totalCostUsd += feature.costUsd;
+          }
+
+          if (feature.createdAt && feature.completedAt) {
+            const cycleTime =
+              new Date(feature.completedAt).getTime() - new Date(feature.createdAt).getTime();
+            if (cycleTime > 0) {
+              totalCycleTimeMs += cycleTime;
+              cycleTimeCount++;
+            }
+          }
+
+          if (feature.executionHistory?.some((exec) => !exec.success)) {
+            failedCount++;
+          }
+        }
+
+        const completedCount = features.length;
+        const totalFeatureCount = allFeatures.length;
+        const throughputPerDay = completedCount / windowDays;
+        const errorBudgetPercent = 10;
+        const failureRate = completedCount > 0 ? (failedCount / completedCount) * 100 : 0;
+        const remaining = Math.max(0, (errorBudgetPercent - failureRate) / errorBudgetPercent);
+        const errorBudgetStatus: 'healthy' | 'warning' | 'exhausted' =
+          remaining > 0.5 ? 'healthy' : remaining > 0 ? 'warning' : 'exhausted';
+
+        return {
+          slug,
+          totalCostUsd,
+          completedCount,
+          totalFeatureCount,
+          throughputPerDay,
+          totalCycleTimeMs,
+          cycleTimeCount,
+          errorBudget: { remaining, status: errorBudgetStatus },
+        };
+      })
+    );
+
+    let totalCostUsd = 0;
+    let totalFeaturesCompleted = 0;
+    let totalCycleTimeMs = 0;
+    let totalCycleTimeCount = 0;
+    const errorBudgetsByProject: PortfolioMetrics['errorBudgetsByProject'] = {};
+
+    let highestCostSlug = '';
+    let highestCost = -1;
+    let lowestThroughputSlug = '';
+    let lowestThroughput = Infinity;
+
+    for (const proj of perProject) {
+      totalCostUsd += proj.totalCostUsd;
+      totalFeaturesCompleted += proj.completedCount;
+      totalCycleTimeMs += proj.totalCycleTimeMs;
+      totalCycleTimeCount += proj.cycleTimeCount;
+      errorBudgetsByProject[proj.slug] = proj.errorBudget;
+
+      if (proj.totalCostUsd > highestCost) {
+        highestCost = proj.totalCostUsd;
+        highestCostSlug = proj.slug;
+      }
+
+      if (proj.throughputPerDay < lowestThroughput) {
+        lowestThroughput = proj.throughputPerDay;
+        lowestThroughputSlug = proj.slug;
+      }
+    }
+
+    const portfolioThroughputPerDay = totalFeaturesCompleted / windowDays;
+    const avgCycleTimeMs = totalCycleTimeCount > 0 ? totalCycleTimeMs / totalCycleTimeCount : 0;
+    const totalFeatureCount = perProject.reduce((s, p) => s + p.totalFeatureCount, 0);
+    const portfolioFlowEfficiency =
+      totalFeatureCount > 0 ? totalFeaturesCompleted / totalFeatureCount : 0;
+
+    return {
+      generatedAt: new Date().toISOString(),
+      windowDays,
+      totalCostUsd,
+      totalFeaturesCompleted,
+      portfolioThroughputPerDay,
+      avgCycleTimeMs,
+      portfolioFlowEfficiency,
+      errorBudgetsByProject,
+      highestCostProject: highestCostSlug,
+      lowestThroughputProject: lowestThroughputSlug,
+    };
   }
 
   /**

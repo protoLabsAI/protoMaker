@@ -201,6 +201,28 @@ interface DescriptionHistoryEntry {
 
 ---
 
+## WSJF Prioritization Fields
+
+Features carry optional fields used by the WSJF (Weighted Shortest Job First) scoring system to auto-rank the backlog.
+
+```typescript
+interface Feature {
+  businessValue?: number; // 1–10; how valuable is this feature to the business
+  timeDecayDeadline?: string; // ISO date; drives urgency multiplier (3× at deadline)
+  wsjfScore?: number; // Computed: (businessValue × timeDecayFactor) / estimatedHours
+}
+```
+
+**Setting business value:** Set `businessValue` on individual features, or set it on an epic — it propagates automatically to child features that don't have an explicit value.
+
+**Time urgency:** If `timeDecayDeadline` is more than 30 days away the multiplier is 1.0 (no urgency). Inside 30 days it scales linearly up to 3.0 at/past the deadline. Features with no deadline use a neutral 0.5 multiplier.
+
+**Estimated hours:** Derived from the median of actual `executionHistory.durationMs` values for completed features of the same complexity. Falls back to defaults (small=0.5h, medium=2h, large=5h, architectural=10h) until ≥3 samples exist per bucket.
+
+See the server's `MetricsService` (`apps/server/src/services/metrics-service.ts`) for the full scoring implementation.
+
+---
+
 ## Git Workflow Error Field
 
 Features carry an optional `gitWorkflowError` field that captures git operation failures without changing the feature status:
