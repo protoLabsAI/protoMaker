@@ -10,7 +10,7 @@ import { promisify } from 'node:util';
 import path from 'node:path';
 import { createLogger } from '@protolabsai/utils';
 import { getAutomakerDir, getFeatureDir } from '@protolabsai/platform';
-import { createGitExecEnv } from '@protolabsai/git-utils';
+import { createGitExecEnv, ensureCleanMergeState } from '@protolabsai/git-utils';
 import type {
   ContextMetrics,
   DeviationRule,
@@ -1203,6 +1203,12 @@ export class ExecuteProcessor implements StateProcessor {
           `[EXECUTE][pre-flight] Worktree is ${behind} commits behind origin/${baseBranch}, merging`,
           { featureId: feature.id }
         );
+
+        // Clear any leftover in-progress merge state from a previous failed attempt.
+        // A stuck MERGE_HEAD causes both git stash and git merge to refuse with
+        // "you have unmerged files", creating an unrecoverable loop.  This must run
+        // before the stash step below.
+        await ensureCleanMergeState(workDir);
 
         // Stash any remaining uncommitted changes before merging so git merge
         // does not refuse with "cannot merge: You have unstaged changes".
