@@ -1,5 +1,14 @@
 # @protolabsai/utils
 
+## 0.99.3
+
+### Patch Changes
+
+- Maintenance release.
+- Updated dependencies
+  - @protolabsai/types@0.99.3
+  - @protolabsai/platform@0.99.3
+
 ## 0.99.2
 
 ### Patch Changes
