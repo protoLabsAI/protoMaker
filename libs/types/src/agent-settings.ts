@@ -193,6 +193,10 @@ export interface PhaseModelConfig {
   /** Model for generating git commit messages from diffs */
   commitMessageModel: PhaseModelEntry;
 
+  // Quick tasks - branch name generation
+  /** Model for generating git branch names from feature titles/descriptions */
+  branchNameModel: PhaseModelEntry;
+
   // Ceremony tasks - retrospectives and milestone announcements
   /** Model for generating project retrospectives and ceremony content */
   ceremonyModel: PhaseModelEntry;
@@ -250,6 +254,9 @@ export const DEFAULT_PHASE_MODELS: PhaseModelConfig = {
 
   // Commit messages - use fast model for speed
   commitMessageModel: { model: 'claude-haiku' },
+
+  // Branch names - use fast model for speed
+  branchNameModel: { model: 'claude-haiku' },
 
   // Ceremony - use capable model for retrospectives and announcements
   ceremonyModel: { model: 'claude-sonnet' },
