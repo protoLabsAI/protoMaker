@@ -1,5 +1,14 @@
 # @protolabsai/git-utils
 
+## 0.99.2
+
+### Patch Changes
+
+- Maintenance release.
+- Updated dependencies
+  - @protolabsai/types@0.99.2
+  - @protolabsai/utils@0.99.2
+
 ## 0.99.1
 
 ### Patch Changes
