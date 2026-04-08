@@ -556,6 +556,9 @@ export class ExecutionService {
             const titleForPrompt = feature.title ?? feature.description?.slice(0, 200) ?? featureId;
             const result = await simpleQuery({
               model,
+              cwd: projectPath,
+              maxTurns: 1,
+              allowedTools: [],
               systemPrompt:
                 'You generate git branch names. Output ONLY the branch name, nothing else — no explanation, no punctuation, no quotes.',
               prompt: `Generate a concise git branch name for this feature. Rules:
