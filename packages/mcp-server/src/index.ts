@@ -945,18 +945,9 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
 
     // Discord Channel Tools
     case 'send_channel_message': {
-      const resolvedChannelId = resolveDiscordChannelId(
-        args.channelId as string | undefined,
-        args.channelName as string | undefined
-      );
-      if (!resolvedChannelId) {
-        return {
-          success: false,
-          error: 'Either channelId or a recognized channelName is required',
-        };
-      }
       return apiCall('/discord/send-channel-message', {
-        channelId: resolvedChannelId,
+        projectSlug: args.projectSlug,
+        channelType: args.channelType,
         content: args.content,
       });
     }

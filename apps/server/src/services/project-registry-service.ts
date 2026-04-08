@@ -21,6 +21,16 @@ export interface RegistryProjectOperationalState {
   activeAgents: number;
 }
 
+export interface ProjectDiscordChannel {
+  channelId?: string;
+  webhook?: string;
+}
+
+export interface ProjectDiscordConfig {
+  dev?: ProjectDiscordChannel;
+  release?: ProjectDiscordChannel;
+}
+
 export interface ProjectRegistryEntry {
   slug: string;
   title?: string;
@@ -31,6 +41,7 @@ export interface ProjectRegistryEntry {
   projectPath?: string;
   studioUrl?: string;
   agents?: string[];
+  discord?: ProjectDiscordConfig;
   operationalState?: RegistryProjectOperationalState | { state: 'unreachable' };
   [key: string]: unknown;
 }
