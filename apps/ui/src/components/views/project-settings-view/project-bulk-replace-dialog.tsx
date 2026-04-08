@@ -40,6 +40,7 @@ const PHASE_LABELS: Record<PhaseModelKey, string> = {
   fileDescriptionModel: 'File Descriptions',
   imageDescriptionModel: 'Image Descriptions',
   commitMessageModel: 'Commit Messages',
+  branchNameModel: 'Branch Names',
   validationModel: 'GitHub Issue Validation',
   specGenerationModel: 'App Specification',
   featureGenerationModel: 'Feature Generation',

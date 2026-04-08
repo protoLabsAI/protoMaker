@@ -22,7 +22,7 @@ export {
 export { isBranchMerged, isCommitOnBranch, getBranchHeadCommit, branchExists } from './merge.js';
 
 // Export rebase utilities
-export { rebaseWorktreeOnMain, type RebaseResult } from './rebase.js';
+export { rebaseWorktreeOnMain, ensureCleanMergeState, type RebaseResult } from './rebase.js';
 
 // Export exec environment utilities
 export { createGitExecEnv, extractTitleFromDescription } from './exec-env.js';

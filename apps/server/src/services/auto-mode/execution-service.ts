@@ -55,7 +55,11 @@ import {
   DEFAULT_MODELS,
 } from '@protolabsai/model-resolver';
 import { getFeatureDir } from '@protolabsai/platform';
-import { rebaseWorktreeOnMain, extractTitleFromDescription } from '@protolabsai/git-utils';
+import {
+  rebaseWorktreeOnMain,
+  ensureCleanMergeState,
+  extractTitleFromDescription,
+} from '@protolabsai/git-utils';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { randomUUID } from 'crypto';
@@ -535,20 +539,99 @@ export class ExecutionService {
           }
         }
       } else if (effectiveUseWorktrees && !branchName) {
-        // Worktrees are enabled but the feature has no branch name — cannot proceed safely
-        const reason = `Feature ${featureId} has no branchName but useWorktrees is enabled. Blocking feature — assign a branch name first.`;
-        logger.error(reason);
+        // Worktrees are enabled but the feature has no branch name — generate one via Haiku
+        // rather than blocking. This handles features created externally (API, direct file
+        // writes) that skip the normal branch-name assignment path.
+        logger.info(`Feature ${featureId} has no branchName — generating one via branchNameModel`);
+        let generatedBranchName: string | null = null;
+        try {
+          if (this.settingsService) {
+            const { phaseModel } = await getPhaseModelWithOverrides(
+              'branchNameModel',
+              this.settingsService,
+              projectPath,
+              '[BranchNameGen]'
+            );
+            const { model } = resolvePhaseModel(phaseModel);
+            const titleForPrompt = feature.title ?? feature.description?.slice(0, 200) ?? featureId;
+            const result = await simpleQuery({
+              model,
+              cwd: projectPath,
+              maxTurns: 1,
+              allowedTools: [],
+              systemPrompt:
+                'You generate git branch names. Output ONLY the branch name, nothing else — no explanation, no punctuation, no quotes.',
+              prompt: `Generate a concise git branch name for this feature. Rules:
+- Prefix: "feature/"
+- Lowercase letters, numbers, hyphens only
+- Max 60 characters total (including prefix)
+- Must be URL-safe (no spaces, slashes beyond the prefix, special chars)
+- End with the last 7 chars of the feature ID: "${featureId.slice(-7)}"
+
+Feature title: ${titleForPrompt}
+Feature ID: ${featureId}
+
+Output the branch name only.`,
+            });
+            const raw = result.text?.trim().replace(/['"]/g, '') ?? '';
+            // Validate: must start with feature/, only safe chars, reasonable length
+            if (/^feature\/[a-z0-9][a-z0-9-]{1,58}$/.test(raw)) {
+              generatedBranchName = raw;
+            } else {
+              // Sanitize the raw output as a fallback
+              const slug = raw
+                .replace(/^feature\//, '')
+                .toLowerCase()
+                .replace(/[^a-z0-9-]/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '')
+                .slice(0, 52);
+              generatedBranchName = `feature/${slug}-${featureId.slice(-7)}`;
+            }
+          }
+        } catch (err) {
+          logger.warn(`branchNameModel query failed for ${featureId}: ${err}`);
+        }
+
+        if (!generatedBranchName) {
+          // Final fallback: derive from feature ID directly — always safe
+          generatedBranchName = `feature/${featureId.slice(0, 52)}`;
+        }
+
+        logger.info(`Generated branchName "${generatedBranchName}" for feature ${featureId}`);
         await this.featureLoader.update(projectPath, featureId, {
-          status: 'blocked',
-          statusChangeReason: reason,
+          branchName: generatedBranchName,
         });
-        this.events.emit('feature:error', {
+        feature = { ...feature, branchName: generatedBranchName };
+
+        // Now create the worktree with the newly generated branch name
+        worktreePath = await this.callbacks.findExistingWorktreeForBranch(
           projectPath,
-          featureId,
-          error: reason,
-          projectSlug: feature?.projectSlug,
-        });
-        return;
+          generatedBranchName
+        );
+        if (!worktreePath) {
+          logger.info(`Auto-creating worktree for generated branch "${generatedBranchName}"`);
+          worktreePath = await this.callbacks.createWorktreeForBranch(
+            projectPath,
+            generatedBranchName,
+            feature
+          );
+        }
+        if (!worktreePath) {
+          const reason = `Worktree creation failed for generated branch "${generatedBranchName}" (feature ${featureId}).`;
+          logger.error(reason);
+          await this.featureLoader.update(projectPath, featureId, {
+            status: 'blocked',
+            statusChangeReason: reason,
+          });
+          this.events.emit('feature:error', {
+            projectPath,
+            featureId,
+            error: reason,
+            projectSlug: feature?.projectSlug,
+          });
+          return;
+        }
       }
 
       // Ensure build artifacts (node_modules, dist, etc.) are present in the worktree.
@@ -935,6 +1018,11 @@ export class ExecutionService {
             `[PreFlight] git fetch failed: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}. Continuing.`
           );
         }
+
+        // Clear any leftover in-progress merge state before attempting the merge.
+        // A stuck MERGE_HEAD (from a previous failed merge attempt) causes git merge
+        // to refuse with "you have unmerged files", creating a recurring failure loop.
+        await ensureCleanMergeState(workDir);
 
         try {
           await execAsync(`git merge origin/${preFlightBaseBranch}`, {
