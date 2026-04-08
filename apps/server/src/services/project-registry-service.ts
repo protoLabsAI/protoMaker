@@ -36,6 +36,7 @@ export interface ProjectRegistryEntry {
   title?: string;
   team?: string;
   github?: string;
+  repoUrl?: string;
   defaultBranch?: string;
   status?: string;
   projectPath?: string;
