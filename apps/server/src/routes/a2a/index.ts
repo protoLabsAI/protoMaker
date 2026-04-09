@@ -372,16 +372,24 @@ async function callChatEndpoint(
   apiKey: string,
   projectPath: string,
   userText: string,
-  skillOverride?: string
+  skillOverride?: string,
+  correlationId?: string
 ): Promise<string> {
   const baseUrl = `http://localhost:${process.env['PORT'] ?? 3008}`;
   const chatRes = await fetch(`${baseUrl}/api/chat`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-API-Key': apiKey },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Key': apiKey,
+      // Propagate the trace context so ava's internal spans are linked to the
+      // originating workstacean correlationId.
+      ...(correlationId ? { 'X-Correlation-Id': correlationId } : {}),
+    },
     body: JSON.stringify({
       messages: [{ id: randomUUID(), role: 'user', parts: [{ type: 'text', text: userText }] }],
       projectPath,
       ...(skillOverride ? { skillOverride } : {}),
+      ...(correlationId ? { correlationId } : {}),
     }),
   });
 
@@ -455,7 +463,9 @@ export function createA2AHandlerRoutes(projectPath: string, deps?: A2AHandlerDep
     const parts = body.params?.message?.parts ?? [];
     const userText = extractText(parts);
     const skillOverride = body.params?.metadata?.skillHint as string | undefined;
-    const contextId = body.params?.contextId;
+    // Prefer params.contextId, then X-Correlation-Id header (set by workstacean A2AExecutor)
+    const contextId =
+      body.params?.contextId ?? (req.headers['x-correlation-id'] as string | undefined);
     const metadata = body.params?.metadata ?? {};
 
     if (!userText && skillOverride !== 'plan_resume') {
@@ -652,14 +662,22 @@ export function createA2AHandlerRoutes(projectPath: string, deps?: A2AHandlerDep
           responseText = await executeNativeSkill(projectPath, skill, userText);
         } else {
           // Skill not found, has no tool restrictions, or uses Ava board tools → /api/chat
-          responseText = await callChatEndpoint(key, projectPath, userText, skillOverride);
+          responseText = await callChatEndpoint(
+            key,
+            projectPath,
+            userText,
+            skillOverride,
+            contextId
+          );
         }
       } else {
-        responseText = await callChatEndpoint(key, projectPath, userText, undefined);
+        responseText = await callChatEndpoint(key, projectPath, userText, undefined, contextId);
       }
 
       const taskId = randomUUID();
-      const responseContextId = randomUUID();
+      // Propagate incoming contextId to preserve the distributed trace chain.
+      // Only generate a new one if no contextId arrived (e.g. direct curl calls).
+      const responseContextId = contextId ?? randomUUID();
 
       res.status(200).json({
         jsonrpc: '2.0',
