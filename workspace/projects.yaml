@@ -274,18 +274,3 @@ projects:
       priorityWeight: 1.0
       minConcurrency: 1
       maxConcurrency: 3
-
-  - slug: protolabsai-protomaker
-    title: protoMaker
-    github: protoLabsAI/protoMaker
-    defaultBranch: main
-    status: active
-    onboardedAt: '2026-04-07T00:00:00.000Z'
-    discord:
-      channels:
-        general: '1490957797406408746'
-        updates: '1490957799151239368'
-        dev: '1490957800711393333'
-    plane:
-      projectId: not provisioned
-      identifier: not provisioned
