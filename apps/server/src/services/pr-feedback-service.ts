@@ -110,6 +110,9 @@ export class PRFeedbackService {
   private schedulerService: SchedulerService | null = null;
 
   private static readonly INTERVAL_ID = 'pr-feedback:poll';
+  private static readonly WATCHDOG_INTERVAL_ID = 'pr-feedback:ci-watchdog';
+  /** 15 minutes — how often to poll GitHub for CI failures as a webhook fallback */
+  private static readonly WATCHDOG_INTERVAL_MS = 15 * 60 * 1000;
 
   /** Features currently under remediation - prevents concurrent remediation */
   private remediatingFeatures = new Set<string>();
@@ -138,6 +141,19 @@ export class PRFeedbackService {
 
   setSchedulerService(schedulerService: SchedulerService): void {
     this.schedulerService = schedulerService;
+    // Register CI watchdog — polls all tracked PRs for CI failures every 15 minutes.
+    // This is a fallback for missed GitHub check_suite webhooks. The webhook path is
+    // the primary trigger; this ensures stale review features eventually get remediated.
+    schedulerService.registerInterval(
+      PRFeedbackService.WATCHDOG_INTERVAL_ID,
+      'PR CI Failure Watchdog',
+      PRFeedbackService.WATCHDOG_INTERVAL_MS,
+      () =>
+        this.pollForCIFailures().catch((err) => {
+          logger.error('[CI watchdog] Poll failed:', err);
+        }),
+      { category: 'monitor' }
+    );
   }
 
   setLeadEngineerService(service: { isFeatureActive(featureId: string): boolean }): void {
@@ -1263,6 +1279,7 @@ export class PRFeedbackService {
 
         await this.featureLoader.update(pr.projectPath, featureId, {
           status: 'blocked',
+          statusChangeReason: `CI remediation budget exceeded on PR #${pr.prNumber}`,
           workItemState: 'blocked',
           error: ciBudgetResult.message,
         });
@@ -1356,6 +1373,7 @@ export class PRFeedbackService {
         // Agent not running — fall through to existing restart logic
         await this.featureLoader.update(pr.projectPath, featureId, {
           status: 'backlog',
+          statusChangeReason: `CI failure on PR #${pr.prNumber}`,
           workItemState: 'in_progress',
           ciIterationCount,
           ciRemediationCount: newCiRemediationCount,
@@ -1378,6 +1396,7 @@ export class PRFeedbackService {
       } else {
         await this.featureLoader.update(pr.projectPath, featureId, {
           status: 'backlog',
+          statusChangeReason: `CI failure on PR #${pr.prNumber}`,
           workItemState: 'in_progress',
           ciIterationCount,
           ciRemediationCount: newCiRemediationCount,
@@ -1440,6 +1459,74 @@ export class PRFeedbackService {
         }
       } catch (error) {
         logger.error(`Failed to poll CI status for PR #${pr.prNumber}:`, error);
+      }
+    }
+  }
+
+  /**
+   * CI Failure Watchdog — polls GitHub for failing CI on all tracked PRs.
+   *
+   * Called on a 15-minute interval via the SchedulerService. Serves as a fallback
+   * for missed GitHub check_suite webhooks (e.g. empty pull_requests array, delivery
+   * failures, or server downtime during the push). When a failure is found, emits
+   * pr:ci-failure so the standard handleCIFailure remediation path runs.
+   *
+   * Uses checkSuiteId -1 as a sentinel to distinguish watchdog-triggered events from
+   * real webhook events (which carry positive suite IDs). This allows the dedup check
+   * in handleCIFailure to still function correctly across retriggers.
+   */
+  async pollForCIFailures(): Promise<void> {
+    if (this.trackedPRs.size === 0) return;
+
+    logger.debug(`[CI watchdog] Polling ${this.trackedPRs.size} tracked PR(s) for CI failures`);
+
+    for (const [featureId, pr] of this.trackedPRs) {
+      try {
+        // Skip if already remediating — avoid concurrent remediation runs
+        if (this.remediatingFeatures.has(featureId)) continue;
+
+        // Only check features still in review — a non-review status means the webhook
+        // path already handled the failure and moved the feature to backlog/in_progress.
+        const feature = await this.featureLoader.get(pr.projectPath, featureId);
+        if (!feature || feature.status !== 'review') continue;
+
+        // Fetch current head SHA from GitHub
+        const prDetails = await prStatusChecker.fetchPRDetails(pr);
+        if (!prDetails) continue;
+
+        const { headSha } = prDetails;
+
+        // Fetch CI check runs for the current commit
+        const checkRuns = await prStatusChecker.fetchCICheckRuns(pr, headSha);
+        if (checkRuns.length === 0) continue;
+
+        // Only act when all checks have completed (don't interrupt running builds)
+        const allCompleted = checkRuns.every((r) => r.status === 'completed');
+        if (!allCompleted) continue;
+
+        const failedRuns = checkRuns.filter((r) => r.conclusion === 'failure');
+        if (failedRuns.length === 0) continue;
+
+        logger.info(
+          `[CI watchdog] CI failure detected for PR #${pr.prNumber} (feature ${featureId}): ` +
+            `${failedRuns.map((r) => r.name).join(', ')} — triggering remediation`
+        );
+
+        // Emit the standard pr:ci-failure event so handleCIFailure runs the full
+        // remediation path (budget check, classification, agent re-dispatch).
+        // checkSuiteId -1 is the watchdog sentinel — distinguishable from both
+        // unset (0) and real suite IDs (positive integers).
+        this.events.emit('pr:ci-failure', {
+          projectPath: pr.projectPath,
+          prNumber: pr.prNumber,
+          headBranch: pr.branchName,
+          headSha,
+          checkSuiteId: -1,
+          checkSuiteUrl: null,
+          repository: 'unknown',
+        });
+      } catch (error) {
+        logger.error(`[CI watchdog] Failed to check PR #${pr.prNumber}:`, error);
       }
     }
   }

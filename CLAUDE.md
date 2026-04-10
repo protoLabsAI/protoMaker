@@ -111,6 +111,21 @@ Then use `create_pr_from_worktree` targeting `dev`, move feature to `review`, en
 **Prettier check fails in CI (worktree path masking):**
 Fixed at the source — `worktree-recovery-service.ts` and `git-workflow-service.ts` now use `node "${projectPath}/node_modules/.bin/prettier" --ignore-path /dev/null` instead of `npx prettier`. If you still hit this manually, use: `npx prettier --write <file> --ignore-path /dev/null`.
 
+**Feature blocked with "merge_conflict" / "unmerged files" (stuck MERGE_HEAD):**
+A previous `git merge` failed with conflicts and left `.git/MERGE_HEAD` in the worktree. Every subsequent merge or stash attempt immediately fails with "Merging is not possible because you have unmerged files", creating an unrecoverable loop. The system now auto-clears this via `ensureCleanMergeState()` before each merge attempt (`libs/git-utils/src/rebase.ts`). If a feature is still stuck:
+
+Recovery — clear the stuck merge state manually:
+
+```bash
+git -C /path/to/.worktrees/<branch> merge --abort
+# If --abort fails:
+git -C /path/to/.worktrees/<branch> reset --merge
+```
+
+Then reset `failureCount: 0` in `feature.json`, reset `status` to `backlog`, and call `start_agent`. The next run will call `ensureCleanMergeState()` automatically before the pre-flight merge.
+
+**Root cause:** Pre-flight merge (`git merge origin/<prBaseBranch>`) was attempted on a worktree with a prior incomplete merge, leaving `MERGE_HEAD` present. Fixed by always calling `ensureCleanMergeState()` before any merge or stash operation.
+
 **"has existing context, resuming" → agent exits immediately (stale context trap):**
 Server logs show: `Feature <id> has existing context, resuming instead of starting fresh` followed immediately by `Feature <id> execution ended, cleaning up runningFeatures`. The previous run left an `agent-output.md` in `.automaker/features/<id>/`. The server tries to resume the dead Claude session, handshake fails silently, agent exits.
 

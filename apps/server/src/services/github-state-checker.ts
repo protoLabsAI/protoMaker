@@ -270,6 +270,25 @@ export class GitHubStateChecker {
             });
           }
 
+          // Check if closed without merging — only flag features currently in 'review'
+          // (features in backlog/in_progress/blocked don't have an active PR to close)
+          if (pr.state === 'closed' && !pr.merged && feature.status === 'review') {
+            logger.info(
+              `Feature "${feature.title}" (${feature.id}) has closed (unmerged) PR #${pr.number} — queuing reconciliation`
+            );
+            drifts.push({
+              type: 'pr-closed-not-merged',
+              severity: 'high',
+              projectPath,
+              featureId: feature.id,
+              prNumber: pr.number,
+              details: {
+                branchName: feature.branchName,
+                previousStatus: feature.status,
+              },
+            });
+          }
+
           // Check for drifts on open PRs
           if (pr.state === 'open') {
             if (ciStatus.state === 'failure') {

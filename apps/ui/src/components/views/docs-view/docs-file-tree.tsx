@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
 import { FileText, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getApiKey, getSessionToken } from '@/lib/http-api-client';
+
+function getAuthHeaders(): Record<string, string> {
+  const apiKey = getApiKey();
+  if (apiKey) return { 'X-API-Key': apiKey };
+  const sessionToken = getSessionToken();
+  return sessionToken ? { 'X-Session-Token': sessionToken } : {};
+}
 
 interface DocFile {
   path: string;
@@ -28,7 +36,8 @@ export function DocsFileTree({ projectPath, selectedPath, onSelect }: DocsFileTr
       setError(null);
       try {
         const response = await fetch(
-          `/api/docs/list?projectPath=${encodeURIComponent(projectPath)}`
+          `/api/docs/list?projectPath=${encodeURIComponent(projectPath)}`,
+          { headers: getAuthHeaders(), credentials: 'include' }
         );
         if (!response.ok) {
           throw new Error(`Failed to fetch docs list: ${response.status}`);
