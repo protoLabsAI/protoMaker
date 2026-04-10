@@ -32,10 +32,10 @@ jobs:
             exit 0
           fi
           # CI fix exception: branches that fix broken CI/CD workflows targeting main.
-          # Pattern: fix/fixci-* (e.g. fix/fixci-pr-1234-description)
+          # Patterns: fix/fixci-* and feature/fixci-* (legacy naming, same intent)
           # These branches are allowed to bypass staging when the fix itself corrects
           # a CI gate that prevents the normal staging promotion path.
-          if [[ "$SOURCE" == fix/fixci-* ]]; then
+          if [[ "$SOURCE" == fix/fixci-* ]] || [[ "$SOURCE" == feature/fixci-* ]]; then
             echo "✅ CI fix branch — fixing broken CI workflow, exception granted"
             exit 0
           fi
