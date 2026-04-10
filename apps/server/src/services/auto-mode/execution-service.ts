@@ -967,11 +967,31 @@ Output the branch name only.`,
       await this.featureLoader.update(projectPath, featureId, { model: modelResult.model });
 
       // Resolve the effective base branch for this project (project setting → auto-detect → 'dev')
-      const preFlightBaseBranch = await getEffectivePrBaseBranch(
+      let preFlightBaseBranch = await getEffectivePrBaseBranch(
         projectPath,
         this.settingsService,
         '[PreFlight]'
       );
+
+      // For features belonging to an epic, sync against the epic branch instead of dev.
+      // Epic child features are branched from origin/epic/... (not dev), so merging dev
+      // would pull in unrelated changes and cause conflicts against the epic branch.
+      if (feature.epicId && !feature.isEpic) {
+        try {
+          const epicFeature = await this.featureLoader.get(projectPath, feature.epicId);
+          if (epicFeature?.branchName) {
+            preFlightBaseBranch = epicFeature.branchName;
+            logger.info(
+              `[PreFlight] Feature ${featureId} belongs to epic, syncing against epic branch: ${preFlightBaseBranch}`
+            );
+          }
+        } catch (err) {
+          logger.warn(
+            `[PreFlight] Could not load epic feature ${feature.epicId} for branch resolution — using default: ${preFlightBaseBranch}`,
+            err
+          );
+        }
+      }
 
       // Merge branch with the project's base branch before agent execution
       // Uses merge instead of rebase to handle concurrent .automaker/ modifications gracefully
