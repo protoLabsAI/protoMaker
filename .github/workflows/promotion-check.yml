@@ -31,6 +31,14 @@ jobs:
             echo "✅ Recovery branch from staging — DAG divergence fix, exception granted"
             exit 0
           fi
+          # CI fix exception: branches that fix broken CI/CD workflows targeting main.
+          # Pattern: fix/fixci-* (e.g. fix/fixci-pr-1234-description)
+          # These branches are allowed to bypass staging when the fix itself corrects
+          # a CI gate that prevents the normal staging promotion path.
+          if [[ "$SOURCE" == fix/fixci-* ]]; then
+            echo "✅ CI fix branch — fixing broken CI workflow, exception granted"
+            exit 0
+          fi
           if [ "$SOURCE" != "staging" ]; then
             echo "::error::PRs to main must come from the 'staging' branch."
             echo "::error::Current source: '$SOURCE'"

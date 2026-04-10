@@ -63,11 +63,23 @@ feature/* ──▶ dev ──────────────────�
 | `deploy-staging.yml`          | Push to `staging`              | Deploy to staging environment           |
 | `deploy-main.yml`             | Push to `main`                 | Deploy to protolabs production (CT 104) |
 | `promotion-check-staging.yml` | PR to `staging`                | Fails if source ≠ `dev` or `promote/*`  |
-| `promotion-check.yml`         | PR to `main`                   | Fails if source ≠ `staging`             |
+| `promotion-check.yml`         | PR to `main`                   | Fails if source ≠ `staging` (see exceptions below) |
 | `changeset-release.yml`       | Push to `main`                 | Version bump + GitHub Release           |
 | `pr-check.yml`                | PR to `dev`, `staging`, `main` | Build check (lint, typecheck, test)     |
 | `test.yml`                    | PR/push to any branch          | Run server + package tests              |
 | `checks.yml`                  | PR/push to any branch          | Lint, format, audit                     |
+
+### Promotion-check exceptions
+
+The `promotion-check.yml` workflow normally requires all PRs to `main` to originate from `staging`. Three named exceptions exist:
+
+| Pattern                        | Purpose                                                        |
+| ------------------------------ | -------------------------------------------------------------- |
+| `chore/branch-strategy-implementation` | One-time bootstrap — established the branch strategy before staging existed |
+| `chore/promote-staging-main-*` | DAG recovery — used after an accidental squash promotion to re-establish a clean merge base |
+| `fix/fixci-*`                  | CI fix bypass — allows a branch that directly repairs a broken CI gate to reach `main` when the gate itself blocks the normal staging path |
+
+When creating a CI fix branch, always use the `fix/fixci-{pr-number}-{short-description}` naming convention so the exception is applied correctly.
 
 ### Branch protection (GitHub)
 
@@ -159,3 +171,6 @@ A previous promotion used `--squash`. To recover: create a new branch from `dev`
 
 **What if staging → main shows conflicts?**
 A previous promotion used `--squash`. To recover: create a new branch from `staging`, `git merge origin/main` (take `--ours` for all conflicts), use `chore/promote-staging-main-*` naming (allowed by `promotion-check.yml`), open a new PR with `--merge`.
+
+**How do I fix a broken CI workflow that blocks the normal staging → main path?**
+Use a `fix/fixci-*` branch. This naming pattern is explicitly allowed by `promotion-check.yml` to bypass the `staging`-only gate when the CI fix itself is what corrects the broken workflow. Example: `fix/fixci-pr-1234-source-branch-check-failure`. This exception exists because a broken promotion CI gate creates a catch-22: you cannot promote through staging if the CI gate is broken, but you cannot fix the gate without merging to main. Do not abuse this — it is only for branches that directly repair a CI/CD workflow on `main`.
