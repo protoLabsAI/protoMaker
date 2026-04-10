@@ -2109,9 +2109,12 @@ Address the follow-up instructions above. Review the previous work and make the 
             }
           }
 
-          // Resolve per-project prBaseBranch override
-          const projectSettings = await this.settingsService.getProjectSettings(projectPath);
-          const projectPrBaseBranch = projectSettings.workflow?.gitWorkflow?.prBaseBranch;
+          // Resolve effective prBaseBranch: project settings → global settings → auto-detect → default
+          const projectPrBaseBranch = await getEffectivePrBaseBranch(
+            projectPath,
+            this.settingsService,
+            '[FollowUp]'
+          );
 
           gitWorkflowResult = await gitWorkflowService.runPostCompletionWorkflow(
             projectPath,
