@@ -21,6 +21,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Router, type Request, type Response } from 'express';
@@ -647,6 +648,30 @@ export function createA2AHandlerRoutes(projectPath: string, deps?: A2AHandlerDep
 
     // ─── Standard skill routing (existing behaviour) ────────────────────
 
+    // Per-request projectPath override from metadata.
+    //
+    // By default this handler uses the route's fixed `projectPath` (Ava's own
+    // repo). Cross-project dispatches (e.g. protoWorkstacean's pr-remediator
+    // targeting protoMaker) need to steer Ava's board tools at a DIFFERENT
+    // repo, so the sender passes an absolute path in `params.metadata.projectPath`.
+    //
+    // We validate the override defensively: must be an absolute string path
+    // that exists and contains `.automaker/`. Any failure falls back to the
+    // route default rather than erroring, so a misconfigured sender still
+    // gets SOME response instead of a hard failure.
+    const metaProjectPath = metadata.projectPath;
+    let effectiveProjectPath = projectPath;
+    if (typeof metaProjectPath === 'string' && metaProjectPath.startsWith('/')) {
+      if (existsSync(join(metaProjectPath, '.automaker'))) {
+        effectiveProjectPath = metaProjectPath;
+        logger.info(`A2A projectPath override: "${metaProjectPath}" (from metadata, validated)`);
+      } else {
+        logger.warn(
+          `A2A projectPath override rejected: "${metaProjectPath}" has no .automaker/ — falling back to ${projectPath}`
+        );
+      }
+    }
+
     try {
       let responseText: string;
 
@@ -654,24 +679,30 @@ export function createA2AHandlerRoutes(projectPath: string, deps?: A2AHandlerDep
       // Read, Write, etc.). If so, bypass /api/chat and run via ProviderFactory.executeQuery
       // which has the full Claude Code SDK tool set. Otherwise use /api/chat as before.
       if (skillOverride) {
-        const skill = await loadSkill(projectPath, skillOverride);
+        const skill = await loadSkill(effectiveProjectPath, skillOverride);
         if (skill?.isNativeTool) {
           logger.info(
             `A2A skill "${skillOverride}" uses native tools [${skill.allowedTools.join(', ')}] — routing via executeQuery`
           );
-          responseText = await executeNativeSkill(projectPath, skill, userText);
+          responseText = await executeNativeSkill(effectiveProjectPath, skill, userText);
         } else {
           // Skill not found, has no tool restrictions, or uses Ava board tools → /api/chat
           responseText = await callChatEndpoint(
             key,
-            projectPath,
+            effectiveProjectPath,
             userText,
             skillOverride,
             contextId
           );
         }
       } else {
-        responseText = await callChatEndpoint(key, projectPath, userText, undefined, contextId);
+        responseText = await callChatEndpoint(
+          key,
+          effectiveProjectPath,
+          userText,
+          undefined,
+          contextId
+        );
       }
 
       const taskId = randomUUID();
