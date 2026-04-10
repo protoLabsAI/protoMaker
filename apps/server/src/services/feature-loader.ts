@@ -313,9 +313,7 @@ export class FeatureLoader implements FeatureStore {
     const shortId = featureId ? featureId.slice(-7) : Date.now().toString(36).slice(-7);
 
     // Determine branch prefix from category or title convention.
-    const isFixWork =
-      category === 'bug' ||
-      (title != null && /^fix[:(]/i.test(title.trim()));
+    const isFixWork = category === 'bug' || (title != null && /^fix[:(]/i.test(title.trim()));
     const prefix = isFixWork ? 'fix' : 'feature';
 
     if (!title || !title.trim()) {
