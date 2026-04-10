@@ -139,6 +139,26 @@ mv .automaker/features/<id>/handoff-EXECUTE.json .automaker/features/<id>/handof
 
 Then reset `failureCount: 0` in `feature.json` and call `start_agent`. Resetting feature `status` alone is NOT enough — the stale output file is what triggers the resume path.
 
+**"source-branch" CI failure / wrong branch prefix (feature/ instead of fix/):**
+Agent-created fix/bug branches used `feature/` prefix instead of `fix/`, causing `source-branch` check failures when those PRs targeted `main`. Root cause (fixed in PR #3346): `generateBranchName()` hardcoded `"feature/"` regardless of the feature's `category`. The `promotion-check.yml` `source-branch` job also rejects any PR to `main` that doesn't originate from `staging` — even a correctly-prefixed `fix/` branch targeting `main` directly will fail.
+
+Symptom: `source-branch` check FAIL, `checks` ×2 blocked, `test` ×2 blocked, `build` PASS.
+
+Recovery — when a feature has a wrong-prefix branch or a PR targeting `main` instead of `dev`:
+
+```bash
+# Create correctly-prefixed replacement branch targeting dev
+git checkout dev && git pull origin dev
+git checkout -b fix/<slug>
+git cherry-pick <bad-branch-sha>
+git push origin fix/<slug>
+gh pr create --base dev --title "fix(ci): <title>"
+# Close the bad PR
+gh pr close <old-number> --comment "Replaced by #<new-number> with correct fix/ prefix targeting dev"
+```
+
+Prevention: Always set `category: 'fix'` (or `'bug'`) when creating fix features via MCP — `branchPrefixForCategory()` will automatically use `fix/`. Agent feature PRs ALWAYS target `dev`, never `main`. See `.automaker/memory/ops-lessons.md` for the full pattern.
+
 **Self-improvement rule:** When you observe a recurring failure pattern that blocks agents, you MUST immediately:
 
 1. File a P1 bug feature on the board describing the root cause and fix
