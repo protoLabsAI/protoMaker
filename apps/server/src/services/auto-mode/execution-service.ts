@@ -554,6 +554,7 @@ export class ExecutionService {
             );
             const { model } = resolvePhaseModel(phaseModel);
             const titleForPrompt = feature.title ?? feature.description?.slice(0, 200) ?? featureId;
+            const branchPrefix = this.featureLoader.branchPrefixForCategory(feature.category);
             const result = await simpleQuery({
               model,
               cwd: projectPath,
@@ -562,31 +563,32 @@ export class ExecutionService {
               systemPrompt:
                 'You generate git branch names. Output ONLY the branch name, nothing else — no explanation, no punctuation, no quotes.',
               prompt: `Generate a concise git branch name for this feature. Rules:
-- Prefix: "feature/"
+- Prefix: "${branchPrefix}/"
 - Lowercase letters, numbers, hyphens only
 - Max 60 characters total (including prefix)
 - Must be URL-safe (no spaces, slashes beyond the prefix, special chars)
 - End with the last 7 chars of the feature ID: "${featureId.slice(-7)}"
 
 Feature title: ${titleForPrompt}
+Feature category: ${feature.category ?? 'feature'}
 Feature ID: ${featureId}
 
 Output the branch name only.`,
             });
             const raw = result.text?.trim().replace(/['"]/g, '') ?? '';
-            // Validate: must start with feature/, only safe chars, reasonable length
-            if (/^feature\/[a-z0-9][a-z0-9-]{1,58}$/.test(raw)) {
+            // Validate: must start with a known prefix/, only safe chars, reasonable length
+            if (/^[a-z]+\/[a-z0-9][a-z0-9-]{1,58}$/.test(raw)) {
               generatedBranchName = raw;
             } else {
               // Sanitize the raw output as a fallback
               const slug = raw
-                .replace(/^feature\//, '')
+                .replace(/^[a-z]+\//, '')
                 .toLowerCase()
                 .replace(/[^a-z0-9-]/g, '-')
                 .replace(/-+/g, '-')
                 .replace(/^-|-$/g, '')
                 .slice(0, 52);
-              generatedBranchName = `feature/${slug}-${featureId.slice(-7)}`;
+              generatedBranchName = `${branchPrefix}/${slug}-${featureId.slice(-7)}`;
             }
           }
         } catch (err) {
@@ -595,7 +597,8 @@ Output the branch name only.`,
 
         if (!generatedBranchName) {
           // Final fallback: derive from feature ID directly — always safe
-          generatedBranchName = `feature/${featureId.slice(0, 52)}`;
+          const branchPrefix = this.featureLoader.branchPrefixForCategory(feature.category);
+          generatedBranchName = `${branchPrefix}/${featureId.slice(0, 52)}`;
         }
 
         logger.info(`Generated branchName "${generatedBranchName}" for feature ${featureId}`);
