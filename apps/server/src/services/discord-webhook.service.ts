@@ -168,7 +168,10 @@ export async function sendToChannelViaWebhook(
 /**
  * Send an embed to a fleet-wide Discord channel via webhook.
  */
-export async function sendEmbedViaWebhook(channelId: string, embed: WebhookEmbed): Promise<boolean> {
+export async function sendEmbedViaWebhook(
+  channelId: string,
+  embed: WebhookEmbed
+): Promise<boolean> {
   const webhookUrl = resolveFleetWebhookUrl(channelId);
   if (!webhookUrl) {
     logger.warn(`No webhook URL configured for channel ${channelId}`);
