@@ -4,21 +4,21 @@ description: Autonomous PR remediation — triage a failing or blocked PR, assig
 category: operations
 argument-hint: (receives full PR context via A2A dispatch — no manual invocation)
 allowed-tools:
-  - mcp__plugin_protolabs_studio__list_features
-  - mcp__plugin_protolabs_studio__get_feature
-  - mcp__plugin_protolabs_studio__create_feature
-  - mcp__plugin_protolabs_studio__update_feature
-  - mcp__plugin_protolabs_studio__get_board_summary
-  - mcp__plugin_protolabs_studio__start_auto_mode
-  - mcp__plugin_protolabs_studio__get_auto_mode_status
-  - mcp__plugin_protolabs_studio__list_running_agents
-  - mcp__plugin_protolabs_studio__start_agent
-  - mcp__plugin_protolabs_studio__get_agent_output
-  - mcp__plugin_protolabs_studio__check_pr_status
-  - mcp__plugin_protolabs_studio__get_pr_feedback
-  - mcp__plugin_protolabs_studio__resolve_pr_threads
-  - mcp__plugin_protolabs_studio__merge_pr
-  - mcp__plugin_protolabs_studio__get_settings
+  - list_features
+  - get_feature
+  - create_feature
+  - update_feature
+  - get_board_summary
+  - start_auto_mode
+  - get_auto_mode_status
+  - list_running_agents
+  - start_agent
+  - get_agent_output
+  - check_pr_status
+  - get_pr_feedback
+  - resolve_pr_threads
+  - merge_pr
+  - get_settings
 ---
 
 # bug_triage — autonomous PR remediation
