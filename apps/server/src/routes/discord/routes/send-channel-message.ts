@@ -1,12 +1,28 @@
 import type { Request, Response } from 'express';
-import type { DiscordBotService } from '../../../services/discord-bot-service.js';
+import type { ProjectRegistryService } from '../../../services/project-registry-service.js';
+import {
+  sendToProjectChannel,
+  sendEmbedToProjectChannel,
+  type WebhookEmbed,
+  type ProjectChannelType,
+} from '../../../services/discord-webhook.service.js';
 
-export function createSendChannelMessageHandler(discordBotService: DiscordBotService) {
+const VALID_CHANNEL_TYPES = new Set<ProjectChannelType>(['dev', 'release']);
+
+export function createSendChannelMessageHandler(projectRegistry: ProjectRegistryService) {
   return async (req: Request, res: Response) => {
-    const { channelId, content, embed } = req.body;
+    const { projectSlug, channelType, content, embed } = req.body;
 
-    if (!channelId || typeof channelId !== 'string') {
-      res.status(400).json({ success: false, error: 'channelId is required' });
+    if (!projectSlug || typeof projectSlug !== 'string') {
+      res.status(400).json({ success: false, error: 'projectSlug is required' });
+      return;
+    }
+
+    if (!channelType || !VALID_CHANNEL_TYPES.has(channelType as ProjectChannelType)) {
+      res.status(400).json({
+        success: false,
+        error: `channelType must be one of: ${[...VALID_CHANNEL_TYPES].join(', ')}`,
+      });
       return;
     }
 
@@ -15,12 +31,25 @@ export function createSendChannelMessageHandler(discordBotService: DiscordBotSer
       return;
     }
 
+    const project = projectRegistry.getProject(projectSlug);
+    if (!project) {
+      res.status(404).json({
+        success: false,
+        error: `Project "${projectSlug}" not found in registry`,
+      });
+      return;
+    }
+
     try {
       let success: boolean;
-      if (embed && typeof embed === 'object' && embed.title) {
-        success = await discordBotService.sendEmbed(channelId, embed);
+      if (embed && typeof embed === 'object' && (embed as WebhookEmbed).title) {
+        success = await sendEmbedToProjectChannel(
+          project,
+          channelType as ProjectChannelType,
+          embed as WebhookEmbed
+        );
       } else if (content && typeof content === 'string') {
-        success = await discordBotService.sendToChannel(channelId, content);
+        success = await sendToProjectChannel(project, channelType as ProjectChannelType, content);
       } else {
         res.status(400).json({ success: false, error: 'Invalid content or embed' });
         return;

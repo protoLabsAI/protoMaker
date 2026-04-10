@@ -12,19 +12,22 @@ export const discordTools: Tool[] = [
   {
     name: 'send_channel_message',
     description:
-      'Send a message to a Discord channel. Accepts a channel name (e.g. "ava", "dev", "infra") or a raw channel ID. ' +
-      'Returns an error if the Discord bot is not connected.',
+      "Send a message to a project's Discord channel via webhook. " +
+      'Requires a project slug (e.g. "protolabsai-protomaker") and a channel type ("dev" or "release"). ' +
+      'Webhook URLs are configured in workspace/projects.yaml.',
     inputSchema: {
       type: 'object',
       properties: {
-        channelId: {
-          type: 'string',
-          description: 'Raw Discord channel ID (18-19 digit snowflake)',
-        },
-        channelName: {
+        projectSlug: {
           type: 'string',
           description:
-            'Human-readable channel name (e.g. "ava", "dev", "infra", "alerts", "deployments", "bug-reports", "vip-lounge"). Used when channelId is not provided.',
+            'Project slug from the registry (e.g. "protolabsai-protomaker", "protolabsai-protoui")',
+        },
+        channelType: {
+          type: 'string',
+          enum: ['dev', 'release'],
+          description:
+            'Which project channel to send to: "dev" for development activity, "release" for deployment/release notifications',
         },
         content: {
           type: 'string',
@@ -32,7 +35,7 @@ export const discordTools: Tool[] = [
           maxLength: 2000,
         },
       },
-      required: ['content'],
+      required: ['projectSlug', 'channelType', 'content'],
     },
   },
   {
