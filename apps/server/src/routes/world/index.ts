@@ -49,40 +49,44 @@ export function createWorldRoutes(
     try {
       const features = await featureLoader.getAll(repoRoot);
 
-      const counts = {
-        total: features.length,
+      const by_status = {
         backlog: 0,
-        inProgress: 0,
+        in_progress: 0,
         review: 0,
         blocked: 0,
         done: 0,
-        verified: 0,
       };
 
       for (const f of features) {
         switch (f.status) {
           case 'backlog':
-            counts.backlog++;
+            by_status.backlog++;
             break;
           case 'in_progress':
-            counts.inProgress++;
+            by_status.in_progress++;
             break;
           case 'review':
-            counts.review++;
+            by_status.review++;
             break;
           case 'blocked':
-            counts.blocked++;
+            by_status.blocked++;
             break;
           case 'done':
-            counts.done++;
-            break;
           case 'verified':
-            counts.verified++;
+            by_status.done++;
             break;
         }
       }
 
-      res.json({ success: true, data: counts, collectedAt: Date.now() });
+      res.json({
+        blocked_count: by_status.blocked,
+        backlog_count: by_status.backlog,
+        in_progress_count: by_status.in_progress,
+        review_count: by_status.review,
+        done_count: by_status.done,
+        total: features.length,
+        by_status,
+      });
     } catch (err) {
       res.status(500).json({ success: false, error: String(err) });
     }
@@ -138,18 +142,18 @@ export function createWorldRoutes(
         });
       }
 
+      const autoModeStatus = autoModeService.getPortfolioStatus();
+
       res.json({
-        success: true,
-        data: {
-          runningCount: runningAgents.length,
-          // projectPath intentionally omitted — avoids leaking internal fs paths
-          agents: runningAgents.map((a) => ({
-            featureId: a.featureId,
-            startTime: a.startTime,
-            title: a.title,
-          })),
-        },
-        collectedAt: Date.now(),
+        running_count: runningAgents.length,
+        auto_mode: autoModeStatus.isRunning,
+        stale_agent_count: 0,
+        agents: runningAgents.map((a) => ({
+          featureId: a.featureId,
+          projectPath: a.projectPath,
+          startTime: a.startTime,
+          model: a.model ?? null,
+        })),
       });
     } catch (err) {
       res.status(500).json({ success: false, error: String(err) });
