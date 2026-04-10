@@ -78,29 +78,33 @@ create_feature({
 
 The title MUST start with `fix(ci):` or `fix(review):` and MUST contain `#${prNumber}` so step 2 can find it on subsequent re-dispatches.
 
-### Step 4 — Kick off
+### Step 4 — Kick off (MANDATORY tool calls)
 
-```
-get_auto_mode_status({ projectPath })
-```
+You **MUST** make these two tool calls in order. Do not compose your final reply until both have returned and you have seen their results:
 
-If not already running:
+**4a.** Call `get_auto_mode_status({ projectPath })` and read the `isRunning` field from the result.
 
-```
-start_auto_mode({ projectPath, maxConcurrency: 1 })
-```
+**4b.** If `isRunning === false`, call `start_auto_mode({ projectPath, maxConcurrency: 1 })` and wait for its result. Then call `get_auto_mode_status({ projectPath })` **again** to confirm `isRunning === true`.
 
-If already running, do nothing — the new feature will be picked up on the next tick.
+**If `isRunning === true` after the second check:** proceed to step 5.
+
+**If `isRunning === false` after calling start_auto_mode:** your reply must be `ERROR: start_auto_mode did not activate — <paste the tool error>.`
+
+**DO NOT write "starting it now" in your response.** That phrase means you haven't called the tool yet. Either you called `start_auto_mode` and it returned success (then say "auto-mode running"), or you didn't and must retry. There is no middle state.
 
 ### Step 5 — Respond "in progress"
 
-Reply with exactly this one line (substitute the real feature ID and slug):
+**Required preconditions before composing this reply:**
+- `create_feature` returned a featureId (from step 3)
+- `get_auto_mode_status` returned `isRunning: true` (from step 4b, AFTER start_auto_mode)
+
+Reply with exactly this one line, substituting the real values from the tool results above:
 
 ```
-Assigned <featureId> on <projectSlug>, auto-mode running. Will antagonistically review on completion.
+Assigned <featureId> on <projectSlug>, auto-mode confirmed running (isRunning=true). Will antagonistically review on completion.
 ```
 
-No preamble, no analysis, no markdown. This is the terminal state for fresh dispatches.
+**No preamble. No analysis. No markdown. No "starting it now".** This is the terminal state for fresh dispatches. If you cannot produce this exact shape because one of the required tool results is missing, your reply is an ERROR line instead (see step 4).
 
 ### Step 6 — Antagonistic review (only when feature is `done`)
 
