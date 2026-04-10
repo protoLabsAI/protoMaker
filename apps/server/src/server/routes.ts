@@ -23,7 +23,9 @@ import {
 } from '../routes/health/index.js';
 import { createSessionsRoutes } from '../routes/sessions/index.js';
 import { createFeaturesRoutes } from '../routes/features/index.js';
-import { createBackfillProjectSlugHandler } from '../routes/features/routes/backfill-project-slug.js';
+import {
+  createBackfillProjectSlugHandler,
+} from '../routes/features/routes/backfill-project-slug.js';
 import { createProjectsRoutes } from '../routes/projects/index.js';
 import { createAutoModeRoutes } from '../routes/auto-mode/index.js';
 import { createEnhancePromptRoutes } from '../routes/enhance-prompt/index.js';
@@ -374,7 +376,9 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/automations', createAutomationsRoutes(automationService));
   app.use('/api/ava', createAvaRoutes(services));
   const projectRegistry = new ProjectRegistryService({ projectRoot: repoRoot });
-  projectRegistry.start().catch((err: unknown) => logger.warn('ProjectRegistry start failed:', err));
+  projectRegistry
+    .start()
+    .catch((err: unknown) => logger.warn('ProjectRegistry start failed:', err));
   app.use('/api/discord', createDiscordRoutes(projectRegistry));
   app.use(
     '/api/ceremonies',
