@@ -20,14 +20,14 @@
  * until FILING_DEDUP_WINDOW_MS has elapsed or the filed feature reaches 'done'.
  */
 
-import { randomUUID } from 'node:crypto';
-import fs from 'fs/promises';
-import { join } from 'node:path';
-import { atomicWriteJson, createLogger } from '@protolabsai/utils';
-import type { FeatureLoader } from './feature-loader.js';
-import type { EventEmitter } from '../lib/events.js';
+import { randomUUID } from "node:crypto";
+import fs from "fs/promises";
+import { join } from "node:path";
+import { atomicWriteJson, createLogger } from "@protolabsai/utils";
+import type { FeatureLoader } from "./feature-loader.js";
+import type { EventEmitter } from "../lib/events.js";
 
-const logger = createLogger('HitlPatternAnalysisService');
+const logger = createLogger("HitlPatternAnalysisService");
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -163,19 +163,25 @@ export class HitlPatternAnalysisService {
    * Called by the TopicBus subscriber when a
    * 'hitl.request.pr.remediation_stuck.*' message arrives.
    */
-  async handleEscalation(payload: HitlPrRemediationStuckPayload): Promise<void> {
+  async handleEscalation(
+    payload: HitlPrRemediationStuckPayload,
+  ): Promise<void> {
     if (!this.initialized) await this.initialize();
 
     const errorClass = extractErrorClass(payload);
-    const signature = buildSignature(payload.kind, payload.failingWorkflow, errorClass);
+    const signature = buildSignature(
+      payload.kind,
+      payload.failingWorkflow,
+      errorClass,
+    );
 
     const record: EscalationRecord = {
       id: randomUUID(),
-      repo: payload.repo ?? '',
+      repo: payload.repo ?? "",
       prNumber: payload.prNumber ?? 0,
-      kind: payload.kind ?? '',
-      failingWorkflow: payload.failingWorkflow ?? '',
-      ciStatus: payload.ciStatus ?? '',
+      kind: payload.kind ?? "",
+      failingWorkflow: payload.failingWorkflow ?? "",
+      ciStatus: payload.ciStatus ?? "",
       attempts: payload.attempts ?? 0,
       timestamp: payload.timestamp ?? new Date().toISOString(),
       errorClass,
@@ -189,7 +195,7 @@ export class HitlPatternAnalysisService {
       this.escalations = this.escalations.slice(-MAX_ESCALATION_RECORDS);
     }
 
-    this.deps.events.emit('hitl:pattern-analysis:escalation-ingested', {
+    this.deps.events.emit("hitl:pattern-analysis:escalation-ingested", {
       id: record.id,
       repo: record.repo,
       prNumber: record.prNumber,
@@ -197,7 +203,7 @@ export class HitlPatternAnalysisService {
     });
 
     logger.info(
-      `Ingested escalation for ${record.repo}#${record.prNumber} kind=${record.kind} signature="${signature}"`
+      `Ingested escalation for ${record.repo}#${record.prNumber} kind=${record.kind} signature="${signature}"`,
     );
 
     await this.updatePatternCounter(signature, record);
@@ -234,7 +240,7 @@ export class HitlPatternAnalysisService {
 
   private async updatePatternCounter(
     signature: string,
-    record: EscalationRecord
+    record: EscalationRecord,
   ): Promise<void> {
     const now = Date.now();
     const existing = this.patterns.get(signature);
@@ -246,7 +252,11 @@ export class HitlPatternAnalysisService {
       const windowStart = new Date(existing.windowStart).getTime();
       if (isNaN(windowStart) || now - windowStart > COUNTER_WINDOW_MS) {
         // Window expired — start fresh
-        state = { signature, count: 1, windowStart: new Date(now).toISOString() };
+        state = {
+          signature,
+          count: 1,
+          windowStart: new Date(now).toISOString(),
+        };
       } else {
         state = { ...existing, count: existing.count + 1 };
       }
@@ -255,7 +265,7 @@ export class HitlPatternAnalysisService {
     this.patterns.set(signature, state);
 
     logger.debug(
-      `Pattern counter updated: signature="${signature}" count=${state.count}`
+      `Pattern counter updated: signature="${signature}" count=${state.count}`,
     );
 
     if (state.count >= OCCURRENCE_THRESHOLD) {
@@ -266,14 +276,14 @@ export class HitlPatternAnalysisService {
   private async maybeFileFeature(
     signature: string,
     state: PatternState,
-    latestRecord: EscalationRecord
+    latestRecord: EscalationRecord,
   ): Promise<void> {
     // Dedup: skip if a feature was filed recently
     if (state.filedAt) {
       const filedAt = new Date(state.filedAt).getTime();
       if (!isNaN(filedAt) && Date.now() - filedAt < FILING_DEDUP_WINDOW_MS) {
         logger.info(
-          `Skipping auto-file for pattern="${signature}" — filed recently (${state.filedAt})`
+          `Skipping auto-file for pattern="${signature}" — filed recently (${state.filedAt})`,
         );
         return;
       }
@@ -284,19 +294,27 @@ export class HitlPatternAnalysisService {
     try {
       const existing = await this.deps.featureLoader.findByTitle(
         this.deps.projectPath,
-        title
+        title,
       );
-      if (existing && existing.status !== 'done' && existing.status !== 'interrupted') {
+      if (
+        existing &&
+        existing.status !== "done" &&
+        existing.status !== "interrupted"
+      ) {
         // Re-populate local dedup guard
-        this.patterns.set(signature, { ...state, filedFeatureId: existing.id, filedAt: new Date().toISOString() });
+        this.patterns.set(signature, {
+          ...state,
+          filedFeatureId: existing.id,
+          filedAt: new Date().toISOString(),
+        });
         logger.info(
-          `Skipping auto-file for pattern="${signature}" — open feature ${existing.id} already exists (status=${existing.status})`
+          `Skipping auto-file for pattern="${signature}" — open feature ${existing.id} already exists (status=${existing.status})`,
         );
         return;
       }
     } catch (err) {
       logger.warn(
-        `Failed to check for existing feature for pattern="${signature}", proceeding with filing: ${err}`
+        `Failed to check for existing feature for pattern="${signature}", proceeding with filing: ${err}`,
       );
     }
 
@@ -308,25 +326,28 @@ export class HitlPatternAnalysisService {
 
     try {
       const description = this.buildFeatureDescription(signature, latestRecord);
-      const feature = await this.deps.featureLoader.create(this.deps.projectPath, {
-        title,
-        description,
-        complexity: 'medium',
-        status: 'backlog',
-        priority: 3,
-        category: 'infra',
-        tags: ['auto-remediation', 'hitl-pattern', 'self-improvement'],
-      } as Parameters<FeatureLoader['create']>[1]);
+      const feature = await this.deps.featureLoader.create(
+        this.deps.projectPath,
+        {
+          title,
+          description,
+          complexity: "medium",
+          status: "backlog",
+          priority: 3,
+          category: "infra",
+          tags: ["auto-remediation", "hitl-pattern", "self-improvement"],
+        } as Parameters<FeatureLoader["create"]>[1],
+      );
 
       // Update pattern state with filed feature ID
       const updated = this.patterns.get(signature)!;
       this.patterns.set(signature, { ...updated, filedFeatureId: feature.id });
 
       logger.info(
-        `Auto-filed feature ${feature.id} for recurring pattern="${signature}" (${state.count} occurrences)`
+        `Auto-filed feature ${feature.id} for recurring pattern="${signature}" (${state.count} occurrences)`,
       );
 
-      this.deps.events.emit('hitl:pattern-analysis:feature-filed', {
+      this.deps.events.emit("hitl:pattern-analysis:feature-filed", {
         featureId: feature.id,
         patternSignature: signature,
         occurrenceCount: state.count,
@@ -343,7 +364,10 @@ export class HitlPatternAnalysisService {
     }
   }
 
-  private buildFeatureDescription(signature: string, latest: EscalationRecord): string {
+  private buildFeatureDescription(
+    signature: string,
+    latest: EscalationRecord,
+  ): string {
     const occurrences = this.escalations
       .filter((e) => e.patternSignature === signature)
       .slice(-5); // Last 5 for evidence
@@ -351,11 +375,11 @@ export class HitlPatternAnalysisService {
     const evidenceLines = occurrences
       .map(
         (e) =>
-          `- ${e.timestamp}: ${e.repo}#${e.prNumber} kind=${e.kind} workflow=${e.failingWorkflow} ci=${e.ciStatus} attempts=${e.attempts}`
+          `- ${e.timestamp}: ${e.repo}#${e.prNumber} kind=${e.kind} workflow=${e.failingWorkflow} ci=${e.ciStatus} attempts=${e.attempts}`,
       )
-      .join('\n');
+      .join("\n");
 
-    const [kind, failingWorkflow, errorClass] = signature.split(':');
+    const [kind, failingWorkflow, errorClass] = signature.split(":");
 
     return [
       `This feature was automatically filed by the HITL pattern analysis pipeline.`,
@@ -381,7 +405,7 @@ export class HitlPatternAnalysisService {
       `4. Add a regression test covering the pattern`,
       ``,
       `**Latest escalation:** ${latest.repo}#${latest.prNumber} at ${latest.timestamp}`,
-    ].join('\n');
+    ].join("\n");
   }
 
   // ---------------------------------------------------------------------------
@@ -389,27 +413,36 @@ export class HitlPatternAnalysisService {
   // ---------------------------------------------------------------------------
 
   private getStorePath(): string {
-    return join(this.deps.projectPath, '.automaker', 'ava-memory', 'hitl-patterns.json');
+    return join(
+      this.deps.projectPath,
+      ".automaker",
+      "ava-memory",
+      "hitl-patterns.json",
+    );
   }
 
   private async loadStore(): Promise<void> {
     const storePath = this.getStorePath();
     try {
-      const raw = await fs.readFile(storePath, 'utf-8');
+      const raw = await fs.readFile(storePath, "utf-8");
       const store = JSON.parse(raw) as HitlPatternStore;
-      this.escalations = Array.isArray(store.escalations) ? store.escalations : [];
-      if (store.patterns && typeof store.patterns === 'object') {
+      this.escalations = Array.isArray(store.escalations)
+        ? store.escalations
+        : [];
+      if (store.patterns && typeof store.patterns === "object") {
         for (const [key, value] of Object.entries(store.patterns)) {
           this.patterns.set(key, value as PatternState);
         }
       }
       logger.debug(
-        `Loaded HITL pattern store: ${this.escalations.length} escalations, ${this.patterns.size} patterns`
+        `Loaded HITL pattern store: ${this.escalations.length} escalations, ${this.patterns.size} patterns`,
       );
     } catch (err: unknown) {
       // ENOENT is expected on first start — any other error is logged as a warning
-      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
-        logger.warn(`Failed to load HITL pattern store (starting fresh): ${err}`);
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+        logger.warn(
+          `Failed to load HITL pattern store (starting fresh): ${err}`,
+        );
       }
     }
   }
@@ -440,35 +473,41 @@ export class HitlPatternAnalysisService {
  * Returns 'unknown' when no class can be determined.
  */
 function extractErrorClass(payload: HitlPrRemediationStuckPayload): string {
-  const text = [payload.failingWorkflow ?? '', payload.errorMessage ?? '']
-    .join(' ')
+  const text = [payload.failingWorkflow ?? "", payload.errorMessage ?? ""]
+    .join(" ")
     .toLowerCase();
 
-  if (/type.?error|typescript|\.ts\b|tsc\b/.test(text)) return 'ts_error';
-  if (/test.fail|jest|vitest|spec\b|\.spec\./.test(text)) return 'test_failure';
-  if (/\blint\b|eslint|prettier/.test(text)) return 'lint_failure';
+  if (/type.?error|typescript|\.ts\b|tsc\b/.test(text)) return "ts_error";
+  if (/test.fail|jest|vitest|spec\b|\.spec\./.test(text)) return "test_failure";
+  if (/\blint\b|eslint|prettier/.test(text)) return "lint_failure";
   if (/source.branch|wrong.branch|promotion.check|source-branch/.test(text))
-    return 'source_branch_guard';
-  if (/build.fail|webpack|vite\b|compile/.test(text)) return 'build_failure';
+    return "source_branch_guard";
+  if (/build.fail|webpack|vite\b|compile/.test(text)) return "build_failure";
 
-  return 'unknown';
+  return "unknown";
 }
 
 /**
  * Build a canonical pattern signature from its three components.
  * Format: `{kind}:{failingWorkflow}:{errorClass}`
  */
-function buildSignature(kind: string, failingWorkflow: string, errorClass: string): string {
-  return [kind ?? 'unknown', failingWorkflow ?? 'unknown', errorClass].join(':');
+function buildSignature(
+  kind: string,
+  failingWorkflow: string,
+  errorClass: string,
+): string {
+  return [kind ?? "unknown", failingWorkflow ?? "unknown", errorClass].join(
+    ":",
+  );
 }
 
 /**
  * Build the feature title for a given pattern signature.
  */
 function buildFeatureTitle(signature: string): string {
-  const [kind, failingWorkflow, errorClass] = signature.split(':');
+  const [kind, failingWorkflow, errorClass] = signature.split(":");
   const humanReadable = [kind, failingWorkflow, errorClass]
-    .map((s) => s?.replace(/_/g, ' '))
-    .join(' / ');
+    .map((s) => s?.replace(/_/g, " "))
+    .join(" / ");
   return `auto-remediate: stuck on ${humanReadable}`;
 }
