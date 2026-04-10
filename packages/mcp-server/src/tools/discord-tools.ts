@@ -20,12 +20,14 @@ export const discordTools: Tool[] = [
       properties: {
         projectSlug: {
           type: 'string',
-          description: 'Project slug from the registry (e.g. "protolabsai-protomaker", "protolabsai-protoui")',
+          description:
+            'Project slug from the registry (e.g. "protolabsai-protomaker", "protolabsai-protoui")',
         },
         channelType: {
           type: 'string',
           enum: ['dev', 'release'],
-          description: 'Which project channel to send to: "dev" for development activity, "release" for deployment/release notifications',
+          description:
+            'Which project channel to send to: "dev" for development activity, "release" for deployment/release notifications',
         },
         content: {
           type: 'string',

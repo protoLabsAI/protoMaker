@@ -1,5 +1,13 @@
 # @protolabsai/model-resolver
 
+## 0.99.4
+
+### Patch Changes
+
+- Maintenance release.
+- Updated dependencies
+  - @protolabsai/types@0.99.4
+
 ## 0.99.3
 
 ### Patch Changes
