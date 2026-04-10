@@ -298,23 +298,42 @@ export class FeatureLoader implements FeatureStore {
   }
 
   /**
-   * Generate a branch name from a feature title and feature ID.
+   * Map a feature category string to a git branch prefix.
+   * Categories that represent bug fixes get fix/, maintenance work gets chore/,
+   * refactors get refactor/, docs get docs/, tests get test/.
+   * Everything else (features, enhancements, unknown categories) gets feature/.
+   */
+  static categoryToPrefix(category: string | undefined): string {
+    const normalized = (category ?? '').toLowerCase().trim();
+    if (['bug', 'bugfix', 'fix', 'hotfix'].includes(normalized)) return 'fix/';
+    if (['chore', 'maintenance', 'ci', 'build', 'cleanup', 'deps'].includes(normalized))
+      return 'chore/';
+    if (normalized === 'refactor') return 'refactor/';
+    if (['docs', 'documentation'].includes(normalized)) return 'docs/';
+    if (normalized === 'test') return 'test/';
+    return 'feature/';
+  }
+
+  /**
+   * Generate a branch name from a feature title, feature ID, and optional category.
    * Appends a short fragment derived from the featureId to guarantee
    * uniqueness even when multiple features share a long common title prefix.
-   * Returns a feature/ prefixed branch name suitable for git.
+   * The branch prefix is derived from the category (e.g. bug → fix/, chore → chore/).
+   * Defaults to feature/ when no category is provided or the category is unrecognised.
    */
-  generateBranchName(title: string | undefined, featureId?: string): string {
+  generateBranchName(title: string | undefined, featureId?: string, category?: string): string {
     // Derive a short, deterministic uniqueness suffix from featureId.
     // featureId format: "feature-{timestamp}-{random9chars}"
     // Use the last 7 characters of the id — always alphanumeric, always unique.
     const shortId = featureId ? featureId.slice(-7) : Date.now().toString(36).slice(-7);
+    const prefix = FeatureLoader.categoryToPrefix(category);
 
     if (!title || !title.trim()) {
-      return `feature/untitled-${shortId}`;
+      return `${prefix}untitled-${shortId}`;
     }
     // Keep slug portion to 50 chars so the full branch stays under ~60 chars.
     const slug = slugify(title, 50);
-    return `feature/${slug || `untitled`}-${shortId}`;
+    return `${prefix}${slug || 'untitled'}-${shortId}`;
   }
 
   /**
@@ -589,7 +608,7 @@ export class FeatureLoader implements FeatureStore {
     const branchName =
       featureData.executionMode === 'read-only'
         ? undefined
-        : featureData.branchName || this.generateBranchName(featureData.title, featureId);
+        : featureData.branchName || this.generateBranchName(featureData.title, featureId, featureData.category);
 
     // Auto-assign projectSlug if not already provided
     let resolvedProjectSlug = featureData.projectSlug;

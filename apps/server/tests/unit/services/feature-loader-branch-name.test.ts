@@ -1,11 +1,13 @@
 /**
- * Unit tests for FeatureLoader.generateBranchName
+ * Unit tests for FeatureLoader.generateBranchName and FeatureLoader.categoryToPrefix
  *
  * Covers:
  * - Two features with a long common title prefix get distinct branch names
  * - Branch names are human-readable (contain slug of title)
  * - Untitled/empty features get unique branch names
  * - Determinism: same title + same featureId always yields the same branch
+ * - Category-aware prefix: each supported category maps to the correct prefix
+ * - Fallback: unknown or missing categories default to feature/
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -74,6 +76,49 @@ import { FeatureLoader } from '../../../src/services/feature-loader.js';
 
 // ---------------------------------------------------------------------------
 
+describe('FeatureLoader.categoryToPrefix', () => {
+  it.each([
+    // Bug / fix categories
+    ['bug', 'fix/'],
+    ['bugfix', 'fix/'],
+    ['fix', 'fix/'],
+    ['hotfix', 'fix/'],
+    // Chore / maintenance categories
+    ['chore', 'chore/'],
+    ['maintenance', 'chore/'],
+    ['ci', 'chore/'],
+    ['build', 'chore/'],
+    ['cleanup', 'chore/'],
+    ['deps', 'chore/'],
+    // Refactor
+    ['refactor', 'refactor/'],
+    // Docs
+    ['docs', 'docs/'],
+    ['documentation', 'docs/'],
+    // Test
+    ['test', 'test/'],
+    // Feature / default
+    ['feature', 'feature/'],
+    ['enhancement', 'feature/'],
+    ['story', 'feature/'],
+    ['Uncategorized', 'feature/'],
+    ['', 'feature/'],
+  ])('category %j → prefix %j', (category, expected) => {
+    expect(FeatureLoader.categoryToPrefix(category)).toBe(expected);
+  });
+
+  it('returns feature/ for undefined category', () => {
+    expect(FeatureLoader.categoryToPrefix(undefined)).toBe('feature/');
+  });
+
+  it('is case-insensitive', () => {
+    expect(FeatureLoader.categoryToPrefix('BUG')).toBe('fix/');
+    expect(FeatureLoader.categoryToPrefix('Fix')).toBe('fix/');
+    expect(FeatureLoader.categoryToPrefix('CHORE')).toBe('chore/');
+    expect(FeatureLoader.categoryToPrefix('Refactor')).toBe('refactor/');
+  });
+});
+
 describe('FeatureLoader.generateBranchName', () => {
   const loader = new FeatureLoader();
 
@@ -105,7 +150,7 @@ describe('FeatureLoader.generateBranchName', () => {
     expect(branchB).toContain('audit');
   });
 
-  it('branch name is human-readable and contains a slug of the title', () => {
+  it('branch name is human-readable and contains a slug of the title (no category → feature/)', () => {
     const branch = loader.generateBranchName('Fix login button', 'feature-123-abc1234');
     expect(branch).toMatch(/^feature\//);
     expect(branch).toContain('fix-login-button');
@@ -121,7 +166,7 @@ describe('FeatureLoader.generateBranchName', () => {
     expect(branch1).toBe(branch2);
   });
 
-  it('returns an untitled branch for undefined title', () => {
+  it('returns an untitled branch for undefined title (no category)', () => {
     const branch = loader.generateBranchName(undefined, 'feature-123-abc1234');
     expect(branch).toMatch(/^feature\/untitled-/);
   });
@@ -129,5 +174,107 @@ describe('FeatureLoader.generateBranchName', () => {
   it('returns an untitled branch for blank title', () => {
     const branch = loader.generateBranchName('   ', 'feature-123-abc1234');
     expect(branch).toMatch(/^feature\/untitled-/);
+  });
+
+  // --- Category-aware prefix tests ---
+
+  it('uses fix/ prefix for bug category', () => {
+    const branch = loader.generateBranchName('Fix null pointer crash', 'feature-123-abc1234', 'bug');
+    expect(branch).toMatch(/^fix\//);
+    expect(branch).toContain('fix-null-pointer-crash');
+  });
+
+  it('uses fix/ prefix for fix category', () => {
+    const branch = loader.generateBranchName('Fix login redirect', 'feature-123-abc1234', 'fix');
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses fix/ prefix for hotfix category', () => {
+    const branch = loader.generateBranchName('Hotfix memory leak', 'feature-456-def5678', 'hotfix');
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses chore/ prefix for chore category', () => {
+    const branch = loader.generateBranchName('Update dependencies', 'feature-789-ghi9012', 'chore');
+    expect(branch).toMatch(/^chore\//);
+  });
+
+  it('uses chore/ prefix for ci category', () => {
+    const branch = loader.generateBranchName(
+      'Fix branch naming in CI',
+      'feature-789-ghi9012',
+      'ci'
+    );
+    expect(branch).toMatch(/^chore\//);
+  });
+
+  it('uses chore/ prefix for maintenance category', () => {
+    const branch = loader.generateBranchName('Cleanup old logs', 'feature-789-ghi9012', 'maintenance');
+    expect(branch).toMatch(/^chore\//);
+  });
+
+  it('uses refactor/ prefix for refactor category', () => {
+    const branch = loader.generateBranchName(
+      'Refactor auth service',
+      'feature-abc-xyz1234',
+      'refactor'
+    );
+    expect(branch).toMatch(/^refactor\//);
+  });
+
+  it('uses docs/ prefix for docs category', () => {
+    const branch = loader.generateBranchName('Update API docs', 'feature-abc-xyz1234', 'docs');
+    expect(branch).toMatch(/^docs\//);
+  });
+
+  it('uses docs/ prefix for documentation category', () => {
+    const branch = loader.generateBranchName(
+      'Improve getting started guide',
+      'feature-abc-xyz1234',
+      'documentation'
+    );
+    expect(branch).toMatch(/^docs\//);
+  });
+
+  it('uses test/ prefix for test category', () => {
+    const branch = loader.generateBranchName(
+      'Add e2e tests for checkout',
+      'feature-abc-xyz1234',
+      'test'
+    );
+    expect(branch).toMatch(/^test\//);
+  });
+
+  it('uses feature/ prefix for feature category', () => {
+    const branch = loader.generateBranchName(
+      'Add dark mode toggle',
+      'feature-abc-xyz1234',
+      'feature'
+    );
+    expect(branch).toMatch(/^feature\//);
+  });
+
+  it('uses feature/ prefix for Uncategorized category (fallback)', () => {
+    const branch = loader.generateBranchName(
+      'Add dark mode toggle',
+      'feature-abc-xyz1234',
+      'Uncategorized'
+    );
+    expect(branch).toMatch(/^feature\//);
+  });
+
+  it('returns fix/-prefixed untitled branch when title is blank and category is bug', () => {
+    const branch = loader.generateBranchName('   ', 'feature-123-abc1234', 'bug');
+    expect(branch).toMatch(/^fix\/untitled-/);
+  });
+
+  it('is deterministic with category: same inputs always yield the same branch name', () => {
+    const title = 'Fix login redirect';
+    const id = 'feature-1234567890-xyz9876';
+    const category = 'fix';
+
+    expect(loader.generateBranchName(title, id, category)).toBe(
+      loader.generateBranchName(title, id, category)
+    );
   });
 });
