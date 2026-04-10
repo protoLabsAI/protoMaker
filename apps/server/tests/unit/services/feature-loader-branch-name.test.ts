@@ -106,9 +106,33 @@ describe('FeatureLoader.generateBranchName', () => {
   });
 
   it('branch name is human-readable and contains a slug of the title', () => {
-    const branch = loader.generateBranchName('Fix login button', 'feature-123-abc1234');
+    const branch = loader.generateBranchName('Add login button', 'feature-123-abc1234');
     expect(branch).toMatch(/^feature\//);
-    expect(branch).toContain('fix-login-button');
+    expect(branch).toContain('add-login-button');
+  });
+
+  it('uses fix/ prefix when category is bug', () => {
+    const branch = loader.generateBranchName('Fix login crash', 'feature-123-abc1234', 'bug');
+    expect(branch).toMatch(/^fix\//);
+    expect(branch).toContain('fix-login-crash');
+  });
+
+  it('uses fix/ prefix when title starts with fix:', () => {
+    const branch = loader.generateBranchName('fix: correct null check', 'feature-123-abc1234');
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses fix/ prefix when title starts with fix(ci):', () => {
+    const branch = loader.generateBranchName(
+      'fix(ci): PR #3351 source-branch failure',
+      'feature-123-abc1234'
+    );
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses feature/ prefix for non-fix categories', () => {
+    const branch = loader.generateBranchName('Add dark mode', 'feature-123-abc1234', 'feature');
+    expect(branch).toMatch(/^feature\//);
   });
 
   it('is deterministic: same title + same featureId always yields the same branch name', () => {
