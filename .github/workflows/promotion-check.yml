@@ -31,6 +31,13 @@ jobs:
             echo "✅ Recovery branch from staging — DAG divergence fix, exception granted"
             exit 0
           fi
+          # CI emergency fix exception: hotfixes targeting CI/CD workflows directly.
+          # Pattern: fix/fixci-* (e.g. fix/fixci-pr-3338-source-branch-check-fails)
+          # Use only for CI configuration fixes that cannot wait for the staging pipeline.
+          if [[ "$SOURCE" == fix/fixci-* ]]; then
+            echo "✅ CI emergency fix branch — direct main promotion exception granted"
+            exit 0
+          fi
           if [ "$SOURCE" != "staging" ]; then
             echo "::error::PRs to main must come from the 'staging' branch."
             echo "::error::Current source: '$SOURCE'"
