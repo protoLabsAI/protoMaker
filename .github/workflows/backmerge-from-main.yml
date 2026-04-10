@@ -1,0 +1,107 @@
+name: Back-merge from main
+
+# Purpose: prevent ancestry divergence between main and the lower integration
+# branches (staging, dev) caused by squash promotions.
+#
+# Every time main receives a squash-merge from a staging→main promotion PR,
+# staging and dev lose sight of main's new commit. Without intervention, the
+# NEXT promotion PR (dev→staging or staging→main) hits phantom "add/add"
+# conflicts in git because the branches have the same content but different
+# ancestry. This workflow fixes that by immediately merging main's new tip
+# back into both staging and dev with `-X ours` — they already have the
+# correct content via their own real commits, so we're only acknowledging
+# the squash commit as an ancestor for future merge-base calculations.
+#
+# Paired with backmerge-from-staging.yml which handles the staging→dev hop
+# independently (e.g. when a dev→staging promotion lands and main hasn't
+# moved).
+#
+# Prerequisite: `required_status_checks` and `required_pull_request_reviews`
+# must be disabled on staging and dev (kept on main). Feature PRs still run
+# CI via the pull_request trigger on checks.yml / test.yml so the lower
+# branches don't need push-time gates.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  backmerge-to-staging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: staging
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch main
+        run: git fetch origin main
+
+      - name: Skip if main is already an ancestor of staging
+        id: check
+        run: |
+          if git merge-base --is-ancestor origin/main HEAD; then
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+            echo "main is already an ancestor of staging — nothing to do"
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Merge main into staging (prefer staging on conflicts)
+        if: steps.check.outputs.needed == 'true'
+        run: |
+          git merge origin/main -X ours --no-ff \
+            -m "Auto back-merge main → staging (post ${{ github.sha }})" \
+            -m "Triggered by .github/workflows/backmerge-from-main.yml to prevent ancestry drift that would otherwise produce phantom conflicts on the next staging→main promotion PR. Staging already has the correct content via its real commits; this commit only acknowledges main's squash as an ancestor for future merge-base calculations."
+
+      - name: Push staging
+        if: steps.check.outputs.needed == 'true'
+        run: git push origin staging
+
+  backmerge-to-dev:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: dev
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch main
+        run: git fetch origin main
+
+      - name: Skip if main is already an ancestor of dev
+        id: check
+        run: |
+          if git merge-base --is-ancestor origin/main HEAD; then
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+            echo "main is already an ancestor of dev — nothing to do"
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Merge main into dev (prefer dev on conflicts)
+        if: steps.check.outputs.needed == 'true'
+        run: |
+          git merge origin/main -X ours --no-ff \
+            -m "Auto back-merge main → dev (post ${{ github.sha }})" \
+            -m "Triggered by .github/workflows/backmerge-from-main.yml. See the staging job for the full rationale — dev gets the same treatment."
+
+      - name: Push dev
+        if: steps.check.outputs.needed == 'true'
+        run: git push origin dev
