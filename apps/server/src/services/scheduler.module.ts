@@ -26,6 +26,7 @@ export function register(container: ServiceContainer): void {
     specGenerationMonitor,
     leadEngineerService,
     archivalService,
+    prFeedbackService,
   } = container;
 
   // Wire schedulerService into interval-tracked services so their timers
@@ -38,6 +39,9 @@ export function register(container: ServiceContainer): void {
     prWatcher.setSchedulerService(schedulerService);
   }
   archivalService.setSchedulerService(schedulerService);
+  // Wire CI watchdog — registers a 15-min interval to poll for CI failures as a
+  // fallback when GitHub check_suite webhooks are missed.
+  prFeedbackService.setSchedulerService(schedulerService);
 
   // Scheduler Service initialization and task registration via AutomationService
   schedulerService.initialize(events, dataDir);
