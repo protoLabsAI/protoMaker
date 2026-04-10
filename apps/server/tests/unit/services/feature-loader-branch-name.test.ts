@@ -179,7 +179,11 @@ describe('FeatureLoader.generateBranchName', () => {
   // --- Category-aware prefix tests ---
 
   it('uses fix/ prefix for bug category', () => {
-    const branch = loader.generateBranchName('Fix null pointer crash', 'feature-123-abc1234', 'bug');
+    const branch = loader.generateBranchName(
+      'Fix null pointer crash',
+      'feature-123-abc1234',
+      'bug'
+    );
     expect(branch).toMatch(/^fix\//);
     expect(branch).toContain('fix-null-pointer-crash');
   });
@@ -209,7 +213,11 @@ describe('FeatureLoader.generateBranchName', () => {
   });
 
   it('uses chore/ prefix for maintenance category', () => {
-    const branch = loader.generateBranchName('Cleanup old logs', 'feature-789-ghi9012', 'maintenance');
+    const branch = loader.generateBranchName(
+      'Cleanup old logs',
+      'feature-789-ghi9012',
+      'maintenance'
+    );
     expect(branch).toMatch(/^chore\//);
   });
 

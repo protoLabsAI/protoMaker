@@ -608,7 +608,8 @@ export class FeatureLoader implements FeatureStore {
     const branchName =
       featureData.executionMode === 'read-only'
         ? undefined
-        : featureData.branchName || this.generateBranchName(featureData.title, featureId, featureData.category);
+        : featureData.branchName ||
+          this.generateBranchName(featureData.title, featureId, featureData.category);
 
     // Auto-assign projectSlug if not already provided
     let resolvedProjectSlug = featureData.projectSlug;
