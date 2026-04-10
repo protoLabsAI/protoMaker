@@ -950,8 +950,12 @@ export async function scanWorktreesForCrashRecovery(
 
         try {
           const globalSettings = await settingsService.getGlobalSettings();
-          const projectSettings = await settingsService.getProjectSettings(projectPath);
-          const projectPrBaseBranch = projectSettings.workflow?.gitWorkflow?.prBaseBranch;
+          // Resolve effective prBaseBranch: project settings → global settings → auto-detect → default
+          const projectPrBaseBranch = await getEffectivePrBaseBranch(
+            projectPath,
+            settingsService,
+            '[MaintenanceRecovery]'
+          );
           const result = await gitWorkflowService.runPostCompletionWorkflow(
             projectPath,
             feature.id,
