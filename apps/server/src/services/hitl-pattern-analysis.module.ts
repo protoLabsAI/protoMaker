@@ -1,9 +1,9 @@
-import { createLogger } from "@protolabsai/utils";
-import type { ServiceContainer } from "../server/services.js";
-import type { TopicMessage } from "@protolabsai/types";
-import type { HitlPrRemediationStuckPayload } from "./hitl-pattern-analysis-service.js";
+import { createLogger } from '@protolabsai/utils';
+import type { ServiceContainer } from '../server/services.js';
+import type { TopicMessage } from '@protolabsai/types';
+import type { HitlPrRemediationStuckPayload } from './hitl-pattern-analysis-service.js';
 
-const logger = createLogger("Server:Wiring");
+const logger = createLogger('Server:Wiring');
 
 /**
  * Wires HitlPatternAnalysisService to the TopicBus.
@@ -26,14 +26,14 @@ export async function register(container: ServiceContainer): Promise<void> {
 
   // Subscribe to all pr-remediator stuck escalations from Workstacean
   topicBus.subscribe(
-    "hitl.request.pr.remediation_stuck.#",
+    'hitl.request.pr.remediation_stuck.#',
     (msg: TopicMessage<unknown>) => {
       const payload = msg.payload as HitlPrRemediationStuckPayload;
       void hitlPatternAnalysisService
         .handleEscalation(payload)
         .catch((err: unknown) => {
           logger.warn(
-            "[HitlPatternAnalysis] Failed to handle escalation:",
+            '[HitlPatternAnalysis] Failed to handle escalation:',
             err,
           );
         });
@@ -41,6 +41,6 @@ export async function register(container: ServiceContainer): Promise<void> {
   );
 
   logger.info(
-    "[HitlPatternAnalysis] Subscribed to hitl.request.pr.remediation_stuck.#",
+    '[HitlPatternAnalysis] Subscribed to hitl.request.pr.remediation_stuck.#',
   );
 }
