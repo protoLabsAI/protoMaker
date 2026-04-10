@@ -1,0 +1,66 @@
+name: Back-merge from staging
+
+# Purpose: prevent ancestry divergence between staging and dev caused by
+# dev→staging squash promotions. See backmerge-from-main.yml for the full
+# rationale — this workflow is the staging-tier counterpart.
+#
+# When a dev→staging promotion PR squash-merges, dev loses sight of the
+# new staging commit. Without this workflow, the next dev→staging promotion
+# PR hits phantom conflicts. The workflow immediately merges staging's new
+# tip back into dev with `-X ours` so dev acknowledges the squash as an
+# ancestor.
+#
+# This is the fast path for mid-cycle promotions — main hasn't moved, so
+# backmerge-from-main.yml doesn't fire, but dev still needs to pick up the
+# staging squash.
+#
+# Prerequisite: `required_status_checks` and `required_pull_request_reviews`
+# must be disabled on dev. Feature PRs still run CI via the pull_request
+# trigger on checks.yml / test.yml.
+
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  backmerge-to-dev:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: dev
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch staging
+        run: git fetch origin staging
+
+      - name: Skip if staging is already an ancestor of dev
+        id: check
+        run: |
+          if git merge-base --is-ancestor origin/staging HEAD; then
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+            echo "staging is already an ancestor of dev — nothing to do"
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Merge staging into dev (prefer dev on conflicts)
+        if: steps.check.outputs.needed == 'true'
+        run: |
+          git merge origin/staging -X ours --no-ff \
+            -m "Auto back-merge staging → dev (post ${{ github.sha }})" \
+            -m "Triggered by .github/workflows/backmerge-from-staging.yml to prevent ancestry drift after a dev→staging promotion. Dev already has the correct content via its real commits; this commit only acknowledges staging's squash as an ancestor for future merge-base calculations."
+
+      - name: Push dev
+        if: steps.check.outputs.needed == 'true'
+        run: git push origin dev
