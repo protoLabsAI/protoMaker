@@ -12,7 +12,7 @@ export const discordTools: Tool[] = [
   {
     name: 'send_channel_message',
     description:
-      'Send a message to a project\'s Discord channel via webhook. ' +
+      "Send a message to a project's Discord channel via webhook. " +
       'Requires a project slug (e.g. "protolabsai-protomaker") and a channel type ("dev" or "release"). ' +
       'Webhook URLs are configured in workspace/projects.yaml.',
     inputSchema: {
