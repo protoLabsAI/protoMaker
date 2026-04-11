@@ -1,5 +1,60 @@
 # @protolabsai/model-resolver
 
+## 0.100.0
+
+### Minor Changes
+
+- ### Features
+  - HITL escalation pattern analysis — auto-file features for recurring stuck PRs (#3357)
+  - honor metadata.projectPath override + new bug_triage skill (#3336)
+  - world-state HTTP endpoints for workstacean polling + A2A trace propagation (#3329)
+  - auto-generate branchName via branchNameModel (Haiku) when missing
+  - merge stale PR queue — WSJF + Cindi + Metrics + Registry + Scheduler (#3312)
+  - create Researcher activation skill + A2A wiring (#3309)
+  - implement agent-loop reviewers + decouple from Langfuse
+  - forward Plane issue metadata to plan skill
+  - add mcp server config, planning service sync, and onboard step (#3288)
+  - add plan/plan_resume skill files, fix modify path to re-run review (#3287)
+  - project-scoped Discord webhooks via registry (#3328)
+
+  ### Bug Fixes
+  - add branchPrefixForCategory to worktree-fallback-guard mock
+  - prettier formatting after back-merge
+  - prettier violations blocking staging→main PR #3343 + concurrency fix note (#3348)
+  - use category-aware branch prefix in generateBranchName (#3346)
+  - use getEffectivePrBaseBranch consistently in all PR creation paths (#3332)
+  - update test expectation and fix prettier formatting
+  - HITL bypass for A2A + skill refinements (#3340)
+  - use getEffectivePrBaseBranch consistently in all PR creation paths
+  - align world endpoints response shape to spec (snake_case flat JSON) (#3330)
+  - add auth headers to docs view fetch calls to resolve 401 (#3326)
+  - add branchNameModel to phase model label maps and settings sync migration
+  - add required cwd/maxTurns/allowedTools to branchName simpleQuery call
+  - rename userPrompt -> prompt in simpleQuery call for branchNameModel
+  - clear stuck MERGE_HEAD before preflight merge to break recurring merge_conflict loop (#3315)
+  - remove dead link to excluded internal doc (#3314)
+  - portfolio-metrics test shape + WSJF/metrics docs (#3313)
+  - deleting current project causes 403-logout redirect loop (#3308)
+  - resolve merge conflict — add protomaker to projects.yaml, fix discord schema
+  - update jon-review test mocks to XML format (#3298)
+  - decouple AntagonisticReviewAdapter from Langfuse availability
+  - switch antagonistic review nodes to XML output format
+  - post-construction clear topP/topK sentinels on ChatAnthropic
+  - set topP/topK: undefined on ChatAnthropic to avoid -1 sentinel (#3289)
+
+  ### Refactors
+  - bug: epic foundation orchestration missing — dependent features don't br (#3333)
+  - bug: closed PR reconciliation — features stay in review when their PR is (#3335)
+  - feat: auto-retrigger agent on CI failure — PR check failures should re-d (#3334)
+  - Workstacean GET /api/projects — operational state + ProjectRegistryServi (#3307)
+  - Bug: Quinn double-triage — idempotency guard on issues.opened webhook (#3301)
+  - Ava skill — portfolio-mode activation + prompt reframe (#3295)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.100.0
+
 ## 0.99.4
 
 ### Patch Changes

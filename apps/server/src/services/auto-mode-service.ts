@@ -2109,9 +2109,12 @@ Address the follow-up instructions above. Review the previous work and make the 
             }
           }
 
-          // Resolve per-project prBaseBranch override
-          const projectSettings = await this.settingsService.getProjectSettings(projectPath);
-          const projectPrBaseBranch = projectSettings.workflow?.gitWorkflow?.prBaseBranch;
+          // Resolve effective prBaseBranch: project settings → global settings → auto-detect → default
+          const projectPrBaseBranch = await getEffectivePrBaseBranch(
+            projectPath,
+            this.settingsService,
+            '[FollowUp]'
+          );
 
           gitWorkflowResult = await gitWorkflowService.runPostCompletionWorkflow(
             projectPath,
@@ -3184,18 +3187,29 @@ Format your response as a structured markdown document.`;
             try {
               const epicFeature = await this.featureLoader.get(projectPath, feature.epicId);
               if (epicFeature?.branchName) {
-                // Verify the epic branch exists before using it as base
-                await execFileAsync('git', ['rev-parse', '--verify', epicFeature.branchName], {
+                const epicBranch = epicFeature.branchName;
+                // Fetch the epic branch from remote to ensure we have up-to-date refs.
+                // Epic branches are pushed to remote-only during project scaffold, so a
+                // local `git rev-parse` would fail without an explicit fetch first.
+                try {
+                  await execFileAsync('git', ['fetch', 'origin', epicBranch], {
+                    cwd: projectPath,
+                  });
+                } catch {
+                  // Non-fatal: cached remote refs may suffice if fetch fails transiently
+                }
+                // Verify the epic branch exists on the remote (origin/epic/...)
+                await execFileAsync('git', ['rev-parse', '--verify', `origin/${epicBranch}`], {
                   cwd: projectPath,
                 });
-                baseBranch = epicFeature.branchName;
+                baseBranch = `origin/${epicBranch}`;
                 logger.info(
                   `Feature ${feature.id} belongs to epic, branching from epic branch: ${baseBranch}`
                 );
               }
             } catch {
               logger.warn(
-                `Epic branch not found for feature ${feature.id} (epicId: ${feature.epicId}), falling back to HEAD`
+                `Epic branch not found for feature ${feature.id} (epicId: ${feature.epicId}), falling back to origin/${resolvedPrBaseBranch}`
               );
             }
           }

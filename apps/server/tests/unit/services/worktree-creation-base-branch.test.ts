@@ -281,4 +281,111 @@ describe('AutoModeService - createWorktreeForBranch base branch resolution', () 
     // getEffectivePrBaseBranch is only called in the new-branch path, so it should NOT be called here
     expect(mockGetEffectivePrBaseBranch).not.toHaveBeenCalled();
   });
+
+  it('branches from origin/epic/<name> when feature belongs to an epic with a remote branch', async () => {
+    mockGetEffectivePrBaseBranch.mockResolvedValue('dev');
+
+    // Feature branch doesn't exist locally (first call is for feature branch check)
+    // Epic branch doesn't exist locally either (second rev-parse is for origin/epic/...)
+    // Both git fetch and git rev-parse --verify origin/... succeed
+    mockExecFileAsync.mockImplementation(async (bin: string, args: string[]) => {
+      // Feature branch rev-parse → not found (forces new-branch path)
+      if (args.includes('rev-parse') && args.includes('feature/test-branch')) {
+        throw new Error('unknown revision');
+      }
+      // All other calls succeed (fetch, epic branch verify, worktree add)
+      return { stdout: '', stderr: '' };
+    });
+
+    const svc = makeService();
+    const epicFeature = makeFeature({
+      id: 'epic-123',
+      isEpic: true,
+      branchName: 'epic/my-feature',
+    });
+    // Inject a mock featureLoader that returns the epic feature for the epicId lookup
+    (svc as any).featureLoader = {
+      get: vi.fn().mockResolvedValue(epicFeature),
+      update: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const childFeature = makeFeature({
+      id: 'feat-child-456',
+      epicId: 'epic-123',
+      isEpic: false,
+      branchName: 'feature/test-branch',
+    });
+
+    await (svc as any).createWorktreeForBranch(PROJECT_PATH, BRANCH_NAME, childFeature);
+
+    const calls = mockExecFileAsync.mock.calls as [string, string[]][];
+
+    // Verify git fetch origin epic/my-feature was called
+    const fetchCall = calls.find(
+      ([bin, args]) => bin === 'git' && args.includes('fetch') && args.includes('epic/my-feature')
+    );
+    expect(fetchCall).toBeDefined();
+
+    // Verify rev-parse checks origin/epic/my-feature (remote), not local epic/my-feature
+    const verifyCall = calls.find(
+      ([bin, args]) =>
+        bin === 'git' && args.includes('rev-parse') && args.includes('origin/epic/my-feature')
+    );
+    expect(verifyCall).toBeDefined();
+
+    // Verify worktree add uses origin/epic/my-feature as base
+    const worktreeAdd = calls.find(
+      ([bin, args]) => bin === 'git' && args.includes('worktree') && args.includes('-B')
+    );
+    expect(worktreeAdd).toBeDefined();
+    expect(worktreeAdd![1]).toContain('origin/epic/my-feature');
+    expect(worktreeAdd![1]).not.toContain('origin/dev');
+  });
+
+  it('falls back to origin/dev when epic branch does not exist on remote', async () => {
+    mockGetEffectivePrBaseBranch.mockResolvedValue('dev');
+
+    mockExecFileAsync.mockImplementation(async (bin: string, args: string[]) => {
+      // Feature branch rev-parse → not found
+      if (args.includes('rev-parse') && args.includes('feature/test-branch')) {
+        throw new Error('unknown revision');
+      }
+      // Epic branch rev-parse on remote → not found (simulates missing remote branch)
+      if (args.includes('rev-parse') && args.some((a) => a.startsWith('origin/epic/'))) {
+        throw new Error('unknown revision');
+      }
+      // fetch and worktree add succeed
+      return { stdout: '', stderr: '' };
+    });
+
+    const svc = makeService();
+    const epicFeature = makeFeature({
+      id: 'epic-123',
+      isEpic: true,
+      branchName: 'epic/my-feature',
+    });
+    (svc as any).featureLoader = {
+      get: vi.fn().mockResolvedValue(epicFeature),
+      update: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const childFeature = makeFeature({
+      id: 'feat-child-456',
+      epicId: 'epic-123',
+      isEpic: false,
+      branchName: 'feature/test-branch',
+    });
+
+    await (svc as any).createWorktreeForBranch(PROJECT_PATH, BRANCH_NAME, childFeature);
+
+    const calls = mockExecFileAsync.mock.calls as [string, string[]][];
+
+    // Should fall back to origin/dev when epic branch not found on remote
+    const worktreeAdd = calls.find(
+      ([bin, args]) => bin === 'git' && args.includes('worktree') && args.includes('-B')
+    );
+    expect(worktreeAdd).toBeDefined();
+    expect(worktreeAdd![1]).toContain('origin/dev');
+    expect(worktreeAdd![1]).not.toContain('origin/epic/');
+  });
 });

@@ -84,6 +84,7 @@ import {
   FrictionTrackerService,
   type FailureContext,
 } from '../services/friction-tracker-service.js';
+import { HitlPatternAnalysisService } from '../services/hitl-pattern-analysis-service.js';
 import { FailureClassifierService } from '../services/failure-classifier-service.js';
 import {
   getReactiveSpawnerService,
@@ -291,6 +292,9 @@ export interface ServiceContainer {
 
   // Friction tracker (self-improvement loop — recurring failure pattern detection)
   frictionTrackerService: FrictionTrackerService;
+
+  // HITL pattern analysis (recurring stuck-PR pattern detection → auto-file)
+  hitlPatternAnalysisService: HitlPatternAnalysisService;
 
   // Reactive spawner (trigger-based agent spawning with rate limiting and circuit breaking)
   reactiveSpawnerService: ReactiveSpawnerService;
@@ -727,6 +731,13 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     instanceId: crdtSyncService.getInstanceId(),
   });
 
+  // HITL Pattern Analysis Service — recurring stuck-PR pattern detection + auto-filing
+  const hitlPatternAnalysisService = new HitlPatternAnalysisService({
+    featureLoader,
+    projectPath: repoRoot,
+    events,
+  });
+
   // Wire friction tracker into the feature-status-change event pipeline.
   // On every blocked status change, classify the reason and record the pattern.
   const failureClassifierService = new FailureClassifierService();
@@ -950,6 +961,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     metricsCollectionService,
     errorBudgetService,
     frictionTrackerService,
+    hitlPatternAnalysisService,
     reactiveSpawnerService,
     commandRegistryService,
     checkpointService,

@@ -554,6 +554,7 @@ export class ExecutionService {
             );
             const { model } = resolvePhaseModel(phaseModel);
             const titleForPrompt = feature.title ?? feature.description?.slice(0, 200) ?? featureId;
+            const branchPrefix = this.featureLoader.branchPrefixForCategory(feature.category);
             const result = await simpleQuery({
               model,
               cwd: projectPath,
@@ -562,31 +563,32 @@ export class ExecutionService {
               systemPrompt:
                 'You generate git branch names. Output ONLY the branch name, nothing else — no explanation, no punctuation, no quotes.',
               prompt: `Generate a concise git branch name for this feature. Rules:
-- Prefix: "feature/"
+- Prefix: "${branchPrefix}/"
 - Lowercase letters, numbers, hyphens only
 - Max 60 characters total (including prefix)
 - Must be URL-safe (no spaces, slashes beyond the prefix, special chars)
 - End with the last 7 chars of the feature ID: "${featureId.slice(-7)}"
 
 Feature title: ${titleForPrompt}
+Feature category: ${feature.category ?? 'feature'}
 Feature ID: ${featureId}
 
 Output the branch name only.`,
             });
             const raw = result.text?.trim().replace(/['"]/g, '') ?? '';
-            // Validate: must start with feature/, only safe chars, reasonable length
-            if (/^feature\/[a-z0-9][a-z0-9-]{1,58}$/.test(raw)) {
+            // Validate: must start with a known prefix/, only safe chars, reasonable length
+            if (/^[a-z]+\/[a-z0-9][a-z0-9-]{1,58}$/.test(raw)) {
               generatedBranchName = raw;
             } else {
               // Sanitize the raw output as a fallback
               const slug = raw
-                .replace(/^feature\//, '')
+                .replace(/^[a-z]+\//, '')
                 .toLowerCase()
                 .replace(/[^a-z0-9-]/g, '-')
                 .replace(/-+/g, '-')
                 .replace(/^-|-$/g, '')
                 .slice(0, 52);
-              generatedBranchName = `feature/${slug}-${featureId.slice(-7)}`;
+              generatedBranchName = `${branchPrefix}/${slug}-${featureId.slice(-7)}`;
             }
           }
         } catch (err) {
@@ -595,7 +597,8 @@ Output the branch name only.`,
 
         if (!generatedBranchName) {
           // Final fallback: derive from feature ID directly — always safe
-          generatedBranchName = `feature/${featureId.slice(0, 52)}`;
+          const branchPrefix = this.featureLoader.branchPrefixForCategory(feature.category);
+          generatedBranchName = `${branchPrefix}/${featureId.slice(0, 52)}`;
         }
 
         logger.info(`Generated branchName "${generatedBranchName}" for feature ${featureId}`);
@@ -967,11 +970,31 @@ Output the branch name only.`,
       await this.featureLoader.update(projectPath, featureId, { model: modelResult.model });
 
       // Resolve the effective base branch for this project (project setting → auto-detect → 'dev')
-      const preFlightBaseBranch = await getEffectivePrBaseBranch(
+      let preFlightBaseBranch = await getEffectivePrBaseBranch(
         projectPath,
         this.settingsService,
         '[PreFlight]'
       );
+
+      // For features belonging to an epic, sync against the epic branch instead of dev.
+      // Epic child features are branched from origin/epic/... (not dev), so merging dev
+      // would pull in unrelated changes and cause conflicts against the epic branch.
+      if (feature.epicId && !feature.isEpic) {
+        try {
+          const epicFeature = await this.featureLoader.get(projectPath, feature.epicId);
+          if (epicFeature?.branchName) {
+            preFlightBaseBranch = epicFeature.branchName;
+            logger.info(
+              `[PreFlight] Feature ${featureId} belongs to epic, syncing against epic branch: ${preFlightBaseBranch}`
+            );
+          }
+        } catch (err) {
+          logger.warn(
+            `[PreFlight] Could not load epic feature ${feature.epicId} for branch resolution — using default: ${preFlightBaseBranch}`,
+            err
+          );
+        }
+      }
 
       // Merge branch with the project's base branch before agent execution
       // Uses merge instead of rebase to handle concurrent .automaker/ modifications gracefully
@@ -993,7 +1016,7 @@ Output the branch name only.`,
           if (!lsOutput.trim()) {
             const missingBranchReason =
               `Pre-flight check failed: base branch "origin/${preFlightBaseBranch}" does not exist on remote. ` +
-              `Configure workflow.gitWorkflow.prBaseBranch in .automaker/settings.json to match the project's default branch.`;
+              `Configure gitWorkflow.prBaseBranch in global settings or workflow.gitWorkflow.prBaseBranch in .automaker/settings.json to match the project's default branch.`;
             logger.error(`[PreFlight] ${missingBranchReason}`);
             this.typedEventBus.emitAutoModeEvent('sync_warning', {
               featureId,
@@ -1323,7 +1346,7 @@ Output the branch name only.`,
             }
           }
 
-          // Resolve per-project prBaseBranch: project settings → auto-detect (never global)
+          // Resolve effective prBaseBranch: project settings → global settings → auto-detect → default
           const projectPrBaseBranch = await getEffectivePrBaseBranch(
             projectPath,
             this.settingsService,

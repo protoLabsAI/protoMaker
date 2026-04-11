@@ -229,7 +229,7 @@ describe('scanWorktreesForCrashRecovery', () => {
       {},
       undefined,
       events,
-      undefined
+      'dev'
     );
 
     expect(events.emit).toHaveBeenCalledWith(
