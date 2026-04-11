@@ -34,6 +34,175 @@ import type { PlanningService } from '../../services/planning-service.js';
 
 const logger = createLogger('A2ARoutes');
 
+// ─── Declared skill surface ──────────────────────────────────────────────────
+// Single source of truth for every skill Ava accepts via /a2a. buildAgentCard
+// renders these into the public Agent Card, and the message/send handler
+// checks incoming skillHint values against this set to reject anything that
+// isn't declared. Without the guard Ava's LLM would silently answer skills
+// she never claimed (observed on protoWorkstacean#104 — she narrated a pr_review
+// despite having no such skill on her card, because the upstream router
+// defaulted to her when no other agent claimed the skill).
+//
+// To add a skill: add an entry here, then — if it needs custom routing —
+// handle the skillHint branch in the message/send handler below.
+
+interface SkillDefinition {
+  id: string;
+  name: string;
+  description: string;
+  tags: string[];
+  inputModes: string[];
+  outputModes: string[];
+  examples: string[];
+}
+
+const DECLARED_SKILLS: readonly SkillDefinition[] = [
+  {
+    id: 'chat',
+    name: 'Free-form Chat',
+    description:
+      'Free-form multi-turn dialogue with the user. No specific tool action required — ' +
+      'Ava picks up context, asks clarifying questions, and routes to a specific skill ' +
+      'internally if the conversation lands on something actionable. This is the default ' +
+      'DM fallback skill (ROUTER_DM_DEFAULT_SKILL=chat) for messages that do not hit a ' +
+      'keyword match.',
+    tags: ['chat', 'dialogue', 'fallback'],
+    inputModes: ['text/plain'],
+    outputModes: ['text/markdown'],
+    examples: [
+      'hey ava, how are you?',
+      "what's going on with the board today?",
+      'can you help me think through this architecture question?',
+    ],
+  },
+  {
+    id: 'sitrep',
+    name: 'Situation Report',
+    description:
+      'Returns current board state: feature counts by status, running agents, ' +
+      'auto-mode status, and recent escalations.',
+    tags: ['monitoring', 'board'],
+    inputModes: ['text/plain'],
+    outputModes: ['text/markdown'],
+    examples: ['give me a sitrep', "what's the board looking like?"],
+  },
+  {
+    id: 'manage_feature',
+    name: 'Manage Feature',
+    description:
+      'Create, update, unblock, reassign, or change the status of a feature on the board.',
+    tags: ['features', 'board'],
+    inputModes: ['text/plain'],
+    outputModes: ['text/markdown'],
+    examples: [
+      'unblock feature feature-123',
+      'create a feature: add dark mode',
+      'mark feature-456 as done',
+    ],
+  },
+  {
+    id: 'auto_mode',
+    name: 'Auto Mode Control',
+    description: 'Start or stop the autonomous feature execution loop.',
+    tags: ['automation'],
+    inputModes: ['text/plain'],
+    outputModes: ['text/plain'],
+    examples: ['start auto-mode', 'stop auto-mode', 'is auto-mode running?'],
+  },
+  {
+    id: 'board_health',
+    name: 'Board Health Check',
+    description:
+      'Analyse board health: blocked features, stalled agents, CI failures, dependency issues.',
+    tags: ['monitoring', 'health'],
+    inputModes: ['text/plain'],
+    outputModes: ['text/markdown'],
+    examples: ["what's blocked?", 'check board health', 'any stalled agents?'],
+  },
+  {
+    id: 'bug_triage',
+    name: 'Bug Triage',
+    description:
+      'Triage an incoming bug report from GitHub. Classifies severity and category, ' +
+      'applies labels, and creates a board feature. Trust-tier-aware: external submissions ' +
+      '(tier 0/1) are wrapped in untrusted framing and quarantined for human review before ' +
+      'auto-mode picks them up.',
+    tags: ['bugs', 'triage', 'github'],
+    inputModes: ['text/plain'],
+    outputModes: ['text/markdown'],
+    examples: [
+      'triage GitHub issue #42',
+      'classify and label this bug report',
+      'create a board feature for this external bug',
+    ],
+  },
+  {
+    id: 'onboard_project',
+    name: 'Onboard Project',
+    description:
+      'Onboard a new GitHub repo: scaffold .automaker board entry, patch .gitignore, ' +
+      'create worktree-init hook, provision Discord category + channels via Quinn, ' +
+      'and register the project in the Workstacean routing index.',
+    tags: ['onboarding', 'projects'],
+    inputModes: ['text/plain'],
+    outputModes: ['text/markdown'],
+    examples: [
+      'onboard protoLabsAI/protoWorkstacean',
+      '/onboard protoLabsAI/quinn',
+      'set up protoLabsAI/myapp as a new project',
+    ],
+  },
+  {
+    id: 'provision_discord',
+    name: 'Provision Discord Channels',
+    description:
+      'Provision Discord channels for a new project. ' +
+      'Creates a category with standard project channels (#dev, #alerts, #releases). ' +
+      'Called by Ava during onboard_project to set up team communication infrastructure. ' +
+      'Returns channel IDs for writing back to project settings.',
+    tags: ['discord', 'onboarding', 'provisioning'],
+    inputModes: ['text/plain'],
+    outputModes: ['application/json'],
+    examples: [
+      'provision discord channels for project MyApp',
+      'set up discord for projectSlug=my-app projectTitle=My App',
+    ],
+  },
+  {
+    id: 'plan',
+    name: 'Plan — SPARC PRD + Antagonistic Review',
+    description:
+      'Draft a SPARC PRD from a raw idea, run antagonistic review (Ava vs Jon), ' +
+      'and publish a HITL gate for human approval. Returns immediately with ' +
+      'status "pending_approval" and a correlationId. Use plan_resume to approve or reject.',
+    tags: ['planning', 'prd', 'review', 'hitl'],
+    inputModes: ['text/plain'],
+    outputModes: ['application/json'],
+    examples: [
+      'plan: add a knowledge graph service to Ava',
+      'plan: build a Grafana dashboard for seedbox metrics',
+    ],
+  },
+  {
+    id: 'plan_resume',
+    name: 'Plan Resume — HITL Decision',
+    description:
+      'Resume a pending plan after human approval. Pass the correlationId and ' +
+      'a decision (approve / reject / modify). If approved, creates the project ' +
+      'and features on the board.',
+    tags: ['planning', 'hitl', 'approval'],
+    inputModes: ['application/json'],
+    outputModes: ['application/json'],
+    examples: [
+      '{"correlationId":"ws-abc123","decision":"approve"}',
+      '{"correlationId":"ws-abc123","decision":"modify","feedback":"reduce scope to MVP"}',
+    ],
+  },
+] as const;
+
+/** Set of skill IDs Ava will accept — used as the allowlist check. Exported for testing. */
+export const DECLARED_SKILL_IDS: ReadonlySet<string> = new Set(DECLARED_SKILLS.map((s) => s.id));
+
 // ─── Agent Card ──────────────────────────────────────────────────────────────
 // Describes Ava's skills in the A2A standard format.
 // Agents read this to understand what they can delegate here.
@@ -59,131 +228,7 @@ function buildAgentCard(host: string) {
     },
     defaultInputModes: ['text/plain'],
     defaultOutputModes: ['text/markdown'],
-    skills: [
-      {
-        id: 'sitrep',
-        name: 'Situation Report',
-        description:
-          'Returns current board state: feature counts by status, running agents, ' +
-          'auto-mode status, and recent escalations.',
-        tags: ['monitoring', 'board'],
-        inputModes: ['text/plain'],
-        outputModes: ['text/markdown'],
-        examples: ['give me a sitrep', "what's the board looking like?"],
-      },
-      {
-        id: 'manage_feature',
-        name: 'Manage Feature',
-        description:
-          'Create, update, unblock, reassign, or change the status of a feature on the board.',
-        tags: ['features', 'board'],
-        inputModes: ['text/plain'],
-        outputModes: ['text/markdown'],
-        examples: [
-          'unblock feature feature-123',
-          'create a feature: add dark mode',
-          'mark feature-456 as done',
-        ],
-      },
-      {
-        id: 'auto_mode',
-        name: 'Auto Mode Control',
-        description: 'Start or stop the autonomous feature execution loop.',
-        tags: ['automation'],
-        inputModes: ['text/plain'],
-        outputModes: ['text/plain'],
-        examples: ['start auto-mode', 'stop auto-mode', 'is auto-mode running?'],
-      },
-      {
-        id: 'board_health',
-        name: 'Board Health Check',
-        description:
-          'Analyse board health: blocked features, stalled agents, CI failures, dependency issues.',
-        tags: ['monitoring', 'health'],
-        inputModes: ['text/plain'],
-        outputModes: ['text/markdown'],
-        examples: ["what's blocked?", 'check board health', 'any stalled agents?'],
-      },
-      {
-        id: 'bug_triage',
-        name: 'Bug Triage',
-        description:
-          'Triage an incoming bug report from GitHub. Classifies severity and category, ' +
-          'applies labels, and creates a board feature. Trust-tier-aware: external submissions ' +
-          '(tier 0/1) are wrapped in untrusted framing and quarantined for human review before ' +
-          'auto-mode picks them up.',
-        tags: ['bugs', 'triage', 'github'],
-        inputModes: ['text/plain'],
-        outputModes: ['text/markdown'],
-        examples: [
-          'triage GitHub issue #42',
-          'classify and label this bug report',
-          'create a board feature for this external bug',
-        ],
-      },
-      {
-        id: 'onboard_project',
-        name: 'Onboard Project',
-        description:
-          'Onboard a new GitHub repo: scaffold .automaker board entry, patch .gitignore, ' +
-          'create worktree-init hook, provision Discord category + channels via Quinn, ' +
-          'and register the project in the Workstacean routing index.',
-        tags: ['onboarding', 'projects'],
-        inputModes: ['text/plain'],
-        outputModes: ['text/markdown'],
-        examples: [
-          'onboard protoLabsAI/protoWorkstacean',
-          '/onboard protoLabsAI/quinn',
-          'set up protoLabsAI/myapp as a new project',
-        ],
-      },
-      {
-        id: 'provision_discord',
-        name: 'Provision Discord Channels',
-        description:
-          'Provision Discord channels for a new project. ' +
-          'Creates a category with standard project channels (#dev, #alerts, #releases). ' +
-          'Called by Ava during onboard_project to set up team communication infrastructure. ' +
-          'Returns channel IDs for writing back to project settings.',
-        tags: ['discord', 'onboarding', 'provisioning'],
-        inputModes: ['text/plain'],
-        outputModes: ['application/json'],
-        examples: [
-          'provision discord channels for project MyApp',
-          'set up discord for projectSlug=my-app projectTitle=My App',
-        ],
-      },
-      {
-        id: 'plan',
-        name: 'Plan — SPARC PRD + Antagonistic Review',
-        description:
-          'Draft a SPARC PRD from a raw idea, run antagonistic review (Ava vs Jon), ' +
-          'and publish a HITL gate for human approval. Returns immediately with ' +
-          'status "pending_approval" and a correlationId. Use plan_resume to approve or reject.',
-        tags: ['planning', 'prd', 'review', 'hitl'],
-        inputModes: ['text/plain'],
-        outputModes: ['application/json'],
-        examples: [
-          'plan: add a knowledge graph service to Ava',
-          'plan: build a Grafana dashboard for seedbox metrics',
-        ],
-      },
-      {
-        id: 'plan_resume',
-        name: 'Plan Resume — HITL Decision',
-        description:
-          'Resume a pending plan after human approval. Pass the correlationId and ' +
-          'a decision (approve / reject / modify). If approved, creates the project ' +
-          'and features on the board.',
-        tags: ['planning', 'hitl', 'approval'],
-        inputModes: ['application/json'],
-        outputModes: ['application/json'],
-        examples: [
-          '{"correlationId":"ws-abc123","decision":"approve"}',
-          '{"correlationId":"ws-abc123","decision":"modify","feedback":"reduce scope to MVP"}',
-        ],
-      },
-    ],
+    skills: DECLARED_SKILLS,
     securitySchemes: {
       apiKey: {
         type: 'apiKey',
@@ -476,6 +521,30 @@ export function createA2AHandlerRoutes(projectPath: string, deps?: A2AHandlerDep
         error: {
           code: -32602,
           message: 'Invalid params: message must contain at least one text part',
+        },
+      });
+      return;
+    }
+
+    // Agent-card allowlist enforcement. If the caller pinned a specific skill,
+    // it MUST be one Ava declared in her Agent Card. Silently answering skills
+    // outside that surface (as the LLM used to do) lets the fleet drift —
+    // callers think the delegation worked, but Ava's answer has no tool
+    // grounding and the sender never learns the skill wasn't implemented.
+    // Returning -32601 ("method not found") forces the sender to route
+    // elsewhere or surface the misconfiguration.
+    if (skillOverride && !DECLARED_SKILL_IDS.has(skillOverride)) {
+      logger.warn(
+        `A2A rejected skill "${skillOverride}" — not in agent card. Declared: [${[...DECLARED_SKILL_IDS].join(', ')}]`
+      );
+      res.status(200).json({
+        jsonrpc: '2.0',
+        id: rpcId,
+        error: {
+          code: -32601,
+          message:
+            `Skill "${skillOverride}" is not declared in Ava's agent card. ` +
+            `Declared skills: ${[...DECLARED_SKILL_IDS].join(', ')}.`,
         },
       });
       return;
