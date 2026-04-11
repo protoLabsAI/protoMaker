@@ -58,6 +58,24 @@ interface SkillDefinition {
 
 const DECLARED_SKILLS: readonly SkillDefinition[] = [
   {
+    id: 'chat',
+    name: 'Free-form Chat',
+    description:
+      'Free-form multi-turn dialogue with the user. No specific tool action required — ' +
+      'Ava picks up context, asks clarifying questions, and routes to a specific skill ' +
+      'internally if the conversation lands on something actionable. This is the default ' +
+      'DM fallback skill (ROUTER_DM_DEFAULT_SKILL=chat) for messages that do not hit a ' +
+      'keyword match.',
+    tags: ['chat', 'dialogue', 'fallback'],
+    inputModes: ['text/plain'],
+    outputModes: ['text/markdown'],
+    examples: [
+      'hey ava, how are you?',
+      "what's going on with the board today?",
+      'can you help me think through this architecture question?',
+    ],
+  },
+  {
     id: 'sitrep',
     name: 'Situation Report',
     description:

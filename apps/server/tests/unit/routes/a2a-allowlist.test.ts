@@ -17,6 +17,7 @@ describe('A2A declared skill allowlist', () => {
     // here too — this test locks the public surface so accidental removals
     // (or accidental additions without a handler branch) are caught.
     const expected = [
+      'chat',
       'sitrep',
       'manage_feature',
       'auto_mode',
@@ -34,10 +35,9 @@ describe('A2A declared skill allowlist', () => {
   });
 
   it('rejects skills Ava does not claim', () => {
-    // pr_review is the concrete case that motivated the guard.
+    // pr_review is the concrete case that motivated the guard — owned by Quinn.
     expect(DECLARED_SKILL_IDS.has('pr_review')).toBe(false);
-    // security_triage and chat belong to Quinn — Ava should not shadow them.
+    // security_triage belongs to Quinn.
     expect(DECLARED_SKILL_IDS.has('security_triage')).toBe(false);
-    expect(DECLARED_SKILL_IDS.has('chat')).toBe(false);
   });
 });
