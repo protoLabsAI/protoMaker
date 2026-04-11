@@ -3182,6 +3182,32 @@ Format your response as a structured markdown document.`;
             this.settingsService,
             '[createWorktreeForBranch]'
           );
+
+          // Refresh the remote tracking ref for the base branch before we
+          // branch off it. Without this fetch, worktrees inherit whatever
+          // commit origin/<base> pointed at the last time someone fetched
+          // — often stale by hours on long-running servers — and the new
+          // feature PR opens already behind origin, guaranteeing avoidable
+          // rebase conflicts downstream. One targeted fetch per worktree
+          // creation is cheap and closes the loop.
+          try {
+            await execFileAsync('git', ['fetch', 'origin', resolvedPrBaseBranch], {
+              cwd: projectPath,
+              env: gitEnv,
+            });
+            logger.debug(
+              `Fetched origin/${resolvedPrBaseBranch} before worktree creation for ${branchName}`
+            );
+          } catch (fetchErr) {
+            // Non-fatal: cached refs may be fresh enough, and a hard-failing
+            // fetch shouldn't block feature execution. Log so it surfaces if
+            // the loop starts shipping stale PRs again.
+            logger.warn(
+              `Failed to fetch origin/${resolvedPrBaseBranch} before worktree creation — proceeding with cached ref:`,
+              fetchErr
+            );
+          }
+
           let baseBranch = `origin/${resolvedPrBaseBranch}`;
           if (feature?.epicId && !feature.isEpic) {
             try {
