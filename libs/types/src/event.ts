@@ -372,7 +372,10 @@ export type EventType =
   // Planning pipeline events (A2A plan + plan_resume skills)
   | 'plan:hitl-requested'
   | 'plan:created'
-  | 'plan:rejected';
+  | 'plan:rejected'
+  // HITL pattern analysis events (recurring stuck-PR pattern detection → auto-file)
+  | 'hitl:pattern-analysis:escalation-ingested'
+  | 'hitl:pattern-analysis:feature-filed';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
