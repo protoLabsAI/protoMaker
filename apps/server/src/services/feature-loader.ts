@@ -301,7 +301,12 @@ export class FeatureLoader implements FeatureStore {
    * Generate a branch name from a feature title and feature ID.
    * Appends a short fragment derived from the featureId to guarantee
    * uniqueness even when multiple features share a long common title prefix.
-   * Returns a feature/ prefixed branch name suitable for git.
+   *
+   * Branch prefix is derived from the conventional commit type in the title:
+   *   fix: ... / fix(scope): ...  → fix/
+   *   chore: ...                  → chore/
+   *   feat: ... / feature: ...   → feature/
+   *   (all other titles)          → feature/
    */
   generateBranchName(title: string | undefined, featureId?: string): string {
     // Derive a short, deterministic uniqueness suffix from featureId.
@@ -312,9 +317,30 @@ export class FeatureLoader implements FeatureStore {
     if (!title || !title.trim()) {
       return `feature/untitled-${shortId}`;
     }
+
+    // Detect conventional commit type prefix: "type: body" or "type(scope): body"
+    const conventionalMatch = title.match(/^([a-zA-Z]+)(?:\([^)]*\))?:\s*(.+)/s);
+    let branchPrefix = 'feature/';
+    let slugTitle = title;
+    if (conventionalMatch) {
+      const type = conventionalMatch[1].toLowerCase();
+      const body = conventionalMatch[2].trim();
+      if (type === 'fix') {
+        branchPrefix = 'fix/';
+        slugTitle = body;
+      } else if (type === 'chore') {
+        branchPrefix = 'chore/';
+        slugTitle = body;
+      } else if (type === 'feat' || type === 'feature') {
+        branchPrefix = 'feature/';
+        slugTitle = body;
+      }
+      // Other types (docs, refactor, test, etc.) fall through to default feature/ prefix
+    }
+
     // Keep slug portion to 50 chars so the full branch stays under ~60 chars.
-    const slug = slugify(title, 50);
-    return `feature/${slug || `untitled`}-${shortId}`;
+    const slug = slugify(slugTitle, 50);
+    return `${branchPrefix}${slug || `untitled`}-${shortId}`;
   }
 
   /**

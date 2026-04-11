@@ -130,4 +130,42 @@ describe('FeatureLoader.generateBranchName', () => {
     const branch = loader.generateBranchName('   ', 'feature-123-abc1234');
     expect(branch).toMatch(/^feature\/untitled-/);
   });
+
+  it('uses fix/ prefix for titles with conventional fix: type', () => {
+    const branch = loader.generateBranchName('fix: login button broken', 'feature-123-abc1234');
+    expect(branch).toMatch(/^fix\//);
+    expect(branch).not.toMatch(/^feature\//);
+  });
+
+  it('uses fix/ prefix for titles with scoped fix(ci): type', () => {
+    const branch = loader.generateBranchName(
+      'fix(ci): PR #3357 — checks gate failure on f8una36',
+      'feature-1775864254653-vd4o8gt6y',
+    );
+    expect(branch).toMatch(/^fix\//);
+    expect(branch).not.toContain('fix-ci');
+  });
+
+  it('uses chore/ prefix for titles with conventional chore: type', () => {
+    const branch = loader.generateBranchName('chore: update dependencies', 'feature-123-abc1234');
+    expect(branch).toMatch(/^chore\//);
+  });
+
+  it('uses feature/ prefix for titles with conventional feat: type', () => {
+    const branch = loader.generateBranchName('feat: add dark mode', 'feature-123-abc1234');
+    expect(branch).toMatch(/^feature\//);
+  });
+
+  it('slugifies only the body (after the type prefix) for conventional commit titles', () => {
+    const branch = loader.generateBranchName('fix: login button broken', 'feature-123-abc1234');
+    expect(branch).toContain('login-button-broken');
+    // "fix" should not appear twice in the slug portion
+    expect(branch).toBe('fix/login-button-broken-abc1234');
+  });
+
+  it('non-conventional titles without colon always use feature/ prefix', () => {
+    const branch = loader.generateBranchName('Fix login button', 'feature-123-abc1234');
+    expect(branch).toMatch(/^feature\//);
+    expect(branch).toContain('fix-login-button');
+  });
 });
