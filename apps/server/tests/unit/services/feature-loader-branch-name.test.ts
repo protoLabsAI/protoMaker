@@ -130,4 +130,39 @@ describe('FeatureLoader.generateBranchName', () => {
     const branch = loader.generateBranchName('   ', 'feature-123-abc1234');
     expect(branch).toMatch(/^feature\/untitled-/);
   });
+
+  it('uses fix/ prefix for category=bug', () => {
+    const branch = loader.generateBranchName('Fix login bug', 'feature-123-abc1234', 'bug');
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses fix/ prefix for category=fix', () => {
+    const branch = loader.generateBranchName('Fix login bug', 'feature-123-abc1234', 'fix');
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses fix/ prefix for category=ci', () => {
+    const branch = loader.generateBranchName('Fix CI pipeline', 'feature-123-abc1234', 'ci');
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses fix/ prefix for category=CI (case-insensitive)', () => {
+    const branch = loader.generateBranchName('Fix CI pipeline', 'feature-123-abc1234', 'CI');
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses feature/ prefix for category=feature', () => {
+    const branch = loader.generateBranchName('Add new feature', 'feature-123-abc1234', 'feature');
+    expect(branch).toMatch(/^feature\//);
+  });
+
+  it('uses feature/ prefix when category is undefined', () => {
+    const branch = loader.generateBranchName('Add new feature', 'feature-123-abc1234', undefined);
+    expect(branch).toMatch(/^feature\//);
+  });
+
+  it('returns fix/untitled for blank title with bug category', () => {
+    const branch = loader.generateBranchName('   ', 'feature-123-abc1234', 'bug');
+    expect(branch).toMatch(/^fix\/untitled-/);
+  });
 });
