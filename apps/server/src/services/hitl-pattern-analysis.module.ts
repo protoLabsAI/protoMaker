@@ -25,22 +25,12 @@ export async function register(container: ServiceContainer): Promise<void> {
   await hitlPatternAnalysisService.initialize();
 
   // Subscribe to all pr-remediator stuck escalations from Workstacean
-  topicBus.subscribe(
-    'hitl.request.pr.remediation_stuck.#',
-    (msg: TopicMessage<unknown>) => {
-      const payload = msg.payload as HitlPrRemediationStuckPayload;
-      void hitlPatternAnalysisService
-        .handleEscalation(payload)
-        .catch((err: unknown) => {
-          logger.warn(
-            '[HitlPatternAnalysis] Failed to handle escalation:',
-            err,
-          );
-        });
-    },
-  );
+  topicBus.subscribe('hitl.request.pr.remediation_stuck.#', (msg: TopicMessage<unknown>) => {
+    const payload = msg.payload as HitlPrRemediationStuckPayload;
+    void hitlPatternAnalysisService.handleEscalation(payload).catch((err: unknown) => {
+      logger.warn('[HitlPatternAnalysis] Failed to handle escalation:', err);
+    });
+  });
 
-  logger.info(
-    '[HitlPatternAnalysis] Subscribed to hitl.request.pr.remediation_stuck.#',
-  );
+  logger.info('[HitlPatternAnalysis] Subscribed to hitl.request.pr.remediation_stuck.#');
 }
