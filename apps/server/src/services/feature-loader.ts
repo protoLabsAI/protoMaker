@@ -298,27 +298,45 @@ export class FeatureLoader implements FeatureStore {
   }
 
   /**
-   * Generate a branch name from a feature title and feature ID.
+   * Derive the git branch prefix from a feature category.
+   * Maps semantic categories to conventional-commit-style prefixes.
+   */
+  branchPrefixForCategory(category: string | undefined): string {
+    if (!category) return 'feature';
+    const c = category.toLowerCase();
+    if (c === 'bug' || c === 'fix') return 'fix';
+    if (c === 'ops' || c === 'chore' || c === 'maintenance') return 'chore';
+    if (c === 'docs' || c === 'documentation') return 'docs';
+    return 'feature';
+  }
+
+  /**
+   * Generate a branch name from a feature title, feature ID, and optional category.
    * Appends a short fragment derived from the featureId to guarantee
    * uniqueness even when multiple features share a long common title prefix.
    *
-   * The branch prefix is derived from the conventional-commit type in the title:
-   * - "fix: ...", "fix(scope): ...", "fix!: ..." → fix/
-   * - all other titles → feature/
+   * Category takes priority for prefix selection. When no category is given,
+   * the conventional-commit type in the title is used (fix: → fix/, etc.).
    */
-  generateBranchName(title: string | undefined, featureId?: string): string {
+  generateBranchName(title: string | undefined, featureId?: string, category?: string): string {
     // Derive a short, deterministic uniqueness suffix from featureId.
     // featureId format: "feature-{timestamp}-{random9chars}"
     // Use the last 7 characters of the id — always alphanumeric, always unique.
     const shortId = featureId ? featureId.slice(-7) : Date.now().toString(36).slice(-7);
 
-    if (!title || !title.trim()) {
-      return `feature/untitled-${shortId}`;
+    // Category takes priority. When absent, detect from conventional-commit title type.
+    let prefix: string;
+    if (category) {
+      prefix = this.branchPrefixForCategory(category);
+    } else if (title && /^fix(\([^)]*\))?!?:/.test(title.trim())) {
+      prefix = 'fix';
+    } else {
+      prefix = 'feature';
     }
 
-    // Detect conventional-commit fix type: fix:, fix(scope):, fix!:
-    const isFixCommit = /^fix(\([^)]*\))?!?:/.test(title.trim());
-    const prefix = isFixCommit ? 'fix' : 'feature';
+    if (!title || !title.trim()) {
+      return `${prefix}/untitled-${shortId}`;
+    }
 
     // Keep slug portion to 50 chars so the full branch stays under ~60 chars.
     const slug = slugify(title, 50);
@@ -597,7 +615,8 @@ export class FeatureLoader implements FeatureStore {
     const branchName =
       featureData.executionMode === 'read-only'
         ? undefined
-        : featureData.branchName || this.generateBranchName(featureData.title, featureId);
+        : featureData.branchName ||
+          this.generateBranchName(featureData.title, featureId, featureData.category);
 
     // Auto-assign projectSlug if not already provided
     let resolvedProjectSlug = featureData.projectSlug;

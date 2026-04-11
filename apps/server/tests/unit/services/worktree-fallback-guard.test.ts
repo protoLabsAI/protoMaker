@@ -204,6 +204,13 @@ function makeFeatureLoader(feature: Feature) {
     })),
     list: vi.fn(async () => []),
     save: vi.fn(async () => {}),
+    branchPrefixForCategory: vi.fn((category: string | undefined) => {
+      const c = (category ?? '').toLowerCase();
+      if (c === 'bug' || c === 'fix') return 'fix';
+      if (c === 'ops' || c === 'chore' || c === 'maintenance') return 'chore';
+      if (c === 'docs') return 'docs';
+      return 'feature';
+    }),
   } as any;
 }
 

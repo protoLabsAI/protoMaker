@@ -1,11 +1,12 @@
 /**
- * Unit tests for FeatureLoader.generateBranchName
+ * Unit tests for FeatureLoader.generateBranchName and branchPrefixForCategory
  *
  * Covers:
  * - Two features with a long common title prefix get distinct branch names
  * - Branch names are human-readable (contain slug of title)
  * - Untitled/empty features get unique branch names
  * - Determinism: same title + same featureId always yields the same branch
+ * - Category-based prefix selection (bug → fix/, ops → chore/, default → feature/)
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -139,7 +140,7 @@ describe('FeatureLoader.generateBranchName', () => {
   it('uses fix/ prefix for scoped fix(scope): titles', () => {
     const branch = loader.generateBranchName(
       'fix(auth): handle token expiry',
-      'feature-123-abc1234',
+      'feature-123-abc1234'
     );
     expect(branch).toMatch(/^fix\//);
   });
@@ -152,7 +153,7 @@ describe('FeatureLoader.generateBranchName', () => {
   it('uses fix/ prefix for scoped breaking fix(scope)!: titles', () => {
     const branch = loader.generateBranchName(
       'fix(ci)!: enforce branch prefix policy',
-      'feature-123-abc1234',
+      'feature-123-abc1234'
     );
     expect(branch).toMatch(/^fix\//);
   });
@@ -160,5 +161,75 @@ describe('FeatureLoader.generateBranchName', () => {
   it('uses feature/ prefix for feat: titles (not fix)', () => {
     const branch = loader.generateBranchName('feat: add dark mode', 'feature-123-abc1234');
     expect(branch).toMatch(/^feature\//);
+  });
+});
+
+describe('FeatureLoader.branchPrefixForCategory', () => {
+  const loader = new FeatureLoader();
+
+  it('returns fix for bug category', () => {
+    expect(loader.branchPrefixForCategory('bug')).toBe('fix');
+  });
+
+  it('returns fix for fix category', () => {
+    expect(loader.branchPrefixForCategory('fix')).toBe('fix');
+  });
+
+  it('returns chore for ops category', () => {
+    expect(loader.branchPrefixForCategory('ops')).toBe('chore');
+  });
+
+  it('returns chore for chore category', () => {
+    expect(loader.branchPrefixForCategory('chore')).toBe('chore');
+  });
+
+  it('returns chore for maintenance category', () => {
+    expect(loader.branchPrefixForCategory('maintenance')).toBe('chore');
+  });
+
+  it('returns docs for docs category', () => {
+    expect(loader.branchPrefixForCategory('docs')).toBe('docs');
+  });
+
+  it('returns feature for feature category', () => {
+    expect(loader.branchPrefixForCategory('feature')).toBe('feature');
+  });
+
+  it('returns feature for improvement category', () => {
+    expect(loader.branchPrefixForCategory('improvement')).toBe('feature');
+  });
+
+  it('returns feature for undefined category', () => {
+    expect(loader.branchPrefixForCategory(undefined)).toBe('feature');
+  });
+
+  it('is case-insensitive', () => {
+    expect(loader.branchPrefixForCategory('BUG')).toBe('fix');
+    expect(loader.branchPrefixForCategory('OPS')).toBe('chore');
+  });
+});
+
+describe('FeatureLoader.generateBranchName with category', () => {
+  const loader = new FeatureLoader();
+
+  it('uses fix/ prefix for bug category', () => {
+    const branch = loader.generateBranchName('Login crash on submit', 'feature-123-abc1234', 'bug');
+    expect(branch).toMatch(/^fix\//);
+    expect(branch).toContain('login-crash-on-submit');
+  });
+
+  it('uses chore/ prefix for ops category', () => {
+    const branch = loader.generateBranchName('Update CI config', 'feature-123-abc1234', 'ops');
+    expect(branch).toMatch(/^chore\//);
+  });
+
+  it('uses feature/ prefix when no category is given', () => {
+    const branch = loader.generateBranchName('Add dashboard', 'feature-123-abc1234');
+    expect(branch).toMatch(/^feature\//);
+  });
+
+  it('untitled bug branches use fix/ prefix', () => {
+    const branch = loader.generateBranchName(undefined, 'feature-123-abc1234', 'bug');
+    expect(branch).toMatch(/^fix\/untitled-/);
   });
 });
