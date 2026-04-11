@@ -130,4 +130,41 @@ describe('FeatureLoader.generateBranchName', () => {
     const branch = loader.generateBranchName('   ', 'feature-123-abc1234');
     expect(branch).toMatch(/^feature\/untitled-/);
   });
+
+  it('uses fix/ prefix when category is "ci"', () => {
+    const branch = loader.generateBranchName('fix ci pipeline', 'feature-123-abc1234', 'ci');
+    expect(branch).toMatch(/^fix\//);
+    expect(branch).toContain('fix-ci-pipeline');
+  });
+
+  it('uses fix/ prefix when category is "bug"', () => {
+    const branch = loader.generateBranchName('fix login error', 'feature-123-bbb5678', 'bug');
+    expect(branch).toMatch(/^fix\//);
+    expect(branch).toContain('fix-login-error');
+  });
+
+  it('uses fix/ prefix when category has surrounding whitespace ("  ci  ")', () => {
+    const branch = loader.generateBranchName('fix flaky test', 'feature-123-ccc9012', '  ci  ');
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses fix/ prefix when category is uppercase ("CI")', () => {
+    const branch = loader.generateBranchName('fix build', 'feature-123-ddd3456', 'CI');
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses feature/ prefix for non-fix categories ("feat")', () => {
+    const branch = loader.generateBranchName('add dark mode', 'feature-123-eee7890', 'feat');
+    expect(branch).toMatch(/^feature\//);
+  });
+
+  it('uses feature/ prefix when category is undefined', () => {
+    const branch = loader.generateBranchName('add dark mode', 'feature-123-fff2345', undefined);
+    expect(branch).toMatch(/^feature\//);
+  });
+
+  it('fix/ untitled branch for ci category with blank title', () => {
+    const branch = loader.generateBranchName('   ', 'feature-123-ggg6789', 'ci');
+    expect(branch).toMatch(/^fix\/untitled-/);
+  });
 });

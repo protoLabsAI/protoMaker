@@ -298,23 +298,29 @@ export class FeatureLoader implements FeatureStore {
   }
 
   /**
-   * Generate a branch name from a feature title and feature ID.
+   * Generate a branch name from a feature title, feature ID, and optional category.
    * Appends a short fragment derived from the featureId to guarantee
    * uniqueness even when multiple features share a long common title prefix.
-   * Returns a feature/ prefixed branch name suitable for git.
+   * Returns a branch name prefixed with:
+   *   - "fix/"     when category (trimmed, lowercased) is "ci" or "bug"
+   *   - "feature/" otherwise
    */
-  generateBranchName(title: string | undefined, featureId?: string): string {
+  generateBranchName(title: string | undefined, featureId?: string, category?: string): string {
     // Derive a short, deterministic uniqueness suffix from featureId.
     // featureId format: "feature-{timestamp}-{random9chars}"
     // Use the last 7 characters of the id — always alphanumeric, always unique.
     const shortId = featureId ? featureId.slice(-7) : Date.now().toString(36).slice(-7);
 
+    // Determine the branch prefix from the feature category.
+    const normalizedCategory = (category ?? '').trim().toLowerCase();
+    const prefix = normalizedCategory === 'ci' || normalizedCategory === 'bug' ? 'fix' : 'feature';
+
     if (!title || !title.trim()) {
-      return `feature/untitled-${shortId}`;
+      return `${prefix}/untitled-${shortId}`;
     }
     // Keep slug portion to 50 chars so the full branch stays under ~60 chars.
     const slug = slugify(title, 50);
-    return `feature/${slug || `untitled`}-${shortId}`;
+    return `${prefix}/${slug || `untitled`}-${shortId}`;
   }
 
   /**
@@ -589,7 +595,8 @@ export class FeatureLoader implements FeatureStore {
     const branchName =
       featureData.executionMode === 'read-only'
         ? undefined
-        : featureData.branchName || this.generateBranchName(featureData.title, featureId);
+        : featureData.branchName ||
+          this.generateBranchName(featureData.title, featureId, featureData.category);
 
     // Auto-assign projectSlug if not already provided
     let resolvedProjectSlug = featureData.projectSlug;
