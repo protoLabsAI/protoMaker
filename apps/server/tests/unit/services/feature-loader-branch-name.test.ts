@@ -131,3 +131,43 @@ describe('FeatureLoader.generateBranchName', () => {
     expect(branch).toMatch(/^feature\/untitled-/);
   });
 });
+
+describe('FeatureLoader.generateBranchName — branch prefix by conventional commit category', () => {
+  const loader = new FeatureLoader();
+
+  it('uses fix/ prefix for fix: category with a body', () => {
+    const branch = loader.generateBranchName('fix: broken login button', 'feature-123-abc1234');
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses fix/ prefix for fix: category with empty body (regression guard)', () => {
+    // Guards against regression back to feature/ prefix when title is just "fix:"
+    const branch = loader.generateBranchName('fix:', 'feature-123-abc1234');
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses fix/ prefix for bug: category', () => {
+    const branch = loader.generateBranchName('bug: null pointer in auth service', 'feature-123-abc1234');
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses fix/ prefix for ci: category', () => {
+    const branch = loader.generateBranchName('ci: add missing test coverage', 'feature-123-abc1234');
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses feature/ prefix for feat: category', () => {
+    const branch = loader.generateBranchName('feat: add dark mode', 'feature-123-abc1234');
+    expect(branch).toMatch(/^feature\//);
+  });
+
+  it('uses feature/ prefix for chore: category', () => {
+    const branch = loader.generateBranchName('chore: update dependencies', 'feature-123-abc1234');
+    expect(branch).toMatch(/^feature\//);
+  });
+
+  it('uses feature/ prefix for title without conventional commit prefix', () => {
+    const branch = loader.generateBranchName('Fix login button', 'feature-123-abc1234');
+    expect(branch).toMatch(/^feature\//);
+  });
+});
