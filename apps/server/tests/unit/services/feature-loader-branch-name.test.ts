@@ -130,4 +130,35 @@ describe('FeatureLoader.generateBranchName', () => {
     const branch = loader.generateBranchName('   ', 'feature-123-abc1234');
     expect(branch).toMatch(/^feature\/untitled-/);
   });
+
+  it('uses fix/ prefix for conventional-commit fix: titles', () => {
+    const branch = loader.generateBranchName('fix: correct login redirect', 'feature-123-abc1234');
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses fix/ prefix for scoped fix(scope): titles', () => {
+    const branch = loader.generateBranchName(
+      'fix(auth): handle token expiry',
+      'feature-123-abc1234',
+    );
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses fix/ prefix for breaking fix!: titles', () => {
+    const branch = loader.generateBranchName('fix!: remove deprecated API', 'feature-123-abc1234');
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses fix/ prefix for scoped breaking fix(scope)!: titles', () => {
+    const branch = loader.generateBranchName(
+      'fix(ci)!: enforce branch prefix policy',
+      'feature-123-abc1234',
+    );
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses feature/ prefix for feat: titles (not fix)', () => {
+    const branch = loader.generateBranchName('feat: add dark mode', 'feature-123-abc1234');
+    expect(branch).toMatch(/^feature\//);
+  });
 });

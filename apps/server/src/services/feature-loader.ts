@@ -301,7 +301,10 @@ export class FeatureLoader implements FeatureStore {
    * Generate a branch name from a feature title and feature ID.
    * Appends a short fragment derived from the featureId to guarantee
    * uniqueness even when multiple features share a long common title prefix.
-   * Returns a feature/ prefixed branch name suitable for git.
+   *
+   * The branch prefix is derived from the conventional-commit type in the title:
+   * - "fix: ...", "fix(scope): ...", "fix!: ..." → fix/
+   * - all other titles → feature/
    */
   generateBranchName(title: string | undefined, featureId?: string): string {
     // Derive a short, deterministic uniqueness suffix from featureId.
@@ -312,9 +315,14 @@ export class FeatureLoader implements FeatureStore {
     if (!title || !title.trim()) {
       return `feature/untitled-${shortId}`;
     }
+
+    // Detect conventional-commit fix type: fix:, fix(scope):, fix!:
+    const isFixCommit = /^fix(\([^)]*\))?!?:/.test(title.trim());
+    const prefix = isFixCommit ? 'fix' : 'feature';
+
     // Keep slug portion to 50 chars so the full branch stays under ~60 chars.
     const slug = slugify(title, 50);
-    return `feature/${slug || `untitled`}-${shortId}`;
+    return `${prefix}/${slug || `untitled`}-${shortId}`;
   }
 
   /**
