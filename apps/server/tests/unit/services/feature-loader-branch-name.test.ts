@@ -162,6 +162,20 @@ describe('FeatureLoader.generateBranchName', () => {
     const branch = loader.generateBranchName('feat: add dark mode', 'feature-123-abc1234');
     expect(branch).toMatch(/^feature\//);
   });
+
+  it(
+    'uses feature/ prefix for fixci: titles — category: fix required to get fix/ prefix',
+    () => {
+      // "fixci:" does NOT match the conventional-commit regex /^fix(\([^)]*\))?!?:/
+      // Agents creating fix branches with non-standard prefixes MUST set category: 'fix'
+      // explicitly — title-based detection only works for "fix:", "fix(scope):", "fix!:", etc.
+      const branch = loader.generateBranchName(
+        'fixci: PR #3383 — checks and test workflows failing',
+        'feature-123-abc1234'
+      );
+      expect(branch).toMatch(/^feature\//);
+    }
+  );
 });
 
 describe('FeatureLoader.branchPrefixForCategory', () => {
