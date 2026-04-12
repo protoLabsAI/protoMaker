@@ -729,7 +729,11 @@ export type TimelineEntryType =
   | 'milestone_complete';
 
 /**
- * Author role for a timeline entry
+ * Author role for a timeline entry. 'ava' here is a persona label
+ * (alongside 'pm', 'operator', 'lead-engineer') — the semantic author
+ * role that wrote the entry, not the routing slug of any particular
+ * A2A agent. Stays 'ava' even though the underlying protoMaker team
+ * runtime may produce the content.
  */
 export type TimelineEntryAuthor = 'pm' | 'ava' | 'operator' | 'lead-engineer';
 

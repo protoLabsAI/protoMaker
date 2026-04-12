@@ -204,17 +204,27 @@ const DECLARED_SKILLS: readonly SkillDefinition[] = [
 export const DECLARED_SKILL_IDS: ReadonlySet<string> = new Set(DECLARED_SKILLS.map((s) => s.id));
 
 // ─── Agent Card ──────────────────────────────────────────────────────────────
-// Describes Ava's skills in the A2A standard format.
-// Agents read this to understand what they can delegate here.
+// Describes the protoMaker team's skills in the A2A standard format.
+// Other agents read this to understand what they can delegate here.
+//
+// Naming note: the returned card identifies this runtime as 'protomaker' —
+// the multi-agent team that runs board ops, planning, feature lifecycle,
+// and onboarding. This is distinct from the in-process 'ava' chat agent
+// that lives in protoWorkstacean's workspace/agents/ava.yaml. We used to
+// collapse both into a single "ava" slug; that caused confusion as the
+// fleet grew. The HTTP env vars (AVA_BASE_URL, AVA_API_KEY, AVA_APP_ID)
+// keep their historical names because they describe this server's HTTP
+// identity, not the logical agent slug.
 
 function buildAgentCard(host: string) {
   const version = getVersion();
   return {
-    name: 'ava',
+    name: 'protomaker',
     description:
-      'protoLabs.studio autonomous development orchestrator. ' +
-      'Monitors board health, manages features, coordinates the agent fleet, ' +
-      'runs auto-mode, and reports status via Discord.',
+      'protoLabs.studio autonomous development team. ' +
+      'Multi-agent runtime coordinating board health, feature management, ' +
+      'auto-mode, planning, and project onboarding. Historically addressed ' +
+      'as "ava" — the underlying HTTP server identity is unchanged.',
     url: `http://${host}`,
     version,
     provider: {
