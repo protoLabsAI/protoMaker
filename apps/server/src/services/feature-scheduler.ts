@@ -1198,6 +1198,8 @@ export class FeatureScheduler {
             canonicalStatus !== 'review' &&
             canonicalStatus !== 'in_progress' &&
             canonicalStatus !== 'blocked' &&
+            // 'interrupted' = circuit breaker tripped; never re-queue (issue #3140)
+            canonicalStatus !== 'interrupted' &&
             feature.planSpec?.status === 'approved' &&
             (feature.planSpec.tasksCompleted ?? 0) < (feature.planSpec.tasksTotal ?? 0));
 
