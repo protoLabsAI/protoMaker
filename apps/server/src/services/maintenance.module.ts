@@ -5,6 +5,7 @@
  * - board-health (full tier, 6h): FeatureHealthService board audit with auto-fix
  * - resource-usage (critical tier, 5min): HealthMonitorService resource check
  * - webhook-health (full tier, 6h): Warns when PRs in review have no CI events after grace period
+ * - post-merge-reconciler (critical tier, 5min): Poll-based fallback for missed PR merge webhooks
  */
 
 import { createLogger } from '@protolabsai/utils';
@@ -15,6 +16,7 @@ import type {
 } from '@protolabsai/types';
 import type { ServiceContainer } from '../server/services.js';
 import { WebhookHealthCheck } from './maintenance/checks/webhook-health-check.js';
+import { PostMergeReconcilerCheck } from './maintenance/checks/post-merge-reconciler-check.js';
 
 const logger = createLogger('Server:Wiring');
 
@@ -98,6 +100,7 @@ export function register(container: ServiceContainer): void {
 
   // Webhook health check (full tier) — warns when PRs in review have no CI events
   const { featureLoader } = container;
+
   const webhookHealthCheckInstance = new WebhookHealthCheck(featureLoader);
   const webhookHealthCheck: MaintenanceCheck = {
     id: 'webhook-health',
@@ -133,9 +136,44 @@ export function register(container: ServiceContainer): void {
     },
   };
 
+  // Post-merge reconciler (critical tier) — poll fallback for missed PR merge webhooks.
+  // Runs every 5 minutes alongside resource-usage. Catches the case where a PR merges
+  // on a repo that has no GitHub webhook configured, preventing the feature from staying
+  // stuck in 'review' and triggering repeated failed agent spawns.
+  // See: protoLabsAI/protoMaker#3115
+  const postMergeReconcilerInstance = new PostMergeReconcilerCheck(featureLoader, events);
+  const postMergeReconcilerCheck: MaintenanceCheck = {
+    id: 'post-merge-reconciler',
+    name: 'Post-Merge PR Reconciler',
+    tier: 'critical',
+    async run(context: MaintenanceCheckContext): Promise<MaintenanceCheckResult> {
+      const t0 = Date.now();
+      let totalChecked = 0;
+      let totalReconciled = 0;
+
+      for (const projectPath of context.projectPaths) {
+        const result = await postMergeReconcilerInstance.run(projectPath);
+        totalChecked += result.checked;
+        totalReconciled += result.reconciled;
+      }
+
+      return {
+        checkId: 'post-merge-reconciler',
+        passed: true,
+        summary:
+          totalReconciled > 0
+            ? `Post-merge reconciler: reconciled ${totalReconciled} missed merge(s) out of ${totalChecked} checked`
+            : `Post-merge reconciler: ${totalChecked} review-state PR(s) checked, none missed`,
+        details: { totalChecked, totalReconciled, projectCount: context.projectPaths.length },
+        durationMs: Date.now() - t0,
+      };
+    },
+  };
+
   maintenanceOrchestrator.register(boardHealthCheck);
   maintenanceOrchestrator.register(resourceUsageCheck);
   maintenanceOrchestrator.register(webhookHealthCheck);
+  maintenanceOrchestrator.register(postMergeReconcilerCheck);
 
   // Wire TopicBus for hierarchical event routing of sweep results
   if (container.topicBus) {
@@ -151,6 +189,6 @@ export function register(container: ServiceContainer): void {
   });
 
   logger.info(
-    'MaintenanceOrchestrator started with board-health, resource-usage, and webhook-health checks'
+    'MaintenanceOrchestrator started with board-health, resource-usage, webhook-health, and post-merge-reconciler checks'
   );
 }
