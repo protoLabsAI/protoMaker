@@ -14,10 +14,15 @@ import type { QuarantineStage, SanitizationViolation } from '@protolabsai/types'
 
 export const CreateRequestSchema = z.object({
   projectPath: z.string().min(1, 'projectPath is required'),
-  feature: z.custom<Partial<Feature>>(
-    (val): val is Partial<Feature> => val !== null && typeof val === 'object',
-    'feature must be an object'
-  ),
+  feature: z
+    .custom<Partial<Feature>>(
+      (val): val is Partial<Feature> => val !== null && typeof val === 'object',
+      'feature must be an object'
+    )
+    .refine(
+      (val: Partial<Feature>) => !(val.isEpic && val.epicId),
+      'A feature cannot be both an epic (isEpic: true) and a member of another epic (epicId set). Set either isEpic or epicId, not both.'
+    ),
 });
 
 /**

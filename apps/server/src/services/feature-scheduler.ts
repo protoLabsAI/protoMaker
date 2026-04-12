@@ -1213,6 +1213,17 @@ export class FeatureScheduler {
               logger.warn(
                 `[loadPendingFeatures] Feature ${feature.id} ("${feature.title}") is marked as an epic but also has a parent epic assigned (epicId: ${feature.epicId}) — it will not be scheduled. Fix the feature configuration to proceed.`
               );
+              // Surface the conflict in the feature data so the UI and agents can observe it.
+              try {
+                await this.featureLoader.update(projectPath, feature.id, {
+                  statusChangeReason: `Contradictory epic state: feature is marked as an epic container (isEpic: true) but also has a parent epic assigned (epicId: ${feature.epicId}). Set either isEpic or epicId, not both.`,
+                });
+              } catch (updateErr) {
+                logger.error(
+                  `[loadPendingFeatures] Failed to surface contradictory state for feature ${feature.id}:`,
+                  updateErr
+                );
+              }
             } else {
               logger.info(
                 `[loadPendingFeatures] Skipping epic feature ${feature.id} - ${feature.title}`

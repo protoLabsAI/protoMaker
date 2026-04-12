@@ -151,12 +151,14 @@ function mockFeatureJsonReads(features: Record<string, Partial<Feature> | null>)
 
 describe('feature-scheduler.ts — loadPendingFeatures epic contradiction', () => {
   let scheduler: FeatureScheduler;
+  let mockFeatureLoader: ReturnType<typeof createMockFeatureLoader>;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFeatureLoader = createMockFeatureLoader();
 
     scheduler = new FeatureScheduler({
-      featureLoader: createMockFeatureLoader() as any,
+      featureLoader: mockFeatureLoader as any,
       settingsService: createMockSettingsService() as any,
       events: {
         emit: vi.fn(),
@@ -192,6 +194,15 @@ describe('feature-scheduler.ts — loadPendingFeatures epic contradiction', () =
     );
     expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('feat-contradiction-1'));
     expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('parent-epic-123'));
+
+    // The contradictory state must be surfaced in the feature data so the UI and agents observe it
+    expect(mockFeatureLoader.update).toHaveBeenCalledWith(
+      '/test/project',
+      'feat-contradiction-1',
+      expect.objectContaining({
+        statusChangeReason: expect.stringContaining('Contradictory epic state'),
+      })
+    );
   });
 
   it('emits info-level log (not warn) for a normal epic container without epicId', async () => {
@@ -221,5 +232,8 @@ describe('feature-scheduler.ts — loadPendingFeatures epic contradiction', () =
     expect(mockInfo).toHaveBeenCalledWith(
       expect.stringContaining('Skipping epic feature feat-normal-epic-1')
     );
+
+    // No update should be emitted for a normal epic — only contradictory state triggers an update
+    expect(mockFeatureLoader.update).not.toHaveBeenCalled();
   });
 });
