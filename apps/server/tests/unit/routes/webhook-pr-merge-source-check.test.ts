@@ -80,12 +80,14 @@ function buildSettingsService() {
   };
 }
 
-function makePrMergedPayload(overrides: {
-  branchName?: string;
-  baseBranch?: string;
-  mergeCommitSha?: string;
-  prNumber?: number;
-} = {}) {
+function makePrMergedPayload(
+  overrides: {
+    branchName?: string;
+    baseBranch?: string;
+    mergeCommitSha?: string;
+    prNumber?: number;
+  } = {}
+) {
   return {
     action: 'closed',
     pull_request: {
