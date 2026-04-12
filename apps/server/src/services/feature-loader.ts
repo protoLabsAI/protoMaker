@@ -325,17 +325,22 @@ export class FeatureLoader implements FeatureStore {
     // Use the last 7 characters of the id — always alphanumeric, always unique.
     const shortId = featureId ? featureId.slice(-7) : Date.now().toString(36).slice(-7);
 
-    // Category takes priority. When absent, detect from conventional-commit title type.
+    // Category takes priority when it maps to a specific non-default prefix.
+    // When the category is unknown or maps to the default "feature" prefix (e.g.
+    // "Uncategorized"), fall through to title detection — this prevents the
+    // "Uncategorized" default from masking fix(ci): / fixci: titles and emitting
+    // a wrong feature/ prefix (root cause of recurring source-branch CI failures).
     let prefix: string;
-    if (category) {
-      prefix = this.branchPrefixForCategory(category);
+    const catPrefix = category ? this.branchPrefixForCategory(category) : null;
+    if (catPrefix && catPrefix !== 'feature') {
+      prefix = catPrefix;
     } else if (title && /^fix([a-z0-9-]{0,15}|\([^)]*\))?!?:/.test(title.trim())) {
       // Matches: fix:, fix(scope):, fix!:, fix(scope)!:
       // Also matches concatenated scope variants: fixci:, fix-ci:, fixup:
       // (agents sometimes omit parentheses when writing fix(scope): commit types)
       prefix = 'fix';
     } else {
-      prefix = 'feature';
+      prefix = catPrefix ?? 'feature';
     }
 
     if (!title || !title.trim()) {

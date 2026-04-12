@@ -262,4 +262,31 @@ describe('FeatureLoader.generateBranchName with category', () => {
     const branch = loader.generateBranchName(undefined, 'feature-123-abc1234', 'bug');
     expect(branch).toMatch(/^fix\/untitled-/);
   });
+
+  it('uses fix/ prefix when category is Uncategorized but title starts with fix(ci):', () => {
+    // Regression: "Uncategorized" is the default category when agents omit category.
+    // branchPrefixForCategory("Uncategorized") returns "feature", which previously
+    // blocked title detection — causing fix(ci): titles to get feature/ prefix.
+    // Root cause of PR #3388 source-branch CI failure.
+    const branch = loader.generateBranchName(
+      'fix(ci): #3115 — post-merge webhook only watches protoMaker repo',
+      'feature-1775874851806-74z02ivk0',
+      'Uncategorized'
+    );
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses fix/ prefix when category is Uncategorized but title starts with fixci:', () => {
+    const branch = loader.generateBranchName(
+      'fixci: PR #3388 — branch prefix regression',
+      'feature-123-abc1234',
+      'Uncategorized'
+    );
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses feature/ prefix when category is Uncategorized and title is not a fix', () => {
+    const branch = loader.generateBranchName('Add dashboard', 'feature-123-abc1234', 'Uncategorized');
+    expect(branch).toMatch(/^feature\//);
+  });
 });
