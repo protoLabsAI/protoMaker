@@ -1235,4 +1235,22 @@ describe('ExecutionService - concurrency and runningFeatures', () => {
       'in_progress'
     );
   });
+
+  it('interrupted status blocks execution (circuit-breaker terminal state)', async () => {
+    // Features marked interrupted (circuit breaker tripped) must never be re-executed.
+    // This is the primary defence against the infinite-backlog zombie loop (issue #3140).
+    const feature = makeFeature({ id: FEATURE_ID, status: 'interrupted' });
+    const callbacks = makeCallbacks(feature);
+    const featureLoader = makeFeatureLoader(feature);
+    const svc = makeService(callbacks, featureLoader, makeRecoveryService());
+
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+
+    // Should return early — interrupted is terminal
+    expect(callbacks.updateFeatureStatus).not.toHaveBeenCalledWith(
+      PROJECT_PATH,
+      FEATURE_ID,
+      'in_progress'
+    );
+  });
 });

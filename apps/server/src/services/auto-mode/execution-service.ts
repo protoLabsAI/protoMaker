@@ -413,7 +413,8 @@ export class ExecutionService {
       // Guard: refuse to execute features in terminal states.
       // This prevents zombie loops where done/verified features keep getting restarted
       // by health checks, reconciliation, or stale retry timers.
-      const TERMINAL_STATUSES = new Set(['done', 'verified', 'completed']);
+      // 'interrupted' is included: features that tripped the circuit breaker must not be retried.
+      const TERMINAL_STATUSES = new Set(['done', 'verified', 'completed', 'interrupted']);
       if (TERMINAL_STATUSES.has(feature.status ?? '')) {
         logger.warn(
           `Refusing to execute feature ${featureId} — already in terminal status "${feature.status}". ` +
@@ -1822,18 +1823,47 @@ Output the branch name only.`,
             });
           }
         } else {
-          await this.callbacks.updateFeatureStatus(projectPath, featureId, 'backlog');
-          this.typedEventBus.emitAutoModeEvent('auto_mode_error', {
-            featureId,
-            featureName: feature?.title,
-            branchName: feature?.branchName ?? null,
-            error: errorInfo.message,
-            errorType: errorInfo.type,
-            projectPath,
-            recoveryAttempted: true,
-            recoveryAction: recoveryResult.actionTaken,
-            failureCategory: failureAnalysis.category,
-          });
+          // Circuit breaker: after MAX_AUTO_RETRIES consecutive failures, permanently mark the
+          // feature as 'interrupted' instead of returning it to 'backlog'. Without this guard,
+          // a zombie feature (e.g. one whose description triggers a CLI init crash on every run)
+          // re-queues every ~3 s indefinitely — observed at iteration 1359+ on create-helix-app.
+          const MAX_AUTO_RETRIES = 3;
+          if (newFailureCount >= MAX_AUTO_RETRIES) {
+            logger.warn(
+              `[CircuitBreaker] Feature ${featureId} tripped after ${newFailureCount} consecutive failures — ` +
+                `marking interrupted. Last error: ${errorInfo.message}`
+            );
+            await this.featureLoader.update(projectPath, featureId, {
+              status: 'interrupted',
+              statusChangeReason:
+                `Circuit breaker: ${newFailureCount} consecutive failures. ` +
+                `Last error: ${errorInfo.message}`,
+            });
+            this.typedEventBus.emitAutoModeEvent('auto_mode_error', {
+              featureId,
+              featureName: feature?.title,
+              branchName: feature?.branchName ?? null,
+              error: `Circuit breaker tripped after ${newFailureCount} failures — feature permanently interrupted`,
+              errorType: errorInfo.type,
+              projectPath,
+              recoveryAttempted: true,
+              recoveryAction: recoveryResult.actionTaken,
+              failureCategory: failureAnalysis.category,
+            });
+          } else {
+            await this.callbacks.updateFeatureStatus(projectPath, featureId, 'backlog');
+            this.typedEventBus.emitAutoModeEvent('auto_mode_error', {
+              featureId,
+              featureName: feature?.title,
+              branchName: feature?.branchName ?? null,
+              error: errorInfo.message,
+              errorType: errorInfo.type,
+              projectPath,
+              recoveryAttempted: true,
+              recoveryAction: recoveryResult.actionTaken,
+              failureCategory: failureAnalysis.category,
+            });
+          }
         }
 
         // Track this failure and check if we should pause auto mode
@@ -2587,6 +2617,8 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
       ? `${previousContent}\n\n---\n\n## Follow-up Session\n\n`
       : '';
     let specDetected = false;
+    // Track API cost accumulated during this run for degenerate-success detection (Bug 2).
+    let runCostUsd = 0;
 
     // Agent output goes to .automaker directory
     // Note: We use projectPath here, not workDir, because workDir might be a worktree path
@@ -3292,6 +3324,7 @@ After generating the revised spec, output:
           // Capture cost and session_id from SDK result
           const resultMsg = msg as unknown as { total_cost_usd?: number; session_id?: string };
           if (typeof resultMsg.total_cost_usd === 'number' && resultMsg.total_cost_usd > 0) {
+            runCostUsd += resultMsg.total_cost_usd;
             try {
               const currentFeature = await this.featureLoader.get(projectPath, featureId);
               const previousCost: number = currentFeature?.costUsd ?? 0;
@@ -3349,6 +3382,34 @@ After generating the revised spec, output:
 
       // Final write - ensure all accumulated content is saved (on success path)
       await writeToFile();
+
+      // Degenerate-success detection (Bug 2 — exit-code reconciliation).
+      // The Claude Code SDK can emit result:success even when the underlying process exits with
+      // code 1 (initialization crash). Symptoms: $0 API cost, <300 chars output, <10 s runtime.
+      // Without this guard the caller sees a clean return, failureCount is never incremented,
+      // and a zombie feature (e.g. one whose description triggers a CLI init crash) cycles
+      // indefinitely. We throw here so the normal failure path fires and the circuit breaker
+      // can eventually trip.
+      const DEGENERATE_COST_THRESHOLD = 0;
+      const DEGENERATE_OUTPUT_CHARS = 300;
+      const DEGENERATE_RUNTIME_MS = 10_000;
+      const elapsedRuntimeMs = Date.now() - streamStartTime;
+      if (
+        runCostUsd <= DEGENERATE_COST_THRESHOLD &&
+        responseText.length < DEGENERATE_OUTPUT_CHARS &&
+        elapsedRuntimeMs < DEGENERATE_RUNTIME_MS
+      ) {
+        logger.warn(
+          `[DegenerateSuccess] Feature ${featureId}: SDK reported success but made 0 API calls ` +
+            `(${responseText.length} chars, ${Math.round(elapsedRuntimeMs / 1000)}s). ` +
+            `Likely CLI init crash. Treating as failure.`
+        );
+        throw new Error(
+          `SDK init failure: process exited cleanly but made 0 API calls ` +
+            `(${responseText.length} chars output, ${Math.round(elapsedRuntimeMs / 1000)}s runtime). ` +
+            `Possible cause: invalid content in feature description caused CLI crash before any API call.`
+        );
+      }
 
       // If loop was detected, throw a recognizable error for retry with recovery context
       if (loopDetected) {
@@ -3440,9 +3501,15 @@ After generating the revised spec, output:
     }
 
     // FEATURE_HEADER section — feature identity (all phases)
+    // Strip raw HTML tags from the description before embedding in the prompt.
+    // Raw HTML (e.g. <script>…</script>, <meta …>) in user-supplied descriptions can trigger
+    // an argument-parsing or stdin-sanitization fault in the Claude Code CLI during its
+    // initialization phase, producing a process exit-code-1 crash with $0 cost and ~225 chars
+    // of output — the "degenerate success" bug (issue #3140).
+    const sanitizedDescription = (feature.description ?? '').replace(/<[^>]*>/g, '');
     builder.addSection(
       'FEATURE_HEADER',
-      `## Feature Implementation Task\n\n**Feature ID:** ${feature.id}\n**Title:** ${title}\n**Description:** ${feature.description}\n`
+      `## Feature Implementation Task\n\n**Feature ID:** ${feature.id}\n**Title:** ${title}\n**Description:** ${sanitizedDescription}\n`
     );
 
     // SPEC section — feature specification when present (all phases)
