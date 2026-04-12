@@ -656,6 +656,32 @@ export class SignalIntakeService {
         return;
       }
 
+      // Persistent idempotency guard: verify no existing feature already tracks this
+      // GitHub issue number. The in-memory processedSignals set (above) handles same-session
+      // duplicates; this guard catches retried deliveries after a server restart or deliveries
+      // from a second webhook registration with a different X-GitHub-Delivery ID.
+      if (signal.source === 'github' && signal.channelContext?.issueNumber !== undefined) {
+        const issueNumber = signal.channelContext.issueNumber as number;
+        try {
+          const existingFeatures = await this.featureLoader.getAll(projectPath as string);
+          const alreadyTriaged = existingFeatures.find((f) => f.githubIssueNumber === issueNumber);
+          if (alreadyTriaged) {
+            logger.info(
+              `[idempotency] GitHub issue #${issueNumber} already triaged as feature ` +
+                `${alreadyTriaged.id} ("${alreadyTriaged.title}") — skipping duplicate creation`
+            );
+            this.updateRingBufferEntry(bufferEntry.id, 'dismissed');
+            return;
+          }
+        } catch (err) {
+          // Non-fatal: if lookup fails, proceed to avoid silently dropping the signal
+          logger.warn(
+            `[idempotency] Feature lookup failed for GitHub issue #${issueNumber} (proceeding with creation):`,
+            err
+          );
+        }
+      }
+
       // Ops signals: route to Lead Engineer state machine
 
       // Create feature with idea state
