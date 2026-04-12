@@ -342,7 +342,7 @@ describe('AutoModeService - createWorktreeForBranch base branch resolution', () 
     expect(worktreeAdd![1]).not.toContain('origin/dev');
   });
 
-  it('falls back to origin/dev when epic branch does not exist on remote', async () => {
+  it('returns null and logs an error when epic branch does not exist on remote', async () => {
     mockGetEffectivePrBaseBranch.mockResolvedValue('dev');
 
     mockExecFileAsync.mockImplementation(async (bin: string, args: string[]) => {
@@ -376,16 +376,25 @@ describe('AutoModeService - createWorktreeForBranch base branch resolution', () 
       branchName: 'feature/test-branch',
     });
 
-    await (svc as any).createWorktreeForBranch(PROJECT_PATH, BRANCH_NAME, childFeature);
+    // Missing epic branch on remote is a hard failure — the function returns null and logs an error
+    // rather than silently branching from the wrong base (which would produce a corrupt PR).
+    const result = await (svc as any).createWorktreeForBranch(
+      PROJECT_PATH,
+      BRANCH_NAME,
+      childFeature
+    );
 
+    expect(result).toBeNull();
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      expect.stringContaining(`Failed to create worktree for branch "${BRANCH_NAME}"`),
+      expect.objectContaining({ message: expect.stringContaining('not found on remote') })
+    );
+
+    // No worktree add should have been attempted
     const calls = mockExecFileAsync.mock.calls as [string, string[]][];
-
-    // Should fall back to origin/dev when epic branch not found on remote
     const worktreeAdd = calls.find(
       ([bin, args]) => bin === 'git' && args.includes('worktree') && args.includes('-B')
     );
-    expect(worktreeAdd).toBeDefined();
-    expect(worktreeAdd![1]).toContain('origin/dev');
-    expect(worktreeAdd![1]).not.toContain('origin/epic/');
+    expect(worktreeAdd).toBeUndefined();
   });
 });

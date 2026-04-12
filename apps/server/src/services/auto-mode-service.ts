@@ -3238,7 +3238,8 @@ Format your response as a structured markdown document.`;
               // would branch from the wrong base — the agent would commit to the wrong
               // history and likely produce a lock-only PR that auto-merges without source
               // changes. Fail loudly so the feature is blocked rather than silently corrupted.
-              const epicBranchName = epicFeature?.branchName ?? `(unknown, epicId: ${feature.epicId})`;
+              const epicBranchName =
+                epicFeature?.branchName ?? `(unknown, epicId: ${feature.epicId})`;
               throw new Error(
                 `Epic base branch '${epicBranchName}' not found on remote for feature ` +
                   `${feature.id}. Push the epic branch before starting child features. ` +
