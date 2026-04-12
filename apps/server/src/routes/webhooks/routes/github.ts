@@ -140,6 +140,33 @@ async function cascadeUpdateBranches(
 }
 
 /**
+ * Returns true if the file path is metadata (lock files, gitignore, .automaker/ dir, markdown)
+ * and therefore should NOT count as a source-code change for feature completion verification.
+ *
+ * Files listed in `filesToModify` are never considered metadata — they are explicitly expected.
+ */
+function isMetadataFile(filePath: string, filesToModify?: string[]): boolean {
+  if (filesToModify?.includes(filePath)) return false;
+
+  const basename = filePath.split('/').pop() ?? filePath;
+
+  // Standard lock files
+  if (['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml'].includes(basename)) return true;
+
+  // Automaker metadata
+  if (basename === '.automaker-lock') return true;
+  if (filePath.startsWith('.automaker/')) return true;
+
+  // Git / editor metadata
+  if (basename === '.gitignore') return true;
+
+  // Markdown (unless explicitly listed in filesToModify above)
+  if (basename.endsWith('.md')) return true;
+
+  return false;
+}
+
+/**
  * Scan all configured projects to find the one whose features satisfy `matcher`.
  * Returns the project path on first match, or null if none match.
  */
@@ -568,14 +595,71 @@ export function createGitHubWebhookHandler(
           `Feature "${feature.title}" already in terminal status '${currentFeature.status}' — skipping merge update for PR #${prNumber}`
         );
       } else {
-        // Update feature status to done
-        await featureLoader.update(projectPath, feature.featureId, {
-          status: 'done',
-        });
+        // Post-merge source-code verification gate.
+        // Inspect the merge diff to ensure the PR contains actual source changes.
+        // A PR containing only metadata files (.automaker-lock, lock files, markdown)
+        // indicates a worktree/base-branch failure — the agent ran in the wrong context.
+        // In that case, block the feature instead of marking it done.
+        let hasSourceChanges = true; // default to true so failures are non-fatal
+        let changedSourceFiles: string[] = [];
+        if (mergeCommitSha) {
+          try {
+            const { stdout: diffOutput } = await execAsync(
+              `git diff --name-only ${mergeCommitSha}^1 ${mergeCommitSha}`,
+              { cwd: projectPath }
+            );
+            const changedFiles = diffOutput.trim().split('\n').filter(Boolean);
+            changedSourceFiles = changedFiles.filter(
+              (f) => !isMetadataFile(f, currentFeature.filesToModify)
+            );
+            hasSourceChanges = changedSourceFiles.length > 0;
 
-        logger.info(
-          `Feature "${feature.title}" moved from "${currentFeature.status}" to "done" after PR #${prNumber} was merged`
-        );
+            if (!hasSourceChanges) {
+              logger.warn(
+                `Feature "${feature.title}" PR #${prNumber} contains no source code changes ` +
+                  `(${changedFiles.length} metadata-only file(s): ${changedFiles.slice(0, 5).join(', ')}). ` +
+                  `Blocking feature instead of marking done.`
+              );
+            } else if (currentFeature.filesToModify?.length) {
+              const missing = currentFeature.filesToModify.filter(
+                (f) => !changedSourceFiles.includes(f)
+              );
+              if (missing.length > 0) {
+                logger.warn(
+                  `Feature "${feature.title}" PR #${prNumber}: expected files absent from diff: ${missing.join(', ')}`
+                );
+              }
+            }
+          } catch (diffErr) {
+            // Non-fatal: if git diff fails (e.g. shallow clone, detached HEAD), proceed normally.
+            logger.warn(
+              `Merge diff inspection failed for PR #${prNumber} (proceeding as done):`,
+              diffErr
+            );
+          }
+        }
+
+        if (!hasSourceChanges) {
+          // Lock-only merge — block, do not mark done
+          await featureLoader.update(projectPath, feature.featureId, {
+            status: 'blocked',
+            statusChangeReason:
+              'PR merged but no source code changes detected — likely worktree/base-branch failure',
+          });
+          logger.info(
+            `Feature "${feature.title}" moved from "${currentFeature.status}" to "blocked" ` +
+              `(lock-only merge, PR #${prNumber})`
+          );
+        } else {
+          // Update feature status to done
+          await featureLoader.update(projectPath, feature.featureId, {
+            status: 'done',
+          });
+
+          logger.info(
+            `Feature "${feature.title}" moved from "${currentFeature.status}" to "done" after PR #${prNumber} was merged`
+          );
+        }
 
         // Epic completion is handled by CompletionDetectorService which reacts to
         // the feature:status-changed event emitted by featureLoader.update() above.
@@ -684,7 +768,7 @@ export function createGitHubWebhookHandler(
         success: true,
         message: wasAlreadyTerminal
           ? `Feature already in terminal status '${currentFeature.status}'`
-          : `Feature "${feature.title}" moved to done`,
+          : `Feature "${feature.title}" processed after PR #${prNumber} merged`,
         featureId: feature.featureId,
       });
     } catch (error) {

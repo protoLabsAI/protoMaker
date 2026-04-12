@@ -3233,9 +3233,16 @@ Format your response as a structured markdown document.`;
                   `Feature ${feature.id} belongs to epic, branching from epic branch: ${baseBranch}`
                 );
               }
-            } catch {
-              logger.warn(
-                `Epic branch not found for feature ${feature.id} (epicId: ${feature.epicId}), falling back to origin/${resolvedPrBaseBranch}`
+            } catch (epicBranchErr) {
+              // Epic branch is missing on remote. Falling back to origin/<prBaseBranch>
+              // would branch from the wrong base — the agent would commit to the wrong
+              // history and likely produce a lock-only PR that auto-merges without source
+              // changes. Fail loudly so the feature is blocked rather than silently corrupted.
+              const epicBranchName = epicFeature?.branchName ?? `(unknown, epicId: ${feature.epicId})`;
+              throw new Error(
+                `Epic base branch '${epicBranchName}' not found on remote for feature ` +
+                  `${feature.id}. Push the epic branch before starting child features. ` +
+                  `Original error: ${epicBranchErr instanceof Error ? epicBranchErr.message : String(epicBranchErr)}`
               );
             }
           }
