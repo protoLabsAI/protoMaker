@@ -26,8 +26,32 @@ import type {
   GitHubCheckSuiteWebhookPayload,
   GitHubCheckRunWebhookPayload,
 } from '@protolabsai/types';
+import { getFilesChangedInPR } from '@protolabsai/git-utils';
 
 const logger = createLogger('webhooks/github');
+
+/**
+ * Returns true for files that are pure metadata / tooling artifacts.
+ * Used in post-merge source diff verification to detect PRs that merged
+ * without any real source code changes (e.g. worktree base-branch failures).
+ *
+ * Matches: .automaker-lock, .gitignore, lockfiles (pnpm-lock.yaml, package-lock.json,
+ * yarn.lock), and anything under .automaker/.
+ */
+function isMetadataFile(filePath: string): boolean {
+  const parts = filePath.split('/');
+  const basename = parts[parts.length - 1] ?? '';
+  if (basename === '.automaker-lock') return true;
+  if (basename === '.gitignore') return true;
+  if (
+    basename === 'pnpm-lock.yaml' ||
+    basename === 'package-lock.json' ||
+    basename === 'yarn.lock'
+  )
+    return true;
+  if (parts[0] === '.automaker') return true;
+  return false;
+}
 
 interface GitHubPullRequestPayload {
   action: string;
@@ -568,40 +592,83 @@ export function createGitHubWebhookHandler(
           `Feature "${feature.title}" already in terminal status '${currentFeature.status}' — skipping merge update for PR #${prNumber}`
         );
       } else {
-        // Update feature status to done
-        await featureLoader.update(projectPath, feature.featureId, {
-          status: 'done',
-        });
+        // Post-merge source diff verification: ensure the PR contains real source
+        // changes, not just metadata (e.g. .automaker-lock). A metadata-only PR
+        // indicates a silent worktree/base-branch failure — the board should NOT
+        // auto-advance to 'done' in that case.
+        const repoFullName = payload.repository.full_name;
+        const changedFiles = await getFilesChangedInPR(repoFullName, prNumber);
+        const sourceFiles = changedFiles.filter((f) => !isMetadataFile(f));
 
-        logger.info(
-          `Feature "${feature.title}" moved from "${currentFeature.status}" to "done" after PR #${prNumber} was merged`
-        );
+        if (changedFiles.length > 0 && sourceFiles.length === 0) {
+          // PR merged but only metadata/lockfiles — block the feature instead of
+          // marking it done so the board accurately reflects the missing work.
+          const blockReason =
+            `POST-MERGE BLOCK: PR #${prNumber} merged but diff contains no source code changes. ` +
+            `Possible worktree/base-branch failure. Changed files: ${changedFiles.join(', ')}`;
 
-        // Epic completion is handled by CompletionDetectorService which reacts to
-        // the feature:status-changed event emitted by featureLoader.update() above.
-        // It creates an epic-to-dev PR instead of marking the epic done prematurely.
+          await featureLoader.update(projectPath, feature.featureId, {
+            status: 'blocked',
+            statusChangeReason: blockReason,
+            description: (currentFeature.description ?? '') + '\n\n⚠️ ' + blockReason,
+          });
 
-        // Emit event for UI notification
-        events.emit('feature:pr-merged', {
-          featureId: feature.featureId,
-          title: feature.title,
-          prNumber,
-          prTitle,
-          branchName,
-          projectPath,
-        });
+          logger.warn(
+            `[post-merge] Feature "${feature.title}" blocked after PR #${prNumber} — ` +
+              `no source code in merge diff (files: ${changedFiles.join(', ')})`
+          );
+        } else {
+          // Source changes present (or diff unavailable — err on side of caution) → mark done.
+          if (changedFiles.length === 0) {
+            logger.warn(
+              `[post-merge] Could not retrieve file list for PR #${prNumber} — proceeding to mark done`
+            );
+          } else if (currentFeature.filesToModify?.length) {
+            const missing = currentFeature.filesToModify.filter(
+              (f) => !sourceFiles.includes(f)
+            );
+            if (missing.length > 0) {
+              logger.warn(
+                `[post-merge] PR #${prNumber} missing expected files from diff:`,
+                missing
+              );
+            }
+          }
 
-        // Publish to TopicBus (hierarchical routing)
-        if (topicBus) {
-          topicBus.publish(`pr.merged.${prNumber}`, {
+          await featureLoader.update(projectPath, feature.featureId, {
+            status: 'done',
+          });
+
+          logger.info(
+            `Feature "${feature.title}" moved from "${currentFeature.status}" to "done" after PR #${prNumber} was merged`
+          );
+
+          // Epic completion is handled by CompletionDetectorService which reacts to
+          // the feature:status-changed event emitted by featureLoader.update() above.
+          // It creates an epic-to-dev PR instead of marking the epic done prematurely.
+
+          // Emit event for UI notification
+          events.emit('feature:pr-merged', {
             featureId: feature.featureId,
             title: feature.title,
             prNumber,
             prTitle,
             branchName,
-            baseBranch,
             projectPath,
           });
+
+          // Publish to TopicBus (hierarchical routing)
+          if (topicBus) {
+            topicBus.publish(`pr.merged.${prNumber}`, {
+              featureId: feature.featureId,
+              title: feature.title,
+              prNumber,
+              prTitle,
+              branchName,
+              baseBranch,
+              projectPath,
+            });
+          }
         }
       }
 

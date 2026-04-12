@@ -281,3 +281,29 @@ export async function getGitRepositoryDiffs(
     hasChanges: files.length > 0,
   };
 }
+
+/**
+ * Get the list of file paths changed in a GitHub Pull Request.
+ * Uses the GitHub CLI (`gh`) to query the GitHub API — no local git fetch required.
+ *
+ * Returns an empty array if the gh CLI is unavailable or the request fails.
+ */
+export async function getFilesChangedInPR(
+  repoFullName: string,
+  prNumber: number
+): Promise<string[]> {
+  try {
+    const { stdout } = await execAsync(
+      `gh api "repos/${repoFullName}/pulls/${prNumber}/files" --jq '.[].filename'`
+    );
+    return stdout
+      .split('\n')
+      .map((f) => f.trim())
+      .filter(Boolean);
+  } catch (err) {
+    logger.warn(
+      `[getFilesChangedInPR] Failed to retrieve file list for PR #${prNumber} in ${repoFullName}: ${(err as Error).message}`
+    );
+    return [];
+  }
+}

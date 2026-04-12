@@ -16,6 +16,7 @@ export {
   listAllFilesInDirectory,
   generateDiffsForNonGitDirectory,
   getGitRepositoryDiffs,
+  getFilesChangedInPR,
 } from './diff.js';
 
 // Export merge detection utilities
