@@ -456,7 +456,9 @@ export class HealthMonitorService {
 
       // Get branch names from features
       const featureBranches = new Set(
-        features.filter((f) => f.branchName).map((f) => f.branchName!.replace(/^feature\//, ''))
+        features
+          .filter((f) => f.branchName)
+          .map((f) => f.branchName!.replace(/^(feature|fix|chore|docs)\//, ''))
       );
 
       // Check for orphaned worktrees (worktrees without corresponding features)
