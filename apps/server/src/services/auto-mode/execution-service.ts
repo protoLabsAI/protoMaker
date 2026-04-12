@@ -1521,6 +1521,7 @@ Output the branch name only.`,
       const errorInfo = classifyError(error);
 
       // Capture execution record on failure (skip aborts — not real executions)
+      let failureExecutionCostUsd = 0;
       if (!errorInfo.isAbort && tempRunningFeature.startTime) {
         try {
           const completedAt = new Date().toISOString();
@@ -1528,6 +1529,7 @@ Output the branch name only.`,
           const currentFeature = await this.featureLoader.get(projectPath, featureId);
           // Calculate execution-specific cost delta (not cumulative cost)
           const executionCostUsd = Math.max(0, (currentFeature?.costUsd ?? 0) - startingCostUsd);
+          failureExecutionCostUsd = executionCostUsd;
           const record: ExecutionRecord = {
             id: executionId,
             startedAt: executionStartedAt,
@@ -1649,6 +1651,7 @@ Output the branch name only.`,
           retryCount: tempRunningFeature?.retryCount ?? 0,
           previousErrors: tempRunningFeature?.previousErrors ?? [],
           runningTime: tempRunningFeature ? Date.now() - tempRunningFeature.startTime : 0,
+          costUsd: failureExecutionCostUsd,
         };
 
         // Analyze failure and determine recovery strategy
