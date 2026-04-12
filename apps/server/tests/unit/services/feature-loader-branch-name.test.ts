@@ -163,19 +163,23 @@ describe('FeatureLoader.generateBranchName', () => {
     expect(branch).toMatch(/^feature\//);
   });
 
-  it(
-    'uses feature/ prefix for fixci: titles — category: fix required to get fix/ prefix',
-    () => {
-      // "fixci:" does NOT match the conventional-commit regex /^fix(\([^)]*\))?!?:/
-      // Agents creating fix branches with non-standard prefixes MUST set category: 'fix'
-      // explicitly — title-based detection only works for "fix:", "fix(scope):", "fix!:", etc.
-      const branch = loader.generateBranchName(
-        'fixci: PR #3383 — checks and test workflows failing',
-        'feature-123-abc1234'
-      );
-      expect(branch).toMatch(/^feature\//);
-    }
-  );
+  it('uses fix/ prefix for fixci: titles (concatenated scope without parentheses)', () => {
+    // "fixci:" matches the extended regex /^fix([a-z0-9-]{0,15}|\([^)]*\))?!?:/
+    // Agents sometimes write fix(ci): as fixci: (omitting parentheses) — both get fix/ prefix.
+    const branch = loader.generateBranchName(
+      'fixci: PR #3383 — checks and test workflows failing',
+      'feature-123-abc1234'
+    );
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses fix/ prefix for fix-ci: titles (hyphenated concatenated scope)', () => {
+    const branch = loader.generateBranchName(
+      'fix-ci: source-branch policy failure on feature branches',
+      'feature-123-abc1234'
+    );
+    expect(branch).toMatch(/^fix\//);
+  });
 });
 
 describe('FeatureLoader.branchPrefixForCategory', () => {
@@ -220,6 +224,18 @@ describe('FeatureLoader.branchPrefixForCategory', () => {
   it('is case-insensitive', () => {
     expect(loader.branchPrefixForCategory('BUG')).toBe('fix');
     expect(loader.branchPrefixForCategory('OPS')).toBe('chore');
+  });
+
+  it('returns fix for bugfix category', () => {
+    expect(loader.branchPrefixForCategory('bugfix')).toBe('fix');
+  });
+
+  it('returns fix for bug-fix category', () => {
+    expect(loader.branchPrefixForCategory('bug-fix')).toBe('fix');
+  });
+
+  it('returns fix for hotfix category', () => {
+    expect(loader.branchPrefixForCategory('hotfix')).toBe('fix');
   });
 });
 

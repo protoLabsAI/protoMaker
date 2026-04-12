@@ -304,7 +304,8 @@ export class FeatureLoader implements FeatureStore {
   branchPrefixForCategory(category: string | undefined): string {
     if (!category) return 'feature';
     const c = category.toLowerCase();
-    if (c === 'bug' || c === 'fix') return 'fix';
+    if (c === 'bug' || c === 'fix' || c === 'bugfix' || c === 'bug-fix' || c === 'hotfix')
+      return 'fix';
     if (c === 'ops' || c === 'chore' || c === 'maintenance') return 'chore';
     if (c === 'docs' || c === 'documentation') return 'docs';
     return 'feature';
@@ -328,7 +329,10 @@ export class FeatureLoader implements FeatureStore {
     let prefix: string;
     if (category) {
       prefix = this.branchPrefixForCategory(category);
-    } else if (title && /^fix(\([^)]*\))?!?:/.test(title.trim())) {
+    } else if (title && /^fix([a-z0-9-]{0,15}|\([^)]*\))?!?:/.test(title.trim())) {
+      // Matches: fix:, fix(scope):, fix!:, fix(scope)!:
+      // Also matches concatenated scope variants: fixci:, fix-ci:, fixup:
+      // (agents sometimes omit parentheses when writing fix(scope): commit types)
       prefix = 'fix';
     } else {
       prefix = 'feature';
