@@ -22,13 +22,17 @@ let mockExecImpl: (
   cb: (err: Error | null, result: { stdout: string; stderr: string }) => void
 ) => void;
 
-vi.mock('child_process', () => ({
-  exec: (
-    cmd: string,
-    opts: unknown,
-    cb: (err: Error | null, result: { stdout: string; stderr: string }) => void
-  ) => mockExecImpl(cmd, opts, cb),
-}));
+vi.mock('child_process', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('child_process')>();
+  return {
+    ...actual,
+    exec: (
+      cmd: string,
+      opts: unknown,
+      cb: (err: Error | null, result: { stdout: string; stderr: string }) => void
+    ) => mockExecImpl(cmd, opts, cb),
+  };
+});
 
 const mockFeatureLoaderUpdate = vi.fn().mockResolvedValue(undefined);
 const mockFeatureLoaderGet = vi.fn();

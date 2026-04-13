@@ -35,6 +35,9 @@ describe('auto-mode-service.ts (integration)', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    // Integration tests use mock providers that produce zero-cost, short, fast responses.
+    // Set AUTOMAKER_MOCK_AGENT to bypass the degenerate-success heuristic in execution-service.
+    vi.stubEnv('AUTOMAKER_MOCK_AGENT', 'true');
     mockEvents.on.mockReturnValue({ unsubscribe: vi.fn() });
     service = new AutoModeService(mockEvents as any);
     featureLoader = new FeatureLoader();

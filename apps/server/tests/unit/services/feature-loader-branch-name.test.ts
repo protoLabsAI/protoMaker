@@ -286,7 +286,11 @@ describe('FeatureLoader.generateBranchName with category', () => {
   });
 
   it('uses feature/ prefix when category is Uncategorized and title is not a fix', () => {
-    const branch = loader.generateBranchName('Add dashboard', 'feature-123-abc1234', 'Uncategorized');
+    const branch = loader.generateBranchName(
+      'Add dashboard',
+      'feature-123-abc1234',
+      'Uncategorized'
+    );
     expect(branch).toMatch(/^feature\//);
   });
 });
