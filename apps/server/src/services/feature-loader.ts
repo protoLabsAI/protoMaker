@@ -328,17 +328,36 @@ export class FeatureLoader implements FeatureStore {
     // Category takes priority when it maps to a specific non-default prefix.
     // When the category is unknown or maps to the default "feature" prefix (e.g.
     // "Uncategorized"), fall through to title detection — this prevents the
-    // "Uncategorized" default from masking fix(ci): / fixci: titles and emitting
-    // a wrong feature/ prefix (root cause of recurring source-branch CI failures).
+    // "Uncategorized" default from masking fix(ci): / fixci: / chore(infra): titles and
+    // emitting a wrong feature/ prefix (root cause of recurring source-branch CI failures).
     let prefix: string;
     const catPrefix = category ? this.branchPrefixForCategory(category) : null;
     if (catPrefix && catPrefix !== 'feature') {
       prefix = catPrefix;
-    } else if (title && /^fix([a-z0-9-]{0,15}|\([^)]*\))?!?:/.test(title.trim())) {
-      // Matches: fix:, fix(scope):, fix!:, fix(scope)!:
-      // Also matches concatenated scope variants: fixci:, fix-ci:, fixup:
-      // (agents sometimes omit parentheses when writing fix(scope): commit types)
-      prefix = 'fix';
+    } else if (title) {
+      // Detect conventional-commit type from title when category doesn't give a specific prefix.
+      // Pattern matches: type:, type(scope):, type!:, type(scope)!:
+      // Also matches concatenated scope variants: fixci:, choreinfra: (agents sometimes omit parens)
+      const ccMatch = title
+        .trim()
+        .match(/^(fix|chore|docs|refactor|test|perf|style|ci|build|revert)([a-z0-9-]{0,15}|\([^)]*\))?!?:/);
+      if (ccMatch) {
+        const type = ccMatch[1];
+        if (type === 'fix' || type === 'revert') {
+          prefix = 'fix';
+        } else if (type === 'chore' || type === 'ci' || type === 'build') {
+          prefix = 'chore';
+        } else if (type === 'docs') {
+          prefix = 'docs';
+        } else if (type === 'refactor') {
+          prefix = 'refactor';
+        } else {
+          // test, perf, style → fall back to category default
+          prefix = catPrefix ?? 'feature';
+        }
+      } else {
+        prefix = catPrefix ?? 'feature';
+      }
     } else {
       prefix = catPrefix ?? 'feature';
     }

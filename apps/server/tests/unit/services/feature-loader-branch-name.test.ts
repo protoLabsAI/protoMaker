@@ -293,4 +293,51 @@ describe('FeatureLoader.generateBranchName with category', () => {
     );
     expect(branch).toMatch(/^feature\//);
   });
+
+  it('uses chore/ prefix when category is Uncategorized but title starts with chore(infra):', () => {
+    // Regression: chore(infra): titles were getting feature/ prefix because title detection
+    // only handled fix: variants. Root cause of PR #3395 source-branch CI failure.
+    const branch = loader.generateBranchName(
+      'chore(infra): issue #11 — add branch protection ruleset to ava/main',
+      'feature-1776060855702-pxszngw6b',
+      'Uncategorized'
+    );
+    expect(branch).toMatch(/^chore\//);
+  });
+
+  it('uses chore/ prefix when category is Uncategorized but title starts with chore:', () => {
+    const branch = loader.generateBranchName(
+      'chore: update CI config',
+      'feature-123-abc1234',
+      'Uncategorized'
+    );
+    expect(branch).toMatch(/^chore\//);
+  });
+
+  it('uses chore/ prefix when category is Uncategorized but title starts with choreinfra: (concatenated scope)', () => {
+    const branch = loader.generateBranchName(
+      'choreinfra: add branch protection',
+      'feature-123-abc1234',
+      'Uncategorized'
+    );
+    expect(branch).toMatch(/^chore\//);
+  });
+
+  it('uses docs/ prefix when category is Uncategorized but title starts with docs:', () => {
+    const branch = loader.generateBranchName(
+      'docs: update contributing guide',
+      'feature-123-abc1234',
+      'Uncategorized'
+    );
+    expect(branch).toMatch(/^docs\//);
+  });
+
+  it('uses refactor/ prefix when category is Uncategorized but title starts with refactor:', () => {
+    const branch = loader.generateBranchName(
+      'refactor: extract auth service',
+      'feature-123-abc1234',
+      'Uncategorized'
+    );
+    expect(branch).toMatch(/^refactor\//);
+  });
 });
