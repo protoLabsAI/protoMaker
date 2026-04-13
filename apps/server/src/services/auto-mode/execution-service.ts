@@ -396,6 +396,11 @@ export class ExecutionService {
     const executionStartedAt = new Date().toISOString();
     let startingCostUsd = 0;
 
+    // Pre-execution failureCount write (Concern 3 — issue #3140).
+    // Declared outside try so the catch block can reference it.
+    // Set to the pre-incremented value when the write succeeds, null otherwise.
+    let preIncrementedFailureCount: number | null = null;
+
     try {
       // Validate that project path is allowed using centralized validation
       validateWorkingDirectory(projectPath);
@@ -1120,6 +1125,38 @@ Output the branch name only.`,
         }
       }
 
+      // Write-before-run: pre-increment failureCount on disk BEFORE starting the agent.
+      // If the server crashes during SDK initialization (before the agent produces any
+      // output and before the catch block can increment), the failure is still counted on
+      // restart. Without this, a repeated SDK-init crash keeps failureCount at 0 and
+      // permanently bypasses the circuit breaker (issue #3140, Concern 3).
+      //
+      // Only applied to the initial dispatch (retryCount === 0). Recovery retries within
+      // the same scheduling cycle share the same "attempt" — the outer pre-increment already
+      // covers them, and a second pre-increment per retry would double-count failures.
+      //
+      // Success path: resets failureCount to 0 (existing logic at line ~1253).
+      // Failure path: catch block uses preIncrementedFailureCount to skip the re-write.
+      if ((options?.retryCount ?? 0) === 0) {
+        try {
+          preIncrementedFailureCount = (feature.failureCount ?? 0) + 1;
+          await this.featureLoader.update(projectPath, featureId, {
+            failureCount: preIncrementedFailureCount,
+          });
+          logger.debug(
+            `[PreExecution] Pre-wrote failureCount=${preIncrementedFailureCount} for ${featureId}`
+          );
+        } catch (preWriteError) {
+          // Non-fatal: the post-execution catch block handles the normal increment.
+          // This is a durability guard for crash scenarios only.
+          logger.warn(
+            `[PreExecution] Failed to pre-write failureCount for ${featureId}:`,
+            preWriteError
+          );
+          preIncrementedFailureCount = null;
+        }
+      }
+
       // Run the agent with the feature's model and images
       // Context files are passed as system prompt for higher priority
       // On retries, try to resume from the previous session if available
@@ -1721,10 +1758,17 @@ Output the branch name only.`,
         // Increment failure count for model escalation on retry
         let newFailureCount = 0;
         if (feature) {
-          newFailureCount = (feature.failureCount ?? 0) + 1;
-          await this.featureLoader.update(projectPath, featureId, {
-            failureCount: newFailureCount,
-          });
+          if (preIncrementedFailureCount !== null) {
+            // Write-before-run already wrote the incremented value to disk (issue #3140).
+            // Re-use that value for the circuit breaker check without a redundant write.
+            newFailureCount = preIncrementedFailureCount;
+          } else {
+            // No pre-increment (recovery retry path or pre-write failed): compute and persist now.
+            newFailureCount = (feature.failureCount ?? 0) + 1;
+            await this.featureLoader.update(projectPath, featureId, {
+              failureCount: newFailureCount,
+            });
+          }
           logger.info(`Feature ${featureId} failure count: ${newFailureCount}`);
 
           // Trigger self-healing when a feature has failed twice
