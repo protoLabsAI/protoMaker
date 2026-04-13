@@ -1254,3 +1254,102 @@ describe('ExecutionService - concurrency and runningFeatures', () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// Exit-code-1 degenerate-success fingerprint regression (issue #3140)
+// ---------------------------------------------------------------------------
+// Reproduces the zombie-loop failure mode:
+//   ~4 s runtime, $0 cost, 225-char output, 0 API calls.
+// The SDK emits result:success even though the underlying Claude Code process
+// exited with code 1. The degenerate-success guard (inside runAgent) detects
+// this and throws an error, which must route through the circuit-breaker path
+// and eventually mark the feature "interrupted" — never returning it to "backlog".
+// ---------------------------------------------------------------------------
+
+describe('ExecutionService — exit-code-1 degenerate-success fingerprint (issue #3140)', () => {
+  const PROJECT_PATH = '/tmp/test-project';
+  const FEATURE_ID = 'feature-zombie-regression-1';
+
+  beforeEach(() => {
+    // Do NOT stub AUTOMAKER_MOCK_AGENT here — these tests verify the real failure path
+    // by spying on runAgent directly, bypassing the env var gate.
+    vi.clearAllMocks();
+  });
+
+  it('circuit breaker trips when runAgent throws degenerate-success error at failureCount=2 → feature reaches interrupted', async () => {
+    // Feature at failureCount=2 (one below MAX_AUTO_RETRIES=3)
+    const feature = makeFeature({
+      id: FEATURE_ID,
+      status: 'backlog',
+      failureCount: 2,
+    });
+    const callbacks = makeCallbacks(feature);
+    // featureLoader.get always returns the same feature (failureCount=2).
+    // update() is a spy that records calls but returns the merged object.
+    const featureLoader = makeFeatureLoader(feature);
+    // Recovery service reports this error as non-retryable (SDK init crash is deterministic)
+    const recoveryService = makeRecoveryService();
+    const svc = makeService(callbacks, featureLoader, recoveryService);
+
+    // Simulate the exact degenerate-success error thrown by the runAgent guard:
+    // SDK emitted result:success but 0 API calls were made (exit-code-1 crash).
+    const degenerateError = new Error(
+      'SDK init failure: process exited cleanly but made 0 API calls ' +
+        '(225 chars output, 4s runtime). ' +
+        'Possible cause: invalid content in feature description caused CLI crash before any API call.'
+    );
+    vi.spyOn(svc as any, 'runAgent').mockRejectedValue(degenerateError);
+
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+
+    // Circuit breaker must trip: feature should be marked interrupted
+    const updateCalls: Array<[string, string, Record<string, unknown>]> =
+      (featureLoader.update as ReturnType<typeof vi.fn>).mock.calls;
+
+    const interruptedUpdate = updateCalls.find(([, , updates]) => updates.status === 'interrupted');
+    expect(interruptedUpdate).toBeDefined();
+
+    // After the circuit breaker trips, the feature must never be re-queued to backlog
+    if (interruptedUpdate) {
+      const interruptedIdx = updateCalls.indexOf(interruptedUpdate);
+      const backlogAfterInterrupted = updateCalls
+        .slice(interruptedIdx + 1)
+        .some(([, , updates]) => updates.status === 'backlog');
+      expect(backlogAfterInterrupted).toBe(false);
+    }
+  });
+
+  it('pre-execution failureCount write: write-before-run increments count before runAgent is called', async () => {
+    // Verifies that failureCount is written to disk BEFORE runAgent starts.
+    // If the server crashes during SDK initialization, the failure is already counted.
+    const feature = makeFeature({
+      id: FEATURE_ID,
+      status: 'backlog',
+      failureCount: 1,
+    });
+    const callbacks = makeCallbacks(feature);
+    const featureLoader = makeFeatureLoader(feature);
+    const recoveryService = makeRecoveryService();
+    const svc = makeService(callbacks, featureLoader, recoveryService);
+
+    let failureCountAtRunAgentTime: number | undefined;
+
+    // Capture the failureCount that was written before runAgent executes
+    vi.spyOn(svc as any, 'runAgent').mockImplementation(async () => {
+      // Check what failureCount value was written before this call
+      const updateCalls: Array<[string, string, Record<string, unknown>]> =
+        (featureLoader.update as ReturnType<typeof vi.fn>).mock.calls;
+      const preWriteCall = updateCalls.find(
+        ([, , updates]) => typeof updates.failureCount === 'number'
+      );
+      failureCountAtRunAgentTime = preWriteCall?.[2]?.failureCount as number | undefined;
+      // Succeed normally so we can isolate the pre-write assertion
+      return Promise.resolve();
+    });
+
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+
+    // failureCount must have been written to 2 (feature.failureCount=1 + 1) BEFORE runAgent ran
+    expect(failureCountAtRunAgentTime).toBe(2);
+  });
+});
