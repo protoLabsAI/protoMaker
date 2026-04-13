@@ -160,6 +160,14 @@ export class ReviewProcessor implements StateProcessor {
       };
     }
 
+    // Detect merge conflicts before normalizing or evaluating review state.
+    // A CONFLICTING PR can never be auto-merged. Retrying fix_ci or update_branch
+    // wastes budget and fires false-positive HITL alerts. Instead, close and re-queue.
+    const mergeableState = await this.getMergeableState(ctx);
+    if (mergeableState === 'CONFLICTING') {
+      return this.handleConflictingPR(ctx);
+    }
+
     // Normalize PR: patch ownership watermark and enable auto-merge if missing
     await this.normalizePR(ctx);
 
@@ -566,6 +574,103 @@ export class ReviewProcessor implements StateProcessor {
       logger.warn('[REVIEW] Fresh-eyes review failed, proceeding without review', err);
       return 'skipped';
     }
+  }
+
+  /**
+   * Query GitHub for the PR's mergeable state.
+   * Returns 'CONFLICTING', 'MERGEABLE', 'UNKNOWN', or null on error.
+   */
+  private async getMergeableState(ctx: StateContext): Promise<string | null> {
+    if (!ctx.prNumber) return null;
+    try {
+      const { stdout } = await execAsync(
+        `gh pr view ${ctx.prNumber} --json mergeable --jq '.mergeable'`,
+        { cwd: ctx.projectPath, timeout: 10000 }
+      );
+      // GitHub returns a quoted JSON string — strip quotes and whitespace
+      return stdout.trim().replace(/^"|"$/g, '') || null;
+    } catch (err) {
+      logger.debug('[REVIEW] getMergeableState: gh CLI failed, skipping conflict check', err);
+      return null;
+    }
+  }
+
+  /**
+   * Handle a PR that has unresolvable merge conflicts (mergeable: CONFLICTING).
+   *
+   * 1. Post an explanatory comment on the PR.
+   * 2. Close the PR.
+   * 3. If the feature's branch already has a merged PR (race: both agents landed),
+   *    mark the feature done.
+   * 4. Otherwise, reset the feature to backlog so the next auto-mode cycle re-cuts
+   *    a fresh branch from the current base branch. No HITL escalation.
+   */
+  private async handleConflictingPR(ctx: StateContext): Promise<StateTransitionResult> {
+    logger.info('[REVIEW] PR has merge conflicts — closing and re-queuing to backlog', {
+      featureId: ctx.feature.id,
+      prNumber: ctx.prNumber,
+    });
+
+    const comment =
+      `This PR has merge conflicts with the base branch and cannot be auto-merged.\n\n` +
+      `Closing and re-queuing the feature to backlog so it will be re-cut from the ` +
+      `current base branch on the next auto-mode cycle.`;
+
+    try {
+      await execAsync(`gh pr comment ${ctx.prNumber} --body ${JSON.stringify(comment)}`, {
+        cwd: ctx.projectPath,
+        timeout: 15000,
+      });
+    } catch (err) {
+      logger.warn('[REVIEW] handleConflictingPR: failed to post conflict comment', err);
+    }
+
+    try {
+      await execAsync(`gh pr close ${ctx.prNumber}`, {
+        cwd: ctx.projectPath,
+        timeout: 15000,
+      });
+      logger.info(`[REVIEW] Closed conflicting PR #${ctx.prNumber}`);
+    } catch (err) {
+      logger.warn('[REVIEW] handleConflictingPR: failed to close PR', err);
+    }
+
+    // If the branch already has a merged PR (e.g. a parallel agent landed the same fix),
+    // mark the feature done instead of re-filing.
+    const alreadyMerged = await this.checkBranchMerged(ctx);
+    if (alreadyMerged) {
+      logger.info('[REVIEW] Branch already merged — marking feature done (superseded)', {
+        featureId: ctx.feature.id,
+      });
+      await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+        status: 'done',
+      });
+      this.serviceContext.events.emit('feature:pr-merged' as EventType, {
+        featureId: ctx.feature.id,
+        prNumber: ctx.prNumber,
+        projectPath: ctx.projectPath,
+      });
+      return {
+        nextState: null,
+        shouldContinue: false,
+        reason: 'PR conflicting but branch already merged — marked done (superseded)',
+      };
+    }
+
+    // Reset to backlog for re-cut — no HITL escalation
+    await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+      status: 'backlog',
+    });
+    logger.info('[REVIEW] Feature reset to backlog for re-cut from fresh base', {
+      featureId: ctx.feature.id,
+      prNumber: ctx.prNumber,
+    });
+
+    return {
+      nextState: null,
+      shouldContinue: false,
+      reason: 'PR closed due to merge conflicts — feature re-queued to backlog',
+    };
   }
 
   /**
