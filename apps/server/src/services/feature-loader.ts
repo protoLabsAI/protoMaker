@@ -340,7 +340,9 @@ export class FeatureLoader implements FeatureStore {
       // Also matches concatenated scope variants: fixci:, choreinfra: (agents sometimes omit parens)
       const ccMatch = title
         .trim()
-        .match(/^(fix|chore|docs|refactor|test|perf|style|ci|build|revert)([a-z0-9-]{0,15}|\([^)]*\))?!?:/);
+        .match(
+          /^(fix|chore|docs|refactor|test|perf|style|ci|build|revert)([a-z0-9-]{0,15}|\([^)]*\))?!?:/
+        );
       if (ccMatch) {
         const type = ccMatch[1];
         if (type === 'fix' || type === 'revert') {

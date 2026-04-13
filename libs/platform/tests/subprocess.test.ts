@@ -214,7 +214,9 @@ describe('subprocess.ts', () => {
       // treat the run as failed. Stderr must also be captured and logged at warn level.
       const stderrMessage = 'Claude Code CLI crashed: ENOENT /usr/local/bin/claude';
       const mockProcess = createMockProcess({
-        stdoutLines: ['{"type":"result","subtype":"success","total_cost_usd":0,"session_id":"abc"}'],
+        stdoutLines: [
+          '{"type":"result","subtype":"success","total_cost_usd":0,"session_id":"abc"}',
+        ],
         stderrLines: [stderrMessage],
         exitCode: 1,
       });
@@ -233,9 +235,7 @@ describe('subprocess.ts', () => {
       });
 
       // Stderr must be logged at warn level so it appears in logs for diagnosis
-      expect(consoleSpy.warn).toHaveBeenCalledWith(
-        expect.stringContaining(stderrMessage)
-      );
+      expect(consoleSpy.warn).toHaveBeenCalledWith(expect.stringContaining(stderrMessage));
     });
 
     it('should yield error with exit code when stderr is empty', async () => {

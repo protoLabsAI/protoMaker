@@ -5,11 +5,12 @@
  *
  * Mock call order in ReviewProcessor.process() when reviewState === 'approved':
  * 1. gh pr list --head ... --state merged   (checkBranchMerged)
- * 2. gh pr view --json body,autoMergeRequest (normalizePR)
- * 3. gh pr view --json state,mergedAt        (getPRReviewState merged fast-path)
- * 4. gh pr view --json reviewDecision,...    (getPRReviewState review decision)
- * 5. gh pr diff                              (runFreshEyesReview)
- * 6. gh pr comment                          (runFreshEyesReview — CONCERN/BLOCK only)
+ * 2. gh pr view --json mergeable            (getMergeableState — CONFLICTING check)
+ * 3. gh pr view --json body,autoMergeRequest (normalizePR)
+ * 4. gh pr view --json state,mergedAt        (getPRReviewState merged fast-path)
+ * 5. gh pr view --json reviewDecision,...    (getPRReviewState review decision)
+ * 6. gh pr diff                              (runFreshEyesReview)
+ * 7. gh pr comment                          (runFreshEyesReview — CONCERN/BLOCK only)
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -127,6 +128,7 @@ function workflowSettingsWithFreshEyes(enabled = true, model = 'haiku') {
 function setupApprovedExecMocks(extraCalls: { stdout: string; stderr: string }[] = []) {
   mockExecAsync
     .mockResolvedValueOnce({ stdout: '', stderr: '' }) // checkBranchMerged → not merged
+    .mockResolvedValueOnce({ stdout: '"MERGEABLE"', stderr: '' }) // getMergeableState → not conflicting
     .mockResolvedValueOnce({ stdout: NORMALIZE_RESPONSE, stderr: '' }) // normalizePR body/autoMerge
     .mockResolvedValueOnce({
       stdout: JSON.stringify({ state: 'OPEN', mergedAt: null }),
@@ -147,6 +149,7 @@ function setupApprovedExecMocks(extraCalls: { stdout: string; stderr: string }[]
 function setupApprovedExecMocksDisabled() {
   mockExecAsync
     .mockResolvedValueOnce({ stdout: '', stderr: '' }) // checkBranchMerged
+    .mockResolvedValueOnce({ stdout: '"MERGEABLE"', stderr: '' }) // getMergeableState → not conflicting
     .mockResolvedValueOnce({ stdout: NORMALIZE_RESPONSE, stderr: '' }) // normalizePR
     .mockResolvedValueOnce({
       stdout: JSON.stringify({ state: 'OPEN', mergedAt: null }),
