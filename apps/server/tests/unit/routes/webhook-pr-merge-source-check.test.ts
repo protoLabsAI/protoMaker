@@ -126,18 +126,23 @@ describe('PR merge source-code verification gate', () => {
     settingsService = buildSettingsService();
 
     // Re-apply mock implementations cleared by mockReset: true in vitest config.
-    vi.mocked(FeatureLoader).mockImplementation(() => ({
-      getAll: mockFeatureLoaderGetAll,
-      get: mockFeatureLoaderGet,
-      update: mockFeatureLoaderUpdate,
-      findByBranch: vi.fn().mockResolvedValue(null),
-      findByPRNumber: vi.fn().mockResolvedValue(null),
-    }));
+    // Must use function() syntax — arrow functions lack [[Construct]] and cannot be called with `new`.
+    vi.mocked(FeatureLoader).mockImplementation(function () {
+      return {
+        getAll: mockFeatureLoaderGetAll,
+        get: mockFeatureLoaderGet,
+        update: mockFeatureLoaderUpdate,
+        findByBranch: vi.fn().mockResolvedValue(null),
+        findByPRNumber: vi.fn().mockResolvedValue(null),
+      };
+    });
 
-    vi.mocked(StagingPromotionService).mockImplementation(() => ({
-      detectDevMerge: vi.fn().mockReturnValue(false),
-      createCandidate: vi.fn(),
-    }));
+    vi.mocked(StagingPromotionService).mockImplementation(function () {
+      return {
+        detectDevMerge: vi.fn().mockReturnValue(false),
+        createCandidate: vi.fn(),
+      };
+    });
 
     vi.mocked(verifyWebhookSignature).mockReturnValue({ valid: true });
 
