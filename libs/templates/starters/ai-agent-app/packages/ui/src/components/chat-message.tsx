@@ -274,6 +274,79 @@ function groupByStep(segments: PartSegment[]): PartSegment[][] {
   return groups.filter((g) => g.length > 0);
 }
 
+// ---------------------------------------------------------------------------
+// Sequential tool-call collapsing (prevents O(n²) task-list re-renders)
+// ---------------------------------------------------------------------------
+
+/**
+ * Tools whose sequential step-calls should be collapsed into a single render.
+ *
+ * When an agent calls one of these tools N times in consecutive steps (each step
+ * containing only that tool call with no other meaningful content), only the final
+ * call's output is displayed. This prevents the O(n²) stacking of full-list
+ * snapshots that occurs when tools like TodoWrite return the complete current state
+ * on every invocation — see protoLabsAI/protoCLI#42.
+ */
+const SEQUENTIAL_COLLAPSE_TOOLS = new Set(['TodoWrite']);
+
+/**
+ * Returns true when a step group contains exactly one segment that is a single
+ * tool-group call from SEQUENTIAL_COLLAPSE_TOOLS, with no other meaningful content.
+ */
+function isSingleCollapsibleToolGroup(group: PartSegment[]): boolean {
+  if (group.length !== 1) return false;
+  const seg = group[0];
+  if (seg.kind !== 'tool-group') return false;
+  if (seg.tools.length !== 1) return false;
+  return SEQUENTIAL_COLLAPSE_TOOLS.has(seg.tools[0].toolName);
+}
+
+/**
+ * Collapse consecutive step groups that each contain only a single call to a
+ * collapsible tool (e.g. TodoWrite).
+ *
+ * Keeps the final group's tool data (latest / complete state) but preserves the
+ * first group's segKey so React reuses the existing component instance rather than
+ * unmounting and remounting it on every new task — equivalent to Ink's rerender().
+ */
+function collapseSequentialToolGroups(groups: PartSegment[][]): PartSegment[][] {
+  const result: PartSegment[][] = [];
+  let i = 0;
+
+  while (i < groups.length) {
+    // Collect a consecutive run of collapsible single-tool groups
+    const runStart = i;
+    while (i < groups.length && isSingleCollapsibleToolGroup(groups[i])) {
+      i++;
+    }
+
+    const runLength = i - runStart;
+
+    if (runLength > 1) {
+      // Multiple consecutive collapsible groups — show only the final state,
+      // but preserve the first group's segKey and toolCallId so React reuses
+      // the existing component instance rather than unmounting it.
+      const firstSeg = groups[runStart][0];
+      const lastSeg = groups[i - 1][0];
+      if (firstSeg.kind === 'tool-group' && lastSeg.kind === 'tool-group') {
+        const lastTool = lastSeg.tools[0];
+        const mergedTool = { ...lastTool, toolCallId: firstSeg.tools[0].toolCallId };
+        result.push([{ kind: 'tool-group', tools: [mergedTool], segKey: firstSeg.segKey }]);
+      }
+    } else if (runLength === 1) {
+      result.push(groups[runStart]);
+    }
+
+    // Add the non-collapsible group that broke the run (if any)
+    if (i < groups.length) {
+      result.push(groups[i]);
+      i++;
+    }
+  }
+
+  return result;
+}
+
 export function ChatMessage({
   message,
   className,
@@ -350,7 +423,8 @@ export function ChatMessage({
 
   const citations = extractCitations(rawParts);
   const segments = buildSegments(rawParts);
-  const stepGroups = groupByStep(segments);
+  // Collapse consecutive single-TodoWrite groups to prevent O(n²) re-renders (protoCLI#42).
+  const stepGroups = collapseSequentialToolGroups(groupByStep(segments));
 
   const lastGroupIdx = stepGroups.length - 1;
   let lastTextSegIdxInLastGroup = -1;
