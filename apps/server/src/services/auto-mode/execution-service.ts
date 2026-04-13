@@ -3395,6 +3395,7 @@ After generating the revised spec, output:
       const DEGENERATE_RUNTIME_MS = 10_000;
       const elapsedRuntimeMs = Date.now() - streamStartTime;
       if (
+        !process.env.AUTOMAKER_MOCK_AGENT &&
         runCostUsd <= DEGENERATE_COST_THRESHOLD &&
         responseText.length < DEGENERATE_OUTPUT_CHARS &&
         elapsedRuntimeMs < DEGENERATE_RUNTIME_MS
