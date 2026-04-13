@@ -39,37 +39,31 @@ const mockFeatureLoaderGet = vi.fn();
 const mockFeatureLoaderGetAll = vi.fn().mockResolvedValue([]);
 
 vi.mock('@/services/feature-loader.js', () => ({
-  FeatureLoader: vi.fn().mockImplementation(() => ({
-    getAll: mockFeatureLoaderGetAll,
-    get: mockFeatureLoaderGet,
-    update: mockFeatureLoaderUpdate,
-    findByBranch: vi.fn().mockResolvedValue(null),
-  })),
+  FeatureLoader: vi.fn(),
 }));
 
 vi.mock('@/services/staging-promotion-service.js', () => ({
-  StagingPromotionService: vi.fn().mockImplementation(() => ({
-    detectDevMerge: vi.fn().mockReturnValue(false),
-    createCandidate: vi.fn(),
-  })),
+  StagingPromotionService: vi.fn(),
 }));
 
 vi.mock('@/lib/webhook-signature.js', () => ({
-  verifyWebhookSignature: vi.fn().mockReturnValue({ valid: true }),
+  verifyWebhookSignature: vi.fn(),
 }));
 
 vi.mock('@/services/pr-watcher-service.js', () => ({
-  getPRWatcherService: vi.fn().mockReturnValue({
-    isWatching: vi.fn().mockReturnValue(false),
-    triggerCheck: vi.fn().mockResolvedValue(undefined),
-  }),
+  getPRWatcherService: vi.fn(),
 }));
 
 vi.mock('@/services/webhook-delivery-service.js', () => ({
-  getWebhookDeliveryService: vi.fn().mockReturnValue(null),
+  getWebhookDeliveryService: vi.fn(),
 }));
 
 import { createGitHubWebhookHandler } from '@/routes/webhooks/routes/github.js';
+import { FeatureLoader } from '@/services/feature-loader.js';
+import { StagingPromotionService } from '@/services/staging-promotion-service.js';
+import { verifyWebhookSignature } from '@/lib/webhook-signature.js';
+import { getPRWatcherService } from '@/services/pr-watcher-service.js';
+import { getWebhookDeliveryService } from '@/services/webhook-delivery-service.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -127,9 +121,32 @@ describe('PR merge source-code verification gate', () => {
   let settingsService: ReturnType<typeof buildSettingsService>;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     events = new EventEmitter();
     settingsService = buildSettingsService();
+
+    // Re-apply mock implementations (vitest mockReset clears them between tests).
+    // Use function() — not arrow — so the mock is callable with `new`.
+    vi.mocked(FeatureLoader).mockImplementation(function (this: any) {
+      this.getAll = mockFeatureLoaderGetAll;
+      this.get = mockFeatureLoaderGet;
+      this.update = mockFeatureLoaderUpdate;
+      this.findByBranch = vi.fn().mockResolvedValue(null);
+      this.findByPRNumber = vi.fn().mockResolvedValue(null);
+    } as any);
+
+    vi.mocked(StagingPromotionService).mockImplementation(function (this: any) {
+      this.detectDevMerge = vi.fn().mockReturnValue(false);
+      this.createCandidate = vi.fn();
+    } as any);
+
+    vi.mocked(verifyWebhookSignature).mockReturnValue({ valid: true } as any);
+
+    vi.mocked(getPRWatcherService).mockReturnValue({
+      isWatching: vi.fn().mockReturnValue(false),
+      triggerCheck: vi.fn().mockResolvedValue(undefined),
+    } as any);
+
+    vi.mocked(getWebhookDeliveryService).mockReturnValue(null as any);
 
     // Default exec: git diff returns empty, gh pr list returns []
     mockExecImpl = (_cmd, _opts, cb) => {
