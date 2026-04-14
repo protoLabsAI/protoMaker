@@ -484,7 +484,18 @@ export function createChatRoutes(services: ServiceContainer): Router {
             {
               ...avaConfig.toolGroups,
               userPresenceDetection,
-              autoApproveTools: avaConfig.autoApproveTools,
+              // HITL approval exists to gate destructive tools in interactive
+              // human chat — a human clicks "approve" in the UI before the tool
+              // fires. In A2A skill calls there is no UI, no human, and no
+              // approval channel, so tools marked `needsApproval: true` stall
+              // indefinitely and the LLM falls back to narrating the action
+              // in prose ("starting it now…") without ever executing it.
+              //
+              // A2A callers are already authenticated via X-API-Key AND scoped
+              // by the skill's allowed-tools whitelist, which provides the real
+              // trust boundary. Auto-approve for A2A, preserve the interactive
+              // gate for everyone else.
+              autoApproveTools: isA2ASkillCall || avaConfig.autoApproveTools,
             },
             avaMcpServers.length > 0 ? avaMcpServers : undefined
           )

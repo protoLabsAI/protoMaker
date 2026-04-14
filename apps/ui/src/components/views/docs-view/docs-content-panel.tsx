@@ -8,6 +8,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@proto
 import { cn } from '@/lib/utils';
 import { DocsEditor } from './docs-editor';
 import { DocsToolbar } from './docs-toolbar';
+import { getApiKey, getSessionToken } from '@/lib/http-api-client';
+
+function getAuthHeaders(): Record<string, string> {
+  const apiKey = getApiKey();
+  if (apiKey) return { 'X-API-Key': apiKey };
+  const sessionToken = getSessionToken();
+  return sessionToken ? { 'X-Session-Token': sessionToken } : {};
+}
 
 interface DocsContentPanelProps {
   projectPath: string;
@@ -38,7 +46,8 @@ export function DocsContentPanel({ projectPath, selectedPath }: DocsContentPanel
     try {
       const response = await fetch('/api/docs/file', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        credentials: 'include',
         body: JSON.stringify({ projectPath, path: pathToSave, content: toSave }),
       });
       if (!response.ok) throw new Error('Save failed');
@@ -89,7 +98,10 @@ export function DocsContentPanel({ projectPath, selectedPath }: DocsContentPanel
       setIsEditing(false);
       try {
         const params = new URLSearchParams({ projectPath, path: selectedPath! });
-        const response = await fetch(`/api/docs/file?${params}`);
+        const response = await fetch(`/api/docs/file?${params}`, {
+          headers: getAuthHeaders(),
+          credentials: 'include',
+        });
         if (!response.ok) throw new Error(`Failed to fetch doc: ${response.status}`);
         const data = await response.json();
         if (!cancelled) {

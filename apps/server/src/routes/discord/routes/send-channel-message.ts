@@ -43,7 +43,11 @@ export function createSendChannelMessageHandler(projectRegistry: ProjectRegistry
     try {
       let success: boolean;
       if (embed && typeof embed === 'object' && (embed as WebhookEmbed).title) {
-        success = await sendEmbedToProjectChannel(project, channelType as ProjectChannelType, embed as WebhookEmbed);
+        success = await sendEmbedToProjectChannel(
+          project,
+          channelType as ProjectChannelType,
+          embed as WebhookEmbed
+        );
       } else if (content && typeof content === 'string') {
         success = await sendToProjectChannel(project, channelType as ProjectChannelType, content);
       } else {

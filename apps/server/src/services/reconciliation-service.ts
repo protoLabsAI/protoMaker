@@ -38,6 +38,7 @@ export type DriftType =
   | 'pr-has-feedback'
   | 'pr-approved-not-merged'
   | 'pr-stale'
+  | 'pr-closed-not-merged'
   // Git
   | 'branch-merged-status-stale'
   | 'branch-deleted-feature-exists'
@@ -130,6 +131,10 @@ export class ReconciliationService {
 
         case 'pr-stale':
           action = await this.reconcilePRStale(drift);
+          break;
+
+        case 'pr-closed-not-merged':
+          action = await this.reconcilePRClosedNotMerged(drift);
           break;
 
         // Git drifts
@@ -684,6 +689,29 @@ export class ReconciliationService {
     }
 
     return 'stale-pr-pinged';
+  }
+
+  /**
+   * PR was closed without merging — move feature back to backlog
+   */
+  private async reconcilePRClosedNotMerged(drift: Drift): Promise<string> {
+    if (!drift.featureId) {
+      throw new Error('featureId required for pr-closed-not-merged');
+    }
+
+    const prNumber = drift.prNumber ?? '?';
+    logger.info(
+      `Moving feature ${drift.featureId} back to 'backlog' — PR #${prNumber} closed without merging`
+    );
+
+    await this.featureLoader.update(drift.projectPath, drift.featureId, {
+      status: 'backlog',
+      statusChangeReason: `PR #${prNumber} closed without merging`,
+      prNumber: undefined,
+      prUrl: undefined,
+    });
+
+    return 'feature-returned-to-backlog';
   }
 
   /**

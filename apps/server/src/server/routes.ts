@@ -97,6 +97,7 @@ import { createOpsRoutes } from '../routes/ops/index.js';
 import { createQaRoutes } from '../routes/qa/index.js';
 import { createContextEngineRoutes } from '../routes/context-engine.js';
 import { createA2ARoutes, createA2AHandlerRoutes } from '../routes/a2a/index.js';
+import { createWorldRoutes } from '../routes/world/index.js';
 import { PlanningService } from '../services/planning-service.js';
 
 const logger = createLogger('Server:Routes');
@@ -231,6 +232,9 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
 
   // A2A message handler — manual X-API-Key check inside (same pattern as /webhooks)
   app.use('/a2a', createA2AHandlerRoutes(repoRoot, { planningService }));
+
+  // World-state polling endpoints — unauthenticated, intended for workstacean HTTP collectors
+  app.use('/api/world', createWorldRoutes(featureLoader, autoModeService, repoRoot));
 
   // --- AUTHENTICATION MIDDLEWARE ---
   // Apply authentication to all /api/* routes
@@ -374,7 +378,9 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/automations', createAutomationsRoutes(automationService));
   app.use('/api/ava', createAvaRoutes(services));
   const projectRegistry = new ProjectRegistryService({ projectRoot: repoRoot });
-  projectRegistry.start().catch((err: unknown) => logger.warn('ProjectRegistry start failed:', err));
+  projectRegistry
+    .start()
+    .catch((err: unknown) => logger.warn('ProjectRegistry start failed:', err));
   app.use('/api/discord', createDiscordRoutes(projectRegistry));
   app.use(
     '/api/ceremonies',
