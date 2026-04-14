@@ -3,12 +3,13 @@
  *
  * Safety-checks in-progress features before auto-resuming them on server restart.
  * Prevents duplicate commits, double PR creation, and conflicting git state by
- * classifying each in-progress feature into one of four restart outcomes:
+ * classifying each in-progress feature into one of five restart outcomes:
  *
  *   1. SKIP_HAS_PR     – feature has a live open PR → leave as in_progress, do not spawn agent
  *   2. SAFE_TO_RESUME  – worktree exists with commits ahead of base → safe to continue
- *   3. RESET_DIRTY     – worktree is dirty/conflicted → reset to blocked, manual intervention
- *   4. RESTART_FRESH   – no worktree and no commits → safe to start fresh
+ *   3. AUTO_RECOVERED  – dirty worktree was auto-recovered: WIP committed to recovery/ branch
+ *   4. RESET_DIRTY     – unrecoverable (merge conflicts or no branch) → escalate to HITL
+ *   5. RESTART_FRESH   – no worktree and no commits → safe to start fresh
  */
 
 import { exec } from 'child_process';
@@ -19,7 +20,12 @@ import type { Feature } from '@protolabsai/types';
 const execAsync = promisify(exec);
 const logger = createLogger('StartupRecoveryService');
 
-export type RestartOutcome = 'SKIP_HAS_PR' | 'SAFE_TO_RESUME' | 'RESET_DIRTY' | 'RESTART_FRESH';
+export type RestartOutcome =
+  | 'SKIP_HAS_PR'
+  | 'SAFE_TO_RESUME'
+  | 'AUTO_RECOVERED'
+  | 'RESET_DIRTY'
+  | 'RESTART_FRESH';
 
 export interface RestartCheckResult {
   featureId: string;
@@ -28,6 +34,8 @@ export interface RestartCheckResult {
   reason: string;
   /** Worktree path (if it exists) */
   worktreePath?: string;
+  /** Recovery branch created when outcome is AUTO_RECOVERED */
+  recoveryBranch?: string;
 }
 
 /**
@@ -94,7 +102,7 @@ async function commitsAheadOfBase(worktreePath: string, baseBranch: string): Pro
  * Check whether the worktree has uncommitted changes or merge conflicts.
  * Returns true if dirty/conflicted.
  */
-async function isWorktreeDirty(worktreePath: string): Promise<boolean> {
+export async function isWorktreeDirty(worktreePath: string): Promise<boolean> {
   try {
     const { stdout } = await execAsync(`git -C "${worktreePath}" status --porcelain`, {
       timeout: 5_000,
@@ -103,6 +111,98 @@ async function isWorktreeDirty(worktreePath: string): Promise<boolean> {
   } catch {
     // Cannot read status — assume dirty to be safe
     return true;
+  }
+}
+
+/**
+ * Check whether the worktree has unresolved merge conflicts.
+ * Returns true if any conflict markers (UU, AA, DD, etc.) are present.
+ */
+async function hasMergeConflicts(worktreePath: string): Promise<boolean> {
+  try {
+    const { stdout } = await execAsync(`git -C "${worktreePath}" status --porcelain`, {
+      timeout: 5_000,
+    });
+    const conflictPrefixes = ['UU', 'AA', 'DD', 'AU', 'UA', 'DU', 'UD'];
+    return stdout
+      .split('\n')
+      .filter(Boolean)
+      .some((line) => conflictPrefixes.some((prefix) => line.startsWith(prefix)));
+  } catch {
+    // Cannot read status — assume conflicts to be safe
+    return true;
+  }
+}
+
+/**
+ * Attempt to auto-recover a dirty worktree by committing all WIP to a
+ * timestamped `recovery/` branch, then returning to the original branch.
+ *
+ * Steps:
+ * 1. Stash uncommitted changes
+ * 2. Create a new `recovery/<featureId>-<ts>` branch from current HEAD
+ * 3. Pop the stash onto the recovery branch
+ * 4. Stage + commit all changes (no-verify to bypass pre-commit hooks in worktrees)
+ * 5. Push the recovery branch to origin (non-fatal)
+ * 6. Return to the original branch (worktree is now clean)
+ *
+ * Returns the recovery branch name on success, or throws on failure.
+ */
+export async function recoverDirtyWorktree(
+  worktreePath: string,
+  branchName: string,
+  featureId: string
+): Promise<string> {
+  const sanitized = featureId.replace(/[^a-zA-Z0-9-]/g, '-').replace(/-+/g, '-');
+  const recoveryBranch = `recovery/${sanitized}-${Date.now()}`;
+
+  // Step 1: Stash uncommitted changes
+  await execAsync(`git -C "${worktreePath}" stash --include-untracked`, { timeout: 15_000 });
+
+  try {
+    // Step 2: Create recovery branch from current HEAD
+    await execAsync(`git -C "${worktreePath}" checkout -b "${recoveryBranch}"`, {
+      timeout: 10_000,
+    });
+
+    // Step 3: Pop stash onto recovery branch
+    await execAsync(`git -C "${worktreePath}" stash pop`, { timeout: 10_000 });
+
+    // Step 4: Stage + commit
+    await execAsync(`git -C "${worktreePath}" add -A`, { timeout: 10_000 });
+    await execAsync(
+      `git -C "${worktreePath}" commit --no-verify -m "recovery: WIP preserved on server restart"`,
+      { timeout: 15_000 }
+    );
+
+    // Step 5: Push recovery branch (non-fatal)
+    try {
+      await execAsync(`git -C "${worktreePath}" push --no-verify origin "${recoveryBranch}"`, {
+        timeout: 30_000,
+      });
+      logger.info(`[STARTUP-RECOVERY] Pushed recovery branch ${recoveryBranch} to origin`);
+    } catch {
+      // Non-fatal: remote may not be configured
+      logger.warn(
+        `[STARTUP-RECOVERY] Could not push recovery branch ${recoveryBranch} — continuing without remote backup`
+      );
+    }
+
+    // Step 6: Return to original branch (worktree is now clean)
+    await execAsync(`git -C "${worktreePath}" checkout "${branchName}"`, { timeout: 10_000 });
+
+    logger.info(
+      `[STARTUP-RECOVERY] Recovered dirty worktree for feature ${featureId}: WIP saved to ${recoveryBranch}`
+    );
+    return recoveryBranch;
+  } catch (err) {
+    // Best-effort: try to restore original branch state
+    try {
+      await execAsync(`git -C "${worktreePath}" checkout "${branchName}"`, { timeout: 10_000 });
+    } catch {
+      // Ignore — best-effort cleanup only
+    }
+    throw err;
   }
 }
 
@@ -141,18 +241,66 @@ export async function checkFeatureRestartOutcome(
   const wtExists = await worktreeExists(wtPath);
 
   if (wtExists) {
-    // 3. Dirty/conflicted worktree → block, require manual intervention
+    // 3. Dirty/conflicted worktree — attempt auto-recovery; escalate only if unrecoverable
     const dirty = await isWorktreeDirty(wtPath);
     if (dirty) {
-      logger.warn(
-        `[STARTUP-RECOVERY] Feature ${featureId} has a dirty worktree at ${wtPath} — blocking`
+      const branchName = feature.branchName;
+
+      // Unrecoverable: no branch name → cannot safely commit WIP
+      if (!branchName) {
+        logger.warn(
+          `[STARTUP-RECOVERY] Feature ${featureId} has a dirty worktree at ${wtPath} but no branchName — cannot auto-recover`
+        );
+        return {
+          featureId,
+          outcome: 'RESET_DIRTY',
+          reason: 'Dirty worktree detected on restart — no branch name, cannot auto-recover',
+          worktreePath: wtPath,
+        };
+      }
+
+      // Unrecoverable: merge conflicts → cannot safely commit WIP
+      const conflicts = await hasMergeConflicts(wtPath);
+      if (conflicts) {
+        logger.warn(
+          `[STARTUP-RECOVERY] Feature ${featureId} has merge conflicts at ${wtPath} — cannot auto-recover`
+        );
+        return {
+          featureId,
+          outcome: 'RESET_DIRTY',
+          reason: 'Dirty worktree detected on restart — merge conflicts require manual resolution',
+          worktreePath: wtPath,
+        };
+      }
+
+      // Recoverable: commit WIP to a recovery/ branch and return to original branch
+      logger.info(
+        `[STARTUP-RECOVERY] Feature ${featureId} has uncommitted changes at ${wtPath} — attempting auto-recovery`
       );
-      return {
-        featureId,
-        outcome: 'RESET_DIRTY',
-        reason: 'Dirty worktree detected on restart — manual intervention required',
-        worktreePath: wtPath,
-      };
+      try {
+        const recoveryBranch = await recoverDirtyWorktree(wtPath, branchName, featureId);
+        logger.info(
+          `[STARTUP-RECOVERY] Feature ${featureId} auto-recovered: WIP saved to ${recoveryBranch}`
+        );
+        return {
+          featureId,
+          outcome: 'AUTO_RECOVERED',
+          reason: `Uncommitted WIP preserved to ${recoveryBranch} — resuming on original branch`,
+          worktreePath: wtPath,
+          recoveryBranch,
+        };
+      } catch (recoveryErr) {
+        const msg = recoveryErr instanceof Error ? recoveryErr.message : String(recoveryErr);
+        logger.error(
+          `[STARTUP-RECOVERY] Auto-recovery failed for feature ${featureId}: ${msg} — blocking`
+        );
+        return {
+          featureId,
+          outcome: 'RESET_DIRTY',
+          reason: `Dirty worktree detected on restart — auto-recovery failed: ${msg}`,
+          worktreePath: wtPath,
+        };
+      }
     }
 
     // 2. Worktree exists and is clean — check for commits ahead of base

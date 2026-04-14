@@ -99,6 +99,7 @@ import { getAgentManifestService } from '../agent-manifest-service.js';
 import { TypedEventBus } from './typed-event-bus.js';
 import { PostExecutionMiddleware } from './post-execution-middleware.js';
 import { globalAgentSemaphore } from './global-agent-semaphore.js';
+import { isWorktreeDirty, recoverDirtyWorktree } from '../startup-recovery-service.js';
 import { TrajectoryQueryService } from '../trajectory-query-service.js';
 import { symlinkBuildArtifacts } from '../worktree-lifecycle-service.js';
 import type {
@@ -720,6 +721,31 @@ Output the branch name only.`,
 
       // Validate that working directory is allowed using centralized validation
       validateWorkingDirectory(workDir);
+
+      // Mid-operation dirty-worktree recovery: a previous agent run for this
+      // feature may have left uncommitted work behind (timeout, crash, kill).
+      // If so, stash the WIP to a recovery/ branch BEFORE this agent starts
+      // so the new run gets a clean slate. Without this, the new agent's
+      // commit step fails with "git workflow failed — uncommitted work in
+      // worktree" and the feature bounces to blocked even though the
+      // auto-recovery-on-restart logic would have caught it on a server
+      // bounce. protoMaker issue #3413.
+      if (worktreePath && branchName) {
+        try {
+          const dirty = await isWorktreeDirty(worktreePath);
+          if (dirty) {
+            const recoveryBranch = await recoverDirtyWorktree(worktreePath, branchName, featureId);
+            logger.info(
+              `[PreFlightDirty] Pre-agent recovery for ${featureId}: stale WIP preserved on ${recoveryBranch}`
+            );
+          }
+        } catch (recoveryErr) {
+          // Non-fatal — if we can't recover, let the agent try anyway. Worst
+          // case the feature hits the original "uncommitted work" block and
+          // the operator sees that + this warning together.
+          logger.warn(`[PreFlightDirty] Pre-agent recovery failed for ${featureId}:`, recoveryErr);
+        }
+      }
 
       // Update running feature with actual worktree info
       tempRunningFeature.worktreePath = worktreePath;

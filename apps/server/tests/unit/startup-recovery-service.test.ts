@@ -164,46 +164,75 @@ describe('checkFeatureRestartOutcome', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // Scenario 3: Dirty/conflicted worktree → RESET_DIRTY
+  // Scenario 3: Dirty worktree — auto-recover when possible, escalate when not
   // ---------------------------------------------------------------------------
   describe('Scenario 3: dirty or conflicted worktree', () => {
-    it('returns RESET_DIRTY when worktree has uncommitted changes', async () => {
+    it('returns AUTO_RECOVERED when worktree has uncommitted changes (no conflicts)', async () => {
       const feature = makeFeature({ branchName: 'feature/my-feat' });
+      const dirtyStatus = ' M src/foo.ts\n?? tmp.txt\n';
 
       mockExecSequence([
         'true\n', // worktreeExists
-        ' M src/foo.ts\n?? tmp.txt\n', // isWorktreeDirty → non-empty output
+        dirtyStatus, // isWorktreeDirty → non-empty = dirty
+        dirtyStatus, // hasMergeConflicts → no UU/AA prefix = recoverable
+        '', // recoverDirtyWorktree: git stash --include-untracked
+        '', // git checkout -b recovery/...
+        '', // git stash pop
+        '', // git add -A
+        '', // git commit --no-verify
+        '', // git push --no-verify origin <recovery>
+        '', // git checkout <branchName>
       ]);
 
       const result = await checkFeatureRestartOutcome(PROJECT_PATH, feature, BASE_BRANCH);
 
-      expect(result.outcome).toBe('RESET_DIRTY');
-      expect(result.reason).toContain('Dirty worktree detected on restart');
+      expect(result.outcome).toBe('AUTO_RECOVERED');
+      expect(result.reason).toContain('Uncommitted WIP preserved to recovery/');
       expect(result.worktreePath).toBeDefined();
+      expect(result.recoveryBranch).toMatch(/^recovery\/feat-abc123-\d+$/);
     });
 
-    it('RESET_DIRTY reason is suitable for use as statusChangeReason', async () => {
+    it('returns RESET_DIRTY when worktree has unresolved merge conflicts', async () => {
       const feature = makeFeature({ branchName: 'feature/conflicted-feat' });
+      const conflictStatus = 'UU src/conflict.ts\n';
 
       mockExecSequence([
         'true\n',
-        'UU src/conflict.ts\n', // merge conflict markers in porcelain output
+        conflictStatus, // isWorktreeDirty → non-empty = dirty
+        conflictStatus, // hasMergeConflicts → UU prefix = unrecoverable
       ]);
 
       const result = await checkFeatureRestartOutcome(PROJECT_PATH, feature, BASE_BRANCH);
 
       expect(result.outcome).toBe('RESET_DIRTY');
-      expect(result.reason).toBe(
-        'Dirty worktree detected on restart — manual intervention required'
-      );
+      expect(result.reason).toContain('merge conflicts');
     });
 
-    it('treats unreadable worktree status as dirty (safe default)', async () => {
+    it('returns RESET_DIRTY when auto-recovery fails (e.g. stash errors)', async () => {
+      const feature = makeFeature({ branchName: 'feature/my-feat' });
+      const dirtyStatus = ' M src/foo.ts\n';
+
+      mockExecSequence([
+        'true\n',
+        dirtyStatus, // isWorktreeDirty → dirty
+        dirtyStatus, // hasMergeConflicts → recoverable
+        new Error('stash lock exists'), // recoverDirtyWorktree fails at stash
+        '', // best-effort checkout back
+      ]);
+
+      const result = await checkFeatureRestartOutcome(PROJECT_PATH, feature, BASE_BRANCH);
+
+      expect(result.outcome).toBe('RESET_DIRTY');
+      expect(result.reason).toContain('auto-recovery failed');
+    });
+
+    it('treats unreadable worktree status as conflicted (safe default)', async () => {
       const feature = makeFeature({ branchName: 'feature/my-feat' });
 
       mockExecSequence([
         'true\n', // worktreeExists succeeds
         new Error('permission denied'), // isWorktreeDirty → exec fails → treat as dirty
+        new Error('permission denied'), // hasMergeConflicts → exec fails → treat as conflicted
       ]);
 
       const result = await checkFeatureRestartOutcome(PROJECT_PATH, feature, BASE_BRANCH);
