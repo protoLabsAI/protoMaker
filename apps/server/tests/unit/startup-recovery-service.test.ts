@@ -172,16 +172,16 @@ describe('checkFeatureRestartOutcome', () => {
       const dirtyStatus = ' M src/foo.ts\n?? tmp.txt\n';
 
       mockExecSequence([
-        'true\n',       // worktreeExists
-        dirtyStatus,    // isWorktreeDirty → non-empty = dirty
-        dirtyStatus,    // hasMergeConflicts → no UU/AA prefix = recoverable
-        '',             // recoverDirtyWorktree: git stash --include-untracked
-        '',             // git checkout -b recovery/...
-        '',             // git stash pop
-        '',             // git add -A
-        '',             // git commit --no-verify
-        '',             // git push --no-verify origin <recovery>
-        '',             // git checkout <branchName>
+        'true\n', // worktreeExists
+        dirtyStatus, // isWorktreeDirty → non-empty = dirty
+        dirtyStatus, // hasMergeConflicts → no UU/AA prefix = recoverable
+        '', // recoverDirtyWorktree: git stash --include-untracked
+        '', // git checkout -b recovery/...
+        '', // git stash pop
+        '', // git add -A
+        '', // git commit --no-verify
+        '', // git push --no-verify origin <recovery>
+        '', // git checkout <branchName>
       ]);
 
       const result = await checkFeatureRestartOutcome(PROJECT_PATH, feature, BASE_BRANCH);
@@ -198,8 +198,8 @@ describe('checkFeatureRestartOutcome', () => {
 
       mockExecSequence([
         'true\n',
-        conflictStatus,   // isWorktreeDirty → non-empty = dirty
-        conflictStatus,   // hasMergeConflicts → UU prefix = unrecoverable
+        conflictStatus, // isWorktreeDirty → non-empty = dirty
+        conflictStatus, // hasMergeConflicts → UU prefix = unrecoverable
       ]);
 
       const result = await checkFeatureRestartOutcome(PROJECT_PATH, feature, BASE_BRANCH);
@@ -214,10 +214,10 @@ describe('checkFeatureRestartOutcome', () => {
 
       mockExecSequence([
         'true\n',
-        dirtyStatus,                    // isWorktreeDirty → dirty
-        dirtyStatus,                    // hasMergeConflicts → recoverable
+        dirtyStatus, // isWorktreeDirty → dirty
+        dirtyStatus, // hasMergeConflicts → recoverable
         new Error('stash lock exists'), // recoverDirtyWorktree fails at stash
-        '',                             // best-effort checkout back
+        '', // best-effort checkout back
       ]);
 
       const result = await checkFeatureRestartOutcome(PROJECT_PATH, feature, BASE_BRANCH);
@@ -230,9 +230,9 @@ describe('checkFeatureRestartOutcome', () => {
       const feature = makeFeature({ branchName: 'feature/my-feat' });
 
       mockExecSequence([
-        'true\n',                               // worktreeExists succeeds
-        new Error('permission denied'),         // isWorktreeDirty → exec fails → treat as dirty
-        new Error('permission denied'),         // hasMergeConflicts → exec fails → treat as conflicted
+        'true\n', // worktreeExists succeeds
+        new Error('permission denied'), // isWorktreeDirty → exec fails → treat as dirty
+        new Error('permission denied'), // hasMergeConflicts → exec fails → treat as conflicted
       ]);
 
       const result = await checkFeatureRestartOutcome(PROJECT_PATH, feature, BASE_BRANCH);

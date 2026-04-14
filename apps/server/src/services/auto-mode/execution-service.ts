@@ -734,11 +734,7 @@ Output the branch name only.`,
         try {
           const dirty = await isWorktreeDirty(worktreePath);
           if (dirty) {
-            const recoveryBranch = await recoverDirtyWorktree(
-              worktreePath,
-              branchName,
-              featureId
-            );
+            const recoveryBranch = await recoverDirtyWorktree(worktreePath, branchName, featureId);
             logger.info(
               `[PreFlightDirty] Pre-agent recovery for ${featureId}: stale WIP preserved on ${recoveryBranch}`
             );
@@ -747,10 +743,7 @@ Output the branch name only.`,
           // Non-fatal — if we can't recover, let the agent try anyway. Worst
           // case the feature hits the original "uncommitted work" block and
           // the operator sees that + this warning together.
-          logger.warn(
-            `[PreFlightDirty] Pre-agent recovery failed for ${featureId}:`,
-            recoveryErr
-          );
+          logger.warn(`[PreFlightDirty] Pre-agent recovery failed for ${featureId}:`, recoveryErr);
         }
       }
 

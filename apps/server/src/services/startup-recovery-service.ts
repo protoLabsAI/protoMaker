@@ -177,13 +177,10 @@ export async function recoverDirtyWorktree(
 
     // Step 5: Push recovery branch (non-fatal)
     try {
-      await execAsync(
-        `git -C "${worktreePath}" push --no-verify origin "${recoveryBranch}"`,
-        { timeout: 30_000 }
-      );
-      logger.info(
-        `[STARTUP-RECOVERY] Pushed recovery branch ${recoveryBranch} to origin`
-      );
+      await execAsync(`git -C "${worktreePath}" push --no-verify origin "${recoveryBranch}"`, {
+        timeout: 30_000,
+      });
+      logger.info(`[STARTUP-RECOVERY] Pushed recovery branch ${recoveryBranch} to origin`);
     } catch {
       // Non-fatal: remote may not be configured
       logger.warn(
