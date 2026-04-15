@@ -360,14 +360,17 @@ describe('FeatureScheduler — title-match on recent merged PRs (re-cut branch d
       status: 'backlog',
     });
 
-    setupExecMocks([], [
-      {
-        number: 42,
-        headRefName: 'fix/auth-recut-branch', // different branch name
-        mergedAt: new Date().toISOString(),
-        title: 'Implement user authentication flow', // same title
-      },
-    ]);
+    setupExecMocks(
+      [],
+      [
+        {
+          number: 42,
+          headRefName: 'fix/auth-recut-branch', // different branch name
+          mergedAt: new Date().toISOString(),
+          title: 'Implement user authentication flow', // same title
+        },
+      ]
+    );
     setupFeaturesOnDisk([feature]);
 
     const result = await scheduler.loadPendingFeatures('/fake/project');
@@ -394,14 +397,17 @@ describe('FeatureScheduler — title-match on recent merged PRs (re-cut branch d
       failureCount: 2,
     });
 
-    setupExecMocks([], [
-      {
-        number: 99,
-        headRefName: 'fix/oauth-recut',
-        mergedAt: new Date().toISOString(),
-        title: 'Add OAuth2 login support (re-cut from blocked branch)', // PR title contains feature title
-      },
-    ]);
+    setupExecMocks(
+      [],
+      [
+        {
+          number: 99,
+          headRefName: 'fix/oauth-recut',
+          mergedAt: new Date().toISOString(),
+          title: 'Add OAuth2 login support (re-cut from blocked branch)', // PR title contains feature title
+        },
+      ]
+    );
     setupFeaturesOnDisk([feature]);
 
     const result = await scheduler.loadPendingFeatures('/fake/project');
@@ -425,14 +431,17 @@ describe('FeatureScheduler — title-match on recent merged PRs (re-cut branch d
       status: 'backlog',
     });
 
-    setupExecMocks([], [
-      {
-        number: 7,
-        headRefName: 'fix/unrelated',
-        mergedAt: new Date().toISOString(),
-        title: 'Fix payment gateway timeout bug', // completely different title
-      },
-    ]);
+    setupExecMocks(
+      [],
+      [
+        {
+          number: 7,
+          headRefName: 'fix/unrelated',
+          mergedAt: new Date().toISOString(),
+          title: 'Fix payment gateway timeout bug', // completely different title
+        },
+      ]
+    );
     setupFeaturesOnDisk([feature]);
 
     const result = await scheduler.loadPendingFeatures('/fake/project');
@@ -457,14 +466,17 @@ describe('FeatureScheduler — title-match on recent merged PRs (re-cut branch d
       status: 'backlog',
     });
 
-    setupExecMocks([], [
-      {
-        number: 5,
-        headRefName: 'fix/misc',
-        mergedAt: new Date().toISOString(),
-        title: 'Fix bug', // exact match but title too short
-      },
-    ]);
+    setupExecMocks(
+      [],
+      [
+        {
+          number: 5,
+          headRefName: 'fix/misc',
+          mergedAt: new Date().toISOString(),
+          title: 'Fix bug', // exact match but title too short
+        },
+      ]
+    );
     setupFeaturesOnDisk([feature]);
 
     const result = await scheduler.loadPendingFeatures('/fake/project');

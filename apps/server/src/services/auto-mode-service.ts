@@ -3273,11 +3273,7 @@ Format your response as a structured markdown document.`;
                 // Create the epic branch on remote from origin/<prBaseBranch> without a local checkout
                 await execFileAsync(
                   'git',
-                  [
-                    'push',
-                    'origin',
-                    `origin/${resolvedPrBaseBranch}:refs/heads/${epicBranch}`,
-                  ],
+                  ['push', 'origin', `origin/${resolvedPrBaseBranch}:refs/heads/${epicBranch}`],
                   { cwd: projectPath, env: gitEnv }
                 );
                 logger.info(

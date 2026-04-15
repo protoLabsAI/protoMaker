@@ -209,10 +209,7 @@ describe('ReviewProcessor — close_and_recut for CONFLICTING PRs', () => {
     );
 
     // Should NOT have emitted a merge event
-    expect(serviceCtx.events.emit).not.toHaveBeenCalledWith(
-      'feature:pr-merged',
-      expect.anything()
-    );
+    expect(serviceCtx.events.emit).not.toHaveBeenCalledWith('feature:pr-merged', expect.anything());
   });
 
   it('CONFLICTING PR + branch already merged → marks feature done (superseded)', async () => {

@@ -555,7 +555,9 @@ export function createGitHubWebhookHandler(
       const prTitle = payload.pull_request.title;
       const repoFullName = payload.repository.full_name;
 
-      logger.info(`PR #${prNumber} merged: ${prTitle} (branch: ${branchName} → ${baseBranch}, repo: ${repoFullName})`);
+      logger.info(
+        `PR #${prNumber} merged: ${prTitle} (branch: ${branchName} → ${baseBranch}, repo: ${repoFullName})`
+      );
 
       // Resolve the projectPath for the merged PR.
       // 1. First, look up the repo in the workspace registry (workspace/projects.yaml).
