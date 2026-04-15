@@ -147,10 +147,12 @@ const INJECTION_PATTERNS: Array<{
     severity: 'block',
   },
   // "you are now" / "act as" / "pretend you are"
+  // Downgraded to warn — technical descriptions commonly say "act as a proxy",
+  // "pretend to be a server", etc. (issue #3409 false-positive class)
   {
     pattern: /(you\s+are\s+now|act\s+as|pretend\s+(you\s+are|to\s+be))/i,
     type: 'role_manipulation',
-    severity: 'block',
+    severity: 'warn',
   },
   // System markers
   {
@@ -206,6 +208,44 @@ export function detectPromptInjection(text: string): SanitizationViolation[] {
 }
 
 /**
+ * Known Unix system directory prefixes that indicate a real filesystem path.
+ * URL paths like /api/users or /v1/features do NOT start with these prefixes
+ * and are therefore treated as URL routes rather than filesystem paths.
+ */
+const SYSTEM_PATH_PREFIXES = [
+  '/home/',
+  '/etc/',
+  '/usr/',
+  '/var/',
+  '/tmp/',
+  '/root/',
+  '/proc/',
+  '/sys/',
+  '/opt/',
+  '/bin/',
+  '/sbin/',
+  '/lib/',
+  '/lib64/',
+  '/mnt/',
+  '/media/',
+  '/dev/',
+  '/boot/',
+  '/run/',
+];
+
+/**
+ * Returns true if a normalized absolute Unix path looks like a real filesystem
+ * path rather than a URL route (e.g. /api/users, /v1/features).
+ */
+function looksLikeFilesystemPath(normalizedPath: string): boolean {
+  // Windows absolute paths are always filesystem paths
+  if (/^[a-zA-Z]:/.test(normalizedPath)) return true;
+
+  // Unix: must start with a known system directory prefix
+  return SYSTEM_PATH_PREFIXES.some((prefix) => normalizedPath.startsWith(prefix));
+}
+
+/**
  * Validate file paths in text to prevent path traversal and unauthorized access
  */
 export function validateFilePaths(text: string, projectRoot: string): SanitizationViolation[] {
@@ -221,14 +261,14 @@ export function validateFilePaths(text: string, projectRoot: string): Sanitizati
 
   let match;
   while ((match = pathPattern.exec(text)) !== null) {
-    const path = match[1];
-    const normalizedPath = path.replace(/\\/g, '/');
+    const rawPath = match[1];
+    const normalizedPath = rawPath.replace(/\\/g, '/');
 
     // Check for path traversal attempts
     if (normalizedPath.includes('../') || normalizedPath.includes('/..')) {
       violations.push({
         type: 'path_traversal',
-        message: `Path traversal attempt detected: "${path}"`,
+        message: `Path traversal attempt detected: "${rawPath}"`,
         severity: 'block',
         position: {
           start: match.index,
@@ -238,20 +278,29 @@ export function validateFilePaths(text: string, projectRoot: string): Sanitizati
       continue;
     }
 
-    // Check if absolute path is outside project root
+    // Check if absolute path is outside project root.
+    // Only flag paths that look like real filesystem paths — URL routes such as
+    // /api/features or /v1/users are not filesystem paths (issue #3425).
     if (normalizedPath.startsWith('/') || /^[a-zA-Z]:/.test(normalizedPath)) {
-      // It's an absolute path
-      if (!normalizedPath.startsWith(normalizedRoot)) {
-        violations.push({
-          type: 'unauthorized_path',
-          message: `Absolute path outside project root: "${path}"`,
-          severity: 'block',
-          position: {
-            start: match.index,
-            end: match.index + match[0].length,
-          },
-        });
+      if (normalizedPath.startsWith(normalizedRoot)) {
+        // Inside project root — allowed
+        continue;
       }
+
+      if (!looksLikeFilesystemPath(normalizedPath)) {
+        // Looks like a URL route, not a filesystem path — skip
+        continue;
+      }
+
+      violations.push({
+        type: 'unauthorized_path',
+        message: `Absolute path outside project root: "${rawPath}"`,
+        severity: 'block',
+        position: {
+          start: match.index,
+          end: match.index + match[0].length,
+        },
+      });
     }
   }
 
