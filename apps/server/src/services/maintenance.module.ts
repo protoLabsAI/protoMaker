@@ -191,13 +191,39 @@ export function register(container: ServiceContainer): void {
     maintenanceOrchestrator.setTopicBus(container.topicBus);
   }
 
+  const { repoRoot } = container;
+
+  // Always include repoRoot so the reconciler runs even when auto-mode is off.
+  // Auto-mode active projects are added on top for multi-project setups.
   maintenanceOrchestrator.start(schedulerService, events, eventHistoryService, () => {
     const paths = new Set<string>();
+    paths.add(repoRoot);
     for (const p of autoModeService.getActiveAutoLoopProjects()) {
       paths.add(p);
     }
     return Array.from(paths);
   });
+
+  // Dedicated 60-second poll interval for the post-merge reconciler so that
+  // features in 'review' with merged PRs transition to 'done' within 90 seconds
+  // on local dev servers where webhooks never arrive (the maintenance critical
+  // tier runs every 5 minutes which is too slow for this SLA).
+  schedulerService.registerInterval(
+    'post-merge-reconciler:poll',
+    'Post-Merge Reconciler Poll (60s)',
+    60_000,
+    async () => {
+      const paths = new Set<string>();
+      paths.add(repoRoot);
+      for (const p of autoModeService.getActiveAutoLoopProjects()) {
+        paths.add(p);
+      }
+      for (const projectPath of paths) {
+        await postMergeReconcilerInstance.run(projectPath);
+      }
+    },
+    { category: 'sync' }
+  );
 
   logger.info(
     'MaintenanceOrchestrator started with board-health, resource-usage, webhook-health, post-merge-reconciler, and done-worktree-cleanup checks'

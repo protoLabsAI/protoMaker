@@ -117,7 +117,10 @@ export class PostMergeReconcilerCheck {
             `[reconciler] PR #${feature.prNumber} on ${repo} is merged — transitioning feature "${feature.title}" (${feature.id}) from review → done (missed webhook)`
           );
 
-          await this.featureLoader.update(projectPath, feature.id, { status: 'done' });
+          await this.featureLoader.update(projectPath, feature.id, {
+            status: 'done',
+            statusChangeReason: 'merged PR detected via poll reconciliation',
+          });
 
           this.events.emit('feature:pr-merged', {
             featureId: feature.id,

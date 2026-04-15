@@ -115,7 +115,7 @@ describe('PostMergeReconcilerCheck', () => {
     expect(mockFeatureLoaderUpdate).toHaveBeenCalledWith(
       '/home/josh/dev/labs/mythxengine',
       'feature-001',
-      { status: 'done' }
+      { status: 'done', statusChangeReason: 'merged PR detected via poll reconciliation' }
     );
     expect(emittedEvents).toHaveLength(1);
     expect(emittedEvents[0]).toMatchObject({ featureId: 'feature-001', prNumber: 184 });
@@ -210,6 +210,7 @@ describe('PostMergeReconcilerCheck', () => {
     expect(mockFeatureLoaderUpdate).toHaveBeenCalledTimes(1);
     expect(mockFeatureLoaderUpdate).toHaveBeenCalledWith(expect.any(String), 'f-002', {
       status: 'done',
+      statusChangeReason: 'merged PR detected via poll reconciliation',
     });
   });
 
