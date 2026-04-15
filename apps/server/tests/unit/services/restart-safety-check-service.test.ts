@@ -10,11 +10,17 @@ vi.mock('node:fs/promises', () => ({
 // Mock child_process execFileCb (the service wraps it in an explicit promise)
 vi.mock('child_process', async (importOriginal) => {
   const actual = await importOriginal<typeof import('child_process')>();
-  return { ...actual, execFile: vi.fn() };
+  return { ...actual, execFile: vi.fn(), exec: vi.fn() };
 });
+
+// Mock the startup-recovery-service's recoverDirtyWorktree function
+vi.mock('@/services/startup-recovery-service.js', () => ({
+  recoverDirtyWorktree: vi.fn(),
+}));
 
 import { access } from 'node:fs/promises';
 import { execFile } from 'child_process';
+import { recoverDirtyWorktree } from '@/services/startup-recovery-service.js';
 
 function mockExecFileWithOutput(stdout: string): void {
   vi.mocked(execFile).mockImplementation((...args: unknown[]) => {
@@ -103,16 +109,50 @@ describe('RestartSafetyCheckService', () => {
       });
     });
 
-    describe('when worktree exists and is dirty', () => {
-      it('returns block with uncommitted changes reason', async () => {
+    describe('when worktree exists and is dirty (auto-recovery)', () => {
+      it('returns recovered when auto-recovery succeeds', async () => {
         const feature = makeFeature({ branchName: 'feature/dirty-branch' });
         vi.mocked(access).mockResolvedValue(undefined);
         mockExecFileWithOutput(' M src/some-file.ts\n?? newfile.ts\n');
+        vi.mocked(recoverDirtyWorktree).mockResolvedValue('recovery/feature-abc-123-1713200000000');
+
+        const result = await service.check(feature, PROJECT_PATH);
+
+        expect(result.action).toBe('recovered');
+        expect(result.reason).toContain('Uncommitted WIP preserved to recovery/');
+        expect(result.recoveryBranch).toBe('recovery/feature-abc-123-1713200000000');
+        expect(result.worktreePath).toContain('.worktrees/feature-dirty-branch');
+        expect(recoverDirtyWorktree).toHaveBeenCalledWith(
+          expect.stringContaining('.worktrees/feature-dirty-branch'),
+          'feature/dirty-branch',
+          'feature-abc-123'
+        );
+      });
+
+      it('returns block when auto-recovery fails', async () => {
+        const feature = makeFeature({ branchName: 'feature/dirty-branch' });
+        vi.mocked(access).mockResolvedValue(undefined);
+        mockExecFileWithOutput(' M src/some-file.ts\n');
+        vi.mocked(recoverDirtyWorktree).mockRejectedValue(new Error('stash lock exists'));
 
         const result = await service.check(feature, PROJECT_PATH);
 
         expect(result.action).toBe('block');
-        expect(result.reason).toContain('uncommitted changes');
+        expect(result.reason).toContain('auto-recovery failed');
+        expect(result.reason).toContain('stash lock exists');
+        expect(result.worktreePath).toBeDefined();
+      });
+
+      it('returns block when dirty worktree has no branchName (cannot auto-recover)', async () => {
+        const feature = makeFeature({ branchName: undefined });
+        vi.mocked(access).mockResolvedValue(undefined);
+        mockExecFileWithOutput(' M src/some-file.ts\n');
+
+        const result = await service.check(feature, PROJECT_PATH);
+
+        expect(result.action).toBe('block');
+        expect(result.reason).toContain('no branch name');
+        expect(result.reason).toContain('cannot auto-recover');
       });
     });
 
@@ -126,6 +166,8 @@ describe('RestartSafetyCheckService', () => {
 
         expect(result.action).toBe('block');
         expect(result.reason).toContain('merge conflicts');
+        // Auto-recovery should NOT be attempted for conflicts
+        expect(recoverDirtyWorktree).not.toHaveBeenCalled();
       });
 
       it('returns block for AA (both added) conflict', async () => {

@@ -8,7 +8,9 @@
  * Possible outcomes per feature:
  * - `resume`    — No PR, clean (or absent) worktree. Safe to reset to backlog.
  * - `to_review` — Feature already has an open PR. Move to review status.
- * - `block`     — Worktree has uncommitted changes or merge conflicts.
+ * - `recovered` — Dirty worktree auto-recovered: WIP committed to recovery/ branch,
+ *                 worktree reset to clean state. Safe to resume from backlog.
+ * - `block`     — Worktree has merge conflicts or recovery failed.
  *                 Set to blocked with a human-readable reason.
  */
 
@@ -18,6 +20,7 @@ import path from 'path';
 import type { ExecFileOptions } from 'child_process';
 import type { Feature } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
+import { recoverDirtyWorktree } from './startup-recovery-service.js';
 
 const logger = createLogger('RestartSafetyCheck');
 
@@ -39,11 +42,15 @@ function execFile(
   });
 }
 
-export type SafetyCheckAction = 'resume' | 'block' | 'to_review';
+export type SafetyCheckAction = 'resume' | 'block' | 'to_review' | 'recovered';
 
 export interface SafetyCheckResult {
   action: SafetyCheckAction;
   reason?: string;
+  /** Recovery branch created when action is 'recovered' */
+  recoveryBranch?: string;
+  /** Worktree path (populated for block/recovered outcomes) */
+  worktreePath?: string;
 }
 
 export class RestartSafetyCheckService {
@@ -69,13 +76,42 @@ export class RestartSafetyCheckService {
           return {
             action: 'block',
             reason: `Worktree has merge conflicts: ${worktreePath}`,
+            worktreePath,
           };
         }
         if (isDirty) {
-          return {
-            action: 'block',
-            reason: `Worktree has uncommitted changes: ${worktreePath}`,
-          };
+          // Attempt auto-recovery: commit WIP to a recovery/ branch
+          const branchName = feature.branchName;
+          if (!branchName) {
+            return {
+              action: 'block',
+              reason: `Worktree has uncommitted changes but no branch name — cannot auto-recover: ${worktreePath}`,
+              worktreePath,
+            };
+          }
+
+          try {
+            const recoveryBranch = await recoverDirtyWorktree(worktreePath, branchName, feature.id);
+            logger.info(
+              `[RestartSafetyCheck] Auto-recovered dirty worktree for feature ${feature.id}: WIP saved to ${recoveryBranch}`
+            );
+            return {
+              action: 'recovered',
+              reason: `Uncommitted WIP preserved to ${recoveryBranch} — resuming on original branch`,
+              recoveryBranch,
+              worktreePath,
+            };
+          } catch (recoveryErr) {
+            const msg = recoveryErr instanceof Error ? recoveryErr.message : String(recoveryErr);
+            logger.warn(
+              `[RestartSafetyCheck] Auto-recovery failed for feature ${feature.id}: ${msg}`
+            );
+            return {
+              action: 'block',
+              reason: `Worktree has uncommitted changes and auto-recovery failed: ${msg}`,
+              worktreePath,
+            };
+          }
         }
       }
     }
