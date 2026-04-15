@@ -241,6 +241,35 @@ describe('feature-scheduler.ts', () => {
       );
     });
 
+    it('preserves prNumber and prUrl when decaying a review feature (issue #3467)', async () => {
+      const feature = makeReviewFeature('pr-feature-1', {
+        reviewStartedAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+        ciRemediationCount: 2,
+        failureCount: 0,
+        prNumber: 3459,
+        prUrl: 'https://github.com/protoLabsAI/protoMaker/pull/3459',
+        prCreatedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+      });
+
+      mockFeatureDirectories(['pr-feature-1']);
+      mockFeatureJsonReads({ 'pr-feature-1': feature });
+
+      await scheduler.checkAndDecayStalled('/test/project');
+
+      expect(mockFeatureLoader.update).toHaveBeenCalledWith(
+        '/test/project',
+        'pr-feature-1',
+        expect.objectContaining({
+          status: 'backlog',
+        })
+      );
+      // prNumber and prUrl must NOT be cleared — the PR may still be valid and merge later
+      const updateCall = (mockFeatureLoader.update as ReturnType<typeof vi.fn>).mock.calls[0][2];
+      expect(updateCall).not.toHaveProperty('prNumber');
+      expect(updateCall).not.toHaveProperty('prUrl');
+      expect(updateCall).not.toHaveProperty('prCreatedAt');
+    });
+
     it('does NOT decay features without failing CI indicators', async () => {
       const healthyFeature = makeReviewFeature('healthy-1', {
         reviewStartedAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),

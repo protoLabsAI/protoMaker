@@ -230,6 +230,39 @@ describe('FeatureScheduler auto-decay (integration)', () => {
     expect(recentFeature.status).toBe('review');
   });
 
+  it('preserves prNumber and prUrl after decay so post-merge reconciler can detect a merge (issue #3467)', async () => {
+    const stalledTime = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const prCreatedAt = new Date(Date.now() - 65 * 60 * 1000).toISOString();
+
+    await createTestFeature(testRepo.path, 'pr-stalled', {
+      id: 'pr-stalled',
+      title: 'PR Stalled Feature',
+      category: 'feature',
+      description: 'Feature with a PR that stalled in CI',
+      status: 'review',
+      reviewStartedAt: stalledTime,
+      failureCount: 0,
+      ciRemediationCount: 2,
+      prNumber: 3459,
+      prUrl: 'https://github.com/protoLabsAI/protoMaker/pull/3459',
+      prCreatedAt,
+    });
+
+    const decayed = await scheduler.checkAndDecayStalled(testRepo.path);
+
+    expect(decayed).toBe(1);
+
+    const featuresDir = path.join(testRepo.path, '.automaker', 'features');
+    const raw = await fs.readFile(path.join(featuresDir, 'pr-stalled', 'feature.json'), 'utf-8');
+    const feature = JSON.parse(raw);
+
+    expect(feature.status).toBe('backlog');
+    // PR linkage must be preserved so reconciler can detect a merge
+    expect(feature.prNumber).toBe(3459);
+    expect(feature.prUrl).toBe('https://github.com/protoLabsAI/protoMaker/pull/3459');
+    expect(feature.prCreatedAt).toBe(prCreatedAt);
+  });
+
   it('emits auto-decayed events for each decayed feature', async () => {
     const stalledTime = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 

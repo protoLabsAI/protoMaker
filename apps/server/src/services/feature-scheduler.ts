@@ -989,6 +989,27 @@ export class FeatureScheduler {
                 error
               );
             }
+          } else if (prView.state === 'CLOSED') {
+            // PR was closed without merging (e.g. abandoned after auto-decay).
+            // Clear the stale PR linkage so the next agent run starts fresh.
+            logger.info(
+              `[loadPendingFeatures] Feature ${feature.id} ("${feature.title}") PR #${feature.prNumber} is CLOSED (not merged) — clearing stale prNumber so agent can start fresh`
+            );
+            try {
+              await this.featureLoader.update(projectPath, feature.id, {
+                prNumber: undefined,
+                prUrl: undefined,
+                prCreatedAt: undefined,
+                prTrackedSince: undefined,
+              });
+              feature.prNumber = undefined;
+              feature.prUrl = undefined;
+            } catch (error) {
+              logger.error(
+                `[loadPendingFeatures] Failed to clear stale prNumber for feature ${feature.id}:`,
+                error
+              );
+            }
           }
         } catch {
           logger.debug(
@@ -1920,7 +1941,10 @@ export class FeatureScheduler {
 
         if (!hasCiFailureIndicator) continue;
 
-        // Decay the feature back to backlog
+        // Decay the feature back to backlog.
+        // Preserve prNumber/prUrl so the post-merge reconciler and loadPendingFeatures
+        // can detect if the PR merges while the feature is in backlog, and transition
+        // it to done without re-running the agent.
         const prevFailureCount = feature.failureCount ?? 0;
         const elapsedMinutes = Math.round(elapsedMs / 60000);
         try {
@@ -1928,12 +1952,7 @@ export class FeatureScheduler {
             status: 'backlog',
             failureCount: prevFailureCount + 1,
             statusChangeReason: `Auto-decayed: stalled in review for ${elapsedMinutes}min with failing CI`,
-            // Clear PR linkage so the feature doesn't bounce back to review via open-PR sync
-            prNumber: undefined,
-            prUrl: undefined,
-            prCreatedAt: undefined,
             reviewStartedAt: undefined,
-            prTrackedSince: undefined,
           });
           decayedCount++;
           logger.warn(
