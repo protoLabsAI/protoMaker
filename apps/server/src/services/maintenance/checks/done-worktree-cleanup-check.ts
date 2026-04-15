@@ -113,9 +113,7 @@ export class DoneWorktreeCleanupCheck implements MaintenanceCheck {
 
     // Index features by branch slug for O(1) lookup
     const featureBySlug = new Map(
-      features
-        .filter((f) => f.branchName)
-        .map((f) => [this.branchSlug(f.branchName!), f])
+      features.filter((f) => f.branchName).map((f) => [this.branchSlug(f.branchName!), f])
     );
 
     // Classify each worktree directory
