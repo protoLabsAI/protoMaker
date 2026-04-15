@@ -558,16 +558,22 @@ export class FeatureLoader implements FeatureStore {
   }
 
   /**
-   * Check if a title already exists on another feature (for duplicate detection)
+   * Check if a title already exists on another active feature (for duplicate detection).
+   * Archived features are excluded — delete-then-recreate and archive-then-recreate must work.
+   *
    * @param projectPath - Path to the project
    * @param title - Title to check
    * @param excludeFeatureId - Optional feature ID to exclude from the check (for updates)
-   * @returns The duplicate feature if found, null otherwise
+   * @param epicId - Optional epic ID; when provided only features within the same epic are
+   *   considered duplicates. Pass `null` explicitly to restrict matching to top-level features.
+   *   When omitted (`undefined`), the epicId dimension is ignored (legacy behaviour).
+   * @returns The duplicate active feature if found, null otherwise
    */
   async findDuplicateTitle(
     projectPath: string,
     title: string,
-    excludeFeatureId?: string
+    excludeFeatureId?: string,
+    epicId?: string | null | undefined
   ): Promise<Feature | null> {
     if (!title || !title.trim()) {
       return null;
@@ -582,12 +588,76 @@ export class FeatureLoader implements FeatureStore {
         continue;
       }
 
+      // Skip archived features — they are out of the active uniqueness pool.
+      // This allows delete-then-recreate and archive-then-recreate workflows.
+      if (feature.archived) {
+        continue;
+      }
+
       if (feature.title && this.normalizeTitle(feature.title) === normalizedTitle) {
+        // When epicId is explicitly supplied (including null), scope the duplicate check
+        // to features that share the same epicId. This prevents false positives when two
+        // epics contain child features with the same name.
+        if (epicId !== undefined) {
+          const featureEpicId = feature.epicId ?? null;
+          const searchEpicId = epicId ?? null;
+          if (featureEpicId !== searchEpicId) {
+            continue;
+          }
+        }
         return feature;
       }
     }
 
     return null;
+  }
+
+  /**
+   * One-shot sweep to detect existing duplicate titles in legacy data and log them for
+   * manual review. Duplicates are identified by (normalizedTitle, epicId) tuples across
+   * all active (non-archived) features.
+   *
+   * Call this once at startup or on demand to surface pre-existing duplicates that were
+   * created before the idempotent-create guard was in place.
+   *
+   * @param projectPath - Path to the project
+   * @returns Array of duplicate groups found (each group has title + array of feature IDs)
+   */
+  async detectLegacyDuplicates(
+    projectPath: string
+  ): Promise<Array<{ title: string; epicId: string | null; featureIds: string[] }>> {
+    const features = await this.getAll(projectPath);
+    const activeFeatures = features.filter((f) => !f.archived);
+
+    // Group by (normalizedTitle, epicId)
+    const groups = new Map<string, { title: string; epicId: string | null; featureIds: string[] }>();
+
+    for (const feature of activeFeatures) {
+      if (!feature.title || !feature.id) continue;
+      const epicId = feature.epicId ?? null;
+      const key = `${this.normalizeTitle(feature.title)}::${epicId ?? ''}`;
+
+      const existing = groups.get(key);
+      if (existing) {
+        existing.featureIds.push(feature.id);
+      } else {
+        groups.set(key, { title: feature.title, epicId, featureIds: [feature.id] });
+      }
+    }
+
+    const duplicates = Array.from(groups.values()).filter((g) => g.featureIds.length > 1);
+
+    if (duplicates.length > 0) {
+      logger.warn(`Legacy duplicate features detected (${duplicates.length} groups):`, {
+        duplicates: duplicates.map((d) => ({
+          title: d.title,
+          epicId: d.epicId,
+          ids: d.featureIds,
+        })),
+      });
+    }
+
+    return duplicates;
   }
 
   /**
