@@ -200,13 +200,15 @@ describe('ReviewProcessor', () => {
     function setupCiFailureExecMock(ciCheckName = 'CI / test') {
       mockExec.mockReset();
       mockExec
-        // Call 1: normalizePR fails → caught, returns early
+        // Call 1: getMergeableState → MERGEABLE (no conflict)
+        .mockImplementationOnce(execSuccess({ stdout: '"MERGEABLE"', stderr: '' }))
+        // Call 2: normalizePR fails → caught, returns early
         .mockImplementationOnce(execFailure(new Error('normalizePR network error')))
-        // Call 2: merge check — PR is OPEN
+        // Call 3: merge check — PR is OPEN
         .mockImplementationOnce(
           execSuccess({ stdout: JSON.stringify({ state: 'OPEN', mergedAt: null }), stderr: '' })
         )
-        // Call 3: main review state check — CI failure
+        // Call 4: main review state check — CI failure
         .mockImplementationOnce(
           execSuccess({
             stdout: JSON.stringify({
@@ -217,7 +219,7 @@ describe('ReviewProcessor', () => {
             stderr: '',
           })
         )
-        // Call 4: fetch CI failure names
+        // Call 5: fetch CI failure names
         .mockImplementationOnce(execSuccess({ stdout: ciCheckName, stderr: '' }));
     }
 

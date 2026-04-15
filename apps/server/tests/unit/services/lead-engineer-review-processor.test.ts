@@ -176,15 +176,17 @@ describe('ReviewProcessor — close_and_recut for CONFLICTING PRs', () => {
     (serviceCtx.featureLoader.get as ReturnType<typeof vi.fn>).mockResolvedValue(feature);
 
     // Call sequence:
-    // 1. getMergeableState: returns CONFLICTING
-    // 2. gh pr comment: success
-    // 3. gh pr close: success
-    // 4. checkBranchMerged (gh pr list): returns '' (not merged)
+    // 1. checkBranchMerged (gh pr list): returns '' (not merged yet)
+    // 2. getMergeableState: returns CONFLICTING
+    // 3. gh pr comment: success
+    // 4. gh pr close: success
+    // 5. checkBranchMerged inside handleConflictingPR (gh pr list): returns '' (not merged)
     mockExecAsync
+      .mockResolvedValueOnce({ stdout: '', stderr: '' }) // checkBranchMerged → not merged
       .mockResolvedValueOnce({ stdout: '"CONFLICTING"', stderr: '' }) // getMergeableState
       .mockResolvedValueOnce({ stdout: '', stderr: '' }) // gh pr comment
       .mockResolvedValueOnce({ stdout: '', stderr: '' }) // gh pr close
-      .mockResolvedValueOnce({ stdout: '', stderr: '' }); // checkBranchMerged
+      .mockResolvedValueOnce({ stdout: '', stderr: '' }); // checkBranchMerged (handleConflictingPR)
 
     const processor = new ReviewProcessor(serviceCtx);
     const ctx = makeCtx(feature, 42);
@@ -218,15 +220,17 @@ describe('ReviewProcessor — close_and_recut for CONFLICTING PRs', () => {
     (serviceCtx.featureLoader.get as ReturnType<typeof vi.fn>).mockResolvedValue(feature);
 
     // Call sequence:
-    // 1. getMergeableState: CONFLICTING
-    // 2. gh pr comment: success
-    // 3. gh pr close: success
-    // 4. checkBranchMerged (gh pr list): returns a mergedAt timestamp → merged
+    // 1. checkBranchMerged (gh pr list): returns '' (not merged yet)
+    // 2. getMergeableState: CONFLICTING
+    // 3. gh pr comment: success
+    // 4. gh pr close: success
+    // 5. checkBranchMerged inside handleConflictingPR: returns a mergedAt timestamp → merged
     mockExecAsync
-      .mockResolvedValueOnce({ stdout: '"CONFLICTING"', stderr: '' })
-      .mockResolvedValueOnce({ stdout: '', stderr: '' })
-      .mockResolvedValueOnce({ stdout: '', stderr: '' })
-      .mockResolvedValueOnce({ stdout: '2024-01-15T12:00:00Z\n', stderr: '' });
+      .mockResolvedValueOnce({ stdout: '', stderr: '' }) // checkBranchMerged → not merged
+      .mockResolvedValueOnce({ stdout: '"CONFLICTING"', stderr: '' }) // getMergeableState
+      .mockResolvedValueOnce({ stdout: '', stderr: '' }) // gh pr comment
+      .mockResolvedValueOnce({ stdout: '', stderr: '' }) // gh pr close
+      .mockResolvedValueOnce({ stdout: '2024-01-15T12:00:00Z\n', stderr: '' }); // checkBranchMerged (handleConflictingPR)
 
     const processor = new ReviewProcessor(serviceCtx);
     const ctx = makeCtx(feature, 42);
