@@ -123,10 +123,10 @@ The repo-root `.env` is **not** mounted directly (to avoid leaking dev secrets).
 
 Build time is typically **5–10 minutes** (layer caching keeps it fast after the first build). Total time from merged PR to running container:
 
-| Scenario | Time |
-|---|---|
-| HTTP API trigger configured | **5–11 minutes** (build time + ~10s restart) |
-| Polling only (default) | **5–12 minutes** (build time + up to 60s poll) |
+| Scenario                    | Time                                           |
+| --------------------------- | ---------------------------------------------- |
+| HTTP API trigger configured | **5–11 minutes** (build time + ~10s restart)   |
+| Polling only (default)      | **5–12 minutes** (build time + up to 60s poll) |
 
 ## Faster Restarts via Watchtower HTTP API
 
@@ -148,6 +148,7 @@ This value is interpolated by Docker Compose into `WATCHTOWER_HTTP_API_TOKEN`.
 Watchtower's HTTP API listens on host port **9091**. GitHub Actions needs to reach it.
 
 Options:
+
 - **Cloud VM**: open port 9091 in your firewall/security group, set `WATCHTOWER_API_URL=http://<vm-ip>:9091`
 - **Cloudflare Tunnel**: tunnel port 9091 to a public URL
 - **Tailscale/WireGuard**: point GH Actions runner at the Tailscale IP
@@ -156,10 +157,10 @@ Options:
 
 In your GitHub repo → Settings → Secrets → Actions, add:
 
-| Secret | Value |
-|---|---|
-| `WATCHTOWER_API_URL` | `http://<your-host>:9091` |
-| `WATCHTOWER_API_TOKEN` | same token you set in step 1 |
+| Secret                      | Value                                                   |
+| --------------------------- | ------------------------------------------------------- |
+| `WATCHTOWER_API_URL`        | `http://<your-host>:9091`                               |
+| `WATCHTOWER_API_TOKEN`      | same token you set in step 1                            |
 | `DISCORD_INFRA_WEBHOOK_URL` | Discord webhook URL for #infra notifications (optional) |
 
 Once set, every push to `dev` will trigger an immediate container restart after the image is pushed.
