@@ -82,9 +82,17 @@ services:
       # Run `docker login ghcr.io` once to populate this file
       - ${HOME}/.docker/config.json:/config.json:ro
 
+    ports:
+      # Expose Watchtower HTTP API on host port 9091.
+      # Used by GitHub Actions to trigger an immediate update after a new image is pushed,
+      # instead of waiting for the next poll cycle.
+      # Requires WATCHTOWER_HTTP_API_UPDATE=true and a matching token (see below).
+      - '9091:8080'
+
     environment:
-      # Poll GHCR every 5 minutes for new images
-      - WATCHTOWER_POLL_INTERVAL=300
+      # Poll GHCR every 60 seconds for new images (reduced from 300s to shrink the
+      # worst-case activation window from 5 min to 1 min).
+      - WATCHTOWER_POLL_INTERVAL=60
 
       # Remove old images after pulling new ones
       - WATCHTOWER_CLEANUP=true
@@ -94,6 +102,17 @@ services:
 
       # Use the mounted Docker config for GHCR auth
       - DOCKER_CONFIG=/
+
+      # Enable HTTP API so GitHub Actions can trigger an immediate update.
+      # POST http://<host>:9091/v1/update  with  Authorization: Bearer <token>
+      - WATCHTOWER_HTTP_API_UPDATE=true
+
+      # Secret token for the HTTP API. Set WATCHTOWER_API_TOKEN in your shell or .env,
+      # or override here. Must match the WATCHTOWER_API_TOKEN repo secret in GitHub.
+      - WATCHTOWER_HTTP_API_TOKEN=${WATCHTOWER_API_TOKEN:-changeme}
+
+      # Continue polling even when the HTTP API is enabled (belt-and-suspenders).
+      - WATCHTOWER_HTTP_API_PERIODIC_POLLS=true
 
 volumes:
   automaker-dev-claude-config:
