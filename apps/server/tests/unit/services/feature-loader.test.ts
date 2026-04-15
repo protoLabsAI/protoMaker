@@ -747,7 +747,12 @@ describe('feature-loader.ts', () => {
         );
 
       // Searching within epic-A — only feature-1000-abc should match
-      const resultA = await loader.findDuplicateTitle(testProjectPath, 'My Feature', undefined, 'epic-A');
+      const resultA = await loader.findDuplicateTitle(
+        testProjectPath,
+        'My Feature',
+        undefined,
+        'epic-A'
+      );
       expect(resultA?.id).toBe('feature-1000-abc');
 
       // Searching within a different epic — no match
@@ -774,7 +779,12 @@ describe('feature-loader.ts', () => {
             description: 'In epic B',
           })
         );
-      const resultC = await loader.findDuplicateTitle(testProjectPath, 'My Feature', undefined, 'epic-C');
+      const resultC = await loader.findDuplicateTitle(
+        testProjectPath,
+        'My Feature',
+        undefined,
+        'epic-C'
+      );
       expect(resultC).toBeNull();
     });
   });

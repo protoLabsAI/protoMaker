@@ -630,7 +630,10 @@ export class FeatureLoader implements FeatureStore {
     const activeFeatures = features.filter((f) => !f.archived);
 
     // Group by (normalizedTitle, epicId)
-    const groups = new Map<string, { title: string; epicId: string | null; featureIds: string[] }>();
+    const groups = new Map<
+      string,
+      { title: string; epicId: string | null; featureIds: string[] }
+    >();
 
     for (const feature of activeFeatures) {
       if (!feature.title || !feature.id) continue;
