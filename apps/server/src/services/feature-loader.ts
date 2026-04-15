@@ -728,6 +728,19 @@ export class FeatureLoader implements FeatureStore {
       throw new Error(`Feature ${featureId} not found`);
     }
 
+    // Reject contradictory epic state when isEpic or epicId fields are being modified.
+    // Only checked when the update touches these fields to allow other updates (e.g. status)
+    // to proceed even on features already in contradictory state (handled by the scheduler).
+    if (updates.isEpic !== undefined || updates.epicId !== undefined) {
+      const effectiveIsEpic = updates.isEpic !== undefined ? updates.isEpic : feature.isEpic;
+      const effectiveEpicId = updates.epicId !== undefined ? updates.epicId : feature.epicId;
+      if (effectiveIsEpic && effectiveEpicId) {
+        throw new Error(
+          'A feature cannot be both an epic (isEpic: true) and a member of another epic (epicId set). Set either isEpic or epicId, not both.'
+        );
+      }
+    }
+
     // Handle image path changes
     let updatedImagePaths = updates.imagePaths;
     if (updates.imagePaths !== undefined) {

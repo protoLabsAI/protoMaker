@@ -1212,17 +1212,20 @@ export class FeatureScheduler {
             if (feature.epicId) {
               // Contradictory state: a feature cannot be both an epic container and a child of
               // another epic. This was likely caused by a direct write bypassing API validation.
-              logger.warn(
-                `[loadPendingFeatures] Feature ${feature.id} ("${feature.title}") is marked as an epic but also has a parent epic assigned (epicId: ${feature.epicId}) — it will not be scheduled. Fix the feature configuration to proceed.`
+              logger.error(
+                `[loadPendingFeatures] Feature ${feature.id} has both isEpic=true and epicId set — skipping; manual intervention required.`
               );
-              // Surface the conflict in the feature data so the UI and agents can observe it.
+              // Move to blocked so the contradictory state is visible in the UI and not silently
+              // swallowed every scheduler cycle. The update only touches status/statusChangeReason
+              // so it bypasses the isEpic+epicId validation guard in FeatureLoader.update.
               try {
                 await this.featureLoader.update(projectPath, feature.id, {
+                  status: 'blocked',
                   statusChangeReason: `Contradictory epic state: feature is marked as an epic container (isEpic: true) but also has a parent epic assigned (epicId: ${feature.epicId}). Set either isEpic or epicId, not both.`,
                 });
               } catch (updateErr) {
                 logger.error(
-                  `[loadPendingFeatures] Failed to surface contradictory state for feature ${feature.id}:`,
+                  `[loadPendingFeatures] Failed to block contradictory-state feature ${feature.id}:`,
                   updateErr
                 );
               }
