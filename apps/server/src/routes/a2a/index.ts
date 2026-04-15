@@ -221,12 +221,11 @@ export const DECLARED_SKILL_IDS: ReadonlySet<string> = new Set(DECLARED_SKILLS.m
 function buildAgentCard(host: string) {
   const version = getVersion();
   return {
-    name: 'protomaker',
+    name: 'protoMaker',
     description:
-      'protoLabs.studio autonomous development team. ' +
+      'protoLabs.studio autonomous development agent. ' +
       'Multi-agent runtime coordinating board health, feature management, ' +
-      'auto-mode, planning, and project onboarding. Historically addressed ' +
-      'as "ava" — the underlying HTTP server identity is unchanged.',
+      'auto-mode, planning, and project onboarding.',
     url: `http://${host}`,
     version,
     provider: {

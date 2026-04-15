@@ -37,7 +37,7 @@ import { fileURLToPath } from 'url';
 import { getAnthropicModel } from '../../lib/ai-provider.js';
 import { createLogger } from '@protolabsai/utils';
 import { resolveModelString } from '@protolabsai/model-resolver';
-import { buildAvaSystemPrompt, type NotesContext } from './personas.js';
+import { buildProtoMakerSystemPrompt, type NotesContext } from './personas.js';
 import { loadAvaConfig, DEFAULT_AVA_CONFIG, type AvaConfig } from './ava-config.js';
 import { getSitrep } from './sitrep.js';
 import { buildAvaTools } from './ava-tools.js';
@@ -420,10 +420,10 @@ export function createChatRoutes(services: ServiceContainer): Router {
         }
       }
 
-      // Build Ava system prompt — enriched with project context, sitrep, and extension
+      // Build protoMaker system prompt — enriched with project context, sitrep, and extension
       const systemPrompt =
         system ??
-        buildAvaSystemPrompt({
+        buildProtoMakerSystemPrompt({
           ctx: context,
           projectContext,
           sitrep,
