@@ -3472,7 +3472,8 @@ After generating the revised spec, output:
       ) {
         const truncatedOutput =
           responseText.length > 0
-            ? responseText.slice(0, 500) + (responseText.length > 500 ? `… [${responseText.length} chars total]` : '')
+            ? responseText.slice(0, 500) +
+              (responseText.length > 500 ? `… [${responseText.length} chars total]` : '')
             : '(empty)';
         logger.warn(
           `[DegenerateSuccess] Feature ${featureId}: SDK reported success but made 0 API calls ` +

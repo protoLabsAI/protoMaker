@@ -1303,8 +1303,9 @@ describe('ExecutionService — exit-code-1 degenerate-success fingerprint (issue
     await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
 
     // Circuit breaker must trip: feature should be marked interrupted
-    const updateCalls: Array<[string, string, Record<string, unknown>]> =
-      (featureLoader.update as ReturnType<typeof vi.fn>).mock.calls;
+    const updateCalls: Array<[string, string, Record<string, unknown>]> = (
+      featureLoader.update as ReturnType<typeof vi.fn>
+    ).mock.calls;
 
     const interruptedUpdate = updateCalls.find(([, , updates]) => updates.status === 'interrupted');
     expect(interruptedUpdate).toBeDefined();
@@ -1319,40 +1320,38 @@ describe('ExecutionService — exit-code-1 degenerate-success fingerprint (issue
     }
   });
 
-  it(
-    'pre-execution failureCount write: write-before-run increments count before runAgent is called',
-    async () => {
-      // Verifies that failureCount is written to disk BEFORE runAgent starts.
-      // If the server crashes during SDK initialization, the failure is already counted.
-      const feature = makeFeature({
-        id: FEATURE_ID,
-        status: 'backlog',
-        failureCount: 1,
-      });
-      const callbacks = makeCallbacks(feature);
-      const featureLoader = makeFeatureLoader(feature);
-      const recoveryService = makeRecoveryService();
-      const svc = makeService(callbacks, featureLoader, recoveryService);
+  it('pre-execution failureCount write: write-before-run increments count before runAgent is called', async () => {
+    // Verifies that failureCount is written to disk BEFORE runAgent starts.
+    // If the server crashes during SDK initialization, the failure is already counted.
+    const feature = makeFeature({
+      id: FEATURE_ID,
+      status: 'backlog',
+      failureCount: 1,
+    });
+    const callbacks = makeCallbacks(feature);
+    const featureLoader = makeFeatureLoader(feature);
+    const recoveryService = makeRecoveryService();
+    const svc = makeService(callbacks, featureLoader, recoveryService);
 
-      let failureCountAtRunAgentTime: number | undefined;
+    let failureCountAtRunAgentTime: number | undefined;
 
-      // Capture the failureCount that was written before runAgent executes
-      vi.spyOn(svc as any, 'runAgent').mockImplementation(async () => {
-        // Check what failureCount value was written before this call
-        const updateCalls: Array<[string, string, Record<string, unknown>]> =
-          (featureLoader.update as ReturnType<typeof vi.fn>).mock.calls;
-        const preWriteCall = updateCalls.find(
-          ([, , updates]) => typeof updates.failureCount === 'number'
-        );
-        failureCountAtRunAgentTime = preWriteCall?.[2]?.failureCount as number | undefined;
-        // Succeed normally so we can isolate the pre-write assertion
-        return Promise.resolve();
-      });
+    // Capture the failureCount that was written before runAgent executes
+    vi.spyOn(svc as any, 'runAgent').mockImplementation(async () => {
+      // Check what failureCount value was written before this call
+      const updateCalls: Array<[string, string, Record<string, unknown>]> = (
+        featureLoader.update as ReturnType<typeof vi.fn>
+      ).mock.calls;
+      const preWriteCall = updateCalls.find(
+        ([, , updates]) => typeof updates.failureCount === 'number'
+      );
+      failureCountAtRunAgentTime = preWriteCall?.[2]?.failureCount as number | undefined;
+      // Succeed normally so we can isolate the pre-write assertion
+      return Promise.resolve();
+    });
 
-      await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
 
-      // failureCount must have been written to 2 (feature.failureCount=1 + 1) BEFORE runAgent ran
-      expect(failureCountAtRunAgentTime).toBe(2);
-    }
-  );
+    // failureCount must have been written to 2 (feature.failureCount=1 + 1) BEFORE runAgent ran
+    expect(failureCountAtRunAgentTime).toBe(2);
+  });
 });

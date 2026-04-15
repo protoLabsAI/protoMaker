@@ -425,11 +425,7 @@ describe('MergeProcessor', () => {
     });
 
     it('escalates when PR contains only lock files and markdown', async () => {
-      setupExecMock('2026-01-01T00:00:00Z\n', [
-        '.automaker-lock',
-        'pnpm-lock.yaml',
-        'README.md',
-      ]);
+      setupExecMock('2026-01-01T00:00:00Z\n', ['.automaker-lock', 'pnpm-lock.yaml', 'README.md']);
       const ctx = makeCtx();
 
       const result = await processor.process(ctx);
@@ -438,10 +434,7 @@ describe('MergeProcessor', () => {
     });
 
     it('proceeds to DEPLOY when PR contains source files alongside metadata', async () => {
-      setupExecMock('2026-01-01T00:00:00Z\n', [
-        '.automaker-lock',
-        'src/services/my-service.ts',
-      ]);
+      setupExecMock('2026-01-01T00:00:00Z\n', ['.automaker-lock', 'src/services/my-service.ts']);
       const ctx = makeCtx();
 
       const result = await processor.process(ctx);
