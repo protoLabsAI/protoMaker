@@ -246,8 +246,7 @@ export function createManageBoardTool(deps: BoardDeps): SharedTool {
           const q = input.query.toLowerCase();
           features = features.filter(
             (f) =>
-              f.title.toLowerCase().includes(q) ||
-              (f.description ?? '').toLowerCase().includes(q)
+              f.title.toLowerCase().includes(q) || (f.description ?? '').toLowerCase().includes(q)
           );
         }
 

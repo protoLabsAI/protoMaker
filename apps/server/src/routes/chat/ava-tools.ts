@@ -350,17 +350,8 @@ export function buildAvaTools(
       inputSchema: z.discriminatedUnion('action', [
         z.object({
           action: z.literal('list').describe('List features with optional filters'),
-          status: z
-            .enum(FEATURE_STATUS_ENUM)
-            .optional()
-            .describe('Filter by status'),
-          priority: z
-            .number()
-            .int()
-            .min(0)
-            .max(4)
-            .optional()
-            .describe('Filter by priority (0-4)'),
+          status: z.enum(FEATURE_STATUS_ENUM).optional().describe('Filter by status'),
+          priority: z.number().int().min(0).max(4).optional().describe('Filter by priority (0-4)'),
           limit: z
             .number()
             .int()
@@ -420,8 +411,7 @@ export function buildAvaTools(
           const q = input.query.toLowerCase();
           features = features.filter(
             (f) =>
-              f.title.toLowerCase().includes(q) ||
-              (f.description ?? '').toLowerCase().includes(q)
+              f.title.toLowerCase().includes(q) || (f.description ?? '').toLowerCase().includes(q)
           );
         }
 
