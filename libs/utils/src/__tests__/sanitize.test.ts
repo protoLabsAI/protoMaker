@@ -211,8 +211,7 @@ describe('validateFilePaths', () => {
   });
 
   it('multiple REST routes in description → no violations', () => {
-    const input =
-      'Add endpoints: GET /api/projects, POST /api/projects, DELETE /api/projects/:id';
+    const input = 'Add endpoints: GET /api/projects, POST /api/projects, DELETE /api/projects/:id';
     const violations = validateFilePaths(input, projectRoot);
 
     expect(violations).toHaveLength(0);
