@@ -10,9 +10,14 @@
  *   rebasable     → attempt git merge -X ours (keep PR semantics, accept base formatting)
  *   decomposable  → propose PR split to user via HITL comment
  *   genuine       → escalate to HITL exactly once with specific hunks
+ *
+ * Format remediation:
+ *   When CI's "Check formatting" step fails on an agent-authored PR, remediateFormatFailure()
+ *   runs prettier on the PR's changed files, verifies scope, and pushes an auto-fix commit.
  */
 
 import { exec } from 'node:child_process';
+import path from 'node:path';
 import { promisify } from 'node:util';
 import { createLogger } from '@protolabsai/utils';
 import Anthropic from '@anthropic-ai/sdk';
@@ -21,6 +26,13 @@ import {
   type ConflictClassification,
   type ConflictVerdict,
 } from './pr-conflict-classifier.js';
+import { PrRemediationWorker } from './pr-remediation-worker.js';
+import type {
+  FormatRemediationInput,
+  FormatRemediationResult,
+  PRFormatRemediatedPayload,
+} from '../types/pr-remediation.js';
+import type { EventEmitter } from '../lib/events.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('PRRemediationService');
@@ -490,4 +502,352 @@ export function logRemediationOutcome(result: RemediationResult, featureId?: str
 /** Get the current remediation count for a PR (for observability/metrics). */
 export function getRemediationCountForPR(projectPath: string, prNumber: number): number {
   return getRemediationCount(projectPath, prNumber);
+}
+
+// ---------------------------------------------------------------------------
+// Format failure remediation
+// ---------------------------------------------------------------------------
+
+/**
+ * Protected branches that should never be touched by auto-remediation.
+ * Only feature branches (feature/, fix/, chore/, etc.) are eligible.
+ */
+const PROTECTED_BRANCHES = new Set(['main', 'staging', 'dev']);
+
+/**
+ * Branch prefixes that identify agent-authored branches.
+ * Human PRs typically don't follow these naming conventions.
+ */
+const AGENT_BRANCH_PREFIXES = [
+  'feature/',
+  'fix/',
+  'chore/',
+  'refactor/',
+  'feat/',
+  'style/',
+  'docs/',
+  'test/',
+  'ci/',
+  'perf/',
+  'build/',
+];
+
+function isProtectedBranch(branch: string): boolean {
+  return PROTECTED_BRANCHES.has(branch);
+}
+
+function isAgentBranch(branch: string): boolean {
+  return AGENT_BRANCH_PREFIXES.some((prefix) => branch.startsWith(prefix));
+}
+
+/**
+ * Auto-remediate a "Check formatting" CI failure on an agent-authored PR.
+ *
+ * Safety gates (any failure skips or escalates):
+ * 1. Protected branch guard — never touch main/staging/dev
+ * 2. Agent-author guard — only act on agent-authored branches (prefix check)
+ * 3. One-remediation cap — check git log for existing auto-remediation commit
+ * 4. Scope check — after prettier runs, verify only PR-diff files were modified
+ *
+ * On success: commits "style: prettier fix (auto-remediation)" and pushes.
+ * On scope drift: escalates to HITL (does not push).
+ */
+export async function remediateFormatFailure(
+  input: FormatRemediationInput,
+  events?: EventEmitter
+): Promise<FormatRemediationResult> {
+  const { prNumber, headBranch, headSha, projectPath, repository } = input;
+
+  logger.info('[FormatRemediation] Triggered', {
+    prNumber,
+    headBranch,
+    repository,
+  });
+
+  // ------------------------------------------------------------------
+  // Guard 1: Protected branch check
+  // ------------------------------------------------------------------
+  if (isProtectedBranch(headBranch)) {
+    logger.warn('[FormatRemediation] Refusing to remediate protected branch', {
+      prNumber,
+      headBranch,
+    });
+    logger.info('[FormatRemediation:security] Skipped — protected branch target', {
+      prNumber,
+      headBranch,
+    });
+    return {
+      status: 'skipped',
+      prNumber,
+      reason: `Skipped: branch '${headBranch}' is protected. Auto-remediation only applies to feature branches.`,
+      details: { headBranch, guard: 'protected-branch' },
+    };
+  }
+
+  // ------------------------------------------------------------------
+  // Guard 2: Agent-author check (branch prefix)
+  // ------------------------------------------------------------------
+  if (!isAgentBranch(headBranch)) {
+    logger.info('[FormatRemediation] Skipping non-agent branch', { prNumber, headBranch });
+    return {
+      status: 'skipped',
+      prNumber,
+      reason: `Skipped: branch '${headBranch}' does not match agent naming convention (expected prefix: ${AGENT_BRANCH_PREFIXES.slice(0, 3).join(', ')}...).`,
+      details: { headBranch, guard: 'agent-author' },
+    };
+  }
+
+  // ------------------------------------------------------------------
+  // Find the worktree path for this branch (reuse existing checkout)
+  // ------------------------------------------------------------------
+  const worktreePath = path.join(projectPath, '.worktrees', headBranch);
+
+  const worker = new PrRemediationWorker();
+
+  // ------------------------------------------------------------------
+  // Guard 3: One-remediation-per-PR cap
+  // ------------------------------------------------------------------
+  let baseBranch = 'dev'; // default; we'll try to detect from gh
+  try {
+    const { stdout: prJson } = await execAsync(
+      `gh pr view ${prNumber} --repo ${repository} --json baseRefName`,
+      { timeout: 15000 }
+    );
+    const parsed = JSON.parse(prJson) as { baseRefName?: string };
+    if (parsed.baseRefName) baseBranch = parsed.baseRefName;
+  } catch {
+    logger.debug('[FormatRemediation] Could not detect base branch from gh, using default', {
+      prNumber,
+      defaultBaseBranch: baseBranch,
+    });
+  }
+
+  try {
+    const hasExisting = await worker.hasExistingRemediationCommit(
+      worktreePath,
+      baseBranch,
+      headBranch
+    );
+    if (hasExisting) {
+      logger.warn('[FormatRemediation] One-remediation cap reached — skipping', {
+        prNumber,
+        headBranch,
+      });
+      logger.warn('[FormatRemediation:security] Possible infinite-loop scenario detected', {
+        prNumber,
+      });
+      return {
+        status: 'skipped',
+        prNumber,
+        reason: 'Skipped: a remediation commit already exists on this PR. One-per-PR cap enforced.',
+        details: { headBranch, guard: 'one-per-pr-cap' },
+      };
+    }
+  } catch (capErr) {
+    // If we can't check the worktree (branch not checked out yet), proceed cautiously
+    logger.debug('[FormatRemediation] Could not check remediation cap — worktree may not exist', {
+      prNumber,
+      error: capErr instanceof Error ? capErr.message : String(capErr),
+    });
+  }
+
+  // ------------------------------------------------------------------
+  // Get changed files in the PR diff
+  // ------------------------------------------------------------------
+  let prChangedFiles: string[] = [];
+  try {
+    const { stdout: diffOut } = await execAsync(
+      `gh pr diff ${prNumber} --repo ${repository} --name-only`,
+      { timeout: 30000 }
+    );
+    prChangedFiles = diffOut.trim().split('\n').filter(Boolean);
+  } catch (diffErr) {
+    logger.warn('[FormatRemediation] Could not get PR diff files', {
+      prNumber,
+      error: diffErr instanceof Error ? diffErr.message : String(diffErr),
+    });
+    return {
+      status: 'error',
+      prNumber,
+      reason: `Could not determine PR changed files: ${diffErr instanceof Error ? diffErr.message : String(diffErr)}`,
+      details: { guard: 'pr-diff-fetch' },
+    };
+  }
+
+  if (prChangedFiles.length === 0) {
+    return {
+      status: 'skipped',
+      prNumber,
+      reason: 'Skipped: PR has no changed files.',
+    };
+  }
+
+  // ------------------------------------------------------------------
+  // Find the prettier binary
+  // ------------------------------------------------------------------
+  const prettierBin = path.join(projectPath, 'node_modules', '.bin', 'prettier');
+
+  // ------------------------------------------------------------------
+  // Determine working directory (prefer existing worktree, else checkout)
+  // ------------------------------------------------------------------
+  let workDir = worktreePath;
+  let scratchDir: string | null = null;
+
+  try {
+    await execAsync(`test -d ${JSON.stringify(worktreePath)}`, { timeout: 3000 });
+    logger.debug('[FormatRemediation] Using existing worktree', { worktreePath });
+  } catch {
+    // Worktree doesn't exist — checkout the PR branch to a scratch dir
+    logger.info('[FormatRemediation] Worktree not found, checking out PR branch', { prNumber });
+    try {
+      scratchDir = await worker.createScratchDir();
+      workDir = scratchDir;
+
+      await execAsync(
+        `gh pr checkout ${prNumber} --repo ${repository} --force`,
+        { cwd: scratchDir, timeout: 60000 }
+      );
+    } catch (checkoutErr) {
+      if (scratchDir) await worker.cleanup(scratchDir);
+      return {
+        status: 'error',
+        prNumber,
+        reason: `Could not checkout PR branch: ${checkoutErr instanceof Error ? checkoutErr.message : String(checkoutErr)}`,
+        details: { guard: 'branch-checkout' },
+      };
+    }
+  }
+
+  try {
+    // ------------------------------------------------------------------
+    // Run prettier on changed files
+    // ------------------------------------------------------------------
+    logger.info('[FormatRemediation] Running prettier', { prNumber, fileCount: prChangedFiles.length });
+
+    let filesFixed: string[];
+    try {
+      filesFixed = await worker.runPrettier(prettierBin, prChangedFiles, workDir);
+    } catch (prettierErr) {
+      const msg = prettierErr instanceof Error ? prettierErr.message : String(prettierErr);
+      logger.error('[FormatRemediation] Prettier execution failed — escalating to HITL', {
+        prNumber,
+        error: msg,
+      });
+      return {
+        status: 'escalated',
+        prNumber,
+        reason: `Prettier execution failed: ${msg}. Manual intervention required.`,
+        details: { error: msg, guard: 'prettier-execution' },
+      };
+    }
+
+    if (filesFixed.length === 0) {
+      logger.info('[FormatRemediation] Prettier made no changes — nothing to commit', { prNumber });
+      return {
+        status: 'skipped',
+        prNumber,
+        reason: 'Prettier ran but made no changes. The formatting issue may have resolved itself.',
+        details: { prChangedFiles },
+      };
+    }
+
+    // ------------------------------------------------------------------
+    // Scope check: verify prettier only touched files within the PR diff
+    // ------------------------------------------------------------------
+    const allModified = await worker.getModifiedFiles(workDir);
+    const outOfScope = allModified.filter((f) => !prChangedFiles.includes(f));
+
+    if (outOfScope.length > 0) {
+      logger.warn('[FormatRemediation] Scope drift detected — escalating to HITL', {
+        prNumber,
+        outOfScope,
+        prChangedFiles: prChangedFiles.length,
+      });
+      return {
+        status: 'escalated',
+        prNumber,
+        reason:
+          `Scope drift: prettier modified ${outOfScope.length} file(s) outside the PR diff. ` +
+          `Escalating for operator review instead of auto-pushing. ` +
+          `Out-of-scope files: ${outOfScope.slice(0, 5).join(', ')}`,
+        details: {
+          outOfScope,
+          filesFixed,
+          prChangedFiles,
+          guard: 'scope-check',
+        },
+      };
+    }
+
+    // ------------------------------------------------------------------
+    // Commit and push
+    // ------------------------------------------------------------------
+    let commitSha: string;
+    try {
+      commitSha = await worker.commitRemediationFix(workDir, prNumber, filesFixed);
+    } catch (commitErr) {
+      const msg = commitErr instanceof Error ? commitErr.message : String(commitErr);
+      logger.error('[FormatRemediation] Commit failed — escalating to HITL', {
+        prNumber,
+        error: msg,
+      });
+      return {
+        status: 'escalated',
+        prNumber,
+        reason: `Commit failed: ${msg}. Manual intervention required.`,
+        details: { error: msg, filesFixed },
+      };
+    }
+
+    try {
+      await worker.pushBranch(workDir, headBranch);
+    } catch (pushErr) {
+      const msg = pushErr instanceof Error ? pushErr.message : String(pushErr);
+      logger.error('[FormatRemediation] Push failed — escalating to HITL', {
+        prNumber,
+        headSha,
+        error: msg,
+      });
+      return {
+        status: 'escalated',
+        prNumber,
+        reason: `Push failed: ${msg}. The format fix was committed locally but not pushed.`,
+        details: { error: msg, commitSha, filesFixed },
+      };
+    }
+
+    // ------------------------------------------------------------------
+    // Emit observability event
+    // ------------------------------------------------------------------
+    const eventPayload: PRFormatRemediatedPayload = {
+      prNumber,
+      filesFixed,
+      commitSha,
+      timestamp: new Date().toISOString(),
+      remediationType: 'format',
+    };
+
+    if (events) {
+      events.emit('pr:remediation-completed', eventPayload);
+    }
+
+    logger.info('[FormatRemediation:outcome] Success', {
+      prNumber,
+      filesFixed: filesFixed.length,
+      commitSha,
+    });
+
+    return {
+      status: 'success',
+      prNumber,
+      filesFixed,
+      commitSha,
+      reason: `Auto-remediation successful: formatted ${filesFixed.length} file(s) and pushed commit ${commitSha}.`,
+      details: { filesFixed, baseBranch, headBranch },
+    };
+  } finally {
+    if (scratchDir) {
+      await worker.cleanup(scratchDir);
+    }
+  }
 }
