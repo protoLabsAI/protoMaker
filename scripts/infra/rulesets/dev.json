@@ -36,7 +36,7 @@
             "integration_id": 15368
           },
           {
-            "context": "build",
+            "context": "ci-complete",
             "integration_id": 15368
           },
           {

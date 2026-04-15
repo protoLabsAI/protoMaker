@@ -7,11 +7,6 @@ on:
       - dev
       - staging
       - main
-    paths-ignore:
-      - 'docs/**'
-      - 'site/**'
-      - '**.md'
-      - '.automaker/**'
   push:
     branches:
       - main
@@ -31,17 +26,54 @@ jobs:
   build:
     runs-on: self-hosted
     if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
+    outputs:
+      docs_only: ${{ steps.changes.outputs.docs_only }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
+      - name: Detect code changes
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch --depth=1 origin ${{ github.event.pull_request.base.ref }}
+            CHANGED=$(git diff --name-only FETCH_HEAD HEAD)
+            CODE=$(echo "$CHANGED" | grep -Ev '^(docs/|site/|\.automaker/)' | grep -Ev '\.md$' | head -1)
+            if [ -z "$CODE" ]; then
+              echo "docs_only=true" >> $GITHUB_OUTPUT
+              echo "Docs-only change detected — skipping build"
+            else
+              echo "docs_only=false" >> $GITHUB_OUTPUT
+              echo "Code changes detected — build required"
+            fi
+          else
+            echo "docs_only=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Setup project
+        if: steps.changes.outputs.docs_only != 'true'
         uses: ./.github/actions/setup-project
         with:
           check-lockfile: 'true'
 
       - name: Build web app
+        if: steps.changes.outputs.docs_only != 'true'
         run: npm run build
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
+
+  ci-complete:
+    runs-on: self-hosted
+    needs: [build]
+    if: always() && (github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request')
+    steps:
+      - name: Verify build passed
+        run: |
+          BUILD_RESULT="${{ needs.build.result }}"
+          echo "Build result: $BUILD_RESULT"
+          if [ "$BUILD_RESULT" = "failure" ]; then
+            echo "Build failed — blocking merge"
+            exit 1
+          fi
+          echo "CI complete"
