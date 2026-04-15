@@ -76,23 +76,23 @@ apply_repo_settings() {
     log_info "Repository settings updated successfully"
 }
 
-# Get or create ruleset for main branch
-apply_main_branch_ruleset() {
-    log_info "Applying main branch ruleset..."
-
-    local RULESET_FILE="scripts/infra/rulesets/main.json"
+# Apply a branch-protection ruleset (idempotent — updates if exists, else creates)
+apply_ruleset() {
+    local RULESET_NAME="$1"
+    local RULESET_FILE="$2"
+    log_info "Applying '${RULESET_NAME}' ruleset..."
 
     if [[ ! -f "$RULESET_FILE" ]]; then
         log_error "Ruleset file not found: $RULESET_FILE"
         exit 1
     fi
 
-    # Check if ruleset exists (ID: 12467930 mentioned in requirements)
-    local EXISTING_RULESET_ID=$(gh api \
+    local EXISTING_RULESET_ID
+    EXISTING_RULESET_ID=$(gh api \
         -H "Accept: application/vnd.github+json" \
         -H "X-GitHub-Api-Version: 2022-11-28" \
         "/repos/${REPO_OWNER}/${REPO_NAME}/rulesets" \
-        --jq '.[] | select(.name == "Protect main") | .id' 2>/dev/null || echo "")
+        --jq ".[] | select(.name == \"${RULESET_NAME}\") | .id" 2>/dev/null || echo "")
 
     if [[ -n "$EXISTING_RULESET_ID" ]]; then
         log_info "Updating existing ruleset (ID: ${EXISTING_RULESET_ID})..."
@@ -103,9 +103,9 @@ apply_main_branch_ruleset() {
             "/repos/${REPO_OWNER}/${REPO_NAME}/rulesets/${EXISTING_RULESET_ID}" \
             --input "$RULESET_FILE" \
             > /dev/null
-        log_info "Ruleset updated successfully"
+        log_info "Ruleset '${RULESET_NAME}' updated successfully"
     else
-        log_info "Creating new ruleset..."
+        log_info "Creating new ruleset '${RULESET_NAME}'..."
         gh api \
             --method POST \
             -H "Accept: application/vnd.github+json" \
@@ -113,8 +113,16 @@ apply_main_branch_ruleset() {
             "/repos/${REPO_OWNER}/${REPO_NAME}/rulesets" \
             --input "$RULESET_FILE" \
             > /dev/null
-        log_info "Ruleset created successfully"
+        log_info "Ruleset '${RULESET_NAME}' created successfully"
     fi
+}
+
+apply_main_branch_ruleset() {
+    apply_ruleset "Protect main" "scripts/infra/rulesets/main.json"
+}
+
+apply_dev_branch_ruleset() {
+    apply_ruleset "Protect dev" "scripts/infra/rulesets/dev.json"
 }
 
 # Verify settings
@@ -163,6 +171,9 @@ main() {
     apply_main_branch_ruleset
     echo ""
 
+    apply_dev_branch_ruleset
+    echo ""
+
     verify_settings
     echo ""
 
@@ -170,8 +181,9 @@ main() {
     log_info ""
     log_info "Next steps:"
     log_info "  1. Create a test PR to verify all required status checks pass"
-    log_info "  2. The ruleset enforces: build, test, format, audit, CodeRabbit"
-    log_info "  3. Admin bypass is available for emergency merges"
+    log_info "  2. main ruleset enforces: build, test, format, audit, CodeRabbit"
+    log_info "  3. dev ruleset enforces: checks, build, source-branch, CodeRabbit"
+    log_info "  4. Admin bypass is available for emergency merges"
 }
 
 main "$@"
