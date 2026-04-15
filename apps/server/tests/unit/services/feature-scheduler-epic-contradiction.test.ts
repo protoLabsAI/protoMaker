@@ -189,12 +189,8 @@ describe('feature-scheduler.ts — loadPendingFeatures epic contradiction', () =
     expect(result).toHaveLength(0);
 
     // Error should be emitted (not warn) with the feature ID
-    expect(mockError).toHaveBeenCalledWith(
-      expect.stringContaining('feat-contradiction-1')
-    );
-    expect(mockError).toHaveBeenCalledWith(
-      expect.stringContaining('isEpic=true')
-    );
+    expect(mockError).toHaveBeenCalledWith(expect.stringContaining('feat-contradiction-1'));
+    expect(mockError).toHaveBeenCalledWith(expect.stringContaining('isEpic=true'));
 
     // The feature must be moved to blocked so the UI can surface it
     expect(mockFeatureLoader.update).toHaveBeenCalledWith(
