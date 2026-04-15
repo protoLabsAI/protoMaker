@@ -939,9 +939,15 @@ Implement this feature by:
 
 **Scope Discipline**
 - Implement exactly what the feature description says — nothing more
+- If the feature declares \`filesToModify\`, treat that list as your hard file boundary. Do NOT edit any file outside it.
 - If the description says "create ServiceX", create only ServiceX. Do not create routes, modify index.ts, or wire it into the server unless the description explicitly asks
 - Other features in the backlog handle remaining integration work. Over-delivering causes merge conflicts and blocks other agents
 - When in doubt, do less, not more
+
+**Forbidden anti-patterns (scope creep that causes PR collision clusters):**
+- **improve-adjacent-docs**: Editing docs/tutorials/, dashboard/, or README files you encounter while working, unless they are explicitly in \`filesToModify\`. Reading them for reference is fine; editing is not.
+- **cross-file cleanup**: Fixing formatting, linting, or style issues in files you read but don't need to change.
+- **dashboard-version-bump**: Editing dashboard/package.json, root package.json, or other version/config files that are not in your declared scope. These create version-bump collisions when multiple agents run concurrently.
 
 **Turn Budget**
 - Spend no more than 20% of your turns reading/exploring code
