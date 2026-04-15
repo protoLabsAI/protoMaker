@@ -411,7 +411,8 @@ export function buildAvaTools(
           const q = input.query.toLowerCase();
           features = features.filter(
             (f) =>
-              f.title.toLowerCase().includes(q) || (f.description ?? '').toLowerCase().includes(q)
+              (f.title ?? '').toLowerCase().includes(q) ||
+              (f.description ?? '').toLowerCase().includes(q)
           );
         }
 
