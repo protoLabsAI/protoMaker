@@ -44,7 +44,12 @@ describe('POST /features/update — blocked → backlog reset', () => {
       status: 'blocked',
       statusChangeReason: 'CI pipeline failed due to flaky test',
       statusHistory: [
-        { from: 'in_progress', to: 'blocked', reason: 'CI pipeline failed due to flaky test', timestamp: '2026-04-14T00:00:00.000Z' },
+        {
+          from: 'in_progress',
+          to: 'blocked',
+          reason: 'CI pipeline failed due to flaky test',
+          timestamp: '2026-04-14T00:00:00.000Z',
+        },
       ],
     };
 
