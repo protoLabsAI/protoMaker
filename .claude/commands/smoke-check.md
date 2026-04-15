@@ -27,18 +27,18 @@ Run a fast connectivity check across all MCP tool categories. No retries, no ana
 
 1. Run ALL of the following tool calls **in parallel** (use a single message with multiple tool calls):
 
-| #   | Category      | Tool Call              | Args                                                                                                                                |
-| --- | ------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Health        | `health_check`         | `{}`                                                                                                                                |
-| 2   | Features      | `list_features`        | `{projectPath: "$CWD"}`                                                                                                             |
-| 3   | Agents        | `list_running_agents`  | `{projectPath: "$CWD"}`                                                                                                             |
-| 4   | Worktrees     | `list_worktrees`       | `{projectPath: "$CWD"}`                                                                                                             |
-| 5   | Context       | `list_context_files`   | `{projectPath: "$CWD"}`                                                                                                             |
-| 6   | Auto-Mode     | `get_auto_mode_status` | `{projectPath: "$CWD"}`                                                                                                             |
-| 7   | Notes         | `list_note_tabs`       | `{}`                                                                                                                                |
-| 8   | Settings      | `get_settings`         | `{}`                                                                                                                                |
-| 9   | Events        | `list_events`          | `{limit: 1}`                                                                                                                        |
-| 10  | Discord       | `read_discord_dms`     | `{userId: "test", limit: 1}`                                                                                                        |
+| #   | Category      | Tool Call              | Args                                                                                                                                                   |
+| --- | ------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | Health        | `health_check`         | `{}`                                                                                                                                                   |
+| 2   | Features      | `list_features`        | `{projectPath: "$CWD"}`                                                                                                                                |
+| 3   | Agents        | `list_running_agents`  | `{projectPath: "$CWD"}`                                                                                                                                |
+| 4   | Worktrees     | `list_worktrees`       | `{projectPath: "$CWD"}`                                                                                                                                |
+| 5   | Context       | `list_context_files`   | `{projectPath: "$CWD"}`                                                                                                                                |
+| 6   | Auto-Mode     | `get_auto_mode_status` | `{projectPath: "$CWD"}`                                                                                                                                |
+| 7   | Notes         | `list_note_tabs`       | `{}`                                                                                                                                                   |
+| 8   | Settings      | `get_settings`         | `{}`                                                                                                                                                   |
+| 9   | Events        | `list_events`          | `{limit: 1}`                                                                                                                                           |
+| 10  | Discord       | `read_discord_dms`     | `{userId: "test", limit: 1}`                                                                                                                           |
 | 11  | Feature Write | `create_feature`       | `{projectPath: "$CWD", title: "[SMOKE-probe] connectivity test", description: "Synthetic probe — auto-deleted after smoke check.", category: "smoke"}` |
 
 Replace `$CWD` with the actual current working directory path.

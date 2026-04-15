@@ -183,9 +183,7 @@ describe('feature-scheduler.ts — smoke-check sentinel filter', () => {
     const result = await (scheduler as any).loadPendingFeatures('/test/project');
 
     expect(result).toHaveLength(0);
-    expect(mockInfo).toHaveBeenCalledWith(
-      expect.stringContaining('smoke-probe-1')
-    );
+    expect(mockInfo).toHaveBeenCalledWith(expect.stringContaining('smoke-probe-1'));
     // Must NOT attempt to update/block the feature — it is simply skipped silently
     expect(mockFeatureLoader.update).not.toHaveBeenCalled();
   });
