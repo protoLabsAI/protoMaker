@@ -46,7 +46,10 @@ import { getBriefingCursorService } from '../../services/briefing-cursor-service
 import { queryPm } from '../project-pm/pm-agent.js';
 import { simpleQuery } from '../../providers/simple-query-service.js';
 import Anthropic from '@anthropic-ai/sdk';
-import { classifyAndRemediate, logRemediationOutcome } from '../../services/pr-remediation-service.js';
+import {
+  classifyAndRemediate,
+  logRemediationOutcome,
+} from '../../services/pr-remediation-service.js';
 
 // ---------------------------------------------------------------------------
 // Plan types

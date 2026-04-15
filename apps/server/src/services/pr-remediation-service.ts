@@ -303,7 +303,9 @@ async function handleRebasable(
     await execAsync(`gh pr comment ${prNumber} --body ${JSON.stringify(successComment)}`, {
       cwd: projectPath,
       timeout: 15000,
-    }).catch(() => {/* comment is informational only */});
+    }).catch(() => {
+      /* comment is informational only */
+    });
   } catch (err) {
     mergeError = err instanceof Error ? err.message : String(err);
     logger.warn('[PRRemediation] Rebasable merge failed', { prNumber, error: mergeError });
@@ -427,8 +429,7 @@ async function handleGenuine(
         '(no specific hunks identified)';
 
   const sampleSection =
-    classification.evidence.conflictingSample.slice(0, 1500) ||
-    '(conflict sample not available)';
+    classification.evidence.conflictingSample.slice(0, 1500) || '(conflict sample not available)';
 
   const comment =
     `**Conflict classifier verdict: genuine — human review required**\n\n` +
@@ -437,7 +438,8 @@ async function handleGenuine(
     `**Conflict sample:**\n\`\`\`diff\n${sampleSection}\n\`\`\`\n\n` +
     `**Classifier reasoning:** ${classification.reasoning}\n\n` +
     `**Files with conflicts (${conflictingFiles.length}):**\n` +
-    conflictingFiles.map((f) => `- \`${f}\``).join('\n') + '\n\n' +
+    conflictingFiles.map((f) => `- \`${f}\``).join('\n') +
+    '\n\n' +
     `No further automatic retries will be made. Please resolve the conflicts manually, ` +
     `push the resolved branch, and reopen this PR if needed.`;
 

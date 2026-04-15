@@ -80,7 +80,8 @@ function sanitizePrNumber(prNumber: unknown): number {
 // ---------------------------------------------------------------------------
 
 function buildClassifierPrompt(evidence: ConflictEvidence): string {
-  const conflictingFileList = evidence.conflictingFiles.map((f) => `- ${f}`).join('\n') || '(none detected)';
+  const conflictingFileList =
+    evidence.conflictingFiles.map((f) => `- ${f}`).join('\n') || '(none detected)';
   const commitList = evidence.recentBaseCommits.slice(0, 20).join('\n') || '(none)';
 
   return `You are a Git merge conflict classifier. Analyze this pull request's conflict situation and return a JSON verdict.
@@ -157,9 +158,7 @@ export class PRConflictClassifier {
       return classification;
     } catch (error) {
       logger.error('[PRConflictClassifier] Classification failed, defaulting to genuine', error);
-      return this.fallbackClassification(
-        error instanceof Error ? error.message : String(error)
-      );
+      return this.fallbackClassification(error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -195,7 +194,13 @@ export class PRConflictClassifier {
   private async fetchPRMetadata(
     prNumber: number,
     projectPath: string
-  ): Promise<{ prTitle: string; prBody: string; prBranch: string; baseBranch: string; prCreatedAt: string }> {
+  ): Promise<{
+    prTitle: string;
+    prBody: string;
+    prBranch: string;
+    baseBranch: string;
+    prCreatedAt: string;
+  }> {
     try {
       const { stdout } = await execAsync(
         `gh pr view ${prNumber} --json title,body,headRefName,baseRefName,createdAt`,
@@ -313,18 +318,18 @@ export class PRConflictClassifier {
     } catch {
       // Merge had conflicts — collect conflicting file list and sample
       try {
-        const { stdout: conflictList } = await execAsync(
-          'git diff --name-only --diff-filter=U',
-          { cwd, timeout: 10000 }
-        );
+        const { stdout: conflictList } = await execAsync('git diff --name-only --diff-filter=U', {
+          cwd,
+          timeout: 10000,
+        });
         conflictingFiles = conflictList.trim().split('\n').filter(Boolean);
 
         if (conflictingFiles.length > 0 && conflictingFiles[0]) {
           try {
-            const { stdout: sampleDiff } = await execAsync(
-              `git diff -- "${conflictingFiles[0]}"`,
-              { cwd, timeout: 10000 }
-            );
+            const { stdout: sampleDiff } = await execAsync(`git diff -- "${conflictingFiles[0]}"`, {
+              cwd,
+              timeout: 10000,
+            });
             conflictingSample = sampleDiff.slice(0, 3000);
           } catch {
             // ignore — sample is optional
@@ -391,7 +396,10 @@ export class PRConflictClassifier {
     }
 
     // Strip markdown code fences if present
-    const raw = content.text.trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+    const raw = content.text
+      .trim()
+      .replace(/^```(?:json)?\n?/, '')
+      .replace(/\n?```$/, '');
     const result = JSON.parse(raw) as {
       verdict: ConflictVerdict;
       confidence: number;
@@ -431,7 +439,9 @@ export class PRConflictClassifier {
         recentBaseCommits: [],
         conflictingSample: '',
       },
-      conflictingHunks: ['Classification error — treating as genuine conflict requiring human review'],
+      conflictingHunks: [
+        'Classification error — treating as genuine conflict requiring human review',
+      ],
     };
   }
 }
