@@ -46,8 +46,10 @@ if echo "$STRIPPED" | grep -qE '(^[[:space:]]*|&&[[:space:]]*|\|\|[[:space:]]*|;
 fi
 
 # Guard: force push to main (catches --force, -f, --force-with-lease targeting main/master)
-# Uses word boundary \b to avoid matching "maintenance" or "mastering" etc.
-if echo "$STRIPPED" | grep -qE 'git[[:space:]]+push[[:space:]].*(-f|--force|--force-with-lease)' && \
+# Uses [[:space:]] boundaries around -f to avoid matching -f inside branch names like
+# "push origin fix/from-main-backmerge" where "-f" appears as a substring.
+# Uses \b word boundaries around main/master to avoid matching "maintenance" etc.
+if echo "$STRIPPED" | grep -qE 'git[[:space:]]+push[[:space:]].*(([[:space:]]|^)-f([[:space:]]|$)|--force([[:space:]]|$)|--force-with-lease)' && \
    echo "$STRIPPED" | grep -qE 'git[[:space:]]+push[[:space:]].*\b(main|master)\b'; then
   jq -n '{
     hookSpecificOutput: {

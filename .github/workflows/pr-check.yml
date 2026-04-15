@@ -4,6 +4,7 @@ name: PR Build Check
 on:
   pull_request:
     branches:
+      - dev
       - staging
       - main
     paths-ignore:
