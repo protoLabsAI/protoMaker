@@ -6,6 +6,7 @@
  * - resource-usage (critical tier, 5min): HealthMonitorService resource check
  * - webhook-health (full tier, 6h): Warns when PRs in review have no CI events after grace period
  * - post-merge-reconciler (critical tier, 5min): Poll-based fallback for missed PR merge webhooks
+ * - done-worktree-cleanup (full tier, 6h): Removes worktrees for done features and orphaned worktrees
  */
 
 import { createLogger } from '@protolabsai/utils';
@@ -17,6 +18,7 @@ import type {
 import type { ServiceContainer } from '../server/services.js';
 import { WebhookHealthCheck } from './maintenance/checks/webhook-health-check.js';
 import { PostMergeReconcilerCheck } from './maintenance/checks/post-merge-reconciler-check.js';
+import { DoneWorktreeCleanupCheck } from './maintenance/checks/done-worktree-cleanup-check.js';
 
 const logger = createLogger('Server:Wiring');
 
@@ -29,6 +31,7 @@ export function register(container: ServiceContainer): void {
     events,
     eventHistoryService,
     autoModeService,
+    worktreeLifecycleService,
   } = container;
 
   // Board health check (full tier) — replaces built-in:board-health automation
@@ -170,10 +173,18 @@ export function register(container: ServiceContainer): void {
     },
   };
 
+  // Done worktree cleanup (full tier) — removes worktrees for done features and orphaned worktrees
+  const doneWorktreeCleanupCheck = new DoneWorktreeCleanupCheck(
+    worktreeLifecycleService,
+    featureLoader,
+    events
+  );
+
   maintenanceOrchestrator.register(boardHealthCheck);
   maintenanceOrchestrator.register(resourceUsageCheck);
   maintenanceOrchestrator.register(webhookHealthCheck);
   maintenanceOrchestrator.register(postMergeReconcilerCheck);
+  maintenanceOrchestrator.register(doneWorktreeCleanupCheck);
 
   // Wire TopicBus for hierarchical event routing of sweep results
   if (container.topicBus) {
@@ -189,6 +200,6 @@ export function register(container: ServiceContainer): void {
   });
 
   logger.info(
-    'MaintenanceOrchestrator started with board-health, resource-usage, webhook-health, and post-merge-reconciler checks'
+    'MaintenanceOrchestrator started with board-health, resource-usage, webhook-health, post-merge-reconciler, and done-worktree-cleanup checks'
   );
 }

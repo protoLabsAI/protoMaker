@@ -484,7 +484,9 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
       auditService,
       autoModeService,
       settingsService,
-      eventStore
+      eventStore,
+      worktreeLifecycleService,
+      featureLoader
     )
   );
   logger.info('Ops routes mounted at /api/ops');
