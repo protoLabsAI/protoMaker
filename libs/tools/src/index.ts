@@ -17,7 +17,7 @@ export * from './domains/features/index.js';
 export * from './domains/hitl/index.js';
 
 // DynamicStructuredTool factory families
-export { createBoardTools } from './board-tools.js';
+export { createBoardTools, createManageBoardTool } from './board-tools.js';
 export type { BoardDeps } from './board-tools.js';
 export { createDiscordTools } from './discord-tools.js';
 export type { DiscordDeps, DiscordMessage } from './discord-tools.js';
