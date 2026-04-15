@@ -268,6 +268,85 @@ describe('WebhookDeliveryService', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // Regression: issues.opened delivery-id idempotency (GH #3300)
+  //
+  // Verifies that two arrivals of the same X-GitHub-Delivery ID for an
+  // issues.opened event are deduplicated, and that the dedup window is 24h
+  // (not 5 minutes) so GitHub retries arriving hours later are still caught.
+  // ---------------------------------------------------------------------------
+
+  describe('issues.opened delivery-id idempotency', () => {
+    it('downstream handler fires only once when same delivery-id arrives twice', () => {
+      const deliveryId = 'gh-delivery-uuid-999';
+      const deduplicationKey = `issues:opened:${deliveryId}`;
+      const handler = vi.fn();
+
+      function simulateWebhookArrival(): boolean {
+        if (service.isDuplicate('github', 'issues', deduplicationKey)) {
+          return false; // duplicate — skip, return 200 without re-processing
+        }
+        service.trackDelivery('github', 'issues', undefined, { deduplicationKey });
+        handler(); // downstream: Quinn bug_triage
+        return true;
+      }
+
+      const first = simulateWebhookArrival();
+      const second = simulateWebhookArrival(); // GitHub retry — same X-GitHub-Delivery
+
+      expect(first).toBe(true);
+      expect(second).toBe(false);
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+
+    it('dedup window is 24h — retry arriving 23h later is still caught', () => {
+      const deduplicationKey = 'issues:opened:late-retry-uuid';
+      service.trackDelivery('github', 'issues', undefined, { deduplicationKey });
+
+      // Advance fake clock by 23h — still within 24h window
+      const now = Date.now();
+      vi.spyOn(Date, 'now').mockReturnValue(now + 23 * 60 * 60 * 1000);
+
+      expect(service.isDuplicate('github', 'issues', deduplicationKey)).toBe(true);
+
+      vi.restoreAllMocks();
+    });
+
+    it('dedup window expires after 24h — a delivery older than 24h is not a duplicate', () => {
+      const deduplicationKey = 'issues:opened:expired-uuid';
+      service.trackDelivery('github', 'issues', undefined, { deduplicationKey });
+
+      // Advance fake clock beyond 24h window
+      const now = Date.now();
+      vi.spyOn(Date, 'now').mockReturnValue(now + 25 * 60 * 60 * 1000);
+
+      expect(service.isDuplicate('github', 'issues', deduplicationKey)).toBe(false);
+
+      vi.restoreAllMocks();
+    });
+
+    it('two different issues (different delivery-ids) are both processed', () => {
+      const handler = vi.fn();
+
+      function simulateWebhookArrival(deliveryId: string): boolean {
+        const deduplicationKey = `issues:opened:${deliveryId}`;
+        if (service.isDuplicate('github', 'issues', deduplicationKey)) {
+          return false;
+        }
+        service.trackDelivery('github', 'issues', undefined, { deduplicationKey });
+        handler();
+        return true;
+      }
+
+      const first = simulateWebhookArrival('delivery-issue-3299');
+      const second = simulateWebhookArrival('delivery-issue-3300');
+
+      expect(first).toBe(true);
+      expect(second).toBe(true);
+      expect(handler).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // Rolling window eviction at 500 entries
   // ---------------------------------------------------------------------------
 
