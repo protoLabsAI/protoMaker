@@ -28,6 +28,8 @@ vi.mock('@protolabsai/platform', () => ({
   getFeatureBackupDir: vi.fn((p: string, id: string) => `${p}/.automaker/backups/${id}`),
   getAppSpecPath: vi.fn((p: string) => `${p}/app_spec.txt`),
   ensureAutomakerDir: vi.fn(),
+  // Real implementation: only alphanumeric, hyphens, underscores, dots, forward slashes
+  isValidBranchName: vi.fn((name: string) => /^[a-zA-Z0-9._\-/]+$/.test(name)),
 }));
 
 vi.mock('@protolabsai/utils', () => ({
@@ -339,5 +341,58 @@ describe('FeatureLoader.generateBranchName with category', () => {
       'Uncategorized'
     );
     expect(branch).toMatch(/^refactor\//);
+  });
+});
+
+describe('FeatureLoader.generateBranchName — special character sanitization', () => {
+  const loader = new FeatureLoader();
+
+  it('strips brackets from feature-factory arc titles like [DD-1.0] Plugin WidgetDescriptor contract', () => {
+    // Reproduces the bug: feature-factory emits titles with bracket prefixes
+    // (e.g. [Arc 6.4], [DD-1.0], [TR-2.1]) that are illegal in git refs.
+    const branch = loader.generateBranchName(
+      '[DD-1.0] Plugin WidgetDescriptor contract',
+      'feature-123-abc1234'
+    );
+    // Must not contain [ or ] which are illegal in git refs
+    expect(branch).not.toMatch(/[\[\]]/);
+    // Must be a valid branch name format
+    expect(branch).toMatch(/^feature\//);
+    expect(branch).toMatch(/^[a-z0-9/._-]+-[a-z0-9]+$/);
+  });
+
+  it('strips parentheses from titles', () => {
+    const branch = loader.generateBranchName(
+      'Fix login (regression) from v2.1',
+      'feature-123-abc1234'
+    );
+    expect(branch).not.toMatch(/[()]/);
+    expect(branch).toMatch(/^feature\//);
+  });
+
+  it('strips colon characters from titles', () => {
+    const branch = loader.generateBranchName(
+      'Arc 6.4: Widget contract implementation',
+      'feature-123-abc1234'
+    );
+    expect(branch).not.toMatch(/:/);
+    expect(branch).toMatch(/^feature\//);
+  });
+
+  it('strips slash characters from slug portion of title', () => {
+    const branch = loader.generateBranchName(
+      'Add support for path/to/resource',
+      'feature-123-abc1234'
+    );
+    // Branch should have exactly one slash (the prefix separator feature/)
+    const slashCount = (branch.match(/\//g) || []).length;
+    expect(slashCount).toBe(1);
+  });
+
+  it('produces a non-empty slug for a pure-bracket title', () => {
+    const branch = loader.generateBranchName('[TR-2.1]', 'feature-123-jqr32ki');
+    // After stripping brackets and dots, slug may be empty — branch must still be valid
+    expect(branch).toMatch(/^feature\/(untitled|[a-z0-9])/);
+    expect(branch).not.toMatch(/[\[\]]/);
   });
 });
