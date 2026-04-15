@@ -1650,8 +1650,7 @@ export class AutoModeService {
             // Dirty worktree was auto-recovered: WIP committed to recovery/ branch.
             // Feature is safe to resume from backlog — worktree is now clean.
             newStatus = 'backlog';
-            reconcileReason =
-              safetyResult.reason ?? 'Dirty worktree auto-recovered — resuming';
+            reconcileReason = safetyResult.reason ?? 'Dirty worktree auto-recovered — resuming';
             // Emit worktree:recovered on the event bus for observability
             this.events.emit('worktree:recovered', {
               featureId: feature.id,

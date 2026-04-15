@@ -114,9 +114,7 @@ describe('RestartSafetyCheckService', () => {
         const feature = makeFeature({ branchName: 'feature/dirty-branch' });
         vi.mocked(access).mockResolvedValue(undefined);
         mockExecFileWithOutput(' M src/some-file.ts\n?? newfile.ts\n');
-        vi.mocked(recoverDirtyWorktree).mockResolvedValue(
-          'recovery/feature-abc-123-1713200000000'
-        );
+        vi.mocked(recoverDirtyWorktree).mockResolvedValue('recovery/feature-abc-123-1713200000000');
 
         const result = await service.check(feature, PROJECT_PATH);
 

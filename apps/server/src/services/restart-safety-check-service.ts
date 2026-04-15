@@ -91,11 +91,7 @@ export class RestartSafetyCheckService {
           }
 
           try {
-            const recoveryBranch = await recoverDirtyWorktree(
-              worktreePath,
-              branchName,
-              feature.id
-            );
+            const recoveryBranch = await recoverDirtyWorktree(worktreePath, branchName, feature.id);
             logger.info(
               `[RestartSafetyCheck] Auto-recovered dirty worktree for feature ${feature.id}: WIP saved to ${recoveryBranch}`
             );
@@ -106,8 +102,7 @@ export class RestartSafetyCheckService {
               worktreePath,
             };
           } catch (recoveryErr) {
-            const msg =
-              recoveryErr instanceof Error ? recoveryErr.message : String(recoveryErr);
+            const msg = recoveryErr instanceof Error ? recoveryErr.message : String(recoveryErr);
             logger.warn(
               `[RestartSafetyCheck] Auto-recovery failed for feature ${feature.id}: ${msg}`
             );
