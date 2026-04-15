@@ -11,6 +11,9 @@ import { getErrorMessage, logError } from '../common.js';
 import { TrustTierService } from '../../../services/trust-tier-service.js';
 import { QuarantineService } from '../../../services/quarantine-service.js';
 import type { QuarantineStage, SanitizationViolation } from '@protolabsai/types';
+import { createLogger } from '@protolabsai/utils';
+
+const logger = createLogger('CreateFeature');
 
 export const CreateRequestSchema = z.object({
   projectPath: z.string().min(1, 'projectPath is required'),
@@ -129,6 +132,30 @@ export function createCreateHandler(
         quarantineStatus: outcome.entry.result,
         quarantineId: outcome.entry.id,
       };
+
+      // Auto-adopt into a matching epic based on bracket pattern in the title.
+      // Opt-out: if the caller explicitly passed epicId: null, skip auto-adoption.
+      // Already-parented: if epicId is already set (non-null string), skip.
+      // Epics themselves are skipped (isEpic: true cannot have epicId).
+      const rawEpicId = (feature as Record<string, unknown>).epicId;
+      const epicIdExplicitlyNull = rawEpicId === null;
+      if (
+        !epicIdExplicitlyNull &&
+        !sanitizedFeature.epicId &&
+        !sanitizedFeature.isEpic &&
+        sanitizedFeature.title?.trim()
+      ) {
+        const candidateEpic = await featureLoader.findCandidateEpicForTitle(
+          projectPath,
+          sanitizedFeature.title
+        );
+        if (candidateEpic) {
+          sanitizedFeature.epicId = candidateEpic.id;
+          logger.debug(
+            `Auto-adopted feature "${sanitizedFeature.title}" into epic "${candidateEpic.title}" (${candidateEpic.id})`
+          );
+        }
+      }
 
       const created = await featureLoader.create(projectPath, sanitizedFeature);
 
