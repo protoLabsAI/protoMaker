@@ -103,7 +103,10 @@ export function createCreatePRHandler(settingsService?: SettingsService) {
                 { cwd: worktreePath, env: execEnv }
               );
               // Re-stage after formatting
-              await execAsync(buildGitAddCommand(worktreePath), { cwd: worktreePath, env: execEnv });
+              await execAsync(buildGitAddCommand(worktreePath), {
+                cwd: worktreePath,
+                env: execEnv,
+              });
               logger.debug(`Auto-formatted ${files.length} staged files`);
             }
           } catch (fmtError: unknown) {
