@@ -36,8 +36,10 @@ const DEFAULT_MAX_ATTEMPTS = 3;
 /** Exponential backoff delays in milliseconds: 1s, 5s, 30s */
 const RETRY_DELAYS_MS = [1_000, 5_000, 30_000] as const;
 
-/** Window (ms) for deduplication lookups — only check deliveries from the last 5 minutes */
-const DEDUP_WINDOW_MS = 5 * 60 * 1000;
+/** Window (ms) for deduplication lookups — check deliveries from the last 24 hours.
+ *  GitHub can retry a failed delivery for up to 72h; 24h covers all practical retry scenarios
+ *  while keeping memory usage bounded (at most 500 entries regardless of window size). */
+const DEDUP_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Callback invoked when a delivery is retried. The caller provides the actual
