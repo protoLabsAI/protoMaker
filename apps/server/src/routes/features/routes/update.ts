@@ -156,6 +156,15 @@ export function createUpdateHandler(
         }
       }
 
+      // When resetting to backlog, clear the stale statusChangeReason so downstream consumers
+      // (board monitors, auto-mode pickup logic) do not continue reading the old blocked reason.
+      // Must happen before featureLoader.update() so the write persists the reset reason.
+      if (newStatus === 'backlog' && previousStatus !== undefined && previousStatus !== 'backlog') {
+        const resetReason =
+          updates.statusChangeReason?.trim() || 'Reset by operator — prior blocker resolved';
+        (updates as Partial<Feature>).statusChangeReason = resetReason;
+      }
+
       const updated = await featureLoader.update(
         projectPath,
         featureId,
