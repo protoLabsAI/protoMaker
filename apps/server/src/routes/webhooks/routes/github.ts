@@ -18,6 +18,7 @@ const execAsync = promisify(exec);
 import type { EventEmitter } from '../../../lib/events.js';
 import type { TopicBus } from '../../../lib/topic-bus.js';
 import type { SettingsService } from '../../../services/settings-service.js';
+import type { ProjectRegistryService } from '../../../services/project-registry-service.js';
 import { FeatureLoader } from '../../../services/feature-loader.js';
 import { getWebhookDeliveryService } from '../../../services/webhook-delivery-service.js';
 import { StagingPromotionService } from '../../../services/staging-promotion-service.js';
@@ -307,7 +308,8 @@ async function handleGlobalCheckRunEvent(
 export function createGitHubWebhookHandler(
   events: EventEmitter,
   settingsService: SettingsService,
-  topicBus?: TopicBus
+  topicBus?: TopicBus,
+  projectRegistry?: ProjectRegistryService
 ) {
   const featureLoader = new FeatureLoader();
   const stagingPromotionService = new StagingPromotionService();
@@ -551,14 +553,33 @@ export function createGitHubWebhookHandler(
       const mergeCommitSha = payload.pull_request.merge_commit_sha ?? '';
       const prNumber = payload.pull_request.number;
       const prTitle = payload.pull_request.title;
+      const repoFullName = payload.repository.full_name;
 
-      logger.info(`PR #${prNumber} merged: ${prTitle} (branch: ${branchName} → ${baseBranch})`);
+      logger.info(`PR #${prNumber} merged: ${prTitle} (branch: ${branchName} → ${baseBranch}, repo: ${repoFullName})`);
 
-      // Search all configured projects for the one containing this branch's feature
-      const projectPath =
-        (await findProjectPathForFeature(featureLoader, settings.projects, (path) =>
-          findFeatureByBranch(featureLoader, path, branchName).then(Boolean)
-        )) ?? process.cwd();
+      // Resolve the projectPath for the merged PR.
+      // 1. First, look up the repo in the workspace registry (workspace/projects.yaml).
+      //    This handles external repos like protoLabsAI/mythxengine whose features live
+      //    in a separate projectPath, not in the current server's project directory.
+      // 2. Fallback: iterate settings.projects and find the project that has a feature
+      //    with a matching branch name.
+      // 3. Last resort: use process.cwd().
+      let projectPath: string | null = null;
+      if (projectRegistry) {
+        const registryEntry = projectRegistry.getProjectByGithub(repoFullName);
+        if (registryEntry?.projectPath) {
+          projectPath = registryEntry.projectPath;
+          logger.info(
+            `Resolved projectPath from workspace registry for ${repoFullName}: ${projectPath}`
+          );
+        }
+      }
+      if (!projectPath) {
+        projectPath =
+          (await findProjectPathForFeature(featureLoader, settings.projects, (path) =>
+            findFeatureByBranch(featureLoader, path, branchName).then(Boolean)
+          )) ?? process.cwd();
+      }
 
       // Find feature by branch name
       const feature = await findFeatureByBranch(featureLoader, projectPath, branchName);
@@ -759,7 +780,6 @@ export function createGitHubWebhookHandler(
 
       // Cascade rebase: update other open PRs targeting the same base branch
       // so they don't go CONFLICTING after this merge.
-      const repoFullName = payload.repository.full_name;
       cascadeUpdateBranches(repoFullName, baseBranch, prNumber).catch((err) =>
         logger.warn(`Cascade branch update failed (non-fatal):`, err)
       );

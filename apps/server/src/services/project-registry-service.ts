@@ -92,6 +92,15 @@ export class ProjectRegistryService {
     return this.projects.find((p) => p.slug === slug) ?? null;
   }
 
+  /**
+   * Look up a registry entry by GitHub repo full name (e.g. "protoLabsAI/mythxengine").
+   * Comparison is case-insensitive to handle GitHub API variations.
+   */
+  getProjectByGithub(repoFullName: string): ProjectRegistryEntry | null {
+    const normalized = repoFullName.toLowerCase();
+    return this.projects.find((p) => p.github?.toLowerCase() === normalized) ?? null;
+  }
+
   private async refresh(): Promise<void> {
     try {
       const entries = await this.fetchFromWorkstacean();
