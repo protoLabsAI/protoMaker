@@ -123,9 +123,12 @@ function execFailure(err: Error) {
  * Sets up the exec mock to simulate:
  *   1st call (gh pr view --json baseRefName): returns 'dev' (non-promotion branch)
  *   2nd call (gh pr merge): succeeds
- *   3rd call (gh pr view --json merged): returns `mergeResult`
+ *   3rd call (gh pr view --json mergedAt): returns `mergeResult`
+ *   4th call (gh pr view --json files): returns JSON list of changed file paths
+ *
+ * `changedFiles` defaults to a source file so existing merge tests are unaffected.
  */
-function setupExecMock(mergeResult: string) {
+function setupExecMock(mergeResult: string, changedFiles: string[] = ['src/index.ts']) {
   mockExec.mockReset();
   mockExec
     // First call: gh pr view --json baseRefName (promotion check)
@@ -148,7 +151,7 @@ function setupExecMock(mergeResult: string) {
         cb(null, { stdout: '', stderr: '' });
       }
     )
-    // Third call: gh pr view --json merged
+    // Third call: gh pr view --json mergedAt
     .mockImplementationOnce(
       (
         _cmd: string,
@@ -156,6 +159,16 @@ function setupExecMock(mergeResult: string) {
         cb: (err: null, result: { stdout: string; stderr: string }) => void
       ) => {
         cb(null, { stdout: mergeResult, stderr: '' });
+      }
+    )
+    // Fourth call: gh pr view --json files (source-code gate)
+    .mockImplementationOnce(
+      (
+        _cmd: string,
+        _opts: unknown,
+        cb: (err: null, result: { stdout: string; stderr: string }) => void
+      ) => {
+        cb(null, { stdout: JSON.stringify(changedFiles), stderr: '' });
       }
     );
 }
@@ -385,6 +398,94 @@ describe('MergeProcessor', () => {
 
       expect(result.nextState).toBe('DEPLOY');
       expect(result.shouldContinue).toBe(true);
+    });
+  });
+
+  describe('source-code gate (lock-only PR detection)', () => {
+    it('escalates to ESCALATE when PR contains only .automaker-lock', async () => {
+      setupExecMock('2026-01-01T00:00:00Z\n', ['.automaker-lock']);
+      const ctx = makeCtx();
+
+      const result = await processor.process(ctx);
+
+      expect(result.nextState).toBe('ESCALATE');
+      expect(result.reason).toMatch(/lock-only/);
+    });
+
+    it('sets feature status to blocked on lock-only merge', async () => {
+      setupExecMock('2026-01-01T00:00:00Z\n', ['.automaker-lock']);
+      const ctx = makeCtx();
+
+      await processor.process(ctx);
+
+      const updatePayload = (serviceContext.featureLoader.update as ReturnType<typeof vi.fn>).mock
+        .calls[0][2];
+      expect(updatePayload.status).toBe('blocked');
+      expect(updatePayload.statusChangeReason).toMatch(/lock-only/);
+    });
+
+    it('escalates when PR contains only lock files and markdown', async () => {
+      setupExecMock('2026-01-01T00:00:00Z\n', [
+        '.automaker-lock',
+        'pnpm-lock.yaml',
+        'README.md',
+      ]);
+      const ctx = makeCtx();
+
+      const result = await processor.process(ctx);
+
+      expect(result.nextState).toBe('ESCALATE');
+    });
+
+    it('proceeds to DEPLOY when PR contains source files alongside metadata', async () => {
+      setupExecMock('2026-01-01T00:00:00Z\n', [
+        '.automaker-lock',
+        'src/services/my-service.ts',
+      ]);
+      const ctx = makeCtx();
+
+      const result = await processor.process(ctx);
+
+      expect(result.nextState).toBe('DEPLOY');
+    });
+
+    it('treats files in filesToModify as source even if they are markdown', async () => {
+      setupExecMock('2026-01-01T00:00:00Z\n', ['docs/api.md']);
+      const ctx = makeCtx({
+        feature: makeFeature({ filesToModify: ['docs/api.md'] }) as any,
+      });
+
+      const result = await processor.process(ctx);
+
+      expect(result.nextState).toBe('DEPLOY');
+    });
+
+    it('proceeds to DEPLOY when diff inspection fails (non-fatal)', async () => {
+      mockExec.mockReset();
+      mockExec
+        // Call 1: baseRefName
+        .mockImplementationOnce(execSuccess({ stdout: 'dev\n', stderr: '' }))
+        // Call 2: gh pr merge
+        .mockImplementationOnce(execSuccess({ stdout: '', stderr: '' }))
+        // Call 3: gh pr view mergedAt
+        .mockImplementationOnce(execSuccess({ stdout: '2026-01-01T00:00:00Z\n', stderr: '' }))
+        // Call 4: gh pr view --json files — fails
+        .mockImplementationOnce(execFailure(new Error('gh CLI unavailable')));
+
+      const ctx = makeCtx();
+      const result = await processor.process(ctx);
+
+      // Diff failure is non-fatal — should proceed as done
+      expect(result.nextState).toBe('DEPLOY');
+    });
+
+    it('proceeds to DEPLOY when PR has empty file list (unusual case)', async () => {
+      setupExecMock('2026-01-01T00:00:00Z\n', []);
+      const ctx = makeCtx();
+
+      const result = await processor.process(ctx);
+
+      expect(result.nextState).toBe('DEPLOY');
     });
   });
 });
