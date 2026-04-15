@@ -147,7 +147,7 @@ function mockFeatureJsonReads(features: Record<string, Partial<Feature> | null>)
   });
 }
 
-describe('feature-scheduler.ts — smoke-check sentinel filter', () => {
+describe('feature-scheduler.ts — synthetic probe sentinel filter', () => {
   let scheduler: FeatureScheduler;
   let mockFeatureLoader: ReturnType<typeof createMockFeatureLoader>;
 
@@ -204,6 +204,63 @@ describe('feature-scheduler.ts — smoke-check sentinel filter', () => {
 
     expect(result).toHaveLength(0);
     expect(mockFeatureLoader.update).not.toHaveBeenCalled();
+  });
+
+  it('skips a feature whose title starts with "[RPC-" (hex hash)', async () => {
+    const rpcFeature: Partial<Feature> = {
+      id: 'rpc-probe-1',
+      title: '[RPC-e58af9] Settings modal close button unresponsive on mobile Chrome',
+      description: 'Synthetic RPC probe.',
+      status: 'backlog',
+      category: 'bug',
+    };
+
+    mockFeatureDirectories(['rpc-probe-1']);
+    mockFeatureJsonReads({ 'rpc-probe-1': rpcFeature });
+
+    const result = await (scheduler as any).loadPendingFeatures('/test/project');
+
+    expect(result).toHaveLength(0);
+    expect(mockInfo).toHaveBeenCalledWith(expect.stringContaining('rpc-probe-1'));
+    expect(mockFeatureLoader.update).not.toHaveBeenCalled();
+  });
+
+  it('does NOT skip "[WIP]" title — no hex hash, not a probe pattern', async () => {
+    const wipFeature: Partial<Feature> = {
+      id: 'wip-feature-1',
+      title: '[WIP] Add dark mode toggle',
+      description: 'Work in progress.',
+      status: 'backlog',
+      category: 'feature',
+      createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+    };
+
+    mockFeatureDirectories(['wip-feature-1']);
+    mockFeatureJsonReads({ 'wip-feature-1': wipFeature });
+
+    const result = await (scheduler as any).loadPendingFeatures('/test/project');
+
+    expect(result.length).toBeGreaterThan(0);
+    expect(result[0].id).toBe('wip-feature-1');
+  });
+
+  it('does NOT skip "[Arc 0.1]" title — not a probe pattern', async () => {
+    const arcFeature: Partial<Feature> = {
+      id: 'arc-feature-1',
+      title: '[Arc 0.1] Core infrastructure',
+      description: 'Architecture phase.',
+      status: 'backlog',
+      category: 'feature',
+      createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+    };
+
+    mockFeatureDirectories(['arc-feature-1']);
+    mockFeatureJsonReads({ 'arc-feature-1': arcFeature });
+
+    const result = await (scheduler as any).loadPendingFeatures('/test/project');
+
+    expect(result.length).toBeGreaterThan(0);
+    expect(result[0].id).toBe('arc-feature-1');
   });
 
   it('does NOT skip a normal backlog feature that does not match the sentinel pattern', async () => {

@@ -1378,13 +1378,14 @@ export class FeatureScheduler {
             continue;
           }
 
-          // Sentinel filter: skip synthetic/probe features created by tooling (e.g. smoke-check).
-          // Features with titles starting "[SMOKE-" or category "smoke" must never be dispatched
+          // Sentinel filter: skip synthetic/probe features created by tooling (e.g. smoke-check, RPC probes).
+          // Features with titles matching the [PREFIX-hexhash] pattern or category "smoke" must never be dispatched
           // to an agent — they are test artifacts and self-complete via cleanup in the originating
           // tool. If cleanup fails, this guard prevents wasteful agent spawns.
-          if (feature.title?.startsWith('[SMOKE-') || feature.category === 'smoke') {
+          const SYNTHETIC_PROBE_RX = /^\[[A-Z]+-[a-f0-9]+\]/;
+          if (SYNTHETIC_PROBE_RX.test(feature.title ?? '') || feature.category === 'smoke') {
             logger.info(
-              `[loadPendingFeatures] Skipping smoke-check sentinel feature ${feature.id} — not eligible for agent dispatch`
+              `[loadPendingFeatures] Skipping synthetic probe ${feature.id} — not eligible for agent dispatch`
             );
             continue;
           }
