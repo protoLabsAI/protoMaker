@@ -2,8 +2,8 @@
  * Unit tests for FeatureScheduler — contradictory epic state handling
  *
  * Covers:
- * - loadPendingFeatures emits warn for features with isEpic: true AND epicId set
- * - Normal epic features (isEpic: true, no epicId) emit info, not warn
+ * - loadPendingFeatures emits error and blocks features with isEpic: true AND epicId set
+ * - Normal epic features (isEpic: true, no epicId) emit info, not error
  * - Contradictory features are skipped (not scheduled)
  */
 
@@ -170,7 +170,7 @@ describe('feature-scheduler.ts — loadPendingFeatures epic contradiction', () =
     });
   });
 
-  it('emits warn-level log when feature has both isEpic and epicId set (contradictory state)', async () => {
+  it('emits error-level log and blocks feature when it has both isEpic and epicId set (contradictory state)', async () => {
     const contradictoryFeature: Partial<Feature> = {
       id: 'feat-contradiction-1',
       title: 'Contradictory Epic Feature',
@@ -188,18 +188,20 @@ describe('feature-scheduler.ts — loadPendingFeatures epic contradiction', () =
     // The contradictory feature must not be scheduled
     expect(result).toHaveLength(0);
 
-    // Warn should be emitted with an actionable message
-    expect(mockWarn).toHaveBeenCalledWith(
-      expect.stringContaining('Fix the feature configuration to proceed')
+    // Error should be emitted (not warn) with the feature ID
+    expect(mockError).toHaveBeenCalledWith(
+      expect.stringContaining('feat-contradiction-1')
     );
-    expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('feat-contradiction-1'));
-    expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('parent-epic-123'));
+    expect(mockError).toHaveBeenCalledWith(
+      expect.stringContaining('isEpic=true')
+    );
 
-    // The contradictory state must be surfaced in the feature data so the UI and agents observe it
+    // The feature must be moved to blocked so the UI can surface it
     expect(mockFeatureLoader.update).toHaveBeenCalledWith(
       '/test/project',
       'feat-contradiction-1',
       expect.objectContaining({
+        status: 'blocked',
         statusChangeReason: expect.stringContaining('Contradictory epic state'),
       })
     );

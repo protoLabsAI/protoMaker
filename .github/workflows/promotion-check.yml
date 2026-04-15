@@ -1,11 +1,12 @@
 # SECURITY: This workflow is hardened against fork PR attacks. See docs/security/ci-hardening.md
 name: Promotion Check
 
-# Enforces the branch strategy: only `staging` may open PRs into `main`.
-# All other source branches are rejected with a clear error message.
+# Enforces the branch strategy: feature/* and fix/* branches target dev;
+# only `staging` may open PRs into `main`.
 on:
   pull_request:
     branches:
+      - dev
       - main
 
 permissions: read-all
@@ -15,43 +16,71 @@ jobs:
     runs-on: self-hosted
     if: github.event.pull_request.head.repo.full_name == github.repository
     steps:
-      - name: Verify PR source is staging
+      - name: Verify PR source branch
         run: |
           SOURCE="${{ github.head_ref }}"
+          TARGET="${{ github.base_ref }}"
           echo "PR source branch: $SOURCE"
-          # Bootstrap exception: the PR that introduces this workflow cannot
-          # come from staging (staging doesn't exist yet). One-time allowance.
-          if [ "$SOURCE" = "chore/branch-strategy-implementation" ]; then
-            echo "✅ Bootstrap PR — establishing branch strategy, one-time exception granted"
-            exit 0
-          fi
-          # Recovery exception: branches created from staging to resolve DAG divergence.
-          # Pattern: chore/promote-staging-main-* (e.g. after accidental squash promotion)
-          if [[ "$SOURCE" == chore/promote-staging-main-* ]]; then
-            echo "✅ Recovery branch from staging — DAG divergence fix, exception granted"
-            exit 0
-          fi
-          if [ "$SOURCE" != "staging" ]; then
-            echo "::error::PRs to main must come from the 'staging' branch."
+          echo "PR target branch: $TARGET"
+
+          if [ "$TARGET" = "main" ]; then
+            # Promotion to main: only staging is allowed
+            # Bootstrap exception: the PR that introduces this workflow cannot
+            # come from staging (staging doesn't exist yet). One-time allowance.
+            if [ "$SOURCE" = "chore/branch-strategy-implementation" ]; then
+              echo "✅ Bootstrap PR — establishing branch strategy, one-time exception granted"
+              exit 0
+            fi
+            # Recovery exception: branches created from staging to resolve DAG divergence.
+            # Pattern: chore/promote-staging-main-* (e.g. after accidental squash promotion)
+            if [[ "$SOURCE" == chore/promote-staging-main-* ]]; then
+              echo "✅ Recovery branch from staging — DAG divergence fix, exception granted"
+              exit 0
+            fi
+            if [ "$SOURCE" != "staging" ]; then
+              echo "::error::PRs to main must come from the 'staging' branch."
+              echo "::error::Current source: '$SOURCE'"
+              echo ""
+              echo "Branch strategy:"
+              echo "  dev  →  staging  →  main"
+              echo ""
+              echo "To promote to main:"
+              echo "  1. Merge your work into staging first"
+              echo "  2. Test on staging environment"
+              echo "  3. Open a PR from staging → main"
+              exit 1
+            fi
+            echo "✅ Source branch is 'staging' — promotion to main approved"
+
+          elif [ "$TARGET" = "dev" ]; then
+            # PRs to dev: must come from a feature/*, fix/*, chore/*, refactor/*, or docs/* branch.
+            # Direct pushes from staging or main to dev are not allowed via PR.
+            if [[ "$SOURCE" == feature/* || "$SOURCE" == fix/* || "$SOURCE" == chore/* || \
+                  "$SOURCE" == refactor/* || "$SOURCE" == docs/* || "$SOURCE" == epic/* ]]; then
+              echo "✅ Source branch '$SOURCE' has a valid prefix — PR to dev approved"
+              exit 0
+            fi
+            # Back-merge exception: dev → staging → main back-merges carry chore/ or main-backmerge patterns
+            if [[ "$SOURCE" == main-backmerge* || "$SOURCE" == *backmerge* ]]; then
+              echo "✅ Back-merge branch — exception granted"
+              exit 0
+            fi
+            echo "::error::PRs to dev must come from a feature/*, fix/*, chore/*, refactor/*, docs/*, or epic/* branch."
             echo "::error::Current source: '$SOURCE'"
             echo ""
             echo "Branch strategy:"
-            echo "  dev  →  staging  →  main"
-            echo ""
-            echo "To promote to main:"
-            echo "  1. Merge your work into staging first"
-            echo "  2. Test on staging environment"
-            echo "  3. Open a PR from staging → main"
+            echo "  feature/* (or fix/*, chore/*, etc.)  →  dev  →  staging  →  main"
             exit 1
           fi
-          echo "✅ Source branch is 'staging' — promotion to main approved"
 
       - name: Verify version was bumped
+        if: github.base_ref == 'main'
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
 
       - name: Check version against latest tag
+        if: github.base_ref == 'main'
         run: |
           # Read version from staging's package.json (shell-only, no node required)
           STAGING_VERSION=$(grep '"version"' libs/types/package.json | head -1 | sed 's/.*"\([0-9][^"]*\)".*/\1/')
