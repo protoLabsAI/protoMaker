@@ -127,6 +127,7 @@ function workflowSettingsWithFreshEyes(enabled = true, model = 'haiku') {
 function setupApprovedExecMocks(extraCalls: { stdout: string; stderr: string }[] = []) {
   mockExecAsync
     .mockResolvedValueOnce({ stdout: '', stderr: '' }) // checkBranchMerged → not merged
+    .mockResolvedValueOnce({ stdout: '"MERGEABLE"', stderr: '' }) // getMergeableState → no conflict
     .mockResolvedValueOnce({ stdout: NORMALIZE_RESPONSE, stderr: '' }) // normalizePR body/autoMerge
     .mockResolvedValueOnce({
       stdout: JSON.stringify({ state: 'OPEN', mergedAt: null }),
@@ -147,6 +148,7 @@ function setupApprovedExecMocks(extraCalls: { stdout: string; stderr: string }[]
 function setupApprovedExecMocksDisabled() {
   mockExecAsync
     .mockResolvedValueOnce({ stdout: '', stderr: '' }) // checkBranchMerged
+    .mockResolvedValueOnce({ stdout: '"MERGEABLE"', stderr: '' }) // getMergeableState → no conflict
     .mockResolvedValueOnce({ stdout: NORMALIZE_RESPONSE, stderr: '' }) // normalizePR
     .mockResolvedValueOnce({
       stdout: JSON.stringify({ state: 'OPEN', mergedAt: null }),

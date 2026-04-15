@@ -695,6 +695,98 @@ describe('feature-loader.ts', () => {
       expect(result).not.toBeNull();
       expect(result?.id).toBe('feature-1000-abc');
     });
+
+    it('should not return archived features as duplicates', async () => {
+      vi.mocked(fs.access).mockResolvedValue(undefined);
+      vi.mocked(fs.readdir).mockResolvedValue([
+        { name: 'feature-1', isDirectory: () => true } as any,
+      ]);
+
+      vi.mocked(fs.readFile).mockResolvedValueOnce(
+        JSON.stringify({
+          id: 'feature-1000-abc',
+          title: 'My Feature',
+          archived: true,
+          status: 'done',
+          category: 'ui',
+          description: 'Archived feature',
+        })
+      );
+
+      const result = await loader.findDuplicateTitle(testProjectPath, 'My Feature');
+
+      // Archived feature must not block re-creation with the same title
+      expect(result).toBeNull();
+    });
+
+    it('should scope duplicate check by epicId when epicId is provided', async () => {
+      vi.mocked(fs.access).mockResolvedValue(undefined);
+      vi.mocked(fs.readdir).mockResolvedValue([
+        { name: 'feature-1', isDirectory: () => true } as any,
+        { name: 'feature-2', isDirectory: () => true } as any,
+      ]);
+
+      vi.mocked(fs.readFile)
+        .mockResolvedValueOnce(
+          JSON.stringify({
+            id: 'feature-1000-abc',
+            title: 'My Feature',
+            epicId: 'epic-A',
+            category: 'ui',
+            description: 'In epic A',
+          })
+        )
+        .mockResolvedValueOnce(
+          JSON.stringify({
+            id: 'feature-2000-def',
+            title: 'My Feature',
+            epicId: 'epic-B',
+            category: 'ui',
+            description: 'In epic B',
+          })
+        );
+
+      // Searching within epic-A — only feature-1000-abc should match
+      const resultA = await loader.findDuplicateTitle(
+        testProjectPath,
+        'My Feature',
+        undefined,
+        'epic-A'
+      );
+      expect(resultA?.id).toBe('feature-1000-abc');
+
+      // Searching within a different epic — no match
+      vi.mocked(fs.readdir).mockResolvedValue([
+        { name: 'feature-1', isDirectory: () => true } as any,
+        { name: 'feature-2', isDirectory: () => true } as any,
+      ]);
+      vi.mocked(fs.readFile)
+        .mockResolvedValueOnce(
+          JSON.stringify({
+            id: 'feature-1000-abc',
+            title: 'My Feature',
+            epicId: 'epic-A',
+            category: 'ui',
+            description: 'In epic A',
+          })
+        )
+        .mockResolvedValueOnce(
+          JSON.stringify({
+            id: 'feature-2000-def',
+            title: 'My Feature',
+            epicId: 'epic-B',
+            category: 'ui',
+            description: 'In epic B',
+          })
+        );
+      const resultC = await loader.findDuplicateTitle(
+        testProjectPath,
+        'My Feature',
+        undefined,
+        'epic-C'
+      );
+      expect(resultC).toBeNull();
+    });
   });
 
   describe('syncFeatureToAppSpec', () => {

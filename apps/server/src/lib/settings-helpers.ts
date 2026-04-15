@@ -832,6 +832,7 @@ export async function getWorkflowSettings(
         },
         ciClassification: projectSettings.workflow.ciClassification,
         heartbeat: projectSettings.workflow.heartbeat,
+        a2aSkillExecution: projectSettings.workflow.a2aSkillExecution,
       };
     }
     return DEFAULT_WORKFLOW_SETTINGS;

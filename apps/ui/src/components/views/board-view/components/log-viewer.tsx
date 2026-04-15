@@ -415,9 +415,23 @@ export function LogViewer({ output, className }: LogViewerProps) {
   // Parse entries and compute initial expanded state together
   const { entries, initialExpandedIds } = useMemo(() => {
     const parsedEntries = parseLogOutput(output);
-    const toExpand: string[] = [];
 
-    parsedEntries.forEach((entry) => {
+    // Deduplicate TodoWrite entries: keep only the last one.
+    // Each TodoWrite call replaces the previous task list, so only the final
+    // state is meaningful. Showing every call produces a cascading redundant list.
+    const lastTodoWriteIdx = parsedEntries.reduce(
+      (lastIdx, entry, idx) => (entry.metadata?.toolName === 'TodoWrite' ? idx : lastIdx),
+      -1
+    );
+    const dedupedEntries =
+      lastTodoWriteIdx === -1
+        ? parsedEntries
+        : parsedEntries.filter(
+            (entry, idx) => entry.metadata?.toolName !== 'TodoWrite' || idx === lastTodoWriteIdx
+          );
+
+    const toExpand: string[] = [];
+    dedupedEntries.forEach((entry) => {
       // If entry should NOT collapse by default, mark it for expansion
       if (!shouldCollapseByDefault(entry)) {
         toExpand.push(entry.id);
@@ -425,7 +439,7 @@ export function LogViewer({ output, className }: LogViewerProps) {
     });
 
     return {
-      entries: parsedEntries,
+      entries: dedupedEntries,
       initialExpandedIds: new Set(toExpand),
     };
   }, [output]);

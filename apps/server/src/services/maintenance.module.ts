@@ -5,6 +5,8 @@
  * - board-health (full tier, 6h): FeatureHealthService board audit with auto-fix
  * - resource-usage (critical tier, 5min): HealthMonitorService resource check
  * - webhook-health (full tier, 6h): Warns when PRs in review have no CI events after grace period
+ * - post-merge-reconciler (critical tier, 5min): Poll-based fallback for missed PR merge webhooks
+ * - done-worktree-cleanup (full tier, 6h): Removes worktrees for done features and orphaned worktrees
  */
 
 import { createLogger } from '@protolabsai/utils';
@@ -15,6 +17,8 @@ import type {
 } from '@protolabsai/types';
 import type { ServiceContainer } from '../server/services.js';
 import { WebhookHealthCheck } from './maintenance/checks/webhook-health-check.js';
+import { PostMergeReconcilerCheck } from './maintenance/checks/post-merge-reconciler-check.js';
+import { DoneWorktreeCleanupCheck } from './maintenance/checks/done-worktree-cleanup-check.js';
 
 const logger = createLogger('Server:Wiring');
 
@@ -27,6 +31,7 @@ export function register(container: ServiceContainer): void {
     events,
     eventHistoryService,
     autoModeService,
+    worktreeLifecycleService,
   } = container;
 
   // Board health check (full tier) — replaces built-in:board-health automation
@@ -98,6 +103,7 @@ export function register(container: ServiceContainer): void {
 
   // Webhook health check (full tier) — warns when PRs in review have no CI events
   const { featureLoader } = container;
+
   const webhookHealthCheckInstance = new WebhookHealthCheck(featureLoader);
   const webhookHealthCheck: MaintenanceCheck = {
     id: 'webhook-health',
@@ -133,24 +139,93 @@ export function register(container: ServiceContainer): void {
     },
   };
 
+  // Post-merge reconciler (critical tier) — poll fallback for missed PR merge webhooks.
+  // Runs every 5 minutes alongside resource-usage. Catches the case where a PR merges
+  // on a repo that has no GitHub webhook configured, preventing the feature from staying
+  // stuck in 'review' and triggering repeated failed agent spawns.
+  // See: protoLabsAI/protoMaker#3115
+  const postMergeReconcilerInstance = new PostMergeReconcilerCheck(featureLoader, events);
+  const postMergeReconcilerCheck: MaintenanceCheck = {
+    id: 'post-merge-reconciler',
+    name: 'Post-Merge PR Reconciler',
+    tier: 'critical',
+    async run(context: MaintenanceCheckContext): Promise<MaintenanceCheckResult> {
+      const t0 = Date.now();
+      let totalChecked = 0;
+      let totalReconciled = 0;
+
+      for (const projectPath of context.projectPaths) {
+        const result = await postMergeReconcilerInstance.run(projectPath);
+        totalChecked += result.checked;
+        totalReconciled += result.reconciled;
+      }
+
+      return {
+        checkId: 'post-merge-reconciler',
+        passed: true,
+        summary:
+          totalReconciled > 0
+            ? `Post-merge reconciler: reconciled ${totalReconciled} missed merge(s) out of ${totalChecked} checked`
+            : `Post-merge reconciler: ${totalChecked} review-state PR(s) checked, none missed`,
+        details: { totalChecked, totalReconciled, projectCount: context.projectPaths.length },
+        durationMs: Date.now() - t0,
+      };
+    },
+  };
+
+  // Done worktree cleanup (full tier) — removes worktrees for done features and orphaned worktrees
+  const doneWorktreeCleanupCheck = new DoneWorktreeCleanupCheck(
+    worktreeLifecycleService,
+    featureLoader,
+    events
+  );
+
   maintenanceOrchestrator.register(boardHealthCheck);
   maintenanceOrchestrator.register(resourceUsageCheck);
   maintenanceOrchestrator.register(webhookHealthCheck);
+  maintenanceOrchestrator.register(postMergeReconcilerCheck);
+  maintenanceOrchestrator.register(doneWorktreeCleanupCheck);
 
   // Wire TopicBus for hierarchical event routing of sweep results
   if (container.topicBus) {
     maintenanceOrchestrator.setTopicBus(container.topicBus);
   }
 
+  const { repoRoot } = container;
+
+  // Always include repoRoot so the reconciler runs even when auto-mode is off.
+  // Auto-mode active projects are added on top for multi-project setups.
   maintenanceOrchestrator.start(schedulerService, events, eventHistoryService, () => {
     const paths = new Set<string>();
+    paths.add(repoRoot);
     for (const p of autoModeService.getActiveAutoLoopProjects()) {
       paths.add(p);
     }
     return Array.from(paths);
   });
 
+  // Dedicated 60-second poll interval for the post-merge reconciler so that
+  // features in 'review' with merged PRs transition to 'done' within 90 seconds
+  // on local dev servers where webhooks never arrive (the maintenance critical
+  // tier runs every 5 minutes which is too slow for this SLA).
+  schedulerService.registerInterval(
+    'post-merge-reconciler:poll',
+    'Post-Merge Reconciler Poll (60s)',
+    60_000,
+    async () => {
+      const paths = new Set<string>();
+      paths.add(repoRoot);
+      for (const p of autoModeService.getActiveAutoLoopProjects()) {
+        paths.add(p);
+      }
+      for (const projectPath of paths) {
+        await postMergeReconcilerInstance.run(projectPath);
+      }
+    },
+    { category: 'sync' }
+  );
+
   logger.info(
-    'MaintenanceOrchestrator started with board-health, resource-usage, and webhook-health checks'
+    'MaintenanceOrchestrator started with board-health, resource-usage, webhook-health, post-merge-reconciler, and done-worktree-cleanup checks'
   );
 }

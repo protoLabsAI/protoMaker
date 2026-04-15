@@ -73,15 +73,20 @@ export function createCreateHandler(
         return;
       }
 
-      // Check for duplicate title if title is provided
+      // Check for duplicate title if title is provided.
+      // Pass epicId so the check is scoped to the same epic — features in different epics
+      // may share a name. Archived features are excluded from the check automatically.
       if (feature.title && feature.title.trim()) {
-        const duplicate = await featureLoader.findDuplicateTitle(projectPath, feature.title);
+        const duplicate = await featureLoader.findDuplicateTitle(
+          projectPath,
+          feature.title,
+          undefined,
+          feature.epicId ?? null
+        );
         if (duplicate) {
-          res.status(409).json({
-            success: false,
-            error: `A feature with title "${feature.title}" already exists`,
-            duplicateFeatureId: duplicate.id,
-          });
+          // Idempotent: return the existing active feature rather than creating a phantom.
+          // The caller gets back the canonical record; no data is duplicated.
+          res.json({ success: true, feature: duplicate });
           return;
         }
       }

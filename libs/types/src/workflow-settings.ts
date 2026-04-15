@@ -600,6 +600,21 @@ export interface WorkflowSettings {
    * @default true
    */
   copyEnvFiles?: boolean;
+  /**
+   * A2A skill execution configuration.
+   * Controls timeout and retry behavior for inbound A2A skill dispatches.
+   * Multi-step skills like bug_triage involve several sequential LLM + tool calls
+   * and routinely take 3–5 minutes. The default 10-minute timeout is sized for
+   * the p99 case. Retries with exponential backoff handle transient gateway drops.
+   */
+  a2aSkillExecution?: {
+    /** Maximum milliseconds to wait for a skill response before aborting. @default 600000 (10 min) */
+    timeoutMs?: number;
+    /** Number of retry attempts on transient failure (timeout or 5xx). @default 2 */
+    maxRetries?: number;
+    /** Base delay in milliseconds before the first retry. Doubles on each subsequent attempt. @default 5000 */
+    retryBaseDelayMs?: number;
+  };
 }
 
 /** Default workflow settings */

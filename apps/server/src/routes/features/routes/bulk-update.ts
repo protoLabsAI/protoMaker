@@ -8,15 +8,27 @@ import { FeatureLoader } from '../../../services/feature-loader.js';
 import type { Feature } from '@protolabsai/types';
 import { getErrorMessage, logError } from '../common.js';
 
-export const BulkUpdateRequestSchema = z.object({
-  projectPath: z.string().min(1, 'projectPath is required'),
-  featureIds: z.array(z.string()).min(1, 'featureIds must be a non-empty array'),
-  updates: z.custom<Partial<Feature>>(
-    (val): val is Partial<Feature> =>
-      val !== null && typeof val === 'object' && Object.keys(val as object).length > 0,
-    'updates must be a non-empty object'
-  ),
-});
+export const BulkUpdateRequestSchema = z
+  .object({
+    projectPath: z.string().min(1, 'projectPath is required'),
+    featureIds: z.array(z.string()).min(1, 'featureIds must be a non-empty array'),
+    updates: z.custom<Partial<Feature>>(
+      (val): val is Partial<Feature> =>
+        val !== null && typeof val === 'object' && Object.keys(val as object).length > 0,
+      'updates must be a non-empty object'
+    ),
+  })
+  .refine(
+    (data) => {
+      const updates = data.updates as Partial<Feature>;
+      return !(updates.isEpic === true && updates.epicId);
+    },
+    {
+      message:
+        'A feature cannot be both an epic (isEpic: true) and a member of another epic (epicId set). Set either isEpic or epicId, not both.',
+      path: ['updates'],
+    }
+  );
 
 interface BulkUpdateResult {
   featureId: string;

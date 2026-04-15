@@ -341,6 +341,105 @@ export function buildAvaTools(
       },
     });
 
+    tools['manage_board'] = makeTool({
+      description:
+        'Read features from the project board. Supports three actions:\n' +
+        '  • list   — enumerate features with optional status/priority filters and pagination\n' +
+        '  • get    — retrieve full metadata for a single feature by ID\n' +
+        '  • search — search feature titles and descriptions by keyword',
+      inputSchema: z.discriminatedUnion('action', [
+        z.object({
+          action: z.literal('list').describe('List features with optional filters'),
+          status: z.enum(FEATURE_STATUS_ENUM).optional().describe('Filter by status'),
+          priority: z.number().int().min(0).max(4).optional().describe('Filter by priority (0-4)'),
+          limit: z
+            .number()
+            .int()
+            .min(1)
+            .max(200)
+            .optional()
+            .describe('Max results to return (default 50)'),
+          offset: z
+            .number()
+            .int()
+            .min(0)
+            .optional()
+            .describe('Results to skip for pagination (default 0)'),
+        }),
+        z.object({
+          action: z.literal('get').describe('Get full metadata for a single feature'),
+          featureId: z.string().describe('The feature ID to retrieve'),
+        }),
+        z.object({
+          action: z.literal('search').describe('Search features by title or description'),
+          query: z.string().describe('Text to search in feature title and description'),
+          limit: z
+            .number()
+            .int()
+            .min(1)
+            .max(200)
+            .optional()
+            .describe('Max results to return (default 50)'),
+          offset: z
+            .number()
+            .int()
+            .min(0)
+            .optional()
+            .describe('Results to skip for pagination (default 0)'),
+        }),
+      ]),
+      execute: async (input) => {
+        if (input.action === 'get') {
+          const feature = await services.featureLoader.get(projectPath, input.featureId);
+          if (!feature) {
+            return { error: `Feature '${input.featureId}' not found` };
+          }
+          return feature;
+        }
+
+        let features = await services.featureLoader.getAll(projectPath);
+
+        if (input.action === 'list') {
+          if (input.status) {
+            features = features.filter((f) => f.status === input.status);
+          }
+          if (input.priority !== undefined) {
+            features = features.filter((f) => f.priority === input.priority);
+          }
+        } else {
+          // search
+          const q = input.query.toLowerCase();
+          features = features.filter(
+            (f) =>
+              (f.title ?? '').toLowerCase().includes(q) ||
+              (f.description ?? '').toLowerCase().includes(q)
+          );
+        }
+
+        const total = features.length;
+        const offset = input.offset ?? 0;
+        const limit = input.limit ?? 50;
+        const page = features.slice(offset, offset + limit);
+
+        return {
+          features: page.map((f) => ({
+            id: f.id,
+            title: f.title,
+            status: f.status,
+            priority: f.priority,
+            complexity: f.complexity,
+            statusChangeReason: f.statusChangeReason,
+            dependencies: f.dependencies ?? [],
+            updatedAt: f.updatedAt,
+          })),
+          total,
+          offset,
+          limit,
+          hasMore: offset + limit < total,
+        };
+      },
+    });
+
     tools['create_plan'] = makeTool({
       description:
         'Create a structured plan card with titled steps. Use this to present a multi-step execution plan to the user as a visual card rather than plain text.',

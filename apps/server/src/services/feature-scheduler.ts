@@ -840,14 +840,20 @@ export class FeatureScheduler {
 
     // Fetch recently merged PRs to reconcile blocked/review features whose PRs already landed.
     const mergedPrBranches = new Map<string, { number: number; mergedAt?: string }>();
+    let mergedPrList: { number: number; headRefName: string; mergedAt?: string; title?: string }[] =
+      [];
     try {
       const { stdout: mergedPrJson } = await execAsync(
-        'gh pr list --state merged --json number,headRefName,mergedAt --limit 100',
+        'gh pr list --state merged --json number,headRefName,mergedAt,title --limit 100',
         { cwd: projectPath, timeout: 15000 }
       );
-      const mergedPrs: { number: number; headRefName: string; mergedAt?: string }[] = JSON.parse(
-        mergedPrJson || '[]'
-      );
+      const mergedPrs: {
+        number: number;
+        headRefName: string;
+        mergedAt?: string;
+        title?: string;
+      }[] = JSON.parse(mergedPrJson || '[]');
+      mergedPrList = mergedPrs;
       for (const pr of mergedPrs)
         mergedPrBranches.set(pr.headRefName, { number: pr.number, mergedAt: pr.mergedAt });
       logger.debug(
@@ -988,6 +994,112 @@ export class FeatureScheduler {
           logger.debug(
             `[loadPendingFeatures] Could not verify PR #${feature.prNumber} for feature ${feature.id} (non-fatal)`
           );
+        }
+      }
+
+      // ── Explicit-done-with-PR-reason guard (24h lock) ──
+      // When a feature is manually marked done with a statusChangeReason referencing a PR
+      // number (e.g. "Shipped via PR #123"), but was subsequently reset to backlog/blocked
+      // (e.g. by a crash-recovery reconciler or execution-gate rollback), re-reconcile it
+      // as done so auto-mode does not re-spawn an agent and burn the retry budget on
+      // work that is already merged on origin/<prBaseBranch>.
+      const PR_REFERENCE_PATTERN = /#\d+/;
+      const DONE_LOCK_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
+      const nowMs = Date.now();
+
+      const doneWithPrGuard = allFeatures.filter(
+        (f) =>
+          (f.status === 'backlog' || f.status === 'blocked') &&
+          !alreadyReconciled.has(f.id) &&
+          (f.statusHistory ?? []).some(
+            (t) =>
+              t.to === 'done' &&
+              t.reason &&
+              PR_REFERENCE_PATTERN.test(t.reason) &&
+              nowMs - new Date(t.timestamp).getTime() < DONE_LOCK_WINDOW_MS
+          )
+      );
+
+      for (const feature of doneWithPrGuard) {
+        const doneTransition = (feature.statusHistory ?? []).find(
+          (t) =>
+            t.to === 'done' &&
+            t.reason &&
+            PR_REFERENCE_PATTERN.test(t.reason) &&
+            nowMs - new Date(t.timestamp).getTime() < DONE_LOCK_WINDOW_MS
+        )!;
+        logger.info(
+          `[loadPendingFeatures] Feature ${feature.id} ("${feature.title}") was manually marked done with PR reference within 24h — re-reconciling to done. Reason: "${doneTransition.reason}"`
+        );
+        const prevStatus = feature.status;
+        try {
+          await this.featureLoader.update(projectPath, feature.id, {
+            status: 'done',
+            statusChangeReason: `Re-reconciled: previously marked done with PR reference within 24h (reason: "${doneTransition.reason}")`,
+          });
+          feature.status = 'done';
+          alreadyReconciled.add(feature.id);
+        } catch (error) {
+          feature.status = prevStatus;
+          logger.error(
+            `[loadPendingFeatures] Failed to re-reconcile feature ${feature.id} to done via done-with-PR-reason guard:`,
+            error
+          );
+        }
+      }
+
+      // ── Title-match on recent merged PRs (re-cut branch detection) ──
+      // When a feature ships via a re-cut branch (different branch name, same work),
+      // none of the branch-name-based or prNumber-based passes above will detect it.
+      // This pass compares the feature's normalized title against recently merged PR
+      // titles on origin/<prBaseBranch>. A match means the work already landed and
+      // auto-mode should not re-spawn the agent.
+      const normalizePrTitle = (s: string): string =>
+        s
+          .toLowerCase()
+          .replace(/[^a-z0-9\s]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+      const titleMatchCandidates = allFeatures.filter(
+        (f) =>
+          (f.status === 'backlog' || f.status === 'blocked') &&
+          !alreadyReconciled.has(f.id) &&
+          f.title
+      );
+
+      for (const feature of titleMatchCandidates) {
+        const featureTitle = normalizePrTitle(feature.title ?? '');
+        // Skip titles that are too short to be a reliable match signal
+        if (featureTitle.length < 10) continue;
+
+        const matchedPr = mergedPrList.find((pr) => {
+          if (!pr.title) return false;
+          const prTitle = normalizePrTitle(pr.title);
+          return prTitle.includes(featureTitle) || featureTitle.includes(prTitle);
+        });
+
+        if (matchedPr) {
+          logger.info(
+            `[loadPendingFeatures] Feature ${feature.id} ("${feature.title}") title matched merged PR #${matchedPr.number} ("${matchedPr.title}") — reconciling to done (re-cut branch detected)`
+          );
+          const prevStatus = feature.status;
+          try {
+            await this.featureLoader.update(projectPath, feature.id, {
+              status: 'done',
+              prNumber: matchedPr.number,
+              prMergedAt: matchedPr.mergedAt ?? new Date().toISOString(),
+              statusChangeReason: `Re-cut branch detected: title matched merged PR #${matchedPr.number} — "${matchedPr.title}"`,
+            });
+            feature.status = 'done';
+            alreadyReconciled.add(feature.id);
+          } catch (error) {
+            feature.status = prevStatus;
+            logger.error(
+              `[loadPendingFeatures] Failed to reconcile feature ${feature.id} to done via title match:`,
+              error
+            );
+          }
         }
       }
 
@@ -1198,6 +1310,8 @@ export class FeatureScheduler {
             canonicalStatus !== 'review' &&
             canonicalStatus !== 'in_progress' &&
             canonicalStatus !== 'blocked' &&
+            // 'interrupted' = circuit breaker tripped; never re-queue (issue #3140)
+            canonicalStatus !== 'interrupted' &&
             feature.planSpec?.status === 'approved' &&
             (feature.planSpec.tasksCompleted ?? 0) < (feature.planSpec.tasksTotal ?? 0));
 
@@ -1210,9 +1324,23 @@ export class FeatureScheduler {
             if (feature.epicId) {
               // Contradictory state: a feature cannot be both an epic container and a child of
               // another epic. This was likely caused by a direct write bypassing API validation.
-              logger.warn(
-                `[loadPendingFeatures] Feature ${feature.id} ("${feature.title}") is marked as an epic but also has a parent epic assigned (epicId: ${feature.epicId}) — it will not be scheduled. Fix the feature configuration to proceed.`
+              logger.error(
+                `[loadPendingFeatures] Feature ${feature.id} has both isEpic=true and epicId set — skipping; manual intervention required.`
               );
+              // Move to blocked so the contradictory state is visible in the UI and not silently
+              // swallowed every scheduler cycle. The update only touches status/statusChangeReason
+              // so it bypasses the isEpic+epicId validation guard in FeatureLoader.update.
+              try {
+                await this.featureLoader.update(projectPath, feature.id, {
+                  status: 'blocked',
+                  statusChangeReason: `Contradictory epic state: feature is marked as an epic container (isEpic: true) but also has a parent epic assigned (epicId: ${feature.epicId}). Set either isEpic or epicId, not both.`,
+                });
+              } catch (updateErr) {
+                logger.error(
+                  `[loadPendingFeatures] Failed to block contradictory-state feature ${feature.id}:`,
+                  updateErr
+                );
+              }
             } else {
               logger.info(
                 `[loadPendingFeatures] Skipping epic feature ${feature.id} - ${feature.title}`

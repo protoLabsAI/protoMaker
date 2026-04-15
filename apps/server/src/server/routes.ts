@@ -214,8 +214,16 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // Prometheus metrics endpoint (unauthenticated for Prometheus scraping)
   app.use('/api/metrics', createPrometheusRoute());
 
+  // Project registry — sourced from workspace/projects.yaml (with Workstacean fallback).
+  // Created here (before webhook routes) so the webhook handler can resolve external
+  // repo full_names (e.g. "protoLabsAI/mythxengine") to their local projectPaths.
+  const projectRegistry = new ProjectRegistryService({ projectRoot: repoRoot });
+  projectRegistry
+    .start()
+    .catch((err: unknown) => logger.warn('ProjectRegistry start failed:', err));
+
   // Webhooks at root level (unauthenticated - uses signature verification)
-  app.use('/webhooks', createWebhooksRoutes(events, settingsService, topicBus));
+  app.use('/webhooks', createWebhooksRoutes(events, settingsService, topicBus, projectRegistry));
   // Alerts webhook routes (unauthenticated - Grafana webhooks)
   app.use('/webhooks/alerts', createAlertsRoutes(settingsService, discordBotService));
 
@@ -231,7 +239,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   });
 
   // A2A message handler — manual X-API-Key check inside (same pattern as /webhooks)
-  app.use('/a2a', createA2AHandlerRoutes(repoRoot, { planningService }));
+  app.use('/a2a', createA2AHandlerRoutes(repoRoot, { planningService, settingsService }));
 
   // World-state polling endpoints — unauthenticated, intended for workstacean HTTP collectors
   app.use('/api/world', createWorldRoutes(featureLoader, autoModeService, repoRoot));
@@ -377,10 +385,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   );
   app.use('/api/automations', createAutomationsRoutes(automationService));
   app.use('/api/ava', createAvaRoutes(services));
-  const projectRegistry = new ProjectRegistryService({ projectRoot: repoRoot });
-  projectRegistry
-    .start()
-    .catch((err: unknown) => logger.warn('ProjectRegistry start failed:', err));
   app.use('/api/discord', createDiscordRoutes(projectRegistry));
   app.use(
     '/api/ceremonies',
@@ -480,7 +484,9 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
       auditService,
       autoModeService,
       settingsService,
-      eventStore
+      eventStore,
+      worktreeLifecycleService,
+      featureLoader
     )
   );
   logger.info('Ops routes mounted at /api/ops');

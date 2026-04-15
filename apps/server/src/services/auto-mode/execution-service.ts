@@ -397,6 +397,11 @@ export class ExecutionService {
     const executionStartedAt = new Date().toISOString();
     let startingCostUsd = 0;
 
+    // Pre-execution failureCount write (Concern 3 — issue #3140).
+    // Declared outside try so the catch block can reference it.
+    // Set to the pre-incremented value when the write succeeds, null otherwise.
+    let preIncrementedFailureCount: number | null = null;
+
     try {
       // Validate that project path is allowed using centralized validation
       validateWorkingDirectory(projectPath);
@@ -414,7 +419,8 @@ export class ExecutionService {
       // Guard: refuse to execute features in terminal states.
       // This prevents zombie loops where done/verified features keep getting restarted
       // by health checks, reconciliation, or stale retry timers.
-      const TERMINAL_STATUSES = new Set(['done', 'verified', 'completed']);
+      // 'interrupted' is included: features that tripped the circuit breaker must not be retried.
+      const TERMINAL_STATUSES = new Set(['done', 'verified', 'completed', 'interrupted']);
       if (TERMINAL_STATUSES.has(feature.status ?? '')) {
         logger.warn(
           `Refusing to execute feature ${featureId} — already in terminal status "${feature.status}". ` +
@@ -1145,6 +1151,38 @@ Output the branch name only.`,
         }
       }
 
+      // Write-before-run: pre-increment failureCount on disk BEFORE starting the agent.
+      // If the server crashes during SDK initialization (before the agent produces any
+      // output and before the catch block can increment), the failure is still counted on
+      // restart. Without this, a repeated SDK-init crash keeps failureCount at 0 and
+      // permanently bypasses the circuit breaker (issue #3140, Concern 3).
+      //
+      // Only applied to the initial dispatch (retryCount === 0). Recovery retries within
+      // the same scheduling cycle share the same "attempt" — the outer pre-increment already
+      // covers them, and a second pre-increment per retry would double-count failures.
+      //
+      // Success path: resets failureCount to 0 (existing logic at line ~1253).
+      // Failure path: catch block uses preIncrementedFailureCount to skip the re-write.
+      if ((options?.retryCount ?? 0) === 0) {
+        try {
+          preIncrementedFailureCount = (feature.failureCount ?? 0) + 1;
+          await this.featureLoader.update(projectPath, featureId, {
+            failureCount: preIncrementedFailureCount,
+          });
+          logger.debug(
+            `[PreExecution] Pre-wrote failureCount=${preIncrementedFailureCount} for ${featureId}`
+          );
+        } catch (preWriteError) {
+          // Non-fatal: the post-execution catch block handles the normal increment.
+          // This is a durability guard for crash scenarios only.
+          logger.warn(
+            `[PreExecution] Failed to pre-write failureCount for ${featureId}:`,
+            preWriteError
+          );
+          preIncrementedFailureCount = null;
+        }
+      }
+
       // Run the agent with the feature's model and images
       // Context files are passed as system prompt for higher priority
       // On retries, try to resume from the previous session if available
@@ -1547,6 +1585,7 @@ Output the branch name only.`,
       const errorInfo = classifyError(error);
 
       // Capture execution record on failure (skip aborts — not real executions)
+      let failureExecutionCostUsd = 0;
       if (!errorInfo.isAbort && tempRunningFeature.startTime) {
         try {
           const completedAt = new Date().toISOString();
@@ -1554,6 +1593,7 @@ Output the branch name only.`,
           const currentFeature = await this.featureLoader.get(projectPath, featureId);
           // Calculate execution-specific cost delta (not cumulative cost)
           const executionCostUsd = Math.max(0, (currentFeature?.costUsd ?? 0) - startingCostUsd);
+          failureExecutionCostUsd = executionCostUsd;
           const record: ExecutionRecord = {
             id: executionId,
             startedAt: executionStartedAt,
@@ -1675,6 +1715,7 @@ Output the branch name only.`,
           retryCount: tempRunningFeature?.retryCount ?? 0,
           previousErrors: tempRunningFeature?.previousErrors ?? [],
           runningTime: tempRunningFeature ? Date.now() - tempRunningFeature.startTime : 0,
+          costUsd: failureExecutionCostUsd,
         };
 
         // Analyze failure and determine recovery strategy
@@ -1743,10 +1784,17 @@ Output the branch name only.`,
         // Increment failure count for model escalation on retry
         let newFailureCount = 0;
         if (feature) {
-          newFailureCount = (feature.failureCount ?? 0) + 1;
-          await this.featureLoader.update(projectPath, featureId, {
-            failureCount: newFailureCount,
-          });
+          if (preIncrementedFailureCount !== null) {
+            // Write-before-run already wrote the incremented value to disk (issue #3140).
+            // Re-use that value for the circuit breaker check without a redundant write.
+            newFailureCount = preIncrementedFailureCount;
+          } else {
+            // No pre-increment (recovery retry path or pre-write failed): compute and persist now.
+            newFailureCount = (feature.failureCount ?? 0) + 1;
+            await this.featureLoader.update(projectPath, featureId, {
+              failureCount: newFailureCount,
+            });
+          }
           logger.info(`Feature ${featureId} failure count: ${newFailureCount}`);
 
           // Trigger self-healing when a feature has failed twice
@@ -1845,18 +1893,47 @@ Output the branch name only.`,
             });
           }
         } else {
-          await this.callbacks.updateFeatureStatus(projectPath, featureId, 'backlog');
-          this.typedEventBus.emitAutoModeEvent('auto_mode_error', {
-            featureId,
-            featureName: feature?.title,
-            branchName: feature?.branchName ?? null,
-            error: errorInfo.message,
-            errorType: errorInfo.type,
-            projectPath,
-            recoveryAttempted: true,
-            recoveryAction: recoveryResult.actionTaken,
-            failureCategory: failureAnalysis.category,
-          });
+          // Circuit breaker: after MAX_AUTO_RETRIES consecutive failures, permanently mark the
+          // feature as 'interrupted' instead of returning it to 'backlog'. Without this guard,
+          // a zombie feature (e.g. one whose description triggers a CLI init crash on every run)
+          // re-queues every ~3 s indefinitely — observed at iteration 1359+ on create-helix-app.
+          const MAX_AUTO_RETRIES = 3;
+          if (newFailureCount >= MAX_AUTO_RETRIES) {
+            logger.warn(
+              `[CircuitBreaker] Feature ${featureId} tripped after ${newFailureCount} consecutive failures — ` +
+                `marking interrupted. Last error: ${errorInfo.message}`
+            );
+            await this.featureLoader.update(projectPath, featureId, {
+              status: 'interrupted',
+              statusChangeReason:
+                `Circuit breaker: ${newFailureCount} consecutive failures. ` +
+                `Last error: ${errorInfo.message}`,
+            });
+            this.typedEventBus.emitAutoModeEvent('auto_mode_error', {
+              featureId,
+              featureName: feature?.title,
+              branchName: feature?.branchName ?? null,
+              error: `Circuit breaker tripped after ${newFailureCount} failures — feature permanently interrupted`,
+              errorType: errorInfo.type,
+              projectPath,
+              recoveryAttempted: true,
+              recoveryAction: recoveryResult.actionTaken,
+              failureCategory: failureAnalysis.category,
+            });
+          } else {
+            await this.callbacks.updateFeatureStatus(projectPath, featureId, 'backlog');
+            this.typedEventBus.emitAutoModeEvent('auto_mode_error', {
+              featureId,
+              featureName: feature?.title,
+              branchName: feature?.branchName ?? null,
+              error: errorInfo.message,
+              errorType: errorInfo.type,
+              projectPath,
+              recoveryAttempted: true,
+              recoveryAction: recoveryResult.actionTaken,
+              failureCategory: failureAnalysis.category,
+            });
+          }
         }
 
         // Track this failure and check if we should pause auto mode
@@ -2610,6 +2687,8 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
       ? `${previousContent}\n\n---\n\n## Follow-up Session\n\n`
       : '';
     let specDetected = false;
+    // Track API cost accumulated during this run for degenerate-success detection (Bug 2).
+    let runCostUsd = 0;
 
     // Agent output goes to .automaker directory
     // Note: We use projectPath here, not workDir, because workDir might be a worktree path
@@ -3315,6 +3394,7 @@ After generating the revised spec, output:
           // Capture cost and session_id from SDK result
           const resultMsg = msg as unknown as { total_cost_usd?: number; session_id?: string };
           if (typeof resultMsg.total_cost_usd === 'number' && resultMsg.total_cost_usd > 0) {
+            runCostUsd += resultMsg.total_cost_usd;
             try {
               const currentFeature = await this.featureLoader.get(projectPath, featureId);
               const previousCost: number = currentFeature?.costUsd ?? 0;
@@ -3372,6 +3452,45 @@ After generating the revised spec, output:
 
       // Final write - ensure all accumulated content is saved (on success path)
       await writeToFile();
+
+      // Degenerate-success detection (Bug 2 — exit-code reconciliation).
+      // The Claude Code SDK can emit result:success even when the underlying process exits with
+      // code 1 (initialization crash). Symptoms: $0 API cost, <300 chars output, <10 s runtime.
+      // Without this guard the caller sees a clean return, failureCount is never incremented,
+      // and a zombie feature (e.g. one whose description triggers a CLI init crash) cycles
+      // indefinitely. We throw here so the normal failure path fires and the circuit breaker
+      // can eventually trip.
+      const DEGENERATE_COST_THRESHOLD = 0;
+      const DEGENERATE_OUTPUT_CHARS = 300;
+      const DEGENERATE_RUNTIME_MS = 10_000;
+      const elapsedRuntimeMs = Date.now() - streamStartTime;
+      if (
+        !process.env.AUTOMAKER_MOCK_AGENT &&
+        runCostUsd <= DEGENERATE_COST_THRESHOLD &&
+        responseText.length < DEGENERATE_OUTPUT_CHARS &&
+        elapsedRuntimeMs < DEGENERATE_RUNTIME_MS
+      ) {
+        const truncatedOutput =
+          responseText.length > 0
+            ? responseText.slice(0, 500) +
+              (responseText.length > 500 ? `… [${responseText.length} chars total]` : '')
+            : '(empty)';
+        logger.warn(
+          `[DegenerateSuccess] Feature ${featureId}: SDK reported success but made 0 API calls ` +
+            `(${responseText.length} chars, ${Math.round(elapsedRuntimeMs / 1000)}s). ` +
+            `Likely CLI init crash. Treating as failure.\nRaw output: ${truncatedOutput}`
+        );
+        const rawOutputSuffix =
+          responseText.length > 0
+            ? `\nRaw output (${responseText.length} chars): ${responseText.slice(0, 200)}${responseText.length > 200 ? '…' : ''}`
+            : '';
+        throw new Error(
+          `SDK init failure: process exited cleanly but made 0 API calls ` +
+            `(${responseText.length} chars output, ${Math.round(elapsedRuntimeMs / 1000)}s runtime). ` +
+            `Possible cause: invalid content in feature description caused CLI crash before any API call.` +
+            rawOutputSuffix
+        );
+      }
 
       // If loop was detected, throw a recognizable error for retry with recovery context
       if (loopDetected) {
@@ -3463,9 +3582,28 @@ After generating the revised spec, output:
     }
 
     // FEATURE_HEADER section — feature identity (all phases)
+    // Strip raw HTML tags from the description before embedding in the prompt.
+    // Raw HTML (e.g. <script>…</script>, <meta …>) in user-supplied descriptions can trigger
+    // an argument-parsing or stdin-sanitization fault in the Claude Code CLI during its
+    // initialization phase, producing a process exit-code-1 crash with $0 cost and ~225 chars
+    // of output — the "degenerate success" bug (issue #3140).
+    const rawDescription = feature.description ?? '';
+    const sanitizedDescription = rawDescription.replace(/<[^>]*>/g, '');
+    // Log a warning when HTML was present — this is the known trigger for the exit-code-1
+    // degenerate-success crash. Logging here gives operators a diagnostic breadcrumb before
+    // the agent run, even though the tags will be stripped before reaching the SDK.
+    if (sanitizedDescription !== rawDescription) {
+      const strippedChars = rawDescription.length - sanitizedDescription.length;
+      logger.warn(
+        `[HTMLSanitization] Feature ${feature.id}: description contained HTML that was stripped ` +
+          `(${strippedChars} chars removed, ${rawDescription.length} → ${sanitizedDescription.length}). ` +
+          `Raw HTML in descriptions triggers Claude Code CLI init crash (exit-code-1 / degenerate-success). ` +
+          `Sanitization applied before SDK handoff.`
+      );
+    }
     builder.addSection(
       'FEATURE_HEADER',
-      `## Feature Implementation Task\n\n**Feature ID:** ${feature.id}\n**Title:** ${title}\n**Description:** ${feature.description}\n`
+      `## Feature Implementation Task\n\n**Feature ID:** ${feature.id}\n**Title:** ${title}\n**Description:** ${sanitizedDescription}\n`
     );
 
     // SPEC section — feature specification when present (all phases)
@@ -3496,6 +3634,18 @@ After generating the revised spec, output:
     // TRAJECTORY_CONTEXT section — lessons from similar past executions (all phases)
     if (trajectoryContext) {
       builder.addSection('TRAJECTORY_CONTEXT', trajectoryContext);
+    }
+
+    // FILE_SCOPE section — explicit file boundary when filesToModify is declared (EXECUTE phase only)
+    // Prevents agents from editing docs/tutorials, dashboard/, and adjacent test files that are
+    // outside the feature's declared scope, which causes PR collision clusters on parallel runs.
+    if (feature.filesToModify && feature.filesToModify.length > 0) {
+      const fileList = feature.filesToModify.map((f) => `- ${f}`).join('\n');
+      builder.addSection(
+        'FILE_SCOPE',
+        `\n## File Scope\n\nThis feature declares the following files as its intended scope:\n${fileList}\n\n**DO NOT edit any file outside this list.** Edits to undeclared files create merge conflicts with other concurrent agents and produce PR collision clusters.\n\nForbidden anti-patterns:\n- **improve-adjacent-docs**: Editing docs/tutorials/, dashboard/, or README files you encounter — unless they appear in the list above\n- **cross-file cleanup**: Formatting or style fixes in unrelated files you happen to read\n- **dashboard-version-bump**: Touching package.json or version files outside your declared scope\n\nIf you discover a file you genuinely need to edit that is NOT listed, limit the change to the minimum required and explain in your summary why it was necessary.\n`,
+        ['EXECUTE']
+      );
     }
 
     // CODING_STANDARDS section — implementation instructions (EXECUTE phase only)
