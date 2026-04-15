@@ -3211,7 +3211,7 @@ Format your response as a structured markdown document.`;
           let baseBranch = `origin/${resolvedPrBaseBranch}`;
           if (feature?.epicId && !feature.isEpic) {
             // Hoist epicFeature so it's accessible in the catch block for error reporting
-            let epicFeature: Awaited<ReturnType<typeof this.featureLoader.get>> | undefined;
+            let epicFeature: Awaited<ReturnType<FeatureLoader['get']>> | undefined;
             try {
               epicFeature = await this.featureLoader.get(projectPath, feature.epicId);
               if (epicFeature?.branchName) {
