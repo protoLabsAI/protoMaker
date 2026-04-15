@@ -34,6 +34,7 @@ import {
   getFeatureBackupDir,
   getAppSpecPath,
   ensureAutomakerDir,
+  isValidBranchName,
 } from '@protolabsai/platform';
 import { addImplementedFeature, type ImplementedFeature } from '../lib/xml-extractor.js';
 import { debugLog } from '../lib/debug-log.js';
@@ -641,12 +642,16 @@ export class FeatureLoader implements FeatureStore {
       });
     }
 
-    // Read-only features don't need a branch — skip generation entirely
+    // Read-only features don't need a branch — skip generation entirely.
+    // If a branchName is provided by the caller, validate it before use — special characters
+    // like `[`, `]`, `(`, `)`, `:` are illegal in git refs and cause worktree creation to fail.
+    // Invalid branch names are discarded and regenerated from the title via generateBranchName.
     const branchName =
       featureData.executionMode === 'read-only'
         ? undefined
-        : featureData.branchName ||
-          this.generateBranchName(featureData.title, featureId, featureData.category);
+        : (featureData.branchName && isValidBranchName(featureData.branchName)
+            ? featureData.branchName
+            : null) ?? this.generateBranchName(featureData.title, featureId, featureData.category);
 
     // Auto-assign projectSlug if not already provided
     let resolvedProjectSlug = featureData.projectSlug;
