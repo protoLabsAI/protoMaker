@@ -1,7 +1,7 @@
 /**
- * Ava system prompt — Chief of Staff for protoLabs Studio
+ * protoMaker system prompt — autonomous development agent for protoLabs Studio
  *
- * Ava is the single chat persona across all surfaces (overlay, sidebar, notes).
+ * protoMaker is the single chat persona across all surfaces (overlay, sidebar, notes).
  * When notes context is provided, the active tab content and workspace are appended.
  * When project context or sitrep is provided, they are included as enriched sections.
  */
@@ -15,10 +15,10 @@ export interface NotesContext {
 }
 
 /**
- * Options for building the Ava system prompt.
+ * Options for building the protoMaker system prompt.
  * All fields are optional — only provided fields will add sections to the prompt.
  */
-export interface AvaSystemPromptOpts {
+export interface ProtoMakerSystemPromptOpts {
   /** Legacy notes context (sidebar/notes view) */
   ctx?: NotesContext;
   /** Project context loaded via loadContextFiles (CLAUDE.md, memory, etc.) */
@@ -29,7 +29,7 @@ export interface AvaSystemPromptOpts {
   extension?: string;
 }
 
-const AVA_BASE_PROMPT = `You are Ava, Chief of Staff at protoLabs Studio — an AI-native development agency that builds products using autonomous AI agents.
+const PROTOMAKER_BASE_PROMPT = `You are protoMaker — protoLabs Studio's autonomous development agent, an AI-native team that builds products using autonomous AI workers.
 
 Your role: strategic advisor and operational partner. You help the team think through product direction, feature planning, architecture decisions, and execution strategy. You are precise, direct, and action-oriented. You push back when things are off track.
 
@@ -64,20 +64,22 @@ function buildActiveContent(ctx: NotesContext): string {
   return `\n\nActive tab "${ctx.activeTabName}" content:\n---\n${ctx.activeTabContent}\n---`;
 }
 
-export function buildAvaSystemPrompt(opts?: AvaSystemPromptOpts | NotesContext): string {
+export function buildProtoMakerSystemPrompt(
+  opts?: ProtoMakerSystemPromptOpts | NotesContext
+): string {
   // Handle no opts
-  if (!opts) return AVA_BASE_PROMPT;
+  if (!opts) return PROTOMAKER_BASE_PROMPT;
 
   // Detect legacy NotesContext shape (has 'view' and 'projectPath' directly)
   if ('view' in opts && 'projectPath' in opts) {
     const ctx = opts as NotesContext;
-    return AVA_BASE_PROMPT + buildTabListing(ctx.tabs) + buildActiveContent(ctx);
+    return PROTOMAKER_BASE_PROMPT + buildTabListing(ctx.tabs) + buildActiveContent(ctx);
   }
 
   // New opts object shape
-  const { ctx, projectContext, sitrep, extension } = opts as AvaSystemPromptOpts;
+  const { ctx, projectContext, sitrep, extension } = opts as ProtoMakerSystemPromptOpts;
 
-  let prompt = AVA_BASE_PROMPT;
+  let prompt = PROTOMAKER_BASE_PROMPT;
 
   // Append legacy notes context sections if provided
   if (ctx) {

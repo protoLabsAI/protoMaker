@@ -55,6 +55,126 @@ function sanitizePrNumber(prNumber: unknown): number {
   return parsed;
 }
 
+/**
+ * Returns true if the file path is metadata-only (lock files, .automaker dir, markdown)
+ * and therefore should NOT count as source-code for the lock-only PR gate.
+ * Files explicitly listed in `filesToModify` are never considered metadata.
+ */
+function isMergeOnlyMetadata(filePath: string, filesToModify?: string[]): boolean {
+  if (filesToModify?.includes(filePath)) return false;
+  const basename = filePath.split('/').pop() ?? filePath;
+  if (['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml'].includes(basename)) return true;
+  if (basename === '.automaker-lock') return true;
+  if (filePath.startsWith('.automaker/')) return true;
+  if (basename === '.gitignore') return true;
+  if (basename.endsWith('.md')) return true;
+  return false;
+}
+
+// ────────────────────────── Scope Budget Enforcement ──────────────────────────
+
+/** Returns true if the file is a test file by name or path convention. */
+function isTestFile(filePath: string): boolean {
+  return (
+    /\.(test|spec)\.(ts|js|tsx|jsx)$/.test(filePath) ||
+    filePath.includes('/tests/') ||
+    filePath.includes('/test/') ||
+    filePath.includes('/__tests__/')
+  );
+}
+
+/**
+ * Returns true if filePath falls within the declared scope.
+ * Handles both exact matches and directory prefix matches.
+ */
+function isWithinDeclaredScope(filePath: string, filesToModify: string[]): boolean {
+  for (const declared of filesToModify) {
+    if (filePath === declared) return true;
+    if (filePath.startsWith(declared + '/')) return true;
+  }
+  return false;
+}
+
+/**
+ * Returns true if filePath is a test file whose directory matches or is under
+ * the directory of any declared file (adjacent test heuristic).
+ */
+function isAdjacentTestFile(filePath: string, filesToModify: string[]): boolean {
+  if (!isTestFile(filePath)) return false;
+  const fileDir = filePath.split('/').slice(0, -1).join('/');
+  return filesToModify.some((declared) => {
+    const declaredDir = declared.split('/').slice(0, -1).join('/');
+    return fileDir === declaredDir || fileDir.startsWith(declaredDir + '/');
+  });
+}
+
+export interface ScopeBudgetResult {
+  withinBudget: boolean;
+  outOfScopeFiles: string[];
+  toleratedFiles: string[];
+  outOfScopePercent: number;
+  totalSourceFiles: number;
+}
+
+const SCOPE_TEST_FILE_TOLERANCE = 2;
+const SCOPE_OUT_OF_BUDGET_PERCENT = 20;
+
+/**
+ * Analyzes whether a PR's changed files stay within the declared scope.
+ *
+ * Rules:
+ * - Metadata files (lock files, .automaker, .md, etc.) are excluded from analysis.
+ *   Files explicitly in filesToModify are never treated as metadata.
+ * - Up to SCOPE_TEST_FILE_TOLERANCE test files adjacent to declared files are tolerated
+ *   without counting against the budget.
+ * - If out-of-scope non-tolerated files exceed SCOPE_OUT_OF_BUDGET_PERCENT of total
+ *   source files, withinBudget is false.
+ */
+export function analyzeScopeBudget(
+  changedFiles: string[],
+  filesToModify: string[]
+): ScopeBudgetResult {
+  // Exclude metadata-only files (lock files, .automaker dir, .md) but preserve declared files.
+  const sourceFiles = changedFiles.filter((f) => !isMergeOnlyMetadata(f, filesToModify));
+
+  if (sourceFiles.length === 0 || filesToModify.length === 0) {
+    return {
+      withinBudget: true,
+      outOfScopeFiles: [],
+      toleratedFiles: [],
+      outOfScopePercent: 0,
+      totalSourceFiles: sourceFiles.length,
+    };
+  }
+
+  const outOfScope: string[] = [];
+  const tolerated: string[] = [];
+  let toleranceUsed = 0;
+
+  for (const file of sourceFiles) {
+    if (isWithinDeclaredScope(file, filesToModify)) continue;
+
+    // Adjacent test files are tolerated up to SCOPE_TEST_FILE_TOLERANCE
+    if (toleranceUsed < SCOPE_TEST_FILE_TOLERANCE && isAdjacentTestFile(file, filesToModify)) {
+      tolerated.push(file);
+      toleranceUsed++;
+    } else {
+      outOfScope.push(file);
+    }
+  }
+
+  const outOfScopePercent =
+    sourceFiles.length > 0 ? (outOfScope.length / sourceFiles.length) * 100 : 0;
+
+  return {
+    withinBudget: outOfScopePercent <= SCOPE_OUT_OF_BUDGET_PERCENT,
+    outOfScopeFiles: outOfScope,
+    toleratedFiles: tolerated,
+    outOfScopePercent,
+    totalSourceFiles: sourceFiles.length,
+  };
+}
+
 // ────────────────────────── ReviewProcessor ──────────────────────────
 
 /**
@@ -182,6 +302,10 @@ export class ReviewProcessor implements StateProcessor {
     });
 
     if (reviewState === 'approved') {
+      // Check scope budget: warn if PR contains files outside declared filesToModify.
+      // Non-blocking — warning only per deviation rule (auto-rollback risks losing legitimate changes).
+      await this.checkScopeBudget(ctx);
+
       // Run fresh-eyes review if enabled in workflow settings
       const freshEyesResult = await this.runFreshEyesReview(ctx);
       if (freshEyesResult === 'blocked') {
@@ -572,6 +696,85 @@ export class ReviewProcessor implements StateProcessor {
     } catch (err) {
       // Review failure must not block the pipeline — log and skip
       logger.warn('[REVIEW] Fresh-eyes review failed, proceeding without review', err);
+      return 'skipped';
+    }
+  }
+
+  /**
+   * Checks whether the PR's changed files stay within the feature's declared filesToModify.
+   *
+   * Warning mode: logs violations and posts a PR comment but never blocks the pipeline.
+   * Returns 'within_budget' | 'over_budget' | 'skipped'.
+   *
+   * Per deviation rule: auto-rollback at REVIEW phase can lose legitimate cross-cutting
+   * changes, so this check is intentionally non-blocking.
+   */
+  private async checkScopeBudget(
+    ctx: StateContext
+  ): Promise<'within_budget' | 'over_budget' | 'skipped'> {
+    const { filesToModify } = ctx.feature;
+    if (!filesToModify || filesToModify.length === 0) {
+      return 'skipped';
+    }
+
+    try {
+      const { stdout } = await execAsync(
+        `gh pr view ${ctx.prNumber} --json files --jq '[.files[].path]'`,
+        { cwd: ctx.projectPath, timeout: 15000 }
+      );
+
+      let changedFiles: string[] = [];
+      try {
+        changedFiles = JSON.parse(stdout.trim()) as string[];
+      } catch {
+        logger.warn('[REVIEW] Scope budget: failed to parse PR files JSON, skipping');
+        return 'skipped';
+      }
+
+      const result = analyzeScopeBudget(changedFiles, filesToModify);
+
+      if (!result.withinBudget) {
+        logger.warn('[REVIEW] Scope budget exceeded — PR contains out-of-scope files', {
+          featureId: ctx.feature.id,
+          prNumber: ctx.prNumber,
+          outOfScopeFiles: result.outOfScopeFiles,
+          outOfScopePercent: result.outOfScopePercent.toFixed(1),
+          toleratedFiles: result.toleratedFiles,
+          declaredScope: filesToModify,
+        });
+
+        const fileLines = result.outOfScopeFiles.map((f) => `- \`${f}\``).join('\n');
+        const scopeLines = filesToModify.map((f) => `- \`${f}\``).join('\n');
+        const commentBody =
+          `**Scope Budget Warning**\n\n` +
+          `This PR modifies ${result.outOfScopeFiles.length} file(s) outside the declared \`filesToModify\` scope ` +
+          `(${result.outOfScopePercent.toFixed(1)}% out-of-scope, threshold: 20%).\n\n` +
+          `Out-of-scope files:\n${fileLines}\n\n` +
+          `Declared scope:\n${scopeLines}\n\n` +
+          `This is a warning only — the PR will proceed to merge. ` +
+          `If these changes are intentional, update \`filesToModify\` in the feature spec.`;
+
+        try {
+          await execAsync(`gh pr comment ${ctx.prNumber} --body ${JSON.stringify(commentBody)}`, {
+            cwd: ctx.projectPath,
+            timeout: 15000,
+          });
+        } catch (commentErr) {
+          logger.warn('[REVIEW] Scope budget: failed to post warning comment', commentErr);
+        }
+
+        return 'over_budget';
+      }
+
+      logger.info('[REVIEW] Scope budget check passed', {
+        featureId: ctx.feature.id,
+        prNumber: ctx.prNumber,
+        totalSourceFiles: result.totalSourceFiles,
+        toleratedFiles: result.toleratedFiles,
+      });
+      return 'within_budget';
+    } catch (err) {
+      logger.warn('[REVIEW] Scope budget check failed, proceeding without enforcement', err);
       return 'skipped';
     }
   }
@@ -1040,12 +1243,68 @@ export class MergeProcessor implements StateProcessor {
         };
       }
 
+      // Source-code gate: verify the PR contains non-metadata changes.
+      // A PR containing only .automaker-lock or lock files indicates the agent ran in
+      // the wrong context (e.g. base-branch failure). Block and escalate instead of
+      // marking done, so the failure is visible on the board.
+      let hasSourceChanges = true; // default true so failures are non-fatal
+      try {
+        const { stdout: filesJson } = await execAsync(
+          `gh pr view ${ctx.prNumber} --json files --jq '[.files[].path]'`,
+          { cwd: ctx.projectPath, timeout: 15000 }
+        );
+        const changedFiles: string[] = JSON.parse(filesJson.trim());
+        // An empty diff (no files) is unusual but allowed through — treat as source change
+        if (changedFiles.length > 0) {
+          const sourceFiles = changedFiles.filter(
+            (f) => !isMergeOnlyMetadata(f, ctx.feature.filesToModify)
+          );
+          hasSourceChanges = sourceFiles.length > 0;
+          if (!hasSourceChanges) {
+            logger.warn(
+              `[MERGE] PR #${ctx.prNumber} contains only metadata files ` +
+                `(${changedFiles.length} file(s): ${changedFiles.slice(0, 5).join(', ')}). ` +
+                `Escalating — no source code landed.`
+            );
+          }
+        }
+      } catch (diffErr) {
+        // Non-fatal: if diff inspection fails, proceed as normal done.
+        logger.warn(
+          `[MERGE] PR #${ctx.prNumber} diff inspection failed — proceeding as done:`,
+          diffErr
+        );
+      }
+
       // Update feature status with merge timestamps
       const now = new Date().toISOString();
       const prReviewDurationMs =
         ctx.feature.prCreatedAt != null
           ? Date.now() - new Date(ctx.feature.prCreatedAt).getTime()
           : undefined;
+
+      if (!hasSourceChanges) {
+        // Lock-only merge: block the feature and escalate for human review.
+        const reason = `PR merged with lock-only changes — no source code landed (PR #${ctx.prNumber})`;
+        await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+          status: 'blocked',
+          statusChangeReason: reason,
+          prMergedAt: now,
+          ...(prReviewDurationMs !== undefined ? { prReviewDurationMs } : {}),
+        });
+        this.serviceContext.events.emit('feature:pr-merged' as EventType, {
+          featureId: ctx.feature.id,
+          prNumber: ctx.prNumber,
+          projectPath: ctx.projectPath,
+        });
+        logger.info(`[MERGE] PR #${ctx.prNumber} escalated — lock-only merge`);
+        ctx.escalationReason = reason;
+        return {
+          nextState: 'ESCALATE',
+          shouldContinue: true,
+          reason,
+        };
+      }
 
       await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
         status: 'done',

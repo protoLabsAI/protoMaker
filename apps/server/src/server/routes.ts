@@ -239,7 +239,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   });
 
   // A2A message handler — manual X-API-Key check inside (same pattern as /webhooks)
-  app.use('/a2a', createA2AHandlerRoutes(repoRoot, { planningService }));
+  app.use('/a2a', createA2AHandlerRoutes(repoRoot, { planningService, settingsService }));
 
   // World-state polling endpoints — unauthenticated, intended for workstacean HTTP collectors
   app.use('/api/world', createWorldRoutes(featureLoader, autoModeService, repoRoot));

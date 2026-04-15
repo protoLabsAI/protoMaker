@@ -31,6 +31,8 @@ import { getVersion } from '../../lib/version.js';
 import { ProviderFactory } from '../../providers/provider-factory.js';
 import { resolveModelString } from '@protolabsai/model-resolver';
 import type { PlanningService } from '../../services/planning-service.js';
+import type { SettingsService } from '../../services/settings-service.js';
+import { getWorkflowSettings } from '../../lib/settings-helpers.js';
 
 const logger = createLogger('A2ARoutes');
 
@@ -219,12 +221,11 @@ export const DECLARED_SKILL_IDS: ReadonlySet<string> = new Set(DECLARED_SKILLS.m
 function buildAgentCard(host: string) {
   const version = getVersion();
   return {
-    name: 'protomaker',
+    name: 'protoMaker',
     description:
-      'protoLabs.studio autonomous development team. ' +
+      'protoLabs.studio autonomous development agent. ' +
       'Multi-agent runtime coordinating board health, feature management, ' +
-      'auto-mode, planning, and project onboarding. Historically addressed ' +
-      'as "ava" — the underlying HTTP server identity is unchanged.',
+      'auto-mode, planning, and project onboarding.',
     url: `http://${host}`,
     version,
     provider: {
@@ -390,6 +391,12 @@ async function executeNativeSkill(
   skill: SkillMeta,
   userText: string
 ): Promise<string> {
+  if (!projectPath) {
+    throw new Error(
+      'executeNativeSkill requires a valid projectPath but received a falsy value. ' +
+        'Cross-project dispatches must include metadata.projectPath.'
+    );
+  }
   const resolvedModel = resolveModelString('claude-sonnet');
   const provider = ProviderFactory.getProviderForModel(resolvedModel);
   const stream = provider.executeQuery({
@@ -423,17 +430,42 @@ async function executeNativeSkill(
   return responseText;
 }
 
+// Default A2A skill execution settings — sized for multi-step skills like bug_triage
+// which involve sequential LLM + tool calls and routinely take 3–5 minutes.
+const A2A_DEFAULT_TIMEOUT_MS = 600_000; // 10 minutes
+const A2A_DEFAULT_MAX_RETRIES = 2;
+const A2A_DEFAULT_RETRY_BASE_DELAY_MS = 5_000;
+
+/** Simple promise-based sleep for retry backoff */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /** Call /api/chat and collect the SSE text-delta response. */
 async function callChatEndpoint(
   apiKey: string,
   projectPath: string,
   userText: string,
   skillOverride?: string,
-  correlationId?: string
+  correlationId?: string,
+  timeoutMs: number = A2A_DEFAULT_TIMEOUT_MS
 ): Promise<string> {
+  if (!projectPath) {
+    throw new Error(
+      `callChatEndpoint requires a valid projectPath but received "${String(projectPath)}". ` +
+        `Skill: ${skillOverride ?? 'none'}.`
+    );
+  }
   const baseUrl = `http://localhost:${process.env['PORT'] ?? 3008}`;
+
+  // AbortSignal.timeout() is built-in since Node 18 — creates a signal that
+  // automatically aborts after the given delay. A fresh signal is created per
+  // attempt so retries each get their own full timeout window.
+  const signal = AbortSignal.timeout(timeoutMs);
+
   const chatRes = await fetch(`${baseUrl}/api/chat`, {
     method: 'POST',
+    signal,
     headers: {
       'Content-Type': 'application/json',
       'X-API-Key': apiKey,
@@ -458,9 +490,65 @@ async function callChatEndpoint(
   return collectChatResponse(chatRes);
 }
 
+/**
+ * Call the chat endpoint with exponential-backoff retry.
+ * Retries on timeout (TimeoutError) and 5xx server errors — both are transient.
+ * Each retry gets a fresh AbortSignal so the full timeout window is available.
+ */
+async function callChatEndpointWithRetry(
+  apiKey: string,
+  projectPath: string,
+  userText: string,
+  skillOverride: string | undefined,
+  correlationId: string | undefined,
+  timeoutMs: number,
+  maxRetries: number,
+  retryBaseDelayMs: number
+): Promise<string> {
+  let lastError: Error | undefined;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    if (attempt > 0) {
+      const delay = retryBaseDelayMs * Math.pow(2, attempt - 1);
+      logger.info(
+        `A2A callChatEndpoint retry ${attempt}/${maxRetries} for skill="${skillOverride ?? 'none'}" after ${delay}ms (last error: ${lastError?.message ?? 'unknown'})`
+      );
+      await sleep(delay);
+    }
+    try {
+      return await callChatEndpoint(
+        apiKey,
+        projectPath,
+        userText,
+        skillOverride,
+        correlationId,
+        timeoutMs
+      );
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      // Retry only on timeout (TimeoutError name, set by AbortSignal.timeout) or 5xx
+      const isTransient =
+        lastError.name === 'TimeoutError' ||
+        lastError.message.startsWith('chat endpoint returned 5');
+      if (!isTransient || attempt === maxRetries) {
+        if (attempt < maxRetries) {
+          logger.warn(
+            `A2A callChatEndpoint non-transient error for skill="${skillOverride ?? 'none'}", not retrying: ${lastError.message}`
+          );
+        }
+        throw lastError;
+      }
+      logger.warn(
+        `A2A callChatEndpoint attempt ${attempt + 1} failed (transient: ${lastError.message}), will retry`
+      );
+    }
+  }
+  throw lastError ?? new Error('callChatEndpointWithRetry: unreachable');
+}
+
 /** Optional services for planning pipeline skills */
 export interface A2AHandlerDeps {
   planningService?: PlanningService;
+  settingsService?: SettingsService;
 }
 
 export function createA2AHandlerRoutes(projectPath: string, deps?: A2AHandlerDeps): Router {
@@ -751,6 +839,49 @@ export function createA2AHandlerRoutes(projectPath: string, deps?: A2AHandlerDep
       }
     }
 
+    // Guard: effectiveProjectPath must be a non-empty string. If the route-level
+    // projectPath was somehow undefined (e.g. misconfigured ServiceContainer) or
+    // the metadata override resolved to a falsy value, reject early with a clear
+    // error rather than passing undefined to downstream services (which causes
+    // Python NoneType crashes in the Claude Agent SDK).
+    if (!effectiveProjectPath) {
+      logger.error(
+        `A2A skill dispatch failed: effectiveProjectPath is falsy (route=${projectPath}, meta=${String(metaProjectPath)})`
+      );
+      res.status(200).json({
+        jsonrpc: '2.0',
+        id: rpcId,
+        result: {
+          id: randomUUID(),
+          contextId: contextId ?? randomUUID(),
+          status: { state: 'completed' },
+          artifacts: [
+            {
+              parts: [
+                {
+                  type: 'text',
+                  text: `ERROR: projectPath is missing — cannot execute skill "${skillOverride ?? 'chat'}". Ensure metadata.projectPath is set for cross-project dispatches.`,
+                },
+              ],
+            },
+          ],
+        },
+      });
+      return;
+    }
+
+    // Load A2A execution settings for this project — controls timeout and retry behavior.
+    // Defaults are generous (10 min timeout, 2 retries) to handle multi-step skills.
+    const workflowSettings = await getWorkflowSettings(
+      effectiveProjectPath,
+      deps?.settingsService,
+      '[A2AHandler]'
+    );
+    const a2aExec = workflowSettings.a2aSkillExecution ?? {};
+    const timeoutMs = a2aExec.timeoutMs ?? A2A_DEFAULT_TIMEOUT_MS;
+    const maxRetries = a2aExec.maxRetries ?? A2A_DEFAULT_MAX_RETRIES;
+    const retryBaseDelayMs = a2aExec.retryBaseDelayMs ?? A2A_DEFAULT_RETRY_BASE_DELAY_MS;
+
     try {
       let responseText: string;
 
@@ -766,21 +897,27 @@ export function createA2AHandlerRoutes(projectPath: string, deps?: A2AHandlerDep
           responseText = await executeNativeSkill(effectiveProjectPath, skill, userText);
         } else {
           // Skill not found, has no tool restrictions, or uses Ava board tools → /api/chat
-          responseText = await callChatEndpoint(
+          responseText = await callChatEndpointWithRetry(
             key,
             effectiveProjectPath,
             userText,
             skillOverride,
-            contextId
+            contextId,
+            timeoutMs,
+            maxRetries,
+            retryBaseDelayMs
           );
         }
       } else {
-        responseText = await callChatEndpoint(
+        responseText = await callChatEndpointWithRetry(
           key,
           effectiveProjectPath,
           userText,
           undefined,
-          contextId
+          contextId,
+          timeoutMs,
+          maxRetries,
+          retryBaseDelayMs
         );
       }
 

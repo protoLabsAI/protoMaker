@@ -3472,7 +3472,8 @@ After generating the revised spec, output:
       ) {
         const truncatedOutput =
           responseText.length > 0
-            ? responseText.slice(0, 500) + (responseText.length > 500 ? `… [${responseText.length} chars total]` : '')
+            ? responseText.slice(0, 500) +
+              (responseText.length > 500 ? `… [${responseText.length} chars total]` : '')
             : '(empty)';
         logger.warn(
           `[DegenerateSuccess] Feature ${featureId}: SDK reported success but made 0 API calls ` +
@@ -3633,6 +3634,18 @@ After generating the revised spec, output:
     // TRAJECTORY_CONTEXT section — lessons from similar past executions (all phases)
     if (trajectoryContext) {
       builder.addSection('TRAJECTORY_CONTEXT', trajectoryContext);
+    }
+
+    // FILE_SCOPE section — explicit file boundary when filesToModify is declared (EXECUTE phase only)
+    // Prevents agents from editing docs/tutorials, dashboard/, and adjacent test files that are
+    // outside the feature's declared scope, which causes PR collision clusters on parallel runs.
+    if (feature.filesToModify && feature.filesToModify.length > 0) {
+      const fileList = feature.filesToModify.map((f) => `- ${f}`).join('\n');
+      builder.addSection(
+        'FILE_SCOPE',
+        `\n## File Scope\n\nThis feature declares the following files as its intended scope:\n${fileList}\n\n**DO NOT edit any file outside this list.** Edits to undeclared files create merge conflicts with other concurrent agents and produce PR collision clusters.\n\nForbidden anti-patterns:\n- **improve-adjacent-docs**: Editing docs/tutorials/, dashboard/, or README files you encounter — unless they appear in the list above\n- **cross-file cleanup**: Formatting or style fixes in unrelated files you happen to read\n- **dashboard-version-bump**: Touching package.json or version files outside your declared scope\n\nIf you discover a file you genuinely need to edit that is NOT listed, limit the change to the minimum required and explain in your summary why it was necessary.\n`,
+        ['EXECUTE']
+      );
     }
 
     // CODING_STANDARDS section — implementation instructions (EXECUTE phase only)

@@ -342,19 +342,83 @@ describe('AutoModeService - createWorktreeForBranch base branch resolution', () 
     expect(worktreeAdd![1]).not.toContain('origin/dev');
   });
 
-  it('returns null and logs an error when epic branch does not exist on remote', async () => {
+  it('auto-pushes local epic branch to remote when remote tracking ref is missing', async () => {
     mockGetEffectivePrBaseBranch.mockResolvedValue('dev');
 
     mockExecFileAsync.mockImplementation(async (bin: string, args: string[]) => {
-      // Feature branch rev-parse → not found
+      // Feature branch rev-parse → not found (forces new-branch path)
       if (args.includes('rev-parse') && args.includes('feature/test-branch')) {
         throw new Error('unknown revision');
       }
-      // Epic branch rev-parse on remote → not found (simulates missing remote branch)
+      // Epic branch remote tracking ref → not found (simulates missing remote branch)
       if (args.includes('rev-parse') && args.some((a) => a.startsWith('origin/epic/'))) {
         throw new Error('unknown revision');
       }
-      // fetch and worktree add succeed
+      // Local epic branch check (epic/my-feature without origin/ prefix) → found
+      // All other calls (fetch, push, worktree add) succeed
+      return { stdout: 'abc123', stderr: '' };
+    });
+
+    const svc = makeService();
+    const epicFeature = makeFeature({
+      id: 'epic-123',
+      isEpic: true,
+      branchName: 'epic/my-feature',
+    });
+    (svc as any).featureLoader = {
+      get: vi.fn().mockResolvedValue(epicFeature),
+      update: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const childFeature = makeFeature({
+      id: 'feat-child-456',
+      epicId: 'epic-123',
+      isEpic: false,
+      branchName: 'feature/test-branch',
+    });
+
+    const result = await (svc as any).createWorktreeForBranch(
+      PROJECT_PATH,
+      BRANCH_NAME,
+      childFeature
+    );
+
+    // Auto-push of local branch should allow worktree creation to succeed
+    expect(result).not.toBeNull();
+
+    const calls = mockExecFileAsync.mock.calls as [string, string[]][];
+
+    // Verify the local branch was pushed to remote
+    const pushCall = calls.find(
+      ([bin, args]) => bin === 'git' && args.includes('push') && args.includes('epic/my-feature')
+    );
+    expect(pushCall).toBeDefined();
+
+    // Verify worktree was created from origin/epic/my-feature
+    const worktreeAdd = calls.find(
+      ([bin, args]) => bin === 'git' && args.includes('worktree') && args.includes('-B')
+    );
+    expect(worktreeAdd).toBeDefined();
+    expect(worktreeAdd![1]).toContain('origin/epic/my-feature');
+  });
+
+  it('auto-creates epic branch from prBaseBranch when branch is missing locally and remotely', async () => {
+    mockGetEffectivePrBaseBranch.mockResolvedValue('dev');
+
+    mockExecFileAsync.mockImplementation(async (bin: string, args: string[]) => {
+      // Feature branch rev-parse → not found (forces new-branch path)
+      if (args.includes('rev-parse') && args.includes('feature/test-branch')) {
+        throw new Error('unknown revision');
+      }
+      // Epic branch remote tracking ref → not found
+      if (args.includes('rev-parse') && args.some((a) => a.startsWith('origin/epic/'))) {
+        throw new Error('unknown revision');
+      }
+      // Local epic branch check → not found either
+      if (args.includes('rev-parse') && args.includes('epic/my-feature')) {
+        throw new Error('unknown revision');
+      }
+      // All other calls (fetch, push with refspec, worktree add) succeed
       return { stdout: '', stderr: '' };
     });
 
@@ -376,25 +440,86 @@ describe('AutoModeService - createWorktreeForBranch base branch resolution', () 
       branchName: 'feature/test-branch',
     });
 
-    // Missing epic branch on remote is a hard failure — the function returns null and logs an error
-    // rather than silently branching from the wrong base (which would produce a corrupt PR).
     const result = await (svc as any).createWorktreeForBranch(
       PROJECT_PATH,
       BRANCH_NAME,
       childFeature
     );
 
-    expect(result).toBeNull();
-    expect(mockLogger.error).toHaveBeenCalledWith(
-      expect.stringContaining(`Failed to create worktree for branch "${BRANCH_NAME}"`),
-      expect.objectContaining({ message: expect.stringContaining('not found on remote') })
-    );
+    // Auto-create from prBaseBranch should allow worktree creation to succeed
+    expect(result).not.toBeNull();
 
-    // No worktree add should have been attempted
     const calls = mockExecFileAsync.mock.calls as [string, string[]][];
+
+    // Verify push with refspec was called to create the remote branch from origin/dev
+    const pushCall = calls.find(
+      ([bin, args]) =>
+        bin === 'git' &&
+        args.includes('push') &&
+        args.some((a) => a.includes('refs/heads/epic/my-feature'))
+    );
+    expect(pushCall).toBeDefined();
+
+    // Verify worktree was created from origin/epic/my-feature
     const worktreeAdd = calls.find(
       ([bin, args]) => bin === 'git' && args.includes('worktree') && args.includes('-B')
     );
-    expect(worktreeAdd).toBeUndefined();
+    expect(worktreeAdd).toBeDefined();
+    expect(worktreeAdd![1]).toContain('origin/epic/my-feature');
+  });
+
+  it('returns null when epic branch is missing on remote and auto-push fails', async () => {
+    mockGetEffectivePrBaseBranch.mockResolvedValue('dev');
+
+    mockExecFileAsync.mockImplementation(async (bin: string, args: string[]) => {
+      // Feature branch rev-parse → not found (forces new-branch path)
+      if (args.includes('rev-parse') && args.includes('feature/test-branch')) {
+        throw new Error('unknown revision');
+      }
+      // Epic branch remote tracking ref → not found
+      if (args.includes('rev-parse') && args.some((a) => a.startsWith('origin/epic/'))) {
+        throw new Error('unknown revision');
+      }
+      // Local epic branch check → not found
+      if (args.includes('rev-parse') && args.includes('epic/my-feature')) {
+        throw new Error('unknown revision');
+      }
+      // Push fails (e.g. permission denied)
+      if (args.includes('push')) {
+        throw new Error('push rejected: permission denied to refs/heads/epic/my-feature');
+      }
+      return { stdout: '', stderr: '' };
+    });
+
+    const svc = makeService();
+    const epicFeature = makeFeature({
+      id: 'epic-123',
+      isEpic: true,
+      branchName: 'epic/my-feature',
+    });
+    (svc as any).featureLoader = {
+      get: vi.fn().mockResolvedValue(epicFeature),
+      update: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const childFeature = makeFeature({
+      id: 'feat-child-456',
+      epicId: 'epic-123',
+      isEpic: false,
+      branchName: 'feature/test-branch',
+    });
+
+    const result = await (svc as any).createWorktreeForBranch(
+      PROJECT_PATH,
+      BRANCH_NAME,
+      childFeature
+    );
+
+    // Auto-push failed → worktree creation should return null (escalates to blocked)
+    expect(result).toBeNull();
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      expect.stringContaining(`Failed to create worktree for branch "${BRANCH_NAME}"`),
+      expect.any(Error)
+    );
   });
 });
