@@ -703,10 +703,10 @@ export async function remediateFormatFailure(
       scratchDir = await worker.createScratchDir();
       workDir = scratchDir;
 
-      await execAsync(
-        `gh pr checkout ${prNumber} --repo ${repository} --force`,
-        { cwd: scratchDir, timeout: 60000 }
-      );
+      await execAsync(`gh pr checkout ${prNumber} --repo ${repository} --force`, {
+        cwd: scratchDir,
+        timeout: 60000,
+      });
     } catch (checkoutErr) {
       if (scratchDir) await worker.cleanup(scratchDir);
       return {
@@ -722,7 +722,10 @@ export async function remediateFormatFailure(
     // ------------------------------------------------------------------
     // Run prettier on changed files
     // ------------------------------------------------------------------
-    logger.info('[FormatRemediation] Running prettier', { prNumber, fileCount: prChangedFiles.length });
+    logger.info('[FormatRemediation] Running prettier', {
+      prNumber,
+      fileCount: prChangedFiles.length,
+    });
 
     let filesFixed: string[];
     try {

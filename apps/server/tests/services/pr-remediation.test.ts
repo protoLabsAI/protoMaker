@@ -97,11 +97,13 @@ function makeEventEmitter() {
  *
  * `overrides` maps substrings to either a stdout string or an Error to throw.
  */
-function setupExecMock(
-  overrides: Record<string, string | Error> = {}
-): void {
+function setupExecMock(overrides: Record<string, string | Error> = {}): void {
   mockExec.mockImplementation(
-    (cmd: string, _opts: unknown, cb: (err: Error | null, result: { stdout: string; stderr: string }) => void) => {
+    (
+      cmd: string,
+      _opts: unknown,
+      cb: (err: Error | null, result: { stdout: string; stderr: string }) => void
+    ) => {
       // Check each override key as a substring of cmd
       for (const [pattern, response] of Object.entries(overrides)) {
         if (cmd.includes(pattern)) {
@@ -305,7 +307,11 @@ describe('successful remediation', () => {
       'gh pr diff': 'src/index.ts\nsrc/utils.ts\nsrc/helpers.ts',
     });
     mockWorker.runPrettier.mockResolvedValue(['src/index.ts', 'src/utils.ts', 'src/helpers.ts']);
-    mockWorker.getModifiedFiles.mockResolvedValue(['src/index.ts', 'src/utils.ts', 'src/helpers.ts']);
+    mockWorker.getModifiedFiles.mockResolvedValue([
+      'src/index.ts',
+      'src/utils.ts',
+      'src/helpers.ts',
+    ]);
     mockWorker.commitRemediationFix.mockResolvedValue('sha-multi');
 
     const result = await remediateFormatFailure({
@@ -534,7 +540,7 @@ describe('regression: synthesized unformatted PR', () => {
     // Verify commitRemediationFix was called with the expected arguments
     expect(mockWorker.commitRemediationFix).toHaveBeenCalledWith(
       expect.any(String), // workDir (worktree path)
-      100,                // prNumber
+      100, // prNumber
       ['src/badly-formatted.ts']
     );
     // Verify push was called
@@ -597,10 +603,7 @@ describe('GitHubWebhookHandler event filtering', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     events = makeEventEmitter();
-    handler = new GitHubWebhookHandler(
-      events as unknown as EventEmitter,
-      '/project'
-    );
+    handler = new GitHubWebhookHandler(events as unknown as EventEmitter, '/project');
     handler.start();
   });
 
@@ -672,9 +675,7 @@ describe('GitHubWebhookHandler event filtering', () => {
     setupExecMock({
       'gh api': JSON.stringify({
         total_count: 1,
-        check_runs: [
-          { id: 1, name: 'Lint UI', status: 'completed', conclusion: 'failure' },
-        ],
+        check_runs: [{ id: 1, name: 'Lint UI', status: 'completed', conclusion: 'failure' }],
       }),
     });
 

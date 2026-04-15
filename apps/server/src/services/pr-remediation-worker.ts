@@ -102,11 +102,7 @@ export class PrRemediationWorker {
    * Uses triple-dot diff to show only commits unique to headBranch since it
    * diverged from baseBranch.
    */
-  async getChangedFiles(
-    cwd: string,
-    baseBranch: string,
-    headBranch: string
-  ): Promise<string[]> {
+  async getChangedFiles(cwd: string, baseBranch: string, headBranch: string): Promise<string[]> {
     // Ensure base is available
     await this.runGitSafe(`fetch origin ${baseBranch} --depth=1`, { cwd, timeout: 30000 });
 
@@ -125,11 +121,7 @@ export class PrRemediationWorker {
    *
    * Returns the list of files that were actually modified.
    */
-  async runPrettier(
-    prettierBin: string,
-    files: string[],
-    cwd: string
-  ): Promise<string[]> {
+  async runPrettier(prettierBin: string, files: string[], cwd: string): Promise<string[]> {
     if (files.length === 0) return [];
 
     // Quote each file path for safety
@@ -168,11 +160,7 @@ export class PrRemediationWorker {
    *
    * Returns the new commit SHA.
    */
-  async commitRemediationFix(
-    cwd: string,
-    prNumber: number,
-    filesFixed: string[]
-  ): Promise<string> {
+  async commitRemediationFix(cwd: string, prNumber: number, filesFixed: string[]): Promise<string> {
     // Stage only the files that were modified
     const quotedFiles = filesFixed.map((f) => JSON.stringify(f)).join(' ');
     await execAsync(`git add -- ${quotedFiles}`, { cwd, timeout: 10000 });

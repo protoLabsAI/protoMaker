@@ -113,10 +113,13 @@ export class GitHubWebhookHandler {
     );
 
     if (!formatCheckFailed) {
-      logger.debug('[GitHubWebhookHandler] Format check did not fail — skipping format remediation', {
-        prNumber,
-        headBranch,
-      });
+      logger.debug(
+        '[GitHubWebhookHandler] Format check did not fail — skipping format remediation',
+        {
+          prNumber,
+          headBranch,
+        }
+      );
       return;
     }
 
@@ -193,7 +196,9 @@ export class GitHubWebhookHandler {
         );
         checkRuns = JSON.parse(stdout) as GitHubCheckRunsListResponse;
       } else {
-        logger.debug('[GitHubWebhookHandler] No checksUrl or checkSuiteId — cannot verify check name');
+        logger.debug(
+          '[GitHubWebhookHandler] No checksUrl or checkSuiteId — cannot verify check name'
+        );
         return false;
       }
 
