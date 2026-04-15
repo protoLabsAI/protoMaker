@@ -29,7 +29,7 @@ export function SettingsHeader({
           {onToggleNavigation && (
             <button
               onClick={onToggleNavigation}
-              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:hidden"
+              className="rounded-md p-1.5 min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:hidden touch-manipulation"
               aria-label={showNavigation ? 'Close navigation menu' : 'Open navigation menu'}
             >
               {showNavigation ? <X className="size-4" /> : <Menu className="size-4" />}

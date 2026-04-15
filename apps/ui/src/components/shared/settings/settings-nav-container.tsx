@@ -47,7 +47,7 @@ export function SettingsNavContainer({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+            className="h-11 w-11 p-0 text-muted-foreground hover:text-foreground touch-manipulation"
             aria-label="Close navigation menu"
           >
             <X className="w-4 h-4" />
