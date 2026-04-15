@@ -58,6 +58,12 @@ get_repo_info() {
 }
 
 # Apply repository-level settings
+#
+# Merge strategy rules (aligned with CLAUDE.md branch-strategy):
+# - squash: enabled (feature PRs to dev)
+# - merge: enabled (dev->staging and staging->main promotions MUST use merge commits,
+#   otherwise squash breaks the DAG and next promotion produces synthetic conflicts)
+# - rebase: disabled (creates confusion alongside merge)
 apply_repo_settings() {
     log_info "Applying repository-level settings..."
 
@@ -66,7 +72,7 @@ apply_repo_settings() {
         -H "Accept: application/vnd.github+json" \
         -H "X-GitHub-Api-Version: 2022-11-28" \
         "/repos/${REPO_OWNER}/${REPO_NAME}" \
-        -f allow_merge_commit=false \
+        -f allow_merge_commit=true \
         -f allow_rebase_merge=false \
         -f allow_squash_merge=true \
         -f delete_branch_on_merge=true \
@@ -137,11 +143,12 @@ verify_settings() {
 
     echo "$SETTINGS" | jq '.'
 
-    # Check if settings match expectations
+    # Check if settings match expectations (merge + squash enabled, rebase disabled)
     local MERGE_COMMIT=$(echo "$SETTINGS" | jq -r '.allow_merge_commit')
+    local SQUASH_MERGE=$(echo "$SETTINGS" | jq -r '.allow_squash_merge')
     local REBASE_MERGE=$(echo "$SETTINGS" | jq -r '.allow_rebase_merge')
 
-    if [[ "$MERGE_COMMIT" == "false" ]] && [[ "$REBASE_MERGE" == "false" ]]; then
+    if [[ "$MERGE_COMMIT" == "true" ]] && [[ "$SQUASH_MERGE" == "true" ]] && [[ "$REBASE_MERGE" == "false" ]]; then
         log_info "✓ Repository settings verified"
     else
         log_warn "⚠ Repository settings may not have applied correctly"
