@@ -3470,15 +3470,24 @@ After generating the revised spec, output:
         responseText.length < DEGENERATE_OUTPUT_CHARS &&
         elapsedRuntimeMs < DEGENERATE_RUNTIME_MS
       ) {
+        const truncatedOutput =
+          responseText.length > 0
+            ? responseText.slice(0, 500) + (responseText.length > 500 ? `… [${responseText.length} chars total]` : '')
+            : '(empty)';
         logger.warn(
           `[DegenerateSuccess] Feature ${featureId}: SDK reported success but made 0 API calls ` +
             `(${responseText.length} chars, ${Math.round(elapsedRuntimeMs / 1000)}s). ` +
-            `Likely CLI init crash. Treating as failure.`
+            `Likely CLI init crash. Treating as failure.\nRaw output: ${truncatedOutput}`
         );
+        const rawOutputSuffix =
+          responseText.length > 0
+            ? `\nRaw output (${responseText.length} chars): ${responseText.slice(0, 200)}${responseText.length > 200 ? '…' : ''}`
+            : '';
         throw new Error(
           `SDK init failure: process exited cleanly but made 0 API calls ` +
             `(${responseText.length} chars output, ${Math.round(elapsedRuntimeMs / 1000)}s runtime). ` +
-            `Possible cause: invalid content in feature description caused CLI crash before any API call.`
+            `Possible cause: invalid content in feature description caused CLI crash before any API call.` +
+            rawOutputSuffix
         );
       }
 
@@ -3577,7 +3586,20 @@ After generating the revised spec, output:
     // an argument-parsing or stdin-sanitization fault in the Claude Code CLI during its
     // initialization phase, producing a process exit-code-1 crash with $0 cost and ~225 chars
     // of output — the "degenerate success" bug (issue #3140).
-    const sanitizedDescription = (feature.description ?? '').replace(/<[^>]*>/g, '');
+    const rawDescription = feature.description ?? '';
+    const sanitizedDescription = rawDescription.replace(/<[^>]*>/g, '');
+    // Log a warning when HTML was present — this is the known trigger for the exit-code-1
+    // degenerate-success crash. Logging here gives operators a diagnostic breadcrumb before
+    // the agent run, even though the tags will be stripped before reaching the SDK.
+    if (sanitizedDescription !== rawDescription) {
+      const strippedChars = rawDescription.length - sanitizedDescription.length;
+      logger.warn(
+        `[HTMLSanitization] Feature ${feature.id}: description contained HTML that was stripped ` +
+          `(${strippedChars} chars removed, ${rawDescription.length} → ${sanitizedDescription.length}). ` +
+          `Raw HTML in descriptions triggers Claude Code CLI init crash (exit-code-1 / degenerate-success). ` +
+          `Sanitization applied before SDK handoff.`
+      );
+    }
     builder.addSection(
       'FEATURE_HEADER',
       `## Feature Implementation Task\n\n**Feature ID:** ${feature.id}\n**Title:** ${title}\n**Description:** ${sanitizedDescription}\n`
