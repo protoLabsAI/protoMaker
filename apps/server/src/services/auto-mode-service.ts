@@ -3236,17 +3236,60 @@ Format your response as a structured markdown document.`;
                 );
               }
             } catch (epicBranchErr) {
-              // Epic branch is missing on remote. Falling back to origin/<prBaseBranch>
-              // would branch from the wrong base — the agent would commit to the wrong
-              // history and likely produce a lock-only PR that auto-merges without source
-              // changes. Fail loudly so the feature is blocked rather than silently corrupted.
-              const epicBranchName =
-                epicFeature?.branchName ?? `(unknown, epicId: ${feature.epicId})`;
-              throw new Error(
-                `Epic base branch '${epicBranchName}' not found on remote for feature ` +
-                  `${feature.id}. Push the epic branch before starting child features. ` +
-                  `Original error: ${epicBranchErr instanceof Error ? epicBranchErr.message : String(epicBranchErr)}`
+              // Epic branch is missing on remote. Auto-create and push it so child features
+              // can branch from the correct base without manual intervention.
+              if (!epicFeature?.branchName) {
+                throw new Error(
+                  `Epic '${feature.epicId}' has no branch name for feature ${feature.id}. ` +
+                    `Cannot auto-push epic branch. ` +
+                    `Original error: ${epicBranchErr instanceof Error ? epicBranchErr.message : String(epicBranchErr)}`
+                );
+              }
+              const epicBranch = epicFeature.branchName;
+              logger.info(
+                `[createWorktreeForBranch] Epic branch '${epicBranch}' not found on remote — attempting auto-push`,
+                { featureId: feature.id }
               );
+              // Check if the epic branch exists locally (from a prior checkout or creation)
+              let epicBranchExistsLocally = false;
+              try {
+                await execFileAsync('git', ['rev-parse', '--verify', epicBranch], {
+                  cwd: projectPath,
+                });
+                epicBranchExistsLocally = true;
+              } catch {
+                // Branch doesn't exist locally either
+              }
+              if (epicBranchExistsLocally) {
+                // Push the existing local branch to remote
+                await execFileAsync('git', ['push', 'origin', epicBranch], {
+                  cwd: projectPath,
+                  env: gitEnv,
+                });
+                logger.info(
+                  `[createWorktreeForBranch] Auto-pushed local epic branch '${epicBranch}' to remote`
+                );
+              } else {
+                // Create the epic branch on remote from origin/<prBaseBranch> without a local checkout
+                await execFileAsync(
+                  'git',
+                  [
+                    'push',
+                    'origin',
+                    `origin/${resolvedPrBaseBranch}:refs/heads/${epicBranch}`,
+                  ],
+                  { cwd: projectPath, env: gitEnv }
+                );
+                logger.info(
+                  `[createWorktreeForBranch] Auto-created epic branch '${epicBranch}' on remote from origin/${resolvedPrBaseBranch}`
+                );
+              }
+              // Fetch the newly pushed branch to update local tracking refs
+              await execFileAsync('git', ['fetch', 'origin', epicBranch], {
+                cwd: projectPath,
+                env: gitEnv,
+              });
+              baseBranch = `origin/${epicBranch}`;
             }
           }
 
