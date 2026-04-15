@@ -7,6 +7,7 @@
  * - webhook-health (full tier, 6h): Warns when PRs in review have no CI events after grace period
  * - post-merge-reconciler (critical tier, 5min): Poll-based fallback for missed PR merge webhooks
  * - done-worktree-cleanup (full tier, 6h): Removes worktrees for done features and orphaned worktrees
+ * - epic-adoption-sweep (full tier + 1h poll): Links orphaned features to parent epics via bracket-prefix matching
  */
 
 import { createLogger } from '@protolabsai/utils';
@@ -19,6 +20,7 @@ import type { ServiceContainer } from '../server/services.js';
 import { WebhookHealthCheck } from './maintenance/checks/webhook-health-check.js';
 import { PostMergeReconcilerCheck } from './maintenance/checks/post-merge-reconciler-check.js';
 import { DoneWorktreeCleanupCheck } from './maintenance/checks/done-worktree-cleanup-check.js';
+import { EpicAdoptionSweepCheck } from './maintenance/checks/epic-adoption-sweep-check.js';
 
 const logger = createLogger('Server:Wiring');
 
@@ -180,11 +182,15 @@ export function register(container: ServiceContainer): void {
     events
   );
 
+  // Epic adoption sweep (full tier + dedicated 1h poll) — links orphaned features to parent epics
+  const epicAdoptionSweepCheck = new EpicAdoptionSweepCheck(featureLoader);
+
   maintenanceOrchestrator.register(boardHealthCheck);
   maintenanceOrchestrator.register(resourceUsageCheck);
   maintenanceOrchestrator.register(webhookHealthCheck);
   maintenanceOrchestrator.register(postMergeReconcilerCheck);
   maintenanceOrchestrator.register(doneWorktreeCleanupCheck);
+  maintenanceOrchestrator.register(epicAdoptionSweepCheck);
 
   // Wire TopicBus for hierarchical event routing of sweep results
   if (container.topicBus) {
@@ -225,7 +231,26 @@ export function register(container: ServiceContainer): void {
     { category: 'sync' }
   );
 
+  // Dedicated 1-hour poll interval for the epic adoption sweep so that orphaned features
+  // created before the auto-adopt guard landed get linked to their parent epics within
+  // a reasonable window (the full maintenance tier runs every 6 hours which is too slow
+  // for active auto-mode sessions generating many child features in quick succession).
+  schedulerService.registerInterval(
+    'epic-adoption-sweep:poll',
+    'Epic Adoption Sweep Poll (1h)',
+    60 * 60_000,
+    async () => {
+      const paths = new Set<string>();
+      paths.add(repoRoot);
+      for (const p of autoModeService.getActiveAutoLoopProjects()) {
+        paths.add(p);
+      }
+      await epicAdoptionSweepCheck.run({ projectPaths: Array.from(paths) });
+    },
+    { category: 'maintenance' }
+  );
+
   logger.info(
-    'MaintenanceOrchestrator started with board-health, resource-usage, webhook-health, post-merge-reconciler, and done-worktree-cleanup checks'
+    'MaintenanceOrchestrator started with board-health, resource-usage, webhook-health, post-merge-reconciler, done-worktree-cleanup, and epic-adoption-sweep checks'
   );
 }

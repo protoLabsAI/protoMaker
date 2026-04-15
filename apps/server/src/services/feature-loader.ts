@@ -48,6 +48,65 @@ const logger = createLogger('FeatureLoader');
 // Re-export Feature type for convenience
 export type { Feature };
 
+/**
+ * Extract the bracket keyword from a feature title used for epic auto-adoption matching.
+ *
+ * Recognized patterns (keyword is the alphabetic prefix before the version number):
+ *   [Arc 1.2]        → "Arc"
+ *   [TR-1.2]         → "TR"
+ *   [DD-1.2]         → "DD"
+ *   [Epic-Name 1.2]  → "Epic-Name"
+ *
+ * Returns null when the title does not start with a recognized bracket pattern.
+ */
+export function extractEpicKeyword(title: string): string | null {
+  // Match [PREFIX SEPARATOR VERSION] at the start of the title
+  // PREFIX: one or more words joined by hyphens (letters/digits only within each word)
+  // SEPARATOR: a single space or dash between the prefix and the version number
+  // VERSION: one or more dot-separated digit groups (e.g. 1, 0.1, 2.3.4)
+  const match = title
+    .trim()
+    .match(/^\[([A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*)[\s\-](\d+(?:\.\d+)+)\]/);
+  if (!match) return null;
+  return match[1];
+}
+
+/**
+ * Find the best candidate parent epic for auto-adoption given a child feature title.
+ *
+ * Matching rules:
+ * - Extracts the keyword from the bracket prefix (e.g., "Arc" from "[Arc 1.2] xyz")
+ * - Searches active (non-archived) epics for a title that contains the keyword (case-insensitive)
+ *   or whose slugified title contains the slugified keyword
+ * - Returns the candidate only when exactly ONE epic matches — ambiguous matches are skipped
+ *   to avoid mis-assignment
+ *
+ * @param title - Title of the child feature being created
+ * @param features - All features in the project (pre-loaded)
+ * @returns The matching epic Feature, or null if no unique match found
+ */
+export function findCandidateEpic(title: string, features: Feature[]): Feature | null {
+  if (!title) return null;
+
+  const keyword = extractEpicKeyword(title);
+  if (!keyword || keyword.length < 2) return null;
+
+  const keywordLower = keyword.toLowerCase();
+  const keywordSlug = slugify(keyword);
+
+  const epics = features.filter((f) => f.isEpic && !f.archived);
+
+  const candidates = epics.filter((epic) => {
+    if (!epic.title) return false;
+    const epicTitleLower = epic.title.toLowerCase();
+    const epicSlug = slugify(epic.title);
+    return epicTitleLower.includes(keywordLower) || epicSlug.includes(keywordSlug);
+  });
+
+  // Only auto-adopt when exactly one epic matches — avoid wrong assignment on ambiguous results
+  return candidates.length === 1 ? candidates[0] : null;
+}
+
 export class FeatureLoader implements FeatureStore {
   private integrityWatchdog: DataIntegrityWatchdogService | null = null;
   private events: EventEmitter | null = null;
@@ -661,6 +720,19 @@ export class FeatureLoader implements FeatureStore {
     }
 
     return duplicates;
+  }
+
+  /**
+   * Find a candidate parent epic for auto-adoption based on the feature title's bracket pattern.
+   * Loads all features for the project and delegates to the standalone findCandidateEpic function.
+   *
+   * @param projectPath - Path to the project
+   * @param title - Title of the child feature being created
+   * @returns The matching epic Feature, or null if no unique match found
+   */
+  async findCandidateEpicForTitle(projectPath: string, title: string): Promise<Feature | null> {
+    const features = await this.getAll(projectPath);
+    return findCandidateEpic(title, features);
   }
 
   /**
