@@ -47,8 +47,14 @@ vi.mock('@protolabsai/platform', () => ({
 }));
 
 vi.mock('@protolabsai/dependency-resolver', () => ({
-  resolveDependencies: vi.fn(),
-  areDependenciesSatisfied: vi.fn(),
+  resolveDependencies: vi.fn((features: any[]) => ({
+    orderedFeatures: features,
+    missingDependencies: new Map(),
+    downstreamImpact: new Map(),
+  })),
+  areDependenciesSatisfied: vi.fn(() => true),
+  checkExternalDependencies: vi.fn(() => Promise.resolve({ satisfied: true, results: [] })),
+  buildLocalForeignFeatureFetcher: vi.fn(() => vi.fn()),
 }));
 
 vi.mock('@protolabsai/types', async () => {
@@ -60,6 +66,12 @@ vi.mock('@protolabsai/types', async () => {
     normalizeFeatureStatus: vi.fn((s: string) => s),
   };
 });
+
+vi.mock('child_process', () => ({
+  exec: vi.fn((_cmd: string, _opts: unknown, cb?: Function) => {
+    if (cb) cb(new Error('mock'), { stdout: '', stderr: '' });
+  }),
+}));
 
 vi.mock('@/lib/worktree-lock.js', () => ({
   isWorktreeLocked: vi.fn(),

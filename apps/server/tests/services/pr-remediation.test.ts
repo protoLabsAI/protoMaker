@@ -21,27 +21,37 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ---------------------------------------------------------------------------
 
 // Mock the PrRemediationWorker class so we can control each method in isolation
-const mockWorker = {
-  createScratchDir: vi.fn(),
-  runGit: vi.fn(),
-  runGitSafe: vi.fn(),
-  getChangedFiles: vi.fn(),
-  runPrettier: vi.fn(),
-  getModifiedFiles: vi.fn(),
-  commitRemediationFix: vi.fn(),
-  pushBranch: vi.fn(),
-  hasExistingRemediationCommit: vi.fn(),
-  cleanup: vi.fn(),
-};
-
+const { mockWorker, MockPrRemediationWorker } = vi.hoisted(() => {
+  const _mockWorker = {
+    createScratchDir: vi.fn(),
+    runGit: vi.fn(),
+    runGitSafe: vi.fn(),
+    getChangedFiles: vi.fn(),
+    runPrettier: vi.fn(),
+    getModifiedFiles: vi.fn(),
+    commitRemediationFix: vi.fn(),
+    pushBranch: vi.fn(),
+    hasExistingRemediationCommit: vi.fn(),
+    cleanup: vi.fn(),
+  };
+  const _MockClass = vi.fn(function (this: any) {
+    return _mockWorker;
+  });
+  return { mockWorker: _mockWorker, MockPrRemediationWorker: _MockClass };
+});
 vi.mock('../../src/services/pr-remediation-worker.js', () => ({
-  PrRemediationWorker: vi.fn().mockImplementation(() => mockWorker),
+  PrRemediationWorker: MockPrRemediationWorker,
 }));
 
 // Mock child_process.exec — used by promisify() inside remediateFormatFailure
-const mockExec = vi.fn();
+const mockExec = vi.hoisted(() => vi.fn());
 vi.mock('node:child_process', () => ({
   exec: mockExec,
+  execFile: vi.fn(),
+  spawn: vi.fn(),
+  fork: vi.fn(),
+  execSync: vi.fn(),
+  execFileSync: vi.fn(),
 }));
 
 // Mock fs/promises for PrRemediationWorker base class tests

@@ -64,14 +64,16 @@ vi.mock('@/lib/prometheus.js', () => ({
 }));
 
 vi.mock('@/services/quarantine-service.js', () => ({
-  QuarantineService: vi.fn().mockImplementation(() => ({
-    process: vi.fn().mockResolvedValue({
-      approved: true,
-      sanitizedTitle: 'sanitized-title',
-      sanitizedDescription: 'sanitized-description',
-      entry: { id: 'q-1', result: 'approved', stage: 'passed', violations: [] },
-    }),
-  })),
+  QuarantineService: class MockQuarantineService {
+    process(input: { title: string; description: string }) {
+      return Promise.resolve({
+        approved: true,
+        sanitizedTitle: input.title,
+        sanitizedDescription: input.description,
+        entry: { id: 'q-1', result: 'approved', stage: 'passed', violations: [] },
+      });
+    }
+  },
 }));
 
 // --- Imports ---
@@ -158,7 +160,7 @@ describe('findCandidateEpic', () => {
 
   it('returns null when no epic title matches the keyword', () => {
     const features = [arcEpic];
-    expect(findCandidateEpic('[TR-1.2] Unrelated task', features)).toBeNull();
+    expect(findCandidateEpic('[QZ-1.2] Unrelated task', features)).toBeNull();
   });
 
   it('returns null when multiple epics match the keyword (ambiguous)', () => {
@@ -264,7 +266,7 @@ describe('POST /features/create — epic auto-adoption', () => {
     req.body = {
       projectPath: '/test/project',
       feature: {
-        title: '[TR-1.0] Unrelated task',
+        title: '[QZ-1.0] Unrelated task',
         description: 'Something unrelated',
       },
     };
