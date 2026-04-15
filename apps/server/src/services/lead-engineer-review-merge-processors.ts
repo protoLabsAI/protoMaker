@@ -55,6 +55,22 @@ function sanitizePrNumber(prNumber: unknown): number {
   return parsed;
 }
 
+/**
+ * Returns true if the file path is metadata-only (lock files, .automaker dir, markdown)
+ * and therefore should NOT count as source-code for the lock-only PR gate.
+ * Files explicitly listed in `filesToModify` are never considered metadata.
+ */
+function isMergeOnlyMetadata(filePath: string, filesToModify?: string[]): boolean {
+  if (filesToModify?.includes(filePath)) return false;
+  const basename = filePath.split('/').pop() ?? filePath;
+  if (['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml'].includes(basename)) return true;
+  if (basename === '.automaker-lock') return true;
+  if (filePath.startsWith('.automaker/')) return true;
+  if (basename === '.gitignore') return true;
+  if (basename.endsWith('.md')) return true;
+  return false;
+}
+
 // ────────────────────────── ReviewProcessor ──────────────────────────
 
 /**
@@ -1040,12 +1056,68 @@ export class MergeProcessor implements StateProcessor {
         };
       }
 
+      // Source-code gate: verify the PR contains non-metadata changes.
+      // A PR containing only .automaker-lock or lock files indicates the agent ran in
+      // the wrong context (e.g. base-branch failure). Block and escalate instead of
+      // marking done, so the failure is visible on the board.
+      let hasSourceChanges = true; // default true so failures are non-fatal
+      try {
+        const { stdout: filesJson } = await execAsync(
+          `gh pr view ${ctx.prNumber} --json files --jq '[.files[].path]'`,
+          { cwd: ctx.projectPath, timeout: 15000 }
+        );
+        const changedFiles: string[] = JSON.parse(filesJson.trim());
+        // An empty diff (no files) is unusual but allowed through — treat as source change
+        if (changedFiles.length > 0) {
+          const sourceFiles = changedFiles.filter(
+            (f) => !isMergeOnlyMetadata(f, ctx.feature.filesToModify)
+          );
+          hasSourceChanges = sourceFiles.length > 0;
+          if (!hasSourceChanges) {
+            logger.warn(
+              `[MERGE] PR #${ctx.prNumber} contains only metadata files ` +
+                `(${changedFiles.length} file(s): ${changedFiles.slice(0, 5).join(', ')}). ` +
+                `Escalating — no source code landed.`
+            );
+          }
+        }
+      } catch (diffErr) {
+        // Non-fatal: if diff inspection fails, proceed as normal done.
+        logger.warn(
+          `[MERGE] PR #${ctx.prNumber} diff inspection failed — proceeding as done:`,
+          diffErr
+        );
+      }
+
       // Update feature status with merge timestamps
       const now = new Date().toISOString();
       const prReviewDurationMs =
         ctx.feature.prCreatedAt != null
           ? Date.now() - new Date(ctx.feature.prCreatedAt).getTime()
           : undefined;
+
+      if (!hasSourceChanges) {
+        // Lock-only merge: block the feature and escalate for human review.
+        const reason = `PR merged with lock-only changes — no source code landed (PR #${ctx.prNumber})`;
+        await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+          status: 'blocked',
+          statusChangeReason: reason,
+          prMergedAt: now,
+          ...(prReviewDurationMs !== undefined ? { prReviewDurationMs } : {}),
+        });
+        this.serviceContext.events.emit('feature:pr-merged' as EventType, {
+          featureId: ctx.feature.id,
+          prNumber: ctx.prNumber,
+          projectPath: ctx.projectPath,
+        });
+        logger.info(`[MERGE] PR #${ctx.prNumber} escalated — lock-only merge`);
+        ctx.escalationReason = reason;
+        return {
+          nextState: 'ESCALATE',
+          shouldContinue: true,
+          reason,
+        };
+      }
 
       await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
         status: 'done',
