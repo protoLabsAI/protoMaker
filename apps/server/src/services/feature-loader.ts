@@ -34,6 +34,7 @@ import {
   getFeatureBackupDir,
   getAppSpecPath,
   ensureAutomakerDir,
+  isValidBranchName,
 } from '@protolabsai/platform';
 import { addImplementedFeature, type ImplementedFeature } from '../lib/xml-extractor.js';
 import { debugLog } from '../lib/debug-log.js';
@@ -304,7 +305,8 @@ export class FeatureLoader implements FeatureStore {
   branchPrefixForCategory(category: string | undefined): string {
     if (!category) return 'feature';
     const c = category.toLowerCase();
-    if (c === 'bug' || c === 'fix') return 'fix';
+    if (c === 'bug' || c === 'fix' || c === 'bugfix' || c === 'bug-fix' || c === 'hotfix')
+      return 'fix';
     if (c === 'ops' || c === 'chore' || c === 'maintenance') return 'chore';
     if (c === 'docs' || c === 'documentation') return 'docs';
     return 'feature';
@@ -314,18 +316,59 @@ export class FeatureLoader implements FeatureStore {
    * Generate a branch name from a feature title, feature ID, and optional category.
    * Appends a short fragment derived from the featureId to guarantee
    * uniqueness even when multiple features share a long common title prefix.
-   * Uses the category to select the correct branch prefix (fix/, chore/, feature/, etc.).
+   *
+   * Category takes priority for prefix selection. When no category is given,
+   * the conventional-commit type in the title is used (fix: → fix/, etc.).
    */
   generateBranchName(title: string | undefined, featureId?: string, category?: string): string {
     // Derive a short, deterministic uniqueness suffix from featureId.
     // featureId format: "feature-{timestamp}-{random9chars}"
     // Use the last 7 characters of the id — always alphanumeric, always unique.
     const shortId = featureId ? featureId.slice(-7) : Date.now().toString(36).slice(-7);
-    const prefix = this.branchPrefixForCategory(category);
+
+    // Category takes priority when it maps to a specific non-default prefix.
+    // When the category is unknown or maps to the default "feature" prefix (e.g.
+    // "Uncategorized"), fall through to title detection — this prevents the
+    // "Uncategorized" default from masking fix(ci): / fixci: / chore(infra): titles and
+    // emitting a wrong feature/ prefix (root cause of recurring source-branch CI failures).
+    let prefix: string;
+    const catPrefix = category ? this.branchPrefixForCategory(category) : null;
+    if (catPrefix && catPrefix !== 'feature') {
+      prefix = catPrefix;
+    } else if (title) {
+      // Detect conventional-commit type from title when category doesn't give a specific prefix.
+      // Pattern matches: type:, type(scope):, type!:, type(scope)!:
+      // Also matches concatenated scope variants: fixci:, choreinfra: (agents sometimes omit parens)
+      const ccMatch = title
+        .trim()
+        .match(
+          /^(fix|chore|docs|refactor|test|perf|style|ci|build|revert)([a-z0-9-]{0,15}|\([^)]*\))?!?:/
+        );
+      if (ccMatch) {
+        const type = ccMatch[1];
+        if (type === 'fix' || type === 'revert') {
+          prefix = 'fix';
+        } else if (type === 'chore' || type === 'ci' || type === 'build') {
+          prefix = 'chore';
+        } else if (type === 'docs') {
+          prefix = 'docs';
+        } else if (type === 'refactor') {
+          prefix = 'refactor';
+        } else {
+          // test, perf, style → fall back to category default
+          prefix = catPrefix ?? 'feature';
+        }
+      } else {
+        prefix = catPrefix ?? 'feature';
+      }
+    } else {
+      prefix = catPrefix ?? 'feature';
+    }
 
     if (!title || !title.trim()) {
       return `${prefix}/untitled-${shortId}`;
     }
+
     // Keep slug portion to 50 chars so the full branch stays under ~60 chars.
     const slug = slugify(title, 50);
     return `${prefix}/${slug || `untitled`}-${shortId}`;
@@ -515,16 +558,22 @@ export class FeatureLoader implements FeatureStore {
   }
 
   /**
-   * Check if a title already exists on another feature (for duplicate detection)
+   * Check if a title already exists on another active feature (for duplicate detection).
+   * Archived features are excluded — delete-then-recreate and archive-then-recreate must work.
+   *
    * @param projectPath - Path to the project
    * @param title - Title to check
    * @param excludeFeatureId - Optional feature ID to exclude from the check (for updates)
-   * @returns The duplicate feature if found, null otherwise
+   * @param epicId - Optional epic ID; when provided only features within the same epic are
+   *   considered duplicates. Pass `null` explicitly to restrict matching to top-level features.
+   *   When omitted (`undefined`), the epicId dimension is ignored (legacy behaviour).
+   * @returns The duplicate active feature if found, null otherwise
    */
   async findDuplicateTitle(
     projectPath: string,
     title: string,
-    excludeFeatureId?: string
+    excludeFeatureId?: string,
+    epicId?: string | null | undefined
   ): Promise<Feature | null> {
     if (!title || !title.trim()) {
       return null;
@@ -539,12 +588,79 @@ export class FeatureLoader implements FeatureStore {
         continue;
       }
 
+      // Skip archived features — they are out of the active uniqueness pool.
+      // This allows delete-then-recreate and archive-then-recreate workflows.
+      if (feature.archived) {
+        continue;
+      }
+
       if (feature.title && this.normalizeTitle(feature.title) === normalizedTitle) {
+        // When epicId is explicitly supplied (including null), scope the duplicate check
+        // to features that share the same epicId. This prevents false positives when two
+        // epics contain child features with the same name.
+        if (epicId !== undefined) {
+          const featureEpicId = feature.epicId ?? null;
+          const searchEpicId = epicId ?? null;
+          if (featureEpicId !== searchEpicId) {
+            continue;
+          }
+        }
         return feature;
       }
     }
 
     return null;
+  }
+
+  /**
+   * One-shot sweep to detect existing duplicate titles in legacy data and log them for
+   * manual review. Duplicates are identified by (normalizedTitle, epicId) tuples across
+   * all active (non-archived) features.
+   *
+   * Call this once at startup or on demand to surface pre-existing duplicates that were
+   * created before the idempotent-create guard was in place.
+   *
+   * @param projectPath - Path to the project
+   * @returns Array of duplicate groups found (each group has title + array of feature IDs)
+   */
+  async detectLegacyDuplicates(
+    projectPath: string
+  ): Promise<Array<{ title: string; epicId: string | null; featureIds: string[] }>> {
+    const features = await this.getAll(projectPath);
+    const activeFeatures = features.filter((f) => !f.archived);
+
+    // Group by (normalizedTitle, epicId)
+    const groups = new Map<
+      string,
+      { title: string; epicId: string | null; featureIds: string[] }
+    >();
+
+    for (const feature of activeFeatures) {
+      if (!feature.title || !feature.id) continue;
+      const epicId = feature.epicId ?? null;
+      const key = `${this.normalizeTitle(feature.title)}::${epicId ?? ''}`;
+
+      const existing = groups.get(key);
+      if (existing) {
+        existing.featureIds.push(feature.id);
+      } else {
+        groups.set(key, { title: feature.title, epicId, featureIds: [feature.id] });
+      }
+    }
+
+    const duplicates = Array.from(groups.values()).filter((g) => g.featureIds.length > 1);
+
+    if (duplicates.length > 0) {
+      logger.warn(`Legacy duplicate features detected (${duplicates.length} groups):`, {
+        duplicates: duplicates.map((d) => ({
+          title: d.title,
+          epicId: d.epicId,
+          ids: d.featureIds,
+        })),
+      });
+    }
+
+    return duplicates;
   }
 
   /**
@@ -599,12 +715,16 @@ export class FeatureLoader implements FeatureStore {
       });
     }
 
-    // Read-only features don't need a branch — skip generation entirely
+    // Read-only features don't need a branch — skip generation entirely.
+    // If a branchName is provided by the caller, validate it before use — special characters
+    // like `[`, `]`, `(`, `)`, `:` are illegal in git refs and cause worktree creation to fail.
+    // Invalid branch names are discarded and regenerated from the title via generateBranchName.
     const branchName =
       featureData.executionMode === 'read-only'
         ? undefined
-        : featureData.branchName ||
-          this.generateBranchName(featureData.title, featureId, featureData.category);
+        : ((featureData.branchName && isValidBranchName(featureData.branchName)
+            ? featureData.branchName
+            : null) ?? this.generateBranchName(featureData.title, featureId, featureData.category));
 
     // Auto-assign projectSlug if not already provided
     let resolvedProjectSlug = featureData.projectSlug;
@@ -684,6 +804,19 @@ export class FeatureLoader implements FeatureStore {
     const feature = await this.get(projectPath, featureId);
     if (!feature) {
       throw new Error(`Feature ${featureId} not found`);
+    }
+
+    // Reject contradictory epic state when isEpic or epicId fields are being modified.
+    // Only checked when the update touches these fields to allow other updates (e.g. status)
+    // to proceed even on features already in contradictory state (handled by the scheduler).
+    if (updates.isEpic !== undefined || updates.epicId !== undefined) {
+      const effectiveIsEpic = updates.isEpic !== undefined ? updates.isEpic : feature.isEpic;
+      const effectiveEpicId = updates.epicId !== undefined ? updates.epicId : feature.epicId;
+      if (effectiveIsEpic && effectiveEpicId) {
+        throw new Error(
+          'A feature cannot be both an epic (isEpic: true) and a member of another epic (epicId set). Set either isEpic or epicId, not both.'
+        );
+      }
     }
 
     // Handle image path changes

@@ -91,6 +91,8 @@ export interface ExecutionContext {
   agentOutput?: string;
   /** Time feature has been running in ms */
   runningTime: number;
+  /** Execution cost in USD (0 for SDK init failures) */
+  costUsd?: number;
 }
 
 /**
@@ -118,7 +120,7 @@ export const DEFAULT_RECOVERY_CONFIG: RecoveryConfig = {
   enabled: true,
   maxTransientRetries: 3,
   maxTestFailureRetries: 2,
-  baseDelayMs: 1000,
+  baseDelayMs: 5000,
   maxDelayMs: 60000,
   preserveContext: true,
 };

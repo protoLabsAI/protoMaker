@@ -28,6 +28,8 @@ vi.mock('@protolabsai/platform', () => ({
   getFeatureBackupDir: vi.fn((p: string, id: string) => `${p}/.automaker/backups/${id}`),
   getAppSpecPath: vi.fn((p: string) => `${p}/app_spec.txt`),
   ensureAutomakerDir: vi.fn(),
+  // Real implementation: only alphanumeric, hyphens, underscores, dots, forward slashes
+  isValidBranchName: vi.fn((name: string) => /^[a-zA-Z0-9._\-/]+$/.test(name)),
 }));
 
 vi.mock('@protolabsai/utils', () => ({
@@ -131,6 +133,55 @@ describe('FeatureLoader.generateBranchName', () => {
     const branch = loader.generateBranchName('   ', 'feature-123-abc1234');
     expect(branch).toMatch(/^feature\/untitled-/);
   });
+
+  it('uses fix/ prefix for conventional-commit fix: titles', () => {
+    const branch = loader.generateBranchName('fix: correct login redirect', 'feature-123-abc1234');
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses fix/ prefix for scoped fix(scope): titles', () => {
+    const branch = loader.generateBranchName(
+      'fix(auth): handle token expiry',
+      'feature-123-abc1234'
+    );
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses fix/ prefix for breaking fix!: titles', () => {
+    const branch = loader.generateBranchName('fix!: remove deprecated API', 'feature-123-abc1234');
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses fix/ prefix for scoped breaking fix(scope)!: titles', () => {
+    const branch = loader.generateBranchName(
+      'fix(ci)!: enforce branch prefix policy',
+      'feature-123-abc1234'
+    );
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses feature/ prefix for feat: titles (not fix)', () => {
+    const branch = loader.generateBranchName('feat: add dark mode', 'feature-123-abc1234');
+    expect(branch).toMatch(/^feature\//);
+  });
+
+  it('uses fix/ prefix for fixci: titles (concatenated scope without parentheses)', () => {
+    // "fixci:" matches the extended regex /^fix([a-z0-9-]{0,15}|\([^)]*\))?!?:/
+    // Agents sometimes write fix(ci): as fixci: (omitting parentheses) — both get fix/ prefix.
+    const branch = loader.generateBranchName(
+      'fixci: PR #3383 — checks and test workflows failing',
+      'feature-123-abc1234'
+    );
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses fix/ prefix for fix-ci: titles (hyphenated concatenated scope)', () => {
+    const branch = loader.generateBranchName(
+      'fix-ci: source-branch policy failure on feature branches',
+      'feature-123-abc1234'
+    );
+    expect(branch).toMatch(/^fix\//);
+  });
 });
 
 describe('FeatureLoader.branchPrefixForCategory', () => {
@@ -176,6 +227,18 @@ describe('FeatureLoader.branchPrefixForCategory', () => {
     expect(loader.branchPrefixForCategory('BUG')).toBe('fix');
     expect(loader.branchPrefixForCategory('OPS')).toBe('chore');
   });
+
+  it('returns fix for bugfix category', () => {
+    expect(loader.branchPrefixForCategory('bugfix')).toBe('fix');
+  });
+
+  it('returns fix for bug-fix category', () => {
+    expect(loader.branchPrefixForCategory('bug-fix')).toBe('fix');
+  });
+
+  it('returns fix for hotfix category', () => {
+    expect(loader.branchPrefixForCategory('hotfix')).toBe('fix');
+  });
 });
 
 describe('FeatureLoader.generateBranchName with category', () => {
@@ -200,5 +263,136 @@ describe('FeatureLoader.generateBranchName with category', () => {
   it('untitled bug branches use fix/ prefix', () => {
     const branch = loader.generateBranchName(undefined, 'feature-123-abc1234', 'bug');
     expect(branch).toMatch(/^fix\/untitled-/);
+  });
+
+  it('uses fix/ prefix when category is Uncategorized but title starts with fix(ci):', () => {
+    // Regression: "Uncategorized" is the default category when agents omit category.
+    // branchPrefixForCategory("Uncategorized") returns "feature", which previously
+    // blocked title detection — causing fix(ci): titles to get feature/ prefix.
+    // Root cause of PR #3388 source-branch CI failure.
+    const branch = loader.generateBranchName(
+      'fix(ci): #3115 — post-merge webhook only watches protoMaker repo',
+      'feature-1775874851806-74z02ivk0',
+      'Uncategorized'
+    );
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses fix/ prefix when category is Uncategorized but title starts with fixci:', () => {
+    const branch = loader.generateBranchName(
+      'fixci: PR #3388 — branch prefix regression',
+      'feature-123-abc1234',
+      'Uncategorized'
+    );
+    expect(branch).toMatch(/^fix\//);
+  });
+
+  it('uses feature/ prefix when category is Uncategorized and title is not a fix', () => {
+    const branch = loader.generateBranchName(
+      'Add dashboard',
+      'feature-123-abc1234',
+      'Uncategorized'
+    );
+    expect(branch).toMatch(/^feature\//);
+  });
+
+  it('uses chore/ prefix when category is Uncategorized but title starts with chore(infra):', () => {
+    // Regression: chore(infra): titles were getting feature/ prefix because title detection
+    // only handled fix: variants. Root cause of PR #3395 source-branch CI failure.
+    const branch = loader.generateBranchName(
+      'chore(infra): issue #11 — add branch protection ruleset to ava/main',
+      'feature-1776060855702-pxszngw6b',
+      'Uncategorized'
+    );
+    expect(branch).toMatch(/^chore\//);
+  });
+
+  it('uses chore/ prefix when category is Uncategorized but title starts with chore:', () => {
+    const branch = loader.generateBranchName(
+      'chore: update CI config',
+      'feature-123-abc1234',
+      'Uncategorized'
+    );
+    expect(branch).toMatch(/^chore\//);
+  });
+
+  it('uses chore/ prefix when category is Uncategorized but title starts with choreinfra: (concatenated scope)', () => {
+    const branch = loader.generateBranchName(
+      'choreinfra: add branch protection',
+      'feature-123-abc1234',
+      'Uncategorized'
+    );
+    expect(branch).toMatch(/^chore\//);
+  });
+
+  it('uses docs/ prefix when category is Uncategorized but title starts with docs:', () => {
+    const branch = loader.generateBranchName(
+      'docs: update contributing guide',
+      'feature-123-abc1234',
+      'Uncategorized'
+    );
+    expect(branch).toMatch(/^docs\//);
+  });
+
+  it('uses refactor/ prefix when category is Uncategorized but title starts with refactor:', () => {
+    const branch = loader.generateBranchName(
+      'refactor: extract auth service',
+      'feature-123-abc1234',
+      'Uncategorized'
+    );
+    expect(branch).toMatch(/^refactor\//);
+  });
+});
+
+describe('FeatureLoader.generateBranchName — special character sanitization', () => {
+  const loader = new FeatureLoader();
+
+  it('strips brackets from feature-factory arc titles like [DD-1.0] Plugin WidgetDescriptor contract', () => {
+    // Reproduces the bug: feature-factory emits titles with bracket prefixes
+    // (e.g. [Arc 6.4], [DD-1.0], [TR-2.1]) that are illegal in git refs.
+    const branch = loader.generateBranchName(
+      '[DD-1.0] Plugin WidgetDescriptor contract',
+      'feature-123-abc1234'
+    );
+    // Must not contain [ or ] which are illegal in git refs
+    expect(branch).not.toMatch(/[\[\]]/);
+    // Must be a valid branch name format
+    expect(branch).toMatch(/^feature\//);
+    expect(branch).toMatch(/^[a-z0-9/._-]+-[a-z0-9]+$/);
+  });
+
+  it('strips parentheses from titles', () => {
+    const branch = loader.generateBranchName(
+      'Fix login (regression) from v2.1',
+      'feature-123-abc1234'
+    );
+    expect(branch).not.toMatch(/[()]/);
+    expect(branch).toMatch(/^feature\//);
+  });
+
+  it('strips colon characters from titles', () => {
+    const branch = loader.generateBranchName(
+      'Arc 6.4: Widget contract implementation',
+      'feature-123-abc1234'
+    );
+    expect(branch).not.toMatch(/:/);
+    expect(branch).toMatch(/^feature\//);
+  });
+
+  it('strips slash characters from slug portion of title', () => {
+    const branch = loader.generateBranchName(
+      'Add support for path/to/resource',
+      'feature-123-abc1234'
+    );
+    // Branch should have exactly one slash (the prefix separator feature/)
+    const slashCount = (branch.match(/\//g) || []).length;
+    expect(slashCount).toBe(1);
+  });
+
+  it('produces a non-empty slug for a pure-bracket title', () => {
+    const branch = loader.generateBranchName('[TR-2.1]', 'feature-123-jqr32ki');
+    // After stripping brackets and dots, slug may be empty — branch must still be valid
+    expect(branch).toMatch(/^feature\/(untitled|[a-z0-9])/);
+    expect(branch).not.toMatch(/[\[\]]/);
   });
 });

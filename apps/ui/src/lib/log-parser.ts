@@ -1158,7 +1158,50 @@ export function parseLogOutput(rawOutput: string): LogEntry[] {
   // Merge consecutive entries of the same type if they're both debug or info
   const mergedEntries = mergeConsecutiveEntries(entries);
 
-  return mergedEntries;
+  // Coalesce all TodoWrite entries into a single live-updating task list.
+  // When an agent calls TodoWrite sequentially (adding tasks one by one), each
+  // call replaces the full list — without coalescing, each call produces a
+  // separate rendered task list, creating a waterfall of repeated growing lists.
+  return coalesceTodoWriteEntries(mergedEntries);
+}
+
+/**
+ * Coalesces multiple TodoWrite entries into a single entry showing the latest state.
+ *
+ * When an agent calls TodoWrite sequentially (e.g. adding one task at a time),
+ * each call replaces the entire list. Without coalescing, the log viewer renders
+ * a separate growing task list per call — a "waterfall" of duplicate lists.
+ *
+ * This function:
+ * - Finds all TodoWrite entries in the log
+ * - Keeps the first occurrence's position (and stable ID) in the rendered output
+ * - Updates its content to reflect the latest TodoWrite state
+ * - Removes all subsequent TodoWrite entries
+ */
+function coalesceTodoWriteEntries(entries: LogEntry[]): LogEntry[] {
+  const todoWriteIndices: number[] = [];
+  entries.forEach((entry, i) => {
+    if (entry.metadata?.toolName === 'TodoWrite') {
+      todoWriteIndices.push(i);
+    }
+  });
+
+  if (todoWriteIndices.length <= 1) {
+    return entries;
+  }
+
+  const lastTodoEntry = entries[todoWriteIndices[todoWriteIndices.length - 1]];
+  const indicesToRemove = new Set(todoWriteIndices.slice(1));
+
+  return entries
+    .filter((_, i) => !indicesToRemove.has(i))
+    .map((entry) => {
+      if (entry.metadata?.toolName === 'TodoWrite') {
+        // Keep the first entry's stable ID, update content to the latest state
+        return { ...lastTodoEntry, id: entry.id };
+      }
+      return entry;
+    });
 }
 
 /**

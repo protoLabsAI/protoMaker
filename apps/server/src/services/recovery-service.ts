@@ -61,7 +61,7 @@ export class RecoveryService {
     const category = this.categorizeFailure(errorInfo, error);
     const strategy = this.determineStrategy(category, context);
     const maxRetries = this.getMaxRetries(category);
-    const delay = this.calculateDelay(category, context.retryCount);
+    const delay = this.calculateDelay(category, context.retryCount, context);
 
     const analysis: FailureAnalysis = {
       category,
@@ -480,13 +480,13 @@ ${this.generateCategoryGuidance(category, successRate, strategies)}
       case 'transient':
         return {
           type: 'retry',
-          delay: this.calculateDelay(category, context.retryCount),
+          delay: this.calculateDelay(category, context.retryCount, context),
         };
 
       case 'rate_limit':
         return {
           type: 'pause_and_wait',
-          duration: this.calculateDelay(category, context.retryCount),
+          duration: this.calculateDelay(category, context.retryCount, context),
           reason: 'API rate limit reached. Waiting before retry.',
         };
 
@@ -549,7 +549,7 @@ ${this.generateCategoryGuidance(category, successRate, strategies)}
           return {
             type: 'retry_with_context',
             context: `Unknown error occurred: ${context.previousErrors.slice(-1).join('')}. Please try a different approach.`,
-            delay: this.calculateDelay('unknown', context.retryCount),
+            delay: this.calculateDelay('unknown', context.retryCount, context),
           };
         }
         return {
@@ -606,13 +606,33 @@ ${this.generateCategoryGuidance(category, successRate, strategies)}
   /**
    * Calculate delay before retry with exponential backoff and jitter.
    * Formula: min(base * 2^retryCount + jitter (up to 25% of exponential delay), maxDelay)
+   *
+   * SDK init failures (exit code 1, $0 cost, <10s runtime) get a longer base delay (10s)
+   * because they indicate transient resource contention that takes longer to clear.
    */
-  private calculateDelay(category: FailureCategory, retryCount: number): number {
+  private calculateDelay(
+    category: FailureCategory,
+    retryCount: number,
+    context?: ExecutionContext
+  ): number {
     let baseDelay = this.config.baseDelayMs;
 
     // Rate limits need longer delays
     if (category === 'rate_limit') {
-      baseDelay = 5000; // 5 seconds base for rate limits
+      baseDelay = 10000; // 10 seconds base for rate limits
+    }
+
+    // SDK init failures: zero cost + very short runtime = Claude Agent SDK never initialised.
+    // These are caused by transient resource contention and need a longer base to avoid
+    // exhausting the retry budget before contention clears.
+    const SDK_INIT_MAX_RUNTIME_MS = 10_000;
+    const isSdkInitFailure =
+      context !== undefined &&
+      (context.costUsd ?? 0) === 0 &&
+      context.runningTime < SDK_INIT_MAX_RUNTIME_MS;
+
+    if (isSdkInitFailure) {
+      baseDelay = 10000; // 10 seconds base for SDK init failures
     }
 
     // Exponential backoff: base * 2^retryCount

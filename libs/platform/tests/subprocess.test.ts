@@ -207,6 +207,37 @@ describe('subprocess.ts', () => {
       });
     });
 
+    it('should yield error when process exits 1 after emitting result:success (regression #3140)', async () => {
+      // Regression test for issue #3140: Claude Code SDK emits result:success in JSONL but the
+      // underlying process exits with code 1 (CLI init crash). The subprocess layer must yield an
+      // error event AFTER the result:success event so callers can detect the contradiction and
+      // treat the run as failed. Stderr must also be captured and logged at warn level.
+      const stderrMessage = 'Claude Code CLI crashed: ENOENT /usr/local/bin/claude';
+      const mockProcess = createMockProcess({
+        stdoutLines: [
+          '{"type":"result","subtype":"success","total_cost_usd":0,"session_id":"abc"}',
+        ],
+        stderrLines: [stderrMessage],
+        exitCode: 1,
+      });
+
+      vi.mocked(cp.spawn).mockReturnValue(mockProcess);
+
+      const generator = spawnJSONLProcess(baseOptions);
+      const results = await collectAsyncGenerator(generator);
+
+      // Should yield both the result:success JSONL event AND a follow-up error event
+      expect(results).toHaveLength(2);
+      expect(results[0]).toMatchObject({ type: 'result', subtype: 'success' });
+      expect(results[1]).toMatchObject({
+        type: 'error',
+        error: expect.stringContaining(stderrMessage),
+      });
+
+      // Stderr must be logged at warn level so it appears in logs for diagnosis
+      expect(consoleSpy.warn).toHaveBeenCalledWith(expect.stringContaining(stderrMessage));
+    });
+
     it('should yield error with exit code when stderr is empty', async () => {
       const mockProcess = createMockProcess({
         stdoutLines: ['{"type":"test"}'],

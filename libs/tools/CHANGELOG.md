@@ -1,5 +1,68 @@
 # @protolabsai/tools
 
+## 0.102.0
+
+### Minor Changes
+
+- ### Features
+  - add list / read action to manage_board tool (#3453)
+  - rename primary chat agent from 'Ava' to 'protoMaker' (#3440)
+  - agent card identifies this runtime as 'protomaker' (#3375)
+
+  ### Bug Fixes
+  - duplicate-feature detection on create + fix soft-delete title reservation (#3452)
+  - ensure prettier runs in agent worktree before commit (#3451)
+  - align lead-engineer review/merge processor tests with getMergeableState insertion (#3450)
+  - quarantine unauthorized_path rule false-positives on URL paths in descriptions (#3448)
+  - add protoMaker-side dev branch ruleset + script integration (#3445)
+  - resolve dev CI failures — Dockerfile lib gaps, test assertions, branch protection (zgrzez2p2) (#3443)
+  - replace invalid 'typeof this.x' type annotation with class-type lookup (#3442)
+  - resolve prettier violations breaking dev 'checks' workflow (#3441)
+  - auto-push missing epic branch instead of blocking child features (#3439)
+  - escalate feature when PR merges with lock-only changes (#3376) (#3437)
+  - prevent retry loop re-spawning agents on already-shipped work (#3432) (#3436)
+  - guard against falsy projectPath in skill dispatch to prevent NoneType crash
+  - capture and log diagnostic output for exit-code-1 degenerate-success crashes (#3430)
+  - remove stray eslint-disable comment from execution-service.test.ts (#3405)
+  - issue #3140 — pre-execution failureCount write + regression tests (#3404)
+  - resolve test and checks workflow failures from PR #3401 (#3403)
+  - make webhook source-check mocks resilient to mockReset (#3398)
+  - detect chore/docs/refactor prefixes from conventional-commit titles (#3396)
+  - resolve 4 CI failures for PR #3390 (#3394)
+  - collapse sequential TodoWrite tool renders to prevent O(n²) stacking (#3392)
+  - coalesce sequential TodoWrite entries into single live-updating task list (#3390)
+  - treat Uncategorized category as default to unblock title detection (#3389)
+  - add post-merge reconciler for missed webhook events on external repos (#3115) (#3388)
+  - extend branch-prefix detection to catch fixci: and hotfix/bugfix categories (#3387)
+  - add circuit breaker, degenerate-success detection, and HTML sanitization (issue #3140) (#3384)
+  - prettier formatting + update stale worktree-creation test (#3383)
+  - add persistent idempotency guard for GitHub issue triage (#3382)
+  - add exponential backoff with SDK init failure detection (#3380)
+  - expand branch-prefix normalization to cover fix/, chore/, docs/ (#3379)
+  - block feature on lock-only PR merge and missing epic branch (#3378)
+  - fetch origin/<base> before creating feature worktree (#3373)
+  - enforce agent-card skill allowlist in message/send handler (#3372)
+  - emit fix/ branch prefix for conventional-commit fix titles (#3370)
+  - handle AUTO_RECOVERED outcome in startup-recovery switch (#3422)
+  - auto-recover dirty worktrees mid-operation (#3419)
+
+  ### Refactors
+  - fix(webhook): post-merge reconciliation doesn't transition review→done r (#3449)
+  - fix(ci): dev branch protection 'build' check doesn't satisfy for docs-on (#3446)
+  - fix(agent): Arc features have over-broad file scope causing cross-PR col (#3438)
+  - fix(agent-health): bug_triage skill has 0% success rate (23/23 failures) (#3434)
+  - fix(ci): #3115 — post-merge webhook only watches protoMaker repo; extern (#3431)
+  - fix(ci): issue #3299 — FeatureScheduler silently skips features with con (#3429)
+  - feat(pr-remediator): issue #149 — close-and-recut strategy for conflicti (#3400)
+  - fix(test): #3399 — auto-mode-service integration tests failing (status t (#3401)
+  - Task Rendering Improvements (protoCLI#42) (#3391)
+  - fix(ci): issue #3299 — FeatureScheduler silently skips features with con (#3381)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.102.0
+
 ## 0.101.0
 
 ### Minor Changes

@@ -442,6 +442,64 @@ describe('SignalIntakeService', () => {
       expect(mockFeatureLoader.create).toHaveBeenCalledTimes(1);
     });
 
+    it('should skip creation when GitHub issue is already tracked by an existing feature (persistent guard)', async () => {
+      // Simulate a feature already created for this issue in a previous server session.
+      // The in-memory processedSignals set is empty (fresh instance), but featureLoader.getAll
+      // returns a feature with a matching githubIssueNumber — the persistent guard must catch it.
+      vi.mocked(mockFeatureLoader.getAll).mockResolvedValue([
+        {
+          id: 'feature-already-triaged',
+          title: '[github] Bug: quinn double triage on #3299',
+          status: 'backlog',
+          githubIssueNumber: 3299,
+        } as any,
+      ]);
+
+      const signal = createTestSignal({
+        source: 'github',
+        author: { id: 'mabry1985', name: 'mabry1985' },
+        content: 'Bug: quinn double triage',
+        channelContext: {
+          issueNumber: 3299,
+          repository: 'protoLabsAI/protoMaker',
+        },
+      });
+
+      mockEmitter.emit('signal:received', signal);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Feature must NOT be created — already triaged
+      expect(mockFeatureLoader.create).not.toHaveBeenCalled();
+    });
+
+    it('should allow creation when existing features have a different githubIssueNumber', async () => {
+      // A different issue is already triaged — the new issue should still be created
+      vi.mocked(mockFeatureLoader.getAll).mockResolvedValue([
+        {
+          id: 'feature-other-issue',
+          title: '[github] Some other bug',
+          status: 'done',
+          githubIssueNumber: 9999,
+        } as any,
+      ]);
+
+      const signal = createTestSignal({
+        source: 'github',
+        author: { id: 'mabry1985', name: 'mabry1985' },
+        content: 'New bug report',
+        channelContext: {
+          issueNumber: 3300,
+          repository: 'protoLabsAI/protoMaker',
+        },
+      });
+
+      mockEmitter.emit('signal:received', signal);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Feature SHOULD be created (different issue number)
+      expect(mockFeatureLoader.create).toHaveBeenCalledTimes(1);
+    });
+
     it('should prevent duplicate Discord signals by author ID', async () => {
       const signal = createTestSignal({
         source: 'discord',

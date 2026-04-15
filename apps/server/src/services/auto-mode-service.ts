@@ -3182,10 +3182,38 @@ Format your response as a structured markdown document.`;
             this.settingsService,
             '[createWorktreeForBranch]'
           );
+
+          // Refresh the remote tracking ref for the base branch before we
+          // branch off it. Without this fetch, worktrees inherit whatever
+          // commit origin/<base> pointed at the last time someone fetched
+          // — often stale by hours on long-running servers — and the new
+          // feature PR opens already behind origin, guaranteeing avoidable
+          // rebase conflicts downstream. One targeted fetch per worktree
+          // creation is cheap and closes the loop.
+          try {
+            await execFileAsync('git', ['fetch', 'origin', resolvedPrBaseBranch], {
+              cwd: projectPath,
+              env: gitEnv,
+            });
+            logger.debug(
+              `Fetched origin/${resolvedPrBaseBranch} before worktree creation for ${branchName}`
+            );
+          } catch (fetchErr) {
+            // Non-fatal: cached refs may be fresh enough, and a hard-failing
+            // fetch shouldn't block feature execution. Log so it surfaces if
+            // the loop starts shipping stale PRs again.
+            logger.warn(
+              `Failed to fetch origin/${resolvedPrBaseBranch} before worktree creation — proceeding with cached ref:`,
+              fetchErr
+            );
+          }
+
           let baseBranch = `origin/${resolvedPrBaseBranch}`;
           if (feature?.epicId && !feature.isEpic) {
+            // Hoist epicFeature so it's accessible in the catch block for error reporting
+            let epicFeature: Awaited<ReturnType<FeatureLoader['get']>> | undefined;
             try {
-              const epicFeature = await this.featureLoader.get(projectPath, feature.epicId);
+              epicFeature = await this.featureLoader.get(projectPath, feature.epicId);
               if (epicFeature?.branchName) {
                 const epicBranch = epicFeature.branchName;
                 // Fetch the epic branch from remote to ensure we have up-to-date refs.
@@ -3207,10 +3235,57 @@ Format your response as a structured markdown document.`;
                   `Feature ${feature.id} belongs to epic, branching from epic branch: ${baseBranch}`
                 );
               }
-            } catch {
-              logger.warn(
-                `Epic branch not found for feature ${feature.id} (epicId: ${feature.epicId}), falling back to origin/${resolvedPrBaseBranch}`
+            } catch (epicBranchErr) {
+              // Epic branch is missing on remote. Auto-create and push it so child features
+              // can branch from the correct base without manual intervention.
+              if (!epicFeature?.branchName) {
+                throw new Error(
+                  `Epic '${feature.epicId}' has no branch name for feature ${feature.id}. ` +
+                    `Cannot auto-push epic branch. ` +
+                    `Original error: ${epicBranchErr instanceof Error ? epicBranchErr.message : String(epicBranchErr)}`
+                );
+              }
+              const epicBranch = epicFeature.branchName;
+              logger.info(
+                `[createWorktreeForBranch] Epic branch '${epicBranch}' not found on remote — attempting auto-push`,
+                { featureId: feature.id }
               );
+              // Check if the epic branch exists locally (from a prior checkout or creation)
+              let epicBranchExistsLocally = false;
+              try {
+                await execFileAsync('git', ['rev-parse', '--verify', epicBranch], {
+                  cwd: projectPath,
+                });
+                epicBranchExistsLocally = true;
+              } catch {
+                // Branch doesn't exist locally either
+              }
+              if (epicBranchExistsLocally) {
+                // Push the existing local branch to remote
+                await execFileAsync('git', ['push', 'origin', epicBranch], {
+                  cwd: projectPath,
+                  env: gitEnv,
+                });
+                logger.info(
+                  `[createWorktreeForBranch] Auto-pushed local epic branch '${epicBranch}' to remote`
+                );
+              } else {
+                // Create the epic branch on remote from origin/<prBaseBranch> without a local checkout
+                await execFileAsync(
+                  'git',
+                  ['push', 'origin', `origin/${resolvedPrBaseBranch}:refs/heads/${epicBranch}`],
+                  { cwd: projectPath, env: gitEnv }
+                );
+                logger.info(
+                  `[createWorktreeForBranch] Auto-created epic branch '${epicBranch}' on remote from origin/${resolvedPrBaseBranch}`
+                );
+              }
+              // Fetch the newly pushed branch to update local tracking refs
+              await execFileAsync('git', ['fetch', 'origin', epicBranch], {
+                cwd: projectPath,
+                env: gitEnv,
+              });
+              baseBranch = `origin/${epicBranch}`;
             }
           }
 

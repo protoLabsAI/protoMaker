@@ -2,6 +2,7 @@
  * POST /create-pr endpoint - Commit changes and create a pull request from a worktree
  */
 
+import path from 'path';
 import type { Request, Response } from 'express';
 import {
   getErrorMessage,
@@ -86,6 +87,32 @@ export function createCreatePRHandler(settingsService?: SettingsService) {
           // Stage all changes
           logger.debug(`Running: git add -A (with staging exclusions)`);
           await execAsync(buildGitAddCommand(worktreePath), { cwd: worktreePath, env: execEnv });
+
+          // Auto-format staged files before committing (matches CI prettier behavior)
+          // Use the main repo's prettier binary — worktrees have no node_modules/
+          try {
+            const { stdout: stagedFiles } = await execAsync(
+              "git diff --cached --name-only --diff-filter=ACMR -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' '*.css' '*.md'",
+              { cwd: worktreePath, env: execEnv }
+            );
+            const files = stagedFiles.trim().split('\n').filter(Boolean);
+            if (files.length > 0) {
+              const prettierBin = path.join(effectiveProjectPath, 'node_modules/.bin/prettier');
+              await execAsync(
+                `node "${prettierBin}" --ignore-path /dev/null --write ${files.map((f) => `"${f}"`).join(' ')}`,
+                { cwd: worktreePath, env: execEnv }
+              );
+              // Re-stage after formatting
+              await execAsync(buildGitAddCommand(worktreePath), {
+                cwd: worktreePath,
+                env: execEnv,
+              });
+              logger.debug(`Auto-formatted ${files.length} staged files`);
+            }
+          } catch (fmtError: unknown) {
+            const err = fmtError as { message?: string };
+            logger.warn(`Auto-format failed (non-fatal): ${err.message ?? String(fmtError)}`);
+          }
 
           // Create commit
           logger.debug(`Running: git commit`);

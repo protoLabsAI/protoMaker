@@ -1,9 +1,12 @@
 /**
- * Unit tests for ReviewProcessor — external merge detection and early-exit paths
+ * Unit tests for ReviewProcessor — external merge detection, early-exit paths,
+ * and close_and_recut remediation for CONFLICTING PRs.
  *
  * Covers:
  * 1. Feature in REVIEW + PR merged externally → processor detects merge and returns DONE
  * 2. Feature already `done` → REVIEW process() is a no-op (returns immediately)
+ * 3. PR is CONFLICTING → closes PR, posts comment, resets feature to backlog (no HITL)
+ * 4. PR is CONFLICTING + branch already merged → marks feature done (superseded)
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -157,5 +160,127 @@ describe('ReviewProcessor — external merge detection', () => {
     );
     expect(nonReviewStartCalls).toHaveLength(0);
     expect(serviceCtx.events.emit).not.toHaveBeenCalled();
+  });
+});
+
+// ── close_and_recut tests ─────────────────────────────────────────────────────
+
+describe('ReviewProcessor — close_and_recut for CONFLICTING PRs', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('CONFLICTING PR → closes PR with comment and resets feature to backlog (no HITL)', async () => {
+    const feature = makeFeature({ status: 'review', branchName: 'fix/test-fix' });
+    const serviceCtx = makeServiceContext({ status: 'review', branchName: 'fix/test-fix' });
+    (serviceCtx.featureLoader.get as ReturnType<typeof vi.fn>).mockResolvedValue(feature);
+
+    // Call sequence:
+    // 1. checkBranchMerged (gh pr list): returns '' (not merged yet)
+    // 2. getMergeableState: returns CONFLICTING
+    // 3. gh pr comment: success
+    // 4. gh pr close: success
+    // 5. checkBranchMerged inside handleConflictingPR (gh pr list): returns '' (not merged)
+    mockExecAsync
+      .mockResolvedValueOnce({ stdout: '', stderr: '' }) // checkBranchMerged → not merged
+      .mockResolvedValueOnce({ stdout: '"CONFLICTING"', stderr: '' }) // getMergeableState
+      .mockResolvedValueOnce({ stdout: '', stderr: '' }) // gh pr comment
+      .mockResolvedValueOnce({ stdout: '', stderr: '' }) // gh pr close
+      .mockResolvedValueOnce({ stdout: '', stderr: '' }); // checkBranchMerged (handleConflictingPR)
+
+    const processor = new ReviewProcessor(serviceCtx);
+    const ctx = makeCtx(feature, 42);
+    await processor.enter(ctx);
+    const result = await processor.process(ctx);
+
+    // Should terminate cleanly — no HITL escalation
+    expect(result.shouldContinue).toBe(false);
+    expect(result.nextState).toBeNull();
+    expect(result.reason).toMatch(/backlog/i);
+
+    // Should have closed the PR
+    const execCalls = mockExecAsync.mock.calls.map((c: unknown[]) => String(c[0]));
+    expect(execCalls.some((cmd) => cmd.includes('gh pr close 42'))).toBe(true);
+    expect(execCalls.some((cmd) => cmd.includes('gh pr comment 42'))).toBe(true);
+
+    // Feature should be reset to backlog, not blocked or escalated
+    expect(serviceCtx.featureLoader.update).toHaveBeenCalledWith(
+      '/test/project',
+      'feat-review-001',
+      { status: 'backlog' }
+    );
+
+    // Should NOT have emitted a merge event
+    expect(serviceCtx.events.emit).not.toHaveBeenCalledWith('feature:pr-merged', expect.anything());
+  });
+
+  it('CONFLICTING PR + branch already merged → marks feature done (superseded)', async () => {
+    const feature = makeFeature({ status: 'review', branchName: 'fix/test-fix' });
+    const serviceCtx = makeServiceContext({ status: 'review', branchName: 'fix/test-fix' });
+    (serviceCtx.featureLoader.get as ReturnType<typeof vi.fn>).mockResolvedValue(feature);
+
+    // Call sequence:
+    // 1. checkBranchMerged (gh pr list): returns '' (not merged yet)
+    // 2. getMergeableState: CONFLICTING
+    // 3. gh pr comment: success
+    // 4. gh pr close: success
+    // 5. checkBranchMerged inside handleConflictingPR: returns a mergedAt timestamp → merged
+    mockExecAsync
+      .mockResolvedValueOnce({ stdout: '', stderr: '' }) // checkBranchMerged → not merged
+      .mockResolvedValueOnce({ stdout: '"CONFLICTING"', stderr: '' }) // getMergeableState
+      .mockResolvedValueOnce({ stdout: '', stderr: '' }) // gh pr comment
+      .mockResolvedValueOnce({ stdout: '', stderr: '' }) // gh pr close
+      .mockResolvedValueOnce({ stdout: '2024-01-15T12:00:00Z\n', stderr: '' }); // checkBranchMerged (handleConflictingPR)
+
+    const processor = new ReviewProcessor(serviceCtx);
+    const ctx = makeCtx(feature, 42);
+    await processor.enter(ctx);
+    const result = await processor.process(ctx);
+
+    // Should terminate cleanly
+    expect(result.shouldContinue).toBe(false);
+    expect(result.nextState).toBeNull();
+    expect(result.reason).toMatch(/superseded|done/i);
+
+    // Feature should be marked done, not backlog
+    expect(serviceCtx.featureLoader.update).toHaveBeenCalledWith(
+      '/test/project',
+      'feat-review-001',
+      { status: 'done' }
+    );
+
+    // Should have emitted the merge event
+    expect(serviceCtx.events.emit).toHaveBeenCalledWith(
+      'feature:pr-merged',
+      expect.objectContaining({ featureId: 'feat-review-001' })
+    );
+  });
+
+  it('non-CONFLICTING PR (MERGEABLE) → continues normal REVIEW flow (no close)', async () => {
+    const feature = makeFeature({ status: 'review', branchName: 'fix/test-fix' });
+    const serviceCtx = makeServiceContext({ status: 'review', branchName: 'fix/test-fix' });
+    (serviceCtx.featureLoader.get as ReturnType<typeof vi.fn>).mockResolvedValue(feature);
+
+    // getMergeableState returns MERGEABLE — should NOT trigger close_and_recut
+    // subsequent calls handle normalizePR, getPRReviewState, etc.
+    mockExecAsync
+      .mockResolvedValueOnce({ stdout: '"MERGEABLE"', stderr: '' }) // getMergeableState
+      .mockResolvedValue({ stdout: '{"body":"","autoMerge":false}', stderr: '' }); // normalizePR etc.
+
+    const processor = new ReviewProcessor(serviceCtx);
+    const ctx = makeCtx(feature, 42);
+    await processor.enter(ctx);
+    await processor.process(ctx);
+
+    // Should NOT have called gh pr close
+    const execCalls = mockExecAsync.mock.calls.map((c: unknown[]) => String(c[0]));
+    expect(execCalls.some((cmd) => cmd.includes('gh pr close'))).toBe(false);
+
+    // Feature should NOT have been reset to backlog by close_and_recut
+    const updateCalls = (serviceCtx.featureLoader.update as ReturnType<typeof vi.fn>).mock.calls;
+    const backlogReset = updateCalls.filter(
+      (call: unknown[]) => (call[2] as Record<string, unknown>)?.status === 'backlog'
+    );
+    expect(backlogReset).toHaveLength(0);
   });
 });

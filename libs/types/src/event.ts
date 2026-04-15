@@ -205,6 +205,7 @@ export type EventType =
   // Worktree recovery events
   | 'worktree:drift-detected'
   | 'worktree:phantom-pruned'
+  | 'worktree:cleanup'
   // World state monitor events
   | 'world-state:reconciliation'
   // Chief of Staff (CoS) events
@@ -640,6 +641,14 @@ export interface EventPayloadMap {
   // Health events
   'health:issue-detected': { message?: string; severity?: string };
   'health:issue-remediated': { message?: string };
+
+  // Worktree cleanup event
+  'worktree:cleanup': {
+    projectPath: string;
+    removed: number;
+    paths: string[];
+    dryRun: boolean;
+  };
 
   // Maintenance sweep events
   'maintenance:sweep:started': { sweepId: string; tier: 'critical' | 'full'; startedAt: string };

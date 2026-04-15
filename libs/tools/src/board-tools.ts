@@ -172,3 +172,119 @@ export function createBoardTools(deps: BoardDeps): SharedTool[] {
 
   return [listFeaturesTool, updateFeatureTool, createFeatureTool];
 }
+
+// ---------------------------------------------------------------------------
+// manage_board — unified read/write action tool
+// ---------------------------------------------------------------------------
+
+const ManageBoardInputSchema = z.discriminatedUnion('action', [
+  z.object({
+    action: z.literal('list').describe('List features with optional filters'),
+    projectPath: z.string().describe('Absolute path to the project directory'),
+    status: z
+      .enum(['backlog', 'in_progress', 'review', 'blocked', 'done'])
+      .optional()
+      .describe('Filter by status'),
+    priority: z.number().int().min(0).max(4).optional().describe('Filter by priority (0-4)'),
+    limit: z.number().int().min(1).max(200).optional().describe('Max results to return'),
+    offset: z.number().int().min(0).optional().describe('Number of results to skip (pagination)'),
+  }),
+  z.object({
+    action: z.literal('get').describe('Get full metadata for a single feature'),
+    projectPath: z.string().describe('Absolute path to the project directory'),
+    featureId: z.string().describe('The feature ID to retrieve'),
+  }),
+  z.object({
+    action: z.literal('search').describe('Search features by title or description'),
+    projectPath: z.string().describe('Absolute path to the project directory'),
+    query: z.string().describe('Text to search for in feature title and description'),
+    limit: z.number().int().min(1).max(200).optional().describe('Max results to return'),
+    offset: z.number().int().min(0).optional().describe('Number of results to skip (pagination)'),
+  }),
+]);
+
+/**
+ * Creates a manage_board tool that supports list, get, and search actions.
+ *
+ * @param deps - Board dependencies (featureLoader)
+ * @returns A SharedTool instance for the manage_board tool
+ */
+export function createManageBoardTool(deps: BoardDeps): SharedTool {
+  return defineSharedTool({
+    name: 'manage_board',
+    description:
+      'Read features from the Automaker board. Supports three actions:\n' +
+      '  • list — enumerate features with optional status/priority filters and pagination\n' +
+      '  • get  — retrieve full metadata for a single feature by ID\n' +
+      '  • search — search feature titles and descriptions by keyword',
+    inputSchema: ManageBoardInputSchema,
+    outputSchema: z.object({ result: z.unknown() }),
+    metadata: { category: 'board', tags: ['board', 'features', 'read'] },
+    execute: async (rawInput) => {
+      const input = rawInput as z.infer<typeof ManageBoardInputSchema>;
+      try {
+        if (input.action === 'get') {
+          const feature = await deps.featureLoader.get(input.projectPath, input.featureId);
+          if (!feature) {
+            return { success: false, error: `Feature '${input.featureId}' not found` };
+          }
+          return { success: true, data: { result: feature } };
+        }
+
+        // list and search both start from getAll
+        let features = await deps.featureLoader.getAll(input.projectPath);
+
+        if (input.action === 'list') {
+          if (input.status) {
+            features = features.filter((f) => f.status === input.status);
+          }
+          if (input.priority !== undefined) {
+            features = features.filter((f) => f.priority === input.priority);
+          }
+        } else {
+          // search
+          const q = input.query.toLowerCase();
+          features = features.filter(
+            (f) =>
+              (f.title ?? '').toLowerCase().includes(q) ||
+              (f.description ?? '').toLowerCase().includes(q)
+          );
+        }
+
+        const total = features.length;
+        const offset = (input as { offset?: number }).offset ?? 0;
+        const limit = (input as { limit?: number }).limit ?? 50;
+        const page = features.slice(offset, offset + limit);
+
+        const summaries = page.map((f) => ({
+          id: f.id,
+          title: f.title,
+          status: f.status,
+          priority: f.priority,
+          complexity: f.complexity,
+          statusChangeReason: f.statusChangeReason,
+          dependencies: f.dependencies ?? [],
+          updatedAt: f.updatedAt,
+        }));
+
+        return {
+          success: true,
+          data: {
+            result: {
+              features: summaries,
+              total,
+              offset,
+              limit,
+              hasMore: offset + limit < total,
+            },
+          },
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'manage_board failed',
+        };
+      }
+    },
+  });
+}
