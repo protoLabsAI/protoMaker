@@ -15,7 +15,8 @@
 set -euo pipefail
 
 REPO="protoLabsAI/ava"
-RULESET_FILE="scripts/infra/ava/rulesets/main.json"
+MAIN_RULESET_FILE="scripts/infra/ava/rulesets/main.json"
+DEV_RULESET_FILE="scripts/infra/ava/rulesets/dev.json"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -38,8 +39,10 @@ check_prerequisites() {
     log_info "Prerequisites OK — targeting ${REPO}"
 }
 
-apply_main_branch_ruleset() {
-    log_info "Applying main branch ruleset..."
+apply_ruleset() {
+    local RULESET_NAME="$1"
+    local RULESET_FILE="$2"
+    log_info "Applying '${RULESET_NAME}' ruleset..."
 
     if [[ ! -f "$RULESET_FILE" ]]; then
         log_error "Ruleset file not found: $RULESET_FILE"
@@ -51,7 +54,7 @@ apply_main_branch_ruleset() {
         -H "Accept: application/vnd.github+json" \
         -H "X-GitHub-Api-Version: 2022-11-28" \
         "/repos/${REPO}/rulesets" \
-        --jq '.[] | select(.name == "Protect main") | .id' 2>/dev/null || echo "")
+        --jq ".[] | select(.name == \"${RULESET_NAME}\") | .id" 2>/dev/null || echo "")
 
     if [[ -n "$EXISTING_ID" ]]; then
         log_info "Updating existing ruleset (ID: ${EXISTING_ID})..."
@@ -62,9 +65,9 @@ apply_main_branch_ruleset() {
             "/repos/${REPO}/rulesets/${EXISTING_ID}" \
             --input "$RULESET_FILE" \
             > /dev/null
-        log_info "Ruleset updated"
+        log_info "Ruleset '${RULESET_NAME}' updated"
     else
-        log_info "Creating new ruleset..."
+        log_info "Creating new ruleset '${RULESET_NAME}'..."
         gh api \
             --method POST \
             -H "Accept: application/vnd.github+json" \
@@ -72,8 +75,16 @@ apply_main_branch_ruleset() {
             "/repos/${REPO}/rulesets" \
             --input "$RULESET_FILE" \
             > /dev/null
-        log_info "Ruleset created"
+        log_info "Ruleset '${RULESET_NAME}' created"
     fi
+}
+
+apply_main_branch_ruleset() {
+    apply_ruleset "Protect main" "$MAIN_RULESET_FILE"
+}
+
+apply_dev_branch_ruleset() {
+    apply_ruleset "Protect dev" "$DEV_RULESET_FILE"
 }
 
 verify_settings() {
@@ -89,8 +100,9 @@ main() {
     log_info "Configuring branch protection for ${REPO}..."
     check_prerequisites
     apply_main_branch_ruleset
+    apply_dev_branch_ruleset
     verify_settings
-    log_info "Done. Next step: add required status checks once CI is configured."
+    log_info "Done."
 }
 
 main "$@"
