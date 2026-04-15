@@ -4011,8 +4011,23 @@ You can use the Read tool to view these images at any time during implementation
               );
               break;
 
+            case 'AUTO_RECOVERED':
+              // Dirty worktree was auto-recovered: WIP committed to recovery/ branch
+              logger.info(
+                `[STARTUP-RECOVERY] Feature ${feature.id} auto-recovered: ${check.reason}`
+              );
+              this.emitAutoModeEvent('worktree_recovered', {
+                featureId: feature.id,
+                projectPath,
+                worktreePath: check.worktreePath,
+                recoveryBranch: check.recoveryBranch,
+                reason: check.reason,
+              });
+              safeToResume.push(feature);
+              break;
+
             case 'RESET_DIRTY':
-              // Dirty/conflicted worktree — block and require human intervention
+              // Unrecoverable dirty worktree — block and escalate to HITL
               logger.warn(`[STARTUP-RECOVERY] Blocking feature ${feature.id}: ${check.reason}`);
               await this.featureLoader.update(projectPath, feature.id, {
                 status: 'blocked',
@@ -4025,6 +4040,12 @@ You can use the Read tool to view these images at any time during implementation
                 reason: check.reason,
                 projectPath,
               });
+              this.emitAutoModeEvent('worktree_unrecoverable', {
+                featureId: feature.id,
+                projectPath,
+                worktreePath: check.worktreePath,
+                reason: check.reason,
+              });
               break;
 
             case 'SAFE_TO_RESUME':
@@ -4036,6 +4057,11 @@ You can use the Read tool to view these images at any time during implementation
               // No worktree or no commits ahead — safe to start fresh
               safeToResume.push(feature);
               break;
+
+            default: {
+              const _exhaustive: never = check.outcome;
+              throw new Error(`Unhandled RestartOutcome: ${_exhaustive as string}`);
+            }
           }
         } catch (checkError) {
           // Safety check failed — fall back to resuming (same as previous behaviour)
