@@ -1378,6 +1378,17 @@ export class FeatureScheduler {
             continue;
           }
 
+          // Sentinel filter: skip synthetic/probe features created by tooling (e.g. smoke-check).
+          // Features with titles starting "[SMOKE-" or category "smoke" must never be dispatched
+          // to an agent — they are test artifacts and self-complete via cleanup in the originating
+          // tool. If cleanup fails, this guard prevents wasteful agent spawns.
+          if (feature.title?.startsWith('[SMOKE-') || feature.category === 'smoke') {
+            logger.info(
+              `[loadPendingFeatures] Skipping smoke-check sentinel feature ${feature.id} — not eligible for agent dispatch`
+            );
+            continue;
+          }
+
           // Creation cooldown: skip features created too recently to allow the creator time
           // to set dependencies, adjust properties, or batch-create related features.
           if (feature.createdAt) {
