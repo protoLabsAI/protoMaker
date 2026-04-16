@@ -30,14 +30,14 @@ interface HITLFormActions {
   removePendingForm: (formId: string) => void;
   openForm: (form: HITLFormRequest) => void;
   closeDialog: () => void;
-  /** Close dialog without cancelling — form stays pending on server */
-  deferForm: () => void;
+  /** Close dialog without cancelling — form stays pending on server. Returns true if draft was saved. */
+  deferForm: () => boolean;
   nextStep: (data: Record<string, unknown>) => void;
   prevStep: () => void;
   setStepData: (stepIndex: number, data: Record<string, unknown>) => void;
   setSubmitting: (submitting: boolean) => void;
-  /** Save draft step data to localStorage for a form */
-  saveDraft: (formId: string, stepData: Record<string, unknown>[]) => void;
+  /** Save draft step data to localStorage for a form. Returns true if saved successfully. */
+  saveDraft: (formId: string, stepData: Record<string, unknown>[]) => boolean;
   /** Load draft step data from localStorage for a form */
   loadDraft: (formId: string) => Record<string, unknown>[] | null;
   /** Clear draft from localStorage */
@@ -94,9 +94,8 @@ export const useHITLFormStore = create<HITLFormState & HITLFormActions>((set, ge
 
   deferForm: () => {
     const { activeForm, stepData } = get();
-    if (activeForm) {
-      get().saveDraft(activeForm.id, stepData);
-    }
+    // When no active form, nothing to save — treat as success
+    const draftSaved = activeForm ? get().saveDraft(activeForm.id, stepData) : true;
     set({
       isDialogOpen: false,
       activeForm: null,
@@ -104,6 +103,7 @@ export const useHITLFormStore = create<HITLFormState & HITLFormActions>((set, ge
       stepData: [],
       isSubmitting: false,
     });
+    return draftSaved;
   },
 
   nextStep: (data) =>
@@ -133,8 +133,9 @@ export const useHITLFormStore = create<HITLFormState & HITLFormActions>((set, ge
   saveDraft: (formId, stepData) => {
     try {
       localStorage.setItem(`${DRAFT_STORAGE_PREFIX}${formId}`, JSON.stringify(stepData));
+      return true;
     } catch {
-      // localStorage full or unavailable — silently ignore
+      return false;
     }
   },
 
