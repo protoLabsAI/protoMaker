@@ -112,11 +112,143 @@ describe('orphanedInProgress', () => {
     expect(actions).toHaveLength(0);
   });
 
-  it('no-ops when in-progress less than 4h', () => {
-    const oneHourAgo = new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString();
-    const feature = createFeature({ id: 'f1', status: 'in_progress', startedAt: oneHourAgo });
+  it('no-ops when in-progress less than 45 min with no failures and no branch', () => {
+    const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    const feature = createFeature({ id: 'f1', status: 'in_progress', startedAt: thirtyMinAgo });
     const ws = createMockWorldState({ features: { f1: feature } });
     const actions = orphanedInProgress.evaluate(ws, 'feature:stopped', { featureId: 'f1' });
+    expect(actions).toHaveLength(0);
+  });
+
+  // ── Trigger 1: failureCount > 0 + no agent + >= 30 min ──
+
+  it('trigger 1: resets feature in-progress >= 30 min with failureCount 1 and no agent', () => {
+    const thirtyFiveMinAgo = new Date(Date.now() - 35 * 60 * 1000).toISOString();
+    const feature = createFeature({
+      id: 'f1',
+      status: 'in_progress',
+      startedAt: thirtyFiveMinAgo,
+      failureCount: 1,
+    });
+    const ws = createMockWorldState({ features: { f1: feature } });
+    const actions = orphanedInProgress.evaluate(ws, 'feature:stopped', { featureId: 'f1' });
+    expect(actions).toHaveLength(1);
+    expect(actions[0].type).toBe('reset_feature');
+  });
+
+  it('trigger 1: no-ops when failureCount > 0 but elapsed < 30 min', () => {
+    const twentyMinAgo = new Date(Date.now() - 20 * 60 * 1000).toISOString();
+    const feature = createFeature({
+      id: 'f1',
+      status: 'in_progress',
+      startedAt: twentyMinAgo,
+      failureCount: 1,
+    });
+    const ws = createMockWorldState({ features: { f1: feature } });
+    const actions = orphanedInProgress.evaluate(ws, 'feature:stopped', { featureId: 'f1' });
+    expect(actions).toHaveLength(0);
+  });
+
+  // ── Trigger 2: failureCount >= 2 → block immediately ──
+
+  it('trigger 2: blocks feature immediately when failureCount >= 2 and no agent', () => {
+    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const feature = createFeature({
+      id: 'f1',
+      status: 'in_progress',
+      startedAt: fiveMinAgo,
+      failureCount: 2,
+    });
+    const ws = createMockWorldState({ features: { f1: feature } });
+    const actions = orphanedInProgress.evaluate(ws, 'feature:stopped', { featureId: 'f1' });
+    const moveAction = actions.find((a) => a.type === 'move_feature');
+    expect(moveAction).toBeDefined();
+    expect((moveAction as { type: string; toStatus: string }).toStatus).toBe('blocked');
+  });
+
+  it('trigger 2: blocks immediately with failureCount 3 even under 4h', () => {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const feature = createFeature({
+      id: 'f1',
+      status: 'in_progress',
+      startedAt: oneHourAgo,
+      failureCount: 3,
+    });
+    const ws = createMockWorldState({ features: { f1: feature } });
+    const actions = orphanedInProgress.evaluate(ws, 'feature:stopped', { featureId: 'f1' });
+    const moveAction = actions.find((a) => a.type === 'move_feature');
+    expect(moveAction).toBeDefined();
+    expect((moveAction as { type: string; toStatus: string }).toStatus).toBe('blocked');
+  });
+
+  it('trigger 2: no-ops when failureCount >= 2 but agent is still running', () => {
+    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const feature = createFeature({
+      id: 'f1',
+      status: 'in_progress',
+      startedAt: fiveMinAgo,
+      failureCount: 2,
+    });
+    const agent: LeadAgentSnapshot = { featureId: 'f1', startTime: fiveMinAgo };
+    const ws = createMockWorldState({ features: { f1: feature }, agents: [agent] });
+    const actions = orphanedInProgress.evaluate(ws, 'feature:stopped', { featureId: 'f1' });
+    expect(actions).toHaveLength(0);
+  });
+
+  // ── Trigger 3: branchName set + no PR + >= 45 min ──
+
+  it('trigger 3: resets feature when worktree created but branch never pushed >= 45 min', () => {
+    const fiftyMinAgo = new Date(Date.now() - 50 * 60 * 1000).toISOString();
+    const feature = createFeature({
+      id: 'f1',
+      status: 'in_progress',
+      startedAt: fiftyMinAgo,
+      branchName: 'fix/some-bug',
+    });
+    const ws = createMockWorldState({ features: { f1: feature } });
+    const actions = orphanedInProgress.evaluate(ws, 'feature:stopped', { featureId: 'f1' });
+    expect(actions).toHaveLength(1);
+    expect(actions[0].type).toBe('reset_feature');
+  });
+
+  it('trigger 3: no-ops when branchName set but elapsed < 45 min', () => {
+    const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    const feature = createFeature({
+      id: 'f1',
+      status: 'in_progress',
+      startedAt: thirtyMinAgo,
+      branchName: 'fix/some-bug',
+    });
+    const ws = createMockWorldState({ features: { f1: feature } });
+    const actions = orphanedInProgress.evaluate(ws, 'feature:stopped', { featureId: 'f1' });
+    expect(actions).toHaveLength(0);
+  });
+
+  it('trigger 3: no-ops when branchName not set (worktree not yet created)', () => {
+    const sixtyMinAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const feature = createFeature({
+      id: 'f1',
+      status: 'in_progress',
+      startedAt: sixtyMinAgo,
+    });
+    const ws = createMockWorldState({ features: { f1: feature } });
+    const actions = orphanedInProgress.evaluate(ws, 'feature:stopped', { featureId: 'f1' });
+    // Falls through to 4h backstop — 1h is not enough
+    expect(actions).toHaveLength(0);
+  });
+
+  it('trigger 3: no-ops when branch has been pushed (prNumber set)', () => {
+    const sixtyMinAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const feature = createFeature({
+      id: 'f1',
+      status: 'in_progress',
+      startedAt: sixtyMinAgo,
+      branchName: 'fix/some-bug',
+      prNumber: 42,
+    });
+    const ws = createMockWorldState({ features: { f1: feature } });
+    const actions = orphanedInProgress.evaluate(ws, 'feature:stopped', { featureId: 'f1' });
+    // prNumber set means branch was pushed; trigger 3 does not apply
     expect(actions).toHaveLength(0);
   });
 

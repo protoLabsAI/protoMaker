@@ -14,10 +14,13 @@ import type {
 
 // ────────────────────────── Thresholds ──────────────────────────
 
-const ORPHANED_IN_PROGRESS_MS = 4 * 60 * 60 * 1000; // 4 hours
+const ORPHANED_IN_PROGRESS_MS = 4 * 60 * 60 * 1000; // 4 hours (backstop)
 const STUCK_AGENT_MS = 2 * 60 * 60 * 1000; // 2 hours
 const STALE_REVIEW_MS = 30 * 60 * 1000; // 30 minutes
 const REMEDIATION_STALL_MS = 60 * 60 * 1000; // 1 hour
+// Escalation thresholds for stale in_progress detection (faster than the 4h backstop)
+const FAILURE_STALE_MS = 30 * 60 * 1000; // 30 min: trigger when failureCount > 0 + no agent
+const UNPUSHED_BRANCH_STALE_MS = 45 * 60 * 1000; // 45 min: trigger when worktree created but branch never pushed
 
 // ────────────────────────── Helper ──────────────────────────
 
@@ -78,12 +81,55 @@ export const orphanedInProgress: LeadFastPathRule = {
       if (!f.startedAt) continue;
 
       const age = now - new Date(f.startedAt).getTime();
+      const failureCount = f.failureCount ?? 0;
+
+      // Trigger 2: failureCount >= 2 with no running agent → block immediately
+      // A feature that has already failed twice will not self-recover; escalate now.
+      if (failureCount >= 2) {
+        actions.push({
+          type: 'move_feature',
+          featureId: f.id,
+          toStatus: 'blocked',
+        });
+        actions.push({
+          type: 'log',
+          level: 'warn',
+          message: `orphanedInProgress: ${f.id} blocked immediately — orphaned with failureCount=${failureCount}`,
+        });
+        continue;
+      }
+
+      // Trigger 1: failureCount > 0 + no running agent + elapsed >= 30 min → reset
+      // Prior failure means the agent is unlikely to recover on its own; detect quickly.
+      if (failureCount > 0 && age >= FAILURE_STALE_MS) {
+        const elapsedMin = Math.round(age / 60_000);
+        actions.push({
+          type: 'reset_feature',
+          featureId: f.id,
+          reason: `Orphaned in-progress with ${failureCount} prior failure(s) for ${elapsedMin} min`,
+        });
+        continue;
+      }
+
+      // Trigger 3: worktree created (branchName set) but no PR yet + elapsed >= 45 min → reset
+      // Branch was never pushed to remote; the agent crashed before completing git workflow.
+      if (f.branchName && !f.prNumber && age >= UNPUSHED_BRANCH_STALE_MS) {
+        const elapsedMin = Math.round(age / 60_000);
+        actions.push({
+          type: 'reset_feature',
+          featureId: f.id,
+          reason: `Orphaned in-progress for ${elapsedMin} min — worktree created but branch never pushed`,
+        });
+        continue;
+      }
+
+      // Backstop: elapsed > 4h with no running agent → reset (or block if repeat failures)
       if (age > ORPHANED_IN_PROGRESS_MS) {
         const hours = Math.round(age / (60 * 60 * 1000));
 
         // Features with repeated failures get blocked instead of reset
         // to prevent infinite retry loops
-        if (f.failureCount && f.failureCount >= 3) {
+        if (failureCount >= 3) {
           actions.push({
             type: 'move_feature',
             featureId: f.id,
@@ -92,7 +138,7 @@ export const orphanedInProgress: LeadFastPathRule = {
           actions.push({
             type: 'log',
             level: 'warn',
-            message: `orphanedInProgress: ${f.id} blocked after ${f.failureCount} failures (orphaned ${hours}h)`,
+            message: `orphanedInProgress: ${f.id} blocked after ${failureCount} failures (orphaned ${hours}h)`,
           });
         } else {
           actions.push({
