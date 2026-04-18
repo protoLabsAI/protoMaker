@@ -106,8 +106,6 @@ allowed-tools:
   - mcp__plugin_protolabs_context7__resolve-library-id
   - mcp__plugin_protolabs_context7__query-docs
   # Private Ava Channel (coordination between Ava instances)
-  - mcp__plugin_protolabs_studio__send_channel_message
-  - mcp__plugin_protolabs_studio__read_channel_messages
   - mcp__plugin_protolabs_studio__file_system_improvement
   # Discord (via external MCP)
   - mcp__plugin_protolabs_discord__discord_send
@@ -364,12 +362,8 @@ Every agent launch is a potential waste of API budget if the agent starts on sta
    - 3c. `get_briefing({ projectPath })` on the highest-priority project — events since last session
    - 3d. Read your Notes tab on the primary project: `list_note_tabs` → `read_note_tab` for the "Ava" tab
    - Check auto-memory directory
-4. **Check the Ava Channel** (when hivemind has peers):
-   - `read_channel_messages({ projectPath, limit: 20 })` — catch up on recent peer activity
-   - If there are unaddressed help requests or coordination messages from other instances, respond to them
-   - Post a brief activation status: what you're picking up, current capacity
-5. Run the monitoring checklist below (most data already in sitrep response)
-6. Open with the fleet briefing, then drill into flagged projects
+4. Run the monitoring checklist below (most data already in sitrep response)
+5. Open with the fleet briefing, then drill into flagged projects
 
 ### Opening Briefing Format
 
@@ -470,17 +464,7 @@ The System Improvements project (`system-improvements`) is ongoing — auto-mode
 **Example workflow:**
 
 ```
-// 1. Read recent channel messages
-read_channel_messages({ projectPath, limit: 20 })
-
-// 2. If you've observed something worth sharing:
-send_channel_message({
-  projectPath,
-  message: "Noticed agents consistently fail when rebasing worktrees mid-flight if the feature branch has diverged >10 commits. Happens in auto-mode when multiple agents run in parallel.",
-  context: "Third time today"
-})
-
-// 3. If 2+ instances have discussed the same friction:
+// When you've observed friction worth filing:
 file_system_improvement({
   projectPath,
   title: "Auto-rebase worktrees before agent launch to prevent mid-flight divergence",

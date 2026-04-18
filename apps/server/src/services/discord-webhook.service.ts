@@ -1,21 +1,15 @@
 /**
  * Discord Webhook Service
  *
- * Sends outbound Discord notifications via webhook HTTP POSTs.
+ * Sends outbound Discord notifications to fleet-wide channels via webhook
+ * HTTP POSTs. Channel ID → webhook URL is resolved from DISCORD_WEBHOOK_*
+ * environment variables (used for fleet channels: infra, alerts, ava, etc.).
  *
- * Two resolution paths:
- *
- * 1. Project-scoped (new): sendToProjectChannel(project, channelType, content)
- *    Webhook URL sourced from project registry (projects.yaml → Workstacean API).
- *    Each project has a Discord category with dev + release channels.
- *
- * 2. Fleet-wide (legacy): sendToChannelViaWebhook(channelId, content)
- *    Webhook URL resolved from environment variables (DISCORD_WEBHOOK_INFRA, etc.)
- *    Used for fleet channels: infra, alerts, ava, etc.
+ * Project-scoped sends moved out — protoWorkstacean owns per-project Discord
+ * routing now via its own Discord plugin and per-project goals/actions.
  */
 
 import { createLogger } from '@protolabsai/utils';
-import type { ProjectRegistryEntry } from './project-registry-service.js';
 
 const logger = createLogger('DiscordWebhookService');
 
@@ -35,8 +29,6 @@ interface WebhookPayload {
   embeds?: WebhookEmbed[];
   username?: string;
 }
-
-export type ProjectChannelType = 'dev' | 'release';
 
 // ── Fleet-wide channel resolution (env vars) ─────────────────────────────────
 
@@ -84,63 +76,7 @@ async function postToWebhook(webhookUrl: string, payload: WebhookPayload): Promi
   }
 }
 
-// ── Project-scoped sends ──────────────────────────────────────────────────────
-
-/**
- * Resolve the webhook URL for a project channel from the registry entry.
- */
-export function resolveProjectWebhookUrl(
-  project: ProjectRegistryEntry,
-  channelType: ProjectChannelType
-): string | undefined {
-  return project.discord?.[channelType]?.webhook || undefined;
-}
-
-/**
- * Send a plain-text message to a project's Discord channel via webhook.
- * Webhook URL sourced from workspace/projects.yaml via the project registry.
- */
-export async function sendToProjectChannel(
-  project: ProjectRegistryEntry,
-  channelType: ProjectChannelType,
-  content: string
-): Promise<boolean> {
-  if (!content) return false;
-
-  const webhookUrl = resolveProjectWebhookUrl(project, channelType);
-  if (!webhookUrl) {
-    logger.warn(
-      `No webhook URL for ${project.slug}#${channelType} — ` +
-        `populate discord.${channelType}.webhook in workspace/projects.yaml`
-    );
-    return false;
-  }
-
-  const truncated = content.length > 2000 ? content.slice(0, 1997) + '...' : content;
-  return postToWebhook(webhookUrl, { content: truncated });
-}
-
-/**
- * Send an embed to a project's Discord channel via webhook.
- */
-export async function sendEmbedToProjectChannel(
-  project: ProjectRegistryEntry,
-  channelType: ProjectChannelType,
-  embed: WebhookEmbed
-): Promise<boolean> {
-  const webhookUrl = resolveProjectWebhookUrl(project, channelType);
-  if (!webhookUrl) {
-    logger.warn(
-      `No webhook URL for ${project.slug}#${channelType} — ` +
-        `populate discord.${channelType}.webhook in workspace/projects.yaml`
-    );
-    return false;
-  }
-
-  return postToWebhook(webhookUrl, { embeds: [embed] });
-}
-
-// ── Fleet-wide sends (legacy — infra, alerts, ava, etc.) ─────────────────────
+// ── Fleet-wide sends (infra, alerts, ava, etc.) ─────────────────────────────
 
 /**
  * Send a plain-text message to a fleet-wide Discord channel via webhook.
