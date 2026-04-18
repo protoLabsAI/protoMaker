@@ -9,11 +9,8 @@
  * server logs instead.
  */
 
-import { execSync } from 'child_process';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-
-import { parse as parseYaml } from 'yaml';
 
 import { createLogger } from '@protolabsai/utils';
 import type { Feature, EscalationSignal } from '@protolabsai/types';
@@ -39,8 +36,6 @@ const logger = createLogger('AvaCronTasks');
 
 // Embed colors
 const COLOR_GREEN = 0x2ecc71;
-const COLOR_YELLOW = 0xf1c40f;
-const COLOR_RED = 0xe74c3c;
 
 export interface AvaCronTaskDeps {
   schedulerService: SchedulerService;
@@ -309,157 +304,6 @@ export async function handleAdaptiveHeartbeat(deps: AvaCronTaskDeps): Promise<vo
 }
 
 // ---------------------------------------------------------------------------
-// Stale PR types
-// ---------------------------------------------------------------------------
-
-interface ProjectsYaml {
-  projects?: Array<{
-    github?: string;
-    status?: string;
-    discord?: {
-      channels?: {
-        alerts?: string;
-      };
-    };
-  }>;
-}
-
-interface StalePR {
-  number: number;
-  title: string;
-  headRefName: string;
-  updatedAt: string;
-  hoursOpen: number;
-  isDraft: boolean;
-  ciState: string | null;
-  hasReviews: boolean;
-  recommendedAction: string;
-}
-
-// ---------------------------------------------------------------------------
-// Stale PR Check
-// ---------------------------------------------------------------------------
-
-/**
- * Stale PR Check — runs board_monitor.py stale_prs for each monitored repo,
- * creates board features for any stale PRs found, and posts a summary to #alerts.
- */
-export async function handleStalePRCheck(deps: AvaCronTaskDeps): Promise<void> {
-  const { projectPath, featureLoader, discordBotService } = deps;
-
-  // Read workspace/projects.yaml
-  const projectsYamlPath = join(projectPath, 'workspace', 'projects.yaml');
-  let projectsYaml: ProjectsYaml;
-  try {
-    const raw = await readFile(projectsYamlPath, 'utf-8');
-    projectsYaml = parseYaml(raw) as ProjectsYaml;
-  } catch {
-    logger.debug('[stale-pr-check] workspace/projects.yaml not found or unreadable — skipping');
-    return;
-  }
-
-  const activeProjects = (projectsYaml.projects ?? []).filter(
-    (p) => p.status === 'active' && p.github
-  );
-
-  if (activeProjects.length === 0) {
-    logger.debug('[stale-pr-check] No active projects in projects.yaml — skipping');
-    return;
-  }
-
-  const boardMonitorPath = join(projectPath, 'tools', 'board_monitor.py');
-  let created = 0;
-  let skipped = 0;
-  let errors = 0;
-  const allStale: Array<{ repo: string; pr: StalePR }> = [];
-
-  for (const project of activeProjects) {
-    const repo = project.github!;
-    try {
-      const output = execSync(`python3 ${boardMonitorPath} stale_prs --repo ${repo}`, {
-        encoding: 'utf8',
-        timeout: 30_000,
-      });
-      const stalePRs: StalePR[] = JSON.parse(output);
-
-      for (const pr of stalePRs) {
-        allStale.push({ repo, pr });
-        const featureTitle = `Stale PR: ${repo}#${pr.number} — ${pr.title}`;
-
-        // Deduplication: skip if a feature with this title already exists
-        const existing = await featureLoader.findDuplicateTitle(projectPath, featureTitle);
-        if (existing) {
-          skipped++;
-          continue;
-        }
-
-        const description =
-          `PR #${pr.number} in ${repo} has been open for ${pr.hoursOpen} hours without activity.\n\n` +
-          `**Branch:** \`${pr.headRefName}\`\n` +
-          `**Last activity:** ${pr.updatedAt}\n` +
-          `**CI:** ${pr.ciState ?? 'unknown'}\n` +
-          `**Has reviews:** ${pr.hasReviews ? 'yes' : 'no'}\n` +
-          `**Draft:** ${pr.isDraft ? 'yes' : 'no'}\n\n` +
-          `**Recommended action:** ${pr.recommendedAction}\n\n` +
-          `_Detected by Quinn board_health at ${new Date().toISOString()}._`;
-
-        await featureLoader.create(projectPath, {
-          title: featureTitle,
-          description,
-          priority: 2,
-          status: 'backlog',
-        });
-        created++;
-      }
-    } catch (err) {
-      errors++;
-      logger.error(`[stale-pr-check] Failed for repo ${repo}`, err);
-    }
-  }
-
-  // Resolve #alerts channel — try first project's alerts channel, fall back to global
-  const firstProjectAlertsChannel = activeProjects[0]?.discord?.channels?.alerts;
-  const alertsChannelId =
-    firstProjectAlertsChannel ?? (await discordBotService.getChannelId('alerts'));
-
-  // Post summary to Discord
-  let summaryText: string;
-  if (allStale.length > 0) {
-    const prLines = allStale
-      .map(
-        ({ repo, pr }) =>
-          `- ${repo}#${pr.number}: ${pr.title} (${pr.hoursOpen}h open, CI: ${pr.ciState ?? 'unknown'})`
-      )
-      .join('\n');
-
-    summaryText =
-      `**Board Health — Stale PR Summary**\n\n` +
-      `Repos checked: ${activeProjects.length}\n` +
-      `Stale PRs found: ${allStale.length}\n` +
-      `Features created: ${created}\n` +
-      `Skipped (already tracked): ${skipped}\n\n` +
-      `${prLines}\n\n` +
-      `_Next check: ~3 hours_`;
-  } else {
-    summaryText = `**Board Health** — No stale PRs found across ${activeProjects.length} repo${activeProjects.length === 1 ? '' : 's'}. All clear.`;
-  }
-
-  if (alertsChannelId) {
-    try {
-      await discordBotService.sendToChannel(alertsChannelId, summaryText);
-    } catch {
-      logger.info(`[stale-pr-check] ${summaryText}`);
-    }
-  } else {
-    logger.info(`[stale-pr-check] ${summaryText}`);
-  }
-
-  logger.info(
-    `[stale-pr-check] Done — repos: ${activeProjects.length}, stale: ${allStale.length}, created: ${created}, skipped: ${skipped}, errors: ${errors}`
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Registration
 // ---------------------------------------------------------------------------
 
@@ -488,26 +332,11 @@ export async function registerAvaCronTasks(deps: AvaCronTaskDeps): Promise<void>
 
   // ava-daily-board-health removed — dashboard shows this live
   // ava-pr-triage removed — Lead Engineer handles PR lifecycle
+  // stale-pr-check removed — protoWorkstacean owns fleet-wide PR health via
+  //   the pr.no_stale goal (workspace/goals.yaml) + alert.pr_stale action
+  //   (workspace/actions.yaml) driven off the pr_pipeline world-state domain.
 
-  // 2. Stale PR check every 3 hours
-  await schedulerService.registerTask(
-    'stale-pr-check',
-    'Stale PR Check',
-    '0 */3 * * *',
-    async () => {
-      logger.info('[AvaCronTasks] Running stale-pr-check');
-      try {
-        await handleStalePRCheck(deps);
-      } catch (err) {
-        logger.error('[AvaCronTasks] stale-pr-check failed', err);
-      }
-    },
-    true
-  );
-
-  logger.info(
-    '[AvaCronTasks] Registered 2 deterministic cron tasks (staging-ping, stale-pr-check)'
-  );
+  logger.info('[AvaCronTasks] Registered 1 deterministic cron task (staging-ping)');
 
   // Load workflow settings once for the remaining opt-in tasks
   const workflowSettings = await getWorkflowSettings(deps.projectPath, deps.settingsService);
