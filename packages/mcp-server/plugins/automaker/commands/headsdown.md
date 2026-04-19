@@ -4,10 +4,13 @@ description: Deep work mode - autonomously process features, merge PRs, groom th
 category: operations
 argument-hint: [project-path]
 allowed-tools:
-  # Read-only — headsdown monitors, reports, and escalates; never edits code directly
+  # Heads Down acts. Default to delegating source-file edits to engineering agents,
+  # but run shell commands, create PRs, and adjust the board directly to keep the
+  # queue draining without operator involvement.
   - Read
   - Glob
   - Grep
+  - Bash
   - Task
   - TaskCreate
   - TaskUpdate
@@ -101,8 +104,35 @@ Use Context7 to look up current library docs when implementing features. Two-ste
 - **Merge aggressively** - Ready PRs get merged, don't let them pile up
 - **Clean as you go** - Groom the board, fix stale features, resolve blockers
 - **Act, don't ask** - Make autonomous decisions. Only escalate to the user when truly stuck.
-- **File bugs immediately** - When you observe a bug or recurring failure pattern, create a bug ticket on the board. Do NOT fix it yourself — the ticket ensures the system learns from the failure and agents implement the fix.
+- **File a GitHub issue AND unstick the queue** - When you observe a recurring failure pattern, file a GitHub issue (not an Automaker feature — see "Where Bugs Go" below) so the platform gets a permanent fix. Then immediately do whatever is needed to keep work moving — open the missing PR, mark the verified-done feature as done, restart the stalled dispatch. Filing the issue without unsticking the state is the failure mode that lets the queue rot.
+- **Direct fixes you may take without filing an issue** - Trivial one-liner unblocks: open a PR for a finished branch, flip a settings toggle, restart auto-mode, kill a hung agent. If it's a code fix, delegate to an engineering agent (don't burn your context window editing source).
 - **Exponential backoff** - When truly blocked, sleep intelligently
+
+## Where Bugs Go: GitHub Issues, Not the Board
+
+**System bugs go to GitHub Issues. The Automaker board is for product work.**
+
+When the pipeline misbehaves (stuck features, decay loops, missing reconciliation, scheduler races, infrastructure flakes, prompt-quality issues), file a GitHub issue against the platform repo — do **not** create an Automaker feature. The board is the queue for shipping product; polluting it with platform-maintenance work pushes real features down and breaks capacity planning.
+
+Use the `Bash` tool:
+
+```bash
+gh issue create \
+  --repo "$GITHUB_REPO_OWNER/$GITHUB_REPO_NAME" \
+  --title "fix(<area>): <one-line summary>" \
+  --label "bug,system-improvement" \
+  --body "<root cause + reproduction + suggested fix>"
+```
+
+Resolve `$GITHUB_REPO_OWNER`/`$GITHUB_REPO_NAME` from environment or from `.automaker/settings.json` → `git.remoteOwner`/`git.remoteRepo`.
+
+**Decision tree:**
+
+- "A user-facing feature needs to be built" → `create_feature` (Automaker board)
+- "The platform itself is broken" → `gh issue create` (GitHub Issues)
+- "An agent failed for a platform-level reason" → `gh issue create` AND unstick the in-flight feature
+
+If the fix would touch `apps/server/`, `libs/`, `packages/mcp-server/`, `.github/workflows/`, or any prompt file → it's a system bug → GitHub Issue.
 
 ## Main Loop
 
@@ -232,7 +262,7 @@ Check why:
 - **Stale or blocked features?** -> Phase 5 (Board Groom)
 - **Blocked on dependencies?** -> Work on unblocked items or productive tasks
 - **Auto-mode paused?** -> Restart if appropriate
-- **Error state?** -> Diagnose, file bug ticket, and move on
+- **Error state?** -> Diagnose, file a GitHub issue, and move on
 
 ---
 
@@ -334,11 +364,11 @@ Scan all blocked features. For each, check `statusChangeReason`. Features with a
 For each "Needs Action" feature:
 
 1. Read the full `statusChangeReason` to understand the root cause
-2. **File a bug ticket** on the board describing the root cause and recovery steps needed
-3. Do NOT fix it yourself — do NOT rebase, reformat, or edit code directly
-4. Do NOT simply reset status and let auto-mode retry — that will reproduce the same failure
+2. **File a GitHub issue** describing the root cause and recovery steps needed (`gh issue create` — not on the Automaker board)
+3. Then unstick the immediate state — open the missing PR, mark verified-done features as done, restart the agent with corrected context. Do NOT walk away from a stuck queue.
+4. For source-code fixes specifically, delegate to an engineering agent (don't burn your context window editing source) — but for one-line config flips, settings toggles, or branch operations, fix it yourself.
 
-These are surfaced with an amber "Needs Action" badge in the UI. The bug ticket ensures the failure gets a proper fix through the agent pipeline.
+These are surfaced with an amber "Needs Action" badge in the UI. The GitHub issue ensures the platform fix is tracked and prioritized separately from product work.
 
 ### 5.1 Stale Feature Remediation
 
@@ -352,8 +382,8 @@ For features in `in_progress` or `review` with no activity > 24h:
 ### 5.2 Board Consistency Checks
 
 - **Done without PR**: Feature marked done but no merged PR -> verify manually or flag
-- **Review with merged PR**: PR already merged but feature still in review -> this is a **system bug** in merged PR reconciliation. File a bug ticket. Do NOT manually `update_feature` to done.
-- **Backlog with merged PR**: Feature in backlog but its branch has a merged PR -> this is a **system bug**. The reconciliation sweep should catch backlog features too. File a bug ticket.
+- **Review with merged PR**: PR already merged but feature still in review -> this is a **system bug** in merged PR reconciliation. File a GitHub issue (`gh issue create`). Do NOT manually `update_feature` to done.
+- **Backlog with merged PR**: Feature in backlog but its branch has a merged PR -> this is a **system bug**. The reconciliation sweep should catch backlog features too. File a GitHub issue (`gh issue create`).
 - **In progress with no agent**: No running agent and no recent activity -> restart or reset
 - **Orphaned worktrees**: Worktrees for features that are already done -> note for cleanup
 
@@ -389,7 +419,7 @@ When blocked on external factors (PR review, CI build, rate limits), use time pr
 ### Tier 3: Bug Filing (15-30 min tasks)
 
 - Investigate recurring failure patterns
-- File bug tickets for any issues found
+- File GitHub issues for any platform problems found
 - Audit blocked features for root causes
 
 ### Task Selection Priority
@@ -486,19 +516,19 @@ Exit headsdown mode **only** when ALL of these conditions are met:
 1. Read agent output for error details
 2. Check if it's a transient error (network, rate limit)
 3. If transient -> retry with backoff
-4. If code error -> file a bug ticket on the board, move to next feature
-5. If blocked -> file a bug ticket, move to next feature
+4. If code error -> file a GitHub issue (`gh issue create`), move to next feature
+5. If blocked -> file a GitHub issue, move to next feature
 
 ### Build Failure
 
 1. Read build output to diagnose
-2. File a bug ticket on the board with the error details
+2. File a GitHub issue (`gh issue create`) with the error details
 3. Move to next feature
 
 ### Test Failure
 
 1. Read test output to diagnose
-2. File a bug ticket on the board with the failure details
+2. File a GitHub issue (`gh issue create`) with the failure details
 3. Move to next feature
 
 ### Complete Block
