@@ -46,22 +46,6 @@ jobs:
           git config --global user.name "GitHub CI"
           git config --global user.email "ci@example.com"
 
-      - name: Free test port
-        run: |
-          # Self-hosted runners persist between runs. A previous run may have left
-          # a process bound to port 3018 (e.g. crashed server, orphaned worker).
-          # Kill anything on that port before we start our own server.
-          echo "Checking for stale processes on port 3018..."
-          STALE_PIDS=$(lsof -ti:3018 2>/dev/null || true)
-          if [ -n "$STALE_PIDS" ]; then
-            echo "Found stale PIDs on port 3018: $STALE_PIDS — killing..."
-            echo "$STALE_PIDS" | xargs kill -9 2>/dev/null || true
-            sleep 1
-            echo "Port 3018 cleared"
-          else
-            echo "Port 3018 is free"
-          fi
-
       - name: Start backend server
         run: |
           echo "Starting backend server..."
