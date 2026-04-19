@@ -36,6 +36,18 @@ const logger = createLogger('HitlPatternAnalysisService');
 /** Number of occurrences before a backlog feature is auto-filed */
 const OCCURRENCE_THRESHOLD = 3;
 
+/**
+ * CI statuses that indicate a transient pending state rather than a real failure.
+ *
+ * When the pr-remediator exhausts retries because a check is still running
+ * (not because it actually failed), the escalation should be recorded for
+ * observability but must NOT count toward the pattern-filing threshold.
+ * Counting transient states caused false-positive feature filings (see RCA for
+ * PR #3481: build was in_progress at dispatch time, triggering a spurious
+ * remediation feature on the board).
+ */
+const TRANSIENT_CI_STATUSES = new Set(['in_progress', 'pending', 'queued']);
+
 /** Sliding window for pattern counters (7 days) */
 const COUNTER_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -195,6 +207,20 @@ export class HitlPatternAnalysisService {
       prNumber: record.prNumber,
       patternSignature: signature,
     });
+
+    // Transient check states (in_progress, pending, queued) mean the CI job was
+    // still running when the pr-remediator gave up — not that the check actually
+    // failed. Record the escalation for observability but skip pattern counting so
+    // we don't file spurious remediation features for builds that will succeed on
+    // their own. Root cause: PR #3481 build was in_progress at dispatch time.
+    const ciStatusNorm = (record.ciStatus ?? '').toLowerCase().trim();
+    if (TRANSIENT_CI_STATUSES.has(ciStatusNorm)) {
+      logger.info(
+        `Escalation for ${record.repo}#${record.prNumber} has transient ciStatus="${record.ciStatus}" — recorded but not counted toward pattern threshold`
+      );
+      await this.persistStore();
+      return;
+    }
 
     logger.info(
       `Ingested escalation for ${record.repo}#${record.prNumber} kind=${record.kind} signature="${signature}"`
