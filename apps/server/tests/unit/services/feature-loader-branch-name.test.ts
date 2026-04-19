@@ -395,4 +395,45 @@ describe('FeatureLoader.generateBranchName — special character sanitization', 
     expect(branch).toMatch(/^feature\/(untitled|[a-z0-9])/);
     expect(branch).not.toMatch(/[\[\]]/);
   });
+
+  it('strips + from titles — reproduction of skill index + retrieval injection bug', () => {
+    // Reproduces GitHub issue #3483: seed script title with '+' produced
+    // 'feature/skill-index-+-retrieval-injection' with '+' leaking into the branch name.
+    const branch = loader.generateBranchName(
+      'skill index + retrieval injection',
+      'feature-1776623241072-suhxybdqp'
+    );
+    expect(branch).not.toContain('+');
+    expect(branch).toMatch(/^feature\//);
+    expect(branch).toMatch(/^[a-z0-9/._-]+-[a-z0-9]+$/);
+  });
+
+  it('strips & from titles', () => {
+    const branch = loader.generateBranchName('Search & filter panel', 'feature-123-abc1234');
+    expect(branch).not.toContain('&');
+    expect(branch).toMatch(/^feature\//);
+  });
+
+  it('strips # from titles', () => {
+    const branch = loader.generateBranchName('Fix issue #42 in auth', 'feature-123-abc1234');
+    expect(branch).not.toContain('#');
+    expect(branch).toMatch(/^feature\//);
+  });
+
+  it('strips ? from titles', () => {
+    const branch = loader.generateBranchName('Why does auth fail?', 'feature-123-abc1234');
+    expect(branch).not.toContain('?');
+    expect(branch).toMatch(/^feature\//);
+  });
+
+  it('branch slug contains only [a-z0-9-] characters', () => {
+    // Belt-and-suspenders: verify the full character set contract regardless of input
+    const branch = loader.generateBranchName(
+      'feature: use +async/await &co. #1 for real?',
+      'feature-123-abc1234'
+    );
+    // Strip the prefix (e.g. "feature/") and trailing short-id suffix
+    const slugPart = branch.replace(/^[a-z]+\//, '');
+    expect(slugPart).toMatch(/^[a-z0-9-]+$/);
+  });
 });
