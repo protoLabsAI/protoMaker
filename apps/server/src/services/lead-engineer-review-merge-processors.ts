@@ -1126,13 +1126,9 @@ export class ReviewProcessor implements StateProcessor {
 
     // Sanitize branch name to prevent shell injection
     if (!/^[a-zA-Z0-9._\-/]+$/.test(branchName)) {
-      logger.warn(
-        '[REVIEW] Branch name contains unsafe characters, skipping external merge check',
-        {
-          featureId: ctx.feature.id,
-        }
+      throw new Error(
+        `[REVIEW] Branch name contains unsafe characters: "${branchName}" (featureId: ${ctx.feature.id})`
       );
-      return false;
     }
 
     try {

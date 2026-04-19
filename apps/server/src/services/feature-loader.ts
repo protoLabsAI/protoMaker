@@ -430,7 +430,13 @@ export class FeatureLoader implements FeatureStore {
 
     // Keep slug portion to 50 chars so the full branch stays under ~60 chars.
     const slug = slugify(title, 50);
-    return `${prefix}/${slug || `untitled`}-${shortId}`;
+    // Belt-and-suspenders: strip any remaining chars unsafe for git branch names.
+    // slugify handles this in practice; this guards against edge cases.
+    const safeSlug = slug
+      .replace(/[^a-z0-9._\-]/g, '')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    return `${prefix}/${safeSlug || `untitled`}-${shortId}`;
   }
 
   /**

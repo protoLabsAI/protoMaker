@@ -395,4 +395,28 @@ describe('FeatureLoader.generateBranchName — special character sanitization', 
     expect(branch).toMatch(/^feature\/(untitled|[a-z0-9])/);
     expect(branch).not.toMatch(/[\[\]]/);
   });
+
+  it('strips plus sign from titles', () => {
+    const branch = loader.generateBranchName('Add A+B feature', 'feature-123-abc1234');
+    expect(branch).not.toMatch(/\+/);
+    expect(branch).toMatch(/^feature\//);
+  });
+
+  it('strips ampersand from titles', () => {
+    const branch = loader.generateBranchName('Add search & filter', 'feature-123-abc1234');
+    expect(branch).not.toMatch(/&/);
+    expect(branch).toMatch(/^feature\//);
+  });
+
+  it('strips hash from titles', () => {
+    const branch = loader.generateBranchName('Fix issue #123 on login', 'feature-123-abc1234');
+    expect(branch).not.toMatch(/#/);
+    expect(branch).toMatch(/^feature\//);
+  });
+
+  it('strips question mark from titles', () => {
+    const branch = loader.generateBranchName('Handle what happens when user?', 'feature-123-abc1234');
+    expect(branch).not.toMatch(/\?/);
+    expect(branch).toMatch(/^feature\//);
+  });
 });
