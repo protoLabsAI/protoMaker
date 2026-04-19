@@ -396,3 +396,43 @@ describe('FeatureLoader.generateBranchName — special character sanitization', 
     expect(branch).not.toMatch(/[\[\]]/);
   });
 });
+
+describe('FeatureLoader.isLlmArtifactBranchName', () => {
+  const loader = new FeatureLoader();
+
+  it('detects the canonical LLM artifact phrase', () => {
+    expect(
+      loader.isLlmArtifactBranchName(
+        'fix/the-user-wants-me-to-generate-a-git-branch-name-base-pmw00hh'
+      )
+    ).toBe(true);
+  });
+
+  it('detects feature-prefixed LLM artifact', () => {
+    expect(
+      loader.isLlmArtifactBranchName(
+        'feature/the-user-wants-me-to-generate-a-git-branch-name-base-z02ivk0'
+      )
+    ).toBe(true);
+  });
+
+  it('detects "with" variant of LLM artifact', () => {
+    expect(
+      loader.isLlmArtifactBranchName(
+        'feature/the-user-wants-me-to-generate-a-git-branch-name-with-ogj7dzt'
+      )
+    ).toBe(true);
+  });
+
+  it('does not flag a legitimate branch name', () => {
+    expect(loader.isLlmArtifactBranchName('fix/completion-detector-missing-7b3f1c2')).toBe(false);
+  });
+
+  it('does not flag epic branch names', () => {
+    expect(loader.isLlmArtifactBranchName('epic/foundation-abc1234')).toBe(false);
+  });
+
+  it('does not flag feature-factory style branch names', () => {
+    expect(loader.isLlmArtifactBranchName('feature/milestone-one-phase-two-abc1234')).toBe(false);
+  });
+});
