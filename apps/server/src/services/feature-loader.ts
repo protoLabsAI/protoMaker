@@ -830,8 +830,8 @@ export class FeatureLoader implements FeatureStore {
       featureData.executionMode === 'read-only'
         ? undefined
         : ((featureData.branchName &&
-              isValidBranchName(featureData.branchName) &&
-              !this.isLlmArtifactBranchName(featureData.branchName)
+          isValidBranchName(featureData.branchName) &&
+          !this.isLlmArtifactBranchName(featureData.branchName)
             ? featureData.branchName
             : null) ?? this.generateBranchName(featureData.title, featureId, featureData.category));
 
