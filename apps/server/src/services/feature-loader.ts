@@ -1051,6 +1051,77 @@ export class FeatureLoader implements FeatureStore {
   }
 
   /**
+   * Reset a feature to backlog status and clear all stale execution context.
+   *
+   * In addition to updating the feature status, this method removes three categories
+   * of stale files that would otherwise cause the next agent dispatch to resume
+   * from stale state (ghost-PR loop, wrong pipeline phase, stale checkpoint):
+   *   - .automaker/checkpoints/{featureId}.json   — pipeline state machine checkpoint
+   *   - .automaker/features/{featureId}/handoff-*.json — phase handoff documents
+   *   - .automaker/features/{featureId}/agent-output.md  — live session output
+   *
+   * All cleanup operations are best-effort: failures are logged but never thrown so
+   * that the status update is never blocked by a missing file.
+   *
+   * @param projectPath - Absolute path to the project root
+   * @param featureId   - Feature identifier
+   * @param reason      - Human-readable reason for the reset (stored as statusChangeReason)
+   */
+  async resetToBacklog(
+    projectPath: string,
+    featureId: string,
+    reason = 'Reset by operator — prior blocker resolved'
+  ): Promise<Feature> {
+    const updated = await this.update(projectPath, featureId, {
+      status: 'backlog',
+      statusChangeReason: reason,
+      startedAt: undefined,
+    });
+
+    // 1. Clear pipeline state machine checkpoint
+    const checkpointPath = path.join(
+      getAutomakerDir(projectPath),
+      'checkpoints',
+      `${featureId}.json`
+    );
+    try {
+      await secureFs.unlink(checkpointPath);
+      logger.info(`[RESET] Cleared checkpoint for ${featureId}`);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+        logger.warn(`[RESET] Failed to clear checkpoint for ${featureId}:`, err);
+      }
+    }
+
+    // 2. Rename agent-output.md to .stale (prevents stale-context resume trap)
+    const featureDir = this.getFeatureDir(projectPath, featureId);
+    const agentOutputPath = path.join(featureDir, 'agent-output.md');
+    try {
+      await secureFs.access(agentOutputPath);
+      await secureFs.rename(agentOutputPath, `${agentOutputPath}.stale`);
+      logger.info(`[RESET] Renamed agent-output.md to .stale for ${featureId}`);
+    } catch {
+      // File doesn't exist — nothing to rename
+    }
+
+    // 3. Rename handoff-*.json to .stale (prevents pipeline from resuming stale phase)
+    try {
+      const entries = (await secureFs.readdir(featureDir, { withFileTypes: true })) as Dirent[];
+      for (const entry of entries) {
+        if (entry.isFile() && entry.name.startsWith('handoff-') && entry.name.endsWith('.json')) {
+          const filePath = path.join(featureDir, entry.name);
+          await secureFs.rename(filePath, `${filePath}.stale`);
+          logger.info(`[RESET] Renamed ${entry.name} to .stale for ${featureId}`);
+        }
+      }
+    } catch {
+      // Feature directory may not exist — nothing to rename
+    }
+
+    return updated;
+  }
+
+  /**
    * Delete a feature
    */
   async delete(projectPath: string, featureId: string): Promise<boolean> {
