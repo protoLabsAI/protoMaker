@@ -1941,6 +1941,14 @@ export class FeatureScheduler {
         const elapsedMs = Date.now() - reviewStartMs;
         if (elapsedMs < timeoutMs) continue;
 
+        // Never decay a feature whose last execution succeeded.
+        // A successful execution means the code is committed and the branch is pushed —
+        // the only remaining step is PR creation. Decaying such a feature to backlog
+        // causes silent data loss: the pushed branch becomes invisible, the next dispatch
+        // re-does the work on a new branch, and the first commit is abandoned.
+        const lastExecution = (feature.executionHistory ?? []).slice(-1)[0];
+        if (lastExecution?.success === true) continue;
+
         // Check for failing CI indicators:
         // - ciRemediationCount > 0 indicates CI failures have been detected
         // - remediationHistory with ci_failure entries

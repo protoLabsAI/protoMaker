@@ -1013,7 +1013,13 @@ export class ExecuteProcessor implements StateProcessor {
     // ── (a) Review queue depth ────────────────────────────────────────────────
     try {
       const allFeatures = await this.serviceContext.featureLoader.getAll(projectPath);
-      const reviewDepth = allFeatures.filter((f) => f.status === 'review').length;
+      // Only count features with an actual PR — features in 'review' without a prNumber
+      // completed execution but haven't materialized a PR yet. They should not consume a
+      // review slot: counting them causes the gate to block their own PR-creation retry,
+      // resulting in silent data loss (branch pushed, work done, feature decayed to backlog).
+      const reviewDepth = allFeatures.filter(
+        (f) => f.status === 'review' && f.prNumber != null
+      ).length;
       if (reviewDepth >= maxPendingReviews) {
         return {
           passed: false,
