@@ -358,6 +358,38 @@ export class FeatureLoader implements FeatureStore {
   }
 
   /**
+   * Detect LLM prompt-completion artifacts in a candidate branch name.
+   *
+   * When a Haiku-tier agent is asked to generate a branch name, it sometimes
+   * completes its own internal reasoning ("the user wants me to generate a git
+   * branch name based on: ...") rather than emitting the computed slug. These
+   * strings pass isValidBranchName (they are syntactically valid git refs) but
+   * are not legitimate branch names.
+   *
+   * Returns true when the slug portion of the branch looks like an LLM artifact
+   * so the caller can fall back to deterministic generation from the title.
+   */
+  isLlmArtifactBranchName(name: string): boolean {
+    // Extract the slug portion (everything after the first /)
+    const slashIdx = name.indexOf('/');
+    const slug = slashIdx >= 0 ? name.slice(slashIdx + 1) : name;
+
+    // LLM artifact phrases that appear when the model completes its own prompt
+    const artifactPhrases = [
+      'the-user-wants',
+      'i-will-generate',
+      'based-on-the',
+      'generate-a-git',
+      'generate-a-branch',
+      'git-branch-name',
+      'branch-name-based',
+    ];
+
+    const lower = slug.toLowerCase();
+    return artifactPhrases.some((phrase) => lower.includes(phrase));
+  }
+
+  /**
    * Derive the git branch prefix from a feature category.
    * Maps semantic categories to conventional-commit-style prefixes.
    */
@@ -798,10 +830,15 @@ export class FeatureLoader implements FeatureStore {
     // If a branchName is provided by the caller, validate it before use — special characters
     // like `[`, `]`, `(`, `)`, `:` are illegal in git refs and cause worktree creation to fail.
     // Invalid branch names are discarded and regenerated from the title via generateBranchName.
+    // LLM artifact branch names (e.g. "fix/the-user-wants-me-to-generate-a-git-branch-name-...")
+    // are also discarded — they pass syntactic validation but are the agent completing its own
+    // reasoning prompt rather than emitting a real slug.
     const branchName =
       featureData.executionMode === 'read-only'
         ? undefined
-        : ((featureData.branchName && isValidBranchName(featureData.branchName)
+        : ((featureData.branchName &&
+          isValidBranchName(featureData.branchName) &&
+          !this.isLlmArtifactBranchName(featureData.branchName)
             ? featureData.branchName
             : null) ?? this.generateBranchName(featureData.title, featureId, featureData.category));
 
