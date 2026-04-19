@@ -8,6 +8,7 @@
  * - update_feature: Update feature properties (including status changes)
  * - delete_feature: Delete feature
  * - update_feature_git_settings: Update git workflow settings
+ * - reconcile_feature_with_pr: Manually link a feature to an out-of-band merged PR
  */
 
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
@@ -332,6 +333,29 @@ export const featureTools: Tool[] = [
         },
       },
       required: ['projectPath'],
+    },
+  },
+  {
+    name: 'reconcile_feature_with_pr',
+    description:
+      'Manually reconcile a feature with a merged GitHub PR. Use this when a feature shipped via an out-of-band PR (cherry-pick, re-cut branch, manual fix) that was never automatically linked to the feature. Verifies the PR is actually merged before marking the feature done. Sets prNumber, prMergedAt, and statusChangeReason on the feature.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        featureId: {
+          type: 'string',
+          description: 'The feature ID to reconcile',
+        },
+        prNumber: {
+          type: 'number',
+          description: 'The GitHub PR number that contains the merged work for this feature',
+        },
+      },
+      required: ['projectPath', 'featureId', 'prNumber'],
     },
   },
 ];

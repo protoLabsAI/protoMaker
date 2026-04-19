@@ -307,6 +307,13 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         featureId: args.featureId,
       });
 
+    case 'reconcile_feature_with_pr':
+      return apiCall('/features/reconcile-with-pr', {
+        projectPath: args.projectPath,
+        featureId: args.featureId,
+        prNumber: args.prNumber,
+      });
+
     case 'update_feature_git_settings': {
       const gitWorkflow: Record<string, unknown> = {};
       if (args.autoCommit !== undefined) gitWorkflow.autoCommit = args.autoCommit;
