@@ -30,6 +30,7 @@ export type EventType =
   | 'feature:retry'
   | 'feature:recovery'
   | 'epic:pr-created'
+  | 'epic:auto-completed'
   | 'feature:pr-merged'
   | 'feature:pr-closed-unmerged'
   | 'feature:verify-pending'
@@ -547,6 +548,13 @@ export interface EventPayloadMap {
     epicBranchName: string;
     prNumber: number;
     prUrl: string;
+  };
+  'epic:auto-completed': {
+    projectPath: string;
+    epicId: string;
+    epicTitle: string | undefined;
+    childrenIds: string[];
+    completedAt: string;
   };
 
   // Feature lifecycle
