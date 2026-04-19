@@ -590,8 +590,35 @@ export class LeadEngineerService {
           if (restoredContext.ciStatus === 'pending') {
             restoredContext.ciStatus = undefined;
           }
+
+          // Ghost PR guard: when resuming at REVIEW or MERGE, validate the PR still exists and
+          // is in a resumable state. A closed/deleted PR causes the review processor to loop
+          // indefinitely. If the PR is gone, invalidate the checkpoint and reset to backlog.
+          const resumeState = checkpoint.currentState as FeatureProcessingState;
+          const prNumber = restoredContext.prNumber;
+          if ((resumeState === 'REVIEW' || resumeState === 'MERGE') && prNumber) {
+            const prStatus = await this.checkpointService.validatePRForResume(
+              projectPath,
+              prNumber
+            );
+            if (prStatus === 'closed' || prStatus === 'not_found') {
+              logger.warn(
+                `[LeadEngineer] Checkpoint at ${resumeState} references PR #${prNumber} which is ${prStatus} — invalidating checkpoint and resetting ${featureId} to backlog`
+              );
+              await this.checkpointService.delete(projectPath, featureId);
+              await this.featureLoader.update(projectPath, featureId, {
+                status: 'backlog',
+                prNumber: undefined,
+                statusChangeReason: `Checkpoint invalidated: PR #${prNumber} was ${prStatus}. Re-queued for execution.`,
+              });
+              this.activeFeatures.delete(featureId);
+              return { outcome: 'completed', finalState: FeatureState.INTAKE, failureCount: 0 };
+            }
+            // 'merged' or 'open' — safe to resume; REVIEW processor will handle merged state.
+          }
+
           resumeFromCheckpoint = {
-            state: checkpoint.currentState as FeatureProcessingState,
+            state: resumeState,
             restoredContext,
           };
         }

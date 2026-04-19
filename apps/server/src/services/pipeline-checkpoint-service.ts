@@ -6,14 +6,17 @@
  * features to resume from their last known-good state after a server restart.
  */
 
+import { exec } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import { promisify } from 'node:util';
 import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@protolabsai/utils';
 import { getAutomakerDir } from '@protolabsai/platform';
 import type { PipelineCheckpoint, GoalGateResult } from '@protolabsai/types';
 import { FeatureState } from '@protolabsai/types';
 import type { StateContext, FeatureProcessingState } from './lead-engineer-service.js';
 
+const execAsync = promisify(exec);
 const logger = createLogger('PipelineCheckpointService');
 
 const CHECKPOINTS_DIR = 'checkpoints';
@@ -111,6 +114,34 @@ export class PipelineCheckpointService {
         logger.error(`Failed to list checkpoints for ${projectPath}:`, err);
       }
       return [];
+    }
+  }
+
+  /**
+   * Validate that a PR referenced in a REVIEW/MERGE checkpoint still exists and is resumable.
+   *
+   * Returns:
+   *   'open'      — PR is open; safe to resume
+   *   'merged'    — PR already merged; let the REVIEW processor detect and advance
+   *   'closed'    — PR was closed without merging; invalidate the checkpoint
+   *   'not_found' — gh CLI error or PR does not exist; invalidate the checkpoint
+   */
+  async validatePRForResume(
+    projectPath: string,
+    prNumber: number
+  ): Promise<'open' | 'merged' | 'closed' | 'not_found'> {
+    try {
+      const { stdout } = await execAsync(
+        `gh pr view ${prNumber} --json state,mergedAt --jq '{state: .state, mergedAt: .mergedAt}'`,
+        { cwd: projectPath, timeout: 10000 }
+      );
+      const data = JSON.parse(stdout.trim()) as { state: string; mergedAt: string | null };
+      if (data.state === 'MERGED' || data.mergedAt) return 'merged';
+      if (data.state === 'CLOSED') return 'closed';
+      if (data.state === 'OPEN') return 'open';
+      return 'not_found';
+    } catch {
+      return 'not_found';
     }
   }
 
