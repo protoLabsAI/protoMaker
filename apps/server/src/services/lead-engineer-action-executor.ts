@@ -124,9 +124,11 @@ export class ActionExecutor {
             }
           }
 
-          await this.deps.featureLoader.update(session.projectPath, action.featureId, {
-            status: 'backlog',
-          });
+          await this.deps.featureLoader.resetToBacklog(
+            session.projectPath,
+            action.featureId,
+            action.reason
+          );
           logger.info(`Reset feature ${action.featureId}: ${action.reason}`);
           this.deps.events.emit('escalation:signal-received', {
             source: 'lead_engineer',
