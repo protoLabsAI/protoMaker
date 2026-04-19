@@ -592,10 +592,15 @@ export interface Feature {
 
   // GTM Content Track fields
   /**
-   * Type of feature: 'code' for engineering work, 'content' for GTM/marketing content.
-   * Defaults to 'code' for all existing features.
+   * Type of feature:
+   * - 'code': Engineering work — standard or read-only pipeline (default)
+   * - 'content': GTM/marketing content — content workflow, no git ops
+   * - 'signal': Cross-repo triage signal — no git ops, no worktrees, auto-resolves to done.
+   *   Use for health-check features that describe problems in external repos (e.g.
+   *   "rabbit-hole.io CI is failing"). These are informational signals, not code work units.
+   *   They do not create local PRs and must not enter the PR-gated review cycle.
    */
-  featureType?: 'code' | 'content';
+  featureType?: 'code' | 'content' | 'signal';
   /**
    * Execution mode for this feature.
    * - 'standard' (default): Full pipeline — worktree, branch, commit, push, PR.
