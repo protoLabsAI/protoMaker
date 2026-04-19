@@ -48,3 +48,42 @@ agents:
         triggers:
           - type: a2a_message
             action: provision_discord
+
+  researcher:
+    description: >
+      Deep research agent backed by rabbit-hole.io. Provides web search,
+      knowledge graph queries, URL ingestion, and multi-source deep research
+      with entity extraction and relationship mapping.
+    url: http://rabbit-hole-agent:7870/a2a
+    apiKeyEnv: RESEARCHER_API_KEY
+    skills:
+      - name: search
+        description: >
+          Quick hybrid search across web (SearXNG), knowledge graph (Neo4j),
+          and Wikipedia. Returns a consolidated markdown summary with source attribution.
+        triggers:
+          - type: a2a_message
+            action: search
+      - name: deep_research
+        description: >
+          Multi-source deep research with entity extraction, relationship mapping,
+          iterative gap-filling, and structured output. Runs the full rabbit-hole.io
+          research pipeline (scope -> plan -> research -> evaluate -> synthesis).
+        triggers:
+          - type: a2a_message
+            action: deep_research
+      - name: ingest_url
+        description: >
+          Fetch a URL (HTML page, PDF, audio, video, YouTube) and extract entities
+          into the knowledge graph via the rabbit-hole media processing pipeline.
+        triggers:
+          - type: a2a_message
+            action: ingest_url
+      - name: kg_facts
+        description: >
+          Query the rabbit-hole knowledge graph for entities and relationships.
+          Returns entity details, relationship counts, and connected entities.
+          Use to retrieve structured knowledge without triggering new research.
+        triggers:
+          - type: a2a_message
+            action: kg_facts
