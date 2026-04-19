@@ -5,6 +5,7 @@
 When a health-check ceremony creates features that describe problems in **external repos** (e.g. "CI failing on rabbit-hole.io main branch", "PR #72 in protoCLI has no reviewer"), those features must be filed as **signal** features, not `code` features.
 
 Signal features:
+
 - Do not create local branches, worktrees, or PRs.
 - Route to the `signal` workflow automatically via `featureType: 'signal'`.
 - Run a read-only investigation agent and auto-resolve to `done` when execution completes.
@@ -32,12 +33,10 @@ mcp__protolabs__update_feature({
   projectPath: '/path/to/project',
   featureId: 'feature-...',
   featureType: 'signal',
-  status: 'done',  // If the external issue is already resolved
+  status: 'done', // If the external issue is already resolved
   // OR: status: 'backlog' to re-run the investigation agent
 });
 ```
-
-
 
 This page shows you how to add a new maintenance check module to the MaintenanceOrchestrator. After reading it, you will know how to implement the check interface, register it, and assign it to the correct tier.
 
