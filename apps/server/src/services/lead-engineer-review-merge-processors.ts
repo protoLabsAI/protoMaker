@@ -504,6 +504,24 @@ export class ReviewProcessor implements StateProcessor {
       };
     }
 
+    // PR was closed without merging (out-of-band operator cleanup, force-delete, etc.).
+    // Reset to backlog so the feature can be re-executed with a fresh PR instead of looping.
+    if (reviewState === 'pr_closed') {
+      logger.warn(`[REVIEW] PR #${ctx.prNumber} closed without merging — resetting to backlog`, {
+        featureId: ctx.feature.id,
+      });
+      await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+        status: 'backlog',
+        prNumber: undefined,
+        statusChangeReason: `PR #${ctx.prNumber} was closed without merging. Re-queued for execution.`,
+      });
+      return {
+        nextState: null,
+        shouldContinue: false,
+        reason: `PR #${ctx.prNumber} closed without merging — feature reset to backlog`,
+      };
+    }
+
     // CLI/API error — check if PR is already merged before escalating.
     // Merged PRs can return 'error' review state when the GitHub API returns
     // unclear status on closed PRs. The merged check in getPRReviewState handles
@@ -1006,6 +1024,11 @@ export class ReviewProcessor implements StateProcessor {
           `[REVIEW] PR #${ctx.prNumber} already merged at ${mergeData.mergedAt}, fast-pathing to approved`
         );
         return 'approved';
+      }
+      // Closed-without-merge: reset to backlog instead of waiting until timeout.
+      if (mergeData.state === 'CLOSED') {
+        logger.warn(`[REVIEW] PR #${ctx.prNumber} is closed (not merged) — signalling pr_closed`);
+        return 'pr_closed';
       }
     } catch (mergeErr) {
       logger.debug(
