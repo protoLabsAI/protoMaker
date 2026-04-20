@@ -20,9 +20,7 @@ describe('DispatchCooldown', () => {
 
   describe('buildKey', () => {
     it('should build key from action only', () => {
-      expect(DispatchCooldown.buildKey('fleet_incident_response')).toBe(
-        'fleet_incident_response'
-      );
+      expect(DispatchCooldown.buildKey('fleet_incident_response')).toBe('fleet_incident_response');
     });
 
     it('should build key from action+agent', () => {

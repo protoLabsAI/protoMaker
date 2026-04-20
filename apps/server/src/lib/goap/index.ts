@@ -8,7 +8,11 @@
  * 4. Per-agent circuit breaker — auto-pauses routing after N consecutive failures
  */
 
-export { DispatchCooldown, type CooldownEntry, type CooldownCheckResult } from './dispatch-cooldown.js';
+export {
+  DispatchCooldown,
+  type CooldownEntry,
+  type CooldownCheckResult,
+} from './dispatch-cooldown.js';
 export {
   IncidentDedup,
   type TrackedIncident,

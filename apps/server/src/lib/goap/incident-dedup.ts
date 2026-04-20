@@ -69,7 +69,9 @@ export class IncidentDedup {
   /**
    * Register a new incident. Adds to both primary store and dedup index.
    */
-  registerIncident(incident: Omit<TrackedIncident, 'duplicateCount' | 'updatedAt'>): TrackedIncident {
+  registerIncident(
+    incident: Omit<TrackedIncident, 'duplicateCount' | 'updatedAt'>
+  ): TrackedIncident {
     const key = IncidentDedup.buildKey(incident.agentId, incident.skillId);
 
     // Check for existing open incident first

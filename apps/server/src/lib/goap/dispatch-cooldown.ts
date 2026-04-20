@@ -88,7 +88,9 @@ export class DispatchCooldown {
     if (result.suppressed) {
       const entry = this.entries.get(key)!;
       entry.suppressedCount++;
-      logger.warn(`Dispatch suppressed: ${result.reason} (total suppressed: ${entry.suppressedCount})`);
+      logger.warn(
+        `Dispatch suppressed: ${result.reason} (total suppressed: ${entry.suppressedCount})`
+      );
       return result;
     }
 
