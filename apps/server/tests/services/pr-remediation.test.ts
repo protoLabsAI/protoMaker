@@ -145,11 +145,22 @@ function setupExecMock(overrides: Record<string, string | Error> = {}): void {
           stdout: JSON.stringify({
             total_count: 1,
             check_runs: [
-              { id: 1, name: 'Check formatting', status: 'completed', conclusion: 'failure' },
+              {
+                id: 1,
+                name: 'checks',
+                status: 'completed',
+                conclusion: 'failure',
+                details_url:
+                  'https://github.com/owner/repo/actions/runs/24676789130/job/68012345',
+              },
             ],
           }),
           stderr: '',
         });
+        return;
+      }
+      if (cmd.includes('gh run view') && cmd.includes('--log-failed')) {
+        cb(null, { stdout: 'Code style issues found in 4 files', stderr: '' });
         return;
       }
 
@@ -629,9 +640,16 @@ describe('GitHubWebhookHandler event filtering', () => {
       'gh api': JSON.stringify({
         total_count: 1,
         check_runs: [
-          { id: 1, name: 'Check formatting', status: 'completed', conclusion: 'failure' },
+          {
+            id: 1,
+            name: 'checks',
+            status: 'completed',
+            conclusion: 'failure',
+            details_url: 'https://github.com/owner/repo/actions/runs/24676789130/job/68012345',
+          },
         ],
       }),
+      'gh run view': 'Code style issues found in 4 files',
       'gh pr view': JSON.stringify({ baseRefName: 'dev' }),
       'gh pr diff': 'src/index.ts',
     });
@@ -655,12 +673,18 @@ describe('GitHubWebhookHandler event filtering', () => {
     expect(PrRemediationWorker).toHaveBeenCalled();
   });
 
-  it('skips remediation when Check formatting check passed', async () => {
+  it('skips remediation when checks job passed (format check succeeded)', async () => {
     setupExecMock({
       'gh api': JSON.stringify({
         total_count: 2,
         check_runs: [
-          { id: 1, name: 'Check formatting', status: 'completed', conclusion: 'success' },
+          {
+            id: 1,
+            name: 'checks',
+            status: 'completed',
+            conclusion: 'success',
+            details_url: 'https://github.com/owner/repo/actions/runs/24676789130/job/68012345',
+          },
           { id: 2, name: 'Lint UI', status: 'completed', conclusion: 'failure' },
         ],
       }),
@@ -681,7 +705,7 @@ describe('GitHubWebhookHandler event filtering', () => {
     expect(mockWorker.runPrettier).not.toHaveBeenCalled();
   });
 
-  it('skips remediation when Check formatting check is not in the suite', async () => {
+  it('skips remediation when checks job is not in the suite (only other jobs failed)', async () => {
     setupExecMock({
       'gh api': JSON.stringify({
         total_count: 1,
@@ -700,6 +724,70 @@ describe('GitHubWebhookHandler event filtering', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 100));
 
+    expect(mockWorker.runPrettier).not.toHaveBeenCalled();
+  });
+
+  it('skips remediation when checks job failed but log contains no format failure marker', async () => {
+    setupExecMock({
+      'gh api': JSON.stringify({
+        total_count: 1,
+        check_runs: [
+          {
+            id: 1,
+            name: 'checks',
+            status: 'completed',
+            conclusion: 'failure',
+            details_url: 'https://github.com/owner/repo/actions/runs/24676789130/job/68012345',
+          },
+        ],
+      }),
+      // The "test" job failed, not the format check step
+      'gh run view': '  checks  test  ✗ Run tests\n  Tests failed: 42 expected 0',
+    });
+
+    events.emit('pr:ci-failure', {
+      projectPath: '',
+      prNumber: 54,
+      headBranch: 'feature/test-fail-not-format',
+      headSha: 'abc123',
+      checkSuiteId: 1002,
+      repository: 'owner/repo',
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    // Log contains no "Code style issues found" → no format remediation
+    expect(mockWorker.runPrettier).not.toHaveBeenCalled();
+  });
+
+  it('skips remediation when checks job failed but details_url has no run_id', async () => {
+    setupExecMock({
+      'gh api': JSON.stringify({
+        total_count: 1,
+        check_runs: [
+          {
+            id: 1,
+            name: 'checks',
+            status: 'completed',
+            conclusion: 'failure',
+            // No details_url — cannot extract run_id
+          },
+        ],
+      }),
+    });
+
+    events.emit('pr:ci-failure', {
+      projectPath: '',
+      prNumber: 55,
+      headBranch: 'feature/no-details-url',
+      headSha: 'abc123',
+      checkSuiteId: 1003,
+      repository: 'owner/repo',
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    // Cannot confirm format failure without run_id — safe to skip
     expect(mockWorker.runPrettier).not.toHaveBeenCalled();
   });
 
