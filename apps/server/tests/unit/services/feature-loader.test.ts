@@ -377,6 +377,43 @@ describe('feature-loader.ts', () => {
 
       await expect(loader.update(testProjectPath, 'feature-123', {})).rejects.toThrow('not found');
     });
+
+    it('should clear prNumber when passed undefined (feature-1776652657290)', async () => {
+      // Regression coverage for the speculative concern that `{prNumber: undefined}`
+      // would not clear the field through the spread + JSON.stringify path used by
+      // atomicWriteJson. JSON.stringify correctly drops keys with undefined values,
+      // so on read-back prNumber is absent → equivalent to cleared. This test pins
+      // the behavior so future refactors (e.g. switching to a replacer, moving to
+      // a different serializer) cannot silently break the PR-cleanup path called
+      // from the pr_closed handler in lead-engineer-review-merge-processors.
+      vi.mocked(fs.readFile).mockResolvedValue(
+        JSON.stringify({
+          id: 'feature-123',
+          status: 'review',
+          prNumber: 9999,
+        })
+      );
+      const writtenContents: string[] = [];
+      vi.mocked(fs.writeFile).mockImplementation(async (_path, data) => {
+        writtenContents.push(typeof data === 'string' ? data : data.toString());
+      });
+
+      const result = await loader.update(testProjectPath, 'feature-123', {
+        prNumber: undefined,
+        status: 'backlog',
+      });
+
+      // In-memory: key is present but value is undefined (spread + explicit undefined)
+      expect(result.prNumber).toBeUndefined();
+
+      // On disk: JSON.stringify drops undefined keys, so the serialized form has
+      // no `prNumber` key — the stale number is NOT persisted.
+      expect(writtenContents.length).toBeGreaterThan(0);
+      const serialized = writtenContents[writtenContents.length - 1];
+      const parsed = JSON.parse(serialized);
+      expect('prNumber' in parsed).toBe(false);
+      expect(parsed.prNumber).toBeUndefined();
+    });
   });
 
   describe('delete', () => {
