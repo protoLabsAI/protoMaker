@@ -40,6 +40,7 @@ import { ProjMAuthorityAgent } from '../services/authority-agents/projm-agent.js
 import { EMAuthorityAgent } from '../services/authority-agents/em-agent.js';
 import { AuditService } from '../services/audit-service.js';
 import { PRFeedbackService } from '../services/pr-feedback-service.js';
+import { GitHubWebhookHandler } from '../services/github-webhook-handler.js';
 import { WorktreeLifecycleService } from '../services/worktree-lifecycle-service.js';
 import { DiscordBotService } from '../services/discord-bot-service.js';
 import { SensorRegistryService } from '../services/sensor-registry-service.js';
@@ -243,6 +244,7 @@ export interface ServiceContainer {
 
   // PR & worktree lifecycle
   prFeedbackService: PRFeedbackService;
+  githubWebhookHandler: GitHubWebhookHandler;
   worktreeLifecycleService: WorktreeLifecycleService;
   githubStateChecker: GitHubStateChecker;
   reconciliationService: ReconciliationService;
@@ -638,6 +640,10 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // PR Feedback Service (monitors open PRs for review comments)
   const prFeedbackService = new PRFeedbackService(events, featureLoader, dataDir);
 
+  // GitHub Webhook Handler (subscribes to pr:ci-failure, triggers format auto-remediation)
+  const githubWebhookHandler = new GitHubWebhookHandler(events, repoRoot);
+  githubWebhookHandler.start();
+
   // Worktree Lifecycle Service (auto-cleanup after merge + recovery)
   const worktreeLifecycleService = new WorktreeLifecycleService(events, featureLoader, async () => {
     const runningAgents = await autoModeService.getRunningAgents();
@@ -942,6 +948,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     trajectoryQueryService,
     leadHandoffService,
     prFeedbackService,
+    githubWebhookHandler,
     worktreeLifecycleService,
     githubStateChecker,
     reconciliationService,
