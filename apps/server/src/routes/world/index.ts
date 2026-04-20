@@ -146,6 +146,7 @@ export function createWorldRoutes(
 
       res.json({
         running_count: runningAgents.length,
+        agentCount: runningAgents.length,
         auto_mode: autoModeStatus.isRunning,
         stale_agent_count: 0,
         agents: runningAgents.map((a) => ({
@@ -158,6 +159,84 @@ export function createWorldRoutes(
     } catch (err) {
       res.status(500).json({ success: false, error: String(err) });
     }
+  });
+
+  /**
+   * GET /api/world/flow
+   *
+   * Returns board flow efficiency metrics for the GOAP planner.
+   * Selector: domains.flow.data.efficiency.ratio
+   *
+   * efficiency.ratio = done_count / total (0–1 scale).
+   * A ratio of 1.0 means all features are done; 0 means none are done.
+   */
+  router.get('/flow', async (req: Request, res: Response): Promise<void> => {
+    if (!requireApiKey(req, res)) return;
+
+    try {
+      const features = await featureLoader.getAll(repoRoot);
+
+      let done = 0;
+      let blocked = 0;
+      let in_progress = 0;
+
+      for (const f of features) {
+        switch (f.status) {
+          case 'done':
+          case 'verified':
+            done++;
+            break;
+          case 'blocked':
+            blocked++;
+            break;
+          case 'in_progress':
+            in_progress++;
+            break;
+        }
+      }
+
+      const total = features.length;
+      const ratio = total > 0 ? done / total : 1;
+
+      res.json({
+        efficiency: { ratio },
+        total,
+        done,
+        blocked,
+        in_progress,
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, error: String(err) });
+    }
+  });
+
+  /**
+   * GET /api/world/services
+   *
+   * Returns service connectivity status for the GOAP planner.
+   * Selector: domains.services.data.discord.connected
+   *
+   * Discord runs in webhook-only mode from ava's perspective (protoBot lives in
+   * Workstacean). A webhook connection is considered live when at least one
+   * DISCORD_WEBHOOK_* env var is set.
+   */
+  router.get('/services', async (req: Request, res: Response): Promise<void> => {
+    if (!requireApiKey(req, res)) return;
+
+    const discordWebhookEnvVars = [
+      'DISCORD_WEBHOOK_INFRA',
+      'DISCORD_WEBHOOK_AGENT_LOGS',
+      'DISCORD_WEBHOOK_CODE_REVIEW',
+      'DISCORD_WEBHOOK_SUGGESTIONS',
+      'DISCORD_WEBHOOK_ALERTS',
+      'DISCORD_WEBHOOK_AVA',
+    ];
+
+    const discordConnected = discordWebhookEnvVars.some((v) => Boolean(process.env[v]));
+
+    res.json({
+      discord: { connected: discordConnected },
+    });
   });
 
   return router;
