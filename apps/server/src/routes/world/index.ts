@@ -3,6 +3,7 @@
  *
  * GET /api/world/board        — aggregate feature counts across all projects
  * GET /api/world/agent-health — running agents + count
+ * GET /api/world/dispatch-health — GOAP feedback loop protection status
  *
  * These are designed to be polled by workstacean's WorldStateEngine via HTTP
  * domain collectors registered in workspace/domains.yaml.  Responses are
@@ -19,6 +20,21 @@ import type { AutoModeService } from '../../services/auto-mode-service.js';
 import { validateApiKey } from '../../lib/auth.js';
 import { getBacklogPlanStatus, getRunningDetails } from '../backlog-plan/common.js';
 import { getAllRunningGenerations } from '../app-spec/common.js';
+import {
+  DispatchCooldown,
+  IncidentDedup,
+  DispatchValidator,
+  AgentCircuitBreakerManager,
+  DEFAULT_GOAP_CONFIG,
+} from '../../lib/goap/index.js';
+
+// Singleton instances for GOAP feedback loop protection
+const dispatchCooldown = new DispatchCooldown();
+const incidentDedup = new IncidentDedup();
+const dispatchValidator = new DispatchValidator();
+const agentCircuitBreaker = new AgentCircuitBreakerManager();
+
+export { dispatchCooldown, incidentDedup, dispatchValidator, agentCircuitBreaker };
 
 function requireApiKey(req: Request, res: Response): boolean {
   const key = req.headers['x-api-key'] as string | undefined;
@@ -236,6 +252,54 @@ export function createWorldRoutes(
 
     res.json({
       discord: { connected: discordConnected },
+    });
+  });
+
+  /**
+   * GET /api/world/dispatch-health
+   *
+   * Returns GOAP feedback loop protection status.
+   * Exposes cooldown entries, open incidents, circuit breaker states,
+   * and registry size for the GOAP planner to factor into decisions.
+   */
+  router.get('/dispatch-health', (req: Request, res: Response): void => {
+    if (!requireApiKey(req, res)) return;
+
+    const openCircuits = agentCircuitBreaker.getOpenCircuits();
+    const openIncidents = incidentDedup.getOpenIncidents();
+    const cooldownEntries = dispatchCooldown.getEntries();
+
+    res.json({
+      cooldown: {
+        active_count: cooldownEntries.length,
+        entries: cooldownEntries,
+        window_ms: DEFAULT_GOAP_CONFIG.cooldownWindowMs,
+      },
+      dedup: {
+        open_incident_count: openIncidents.length,
+        total_suppressed: incidentDedup.getTotalSuppressedCount(),
+        open_incidents: openIncidents.map((i) => ({
+          id: i.id,
+          agentId: i.agentId,
+          skillId: i.skillId,
+          status: i.status,
+          duplicateCount: i.duplicateCount,
+        })),
+      },
+      circuit_breaker: {
+        open_count: openCircuits.length,
+        threshold: DEFAULT_GOAP_CONFIG.circuitBreakerThreshold,
+        cooldown_ms: DEFAULT_GOAP_CONFIG.circuitBreakerCooldownMs,
+        open_agents: openCircuits.map((s) => ({
+          agentId: s.agentId,
+          state: s.state,
+          failures: s.consecutiveFailures,
+        })),
+      },
+      registry: {
+        registered_count: dispatchValidator.getRegisteredCount(),
+        phantom_patterns: DEFAULT_GOAP_CONFIG.phantomAgentPatterns,
+      },
     });
   });
 
