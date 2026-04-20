@@ -21,6 +21,7 @@ import { WebhookHealthCheck } from './maintenance/checks/webhook-health-check.js
 import { PostMergeReconcilerCheck } from './maintenance/checks/post-merge-reconciler-check.js';
 import { DoneWorktreeCleanupCheck } from './maintenance/checks/done-worktree-cleanup-check.js';
 import { EpicAdoptionSweepCheck } from './maintenance/checks/epic-adoption-sweep-check.js';
+import { BacklogTitleReconcilerCheck } from './maintenance/checks/backlog-title-reconciler-check.js';
 
 const logger = createLogger('Server:Wiring');
 
@@ -185,12 +186,19 @@ export function register(container: ServiceContainer): void {
   // Epic adoption sweep (full tier + dedicated 1h poll) — links orphaned features to parent epics
   const epicAdoptionSweepCheck = new EpicAdoptionSweepCheck(featureLoader);
 
+  // Backlog title reconciler (full tier) — fuzzy-matches zombie features (backlog/review/blocked
+  // with no prNumber) against recently merged PRs and marks them done on a confident title match.
+  // Complements PostMergeReconcilerCheck which only handles features that already have a prNumber.
+  // See protoLabsAI/protoMaker#3511.
+  const backlogTitleReconcilerCheck = new BacklogTitleReconcilerCheck(featureLoader, events);
+
   maintenanceOrchestrator.register(boardHealthCheck);
   maintenanceOrchestrator.register(resourceUsageCheck);
   maintenanceOrchestrator.register(webhookHealthCheck);
   maintenanceOrchestrator.register(postMergeReconcilerCheck);
   maintenanceOrchestrator.register(doneWorktreeCleanupCheck);
   maintenanceOrchestrator.register(epicAdoptionSweepCheck);
+  maintenanceOrchestrator.register(backlogTitleReconcilerCheck);
 
   // Wire TopicBus for hierarchical event routing of sweep results
   if (container.topicBus) {
@@ -251,6 +259,6 @@ export function register(container: ServiceContainer): void {
   );
 
   logger.info(
-    'MaintenanceOrchestrator started with board-health, resource-usage, webhook-health, post-merge-reconciler, done-worktree-cleanup, and epic-adoption-sweep checks'
+    'MaintenanceOrchestrator started with board-health, resource-usage, webhook-health, post-merge-reconciler, done-worktree-cleanup, epic-adoption-sweep, and backlog-title-reconciler checks'
   );
 }

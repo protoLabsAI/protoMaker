@@ -33,6 +33,7 @@ export type EventType =
   | 'epic:auto-completed'
   | 'feature:pr-merged'
   | 'feature:pr-closed-unmerged'
+  | 'feature:auto-reconciled'
   | 'feature:verify-pending'
   | 'feature:blocked'
   | 'feature:unblocked'
