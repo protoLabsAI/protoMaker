@@ -26,6 +26,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Router, type Request, type Response } from 'express';
 import { createLogger } from '@protolabsai/utils';
+import { resolveCallbackUrl } from '@protolabsai/platform';
 import { validateApiKey } from '../../lib/auth.js';
 import { getVersion } from '../../lib/version.js';
 import { ProviderFactory } from '../../providers/provider-factory.js';
@@ -220,13 +221,18 @@ export const DECLARED_SKILL_IDS: ReadonlySet<string> = new Set(DECLARED_SKILLS.m
 
 function buildAgentCard(host: string) {
   const version = getVersion();
+  const port = process.env['PORT'] ? parseInt(process.env['PORT'], 10) : undefined;
+  // Resolve the publicly-routable callback URL for this agent.
+  // Resolution order: PUBLIC_CALLBACK_URL env var → Tailscale detection →
+  // HOSTNAME env var → HTTP Host header (local / development fallback).
+  const callbackBase = resolveCallbackUrl({ port, hostname: host.split(':')[0] });
   return {
     name: 'protoMaker',
     description:
       'protoLabs.studio autonomous development agent. ' +
       'Multi-agent runtime coordinating board health, feature management, ' +
       'auto-mode, planning, and project onboarding.',
-    url: `http://${host}`,
+    url: callbackBase,
     version,
     provider: {
       organization: 'protoLabsAI',
