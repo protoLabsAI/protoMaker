@@ -1,5 +1,17 @@
 # @protolabsai/spec-parser
 
+## 0.104.0
+
+### Minor Changes
+
+- ### Features
+  - BacklogTitleReconcilerCheck — match zombie features to merged PRs by title (#3512)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.104.0
+
 ## 0.103.1
 
 ### Patch Changes
