@@ -37,6 +37,8 @@ const events = {
 const featureLoader = new FeatureLoader();
 const check = new BacklogTitleReconcilerCheck(featureLoader, events, threshold);
 
-console.log(`Running BacklogTitleReconcilerCheck against ${projectPath} (threshold=${threshold})...`);
+console.log(
+  `Running BacklogTitleReconcilerCheck against ${projectPath} (threshold=${threshold})...`
+);
 const result = await check.sweepProject(projectPath);
 console.log(JSON.stringify(result, null, 2));
