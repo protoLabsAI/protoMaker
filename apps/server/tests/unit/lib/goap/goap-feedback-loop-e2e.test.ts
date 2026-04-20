@@ -2,10 +2,11 @@
  * End-to-end test for GOAP feedback loop prevention.
  *
  * Replays the original incident cascade (14+ waves) and verifies:
- * - Cooldown suppresses repeated incidents
- * - Dedup prevents duplicate filing
- * - Registry validation blocks phantom agents
- * - Circuit breaker pauses after threshold
+ * - Goal satisfied guard blocks dispatch when goal is already met (layer 0)
+ * - Cooldown suppresses repeated incidents (layer 1)
+ * - Dedup prevents duplicate filing (layer 2)
+ * - Registry validation blocks phantom agents (layer 3)
+ * - Circuit breaker pauses after threshold (layer 4)
  * - Blast radius is contained
  */
 
@@ -14,12 +15,18 @@ import { DispatchCooldown } from '@/lib/goap/dispatch-cooldown.js';
 import { IncidentDedup } from '@/lib/goap/incident-dedup.js';
 import { DispatchValidator, InvalidAgentError } from '@/lib/goap/dispatch-validator.js';
 import { AgentCircuitBreakerManager } from '@/lib/goap/agent-circuit-breaker.js';
+import {
+  GoalSatisfiedGuard,
+  createGoalSatisfiedGuard,
+  type WorldStateSnapshot,
+} from '@/lib/goap/goal-satisfied-guard.js';
 
 describe('GOAP Feedback Loop Prevention (E2E)', () => {
   let cooldown: DispatchCooldown;
   let dedup: IncidentDedup;
   let validator: DispatchValidator;
   let circuitBreaker: AgentCircuitBreakerManager;
+  let goalGuard: GoalSatisfiedGuard;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -34,6 +41,7 @@ describe('GOAP Feedback Loop Prevention (E2E)', () => {
       circuitBreakerThreshold: 5,
       circuitBreakerCooldownMs: 300_000,
     });
+    goalGuard = createGoalSatisfiedGuard();
 
     // Register legitimate agents
     validator.registerAgent('lead-engineer-1');
@@ -47,6 +55,7 @@ describe('GOAP Feedback Loop Prevention (E2E)', () => {
 
   /**
    * Simulate the full dispatch pipeline:
+   * 0. Check goal satisfaction (pre-dispatch short-circuit)
    * 1. Check cooldown
    * 2. Check incident dedup
    * 3. Validate dispatch target
@@ -58,7 +67,16 @@ describe('GOAP Feedback Loop Prevention (E2E)', () => {
     agentId: string;
     skillId: string;
     incidentId: string;
+    worldState?: WorldStateSnapshot;
   }): { allowed: boolean; blockedBy?: string; reason?: string } {
+    // Step 0: Goal satisfied guard — skip dispatch if goal already met
+    if (opts.worldState !== undefined) {
+      const goalResult = goalGuard.evaluate(opts.skillId, opts.worldState);
+      if (goalResult.satisfied) {
+        return { allowed: false, blockedBy: 'goal_satisfied', reason: goalResult.reason };
+      }
+    }
+
     // Step 1: Cooldown check
     const cooldownKey = DispatchCooldown.buildKey(opts.action, opts.agentId, opts.skillId);
     const cooldownResult = cooldown.checkAndRecord(cooldownKey);
@@ -241,6 +259,94 @@ describe('GOAP Feedback Loop Prevention (E2E)', () => {
       });
 
       expect(result.allowed).toBe(true);
+    });
+  });
+
+  describe('goal satisfied guard — layer 0 (GitHub #147, #148)', () => {
+    it('should block investigate_orphaned_skills when orphaned_skill_count is 0 (#147)', () => {
+      const result = tryDispatch({
+        action: 'investigate_orphaned_skills',
+        agentId: 'lead-engineer-1',
+        skillId: 'investigate_orphaned_skills',
+        incidentId: 'INC-147',
+        worldState: { orphaned_skill_count: 0 },
+      });
+      expect(result.allowed).toBe(false);
+      expect(result.blockedBy).toBe('goal_satisfied');
+      expect(result.reason).toContain('fleet.no_skill_orphaned');
+    });
+
+    it('should allow investigate_orphaned_skills when orphaned_skill_count > 0', () => {
+      const result = tryDispatch({
+        action: 'investigate_orphaned_skills',
+        agentId: 'lead-engineer-1',
+        skillId: 'investigate_orphaned_skills',
+        incidentId: 'INC-147b',
+        worldState: { orphaned_skill_count: 2 },
+      });
+      expect(result.allowed).toBe(true);
+    });
+
+    it('should block fleet_incident_response when stuck_agent_count is 0 (#148)', () => {
+      const result = tryDispatch({
+        action: 'fleet_incident_response',
+        agentId: 'lead-engineer-2',
+        skillId: 'fleet_incident_response',
+        incidentId: 'INC-148',
+        worldState: { stuck_agent_count: 0 },
+      });
+      expect(result.allowed).toBe(false);
+      expect(result.blockedBy).toBe('goal_satisfied');
+      expect(result.reason).toContain('fleet.no_agent_stuck');
+    });
+
+    it('should allow fleet_incident_response when agents are still stuck', () => {
+      const result = tryDispatch({
+        action: 'fleet_incident_response',
+        agentId: 'lead-engineer-2',
+        skillId: 'fleet_incident_response',
+        incidentId: 'INC-148b',
+        worldState: { stuck_agent_count: 1 },
+      });
+      expect(result.allowed).toBe(true);
+    });
+
+    it('should allow dispatch when no worldState provided (backward compat — planner did not pass snapshot)', () => {
+      // When no worldState is provided, the goal guard is skipped entirely.
+      // This preserves backward compatibility for callers that do not yet
+      // send a worldState snapshot with their dispatch.
+      const result = tryDispatch({
+        action: 'investigate_orphaned_skills',
+        agentId: 'lead-engineer-1',
+        skillId: 'investigate_orphaned_skills',
+        incidentId: 'INC-149',
+        // worldState intentionally omitted
+      });
+      // Goal guard skipped; should pass all other layers
+      expect(result.allowed).toBe(true);
+    });
+
+    it('should catch goal_satisfied before cooldown (earliest possible layer)', () => {
+      // First, dispatch once to prime the cooldown
+      tryDispatch({
+        action: 'fleet_incident_response',
+        agentId: 'lead-engineer-1',
+        skillId: 'fleet_incident_response',
+        incidentId: 'INC-150a',
+        worldState: { stuck_agent_count: 1 },
+      });
+
+      // Second dispatch: goal now satisfied AND cooldown active
+      // Goal guard should fire before cooldown check
+      const result = tryDispatch({
+        action: 'fleet_incident_response',
+        agentId: 'lead-engineer-1',
+        skillId: 'fleet_incident_response',
+        incidentId: 'INC-150b',
+        worldState: { stuck_agent_count: 0 },
+      });
+      expect(result.allowed).toBe(false);
+      expect(result.blockedBy).toBe('goal_satisfied');
     });
   });
 
