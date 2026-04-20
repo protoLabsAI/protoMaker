@@ -659,8 +659,13 @@ export class SignalIntakeService {
       // Persistent idempotency guard: verify no existing feature already tracks this
       // GitHub issue number. The in-memory processedSignals set (above) handles same-session
       // duplicates; this guard catches retried deliveries after a server restart or deliveries
-      // from a second webhook registration with a different X-GitHub-Delivery ID.
-      if (signal.source === 'github' && signal.channelContext?.issueNumber !== undefined) {
+      // from a second webhook registration with a different X-GitHub-Delivery ID — and also
+      // synthetic A2A re-dispatches from protoWorkstacean's _runTriageSweep, which arrive
+      // under a non-`github` source but still carry the canonical issue number.
+      //
+      // Gate on issue number presence rather than source so any caller that plumbs an
+      // issue number through channelContext gets idempotent behavior.
+      if (signal.channelContext?.issueNumber !== undefined) {
         const issueNumber = signal.channelContext.issueNumber as number;
         try {
           const existingFeatures = await this.featureLoader.getAll(projectPath as string);
@@ -668,7 +673,8 @@ export class SignalIntakeService {
           if (alreadyTriaged) {
             logger.info(
               `[idempotency] GitHub issue #${issueNumber} already triaged as feature ` +
-                `${alreadyTriaged.id} ("${alreadyTriaged.title}") — skipping duplicate creation`
+                `${alreadyTriaged.id} ("${alreadyTriaged.title}") — skipping duplicate creation ` +
+                `(source=${signal.source})`
             );
             this.updateRingBufferEntry(bufferEntry.id, 'dismissed');
             return;
@@ -694,8 +700,11 @@ export class SignalIntakeService {
         complexity: 'medium',
         workItemState: 'idea',
         sourceChannel: sourceToChannel(signal.source),
-        // Store GitHub issue number for auto-close on PR merge
-        ...(signal.source === 'github' && signal.channelContext?.issueNumber
+        // Store GitHub issue number for auto-close on PR merge AND for future
+        // idempotency lookups. Any caller that plumbs an issueNumber through
+        // channelContext gets it persisted, not just native github-webhook
+        // signals — matches the relaxed idempotency guard above.
+        ...(signal.channelContext?.issueNumber
           ? { githubIssueNumber: signal.channelContext.issueNumber as number }
           : {}),
       });
@@ -746,6 +755,14 @@ export class SignalIntakeService {
     files?: string[];
     autoApprove?: boolean;
     webResearch?: boolean;
+    /**
+     * Optional channelContext passthrough. Merged into the built signal so callers
+     * can plumb GitHub identifiers (issueNumber, repository), author info, or
+     * other source-specific metadata through the standard intake pipeline.
+     * Top-level params (projectPath, images, files, ...) take precedence on conflict.
+     */
+    channelContext?: Record<string, unknown>;
+    author?: { id: string; name: string };
   }): void {
     // Enrich content with file and image references
     let enrichedContent = params.content;
@@ -762,8 +779,9 @@ export class SignalIntakeService {
     const signal: SignalPayload = {
       source: params.source,
       content: enrichedContent,
-      author: { id: 'ui-user', name: 'UI User' },
+      author: params.author ?? { id: 'ui-user', name: 'UI User' },
       channelContext: {
+        ...(params.channelContext ?? {}),
         projectPath: params.projectPath,
         images: params.images,
         files: params.files,

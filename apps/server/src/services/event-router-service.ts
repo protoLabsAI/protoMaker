@@ -131,10 +131,16 @@ export class EventRouterService {
 
       // Submit the signal through the standard intake pipeline so all
       // downstream handlers (PM pipeline, GTM, HITL) execute normally.
+      // Forward the caller's channelContext and author so issue-level identifiers
+      // (issueNumber, repository) reach the idempotency guard in SignalIntakeService —
+      // without this, protoWorkstacean re-dispatches from _runTriageSweep would create
+      // duplicate board features on every container restart (issue #3503).
       this.signalIntakeService.submitSignal({
         source: signal.source,
         content,
         projectPath: signal.payload['projectPath'] as string | undefined,
+        channelContext: intentSignal.channelContext,
+        author: intentSignal.author,
       });
 
       // Wait a tick to let the async intake pipeline process
