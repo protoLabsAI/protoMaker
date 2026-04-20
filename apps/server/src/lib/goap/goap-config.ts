@@ -23,6 +23,13 @@ export interface GoapFeedbackLoopConfig {
 
   /** Per-agent-class circuit breaker overrides: agentClass -> threshold */
   agentClassThresholds: Record<string, number>;
+
+  /**
+   * Cooldown window in milliseconds after a resolved incident before the same
+   * (goal, agent) pair can be re-dispatched. Prevents re-firing after resolution.
+   * Default: 1 hour.
+   */
+  resolvedIncidentCooldownMs: number;
 }
 
 export const DEFAULT_GOAP_CONFIG: GoapFeedbackLoopConfig = {
@@ -32,4 +39,5 @@ export const DEFAULT_GOAP_CONFIG: GoapFeedbackLoopConfig = {
   phantomAgentPatterns: ['auto-triage-sweep', 'system', 'user'],
   registryGracePeriodMs: 30 * 1000, // 30 seconds
   agentClassThresholds: {},
+  resolvedIncidentCooldownMs: 60 * 60 * 1000, // 1 hour
 };

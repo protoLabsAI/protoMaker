@@ -18,6 +18,8 @@ export {
   type TrackedIncident,
   type IncidentStatus,
   type DedupCheckResult,
+  type ResolvedCooldownCheckResult,
+  type ResolvedCooldownEntry,
 } from './incident-dedup.js';
 export {
   DispatchValidator,
