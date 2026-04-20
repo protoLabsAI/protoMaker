@@ -63,9 +63,11 @@ describe('GOAP Feedback Loop Prevention (E2E)', () => {
     incidentId: string;
     goalId?: string;
   }): { allowed: boolean; blockedBy?: string; reason?: string } {
-    // Step 1: Cooldown check (5-min dispatch window)
     const cooldownKey = DispatchCooldown.buildKey(opts.action, opts.agentId, opts.skillId);
-    const cooldownResult = cooldown.checkAndRecord(cooldownKey);
+
+    // Step 1: Cooldown check — read-only; only record firing if dispatch is fully allowed
+    // (recording here would re-arm the cooldown even when a later layer blocks the dispatch)
+    const cooldownResult = cooldown.check(cooldownKey);
     if (cooldownResult.suppressed) {
       return { allowed: false, blockedBy: 'cooldown', reason: cooldownResult.reason };
     }
@@ -107,6 +109,8 @@ describe('GOAP Feedback Loop Prevention (E2E)', () => {
       return { allowed: false, blockedBy: 'circuit_breaker', reason: 'Agent circuit is open' };
     }
 
+    // All layers passed — record the cooldown firing now
+    cooldown.recordFiring(cooldownKey);
     return { allowed: true };
   }
 
@@ -203,6 +207,8 @@ describe('GOAP Feedback Loop Prevention (E2E)', () => {
       // Next dispatch should be blocked by circuit breaker
       // Need to advance past cooldown or use different action keys
       vi.advanceTimersByTime(300_001); // past cooldown window
+      // Refresh agent so lastSeenAt is within registry grace period
+      validator.registerAgent(agentId);
 
       const result = tryDispatch({
         action: 'fleet_incident_response',
@@ -275,6 +281,8 @@ describe('GOAP Feedback Loop Prevention (E2E)', () => {
 
       // Advance past both the 5-min dispatch cooldown AND the 1h resolved cooldown
       vi.advanceTimersByTime(RESOLVED_COOLDOWN_MS + 60_000); // 1h + 1 min
+      // Refresh agent so lastSeenAt is within registry grace period
+      validator.registerAgent(agentId);
 
       const reDispatch = tryDispatch({
         action: 'fleet_incident_response',
@@ -385,7 +393,9 @@ describe('GOAP Feedback Loop Prevention (E2E)', () => {
       });
 
       dedup.resolveIncident('INC-003');
-      vi.advanceTimersByTime(300_001); // past cooldown
+      vi.advanceTimersByTime(300_001); // past 5-min dispatch cooldown
+      // Refresh agent so lastSeenAt is within registry grace period
+      validator.registerAgent('lead-engineer-1');
 
       const result = tryDispatch({
         action: 'fleet_incident_response',

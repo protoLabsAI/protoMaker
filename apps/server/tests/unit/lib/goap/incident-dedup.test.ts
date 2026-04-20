@@ -201,7 +201,11 @@ describe('IncidentDedup', () => {
     const COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
 
     it('should not suppress when no resolution recorded', () => {
-      const result = dedup.checkResolvedCooldown('fleet.no_agent_stuck', 'lead-engineer-1', COOLDOWN_MS);
+      const result = dedup.checkResolvedCooldown(
+        'fleet.no_agent_stuck',
+        'lead-engineer-1',
+        COOLDOWN_MS,
+      );
       expect(result.suppressed).toBe(false);
     });
 
@@ -218,7 +222,11 @@ describe('IncidentDedup', () => {
 
       // 30 minutes later — still within 1h cooldown
       vi.advanceTimersByTime(30 * 60 * 1000);
-      const result = dedup.checkResolvedCooldown('fleet.no_agent_stuck', 'lead-engineer-1', COOLDOWN_MS);
+      const result = dedup.checkResolvedCooldown(
+        'fleet.no_agent_stuck',
+        'lead-engineer-1',
+        COOLDOWN_MS,
+      );
 
       expect(result.suppressed).toBe(true);
       expect(result.remainingMs).toBeGreaterThan(0);
@@ -239,7 +247,11 @@ describe('IncidentDedup', () => {
 
       // 1h + 1ms later — cooldown expired
       vi.advanceTimersByTime(COOLDOWN_MS + 1);
-      const result = dedup.checkResolvedCooldown('fleet.no_agent_stuck', 'lead-engineer-1', COOLDOWN_MS);
+      const result = dedup.checkResolvedCooldown(
+        'fleet.no_agent_stuck',
+        'lead-engineer-1',
+        COOLDOWN_MS,
+      );
 
       expect(result.suppressed).toBe(false);
     });
@@ -278,7 +290,7 @@ describe('IncidentDedup', () => {
       expect(dedup.getResolvedCooldownEntries()).toHaveLength(0);
     });
 
-    it('should track resolved cooldown per (goalId, agentId) — different agents independent', () => {
+    it('should track resolved cooldown per goalId+agentId pair independently', () => {
       dedup.registerIncident({
         id: 'INC-005',
         agentId: 'lead-engineer-1',
@@ -290,9 +302,19 @@ describe('IncidentDedup', () => {
       dedup.resolveIncident('INC-005');
 
       // lead-engineer-1 is suppressed
-      expect(dedup.checkResolvedCooldown('fleet.no_agent_stuck', 'lead-engineer-1', COOLDOWN_MS).suppressed).toBe(true);
+      const r1 = dedup.checkResolvedCooldown(
+        'fleet.no_agent_stuck',
+        'lead-engineer-1',
+        COOLDOWN_MS,
+      );
+      expect(r1.suppressed).toBe(true);
       // lead-engineer-2 is not suppressed (different agent)
-      expect(dedup.checkResolvedCooldown('fleet.no_agent_stuck', 'lead-engineer-2', COOLDOWN_MS).suppressed).toBe(false);
+      const r2 = dedup.checkResolvedCooldown(
+        'fleet.no_agent_stuck',
+        'lead-engineer-2',
+        COOLDOWN_MS,
+      );
+      expect(r2.suppressed).toBe(false);
     });
 
     it('should store resolvedAt timestamp on incident', () => {
