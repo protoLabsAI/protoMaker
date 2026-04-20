@@ -284,3 +284,54 @@ describe('ReviewProcessor — close_and_recut for CONFLICTING PRs', () => {
     expect(backlogReset).toHaveLength(0);
   });
 });
+
+// ── pr_closed handling ────────────────────────────────────────────────────────
+
+describe('ReviewProcessor — closed PR detected during polling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('CLOSED PR (not merged) → resets feature to backlog without escalating', async () => {
+    const feature = makeFeature({ status: 'review', branchName: 'fix/test-fix' });
+    const serviceCtx = makeServiceContext({ status: 'review', branchName: 'fix/test-fix' });
+    (serviceCtx.featureLoader.get as ReturnType<typeof vi.fn>).mockResolvedValue(feature);
+
+    // Call sequence:
+    // 1. checkBranchMerged (gh pr list): returns '' (not externally merged)
+    // 2. getMergeableState (gh pr view --json mergeable): returns '' → null (not CONFLICTING)
+    // 3. normalizePR (gh pr view --json body,autoMergeRequest): throws → early return
+    // 4. getPRReviewState merge-check (gh pr view --json state,mergedAt): state=CLOSED → pr_closed
+    mockExecAsync
+      .mockResolvedValueOnce({ stdout: '', stderr: '' }) // checkBranchMerged → not merged
+      .mockResolvedValueOnce({ stdout: '', stderr: '' }) // getMergeableState → null (not CONFLICTING)
+      .mockRejectedValueOnce(new Error('PR not found')) // normalizePR → early return
+      .mockResolvedValueOnce({
+        stdout: JSON.stringify({ state: 'CLOSED', mergedAt: null }),
+        stderr: '',
+      }); // getPRReviewState merge-check → CLOSED → pr_closed
+
+    const processor = new ReviewProcessor(serviceCtx);
+    const ctx = makeCtx(feature, 42);
+    await processor.enter(ctx);
+    const result = await processor.process(ctx);
+
+    // Should terminate cleanly without HITL escalation
+    expect(result.shouldContinue).toBe(false);
+    expect(result.nextState).toBeNull();
+    expect(result.reason).toMatch(/closed without merging/i);
+
+    // Feature should be reset to backlog with prNumber cleared
+    expect(serviceCtx.featureLoader.update).toHaveBeenCalledWith(
+      '/test/project',
+      'feat-review-001',
+      expect.objectContaining({ status: 'backlog', prNumber: undefined })
+    );
+
+    // Should NOT have escalated
+    expect(serviceCtx.events.emit).not.toHaveBeenCalledWith(
+      'feature:escalated',
+      expect.anything()
+    );
+  });
+});

@@ -62,8 +62,23 @@ export class PipelineCheckpointService {
     try {
       const result = await readJsonWithRecovery<PipelineCheckpoint | null>(filePath, null);
       if (result.data && result.data.version === 1) {
-        logger.info(`Checkpoint loaded for ${featureId} at state ${result.data.currentState}`);
-        return result.data;
+        const checkpoint = result.data;
+        // Validate the PR on every load so stale checkpoints never surface
+        // regardless of which code path calls load().
+        const state = checkpoint.currentState as string;
+        const prNumber = checkpoint.stateContext.prNumber as number | undefined;
+        if ((state === 'REVIEW' || state === 'MERGE') && prNumber) {
+          const prStatus = await this.validatePRForResume(projectPath, prNumber);
+          if (prStatus === 'closed' || prStatus === 'not_found') {
+            logger.warn(
+              `Checkpoint for ${featureId} at ${state} references PR #${prNumber} which is ${prStatus} — auto-invalidating checkpoint`
+            );
+            await this.delete(projectPath, featureId);
+            return null;
+          }
+        }
+        logger.info(`Checkpoint loaded for ${featureId} at state ${checkpoint.currentState}`);
+        return checkpoint;
       }
       return null;
     } catch {
