@@ -29,7 +29,7 @@ vi.mock('child_process', async (importOriginal) => {
   return { ...actual, execFile: execFileMock };
 });
 
-const { BacklogTitleReconcilerCheck, normalizeTitle, jaccardSimilarity } =
+const { BacklogTitleReconcilerCheck, normalizeTitle, jaccardSimilarity, extractIssueRefs } =
   await import('@/services/maintenance/checks/backlog-title-reconciler-check.js');
 
 type ExecCallback = (err: Error | null, stdout: string, stderr: string) => void;
@@ -46,6 +46,7 @@ type FakeFeature = {
   id: string;
   title: string;
   status: string;
+  description?: string;
   prNumber?: number | null;
   assignee?: string | null;
 };
@@ -87,6 +88,35 @@ describe('normalizeTitle', () => {
 
   it('returns empty set for empty input', () => {
     expect(normalizeTitle('').size).toBe(0);
+  });
+});
+
+describe('extractIssueRefs', () => {
+  it('extracts multi-digit #NNNN references', () => {
+    const refs = extractIssueRefs('fix(ci): PR #3498 — prettier violation, see also #3504');
+    expect(refs).toContain(3498);
+    expect(refs).toContain(3504);
+    // Bare numbers (no # prefix) are ignored — they're often CI run IDs, line
+    // numbers, or dates that would collide with real PR numbers.
+    expect(extractIssueRefs('ran job 24645447205 successfully')).toEqual([]);
+  });
+
+  it('ignores short numeric refs below 100', () => {
+    const refs = extractIssueRefs('see #1 and #42 about item #99 vs #100');
+    expect(refs).not.toContain(1);
+    expect(refs).not.toContain(42);
+    expect(refs).not.toContain(99);
+    expect(refs).toContain(100);
+  });
+
+  it('returns empty array for empty input', () => {
+    expect(extractIssueRefs('')).toEqual([]);
+    expect(extractIssueRefs('no refs here')).toEqual([]);
+  });
+
+  it('deduplicates repeated refs', () => {
+    const refs = extractIssueRefs('see #3498 and later #3498 again');
+    expect(refs.filter((r) => r === 3498).length).toBe(1);
   });
 });
 
@@ -253,6 +283,95 @@ describe('BacklogTitleReconcilerCheck.sweepProject', () => {
     const check = new BacklogTitleReconcilerCheck(loader, events, 0.4);
 
     respondMergedPrs([{ number: 3504, title: 'fix dedup issue-triage regression', mergedAt: now }]);
+
+    const result = await check.sweepProject('/tmp/proj');
+
+    expect(result.reconciled).toBe(0);
+    expect(loader.update).not.toHaveBeenCalled();
+  });
+
+  it('direct #NNNN reference in title reconciles even when Jaccard would miss', async () => {
+    // Title has NO meaningful token overlap with the merged PR, but carries the
+    // explicit #3498 reference. The fast-path should catch it.
+    const now = new Date().toISOString();
+    const loader = createFeatureLoader([
+      {
+        id: 'feat-ref',
+        title: 'fix(ci): PR #3498 — Prettier formatting violation in test file',
+        status: 'backlog',
+        prNumber: null,
+      },
+    ]);
+    const events = createEvents();
+    // Use high threshold (0.9) — only the #NNNN fast-path can succeed.
+    const check = new BacklogTitleReconcilerCheck(loader, events, 0.9);
+
+    respondMergedPrs([
+      {
+        number: 3498,
+        title:
+          'PipelineCheckpointService resumes at REVIEW on deleted/ghost PRs — auto-mode loops indefinitely',
+        mergedAt: now,
+      },
+    ]);
+
+    const result = await check.sweepProject('/tmp/proj');
+
+    expect(result.reconciled).toBe(1);
+    expect(loader.update).toHaveBeenCalledWith(
+      '/tmp/proj',
+      'feat-ref',
+      expect.objectContaining({ status: 'done', prNumber: 3498 })
+    );
+  });
+
+  it('direct #NNNN reference in description reconciles (not just title)', async () => {
+    const now = new Date().toISOString();
+    const loader = createFeatureLoader([
+      {
+        id: 'feat-desc-ref',
+        title: 'PipelineCheckpointService.load() crashes on GitHub API error',
+        description: 'Introduced in PR #3498 — file a follow-up.',
+        status: 'backlog',
+        prNumber: null,
+      },
+    ]);
+    const events = createEvents();
+    const check = new BacklogTitleReconcilerCheck(loader, events, 0.9);
+
+    respondMergedPrs([
+      {
+        number: 3498,
+        title: 'unrelated-sounding but matched by description ref',
+        mergedAt: now,
+      },
+    ]);
+
+    const result = await check.sweepProject('/tmp/proj');
+
+    expect(result.reconciled).toBe(1);
+  });
+
+  it('direct #NNNN ref to a PR already claimed by another feature is skipped', async () => {
+    const now = new Date().toISOString();
+    const loader = createFeatureLoader([
+      {
+        id: 'feat-ref-dup',
+        title: 'followup mentioning #3498',
+        status: 'backlog',
+        prNumber: null,
+      },
+      {
+        id: 'feat-already-has',
+        title: 'other',
+        status: 'done',
+        prNumber: 3498,
+      },
+    ]);
+    const events = createEvents();
+    const check = new BacklogTitleReconcilerCheck(loader, events, 0.9);
+
+    respondMergedPrs([{ number: 3498, title: 'any title', mergedAt: now }]);
 
     const result = await check.sweepProject('/tmp/proj');
 
