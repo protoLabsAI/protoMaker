@@ -214,6 +214,58 @@ describe('PostMergeReconcilerCheck', () => {
     });
   });
 
+  it('reconciles a backlog feature whose PR merged after auto-decay (issue #3467)', async () => {
+    // Feature was auto-decayed from review → backlog while PR was pending.
+    // The PR then merged. The reconciler must catch this even though status is backlog.
+    const feature = makeFeature({
+      status: 'backlog',
+      statusChangeReason: 'Auto-decayed: stalled in review for 58min with failing CI',
+    });
+    mockFeatureLoaderGetAll.mockResolvedValue([feature]);
+
+    const execFileAsync = makeExecFileAsync({
+      'protoLabsAI/mythxengine#184': {
+        stdout: JSON.stringify({ state: 'MERGED', merged: true }),
+      },
+    });
+
+    const check = new PostMergeReconcilerCheck(makeLoader(), events as any, execFileAsync);
+    const emittedEvents: unknown[] = [];
+    events.on('feature:pr-merged', (e) => emittedEvents.push(e));
+
+    const result = await check.run('/home/josh/dev/labs/mythxengine');
+
+    expect(result.checked).toBe(1);
+    expect(result.reconciled).toBe(1);
+    expect(mockFeatureLoaderUpdate).toHaveBeenCalledWith(
+      '/home/josh/dev/labs/mythxengine',
+      'feature-001',
+      { status: 'done', statusChangeReason: 'merged PR detected via poll reconciliation' }
+    );
+    expect(emittedEvents).toHaveLength(1);
+  });
+
+  it('reconciles a blocked feature whose PR merged after being blocked (issue #3467)', async () => {
+    const feature = makeFeature({ status: 'blocked' });
+    mockFeatureLoaderGetAll.mockResolvedValue([feature]);
+
+    const execFileAsync = makeExecFileAsync({
+      'protoLabsAI/mythxengine#184': {
+        stdout: JSON.stringify({ state: 'MERGED', merged: true }),
+      },
+    });
+
+    const check = new PostMergeReconcilerCheck(makeLoader(), events as any, execFileAsync);
+    const result = await check.run('/home/josh/dev/labs/mythxengine');
+
+    expect(result.reconciled).toBe(1);
+    expect(mockFeatureLoaderUpdate).toHaveBeenCalledWith(
+      expect.any(String),
+      'feature-001',
+      expect.objectContaining({ status: 'done' })
+    );
+  });
+
   it('returns zero counts when no features are in review status', async () => {
     mockFeatureLoaderGetAll.mockResolvedValue([
       makeFeature({ status: 'backlog', prNumber: undefined, prUrl: undefined }),

@@ -989,6 +989,27 @@ export class FeatureScheduler {
                 error
               );
             }
+          } else if (prView.state === 'CLOSED') {
+            // PR was closed without merging (e.g. abandoned after auto-decay).
+            // Clear the stale PR linkage so the next agent run starts fresh.
+            logger.info(
+              `[loadPendingFeatures] Feature ${feature.id} ("${feature.title}") PR #${feature.prNumber} is CLOSED (not merged) — clearing stale prNumber so agent can start fresh`
+            );
+            try {
+              await this.featureLoader.update(projectPath, feature.id, {
+                prNumber: undefined,
+                prUrl: undefined,
+                prCreatedAt: undefined,
+                prTrackedSince: undefined,
+              });
+              feature.prNumber = undefined;
+              feature.prUrl = undefined;
+            } catch (error) {
+              logger.error(
+                `[loadPendingFeatures] Failed to clear stale prNumber for feature ${feature.id}:`,
+                error
+              );
+            }
           }
         } catch {
           logger.debug(
@@ -1353,6 +1374,18 @@ export class FeatureScheduler {
           if (feature.assignee && feature.assignee !== 'agent') {
             logger.info(
               `[loadPendingFeatures] Skipping feature ${feature.id} — assigned to human: "${feature.assignee}"`
+            );
+            continue;
+          }
+
+          // Sentinel filter: skip synthetic/probe features created by tooling (e.g. smoke-check, RPC probes).
+          // Features with titles matching the [PREFIX-hexhash] pattern or category "smoke" must never be dispatched
+          // to an agent — they are test artifacts and self-complete via cleanup in the originating
+          // tool. If cleanup fails, this guard prevents wasteful agent spawns.
+          const SYNTHETIC_PROBE_RX = /^\[[A-Z]+-[a-f0-9]+\]/;
+          if (SYNTHETIC_PROBE_RX.test(feature.title ?? '') || feature.category === 'smoke') {
+            logger.info(
+              `[loadPendingFeatures] Skipping synthetic probe ${feature.id} — not eligible for agent dispatch`
             );
             continue;
           }
@@ -1908,6 +1941,14 @@ export class FeatureScheduler {
         const elapsedMs = Date.now() - reviewStartMs;
         if (elapsedMs < timeoutMs) continue;
 
+        // Never decay a feature whose last execution succeeded.
+        // A successful execution means the code is committed and the branch is pushed —
+        // the only remaining step is PR creation. Decaying such a feature to backlog
+        // causes silent data loss: the pushed branch becomes invisible, the next dispatch
+        // re-does the work on a new branch, and the first commit is abandoned.
+        const lastExecution = (feature.executionHistory ?? []).slice(-1)[0];
+        if (lastExecution?.success === true) continue;
+
         // Check for failing CI indicators:
         // - ciRemediationCount > 0 indicates CI failures have been detected
         // - remediationHistory with ci_failure entries
@@ -1920,7 +1961,10 @@ export class FeatureScheduler {
 
         if (!hasCiFailureIndicator) continue;
 
-        // Decay the feature back to backlog
+        // Decay the feature back to backlog.
+        // Preserve prNumber/prUrl so the post-merge reconciler and loadPendingFeatures
+        // can detect if the PR merges while the feature is in backlog, and transition
+        // it to done without re-running the agent.
         const prevFailureCount = feature.failureCount ?? 0;
         const elapsedMinutes = Math.round(elapsedMs / 60000);
         try {
@@ -1928,12 +1972,7 @@ export class FeatureScheduler {
             status: 'backlog',
             failureCount: prevFailureCount + 1,
             statusChangeReason: `Auto-decayed: stalled in review for ${elapsedMinutes}min with failing CI`,
-            // Clear PR linkage so the feature doesn't bounce back to review via open-PR sync
-            prNumber: undefined,
-            prUrl: undefined,
-            prCreatedAt: undefined,
             reviewStartedAt: undefined,
-            prTrackedSince: undefined,
           });
           decayedCount++;
           logger.warn(

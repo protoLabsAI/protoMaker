@@ -1646,6 +1646,24 @@ export class AutoModeService {
             newStatus = 'blocked';
             reconcileReason = safetyResult.reason ?? 'Unsafe to resume after restart';
             break;
+          case 'recovered':
+            // Dirty worktree was auto-recovered: WIP committed to recovery/ branch.
+            // Feature is safe to resume from backlog — worktree is now clean.
+            newStatus = 'backlog';
+            reconcileReason = safetyResult.reason ?? 'Dirty worktree auto-recovered — resuming';
+            // Emit worktree:recovered on the event bus for observability
+            this.events.emit('worktree:recovered', {
+              featureId: feature.id,
+              projectPath,
+              worktreePath: safetyResult.worktreePath ?? '',
+              recoveryBranch: safetyResult.recoveryBranch ?? '',
+              reason: reconcileReason,
+              timestamp: new Date().toISOString(),
+            });
+            logger.info(
+              `[RECONCILE] Auto-recovered dirty worktree for feature ${feature.id}: ${reconcileReason}`
+            );
+            break;
           case 'resume':
           default:
             newStatus = 'backlog';

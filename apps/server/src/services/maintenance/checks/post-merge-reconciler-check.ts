@@ -43,6 +43,13 @@ interface PRViewResult {
 const TERMINAL_STATUSES = new Set(['done', 'completed', 'verified']);
 
 /**
+ * Statuses that the reconciler should check for a merged PR.
+ * Includes 'backlog' because auto-decay may have moved a feature out of 'review'
+ * while its PR was still pending — the PR may merge while the feature is in backlog.
+ */
+const RECONCILABLE_STATUSES = new Set(['review', 'backlog', 'blocked']);
+
+/**
  * Extract `owner/repo` from a GitHub PR URL.
  *
  * @example
@@ -66,7 +73,10 @@ export class PostMergeReconcilerCheck {
   }
 
   /**
-   * Reconcile PR merge status for all 'review' features in the given project.
+   * Reconcile PR merge status for all features in 'review', 'backlog', or 'blocked'
+   * status that have a prNumber set.  Backlog and blocked are included because auto-decay
+   * can move a feature out of 'review' while its PR is still pending — the PR may merge
+   * while the feature sits in backlog, and the webhook path will miss it.
    *
    * @returns Counts of features checked and transitioned to done.
    */
@@ -78,7 +88,7 @@ export class PostMergeReconcilerCheck {
       const features = await this.featureLoader.getAll(projectPath);
 
       const reviewFeatures = features.filter(
-        (f) => f.status === 'review' && f.prNumber != null && f.prUrl
+        (f) => RECONCILABLE_STATUSES.has(f.status ?? '') && f.prNumber != null && f.prUrl
       );
 
       for (const feature of reviewFeatures) {

@@ -17,7 +17,7 @@ import fs from 'node:fs';
 import path from 'path';
 import { exec, execFile, execSync } from 'child_process';
 import { createLogger } from '@protolabsai/utils';
-import { getFeatureDir } from '@protolabsai/platform';
+import { getFeatureDir, getAutomakerDir } from '@protolabsai/platform';
 import * as secureFs from '../lib/secure-fs.js';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
@@ -406,7 +406,9 @@ export class WorktreeLifecycleService {
   /**
    * Rename stale agent context files so the next agent launch starts fresh.
    *
-   * Renames agent-output.md and handoff-*.json files to .stale variants.
+   * Renames agent-output.md and handoff-*.json files to .stale variants, and
+   * deletes the pipeline checkpoint file so the next run does not resume at a
+   * dead state (e.g. REVIEW with a closed PR number).
    */
   private async renameStaleContextFiles(projectPath: string, featureId: string): Promise<void> {
     const featureDir = getFeatureDir(projectPath, featureId);
@@ -433,6 +435,25 @@ export class WorktreeLifecycleService {
       }
     } catch {
       // Feature directory may not exist — nothing to rename
+    }
+
+    // Delete pipeline checkpoint. The HTTP update handler already calls
+    // PipelineCheckpointService.delete() on the status→backlog transition, but
+    // any other caller of cleanupForBacklogReset (direct mutation, maintenance
+    // job, future code path) would otherwise leave a stale checkpoint behind —
+    // and auto-mode resumes from REVIEW with a dead PR number, looping forever.
+    const checkpointPath = path.join(
+      getAutomakerDir(projectPath),
+      'checkpoints',
+      `${featureId}.json`
+    );
+    try {
+      await fs.promises.unlink(checkpointPath);
+      logger.info(`[BACKLOG-RESET] Deleted pipeline checkpoint for ${featureId}`);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+        logger.warn(`[BACKLOG-RESET] Failed to delete checkpoint for ${featureId}: ${err}`);
+      }
     }
   }
 

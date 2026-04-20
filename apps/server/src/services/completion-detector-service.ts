@@ -326,6 +326,13 @@ export class CompletionDetectorService {
           projectSlug: epic.projectSlug,
           isEpic: true,
         });
+        this.emitter!.emit('epic:auto-completed', {
+          projectPath,
+          epicId,
+          epicTitle: epic.title,
+          childrenIds: children.map((c) => c.id),
+          completedAt: new Date().toISOString(),
+        });
         if (epic.projectSlug && epic.milestoneSlug) {
           await this.checkMilestoneCompletion(projectPath, epic.projectSlug, epic.milestoneSlug);
         }
@@ -370,12 +377,11 @@ export class CompletionDetectorService {
       return;
     }
 
-    // No branch — claim dedup then mark done directly (manual or non-git epic)
+    // No branch — claim dedup then mark done directly (board-only or non-git epic)
     this.emittedEpics.add(dedupeKey);
     this.appendLedgerEntry('epic', dedupeKey);
     this.completionCounts.epics++;
 
-    // No branch — mark done directly (manual or non-git epic)
     logger.info(`All children of epic "${epic.title}" are done — marking epic done (no branch)`);
     await this.featureLoader!.update(projectPath, epicId, { status: 'done' });
 
@@ -385,6 +391,15 @@ export class CompletionDetectorService {
       featureTitle: epic.title,
       projectSlug: epic.projectSlug,
       isEpic: true,
+    });
+    // Emit epic:auto-completed so downstream dependency resolution can unblock
+    // features that depend on this epic's completion
+    this.emitter!.emit('epic:auto-completed', {
+      projectPath,
+      epicId,
+      epicTitle: epic.title,
+      childrenIds: children.map((c) => c.id),
+      completedAt: new Date().toISOString(),
     });
 
     // Epic completion may itself trigger milestone/project checks

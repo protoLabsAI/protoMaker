@@ -1,5 +1,49 @@
 # @protolabsai/mcp-server
 
+## 0.103.0
+
+### Minor Changes
+
+- ### Features
+  - restore Ava + Heads Down autonomous posture, route system bugs to GitHub Issues (#3480)
+  - auto-fix Check formatting failures on open PRs (#3463)
+  - diagnose conflict type before update_branch retry (issue #3411) (#3459)
+  - auto-adopt children with bracket-prefix titles into matching epics (#3408) (#3462)
+
+  ### Bug Fixes
+  - harden PR creation, checkpoint reset, and worktree safety (#3499)
+  - reconcile domain producer shapes against workstacean goal selectors (#3496)
+  - repair 6 lead-engineer tests broken by API drift (#3495)
+  - update 6 stale test assertions to match current production behavior (#3494)
+  - auto-complete board-only epics when all children are done (#3492)
+  - strip unsafe chars from branch slugs; hard-fail merge gate on malformed branches (#3490)
+  - validate PR exists before resuming checkpoint at REVIEW/MERGE (#3489)
+  - reset_feature action now clears checkpoint, handoff, and agent-output files (#3488)
+  - prevent silent data loss when review queue saturates after successful execution (#3486)
+  - add reconcile_feature_with_pr MCP tool for out-of-band PR recovery (#3478)
+  - register rabbit-hole researcher as A2A fleet agent (#3477)
+  - restore main to green — dev ruleset blocks backmerge + E2E port conflict (#3475)
+  - surface draft-save failures instead of swallowing them silently (#3470)
+  - dev container auto-restart on new image push (ra8e74dcq) (#3469)
+  - repair 3 broken test suites from stabilization-queue PRs (#3468)
+  - auto-cleanup synthetic features after probe completes (#3465)
+  - auto-recover dirty worktrees on server restart (issue #3413) (#3458)
+  - reset to backlog should clear stale statusHistory blocker reason (issue #3412) (#3461)
+  - extend dedup window to 24h + regression tests for issues.opened idempotency (#3460)
+  - align github-settings script + main ruleset with promotion-merge reality (#3457)
+
+  ### Refactors
+  - fix(rollcall): homelab-iac copy of agent-rollcall.sh diverged from in-re (#3497)
+  - fix(ci): PR #3481 — transient build-pending state blocked merge; signal (#3485)
+  - Board flow: stale in_progress features with failureCount > 0 not escalat (#3472)
+  - fix(scheduler): broaden synthetic-probe sentinel beyond [SMOKE-*] (RPC p (#3466)
+  - fix(lifecycle): auto-decay review→backlog must preserve prNumber for lat (#3464)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/tools@0.103.0
+
 ## 0.102.0
 
 ### Minor Changes

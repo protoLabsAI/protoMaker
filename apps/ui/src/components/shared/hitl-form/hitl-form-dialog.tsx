@@ -162,7 +162,10 @@ export function HITLFormDialog() {
   /** Close dialog without cancelling — form stays pending on server */
   const handleDefer = useCallback(() => {
     setAdditionalContext('');
-    deferForm();
+    const draftSaved = deferForm();
+    if (!draftSaved) {
+      toast.error('Draft could not be saved. Your progress may be lost.');
+    }
   }, [deferForm]);
 
   const handleOpenChange = useCallback(

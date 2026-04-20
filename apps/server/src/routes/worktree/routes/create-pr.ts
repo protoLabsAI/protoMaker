@@ -20,6 +20,7 @@ import { validatePRState } from '@protolabsai/types';
 import { buildPROwnershipWatermark } from '../../github/utils/pr-ownership.js';
 import type { SettingsService } from '../../../services/settings-service.js';
 import { getEffectivePrBaseBranch } from '../../../lib/settings-helpers.js';
+import { createPrWithFallback } from '../../../lib/gh-pr-create.js';
 
 const logger = createLogger('CreatePR');
 
@@ -405,34 +406,25 @@ export function createCreatePRHandler(settingsService?: SettingsService) {
           }
 
           try {
-            // Build gh pr create args - use array to avoid shell injection
-            // with backticks, $(), !, and other special chars in LLM-generated PR bodies
-            const prArgs = ['pr', 'create', '--base', base];
+            const head = upstreamRepo && originOwner ? `${originOwner}:${branchName}` : branchName;
 
-            // If this is a fork (has upstream remote), specify the repo and head
-            if (upstreamRepo && originOwner) {
-              // For forks: --repo specifies where to create PR, --head specifies source
-              prArgs.push('--repo', upstreamRepo, '--head', `${originOwner}:${branchName}`);
-            } else {
-              // Not a fork, just specify the head branch
-              prArgs.push('--head', branchName);
-            }
-
-            prArgs.push('--title', title, '--body', body);
-            if (draft) prArgs.push('--draft');
-
-            logger.debug(`Creating PR with args: gh ${prArgs.join(' ')}`);
-            const { stdout: prOutput } = await execFileAsync('gh', prArgs, {
+            logger.debug(`Creating PR: base=${base} head=${head} draft=${!!draft}`);
+            const prResult = await createPrWithFallback({
               cwd: worktreePath,
               env: execEnv,
+              base,
+              head,
+              title,
+              body,
+              draft,
+              repo: upstreamRepo || undefined,
             });
-            prUrl = prOutput.trim();
-            logger.info(`PR created: ${prUrl}`);
+            prUrl = prResult.url;
+            logger.info(`PR created via ${prResult.via}: ${prUrl}`);
 
             // Extract PR number and store metadata for newly created PR
             if (prUrl) {
-              const prMatch = prUrl.match(/\/pull\/(\d+)/);
-              prNumber = prMatch ? parseInt(prMatch[1], 10) : undefined;
+              prNumber = prResult.number;
 
               if (prNumber) {
                 try {

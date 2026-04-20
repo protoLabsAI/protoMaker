@@ -1,8 +1,10 @@
 name: Build Dev Server Image
 
 # Builds and pushes the dev-branch server image to GHCR on every push to dev.
-# Watchtower on local machines polls GHCR every 5 minutes and auto-restarts
-# the automaker-dev-server container when a new image is available.
+# After pushing, optionally triggers Watchtower's HTTP API for an immediate restart
+# (requires WATCHTOWER_API_URL + WATCHTOWER_API_TOKEN repo secrets).
+# If those secrets are not set, Watchtower polls GHCR every 60 seconds and
+# auto-restarts the automaker-dev-server container when a new image is available.
 
 on:
   push:
@@ -49,3 +51,51 @@ jobs:
           # Use GitHub Actions cache to speed up subsequent builds
           cache-from: type=gha,scope=dev-server
           cache-to: type=gha,mode=max,scope=dev-server
+
+      # Trigger Watchtower to immediately check for the new image instead of waiting for the
+      # next poll cycle. Requires WATCHTOWER_API_URL and WATCHTOWER_API_TOKEN secrets to be set.
+      # Set WATCHTOWER_API_URL to http://<host-ip>:9091 (the host must be reachable from GH Actions).
+      # If the secrets are not set, Watchtower will pick up the new image on its next 60-second poll.
+      - name: Trigger Watchtower HTTP API update
+        if: success()
+        env:
+          WATCHTOWER_API_URL: ${{ secrets.WATCHTOWER_API_URL }}
+          WATCHTOWER_API_TOKEN: ${{ secrets.WATCHTOWER_API_TOKEN }}
+        run: |
+          if [ -n "$WATCHTOWER_API_URL" ] && [ -n "$WATCHTOWER_API_TOKEN" ]; then
+            echo "Triggering Watchtower at $WATCHTOWER_API_URL to pull new image..."
+            HTTP_CODE=$(curl -s -o /tmp/wt_response.txt -w "%{http_code}" \
+              --max-time 10 \
+              -X POST "$WATCHTOWER_API_URL/v1/update" \
+              -H "Authorization: Bearer $WATCHTOWER_API_TOKEN")
+            echo "Watchtower API response: HTTP $HTTP_CODE"
+            cat /tmp/wt_response.txt || true
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "Watchtower triggered — container restart underway."
+            else
+              echo "WARNING: Watchtower API returned HTTP $HTTP_CODE. Container will update on next 60s poll."
+            fi
+          else
+            echo "WATCHTOWER_API_URL / WATCHTOWER_API_TOKEN not configured."
+            echo "Container will pick up the new image on Watchtower's next 60-second poll."
+            echo "To enable direct trigger: set WATCHTOWER_API_URL and WATCHTOWER_API_TOKEN in repo secrets."
+          fi
+
+      # Post a notification to #infra Discord channel after a successful image push.
+      # Requires DISCORD_INFRA_WEBHOOK_URL secret to be set.
+      - name: Notify Discord infra channel
+        if: success()
+        env:
+          DISCORD_INFRA_WEBHOOK_URL: ${{ secrets.DISCORD_INFRA_WEBHOOK_URL }}
+        run: |
+          if [ -n "$DISCORD_INFRA_WEBHOOK_URL" ]; then
+            SHORT_SHA="${{ github.sha }}"
+            SHORT_SHA="${SHORT_SHA:0:7}"
+            COMMIT_MSG=$(echo '${{ github.event.head_commit.message }}' | head -c 80 | tr -d '"\\')
+            curl -s -X POST "$DISCORD_INFRA_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -d "{\"content\": \"**[dev-image]** New server image pushed: \`${SHORT_SHA}\` — ${COMMIT_MSG}\\nWatchtower will restart the container within 60 seconds.\"}"
+            echo "Discord notification sent."
+          else
+            echo "DISCORD_INFRA_WEBHOOK_URL not set. Skipping Discord notification."
+          fi

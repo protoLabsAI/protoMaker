@@ -30,6 +30,7 @@ export type EventType =
   | 'feature:retry'
   | 'feature:recovery'
   | 'epic:pr-created'
+  | 'epic:auto-completed'
   | 'feature:pr-merged'
   | 'feature:pr-closed-unmerged'
   | 'feature:verify-pending'
@@ -206,6 +207,7 @@ export type EventType =
   | 'worktree:drift-detected'
   | 'worktree:phantom-pruned'
   | 'worktree:cleanup'
+  | 'worktree:recovered'
   // World state monitor events
   | 'world-state:reconciliation'
   // Chief of Staff (CoS) events
@@ -547,6 +549,13 @@ export interface EventPayloadMap {
     prNumber: number;
     prUrl: string;
   };
+  'epic:auto-completed': {
+    projectPath: string;
+    epicId: string;
+    epicTitle: string | undefined;
+    childrenIds: string[];
+    completedAt: string;
+  };
 
   // Feature lifecycle
   'feature:started': { featureId: string; featureTitle?: string; projectPath?: string };
@@ -648,6 +657,16 @@ export interface EventPayloadMap {
     removed: number;
     paths: string[];
     dryRun: boolean;
+  };
+
+  // Worktree auto-recovery event (dirty worktree salvaged on restart)
+  'worktree:recovered': {
+    featureId: string;
+    projectPath: string;
+    worktreePath: string;
+    recoveryBranch: string;
+    reason: string;
+    timestamp: string;
   };
 
   // Maintenance sweep events

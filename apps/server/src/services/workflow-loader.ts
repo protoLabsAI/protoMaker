@@ -310,6 +310,45 @@ const SWEBENCH_WORKFLOW: WorkflowDefinition = {
   },
 };
 
+// ─── Signal Workflow ──────────────────────────────────────────────────────────
+//
+// Cross-repo triage signals: informational features that describe problems in
+// external repos (e.g. "CI failing on rabbit-hole.io main branch"). These are
+// NOT code work units — they produce no local commits, branches, or PRs.
+//
+// Lifecycle: backlog → execute (agent investigates / documents) → done
+// Use featureType: 'signal' to assign this workflow automatically.
+
+const SIGNAL_WORKFLOW: WorkflowDefinition = {
+  name: 'signal',
+  description:
+    'Cross-repo triage signal — read-only investigation of an external repo issue, auto-resolves to done without a PR',
+  phases: [
+    { state: 'INTAKE', enabled: true },
+    { state: 'PLAN', enabled: false },
+    { state: 'EXECUTE', enabled: true },
+    { state: 'REVIEW', enabled: false },
+    { state: 'MERGE', enabled: false },
+    { state: 'DEPLOY', enabled: false },
+  ],
+  agent: {
+    model: 'sonnet',
+  },
+  execution: {
+    useWorktrees: false,
+    gitWorkflow: {
+      autoCommit: false,
+      autoPush: false,
+      autoCreatePR: false,
+    },
+    terminalStatus: 'done',
+  },
+  match: {
+    categories: ['signal', 'triage', 'cross-repo'],
+    keywords: ['signal', 'triage', 'cross-repo', 'external-repo', 'monitoring'],
+  },
+};
+
 /** All built-in workflows, keyed by name */
 const BUILT_IN_WORKFLOWS = new Map<string, WorkflowDefinition>([
   // Core pipelines
@@ -328,6 +367,8 @@ const BUILT_IN_WORKFLOWS = new Map<string, WorkflowDefinition>([
   ['strategic-review', STRATEGIC_REVIEW_WORKFLOW],
   // Benchmark
   ['swebench', SWEBENCH_WORKFLOW],
+  // Signals
+  ['signal', SIGNAL_WORKFLOW],
 ]);
 
 // ─── Service ──────────────────────────────────────────────────────────────
@@ -359,7 +400,7 @@ export class WorkflowLoader {
    *
    * Priority:
    *   1. feature.workflow (explicit assignment)
-   *   2. feature.featureType mapping ('content' → content workflow)
+   *   2. feature.featureType mapping ('content' → content, 'signal' → signal workflow)
    *   3. feature.executionMode mapping ('read-only' → read-only workflow)
    *   4. Default: 'standard'
    */
@@ -373,9 +414,14 @@ export class WorkflowLoader {
       );
     }
 
-    // Legacy featureType mapping
+    // featureType mapping
     if (feature.featureType === 'content') {
       const workflow = await this.resolve(projectPath, 'content');
+      if (workflow) return workflow;
+    }
+
+    if (feature.featureType === 'signal') {
+      const workflow = await this.resolve(projectPath, 'signal');
       if (workflow) return workflow;
     }
 

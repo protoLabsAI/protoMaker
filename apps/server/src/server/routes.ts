@@ -60,7 +60,6 @@ import { createAuthorityRoutes } from '../routes/authority/index.js';
 import { createCosRoutes } from '../routes/cos/index.js';
 import { createCeremoniesRoutes } from '../routes/ceremonies/index.js';
 import { createWebhooksRoutes } from '../routes/webhooks/index.js';
-import { createDiscordRoutes } from '../routes/discord/index.js';
 import { ProjectRegistryService } from '../services/project-registry-service.js';
 import { createAvaRoutes } from '../routes/ava/index.js';
 import { createKnowledgeRoutes } from '../routes/knowledge/index.js';
@@ -82,7 +81,6 @@ import { createTodoRoutes } from '../routes/todo/index.js';
 import { createSitrepRoutes } from '../routes/sitrep/index.js';
 import { createPortfolioSitrepRoutes } from '../routes/portfolio/sitrep.js';
 import { createCrossRepoDepsRoutes } from '../routes/portfolio/cross-repo-deps.js';
-import { createPortfolioSyncRegistryRoutes } from '../routes/portfolio/sync-registry.js';
 import { createLeadEngineerRoutes } from '../routes/lead-engineer/index.js';
 import { createPrometheusRoute } from '../routes/metrics/prometheus.js';
 import { createAutomationsRoutes } from '../routes/automations/index.js';
@@ -385,7 +383,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   );
   app.use('/api/automations', createAutomationsRoutes(automationService));
   app.use('/api/ava', createAvaRoutes(services));
-  app.use('/api/discord', createDiscordRoutes(projectRegistry));
   app.use(
     '/api/ceremonies',
     createCeremoniesRoutes(events, featureLoader, projectService, ceremonyService, ceremonyAuditLog)
@@ -432,7 +429,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     '/api/portfolio/cross-repo-deps',
     createCrossRepoDepsRoutes({ settingsService, featureLoader })
   );
-  app.use('/api/portfolio/sync-registry', createPortfolioSyncRegistryRoutes({ settingsService }));
   // Knowledge store routes (chunked retrieval)
   if (knowledgeStoreService) {
     app.use('/api/knowledge', createKnowledgeRoutes(knowledgeStoreService));

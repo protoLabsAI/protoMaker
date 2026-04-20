@@ -403,9 +403,11 @@ describe('ExecuteProcessor — execution gate rejection tracking (Bug 3)', () =>
   });
 
   it('returns to backlog on first gate rejection (count < 3)', async () => {
-    // Gate enabled. featureLoader.getAll returns 6 features in 'review' (> default maxPendingReviews=5).
+    // Gate enabled. featureLoader.getAll returns 6 features in 'review' with prNumber
+    // (> default maxPendingReviews=5). The gate only counts review features that have
+    // an actual PR — features in 'review' without a prNumber are excluded.
     const reviewFeatures = Array.from({ length: 6 }, (_, i) =>
-      makeFeature({ id: `feat-review-${i}`, status: 'review' as const })
+      makeFeature({ id: `feat-review-${i}`, status: 'review' as const, prNumber: 100 + i })
     );
     const { ctx, featureLoader } = makeServiceContext({
       executionGate: true,
@@ -431,7 +433,7 @@ describe('ExecuteProcessor — execution gate rejection tracking (Bug 3)', () =>
 
   it('escalates after 3rd consecutive gate rejection', async () => {
     const reviewFeatures = Array.from({ length: 6 }, (_, i) =>
-      makeFeature({ id: `feat-review-${i}`, status: 'review' as const })
+      makeFeature({ id: `feat-review-${i}`, status: 'review' as const, prNumber: 200 + i })
     );
     const { ctx, featureLoader } = makeServiceContext({
       executionGate: true,
@@ -459,7 +461,7 @@ describe('ExecuteProcessor — execution gate rejection tracking (Bug 3)', () =>
 
   it('increments gateRejectionCount from undefined on first rejection', async () => {
     const reviewFeatures = Array.from({ length: 6 }, (_, i) =>
-      makeFeature({ id: `feat-review-${i}`, status: 'review' as const })
+      makeFeature({ id: `feat-review-${i}`, status: 'review' as const, prNumber: 300 + i })
     );
     const { ctx } = makeServiceContext({
       executionGate: true,

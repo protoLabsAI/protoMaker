@@ -45,6 +45,11 @@ import { getEventHistoryService } from '../../services/event-history-service.js'
 import { getBriefingCursorService } from '../../services/briefing-cursor-service.js';
 import { queryPm } from '../project-pm/pm-agent.js';
 import { simpleQuery } from '../../providers/simple-query-service.js';
+import Anthropic from '@anthropic-ai/sdk';
+import {
+  classifyAndRemediate,
+  logRemediationOutcome,
+} from '../../services/pr-remediation-service.js';
 
 // ---------------------------------------------------------------------------
 // Plan types
@@ -1211,6 +1216,52 @@ export function buildAvaTools(
         } catch (err) {
           return {
             error: `Failed to resolve PR threads: ${err instanceof Error ? err.message : String(err)}`,
+          };
+        }
+      },
+    });
+
+    tools['diagnose_pr_conflict'] = makeTool({
+      description:
+        'Classify the conflict type for a pull request and take the appropriate remediation action. ' +
+        'Returns one of four verdicts: redundant (auto-closes with comment), rebasable (attempts LLM-assisted merge), ' +
+        'decomposable (proposes splitting the PR), or genuine (escalates to HITL with specific conflict details). ' +
+        'Use this before retrying update_branch to avoid burning retry budget on unresolvable conflicts.',
+      inputSchema: z.object({
+        prNumber: z.number().int().describe('PR number to diagnose and remediate'),
+        retryAttempt: z
+          .number()
+          .int()
+          .optional()
+          .describe('Current retry attempt number (default: 2 — triggers classification)'),
+        maxRetries: z
+          .number()
+          .int()
+          .optional()
+          .describe('Maximum remediation attempts before budget exhaustion (default: 3)'),
+      }),
+      execute: async ({ prNumber, retryAttempt, maxRetries }) => {
+        try {
+          const anthropic = new Anthropic();
+          const result = await classifyAndRemediate({
+            projectPath,
+            prNumber,
+            retryAttempt: retryAttempt ?? 2,
+            anthropic,
+            maxRetries: maxRetries ?? 3,
+          });
+          logRemediationOutcome(result);
+          return {
+            prNumber: result.prNumber,
+            verdict: result.verdict,
+            actionType: result.actionType,
+            remediationCount: result.remediationCount,
+            reasoning: result.reasoning,
+            details: result.details,
+          };
+        } catch (err) {
+          return {
+            error: `Failed to diagnose PR conflict: ${err instanceof Error ? err.message : String(err)}`,
           };
         }
       },

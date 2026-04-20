@@ -48,6 +48,65 @@ const logger = createLogger('FeatureLoader');
 // Re-export Feature type for convenience
 export type { Feature };
 
+/**
+ * Extract the bracket keyword from a feature title used for epic auto-adoption matching.
+ *
+ * Recognized patterns (keyword is the alphabetic prefix before the version number):
+ *   [Arc 1.2]        → "Arc"
+ *   [TR-1.2]         → "TR"
+ *   [DD-1.2]         → "DD"
+ *   [Epic-Name 1.2]  → "Epic-Name"
+ *
+ * Returns null when the title does not start with a recognized bracket pattern.
+ */
+export function extractEpicKeyword(title: string): string | null {
+  // Match [PREFIX SEPARATOR VERSION] at the start of the title
+  // PREFIX: one or more words joined by hyphens (letters/digits only within each word)
+  // SEPARATOR: a single space or dash between the prefix and the version number
+  // VERSION: one or more dot-separated digit groups (e.g. 1, 0.1, 2.3.4)
+  const match = title
+    .trim()
+    .match(/^\[([A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*)[\s\-](\d+(?:\.\d+)+)\]/);
+  if (!match) return null;
+  return match[1];
+}
+
+/**
+ * Find the best candidate parent epic for auto-adoption given a child feature title.
+ *
+ * Matching rules:
+ * - Extracts the keyword from the bracket prefix (e.g., "Arc" from "[Arc 1.2] xyz")
+ * - Searches active (non-archived) epics for a title that contains the keyword (case-insensitive)
+ *   or whose slugified title contains the slugified keyword
+ * - Returns the candidate only when exactly ONE epic matches — ambiguous matches are skipped
+ *   to avoid mis-assignment
+ *
+ * @param title - Title of the child feature being created
+ * @param features - All features in the project (pre-loaded)
+ * @returns The matching epic Feature, or null if no unique match found
+ */
+export function findCandidateEpic(title: string, features: Feature[]): Feature | null {
+  if (!title) return null;
+
+  const keyword = extractEpicKeyword(title);
+  if (!keyword || keyword.length < 2) return null;
+
+  const keywordLower = keyword.toLowerCase();
+  const keywordSlug = slugify(keyword);
+
+  const epics = features.filter((f) => f.isEpic && !f.archived);
+
+  const candidates = epics.filter((epic) => {
+    if (!epic.title) return false;
+    const epicTitleLower = epic.title.toLowerCase();
+    const epicSlug = slugify(epic.title);
+    return epicTitleLower.includes(keywordLower) || epicSlug.includes(keywordSlug);
+  });
+
+  // Only auto-adopt when exactly one epic matches — avoid wrong assignment on ambiguous results
+  return candidates.length === 1 ? candidates[0] : null;
+}
+
 export class FeatureLoader implements FeatureStore {
   private integrityWatchdog: DataIntegrityWatchdogService | null = null;
   private events: EventEmitter | null = null;
@@ -299,6 +358,38 @@ export class FeatureLoader implements FeatureStore {
   }
 
   /**
+   * Detect LLM prompt-completion artifacts in a candidate branch name.
+   *
+   * When a Haiku-tier agent is asked to generate a branch name, it sometimes
+   * completes its own internal reasoning ("the user wants me to generate a git
+   * branch name based on: ...") rather than emitting the computed slug. These
+   * strings pass isValidBranchName (they are syntactically valid git refs) but
+   * are not legitimate branch names.
+   *
+   * Returns true when the slug portion of the branch looks like an LLM artifact
+   * so the caller can fall back to deterministic generation from the title.
+   */
+  isLlmArtifactBranchName(name: string): boolean {
+    // Extract the slug portion (everything after the first /)
+    const slashIdx = name.indexOf('/');
+    const slug = slashIdx >= 0 ? name.slice(slashIdx + 1) : name;
+
+    // LLM artifact phrases that appear when the model completes its own prompt
+    const artifactPhrases = [
+      'the-user-wants',
+      'i-will-generate',
+      'based-on-the',
+      'generate-a-git',
+      'generate-a-branch',
+      'git-branch-name',
+      'branch-name-based',
+    ];
+
+    const lower = slug.toLowerCase();
+    return artifactPhrases.some((phrase) => lower.includes(phrase));
+  }
+
+  /**
    * Derive the git branch prefix from a feature category.
    * Maps semantic categories to conventional-commit-style prefixes.
    */
@@ -370,7 +461,14 @@ export class FeatureLoader implements FeatureStore {
     }
 
     // Keep slug portion to 50 chars so the full branch stays under ~60 chars.
-    const slug = slugify(title, 50);
+    const rawSlug = slugify(title, 50);
+    // Belt-and-suspenders: strip any characters outside [a-z0-9-] that may have slipped
+    // through slugify (e.g. '+', '&', '#', '?', ':' from titles with special syntax).
+    // This guarantees the slug portion contains only safe git ref characters.
+    const slug = rawSlug
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
     return `${prefix}/${slug || `untitled`}-${shortId}`;
   }
 
@@ -664,6 +762,19 @@ export class FeatureLoader implements FeatureStore {
   }
 
   /**
+   * Find a candidate parent epic for auto-adoption based on the feature title's bracket pattern.
+   * Loads all features for the project and delegates to the standalone findCandidateEpic function.
+   *
+   * @param projectPath - Path to the project
+   * @param title - Title of the child feature being created
+   * @returns The matching epic Feature, or null if no unique match found
+   */
+  async findCandidateEpicForTitle(projectPath: string, title: string): Promise<Feature | null> {
+    const features = await this.getAll(projectPath);
+    return findCandidateEpic(title, features);
+  }
+
+  /**
    * Get a single feature by ID
    * Uses automatic recovery from backups if the main file is corrupted
    */
@@ -719,10 +830,15 @@ export class FeatureLoader implements FeatureStore {
     // If a branchName is provided by the caller, validate it before use — special characters
     // like `[`, `]`, `(`, `)`, `:` are illegal in git refs and cause worktree creation to fail.
     // Invalid branch names are discarded and regenerated from the title via generateBranchName.
+    // LLM artifact branch names (e.g. "fix/the-user-wants-me-to-generate-a-git-branch-name-...")
+    // are also discarded — they pass syntactic validation but are the agent completing its own
+    // reasoning prompt rather than emitting a real slug.
     const branchName =
       featureData.executionMode === 'read-only'
         ? undefined
-        : ((featureData.branchName && isValidBranchName(featureData.branchName)
+        : ((featureData.branchName &&
+          isValidBranchName(featureData.branchName) &&
+          !this.isLlmArtifactBranchName(featureData.branchName)
             ? featureData.branchName
             : null) ?? this.generateBranchName(featureData.title, featureId, featureData.category));
 
@@ -976,6 +1092,77 @@ export class FeatureLoader implements FeatureStore {
 
     logger.info(`Updated feature ${featureId}`);
     return updatedFeature;
+  }
+
+  /**
+   * Reset a feature to backlog status and clear all stale execution context.
+   *
+   * In addition to updating the feature status, this method removes three categories
+   * of stale files that would otherwise cause the next agent dispatch to resume
+   * from stale state (ghost-PR loop, wrong pipeline phase, stale checkpoint):
+   *   - .automaker/checkpoints/{featureId}.json   — pipeline state machine checkpoint
+   *   - .automaker/features/{featureId}/handoff-*.json — phase handoff documents
+   *   - .automaker/features/{featureId}/agent-output.md  — live session output
+   *
+   * All cleanup operations are best-effort: failures are logged but never thrown so
+   * that the status update is never blocked by a missing file.
+   *
+   * @param projectPath - Absolute path to the project root
+   * @param featureId   - Feature identifier
+   * @param reason      - Human-readable reason for the reset (stored as statusChangeReason)
+   */
+  async resetToBacklog(
+    projectPath: string,
+    featureId: string,
+    reason = 'Reset by operator — prior blocker resolved'
+  ): Promise<Feature> {
+    const updated = await this.update(projectPath, featureId, {
+      status: 'backlog',
+      statusChangeReason: reason,
+      startedAt: undefined,
+    });
+
+    // 1. Clear pipeline state machine checkpoint
+    const checkpointPath = path.join(
+      getAutomakerDir(projectPath),
+      'checkpoints',
+      `${featureId}.json`
+    );
+    try {
+      await secureFs.unlink(checkpointPath);
+      logger.info(`[RESET] Cleared checkpoint for ${featureId}`);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+        logger.warn(`[RESET] Failed to clear checkpoint for ${featureId}:`, err);
+      }
+    }
+
+    // 2. Rename agent-output.md to .stale (prevents stale-context resume trap)
+    const featureDir = this.getFeatureDir(projectPath, featureId);
+    const agentOutputPath = path.join(featureDir, 'agent-output.md');
+    try {
+      await secureFs.access(agentOutputPath);
+      await secureFs.rename(agentOutputPath, `${agentOutputPath}.stale`);
+      logger.info(`[RESET] Renamed agent-output.md to .stale for ${featureId}`);
+    } catch {
+      // File doesn't exist — nothing to rename
+    }
+
+    // 3. Rename handoff-*.json to .stale (prevents pipeline from resuming stale phase)
+    try {
+      const entries = (await secureFs.readdir(featureDir, { withFileTypes: true })) as Dirent[];
+      for (const entry of entries) {
+        if (entry.isFile() && entry.name.startsWith('handoff-') && entry.name.endsWith('.json')) {
+          const filePath = path.join(featureDir, entry.name);
+          await secureFs.rename(filePath, `${filePath}.stale`);
+          logger.info(`[RESET] Renamed ${entry.name} to .stale for ${featureId}`);
+        }
+      }
+    } catch {
+      // Feature directory may not exist — nothing to rename
+    }
+
+    return updated;
   }
 
   /**
