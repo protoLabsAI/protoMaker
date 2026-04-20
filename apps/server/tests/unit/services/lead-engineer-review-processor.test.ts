@@ -329,9 +329,6 @@ describe('ReviewProcessor — closed PR detected during polling', () => {
     );
 
     // Should NOT have escalated
-    expect(serviceCtx.events.emit).not.toHaveBeenCalledWith(
-      'feature:escalated',
-      expect.anything()
-    );
+    expect(serviceCtx.events.emit).not.toHaveBeenCalledWith('feature:escalated', expect.anything());
   });
 });
