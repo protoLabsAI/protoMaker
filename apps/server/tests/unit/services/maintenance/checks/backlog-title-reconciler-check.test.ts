@@ -360,7 +360,11 @@ describe('BacklogTitleReconcilerCheck.sweepProject', () => {
     expect(result.reconciled).toBe(1);
   });
 
-  it('direct #NNNN ref to a PR already claimed by another feature is skipped', async () => {
+  it('direct #NNNN ref can claim a PR that another feature already claims (many-to-one OK)', async () => {
+    // Multiple zombies filed as sub-concerns of the same shipping PR are a
+    // legitimate many-to-one match. The contextual-verb requirement in
+    // extractIssueRefs keeps false positives out; unique-claim enforcement is
+    // only needed on the fuzzy-Jaccard path.
     const now = new Date().toISOString();
     const loader = createFeatureLoader([
       {
@@ -384,8 +388,12 @@ describe('BacklogTitleReconcilerCheck.sweepProject', () => {
 
     const result = await check.sweepProject('/tmp/proj');
 
-    expect(result.reconciled).toBe(0);
-    expect(loader.update).not.toHaveBeenCalled();
+    expect(result.reconciled).toBe(1);
+    expect(loader.update).toHaveBeenCalledWith(
+      '/tmp/proj',
+      'feat-ref-dup',
+      expect.objectContaining({ status: 'done', prNumber: 3498 })
+    );
   });
 
   it('plain #NNNN mention (no resolution verb) does NOT trigger direct-ref path', async () => {
