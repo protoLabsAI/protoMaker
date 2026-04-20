@@ -269,8 +269,10 @@ export class BacklogTitleReconcilerCheck implements MaintenanceCheck {
       for (const ref of refs) {
         const pr = mergedPrsByNumber.get(ref);
         if (!pr) continue;
-        const claimed = features.some((f) => f.prNumber === pr.number);
-        if (claimed) continue;
+        // Direct contextual refs (closes/fixes/introduced-in #N) are legitimate
+        // many-to-one: several zombies can all be sub-concerns of the same
+        // shipping PR. No claim-uniqueness guard here — the contextual-verb
+        // requirement in extractIssueRefs is what prevents false matches.
         best = { pr, score: 1.0 };
         logger.debug(
           `[backlog-title-reconciler] Direct #${ref} reference in feature ${feature.id} matches merged PR — skipping Jaccard`
