@@ -500,6 +500,62 @@ describe('SignalIntakeService', () => {
       expect(mockFeatureLoader.create).toHaveBeenCalledTimes(1);
     });
 
+    it('should dedup by issueNumber regardless of signal.source (issue #3503 regression)', async () => {
+      // Regression coverage for #3503: protoWorkstacean's _runTriageSweep re-dispatches
+      // open `status: needs-triage` issues via A2A, which arrive under a non-`github`
+      // source. Pre-fix, the idempotency guard was gated on `source === 'github'`, so
+      // these synthetic re-dispatches bypassed it and created duplicate features every
+      // container restart.
+      vi.mocked(mockFeatureLoader.getAll).mockResolvedValue([
+        {
+          id: 'feature-already-triaged-by-webhook',
+          title: '[github] Some earlier bug',
+          status: 'backlog',
+          githubIssueNumber: 4242,
+        } as any,
+      ]);
+
+      const signal = createTestSignal({
+        source: 'a2a:workstacean',
+        author: { id: 'workstacean', name: 'protoWorkstacean' },
+        content: 'Synthetic re-dispatch from _runTriageSweep',
+        channelContext: {
+          issueNumber: 4242,
+          repository: 'protoLabsAI/protoMaker',
+        },
+      });
+
+      mockEmitter.emit('signal:received', signal);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockFeatureLoader.create).not.toHaveBeenCalled();
+    });
+
+    it('should persist githubIssueNumber for non-github sources too', async () => {
+      // Pre-fix, githubIssueNumber was only stored when source === 'github'. That meant
+      // the first A2A re-dispatch would create a feature without the field, so the next
+      // re-dispatch could not dedup against it. Now any signal with channelContext.issueNumber
+      // persists the field, closing the loop for future lookups.
+      vi.mocked(mockFeatureLoader.getAll).mockResolvedValue([]);
+
+      const signal = createTestSignal({
+        source: 'a2a:workstacean',
+        author: { id: 'workstacean', name: 'protoWorkstacean' },
+        content: 'First synthetic dispatch for issue #7777',
+        channelContext: {
+          issueNumber: 7777,
+          repository: 'protoLabsAI/protoMaker',
+        },
+      });
+
+      mockEmitter.emit('signal:received', signal);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockFeatureLoader.create).toHaveBeenCalledTimes(1);
+      const createCall = vi.mocked(mockFeatureLoader.create).mock.calls[0]?.[1];
+      expect(createCall).toMatchObject({ githubIssueNumber: 7777 });
+    });
+
     it('should prevent duplicate Discord signals by author ID', async () => {
       const signal = createTestSignal({
         source: 'discord',
