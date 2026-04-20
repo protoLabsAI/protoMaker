@@ -232,7 +232,7 @@ function buildAgentCard(host: string) {
       'protoLabs.studio autonomous development agent. ' +
       'Multi-agent runtime coordinating board health, feature management, ' +
       'auto-mode, planning, and project onboarding.',
-    url: callbackBase,
+    url: `${callbackBase}/a2a`,
     version,
     provider: {
       organization: 'protoLabsAI',
