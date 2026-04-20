@@ -965,6 +965,241 @@ describe('CompletionDetectorService', () => {
     });
   });
 
+  describe('board-only epic auto-completion', () => {
+    beforeEach(() => {
+      mockExecFile.mockReset();
+    });
+
+    it('should auto-complete board-only epic (no branchName) when all 3 children are done', async () => {
+      const epic = createTestFeature({
+        id: 'epic-1',
+        title: 'Board-Only Epic',
+        status: 'backlog',
+        isEpic: true,
+        // no branchName — pure board-only epic
+      });
+      const child1 = createTestFeature({ id: 'child-1', epicId: 'epic-1', status: 'done' });
+      const child2 = createTestFeature({ id: 'child-2', epicId: 'epic-1', status: 'done' });
+      const child3 = createTestFeature({ id: 'child-3', epicId: 'epic-1', status: 'done' });
+
+      featureLoader = createMockFeatureLoader([epic, child1, child2, child3]);
+      await service.initialize(events as any, featureLoader as any, projectService as any);
+
+      events._fire('feature:status-changed', {
+        projectPath: '/test/path',
+        featureId: 'child-3',
+        previousStatus: 'review',
+        newStatus: 'done',
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Epic should be marked done within one sweep
+      expect(featureLoader.update).toHaveBeenCalledWith('/test/path', 'epic-1', { status: 'done' });
+
+      // epic:auto-completed event should be emitted
+      expect(events.emit).toHaveBeenCalledWith(
+        'epic:auto-completed',
+        expect.objectContaining({
+          projectPath: '/test/path',
+          epicId: 'epic-1',
+          epicTitle: 'Board-Only Epic',
+          childrenIds: expect.arrayContaining(['child-1', 'child-2', 'child-3']),
+        })
+      );
+    });
+
+    it('should NOT auto-complete board-only epic when some children are not done', async () => {
+      const epic = createTestFeature({
+        id: 'epic-1',
+        title: 'Board-Only Epic',
+        status: 'backlog',
+        isEpic: true,
+      });
+      const child1 = createTestFeature({ id: 'child-1', epicId: 'epic-1', status: 'done' });
+      const child2 = createTestFeature({ id: 'child-2', epicId: 'epic-1', status: 'done' });
+      const child3 = createTestFeature({
+        id: 'child-3',
+        epicId: 'epic-1',
+        status: 'in_progress',
+      });
+
+      featureLoader = createMockFeatureLoader([epic, child1, child2, child3]);
+      await service.initialize(events as any, featureLoader as any, projectService as any);
+
+      events._fire('feature:status-changed', {
+        projectPath: '/test/path',
+        featureId: 'child-1',
+        previousStatus: 'review',
+        newStatus: 'done',
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(featureLoader.update).not.toHaveBeenCalled();
+      expect(events.emit).not.toHaveBeenCalledWith('epic:auto-completed', expect.anything());
+    });
+
+    it('should NOT auto-complete board-only epic with no children', async () => {
+      const epic = createTestFeature({
+        id: 'epic-1',
+        title: 'Empty Epic',
+        status: 'backlog',
+        isEpic: true,
+      });
+      // child completes but has a different epicId — epic has no children
+      const unrelated = createTestFeature({ id: 'other-1', epicId: 'epic-1', status: 'done' });
+
+      // Override: epic has zero children by removing unrelated from epic-1 scope
+      const epicOnly = createTestFeature({
+        id: 'epic-1',
+        title: 'Empty Epic',
+        status: 'backlog',
+        isEpic: true,
+      });
+      featureLoader = createMockFeatureLoader([epicOnly]); // no children
+      await service.initialize(events as any, featureLoader as any, projectService as any);
+
+      // Fire for a feature that exists in a different context — epic has no children
+      // Simulate by manually calling retryEpicCompletion
+      await (service as any).checkEpicCompletion('/test/path', 'epic-1');
+
+      expect(featureLoader.update).not.toHaveBeenCalled();
+      expect(events.emit).not.toHaveBeenCalledWith('epic:auto-completed', expect.anything());
+    });
+
+    it('should auto-complete when epic has branchName set but branch does not exist on remote', async () => {
+      type ExecFileCb = (err: null, result: { stdout: string; stderr: string }) => void;
+
+      // git ls-remote → empty output (branch does not exist on remote)
+      mockExecFile.mockImplementationOnce(
+        (_cmd: string, _args: string[], _opts: object, cb: ExecFileCb) => {
+          cb(null, { stdout: '', stderr: '' });
+        }
+      );
+
+      const epic = createTestFeature({
+        id: 'epic-1',
+        title: 'Epic With Branch',
+        status: 'backlog',
+        isEpic: true,
+        branchName: 'epic/m1-foundation',
+      });
+      const child1 = createTestFeature({ id: 'child-1', epicId: 'epic-1', status: 'done' });
+      const child2 = createTestFeature({ id: 'child-2', epicId: 'epic-1', status: 'done' });
+      const child3 = createTestFeature({ id: 'child-3', epicId: 'epic-1', status: 'done' });
+
+      featureLoader = createMockFeatureLoader([epic, child1, child2, child3]);
+      await service.initialize(events as any, featureLoader as any, projectService as any);
+
+      events._fire('feature:status-changed', {
+        projectPath: '/test/path',
+        featureId: 'child-3',
+        previousStatus: 'review',
+        newStatus: 'done',
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Epic should be marked done (branch not found on remote → board-only path)
+      expect(featureLoader.update).toHaveBeenCalledWith('/test/path', 'epic-1', { status: 'done' });
+
+      // epic:auto-completed should be emitted for downstream unblocking
+      expect(events.emit).toHaveBeenCalledWith(
+        'epic:auto-completed',
+        expect.objectContaining({
+          projectPath: '/test/path',
+          epicId: 'epic-1',
+          childrenIds: expect.arrayContaining(['child-1', 'child-2', 'child-3']),
+        })
+      );
+    });
+  });
+
+  describe('git-backed epic regression', () => {
+    beforeEach(() => {
+      mockExecFile.mockReset();
+    });
+
+    it('should follow PR creation flow (not direct done) when epic branch exists on remote', async () => {
+      type ExecFileCb = (err: null, result: { stdout: string; stderr: string }) => void;
+
+      // git symbolic-ref (auto-detect default branch via getEffectivePrBaseBranch) → dev
+      mockExecFile.mockImplementationOnce(
+        (_cmd: string, _args: string[], _opts: object, cb: ExecFileCb) => {
+          cb(null, { stdout: 'refs/remotes/origin/dev', stderr: '' });
+        }
+      );
+      // git ls-remote → branch EXISTS on remote
+      mockExecFile.mockImplementationOnce(
+        (_cmd: string, _args: string[], _opts: object, cb: ExecFileCb) => {
+          cb(null, { stdout: 'abc123\trefs/heads/epic/m1-foundation', stderr: '' });
+        }
+      );
+      // gh pr list → no existing PR
+      mockExecFile.mockImplementationOnce(
+        (_cmd: string, _args: string[], _opts: object, cb: ExecFileCb) => {
+          cb(null, { stdout: '[]', stderr: '' });
+        }
+      );
+      // gh pr create → returns PR URL
+      mockExecFile.mockImplementationOnce(
+        (_cmd: string, _args: string[], _opts: object, cb: ExecFileCb) => {
+          cb(null, { stdout: 'https://github.com/org/repo/pull/99', stderr: '' });
+        }
+      );
+      // gh pr merge (auto-merge) → success
+      mockExecFile.mockImplementation(
+        (_cmd: string, _args: string[], _opts: object, cb: ExecFileCb) => {
+          cb(null, { stdout: '', stderr: '' });
+        }
+      );
+
+      const epic = createTestFeature({
+        id: 'epic-1',
+        title: 'Git-Backed Epic',
+        status: 'backlog',
+        isEpic: true,
+        branchName: 'epic/m1-foundation',
+      });
+      const child1 = createTestFeature({ id: 'child-1', epicId: 'epic-1', status: 'done' });
+      const child2 = createTestFeature({ id: 'child-2', epicId: 'epic-1', status: 'done' });
+      const child3 = createTestFeature({ id: 'child-3', epicId: 'epic-1', status: 'done' });
+
+      featureLoader = createMockFeatureLoader([epic, child1, child2, child3]);
+      await service.initialize(events as any, featureLoader as any, projectService as any);
+
+      events._fire('feature:status-changed', {
+        projectPath: '/test/path',
+        featureId: 'child-3',
+        previousStatus: 'review',
+        newStatus: 'done',
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Epic should move to 'review' (PR created), NOT directly to 'done'
+      expect(featureLoader.update).toHaveBeenCalledWith(
+        '/test/path',
+        'epic-1',
+        expect.objectContaining({ status: 'review', prNumber: 99 })
+      );
+
+      // epic:auto-completed should NOT be emitted for git-backed epics
+      expect(events.emit).not.toHaveBeenCalledWith('epic:auto-completed', expect.anything());
+
+      // epic:pr-created SHOULD be emitted
+      expect(events.emit).toHaveBeenCalledWith(
+        'epic:pr-created',
+        expect.objectContaining({
+          epicFeatureId: 'epic-1',
+          epicBranchName: 'epic/m1-foundation',
+          prNumber: 99,
+        })
+      );
+    });
+  });
+
   describe('areMilestonePhasesDone guard', () => {
     it('should return false for empty phases', async () => {
       const feature1 = createTestFeature({

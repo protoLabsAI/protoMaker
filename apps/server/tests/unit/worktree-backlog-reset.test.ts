@@ -36,6 +36,7 @@ vi.mock('@/lib/worktree-lock.js', () => ({
 vi.mock('@protolabsai/platform', () => ({
   getFeatureDir: (projectPath: string, featureId: string) =>
     `${projectPath}/.automaker/features/${featureId}`,
+  getAutomakerDir: (projectPath: string) => `${projectPath}/.automaker`,
 }));
 
 function createMockEvents(): EventEmitter {

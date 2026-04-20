@@ -1,5 +1,43 @@
 # Create a New Maintenance Check
 
+## Cross-Repo Triage Signals
+
+When a health-check ceremony creates features that describe problems in **external repos** (e.g. "CI failing on rabbit-hole.io main branch", "PR #72 in protoCLI has no reviewer"), those features must be filed as **signal** features, not `code` features.
+
+Signal features:
+
+- Do not create local branches, worktrees, or PRs.
+- Route to the `signal` workflow automatically via `featureType: 'signal'`.
+- Run a read-only investigation agent and auto-resolve to `done` when execution completes.
+- Never enter the PR-gated review cycle, so they cannot get stuck in `review` indefinitely.
+
+**How to create a signal feature via MCP:**
+
+```typescript
+mcp__protolabs__create_feature({
+  projectPath: '/path/to/project',
+  title: 'Signal: rabbit-hole.io CI failing on main',
+  description: 'CI checks on rabbit-hole.io main are red. Investigate and document root cause.',
+  category: 'signal',
+  featureType: 'signal',
+  // No branchName, no prNumber — signal workflow handles git-free execution
+});
+```
+
+**Why this matters:** Mixing signal features with code features inflates the review queue and makes board metrics misleading. Signal features that land in `review` with no `prNumber` will never transition to `done` automatically — the review→done gate requires a merged PR.
+
+**Immediate recovery for stuck signal features:** If you find existing features stuck in `review` with no `prNumber` that describe external-repo issues, update them in place:
+
+```typescript
+mcp__protolabs__update_feature({
+  projectPath: '/path/to/project',
+  featureId: 'feature-...',
+  featureType: 'signal',
+  status: 'done', // If the external issue is already resolved
+  // OR: status: 'backlog' to re-run the investigation agent
+});
+```
+
 This page shows you how to add a new maintenance check module to the MaintenanceOrchestrator. After reading it, you will know how to implement the check interface, register it, and assign it to the correct tier.
 
 ## Prerequisites

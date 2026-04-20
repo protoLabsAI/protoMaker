@@ -15,6 +15,7 @@ import type { Feature } from '@protolabsai/types';
 import { DEFAULT_GIT_WORKFLOW_SETTINGS } from '@protolabsai/types';
 import { buildGitAddCommand } from '../lib/git-staging-utils.js';
 import { createGitExecEnv } from '@protolabsai/git-utils';
+import { createPrWithFallback } from '../lib/gh-pr-create.js';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -228,27 +229,18 @@ export async function checkAndRecoverUncommittedWork(
         "'"
       );
 
-    const { stdout: prOutput } = await execFileAsync(
-      'gh',
-      [
-        'pr',
-        'create',
-        '--base',
-        baseBranch,
-        '--head',
-        branchName,
-        '--title',
-        prTitle,
-        '--body',
-        prBody,
-      ],
-      { cwd: worktreePath, env: execEnv }
-    );
+    const prResult = await createPrWithFallback({
+      cwd: worktreePath,
+      env: execEnv,
+      base: baseBranch,
+      head: branchName,
+      title: prTitle,
+      body: prBody,
+    });
 
-    // Parse PR URL and number from output (gh pr create prints the URL on stdout)
-    const prUrl = prOutput.trim();
-    const prNumberMatch = prUrl.match(/\/pull\/(\d+)/);
-    const prNumber = prNumberMatch ? parseInt(prNumberMatch[1], 10) : undefined;
+    const prUrl = prResult.url;
+    const prNumber = prResult.number;
+    logger.info(`[PostAgentHook] PR created via ${prResult.via}: ${prUrl}`);
 
     result.prUrl = prUrl;
     result.prNumber = prNumber;

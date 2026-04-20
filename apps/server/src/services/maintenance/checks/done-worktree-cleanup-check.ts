@@ -208,12 +208,39 @@ export class DoneWorktreeCleanupCheck implements MaintenanceCheck {
   }
 
   private async isOrphanSafeToRemove(worktreePath: string): Promise<boolean> {
+    // Guard 1: uncommitted changes in the working tree
     try {
       const { stdout } = await execAsync('git status --porcelain', { cwd: worktreePath });
-      return !stdout.trim();
+      if (stdout.trim()) return false;
     } catch {
+      // git status failed — worktree is likely broken; let caller fall through
       return true;
     }
+
+    // Guard 2: committed but unpushed work. A worktree can have a clean
+    // working tree (status --porcelain empty) while still holding commits
+    // that exist on no remote. Destroying the worktree with --force would
+    // delete that work. Refuse removal if HEAD is not reachable from any
+    // remote ref.
+    try {
+      const { stdout: remoteContainers } = await execAsync('git branch -r --contains HEAD', {
+        cwd: worktreePath,
+      });
+      if (!remoteContainers.trim()) {
+        logger.warn(
+          `[SAFETY] Skipping orphan worktree removal: ${worktreePath} has commits not present on any remote ref`
+        );
+        return false;
+      }
+    } catch {
+      // git branch -r failed — assume unsafe to avoid silent data loss
+      logger.warn(
+        `[SAFETY] Skipping orphan worktree removal: ${worktreePath} unpushed-commit check failed`
+      );
+      return false;
+    }
+
+    return true;
   }
 
   private async removeWorktree(

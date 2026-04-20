@@ -50,6 +50,7 @@ function createMockFeatureLoader() {
   return {
     update: vi.fn().mockResolvedValue(undefined),
     get: vi.fn(),
+    resetToBacklog: vi.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -469,9 +470,11 @@ describe('ActionExecutor — reset_feature merged PR guard', () => {
     });
 
     // Should reset to backlog as usual
-    expect(deps.featureLoader.update).toHaveBeenCalledWith('/test/project', 'feat-no-pr', {
-      status: 'backlog',
-    });
+    expect(deps.featureLoader.resetToBacklog).toHaveBeenCalledWith(
+      '/test/project',
+      'feat-no-pr',
+      'Auto-retry: flaky test'
+    );
     // Should emit feature_reset escalation signal
     const emitCalls = vi.mocked(deps.events.emit).mock.calls;
     const resetEmitted = emitCalls.some(
@@ -515,9 +518,11 @@ describe('ActionExecutor — reset_feature merged PR guard', () => {
     });
 
     expect(vi.mocked(exec)).not.toHaveBeenCalled();
-    expect(deps.featureLoader.update).toHaveBeenCalledWith('/test/project', 'feat-no-branch', {
-      status: 'backlog',
-    });
+    expect(deps.featureLoader.resetToBacklog).toHaveBeenCalledWith(
+      '/test/project',
+      'feat-no-branch',
+      'Auto-retry'
+    );
   });
 
   it('resets to backlog (fail-open) when GitHub check throws', async () => {
@@ -554,8 +559,10 @@ describe('ActionExecutor — reset_feature merged PR guard', () => {
     });
 
     // On gh check failure, fail-open: reset to backlog
-    expect(deps.featureLoader.update).toHaveBeenCalledWith('/test/project', 'feat-gh-fail', {
-      status: 'backlog',
-    });
+    expect(deps.featureLoader.resetToBacklog).toHaveBeenCalledWith(
+      '/test/project',
+      'feat-gh-fail',
+      'Auto-retry'
+    );
   });
 });

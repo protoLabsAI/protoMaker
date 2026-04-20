@@ -504,6 +504,24 @@ export class ReviewProcessor implements StateProcessor {
       };
     }
 
+    // PR was closed without merging (out-of-band operator cleanup, force-delete, etc.).
+    // Reset to backlog so the feature can be re-executed with a fresh PR instead of looping.
+    if (reviewState === 'pr_closed') {
+      logger.warn(`[REVIEW] PR #${ctx.prNumber} closed without merging — resetting to backlog`, {
+        featureId: ctx.feature.id,
+      });
+      await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+        status: 'backlog',
+        prNumber: undefined,
+        statusChangeReason: `PR #${ctx.prNumber} was closed without merging. Re-queued for execution.`,
+      });
+      return {
+        nextState: null,
+        shouldContinue: false,
+        reason: `PR #${ctx.prNumber} closed without merging — feature reset to backlog`,
+      };
+    }
+
     // CLI/API error — check if PR is already merged before escalating.
     // Merged PRs can return 'error' review state when the GitHub API returns
     // unclear status on closed PRs. The merged check in getPRReviewState handles
@@ -1007,6 +1025,11 @@ export class ReviewProcessor implements StateProcessor {
         );
         return 'approved';
       }
+      // Closed-without-merge: reset to backlog instead of waiting until timeout.
+      if (mergeData.state === 'CLOSED') {
+        logger.warn(`[REVIEW] PR #${ctx.prNumber} is closed (not merged) — signalling pr_closed`);
+        return 'pr_closed';
+      }
     } catch (mergeErr) {
       logger.debug(
         `[REVIEW] Merge check failed for PR #${ctx.prNumber}, continuing with review state check`
@@ -1124,15 +1147,14 @@ export class ReviewProcessor implements StateProcessor {
     const branchName = ctx.feature.branchName;
     if (!branchName) return false;
 
-    // Sanitize branch name to prevent shell injection
+    // Refuse to proceed with an unsafe branch name — shell injection risk and indicative
+    // of a generation bug. Hard-fail so the state machine escalates and the operator is
+    // notified rather than silently skipping the merge gate.
     if (!/^[a-zA-Z0-9._\-/]+$/.test(branchName)) {
-      logger.warn(
-        '[REVIEW] Branch name contains unsafe characters, skipping external merge check',
-        {
-          featureId: ctx.feature.id,
-        }
+      throw new Error(
+        `[REVIEW] Branch name "${branchName}" contains unsafe characters — merge gate aborted. ` +
+          `Rename the branch to use only [a-zA-Z0-9._-/] characters before retrying.`
       );
-      return false;
     }
 
     try {
