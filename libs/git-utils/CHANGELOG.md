@@ -1,5 +1,18 @@
 # @protolabsai/git-utils
 
+## 0.106.0
+
+### Minor Changes
+
+- ### Features
+  - create-time dedup via title-Jaccard + #NNNN parsing (#3526)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.106.0
+  - @protolabsai/utils@0.106.0
+
 ## 0.105.0
 
 ### Minor Changes
