@@ -1,5 +1,17 @@
 # @protolabsai/types
 
+## 0.105.0
+
+### Minor Changes
+
+- ### Features
+  - reconciler direct #NNNN fast-path (#3519)
+
+  ### Bug Fixes
+  - distinguish transient gh errors from PR-not-found (#3522)
+  - allow many-to-one direct #ref matches on shipping PR (#3521)
+  - reconciler #NNNN fast-path requires resolution verb (#3520)
+
 ## 0.104.0
 
 ### Minor Changes

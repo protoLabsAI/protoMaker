@@ -69,6 +69,9 @@ export class PipelineCheckpointService {
         const prNumber = checkpoint.stateContext.prNumber as number | undefined;
         if ((state === 'REVIEW' || state === 'MERGE') && prNumber) {
           const prStatus = await this.validatePRForResume(projectPath, prNumber);
+          // Only invalidate on DEFINITIVE closed/not_found responses. 'unknown'
+          // (transient gh CLI error) leaves the checkpoint untouched so a brief
+          // GitHub outage can't wipe valid checkpoints across the portfolio.
           if (prStatus === 'closed' || prStatus === 'not_found') {
             logger.warn(
               `Checkpoint for ${featureId} at ${state} references PR #${prNumber} which is ${prStatus} — auto-invalidating checkpoint`
@@ -144,7 +147,7 @@ export class PipelineCheckpointService {
   async validatePRForResume(
     projectPath: string,
     prNumber: number
-  ): Promise<'open' | 'merged' | 'closed' | 'not_found'> {
+  ): Promise<'open' | 'merged' | 'closed' | 'not_found' | 'unknown'> {
     try {
       const { stdout } = await execAsync(
         `gh pr view ${prNumber} --json state,mergedAt --jq '{state: .state, mergedAt: .mergedAt}'`,
@@ -155,8 +158,16 @@ export class PipelineCheckpointService {
       if (data.state === 'CLOSED') return 'closed';
       if (data.state === 'OPEN') return 'open';
       return 'not_found';
-    } catch {
-      return 'not_found';
+    } catch (err) {
+      // Distinguish "PR genuinely doesn't exist" (gh CLI succeeds, state unmapped)
+      // from "transient error talking to GitHub" (network, rate limit, CLI failure).
+      // A transient error must NOT cause load() to delete a valid checkpoint — a
+      // brief outage should leave state untouched. Caller treats 'unknown' as
+      // "proceed with the checkpoint as-is."
+      logger.debug(
+        `validatePRForResume: gh CLI error for PR #${prNumber} — returning 'unknown' (transient, keep checkpoint): ${err instanceof Error ? err.message : String(err)}`
+      );
+      return 'unknown';
     }
   }
 
