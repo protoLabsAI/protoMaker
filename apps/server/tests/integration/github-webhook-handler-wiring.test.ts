@@ -39,10 +39,7 @@ vi.mock('../../src/services/pr-remediation-service.js', () => ({
 // Helpers
 // ---------------------------------------------------------------------------
 
-function setupExecStub(opts: {
-  checkRunsResponse: object;
-  runViewOutput: string;
-}): void {
+function setupExecStub(opts: { checkRunsResponse: object; runViewOutput: string }): void {
   mockExec.mockImplementation(
     (
       cmd: string,

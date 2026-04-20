@@ -299,6 +299,11 @@ describe('GOAP Feedback Loop Prevention (E2E)', () => {
       for (let i = 0; i < 5; i++) {
         circuitBreaker.recordAgentFailure('lead-engineer-2');
       }
+      // Re-register lead-engineer-2 so its lastSeenAt is fresh at the current
+      // fake-timer position. Without this, the 900s total elapsed time exceeds
+      // the 30s registryGracePeriodMs and the registry blocks the dispatch
+      // before the circuit breaker gets a chance to run.
+      validator.registerAgent('lead-engineer-2');
       const circuited = tryDispatch({
         action: 'fleet_incident_response',
         agentId: 'lead-engineer-2',

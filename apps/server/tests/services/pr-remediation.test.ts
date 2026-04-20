@@ -150,8 +150,7 @@ function setupExecMock(overrides: Record<string, string | Error> = {}): void {
                 name: 'checks',
                 status: 'completed',
                 conclusion: 'failure',
-                details_url:
-                  'https://github.com/owner/repo/actions/runs/24676789130/job/68012345',
+                details_url: 'https://github.com/owner/repo/actions/runs/24676789130/job/68012345',
               },
             ],
           }),
