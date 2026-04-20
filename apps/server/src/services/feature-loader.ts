@@ -38,6 +38,7 @@ import {
 } from '@protolabsai/platform';
 import { addImplementedFeature, type ImplementedFeature } from '../lib/xml-extractor.js';
 import { debugLog } from '../lib/debug-log.js';
+import { normalizeTitle, jaccardSimilarity, extractIssueRefs } from '../lib/title-match.js';
 import type { DataIntegrityWatchdogService } from './data-integrity-watchdog-service.js';
 import type { ProjectSlugResolver } from './project-slug-resolver.js';
 import { featuresByStatus } from '../lib/prometheus.js';
@@ -796,9 +797,108 @@ export class FeatureLoader implements FeatureStore {
   }
 
   /**
+   * Scan recent features for a near-duplicate title match. Used by `create()`
+   * to short-circuit duplicate filings. Configurable window (default 7 days)
+   * and threshold (default 0.85 Jaccard) — tight threshold because at create
+   * time we prefer false negatives (let the new feature through) over false
+   * positives (swallow legitimate new work).
+   *
+   * Only considers non-terminal features (backlog, in_progress, review,
+   * blocked) — a title that matches a long-done feature is likely describing
+   * a follow-up, not a duplicate.
+   */
+  private async findRecentDuplicateByTitle(
+    projectPath: string,
+    title: string,
+    options: { windowMs?: number; threshold?: number; minTokens?: number } = {}
+  ): Promise<{ feature: Feature; score: number } | null> {
+    const windowMs = options.windowMs ?? 7 * 24 * 60 * 60 * 1000;
+    const threshold = options.threshold ?? 0.85;
+    // Minimum meaningful-token count. Short titles like "MS1 Phase 1"
+    // normalize to 2-3 tokens; at that density, any collision dominates the
+    // Jaccard score and produces spurious matches (e.g. "MS1 Phase 1" and
+    // "MS1 Phase 2" both normalize to {ms1, phase}, score=1.0). Require
+    // more signal before we're willing to swallow a new feature as dup.
+    const minTokens = options.minTokens ?? 4;
+    const cutoff = Date.now() - windowMs;
+    const newTokens = normalizeTitle(title);
+    if (newTokens.size < minTokens) return null;
+
+    let all: Feature[];
+    try {
+      all = await this.getAll(projectPath);
+    } catch {
+      return null;
+    }
+
+    let best: { feature: Feature; score: number } | null = null;
+    for (const f of all) {
+      if (!f.title) continue;
+      if (f.status === 'done') continue;
+      if (f.createdAt) {
+        const createdMs = Date.parse(f.createdAt);
+        if (!Number.isNaN(createdMs) && createdMs < cutoff) continue;
+      }
+      const existingTokens = normalizeTitle(f.title);
+      if (existingTokens.size < minTokens) continue;
+      const score = jaccardSimilarity(newTokens, existingTokens);
+      if (score >= threshold && (!best || score > best.score)) {
+        best = { feature: f, score };
+      }
+    }
+    return best;
+  }
+
+  /**
    * Create a new feature
    */
   async create(projectPath: string, featureData: Partial<Feature>): Promise<Feature> {
+    // Dedup pass — resolves protoLabsAI/protoMaker#3505. Runs BEFORE id/dir
+    // generation so we don't allocate resources for a duplicate. Two signals:
+    //
+    //   1. #NNNN resolution-verb references in title/description. If the
+    //      caller didn't explicitly pass `githubIssueNumber` but the title or
+    //      description says "closes #3498" / "fixed by #3504" / "introduced
+    //      in PR #3498", auto-populate githubIssueNumber from the first ref.
+    //      This lets the downstream idempotency guard in SignalIntakeService
+    //      dedup even when the agent filed the feature without metadata.
+    //
+    //   2. Title-Jaccard against last 7 days of backlog/review features.
+    //      If a near-duplicate is found (≥ 0.85 similarity), return the
+    //      existing feature instead of creating a new one. Catches the
+    //      "two dispatches before the first feature is visible" race and
+    //      the "same bug filed from two channels" pattern.
+    //
+    // Dedup can be disabled via `__skipDedup` flag on featureData (not on the
+    // Feature type — internal escape hatch for test fixtures and migrations).
+    const skipDedup = (featureData as { __skipDedup?: boolean }).__skipDedup === true;
+    if (!skipDedup) {
+      const title = featureData.title?.trim() ?? '';
+      const description = featureData.description ?? '';
+
+      // Signal 1: auto-populate githubIssueNumber from title/description refs
+      if (featureData.githubIssueNumber == null && title) {
+        const refs = [...extractIssueRefs(title), ...extractIssueRefs(description)];
+        if (refs.length > 0) {
+          featureData = { ...featureData, githubIssueNumber: refs[0] };
+          logger.info(
+            `[dedup] Auto-populated githubIssueNumber=${refs[0]} from #NNNN ref in "${title.slice(0, 60)}"`
+          );
+        }
+      }
+
+      // Signal 2: title-Jaccard against recent features (7-day window)
+      if (title) {
+        const existing = await this.findRecentDuplicateByTitle(projectPath, title);
+        if (existing) {
+          logger.warn(
+            `[dedup] Title-similarity duplicate detected — new="${title.slice(0, 60)}" matches existing feature ${existing.feature.id} ("${(existing.feature.title ?? '').slice(0, 60)}") at score ${(existing.score * 100).toFixed(0)}% — returning existing feature`
+          );
+          return existing.feature;
+        }
+      }
+    }
+
     const featureId = featureData.id || this.generateFeatureId();
     const featureDir = this.getFeatureDir(projectPath, featureId);
     const featureJsonPath = this.getFeatureJsonPath(projectPath, featureId);

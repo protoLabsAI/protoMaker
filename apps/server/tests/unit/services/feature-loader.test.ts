@@ -416,6 +416,110 @@ describe('feature-loader.ts', () => {
     });
   });
 
+  describe('create dedup (protoMaker#3505)', () => {
+    it('returns the existing feature when title matches at ≥0.85 Jaccard', async () => {
+      const existing = {
+        id: 'feature-existing',
+        title: 'fix(intake): dedup issue-triage across A2A re-dispatches',
+        status: 'backlog',
+        createdAt: new Date().toISOString(),
+      };
+      vi.mocked(fs.access).mockResolvedValue(undefined);
+      vi.mocked(fs.readdir).mockResolvedValue([
+        { name: 'feature-existing', isDirectory: () => true } as any,
+      ]);
+      vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(existing));
+      const writeSpy = vi.mocked(fs.writeFile);
+
+      // Near-identical titles — only surface-level punctuation differs.
+      // Jaccard ≈ 1.0 because the normalizer strips prefix/punctuation.
+      const result = await loader.create(testProjectPath, {
+        title: 'fix(intake): dedup issue-triage across A2A re-dispatches',
+        description: 'duplicate filing',
+      });
+
+      expect(result.id).toBe('feature-existing');
+      expect(writeSpy).not.toHaveBeenCalled();
+    });
+
+    it('skips terminal-status features — matching a done feature does NOT dedup', async () => {
+      const doneFeature = {
+        id: 'feature-done-123',
+        title: 'fix(ci): old completed work with matching tokens',
+        status: 'done',
+        createdAt: new Date().toISOString(),
+      };
+      vi.mocked(fs.access).mockResolvedValue(undefined);
+      vi.mocked(fs.readdir).mockResolvedValue([
+        { name: 'feature-done-123', isDirectory: () => true } as any,
+      ]);
+      vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(doneFeature));
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+      vi.mocked(fs.mkdir).mockResolvedValue(undefined as any);
+
+      const result = await loader.create(testProjectPath, {
+        title: 'fix(ci): old completed work with matching tokens',
+        description: 'new filing for follow-up',
+      });
+
+      expect(result.id).not.toBe('feature-done-123');
+      expect(fs.writeFile).toHaveBeenCalled();
+    });
+
+    it('auto-populates githubIssueNumber from contextual #NNNN ref in title', async () => {
+      vi.mocked(fs.access).mockResolvedValue(undefined);
+      vi.mocked(fs.readdir).mockResolvedValue([]);
+      vi.mocked(fs.readFile).mockResolvedValue('{}');
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+      vi.mocked(fs.mkdir).mockResolvedValue(undefined as any);
+
+      const result = await loader.create(testProjectPath, {
+        title: 'follow-up concerns — introduced in PR #3498',
+        description: 'see upstream',
+      });
+
+      expect(result.githubIssueNumber).toBe(3498);
+    });
+
+    it('does NOT auto-populate githubIssueNumber from plain mentions', async () => {
+      vi.mocked(fs.access).mockResolvedValue(undefined);
+      vi.mocked(fs.readdir).mockResolvedValue([]);
+      vi.mocked(fs.readFile).mockResolvedValue('{}');
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+      vi.mocked(fs.mkdir).mockResolvedValue(undefined as any);
+
+      const result = await loader.create(testProjectPath, {
+        title: 'some bug',
+        description: 'related: #3498, #3504, #3511',
+      });
+
+      expect(result.githubIssueNumber).toBeUndefined();
+    });
+
+    it('respects __skipDedup escape hatch (for fixtures/migrations)', async () => {
+      const existing = {
+        id: 'feature-exists',
+        title: 'same exact title',
+        status: 'backlog',
+        createdAt: new Date().toISOString(),
+      };
+      vi.mocked(fs.access).mockResolvedValue(undefined);
+      vi.mocked(fs.readdir).mockResolvedValue([
+        { name: 'feature-exists', isDirectory: () => true } as any,
+      ]);
+      vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(existing));
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+      vi.mocked(fs.mkdir).mockResolvedValue(undefined as any);
+
+      const result = await loader.create(testProjectPath, {
+        title: 'same exact title',
+        __skipDedup: true,
+      } as any);
+
+      expect(result.id).not.toBe('feature-exists');
+    });
+  });
+
   describe('delete', () => {
     it('should delete feature directory', async () => {
       vi.mocked(fs.rm).mockResolvedValue(undefined);
