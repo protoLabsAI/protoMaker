@@ -137,6 +137,37 @@ export function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
   return intersect / union;
 }
 
+/**
+ * Extract `#NNNN` PR/issue references from a string that appear in a
+ * contextual phrase indicating resolution — "closes #N", "fixes #N",
+ * "resolved by PR #N", "shipped in #N", etc. Plain mentions ("see #3498 for
+ * context", "related: #3505") are intentionally excluded because they would
+ * false-match features that cite a PR without that PR being the actual
+ * resolution.
+ *
+ * Filters out numbers below 100 (likely workstream indices, checklist items,
+ * or footnote markers rather than real PR/issue IDs).
+ */
+export function extractIssueRefs(text: string): number[] {
+  if (!text) return [];
+  const refs = new Set<number>();
+
+  // Contextual patterns — the verb or preposition must appear within ~20 chars
+  // of the #NNNN. Case-insensitive.
+  const patterns = [
+    /\b(closes?|closed|fix(?:es|ed)?|resolv(?:es|ed)|address(?:es|ed)|ship(?:ped)?(?:\s+in)?|landed\s+in|introduced\s+in|covered\s+by)\b(?:\s+(?:by|in))?\s+(?:PR\s+)?#(\d{3,})/gi,
+  ];
+
+  for (const re of patterns) {
+    for (const m of text.matchAll(re)) {
+      const n = parseInt(m[2], 10);
+      if (!Number.isNaN(n) && n >= 100) refs.add(n);
+    }
+  }
+
+  return Array.from(refs);
+}
+
 export class BacklogTitleReconcilerCheck implements MaintenanceCheck {
   readonly id = 'backlog-title-reconciler';
   readonly name = 'Backlog Title Reconciler';
@@ -211,6 +242,7 @@ export class BacklogTitleReconcilerCheck implements MaintenanceCheck {
 
     // Precompute normalized token sets for all merged PRs once.
     const normalizedPrs = mergedPrs.map((pr) => ({ pr, tokens: normalizeTitle(pr.title) }));
+    const mergedPrsByNumber = new Map(mergedPrs.map((pr) => [pr.number, pr]));
 
     let reconciled = 0;
     const summaries: string[] = [];
@@ -223,33 +255,61 @@ export class BacklogTitleReconcilerCheck implements MaintenanceCheck {
         break;
       }
 
-      const featureTokens = normalizeTitle(feature.title!);
-      // Collect every PR that crosses threshold, sorted best-first. Picking the
-      // best-unclaimed (rather than just the best-overall) prevents a single
-      // popular PR from absorbing the match of every zombie whose tokens line up
-      // the same way — and keeps ties from starving later candidates.
-      const matches = normalizedPrs
-        .map(({ pr, tokens }) => ({ pr, score: jaccardSimilarity(featureTokens, tokens) }))
-        .filter((m) => m.score >= this.threshold)
-        .sort((a, b) => b.score - a.score);
-
+      // Fast path: explicit #NNNN reference in title or description. If the
+      // feature mentions a merged PR number directly, trust that over fuzzy
+      // title matching. This catches zombies filed by adversarial-review flows
+      // whose titles describe a sub-concern of the shipping PR rather than
+      // echoing the PR title — e.g. "fix(ci): PR #3498 — Prettier violation"
+      // whose real resolution is inside PR #3498's own commits.
+      const refs = [
+        ...extractIssueRefs(feature.title ?? ''),
+        ...extractIssueRefs(feature.description ?? ''),
+      ];
       let best: { pr: MergedPr; score: number } | null = null;
-      for (const candidate of matches) {
-        const claimed = features.some((f) => f.prNumber === candidate.pr.number);
-        if (!claimed) {
-          best = candidate;
-          break;
+      for (const ref of refs) {
+        const pr = mergedPrsByNumber.get(ref);
+        if (!pr) continue;
+        // Direct contextual refs (closes/fixes/introduced-in #N) are legitimate
+        // many-to-one: several zombies can all be sub-concerns of the same
+        // shipping PR. No claim-uniqueness guard here — the contextual-verb
+        // requirement in extractIssueRefs is what prevents false matches.
+        best = { pr, score: 1.0 };
+        logger.debug(
+          `[backlog-title-reconciler] Direct #${ref} reference in feature ${feature.id} matches merged PR — skipping Jaccard`
+        );
+        break;
+      }
+
+      // Fallback: token-set Jaccard similarity.
+      if (!best) {
+        const featureTokens = normalizeTitle(feature.title!);
+        // Collect every PR that crosses threshold, sorted best-first. Picking the
+        // best-unclaimed (rather than just the best-overall) prevents a single
+        // popular PR from absorbing the match of every zombie whose tokens line up
+        // the same way — and keeps ties from starving later candidates.
+        const matches = normalizedPrs
+          .map(({ pr, tokens }) => ({ pr, score: jaccardSimilarity(featureTokens, tokens) }))
+          .filter((m) => m.score >= this.threshold)
+          .sort((a, b) => b.score - a.score);
+
+        for (const candidate of matches) {
+          const claimed = features.some((f) => f.prNumber === candidate.pr.number);
+          if (!claimed) {
+            best = candidate;
+            break;
+          }
         }
       }
 
       if (!best) {
         logger.debug(
-          `No unclaimed match for feature "${feature.title}" (${matches.length} candidate(s) ≥ ${this.threshold} but all already claimed)`
+          `No unclaimed match for feature "${feature.title}" (no direct #NNNN ref and no PR title ≥ ${this.threshold} Jaccard)`
         );
         continue;
       }
 
-      const reason = `Reconciled to PR #${best.pr.number} by title match (score=${best.score.toFixed(2)})`;
+      const matchKind = best.score >= 1.0 ? 'direct #ref' : 'title match';
+      const reason = `Reconciled to PR #${best.pr.number} by ${matchKind} (score=${best.score.toFixed(2)})`;
 
       logger.info(
         `[backlog-title-reconciler] Matching ${feature.id} "${feature.title}" → PR #${best.pr.number} "${best.pr.title}" (score=${best.score.toFixed(2)})`

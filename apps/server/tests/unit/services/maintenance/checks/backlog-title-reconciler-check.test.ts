@@ -29,7 +29,7 @@ vi.mock('child_process', async (importOriginal) => {
   return { ...actual, execFile: execFileMock };
 });
 
-const { BacklogTitleReconcilerCheck, normalizeTitle, jaccardSimilarity } =
+const { BacklogTitleReconcilerCheck, normalizeTitle, jaccardSimilarity, extractIssueRefs } =
   await import('@/services/maintenance/checks/backlog-title-reconciler-check.js');
 
 type ExecCallback = (err: Error | null, stdout: string, stderr: string) => void;
@@ -46,6 +46,7 @@ type FakeFeature = {
   id: string;
   title: string;
   status: string;
+  description?: string;
   prNumber?: number | null;
   assignee?: string | null;
 };
@@ -87,6 +88,41 @@ describe('normalizeTitle', () => {
 
   it('returns empty set for empty input', () => {
     expect(normalizeTitle('').size).toBe(0);
+  });
+});
+
+describe('extractIssueRefs', () => {
+  it('extracts refs appearing after resolution verbs', () => {
+    expect(extractIssueRefs('closes #3498')).toContain(3498);
+    expect(extractIssueRefs('Closes PR #3498')).toContain(3498);
+    expect(extractIssueRefs('fixed by #3504')).toContain(3504);
+    expect(extractIssueRefs('resolved in #3512')).toContain(3512);
+    expect(extractIssueRefs('shipped in PR #3490')).toContain(3490);
+    expect(extractIssueRefs('landed in #3506')).toContain(3506);
+    expect(extractIssueRefs('Introduced in PR #3498 — file follow-up')).toContain(3498);
+  });
+
+  it('IGNORES plain mentions without a resolution verb', () => {
+    // These are the false-positive patterns the tightened extractor guards against.
+    expect(extractIssueRefs('see #3505 for context')).toEqual([]);
+    expect(extractIssueRefs('related: #3505, #3511')).toEqual([]);
+    expect(extractIssueRefs('tracking: #3498 #3504')).toEqual([]);
+  });
+
+  it('ignores short numeric refs below 100', () => {
+    // Below-100 filter applies even within a contextual phrase.
+    expect(extractIssueRefs('closes #42')).toEqual([]);
+    expect(extractIssueRefs('closes #100')).toContain(100);
+  });
+
+  it('returns empty array for empty input', () => {
+    expect(extractIssueRefs('')).toEqual([]);
+    expect(extractIssueRefs('no refs here')).toEqual([]);
+  });
+
+  it('deduplicates repeated refs', () => {
+    const refs = extractIssueRefs('closes #3498 — also fixes #3498 downstream');
+    expect(refs.filter((r) => r === 3498).length).toBe(1);
   });
 });
 
@@ -256,6 +292,133 @@ describe('BacklogTitleReconcilerCheck.sweepProject', () => {
 
     const result = await check.sweepProject('/tmp/proj');
 
+    expect(result.reconciled).toBe(0);
+    expect(loader.update).not.toHaveBeenCalled();
+  });
+
+  it('direct #NNNN reference with resolution verb reconciles even when Jaccard would miss', async () => {
+    // Title has NO meaningful token overlap with the merged PR, but the
+    // description uses a resolution verb ("introduced in PR #3498"). The
+    // fast-path should catch it via the contextual extractor.
+    const now = new Date().toISOString();
+    const loader = createFeatureLoader([
+      {
+        id: 'feat-ref',
+        title: 'fix(ci): Prettier formatting violation in test file',
+        description: 'Introduced in PR #3498. File follow-up.',
+        status: 'backlog',
+        prNumber: null,
+      },
+    ]);
+    const events = createEvents();
+    // Use high threshold (0.9) — only the #NNNN fast-path can succeed.
+    const check = new BacklogTitleReconcilerCheck(loader, events, 0.9);
+
+    respondMergedPrs([
+      {
+        number: 3498,
+        title:
+          'PipelineCheckpointService resumes at REVIEW on deleted/ghost PRs — auto-mode loops indefinitely',
+        mergedAt: now,
+      },
+    ]);
+
+    const result = await check.sweepProject('/tmp/proj');
+
+    expect(result.reconciled).toBe(1);
+    expect(loader.update).toHaveBeenCalledWith(
+      '/tmp/proj',
+      'feat-ref',
+      expect.objectContaining({ status: 'done', prNumber: 3498 })
+    );
+  });
+
+  it('direct #NNNN reference in description reconciles (not just title)', async () => {
+    const now = new Date().toISOString();
+    const loader = createFeatureLoader([
+      {
+        id: 'feat-desc-ref',
+        title: 'PipelineCheckpointService.load() crashes on GitHub API error',
+        description: 'Introduced in PR #3498 — file a follow-up.',
+        status: 'backlog',
+        prNumber: null,
+      },
+    ]);
+    const events = createEvents();
+    const check = new BacklogTitleReconcilerCheck(loader, events, 0.9);
+
+    respondMergedPrs([
+      {
+        number: 3498,
+        title: 'unrelated-sounding but matched by description ref',
+        mergedAt: now,
+      },
+    ]);
+
+    const result = await check.sweepProject('/tmp/proj');
+
+    expect(result.reconciled).toBe(1);
+  });
+
+  it('direct #NNNN ref can claim a PR that another feature already claims (many-to-one OK)', async () => {
+    // Multiple zombies filed as sub-concerns of the same shipping PR are a
+    // legitimate many-to-one match. The contextual-verb requirement in
+    // extractIssueRefs keeps false positives out; unique-claim enforcement is
+    // only needed on the fuzzy-Jaccard path.
+    const now = new Date().toISOString();
+    const loader = createFeatureLoader([
+      {
+        id: 'feat-ref-dup',
+        title: 'followup',
+        description: 'fixed by PR #3498',
+        status: 'backlog',
+        prNumber: null,
+      },
+      {
+        id: 'feat-already-has',
+        title: 'other',
+        status: 'done',
+        prNumber: 3498,
+      },
+    ]);
+    const events = createEvents();
+    const check = new BacklogTitleReconcilerCheck(loader, events, 0.9);
+
+    respondMergedPrs([{ number: 3498, title: 'any title', mergedAt: now }]);
+
+    const result = await check.sweepProject('/tmp/proj');
+
+    expect(result.reconciled).toBe(1);
+    expect(loader.update).toHaveBeenCalledWith(
+      '/tmp/proj',
+      'feat-ref-dup',
+      expect.objectContaining({ status: 'done', prNumber: 3498 })
+    );
+  });
+
+  it('plain #NNNN mention (no resolution verb) does NOT trigger direct-ref path', async () => {
+    // Regression: feature-1776656525567 previously false-matched PR #3504
+    // because its description listed "#3504" in a "related:" context. The
+    // tightened extractor must ignore that and fall back to Jaccard.
+    const now = new Date().toISOString();
+    const loader = createFeatureLoader([
+      {
+        id: 'feat-plain-mention',
+        title: 'widget platform improvement',
+        description: 'Context: related to #3498, #3504, #3511. Tracks ongoing cleanup.',
+        status: 'backlog',
+        prNumber: null,
+      },
+    ]);
+    const events = createEvents();
+    const check = new BacklogTitleReconcilerCheck(loader, events, 0.9);
+
+    respondMergedPrs([
+      { number: 3498, title: 'unrelated title', mergedAt: now },
+      { number: 3504, title: 'another unrelated', mergedAt: now },
+    ]);
+
+    const result = await check.sweepProject('/tmp/proj');
     expect(result.reconciled).toBe(0);
     expect(loader.update).not.toHaveBeenCalled();
   });

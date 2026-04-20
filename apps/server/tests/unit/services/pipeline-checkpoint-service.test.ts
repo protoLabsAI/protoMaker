@@ -79,14 +79,17 @@ describe('PipelineCheckpointService.validatePRForResume', () => {
     expect(result).toBe('closed');
   });
 
-  it('returns "not_found" when gh CLI errors (PR deleted, auth failure, network)', async () => {
+  it('returns "unknown" when gh CLI errors (transient: network, rate limit, auth)', async () => {
+    // Previously returned 'not_found', which caused load() to delete valid
+    // checkpoints during GitHub outages. Now 'unknown' so load() leaves the
+    // checkpoint intact until a definitive response is available.
     execMock.mockImplementationOnce((_cmd: string, _opts: unknown, cb: ExecCallback) => {
       const err: NodeJS.ErrnoException = new Error('gh: not found');
       err.code = 'ENOENT';
       cb(err, '', 'could not find pull request');
     });
     const result = await service.validatePRForResume('/tmp/proj', 99999);
-    expect(result).toBe('not_found');
+    expect(result).toBe('unknown');
   });
 
   it('returns "not_found" when state is an unexpected value (future GitHub API change)', async () => {
@@ -169,11 +172,26 @@ describe('PipelineCheckpointService.load — PR validation at load time', () => 
     await expect(fs.access(filePath)).rejects.toThrow();
   });
 
-  it('deletes checkpoint and returns null when PR is not_found (deleted)', async () => {
-    const filePath = await writeCheckpoint('feat-gone', 'MERGE', 404);
+  it('KEEPS checkpoint when gh CLI errors (transient "unknown" state)', async () => {
+    // Regression for feature-1776652853666: a brief GitHub outage must NOT
+    // cause load() to delete a valid checkpoint. The 'unknown' response from
+    // validatePRForResume leaves the checkpoint intact so the next load
+    // attempt can re-validate once the outage clears.
+    const filePath = await writeCheckpoint('feat-transient', 'MERGE', 404);
     execMock.mockImplementationOnce((_cmd: string, _opts: unknown, cb: ExecCallback) => {
-      cb(new Error('gh: not found'), '', 'could not find pull request');
+      cb(new Error('gh: network error'), '', 'rate limit exceeded');
     });
+
+    const result = await service.load(tmpProject, 'feat-transient');
+
+    expect(result).not.toBeNull();
+    expect(result?.currentState).toBe('MERGE');
+    await expect(fs.access(filePath)).resolves.toBeUndefined();
+  });
+
+  it('deletes checkpoint and returns null when gh reports explicit CLOSED state', async () => {
+    const filePath = await writeCheckpoint('feat-gone', 'MERGE', 404);
+    respondExec(JSON.stringify({ state: 'CLOSED', mergedAt: null }));
 
     const result = await service.load(tmpProject, 'feat-gone');
 
