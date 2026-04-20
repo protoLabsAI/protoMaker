@@ -92,21 +92,27 @@ describe('normalizeTitle', () => {
 });
 
 describe('extractIssueRefs', () => {
-  it('extracts multi-digit #NNNN references', () => {
-    const refs = extractIssueRefs('fix(ci): PR #3498 — prettier violation, see also #3504');
-    expect(refs).toContain(3498);
-    expect(refs).toContain(3504);
-    // Bare numbers (no # prefix) are ignored — they're often CI run IDs, line
-    // numbers, or dates that would collide with real PR numbers.
-    expect(extractIssueRefs('ran job 24645447205 successfully')).toEqual([]);
+  it('extracts refs appearing after resolution verbs', () => {
+    expect(extractIssueRefs('closes #3498')).toContain(3498);
+    expect(extractIssueRefs('Closes PR #3498')).toContain(3498);
+    expect(extractIssueRefs('fixed by #3504')).toContain(3504);
+    expect(extractIssueRefs('resolved in #3512')).toContain(3512);
+    expect(extractIssueRefs('shipped in PR #3490')).toContain(3490);
+    expect(extractIssueRefs('landed in #3506')).toContain(3506);
+    expect(extractIssueRefs('Introduced in PR #3498 — file follow-up')).toContain(3498);
+  });
+
+  it('IGNORES plain mentions without a resolution verb', () => {
+    // These are the false-positive patterns the tightened extractor guards against.
+    expect(extractIssueRefs('see #3505 for context')).toEqual([]);
+    expect(extractIssueRefs('related: #3505, #3511')).toEqual([]);
+    expect(extractIssueRefs('tracking: #3498 #3504')).toEqual([]);
   });
 
   it('ignores short numeric refs below 100', () => {
-    const refs = extractIssueRefs('see #1 and #42 about item #99 vs #100');
-    expect(refs).not.toContain(1);
-    expect(refs).not.toContain(42);
-    expect(refs).not.toContain(99);
-    expect(refs).toContain(100);
+    // Below-100 filter applies even within a contextual phrase.
+    expect(extractIssueRefs('closes #42')).toEqual([]);
+    expect(extractIssueRefs('closes #100')).toContain(100);
   });
 
   it('returns empty array for empty input', () => {
@@ -115,7 +121,7 @@ describe('extractIssueRefs', () => {
   });
 
   it('deduplicates repeated refs', () => {
-    const refs = extractIssueRefs('see #3498 and later #3498 again');
+    const refs = extractIssueRefs('closes #3498 — also fixes #3498 downstream');
     expect(refs.filter((r) => r === 3498).length).toBe(1);
   });
 });
@@ -290,14 +296,16 @@ describe('BacklogTitleReconcilerCheck.sweepProject', () => {
     expect(loader.update).not.toHaveBeenCalled();
   });
 
-  it('direct #NNNN reference in title reconciles even when Jaccard would miss', async () => {
-    // Title has NO meaningful token overlap with the merged PR, but carries the
-    // explicit #3498 reference. The fast-path should catch it.
+  it('direct #NNNN reference with resolution verb reconciles even when Jaccard would miss', async () => {
+    // Title has NO meaningful token overlap with the merged PR, but the
+    // description uses a resolution verb ("introduced in PR #3498"). The
+    // fast-path should catch it via the contextual extractor.
     const now = new Date().toISOString();
     const loader = createFeatureLoader([
       {
         id: 'feat-ref',
-        title: 'fix(ci): PR #3498 — Prettier formatting violation in test file',
+        title: 'fix(ci): Prettier formatting violation in test file',
+        description: 'Introduced in PR #3498. File follow-up.',
         status: 'backlog',
         prNumber: null,
       },
@@ -357,7 +365,8 @@ describe('BacklogTitleReconcilerCheck.sweepProject', () => {
     const loader = createFeatureLoader([
       {
         id: 'feat-ref-dup',
-        title: 'followup mentioning #3498',
+        title: 'followup',
+        description: 'fixed by PR #3498',
         status: 'backlog',
         prNumber: null,
       },
@@ -375,6 +384,33 @@ describe('BacklogTitleReconcilerCheck.sweepProject', () => {
 
     const result = await check.sweepProject('/tmp/proj');
 
+    expect(result.reconciled).toBe(0);
+    expect(loader.update).not.toHaveBeenCalled();
+  });
+
+  it('plain #NNNN mention (no resolution verb) does NOT trigger direct-ref path', async () => {
+    // Regression: feature-1776656525567 previously false-matched PR #3504
+    // because its description listed "#3504" in a "related:" context. The
+    // tightened extractor must ignore that and fall back to Jaccard.
+    const now = new Date().toISOString();
+    const loader = createFeatureLoader([
+      {
+        id: 'feat-plain-mention',
+        title: 'widget platform improvement',
+        description: 'Context: related to #3498, #3504, #3511. Tracks ongoing cleanup.',
+        status: 'backlog',
+        prNumber: null,
+      },
+    ]);
+    const events = createEvents();
+    const check = new BacklogTitleReconcilerCheck(loader, events, 0.9);
+
+    respondMergedPrs([
+      { number: 3498, title: 'unrelated title', mergedAt: now },
+      { number: 3504, title: 'another unrelated', mergedAt: now },
+    ]);
+
+    const result = await check.sweepProject('/tmp/proj');
     expect(result.reconciled).toBe(0);
     expect(loader.update).not.toHaveBeenCalled();
   });

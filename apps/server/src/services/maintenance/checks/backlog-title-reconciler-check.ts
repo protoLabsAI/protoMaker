@@ -138,19 +138,33 @@ export function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
 }
 
 /**
- * Extract `#NNNN` PR/issue references from a string. Filters out very small
- * numbers (< 100) to avoid matching against minor refs like "#1" that are
- * more likely to be workstream numbers, checklist positions, or footnote
- * markers than real PR/issue identifiers.
+ * Extract `#NNNN` PR/issue references from a string that appear in a
+ * contextual phrase indicating resolution — "closes #N", "fixes #N",
+ * "resolved by PR #N", "shipped in #N", etc. Plain mentions ("see #3498 for
+ * context", "related: #3505") are intentionally excluded because they would
+ * false-match features that cite a PR without that PR being the actual
+ * resolution.
+ *
+ * Filters out numbers below 100 (likely workstream indices, checklist items,
+ * or footnote markers rather than real PR/issue IDs).
  */
 export function extractIssueRefs(text: string): number[] {
   if (!text) return [];
-  const matches = text.matchAll(/#(\d{3,})/g);
   const refs = new Set<number>();
-  for (const m of matches) {
-    const n = parseInt(m[1], 10);
-    if (!Number.isNaN(n) && n >= 100) refs.add(n);
+
+  // Contextual patterns — the verb or preposition must appear within ~20 chars
+  // of the #NNNN. Case-insensitive.
+  const patterns = [
+    /\b(closes?|closed|fix(?:es|ed)?|resolv(?:es|ed)|address(?:es|ed)|ship(?:ped)?(?:\s+in)?|landed\s+in|introduced\s+in|covered\s+by)\b(?:\s+(?:by|in))?\s+(?:PR\s+)?#(\d{3,})/gi,
+  ];
+
+  for (const re of patterns) {
+    for (const m of text.matchAll(re)) {
+      const n = parseInt(m[2], 10);
+      if (!Number.isNaN(n) && n >= 100) refs.add(n);
+    }
   }
+
   return Array.from(refs);
 }
 
