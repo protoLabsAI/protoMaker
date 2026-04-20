@@ -69,10 +69,22 @@ describe('detectTailscale', () => {
     setHostname('worker-node');
     setNetworkInterfaces({
       eth0: [
-        { address: '192.168.1.1', family: 'IPv4', internal: false, netmask: '255.255.255.0', mac: '' },
+        {
+          address: '192.168.1.1',
+          family: 'IPv4',
+          internal: false,
+          netmask: '255.255.255.0',
+          mac: '',
+        },
       ],
       tailscale0: [
-        { address: '100.100.5.12', family: 'IPv4', internal: false, netmask: '255.192.0.0', mac: '' },
+        {
+          address: '100.100.5.12',
+          family: 'IPv4',
+          internal: false,
+          netmask: '255.192.0.0',
+          mac: '',
+        },
       ],
     } as ReturnType<typeof os.networkInterfaces>);
     const result = detectTailscale();
@@ -84,7 +96,13 @@ describe('detectTailscale', () => {
     setHostname('runner-123');
     setNetworkInterfaces({
       eth0: [
-        { address: '192.168.1.5', family: 'IPv4', internal: false, netmask: '255.255.255.0', mac: '' },
+        {
+          address: '192.168.1.5',
+          family: 'IPv4',
+          internal: false,
+          netmask: '255.255.255.0',
+          mac: '',
+        },
       ],
     } as ReturnType<typeof os.networkInterfaces>);
     const result = detectTailscale();
@@ -134,7 +152,13 @@ describe('resolveCallbackUrl', () => {
     setHostname('runner');
     setNetworkInterfaces({
       ts0: [
-        { address: '100.80.1.42', family: 'IPv4', internal: false, netmask: '255.192.0.0', mac: '' },
+        {
+          address: '100.80.1.42',
+          family: 'IPv4',
+          internal: false,
+          netmask: '255.192.0.0',
+          mac: '',
+        },
       ],
     } as ReturnType<typeof os.networkInterfaces>);
     const url = resolveCallbackUrl({ port: 3008 });
@@ -195,9 +219,7 @@ describe('resolveCallbackUrl', () => {
   it('(c) strict mode throws CallbackUrlNotConfiguredError when only localhost is available', () => {
     setHostname('localhost');
     setNetworkInterfaces({
-      lo: [
-        { address: '127.0.0.1', family: 'IPv4', internal: true, netmask: '255.0.0.0', mac: '' },
-      ],
+      lo: [{ address: '127.0.0.1', family: 'IPv4', internal: true, netmask: '255.0.0.0', mac: '' }],
     } as ReturnType<typeof os.networkInterfaces>);
 
     expect(() =>
