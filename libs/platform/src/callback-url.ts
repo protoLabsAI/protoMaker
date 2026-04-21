@@ -196,7 +196,9 @@ export function resolveCallbackUrl(options: ResolveCallbackUrlOptions = {}): str
 
     const detection = detectTailscale(hostname);
     if (detection.isTailscale && detection.tailscaleUrl) {
-      const base = detection.tailscaleUrl.replace(/\/$/, '');
+      const base = detection.tailscaleUrl
+        .replace(/\/$/, '')
+        .replace(/^http:\/\//, `${protocol}://`);
       return port != null ? `${base}${portSuffix}` : base;
     }
   }
