@@ -219,13 +219,16 @@ export const DECLARED_SKILL_IDS: ReadonlySet<string> = new Set(DECLARED_SKILLS.m
 // keep their historical names because they describe this server's HTTP
 // identity, not the logical agent slug.
 
-function buildAgentCard(host: string) {
+function buildAgentCard() {
   const version = getVersion();
   const port = process.env['PORT'] ? parseInt(process.env['PORT'], 10) : undefined;
   // Resolve the publicly-routable callback URL for this agent.
   // Resolution order: PUBLIC_CALLBACK_URL env var → Tailscale detection →
-  // HOSTNAME env var → HTTP Host header (local / development fallback).
-  const callbackBase = resolveCallbackUrl({ port, hostname: host.split(':')[0] });
+  // HOSTNAME env var → localhost fallback.
+  // Do NOT derive from the HTTP Host header — the Host header reflects the
+  // proxy/ingress address (e.g. ava:8081 for the Astro dashboard) which may
+  // differ from the actual A2A server endpoint.
+  const callbackBase = resolveCallbackUrl({ port });
   return {
     name: 'protoMaker',
     description:
@@ -312,9 +315,8 @@ export function createA2ARoutes(): Router {
   // GET /.well-known/agent.json and /.well-known/agent-card.json
   // Unauthenticated — agent discovery must be open.
   // Registered in routes.ts BEFORE authMiddleware.
-  router.get(['/agent.json', '/agent-card.json'], (req: Request, res: Response): void => {
-    const host = req.headers.host ?? 'ava:3008';
-    const card = buildAgentCard(host);
+  router.get(['/agent.json', '/agent-card.json'], (_req: Request, res: Response): void => {
+    const card = buildAgentCard();
     res.setHeader('Cache-Control', 'public, max-age=60');
     res.json(card);
   });
