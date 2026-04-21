@@ -204,7 +204,7 @@ describe('IncidentDedup', () => {
       const result = dedup.checkResolvedCooldown(
         'fleet.no_agent_stuck',
         'lead-engineer-1',
-        COOLDOWN_MS,
+        COOLDOWN_MS
       );
       expect(result.suppressed).toBe(false);
     });
@@ -225,7 +225,7 @@ describe('IncidentDedup', () => {
       const result = dedup.checkResolvedCooldown(
         'fleet.no_agent_stuck',
         'lead-engineer-1',
-        COOLDOWN_MS,
+        COOLDOWN_MS
       );
 
       expect(result.suppressed).toBe(true);
@@ -250,7 +250,7 @@ describe('IncidentDedup', () => {
       const result = dedup.checkResolvedCooldown(
         'fleet.no_agent_stuck',
         'lead-engineer-1',
-        COOLDOWN_MS,
+        COOLDOWN_MS
       );
 
       expect(result.suppressed).toBe(false);
@@ -305,14 +305,14 @@ describe('IncidentDedup', () => {
       const r1 = dedup.checkResolvedCooldown(
         'fleet.no_agent_stuck',
         'lead-engineer-1',
-        COOLDOWN_MS,
+        COOLDOWN_MS
       );
       expect(r1.suppressed).toBe(true);
       // lead-engineer-2 is not suppressed (different agent)
       const r2 = dedup.checkResolvedCooldown(
         'fleet.no_agent_stuck',
         'lead-engineer-2',
-        COOLDOWN_MS,
+        COOLDOWN_MS
       );
       expect(r2.suppressed).toBe(false);
     });
