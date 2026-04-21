@@ -42,11 +42,11 @@ export interface WorktreeRecoveryResult {
  * Check for uncommitted work in a worktree after agent exit and recover if found.
  *
  * Steps when uncommitted work is detected:
- * 1. Format changed files with prettier (non-fatal)
- * 2. Stage changed files (excluding .automaker/ except memory/)
- * 3. Commit with HUSKY=0 / --no-verify to bypass hooks
- * 4. Push to remote with -u
- * 5. Create PR via gh CLI targeting prBaseBranch
+ * 1. Stage changed files (excluding .automaker/ except memory/)
+ * 1.5. Format staged files with prettier (non-fatal) and re-stage
+ * 2. Commit with HUSKY=0 / --no-verify to bypass hooks
+ * 3. Push to remote with -u
+ * 4. Create PR via gh CLI targeting prBaseBranch
  *
  * Returns a structured result. The caller is responsible for updating feature
  * status, emitting events, and deciding how to proceed.
@@ -94,26 +94,7 @@ export async function checkAndRecoverUncommittedWork(
     );
     logger.debug(`[PostAgentHook] Uncommitted changes:\n${statusOutput}`);
 
-    // Step 1: Format changed files with prettier (non-fatal)
-    // Use the main repo's prettier binary — worktrees have no node_modules/
-    try {
-      const { stdout: diffOutput } = await execAsync(
-        "git diff HEAD --name-only --diff-filter=ACMR -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' '*.css' '*.md'",
-        { cwd: worktreePath, env: execEnv }
-      );
-      const files = diffOutput.trim().split('\n').filter(Boolean);
-      if (files.length > 0) {
-        const prettierBin = path.join(projectPath, 'node_modules/.bin/prettier');
-        await execAsync(
-          `node "${prettierBin}" --ignore-path /dev/null --write ${files.map((f) => `"${f}"`).join(' ')}`,
-          { cwd: worktreePath, env: execEnv }
-        );
-      }
-    } catch {
-      // Non-fatal: formatting failure should not block recovery
-    }
-
-    // Step 2: Stage changed files (exclude .automaker/ except memory/ and skills/ if they exist).
+    // Step 1: Stage changed files (exclude .automaker/ except memory/ and skills/ if they exist).
     const addCommand = buildGitAddCommand(worktreePath);
     logger.debug(`[PostAgentHook] Running: ${addCommand}`);
     await execAsync(addCommand, {
@@ -146,7 +127,30 @@ export async function checkAndRecoverUncommittedWork(
       logger.info(`[PostAgentHook] Fallback 'git add .' staged files successfully`);
     }
 
-    // Step 3: Commit — skip hooks by default unless skipGitHooks is false
+    // Step 1.5: Format staged files with prettier before commit (prevents CI prettier drift).
+    // Run AFTER staging so new/untracked files are included via git diff --cached.
+    // Using git diff --cached (not git diff HEAD) ensures newly-added files are covered.
+    try {
+      const { stdout: stagedFiles } = await execAsync(
+        "git diff --cached --name-only --diff-filter=ACMR -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' '*.css' '*.md'",
+        { cwd: worktreePath, env: execEnv }
+      );
+      const files = stagedFiles.trim().split('\n').filter(Boolean);
+      if (files.length > 0) {
+        const prettierBin = path.join(projectPath, 'node_modules/.bin/prettier');
+        await execAsync(
+          `node "${prettierBin}" --ignore-path /dev/null --write ${files.map((f) => `"${f}"`).join(' ')}`,
+          { cwd: worktreePath, env: execEnv }
+        );
+        // Re-stage after formatting so prettier changes are included in the commit
+        await execAsync(addCommand, { cwd: worktreePath, env: execEnv });
+        logger.debug(`[PostAgentHook] Auto-formatted ${files.length} staged files`);
+      }
+    } catch {
+      // Non-fatal: formatting failure should not block recovery
+    }
+
+    // Step 2: Commit — skip hooks by default unless skipGitHooks is false
     const commitTitle = (feature.title || 'feature implementation')
       .replace(/"/g, "'")
       .substring(0, 72);
