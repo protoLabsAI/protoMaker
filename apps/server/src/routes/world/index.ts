@@ -38,7 +38,13 @@ const dispatchValidator = new DispatchValidator();
 const agentCircuitBreaker = new AgentCircuitBreakerManager();
 const goalSatisfiedGuard: GoalSatisfiedGuard = createGoalSatisfiedGuard();
 
-export { dispatchCooldown, incidentDedup, dispatchValidator, agentCircuitBreaker, goalSatisfiedGuard };
+export {
+  dispatchCooldown,
+  incidentDedup,
+  dispatchValidator,
+  agentCircuitBreaker,
+  goalSatisfiedGuard,
+};
 
 function requireApiKey(req: Request, res: Response): boolean {
   const key = req.headers['x-api-key'] as string | undefined;

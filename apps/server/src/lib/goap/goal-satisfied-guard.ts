@@ -72,12 +72,7 @@ export class GoalSatisfiedGuard {
    * @param goalName   GOAP goal name (e.g. "fleet.no_skill_orphaned")
    * @param description Human-readable description for log messages
    */
-  register(
-    skillId: string,
-    predicate: GoalPredicate,
-    goalName: string,
-    description: string
-  ): void {
+  register(skillId: string, predicate: GoalPredicate, goalName: string, description: string): void {
     this.goals.set(skillId, { predicate, goalName, description });
     logger.debug(`Registered goal predicate for skill "${skillId}": ${goalName}`);
   }
