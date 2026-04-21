@@ -214,10 +214,7 @@ export class PrettierDriftAutofixCheck implements MaintenanceCheck {
     }
   }
 
-  private async fetchCheckRuns(
-    projectPath: string,
-    headSha: string
-  ): Promise<CheckRunEntry[]> {
+  private async fetchCheckRuns(projectPath: string, headSha: string): Promise<CheckRunEntry[]> {
     try {
       const { stdout } = await execFileAsync(
         'gh',
@@ -262,25 +259,25 @@ export class PrettierDriftAutofixCheck implements MaintenanceCheck {
 
     try {
       // Fetch the branch from origin
-      await execFileAsync(
-        'git',
-        ['fetch', 'origin', branchName],
-        { cwd: projectPath, encoding: 'utf-8', timeout: 30_000 }
-      );
+      await execFileAsync('git', ['fetch', 'origin', branchName], {
+        cwd: projectPath,
+        encoding: 'utf-8',
+        timeout: 30_000,
+      });
 
       // Create temporary worktree tracking the branch
-      await execFileAsync(
-        'git',
-        ['worktree', 'add', tmpDir, `origin/${branchName}`],
-        { cwd: projectPath, encoding: 'utf-8', timeout: 15_000 }
-      );
+      await execFileAsync('git', ['worktree', 'add', tmpDir, `origin/${branchName}`], {
+        cwd: projectPath,
+        encoding: 'utf-8',
+        timeout: 15_000,
+      });
 
       // Set up branch tracking in the worktree
-      await execFileAsync(
-        'git',
-        ['checkout', '-B', branchName, `origin/${branchName}`],
-        { cwd: tmpDir, encoding: 'utf-8', timeout: 10_000 }
-      );
+      await execFileAsync('git', ['checkout', '-B', branchName, `origin/${branchName}`], {
+        cwd: tmpDir,
+        encoding: 'utf-8',
+        timeout: 10_000,
+      });
 
       // Run prettier on the offending files
       const prettierCmd = prettierVersion ? `prettier@${prettierVersion}` : 'prettier';
@@ -296,11 +293,11 @@ export class PrettierDriftAutofixCheck implements MaintenanceCheck {
       );
 
       // Check if prettier made any changes
-      const { stdout: diffOutput } = await execFileAsync(
-        'git',
-        ['diff', '--name-only'],
-        { cwd: tmpDir, encoding: 'utf-8', timeout: 10_000 }
-      );
+      const { stdout: diffOutput } = await execFileAsync('git', ['diff', '--name-only'], {
+        cwd: tmpDir,
+        encoding: 'utf-8',
+        timeout: 10_000,
+      });
 
       if (!diffOutput.trim()) {
         // No changes — already clean
@@ -323,23 +320,19 @@ export class PrettierDriftAutofixCheck implements MaintenanceCheck {
 
       // Commit the format changes
       const commitMessage = `style: apply prettier formatting\n\nAuto-formatted via ${prettierCmd} — prettier-drift recovery.`;
-      await execFileAsync(
-        'git',
-        ['commit', '-am', commitMessage],
-        {
-          cwd: tmpDir,
-          encoding: 'utf-8',
-          timeout: 15_000,
-          env: { ...process.env, HUSKY: '0' },
-        }
-      );
+      await execFileAsync('git', ['commit', '-am', commitMessage], {
+        cwd: tmpDir,
+        encoding: 'utf-8',
+        timeout: 15_000,
+        env: { ...process.env, HUSKY: '0' },
+      });
 
       // Push the branch
-      await execFileAsync(
-        'git',
-        ['push', 'origin', branchName],
-        { cwd: tmpDir, encoding: 'utf-8', timeout: 30_000 }
-      );
+      await execFileAsync('git', ['push', 'origin', branchName], {
+        cwd: tmpDir,
+        encoding: 'utf-8',
+        timeout: 30_000,
+      });
 
       // Post a PR comment
       await this.postPRComment(
@@ -356,11 +349,11 @@ export class PrettierDriftAutofixCheck implements MaintenanceCheck {
     } finally {
       // Always clean up the temporary worktree
       try {
-        await execFileAsync(
-          'git',
-          ['worktree', 'remove', '--force', tmpDir],
-          { cwd: projectPath, encoding: 'utf-8', timeout: 15_000 }
-        );
+        await execFileAsync('git', ['worktree', 'remove', '--force', tmpDir], {
+          cwd: projectPath,
+          encoding: 'utf-8',
+          timeout: 15_000,
+        });
       } catch (cleanupErr) {
         logger.warn(`PrettierDriftAutofix: failed to remove worktree ${tmpDir}: ${cleanupErr}`);
         // Best-effort cleanup via fs
@@ -380,8 +373,7 @@ export class PrettierDriftAutofixCheck implements MaintenanceCheck {
         devDependencies?: Record<string, string>;
         dependencies?: Record<string, string>;
       };
-      const version =
-        pkg.devDependencies?.prettier ?? pkg.dependencies?.prettier ?? null;
+      const version = pkg.devDependencies?.prettier ?? pkg.dependencies?.prettier ?? null;
       // Strip semver range prefixes (^, ~, >=, etc.)
       return version ? version.replace(/^[^0-9]*/, '') : null;
     } catch {
@@ -389,15 +381,11 @@ export class PrettierDriftAutofixCheck implements MaintenanceCheck {
     }
   }
 
-  private async postPRComment(
-    projectPath: string,
-    prNumber: number,
-    body: string
-  ): Promise<void> {
-    await execFileAsync(
-      'gh',
-      ['pr', 'comment', String(prNumber), '--body', body],
-      { cwd: projectPath, encoding: 'utf-8', timeout: 15_000 }
-    );
+  private async postPRComment(projectPath: string, prNumber: number, body: string): Promise<void> {
+    await execFileAsync('gh', ['pr', 'comment', String(prNumber), '--body', body], {
+      cwd: projectPath,
+      encoding: 'utf-8',
+      timeout: 15_000,
+    });
   }
 }

@@ -83,10 +83,7 @@ describe('PrettierDriftAutofixCheck', () => {
     it('extracts file paths from prettier warn output', () => {
       const check = new PrettierDriftAutofixCheck(makeMockFeatureLoader() as any);
       const files = check.parsePrettierFiles(PRETTIER_FAIL_LOG);
-      expect(files).toEqual([
-        'apps/server/src/services/foo.ts',
-        'libs/types/src/bar.ts',
-      ]);
+      expect(files).toEqual(['apps/server/src/services/foo.ts', 'libs/types/src/bar.ts']);
     });
 
     it('returns empty array when no Code style issues marker', () => {
