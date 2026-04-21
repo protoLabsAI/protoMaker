@@ -10,12 +10,21 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // Mock 'os' so we can control hostname() and networkInterfaces() per test.
+// NOTE: Vitest surfaces CJS modules with both a namespace AND a `default` export.
+// `import os from 'os'` resolves to `default`, so we must override both.
 vi.mock('os', async () => {
   const actual = await vi.importActual<typeof import('os')>('os');
+  const hostname = vi.fn();
+  const networkInterfaces = vi.fn();
   return {
     ...actual,
-    hostname: vi.fn(),
-    networkInterfaces: vi.fn(),
+    hostname,
+    networkInterfaces,
+    default: {
+      ...actual,
+      hostname,
+      networkInterfaces,
+    },
   };
 });
 
