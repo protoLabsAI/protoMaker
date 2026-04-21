@@ -2,14 +2,20 @@
  * Unit tests for IncidentDedup
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { IncidentDedup } from '@/lib/goap/incident-dedup.js';
 
 describe('IncidentDedup', () => {
   let dedup: IncidentDedup;
 
   beforeEach(() => {
+    vi.useFakeTimers();
     dedup = new IncidentDedup();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   describe('buildKey', () => {
@@ -188,6 +194,170 @@ describe('IncidentDedup', () => {
       dedup.checkForExisting('a1', 's1');
 
       expect(dedup.getTotalSuppressedCount()).toBe(3);
+    });
+  });
+
+  describe('checkResolvedCooldown', () => {
+    const COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
+
+    it('should not suppress when no resolution recorded', () => {
+      const result = dedup.checkResolvedCooldown(
+        'fleet.no_agent_stuck',
+        'lead-engineer-1',
+        COOLDOWN_MS
+      );
+      expect(result.suppressed).toBe(false);
+    });
+
+    it('should suppress within 1h after incident resolution', () => {
+      dedup.registerIncident({
+        id: 'INC-003',
+        agentId: 'lead-engineer-1',
+        skillId: 'bug_triage',
+        goalId: 'fleet.no_agent_stuck',
+        status: 'open',
+        createdAt: Date.now(),
+      });
+      dedup.resolveIncident('INC-003');
+
+      // 30 minutes later — still within 1h cooldown
+      vi.advanceTimersByTime(30 * 60 * 1000);
+      const result = dedup.checkResolvedCooldown(
+        'fleet.no_agent_stuck',
+        'lead-engineer-1',
+        COOLDOWN_MS
+      );
+
+      expect(result.suppressed).toBe(true);
+      expect(result.remainingMs).toBeGreaterThan(0);
+      expect(result.remainingMs).toBeLessThanOrEqual(COOLDOWN_MS);
+      expect(result.reason).toContain('fleet.no_agent_stuck:lead-engineer-1');
+    });
+
+    it('should not suppress after 1h cooldown expires', () => {
+      dedup.registerIncident({
+        id: 'INC-003',
+        agentId: 'lead-engineer-1',
+        skillId: 'bug_triage',
+        goalId: 'fleet.no_agent_stuck',
+        status: 'open',
+        createdAt: Date.now(),
+      });
+      dedup.resolveIncident('INC-003');
+
+      // 1h + 1ms later — cooldown expired
+      vi.advanceTimersByTime(COOLDOWN_MS + 1);
+      const result = dedup.checkResolvedCooldown(
+        'fleet.no_agent_stuck',
+        'lead-engineer-1',
+        COOLDOWN_MS
+      );
+
+      expect(result.suppressed).toBe(false);
+    });
+
+    it('should prune expired entry on check', () => {
+      dedup.registerIncident({
+        id: 'INC-003',
+        agentId: 'lead-engineer-1',
+        skillId: 'bug_triage',
+        goalId: 'fleet.no_agent_stuck',
+        status: 'open',
+        createdAt: Date.now(),
+      });
+      dedup.resolveIncident('INC-003');
+
+      expect(dedup.getResolvedCooldownEntries()).toHaveLength(1);
+
+      vi.advanceTimersByTime(COOLDOWN_MS + 1);
+      dedup.checkResolvedCooldown('fleet.no_agent_stuck', 'lead-engineer-1', COOLDOWN_MS);
+
+      expect(dedup.getResolvedCooldownEntries()).toHaveLength(0);
+    });
+
+    it('should not record resolved cooldown without goalId', () => {
+      dedup.registerIncident({
+        id: 'INC-004',
+        agentId: 'lead-engineer-1',
+        skillId: 'bug_triage',
+        // no goalId
+        status: 'open',
+        createdAt: Date.now(),
+      });
+      dedup.resolveIncident('INC-004');
+
+      // No cooldown recorded because goalId was absent
+      expect(dedup.getResolvedCooldownEntries()).toHaveLength(0);
+    });
+
+    it('should track resolved cooldown per goalId+agentId pair independently', () => {
+      dedup.registerIncident({
+        id: 'INC-005',
+        agentId: 'lead-engineer-1',
+        skillId: 'bug_triage',
+        goalId: 'fleet.no_agent_stuck',
+        status: 'open',
+        createdAt: Date.now(),
+      });
+      dedup.resolveIncident('INC-005');
+
+      // lead-engineer-1 is suppressed
+      const r1 = dedup.checkResolvedCooldown(
+        'fleet.no_agent_stuck',
+        'lead-engineer-1',
+        COOLDOWN_MS
+      );
+      expect(r1.suppressed).toBe(true);
+      // lead-engineer-2 is not suppressed (different agent)
+      const r2 = dedup.checkResolvedCooldown(
+        'fleet.no_agent_stuck',
+        'lead-engineer-2',
+        COOLDOWN_MS
+      );
+      expect(r2.suppressed).toBe(false);
+    });
+
+    it('should store resolvedAt timestamp on incident', () => {
+      const before = Date.now();
+      dedup.registerIncident({
+        id: 'INC-006',
+        agentId: 'agent-1',
+        skillId: 'test',
+        goalId: 'fleet.no_agent_stuck',
+        status: 'open',
+        createdAt: before,
+      });
+      dedup.resolveIncident('INC-006');
+
+      const incident = dedup.getIncident('INC-006');
+      expect(incident?.resolvedAt).toBeGreaterThanOrEqual(before);
+    });
+  });
+
+  describe('getResolvedCooldownEntries', () => {
+    it('should return all active resolved-cooldown entries', () => {
+      dedup.registerIncident({
+        id: 'INC-010',
+        agentId: 'a1',
+        skillId: 's1',
+        goalId: 'goal-a',
+        status: 'open',
+        createdAt: Date.now(),
+      });
+      dedup.registerIncident({
+        id: 'INC-011',
+        agentId: 'a2',
+        skillId: 's2',
+        goalId: 'goal-b',
+        status: 'open',
+        createdAt: Date.now(),
+      });
+      dedup.resolveIncident('INC-010');
+      dedup.resolveIncident('INC-011');
+
+      const entries = dedup.getResolvedCooldownEntries();
+      expect(entries).toHaveLength(2);
+      expect(entries.map((e) => e.key).sort()).toEqual(['goal-a:a1', 'goal-b:a2']);
     });
   });
 

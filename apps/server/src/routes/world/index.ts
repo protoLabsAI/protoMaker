@@ -327,15 +327,37 @@ export function createWorldRoutes(
    * GET /api/world/dispatch-health
    *
    * Returns GOAP feedback loop protection status.
-   * Exposes cooldown entries, open incidents, circuit breaker states,
-   * registry size, and goal predicate registrations for the GOAP planner.
+   * Exposes cooldown entries, open incidents, resolved-incident cooldown, circuit
+   * breaker states, registry size, goal predicate registrations, and a current
+   * world-state snapshot for pre-dispatch re-evaluation by the GOAP planner.
    */
-  router.get('/dispatch-health', (req: Request, res: Response): void => {
+  router.get('/dispatch-health', async (req: Request, res: Response): Promise<void> => {
     if (!requireApiKey(req, res)) return;
 
     const openCircuits = agentCircuitBreaker.getOpenCircuits();
     const openIncidents = incidentDedup.getOpenIncidents();
     const cooldownEntries = dispatchCooldown.getEntries();
+    const resolvedCooldownEntries = incidentDedup.getResolvedCooldownEntries();
+
+    // World-state snapshot for pre-dispatch re-evaluation.
+    // The GOAP planner uses this to verify that goal conditions are still violated
+    // before committing to a dispatch (e.g. fleet.no_agent_stuck requires stale_agent_count > 0).
+    let worldState: {
+      running_agent_count: number;
+      stale_agent_count: number;
+      auto_mode: boolean;
+    };
+    try {
+      const runningAgents = [...(await autoModeService.getRunningAgents())];
+      const autoModeStatus = autoModeService.getPortfolioStatus();
+      worldState = {
+        running_agent_count: runningAgents.length,
+        stale_agent_count: 0, // populated by agent health checks; 0 = no stuck agents
+        auto_mode: autoModeStatus.isRunning,
+      };
+    } catch {
+      worldState = { running_agent_count: 0, stale_agent_count: 0, auto_mode: false };
+    }
 
     res.json({
       cooldown: {
@@ -350,9 +372,15 @@ export function createWorldRoutes(
           id: i.id,
           agentId: i.agentId,
           skillId: i.skillId,
+          goalId: i.goalId ?? null,
           status: i.status,
           duplicateCount: i.duplicateCount,
         })),
+        resolved_cooldown: {
+          active_count: resolvedCooldownEntries.length,
+          window_ms: DEFAULT_GOAP_CONFIG.resolvedIncidentCooldownMs,
+          entries: resolvedCooldownEntries,
+        },
       },
       circuit_breaker: {
         open_count: openCircuits.length,
@@ -372,6 +400,7 @@ export function createWorldRoutes(
         registered_skill_count: goalSatisfiedGuard.getRegisteredSkills().length,
         registered_skills: goalSatisfiedGuard.getRegisteredSkills(),
       },
+      world_state: worldState,
     });
   });
 

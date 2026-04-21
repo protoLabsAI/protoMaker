@@ -53,13 +53,16 @@ describe('GOAP Feedback Loop Prevention (E2E)', () => {
     vi.useRealTimers();
   });
 
+  const RESOLVED_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
+
   /**
    * Simulate the full dispatch pipeline:
    * 0. Check goal satisfaction (pre-dispatch short-circuit)
    * 1. Check cooldown
-   * 2. Check incident dedup
-   * 3. Validate dispatch target
-   * 4. Check circuit breaker
+   * 2. Check resolved-incident cooldown (1h post-resolution suppression)
+   * 3. Check incident dedup (in-flight)
+   * 4. Validate dispatch target
+   * 5. Check circuit breaker
    * Returns reason if blocked, null if allowed.
    */
   function tryDispatch(opts: {
@@ -68,6 +71,7 @@ describe('GOAP Feedback Loop Prevention (E2E)', () => {
     skillId: string;
     incidentId: string;
     worldState?: WorldStateSnapshot;
+    goalId?: string;
   }): { allowed: boolean; blockedBy?: string; reason?: string } {
     // Step 0: Goal satisfied guard — skip dispatch if goal already met
     if (opts.worldState !== undefined) {
@@ -77,14 +81,32 @@ describe('GOAP Feedback Loop Prevention (E2E)', () => {
       }
     }
 
-    // Step 1: Cooldown check
     const cooldownKey = DispatchCooldown.buildKey(opts.action, opts.agentId, opts.skillId);
-    const cooldownResult = cooldown.checkAndRecord(cooldownKey);
+
+    // Step 1: Cooldown check — read-only; only record firing if dispatch is fully allowed
+    // (recording here would re-arm the cooldown even when a later layer blocks the dispatch)
+    const cooldownResult = cooldown.check(cooldownKey);
     if (cooldownResult.suppressed) {
       return { allowed: false, blockedBy: 'cooldown', reason: cooldownResult.reason };
     }
 
-    // Step 2: Incident dedup check
+    // Step 2: Resolved-incident cooldown (1h post-resolution suppression per goal+agent)
+    if (opts.goalId) {
+      const resolvedResult = dedup.checkResolvedCooldown(
+        opts.goalId,
+        opts.agentId,
+        RESOLVED_COOLDOWN_MS
+      );
+      if (resolvedResult.suppressed) {
+        return {
+          allowed: false,
+          blockedBy: 'resolved_cooldown',
+          reason: resolvedResult.reason,
+        };
+      }
+    }
+
+    // Step 3: Incident dedup check (in-flight)
     const dedupResult = dedup.checkForExisting(opts.agentId, opts.skillId);
     if (dedupResult.isDuplicate) {
       return {
@@ -94,17 +116,19 @@ describe('GOAP Feedback Loop Prevention (E2E)', () => {
       };
     }
 
-    // Step 3: Registry validation
+    // Step 4: Registry validation
     const registryResult = validator.validate(opts.agentId);
     if (!registryResult.valid) {
       return { allowed: false, blockedBy: 'registry', reason: registryResult.reason };
     }
 
-    // Step 4: Circuit breaker
+    // Step 5: Circuit breaker
     if (circuitBreaker.isAgentCircuitOpen(opts.agentId)) {
       return { allowed: false, blockedBy: 'circuit_breaker', reason: 'Agent circuit is open' };
     }
 
+    // All layers passed — record the cooldown firing now
+    cooldown.recordFiring(cooldownKey);
     return { allowed: true };
   }
 
@@ -201,6 +225,8 @@ describe('GOAP Feedback Loop Prevention (E2E)', () => {
       // Next dispatch should be blocked by circuit breaker
       // Need to advance past cooldown or use different action keys
       vi.advanceTimersByTime(300_001); // past cooldown window
+      // Refresh agent so lastSeenAt is within registry grace period
+      validator.registerAgent(agentId);
 
       const result = tryDispatch({
         action: 'fleet_incident_response',
@@ -211,6 +237,142 @@ describe('GOAP Feedback Loop Prevention (E2E)', () => {
 
       expect(result.allowed).toBe(false);
       expect(result.blockedBy).toBe('circuit_breaker');
+    });
+  });
+
+  describe('resolved-incident cooldown prevents re-dispatch after resolution', () => {
+    it('should block re-dispatch within 1h after all incidents resolved (INC-003–INC-018 scenario)', () => {
+      const goalId = 'fleet.no_agent_stuck';
+      const agentId = 'lead-engineer-1';
+      const skillId = 'bug_triage';
+
+      // Wave 1: Dispatch allowed, incident registered
+      const wave1 = tryDispatch({
+        action: 'fleet_incident_response',
+        agentId,
+        skillId,
+        incidentId: 'INC-003',
+        goalId,
+      });
+      expect(wave1.allowed).toBe(true);
+
+      dedup.registerIncident({
+        id: 'INC-003',
+        agentId,
+        skillId,
+        goalId,
+        status: 'open',
+        createdAt: Date.now(),
+      });
+
+      // Incident resolved — fleet health = 0 failures, 0 WIP
+      dedup.resolveIncident('INC-003');
+
+      // Advance past the 5-min dispatch cooldown but still within 1h resolved cooldown
+      vi.advanceTimersByTime(10 * 60 * 1000); // 10 minutes
+
+      // Re-dispatch attempt after resolution — should be blocked by resolved_cooldown
+      const reDispatch = tryDispatch({
+        action: 'fleet_incident_response',
+        agentId,
+        skillId,
+        incidentId: 'INC-019',
+        goalId,
+      });
+      expect(reDispatch.allowed).toBe(false);
+      expect(reDispatch.blockedBy).toBe('resolved_cooldown');
+    });
+
+    it('should allow re-dispatch after 1h resolved cooldown expires', () => {
+      const goalId = 'fleet.no_agent_stuck';
+      const agentId = 'lead-engineer-1';
+
+      dedup.registerIncident({
+        id: 'INC-003',
+        agentId,
+        skillId: 'bug_triage',
+        goalId,
+        status: 'open',
+        createdAt: Date.now(),
+      });
+      dedup.resolveIncident('INC-003');
+
+      // Advance past both the 5-min dispatch cooldown AND the 1h resolved cooldown
+      vi.advanceTimersByTime(RESOLVED_COOLDOWN_MS + 60_000); // 1h + 1 min
+      // Refresh agent so lastSeenAt is within registry grace period
+      validator.registerAgent(agentId);
+
+      const reDispatch = tryDispatch({
+        action: 'fleet_incident_response',
+        agentId,
+        skillId: 'bug_triage',
+        incidentId: 'INC-020',
+        goalId,
+      });
+      expect(reDispatch.allowed).toBe(true);
+    });
+
+    it('should contain INC-003–INC-018 storm: 1 allowed, 17 blocked (cooldown then resolved_cooldown)', () => {
+      const goalId = 'fleet.no_agent_stuck';
+      const agentId = 'lead-engineer-1';
+      const skillId = 'bug_triage';
+      const dispatched: string[] = [];
+      const blocked: { id: string; blockedBy: string }[] = [];
+
+      // Wave 1: INC-003 dispatched
+      const wave1 = tryDispatch({
+        action: 'fleet_incident_response',
+        agentId,
+        skillId,
+        incidentId: 'INC-003',
+        goalId,
+      });
+      expect(wave1.allowed).toBe(true);
+      dispatched.push('INC-003');
+
+      dedup.registerIncident({
+        id: 'INC-003',
+        agentId,
+        skillId,
+        goalId,
+        status: 'open',
+        createdAt: Date.now(),
+      });
+
+      // Waves 2-8: Within 5-min cooldown window — blocked by cooldown
+      for (let i = 4; i <= 9; i++) {
+        vi.advanceTimersByTime(30_000); // 30s between waves
+        const result = tryDispatch({
+          action: 'fleet_incident_response',
+          agentId,
+          skillId,
+          incidentId: `INC-${String(i).padStart(3, '0')}`,
+          goalId,
+        });
+        expect(result.allowed).toBe(false);
+        blocked.push({ id: `INC-${String(i).padStart(3, '0')}`, blockedBy: result.blockedBy! });
+      }
+
+      // Incident resolves — fleet health clear
+      dedup.resolveIncident('INC-003');
+
+      // Waves 9-18: After 5-min cooldown but within 1h resolved cooldown — blocked by resolved_cooldown
+      vi.advanceTimersByTime(5 * 60 * 1000 + 1000); // past 5-min dispatch cooldown
+      for (let i = 10; i <= 18; i++) {
+        vi.advanceTimersByTime(60_000); // 1 min between waves
+        const result = tryDispatch({
+          action: 'fleet_incident_response',
+          agentId,
+          skillId,
+          incidentId: `INC-${String(i).padStart(3, '0')}`,
+          goalId,
+        });
+        expect(result.allowed).toBe(false);
+        blocked.push({ id: `INC-${String(i).padStart(3, '0')}`, blockedBy: result.blockedBy! });
+      }
+
+      expect(dispatched).toHaveLength(1);
+      expect(blocked.filter((b) => b.blockedBy === 'resolved_cooldown')).toHaveLength(9);
     });
   });
 
@@ -249,7 +411,9 @@ describe('GOAP Feedback Loop Prevention (E2E)', () => {
       });
 
       dedup.resolveIncident('INC-003');
-      vi.advanceTimersByTime(300_001); // past cooldown
+      vi.advanceTimersByTime(300_001); // past 5-min dispatch cooldown
+      // Refresh agent so lastSeenAt is within registry grace period
+      validator.registerAgent('lead-engineer-1');
 
       const result = tryDispatch({
         action: 'fleet_incident_response',
