@@ -228,7 +228,20 @@ function buildAgentCard() {
   // Do NOT derive from the HTTP Host header — the Host header reflects the
   // proxy/ingress address (e.g. ava:8081 for the Astro dashboard) which may
   // differ from the actual A2A server endpoint.
-  const callbackBase = resolveCallbackUrl({ port });
+  //
+  // Use HTTPS in production so external A2A peers (e.g. Workstacean) can
+  // reach the agent card at a publicly-routable URL. In development, http is
+  // fine. When PUBLIC_CALLBACK_URL is set it is used as-is (already has the
+  // correct scheme); otherwise we default to https in production.
+  const isProduction = process.env['NODE_ENV'] === 'production';
+  const protocol = isProduction ? 'https' : 'http';
+  const callbackBase = resolveCallbackUrl({ port, protocol });
+  if (callbackBase.includes('localhost') || callbackBase.includes('127.0.0.1')) {
+    logger.warn(
+      'A2A agent card URL resolved to localhost — external peers cannot reach this agent. ' +
+        'Set PUBLIC_CALLBACK_URL to an externally-routable URL (e.g. https://ava.proto-labs.ai).'
+    );
+  }
   return {
     name: 'protoMaker',
     description:

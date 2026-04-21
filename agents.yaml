@@ -19,7 +19,59 @@
 agents:
   ava:
     description: Autonomous orchestrator. Owns high-level operational skills.
+    # apiKeyEnv: AVA_API_KEY — set in calling agent (e.g. Workstacean) to authenticate
+    # url is read from the live agent card at /.well-known/agent.json; set
+    # PUBLIC_CALLBACK_URL on the ava server so the card advertises a routable URL.
     skills:
+      - name: chat
+        description: >
+          Free-form multi-turn dialogue. Default DM fallback when no keyword match.
+          Ava picks up context, asks clarifying questions, and routes to a specific
+          skill internally if the conversation lands on something actionable.
+        triggers:
+          - type: discord_dm
+          - type: a2a_message
+            action: chat
+
+      - name: sitrep
+        description: >
+          Returns current board state: feature counts by status, running agents,
+          auto-mode status, and recent escalations.
+        triggers:
+          - type: discord_dm
+          - type: a2a_message
+            action: sitrep
+
+      - name: manage_feature
+        description: >
+          Create, update, unblock, reassign, or change the status of a feature
+          on the board.
+        triggers:
+          - type: a2a_message
+            action: manage_feature
+
+      - name: auto_mode
+        description: Start or stop the autonomous feature execution loop.
+        triggers:
+          - type: a2a_message
+            action: auto_mode
+
+      - name: board_health
+        description: >
+          Analyse board health: blocked features, stalled agents, CI failures,
+          dependency issues.
+        triggers:
+          - type: a2a_message
+            action: board_health
+
+      - name: bug_triage
+        description: >
+          Triage an incoming bug report from GitHub. Classifies severity and
+          category, applies labels, and creates a board feature.
+        triggers:
+          - type: a2a_message
+            action: bug_triage
+
       - name: onboard_project
         description: >
           Onboard a GitHub repository into protoLabs Studio.
@@ -34,6 +86,32 @@ agents:
             example: /onboard_project protoLabsAI/protoWorkstacean
           - type: a2a_message
             action: onboard_project
+
+      - name: provision_discord
+        description: >
+          Provision Discord channels for a new project via ava's A2A endpoint.
+          Ava delegates internally to Quinn. Returns channel IDs for writing back
+          to project settings.
+        triggers:
+          - type: a2a_message
+            action: provision_discord
+
+      - name: plan
+        description: >
+          Draft a SPARC PRD from a raw idea, run antagonistic review (Ava vs Jon),
+          and publish a HITL gate for human approval. Returns immediately with
+          status "pending_approval" and a correlationId.
+        triggers:
+          - type: a2a_message
+            action: plan
+
+      - name: plan_resume
+        description: >
+          Resume a pending plan after human approval. Pass the correlationId and
+          a decision (approve / reject / modify).
+        triggers:
+          - type: a2a_message
+            action: plan_resume
 
   quinn:
     description: QA Engineer. Validates releases, tests endpoints, runs regression checks.
