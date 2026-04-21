@@ -25,7 +25,10 @@ import {
   IncidentDedup,
   DispatchValidator,
   AgentCircuitBreakerManager,
+  GoalSatisfiedGuard,
+  createGoalSatisfiedGuard,
   DEFAULT_GOAP_CONFIG,
+  type WorldStateSnapshot,
 } from '../../lib/goap/index.js';
 
 // Singleton instances for GOAP feedback loop protection
@@ -33,8 +36,15 @@ const dispatchCooldown = new DispatchCooldown();
 const incidentDedup = new IncidentDedup();
 const dispatchValidator = new DispatchValidator();
 const agentCircuitBreaker = new AgentCircuitBreakerManager();
+const goalSatisfiedGuard: GoalSatisfiedGuard = createGoalSatisfiedGuard();
 
-export { dispatchCooldown, incidentDedup, dispatchValidator, agentCircuitBreaker };
+export {
+  dispatchCooldown,
+  incidentDedup,
+  dispatchValidator,
+  agentCircuitBreaker,
+  goalSatisfiedGuard,
+};
 
 function requireApiKey(req: Request, res: Response): boolean {
   const key = req.headers['x-api-key'] as string | undefined;
@@ -256,12 +266,70 @@ export function createWorldRoutes(
   });
 
   /**
+   * POST /api/world/check-dispatch
+   *
+   * Pre-dispatch goal-satisfaction check. The GOAP planner calls this before
+   * dispatching a corrective action to verify the target goal is not already
+   * satisfied in the current world state snapshot.
+   *
+   * If the goal predicate evaluates true against the provided worldState,
+   * the endpoint returns allowed=false with blockedBy="goal_satisfied".
+   * This prevents dispatching corrective actions when the condition they
+   * address has already resolved (GitHub #147, #148).
+   *
+   * Request body: { skillId: string, worldState: Record<string, boolean | number | string> }
+   * Response: { allowed: boolean, blockedBy?: "goal_satisfied", reason?: string, skillId: string }
+   */
+  router.post('/check-dispatch', (req: Request, res: Response): void => {
+    if (!requireApiKey(req, res)) return;
+
+    const body = req.body as { skillId?: unknown; worldState?: unknown };
+    const { skillId, worldState } = body;
+
+    if (!skillId || typeof skillId !== 'string') {
+      res.status(400).json({ success: false, error: 'skillId (string) is required' });
+      return;
+    }
+
+    if (!worldState || typeof worldState !== 'object' || Array.isArray(worldState)) {
+      res.status(400).json({ success: false, error: 'worldState (object) is required' });
+      return;
+    }
+
+    // Extract only primitive values — predicates operate on flat primitive snapshots
+    const snapshot: WorldStateSnapshot = {};
+    for (const [key, value] of Object.entries(worldState as Record<string, unknown>)) {
+      if (typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string') {
+        snapshot[key] = value;
+      }
+    }
+
+    const result = goalSatisfiedGuard.evaluate(skillId, snapshot);
+
+    if (result.satisfied) {
+      res.json({
+        allowed: false,
+        blockedBy: 'goal_satisfied',
+        reason: result.reason,
+        skillId,
+        goalName: result.goalName,
+      });
+    } else {
+      res.json({
+        allowed: true,
+        skillId,
+        goalName: result.goalName ?? null,
+      });
+    }
+  });
+
+  /**
    * GET /api/world/dispatch-health
    *
    * Returns GOAP feedback loop protection status.
    * Exposes cooldown entries, open incidents, resolved-incident cooldown, circuit
-   * breaker states, registry size, and a current world-state snapshot for
-   * pre-dispatch re-evaluation by the GOAP planner.
+   * breaker states, registry size, goal predicate registrations, and a current
+   * world-state snapshot for pre-dispatch re-evaluation by the GOAP planner.
    */
   router.get('/dispatch-health', async (req: Request, res: Response): Promise<void> => {
     if (!requireApiKey(req, res)) return;
@@ -327,6 +395,10 @@ export function createWorldRoutes(
       registry: {
         registered_count: dispatchValidator.getRegisteredCount(),
         phantom_patterns: DEFAULT_GOAP_CONFIG.phantomAgentPatterns,
+      },
+      goal_satisfied_guard: {
+        registered_skill_count: goalSatisfiedGuard.getRegisteredSkills().length,
+        registered_skills: goalSatisfiedGuard.getRegisteredSkills(),
       },
       world_state: worldState,
     });
