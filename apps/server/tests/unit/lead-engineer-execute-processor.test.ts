@@ -6,10 +6,13 @@
  * - EscalateProcessor persists agentRetryCount from ctx.retryCount on blocked transition
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { Feature } from '@protolabsai/types';
 import { EscalateProcessor } from '../../src/services/lead-engineer-escalation.js';
-import type { StateContext, ProcessorServiceContext } from '../../src/services/lead-engineer-types.js';
+import type {
+  StateContext,
+  ProcessorServiceContext,
+} from '../../src/services/lead-engineer-types.js';
 
 function makeFeature(overrides: Partial<Feature> = {}): Feature {
   return {
@@ -77,7 +80,7 @@ describe('EscalateProcessor — agentRetryCount persistence', () => {
     );
   });
 
-  it('persists agentRetryCount: 3 for feature with 3 successful executions then final review failure', async () => {
+  it('persists agentRetryCount: 3 for feature with 3 executions then final review failure', async () => {
     const updateFn = vi.fn().mockResolvedValue(undefined);
     const serviceCtx = makeServiceContext(updateFn);
     const processor = new EscalateProcessor(serviceCtx);

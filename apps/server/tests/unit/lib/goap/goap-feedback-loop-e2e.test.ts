@@ -222,10 +222,10 @@ describe('GOAP Feedback Loop Prevention (E2E)', () => {
         circuitBreaker.recordAgentFailure(agentId);
       }
 
-      // Next dispatch should be blocked by circuit breaker
-      // Need to advance past cooldown or use different action keys
-      vi.advanceTimersByTime(300_001); // past cooldown window
-      // Refresh agent so lastSeenAt is within registry grace period
+      // Next dispatch should be blocked by circuit breaker.
+      // skillId 'deploy' was never dispatched before so no dispatch cooldown applies.
+      // Do NOT advance past circuitBreakerCooldownMs (300_000) or the circuit auto-resets.
+      // Refresh agent so lastSeenAt is within registry grace period.
       validator.registerAgent(agentId);
 
       const result = tryDispatch({
