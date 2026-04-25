@@ -261,9 +261,31 @@ export interface Feature {
   isFoundation?: boolean;
   /**
    * Number of times this feature has failed and been retried.
-   * Used for model escalation - after multiple failures, escalate to opus.
+   * Incremented by EscalateProcessor each time the feature transitions to blocked.
+   * Used for model escalation — after multiple failures, escalate to opus.
+   *
+   * Semantic distinction between the three retry/failure counters:
+   * - `failureCount`: agent-execution failures. Incremented by EscalateProcessor on each
+   *   blocked transition. Drives model escalation (≥2 → opus).
+   * - `agentRetryCount`: review-loop iterations from the EXECUTE state machine
+   *   (ctx.retryCount). Tracks how many times the lead engineer looped back through
+   *   EXECUTE before hitting the retry limit. Persisted on blocked transition.
+   * - `executionHistory.length`: total agent runs (successes + failures combined).
+   *   Each entry in executionHistory captures one agent invocation regardless of outcome.
    */
   failureCount?: number;
+
+  /**
+   * Number of EXECUTE state machine retry iterations at the time the feature was blocked.
+   * Persisted by EscalateProcessor from ctx.retryCount when transitioning to blocked.
+   *
+   * Semantic distinction (see failureCount JSDoc for full breakdown):
+   * - `agentRetryCount`: review-loop iterations — how many times EXECUTE retried before
+   *   hitting the configured maxAgentRetries limit.
+   * - `failureCount`: execution failures — how many times the feature has escalated total.
+   * - `executionHistory.length`: total agent runs regardless of outcome.
+   */
+  agentRetryCount?: number;
   /**
    * Number of auto-retry attempts for this feature.
    * Incremented each time ReconciliationService auto-resets a blocked feature.

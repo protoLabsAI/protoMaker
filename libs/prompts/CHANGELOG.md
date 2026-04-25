@@ -1,5 +1,34 @@
 # @protolabsai/prompts
 
+## 0.107.0
+
+### Minor Changes
+
+- ### Features
+  - create-time dedup via title-Jaccard + #NNNN parsing (#3550)
+  - auto-fix prettier-drift failures on open PRs (#3537)
+
+  ### Bug Fixes
+  - blocked-feature reason and failureCount disagree — operator can't trust either (#3551)
+  - route message/send to Ava instead of protoBot on ava.proto-labs.ai (#3548)
+  - implement message/stream SSE endpoint and prevent 404 HTML leaking as task text (#3547)
+  - run prettier --write after git add, not before (#3546)
+  - honor protocol option in Tailscale branch + fix os mock in callback-url.test (#3543)
+  - GitHubWebhookHandler is dead code — never wired + wrong check-name granularity (#3539)
+  - append /a2a path to agent card url field (#3538)
+  - push-callback URL heuristic breaks for Tailscale-external agents (#3535)
+  - add dispatch dedup/cooldown + circuit breaker to prevent incident feedback loops (#3534)
+
+  ### Refactors
+  - chore(.claude/commands/rollcall.md:5): hardcoded absolute path breaks no (#3544)
+  - fix(a2a): agent card advertises wrong url (ava:8081) instead of A2A JSON (#3542)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.107.0
+  - @protolabsai/utils@0.107.0
+
 ## 0.106.0
 
 ### Minor Changes
