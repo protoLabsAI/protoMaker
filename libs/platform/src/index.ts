@@ -265,6 +265,15 @@ export {
 // Network security (SSRF prevention)
 export { UrlNotAllowedError, isIpBlocked, validateUrlTarget } from './network-security.js';
 
+// Push-callback URL resolution (Tailscale-aware)
+export {
+  CallbackUrlNotConfiguredError,
+  detectTailscale,
+  resolveCallbackUrl,
+  type TailscaleDetectionResult,
+  type ResolveCallbackUrlOptions,
+} from './callback-url.js';
+
 // Safe environment builder for subprocess execution
 export { buildSafeEnv, type SafeEnvOptions } from './safe-env.js';
 

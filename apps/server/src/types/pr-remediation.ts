@@ -70,6 +70,8 @@ export interface GitHubCheckRunSummary {
   name: string;
   status: string;
   conclusion: string | null;
+  /** URL to the GitHub Actions job detail page (contains run_id in path). */
+  details_url?: string;
 }
 
 export interface GitHubCheckRunsListResponse {

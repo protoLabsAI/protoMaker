@@ -103,6 +103,11 @@ services:
       - ALLOWED_ROOT_DIRECTORY=${ALLOWED_ROOT_DIRECTORY:-/home/josh/dev}
       - AUTOMAKER_PROJECT_PATH=${AUTOMAKER_PROJECT_PATH:-/home/josh/dev/ava}
 
+      # Public callback URL advertised in the A2A agent card (/.well-known/agent.json).
+      # Must be externally routable so peers (e.g. Workstacean) can POST to /a2a.
+      # Example: PUBLIC_CALLBACK_URL=https://ava.proto-labs.ai
+      - PUBLIC_CALLBACK_URL=${PUBLIC_CALLBACK_URL:-}
+
       # CORS
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3007}
 

@@ -33,8 +33,18 @@ const logger = createLogger('GitHubWebhookHandler');
 // Constants
 // ---------------------------------------------------------------------------
 
-/** The exact name of the GitHub Actions step we are watching. */
-const FORMAT_CHECK_NAME = 'Check formatting';
+/**
+ * The GitHub Actions job name that runs all CI checks, including formatting.
+ * The GitHub check_runs API returns job-level entries only — "Check formatting"
+ * is a step name (not a job name) and will never appear as a check run name.
+ */
+const CHECKS_JOB_NAME = 'checks';
+
+/**
+ * The string emitted by prettier to stdout when it finds formatting issues.
+ * Appears in the failed step log output fetched via `gh run view --log-failed`.
+ */
+const FORMAT_FAILURE_MARKER = 'Code style issues found';
 
 // ---------------------------------------------------------------------------
 // CI failure event payload (matches what routes/webhooks/routes/github.ts emits)
@@ -167,13 +177,23 @@ export class GitHubWebhookHandler {
   }
 
   /**
-   * Query the GitHub API to determine whether the "Check formatting" check run
-   * failed in the given check suite.
+   * Determine whether a format-check failure caused the `checks` CI job to fail.
    *
-   * Uses `checksUrl` (the check_suite.check_runs_url) when available;
+   * Background: `.github/workflows/checks.yml` defines a single job named `checks`
+   * (not `Check formatting`). The "Check formatting" label is a step name inside
+   * that job. The GitHub check_runs API only exposes job-level entries, so searching
+   * for `cr.name === 'Check formatting'` always returns undefined.
+   *
+   * This method:
+   *   1. Finds the `checks` job run and confirms it failed.
+   *   2. Extracts the workflow run ID from `details_url`.
+   *   3. Fetches the failed-step log via `gh run view --log-failed`.
+   *   4. Returns true only if the log contains the prettier failure marker.
+   *
+   * Uses `checksUrl` (check_suite.check_runs_url) when available;
    * falls back to querying by checkSuiteId.
    *
-   * Returns false on any API error (fail-safe: don't remediate if we can't confirm).
+   * Returns false on any API or parse error (fail-safe: don't remediate if uncertain).
    */
   private async isFormatCheckFailed(
     repository: string,
@@ -207,21 +227,48 @@ export class GitHubWebhookHandler {
         return false;
       }
 
-      const formatCheck = checkRuns.check_runs.find((cr) => cr.name === FORMAT_CHECK_NAME);
-      if (!formatCheck) {
-        logger.debug('[GitHubWebhookHandler] "Check formatting" check run not found in suite');
+      // The GitHub check_runs API returns job-level entries only.
+      // "Check formatting" is a step inside the "checks" job — not its own check run.
+      const checksJob = checkRuns.check_runs.find(
+        (cr) => cr.name === CHECKS_JOB_NAME && cr.conclusion === 'failure'
+      );
+
+      if (!checksJob) {
+        logger.debug(
+          '[GitHubWebhookHandler] "checks" job not found or did not fail — skipping format remediation'
+        );
         return false;
       }
 
-      const failed = formatCheck.conclusion === 'failure';
-      logger.debug('[GitHubWebhookHandler] Format check status', {
-        checkName: formatCheck.name,
-        conclusion: formatCheck.conclusion,
-        failed,
+      // Extract the workflow run ID from the job detail URL so we can fetch step-level logs.
+      // URL format: https://github.com/{org}/{repo}/actions/runs/{runId}/job/{jobId}
+      const detailsUrl = checksJob.details_url ?? '';
+      const runIdMatch = /\/actions\/runs\/(\d+)/.exec(detailsUrl);
+      if (!runIdMatch) {
+        logger.warn(
+          '[GitHubWebhookHandler] Could not extract run_id from details_url — cannot confirm format failure',
+          { detailsUrl }
+        );
+        // Fail-safe: without run_id we cannot inspect logs, so do not auto-remediate
+        return false;
+      }
+      const runId = runIdMatch[1];
+
+      // Fetch the output of all failed steps for this run.
+      // The prettier "Check formatting" step emits FORMAT_FAILURE_MARKER to stdout on failure.
+      const { stdout: logOutput } = await execAsync(
+        `gh run view ${runId} --log-failed --repo ${repository}`,
+        { timeout: 30000 }
+      );
+
+      const hasFormatFailure = logOutput.includes(FORMAT_FAILURE_MARKER);
+      logger.debug('[GitHubWebhookHandler] Format failure log check', {
+        runId,
+        hasFormatFailure,
       });
-      return failed;
+      return hasFormatFailure;
     } catch (err) {
-      logger.warn('[GitHubWebhookHandler] Failed to fetch check runs', {
+      logger.warn('[GitHubWebhookHandler] Failed to check format failure in CI logs', {
         error: err instanceof Error ? err.message : String(err),
       });
       // Fail-safe: if we can't confirm the format check failed, don't auto-remediate

@@ -85,9 +85,13 @@ export class EscalateProcessor implements StateProcessor {
     });
 
     // Single write: blocked status + failure tracking + classification
+    // agentRetryCount = review-loop iterations (ctx.retryCount from EXECUTE processor)
+    // failureCount = agent-execution failures (incremented here each time ESCALATE runs)
+    // executionHistory.length = total agent runs (success and failure combined)
     await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
       status: 'blocked',
       statusChangeReason: ctx.escalationReason || 'Escalated by lead engineer',
+      agentRetryCount: ctx.retryCount,
       failureCount: (ctx.feature.failureCount ?? 0) + 1,
       failureClassification: {
         category: failureAnalysis.category,

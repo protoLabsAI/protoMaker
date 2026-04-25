@@ -41,6 +41,11 @@ const FEATURE_FLAG_LABELS: Record<keyof FeatureFlags, { label: string; descripti
     description:
       'Allow Ava Gateway to automatically act on board issues each heartbeat cycle (unblock features, retry agents, merge ready PRs). Budget: max 3 actions per cycle.',
   },
+  autoPrettierFix: {
+    label: 'Auto Prettier Fix',
+    description:
+      'Automatically fix prettier formatting drift on PRs whose "checks" CI job fails solely on format:check. Applies prettier --write, commits, and pushes. On by default.',
+  },
 };
 
 // Role badge colour mapping

@@ -36,6 +36,7 @@ async function gracefulShutdown(server: http.Server, services: ServiceContainer)
     agentDiscordRouter,
     agentService,
     crdtSyncService,
+    githubWebhookHandler,
     dataDir,
   } = services;
 
@@ -67,6 +68,7 @@ async function gracefulShutdown(server: http.Server, services: ServiceContainer)
   schedulerService.stop();
   terminalService.cleanup();
   worktreeLifecycleService.shutdown();
+  githubWebhookHandler.stop();
   issueCreationService.shutdown();
   hitlFormService.shutdown();
   actionableItemBridge.shutdown();

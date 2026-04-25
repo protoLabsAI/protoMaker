@@ -8,6 +8,6 @@ Run the agent roll call smoke test. Reports container status, A2A agent card, an
 
 ## Steps
 
-1. Run `bash /home/josh/dev/protoWorkstacean/scripts/agent-rollcall.sh`
+1. Run `bash "$(git rev-parse --show-toplevel)/scripts/agent-rollcall.sh"`
 2. Report the output to the user
 3. If any services are down, suggest remediation steps

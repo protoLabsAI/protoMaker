@@ -84,12 +84,14 @@ AUTOMAKER_API_KEY=your-custom-key npm run dev --workspace=apps/server
 
 ### Integrations
 
-| Variable              | Default                      | Description                                 |
-| --------------------- | ---------------------------- | ------------------------------------------- |
-| `GITHUB_TOKEN`        | _(none)_                     | GitHub PAT for repository operations        |
-| `LANGFUSE_PUBLIC_KEY` | _(none)_                     | Langfuse public key (enables observability) |
-| `LANGFUSE_SECRET_KEY` | _(none)_                     | Langfuse secret key                         |
-| `LANGFUSE_BASE_URL`   | `https://cloud.langfuse.com` | Langfuse API URL                            |
+| Variable              | Default                      | Description                                         |
+| --------------------- | ---------------------------- | --------------------------------------------------- |
+| `GITHUB_TOKEN`        | _(none)_                     | GitHub PAT for repository operations                |
+| `LANGFUSE_PUBLIC_KEY` | _(none)_                     | Langfuse public key (enables observability)         |
+| `LANGFUSE_SECRET_KEY` | _(none)_                     | Langfuse secret key                                 |
+| `LANGFUSE_BASE_URL`   | `https://cloud.langfuse.com` | Langfuse API URL                                    |
+| `WORKSTACEAN_URL`     | `http://workstacean:8082`    | Workstacean bot pool service URL                    |
+| `WORKSTACEAN_API_KEY` | _(none)_                     | API key for authenticating with Workstacean service |
 
 ### Development
 

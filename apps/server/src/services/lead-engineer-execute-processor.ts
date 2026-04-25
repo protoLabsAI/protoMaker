@@ -293,7 +293,7 @@ export class ExecuteProcessor implements StateProcessor {
     // Check agent retry limit (configurable via workflow settings, falls back to module constant)
     const maxAgentRetries = await this.resolveMaxAgentRetries(ctx.projectPath);
     if (ctx.retryCount >= maxAgentRetries) {
-      ctx.escalationReason = `Max agent retries exceeded (${maxAgentRetries})`;
+      ctx.escalationReason = `Max agent retries exceeded: ${ctx.retryCount} attempts, limit ${maxAgentRetries}`;
       return {
         nextState: 'ESCALATE',
         shouldContinue: true,

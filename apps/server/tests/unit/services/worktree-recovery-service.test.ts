@@ -67,14 +67,16 @@ describe('worktree-recovery-service', () => {
     it('successfully recovers uncommitted work (commit + push + PR)', async () => {
       // git status --short: uncommitted files
       mockExec.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
-      // git diff HEAD (for prettier formatting)
-      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
-      // npx prettier
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
-      // git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'
+      // git add (step 1: stage)
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git diff --cached --name-only (staging verification)
       mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
+      // git diff --cached --name-only --diff-filter=ACMR (step 1.5: prettier file list)
+      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
+      // node prettier --write
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git add (re-stage after prettier)
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git commit (execFile)
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git fetch origin dev (rebase step)
@@ -103,15 +105,54 @@ describe('worktree-recovery-service', () => {
       expect(result.error).toBeUndefined();
     });
 
+    it('invokes project-local prettier with --ignore-path /dev/null on staged files', async () => {
+      // git status --short: uncommitted files
+      mockExec.mockResolvedValueOnce({ stdout: 'A  src/new-file.ts\n', stderr: '' });
+      // git add (stage)
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git diff --cached (verify staging)
+      mockExec.mockResolvedValueOnce({ stdout: 'src/new-file.ts\n', stderr: '' });
+      // git diff --cached --diff-filter=ACMR (prettier file list)
+      mockExec.mockResolvedValueOnce({ stdout: 'src/new-file.ts\n', stderr: '' });
+      // node prettier --write (captured for assertion)
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git add (re-stage after prettier)
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git commit
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git fetch
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git rebase
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git push
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // gh pr create
+      mockExecFile.mockResolvedValueOnce({
+        stdout: 'https://github.com/owner/repo/pull/10\n',
+        stderr: '',
+      });
+
+      await checkAndRecoverUncommittedWork(baseFeature, '/mock/worktree', '/fake/project');
+
+      // Find the prettier invocation among all exec calls
+      const allCalls = mockExec.mock.calls.map((call: unknown[]) => String(call[0]));
+      const prettierCall = allCalls.find((cmd) => cmd.includes('prettier'));
+      expect(prettierCall).toBeDefined();
+      expect(prettierCall).toContain('--ignore-path /dev/null');
+      expect(prettierCall).toContain('--write');
+      // Uses the project-local binary path (node_modules/.bin/prettier)
+      expect(prettierCall).toContain('/fake/project/node_modules/.bin/prettier');
+    });
+
     it('returns error when commit step fails', async () => {
       // git status --short: uncommitted files
       mockExec.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
-      // git diff HEAD (for prettier formatting)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
-      // git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'
+      // git add (stage)
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git diff --cached --name-only (staging verification)
       mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
+      // git diff --cached --diff-filter=ACMR (prettier list — empty, skip prettier)
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git commit (execFile) fails
       mockExecFile.mockRejectedValueOnce(new Error('nothing to commit, working tree clean'));
 
@@ -129,12 +170,12 @@ describe('worktree-recovery-service', () => {
     it('returns error when push step fails', async () => {
       // git status --short
       mockExec.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
-      // git diff HEAD
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
-      // git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'
+      // git add (stage)
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git diff --cached --name-only (staging verification)
       mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
+      // git diff --cached --diff-filter=ACMR (prettier list — empty, skip prettier)
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git commit succeeds
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git fetch origin dev (rebase step)
@@ -158,14 +199,14 @@ describe('worktree-recovery-service', () => {
     it('continues recovery even if prettier formatting fails', async () => {
       // git status --short
       mockExec.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
-      // git diff HEAD
-      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
-      // npx prettier fails (non-fatal)
-      mockExec.mockRejectedValueOnce(new Error('prettier not found'));
-      // git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'
+      // git add (stage)
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git diff --cached --name-only (staging verification)
       mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
+      // git diff --cached --diff-filter=ACMR (prettier list)
+      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
+      // node prettier fails (non-fatal)
+      mockExec.mockRejectedValueOnce(new Error('prettier not found'));
       // git commit succeeds
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git fetch origin dev (rebase step)
@@ -195,14 +236,16 @@ describe('worktree-recovery-service', () => {
     it('recovers when rebase conflicts — pushes without force-with-lease', async () => {
       // git status --short
       mockExec.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
-      // git diff HEAD (for prettier formatting)
-      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
-      // npx prettier
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
-      // git add
+      // git add (stage)
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git diff --cached --name-only (staging verification)
       mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
+      // git diff --cached --diff-filter=ACMR (prettier list)
+      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
+      // node prettier --write
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git add (re-stage after prettier)
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git commit (execFile)
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git fetch origin dev (rebase step)
@@ -235,14 +278,16 @@ describe('worktree-recovery-service', () => {
     it('recovers when rebase fails for non-conflict reason — aborts and pushes normally', async () => {
       // git status --short
       mockExec.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
-      // git diff HEAD
-      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
-      // npx prettier
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
-      // git add
+      // git add (stage)
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git diff --cached --name-only (staging verification)
       mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
+      // git diff --cached --diff-filter=ACMR (prettier list)
+      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
+      // node prettier --write
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git add (re-stage after prettier)
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git commit (execFile)
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git fetch origin dev — fails (network error)
