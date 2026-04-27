@@ -3,15 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>protoLabs — AI-Native Development Agency</title>
+    <title>protoLabs — Open-source autonomous development</title>
     <meta
       name="description"
-      content="An autonomous development studio where ideas become shipped software — orchestrated by AI, validated by humans."
+      content="Open-source autonomous development platform. AI agents plan, build, and ship features. You architect and review. MIT licensed."
     />
-    <meta property="og:title" content="protoLabs — AI-Native Development Agency" />
+    <meta property="og:title" content="protoLabs — Open-source autonomous development" />
     <meta
       property="og:description"
-      content="An autonomous development studio where ideas become shipped software — orchestrated by AI, validated by humans."
+      content="Open-source autonomous development platform. AI agents plan, build, and ship features. You architect and review. MIT licensed."
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://protolabs.studio" />
@@ -20,10 +20,10 @@
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@protoLabsAI" />
-    <meta name="twitter:title" content="protoLabs — AI-Native Development Agency" />
+    <meta name="twitter:title" content="protoLabs — Open-source autonomous development" />
     <meta
       name="twitter:description"
-      content="An autonomous development studio where ideas become shipped software — orchestrated by AI, validated by humans."
+      content="Open-source autonomous development platform. AI agents plan, build, and ship features. You architect and review. MIT licensed."
     />
     <meta name="twitter:image" content="https://protolabs.studio/images/og-main.png" />
     <link
@@ -58,6 +58,7 @@
                 1: '#111113',
                 2: '#18181b',
                 3: '#222225',
+                4: '#2a2a2e',
               },
               accent: {
                 DEFAULT: '#a78bfa',
@@ -367,9 +368,22 @@
             class="hover:text-white transition-colors"
             >Twitter</a
           >
-          <a href="#notify" class="text-accent hover:text-white transition-colors font-medium"
-            >Get Notified</a
+          <a
+            href="https://github.com/protoLabsAI/protoMaker"
+            target="_blank"
+            rel="noopener"
+            class="inline-flex items-center gap-1.5 text-accent hover:text-white transition-colors font-medium"
+            aria-label="View protoLabs on GitHub"
           >
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                fill-rule="evenodd"
+                clip-rule="evenodd"
+                d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+              />
+            </svg>
+            GitHub
+          </a>
         </div>
       </div>
     </nav>
@@ -379,27 +393,40 @@
       <div class="max-w-5xl mx-auto px-6 pt-28 pb-16 md:pt-44 md:pb-24">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           <div>
+            <div class="animate-fade-up">
+              <span class="badge badge-purple">MIT Licensed · Open Source</span>
+            </div>
             <h1
-              class="text-3xl sm:text-4xl md:text-5xl font-bold leading-[1.1] tracking-tight animate-fade-up"
+              class="mt-5 text-3xl sm:text-4xl md:text-5xl font-bold leading-[1.1] tracking-tight animate-fade-up animate-delay-1"
             >
-              Software doesn't need to be built the way we've been building it.
+              AI agents that plan, build, and ship your features.
             </h1>
             <p
-              class="mt-6 text-lg md:text-xl text-zinc-400 leading-relaxed max-w-2xl animate-fade-up animate-delay-1"
+              class="mt-6 text-lg md:text-xl text-zinc-400 leading-relaxed max-w-2xl animate-fade-up animate-delay-2"
             >
-              An autonomous development studio where ideas become shipped software — orchestrated by
-              AI, validated by humans.
-            </p>
-            <p
-              class="mt-4 text-base text-zinc-400 leading-relaxed max-w-2xl animate-fade-up animate-delay-2"
-            >
-              <span class="text-zinc-200 font-medium">protoLabs</span> handles planning,
-              implementation, review, and deployment. You architect. The system builds.
+              protoLabs is an open-source autonomous development platform. Describe a feature.
+              Agents plan it, implement it in an isolated worktree, run your CI, and open a PR. You
+              review and merge.
             </p>
             <div class="mt-8 flex flex-wrap items-center gap-3 animate-fade-up animate-delay-3">
               <a
-                href="#how-it-works"
+                href="https://github.com/protoLabsAI/protoMaker"
+                target="_blank"
+                rel="noopener"
                 class="inline-flex items-center gap-2 px-5 py-2.5 bg-accent hover:bg-accent-dim text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    fill-rule="evenodd"
+                    clip-rule="evenodd"
+                    d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                  />
+                </svg>
+                Star on GitHub
+              </a>
+              <a
+                href="#how-it-works"
+                class="inline-flex items-center gap-2 px-5 py-2.5 border border-white/10 hover:border-white/20 text-zinc-300 hover:text-white text-sm font-medium rounded-lg transition-colors"
               >
                 See how it works
                 <svg
@@ -492,16 +519,16 @@
           class="max-w-5xl mx-auto px-6 py-10 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 text-center"
         >
           <div>
-            <div class="text-3xl md:text-4xl font-bold font-mono text-white">3,700+</div>
+            <div class="text-3xl md:text-4xl font-bold font-mono text-white">5,790+</div>
             <div class="mt-1 text-sm text-zinc-500">commits shipped</div>
           </div>
           <div>
-            <div class="text-3xl md:text-4xl font-bold font-mono text-white">1,700+</div>
+            <div class="text-3xl md:text-4xl font-bold font-mono text-white">2,000+</div>
             <div class="mt-1 text-sm text-zinc-500">PRs merged</div>
           </div>
           <div>
-            <div class="text-3xl md:text-4xl font-bold font-mono text-white">~$8</div>
-            <div class="mt-1 text-sm text-zinc-500">avg cost per feature</div>
+            <div class="text-3xl md:text-4xl font-bold font-mono text-white">1,034</div>
+            <div class="mt-1 text-sm text-zinc-500">features shipped by agents</div>
           </div>
         </div>
       </div>
@@ -1140,6 +1167,97 @@
         </p>
       </section>
 
+      <!-- Built with protoLabs -->
+      <section class="max-w-5xl mx-auto px-6 py-16 md:py-24">
+        <div class="text-center mb-12 fade-section">
+          <p class="text-accent text-sm font-mono uppercase tracking-widest">
+            Built with protoLabs
+          </p>
+          <h2 class="mt-4 text-2xl md:text-3xl font-semibold text-white">
+            Proof of methodology, not demos.
+          </h2>
+          <p class="mt-4 text-zinc-400 text-sm leading-relaxed max-w-lg mx-auto">
+            Every product below was designed, implemented, and shipped using the same autonomous
+            pipeline you see on this page. No demos. No slides. Real production software.
+          </p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 fade-section">
+          <!-- rabbit-hole -->
+          <div
+            class="rounded-xl border border-white/5 bg-surface-1/50 p-6 flex flex-col gap-4 hover:border-accent/20 transition-colors"
+          >
+            <div class="flex items-center justify-between">
+              <span class="text-base font-semibold text-white">rabbit-hole</span>
+              <span class="badge badge-green">Shipped</span>
+            </div>
+            <p class="text-sm text-zinc-400 leading-relaxed flex-1">
+              AI-powered research platform. Web search, knowledge graphs, URL ingestion, and
+              multi-source deep synthesis — now the internal research agent inside protoLabs.
+            </p>
+            <div class="mockup-panel p-3 text-xs space-y-1">
+              <div>
+                <span class="text-accent">tools:</span>
+                <span class="dim">search, deep_research, ingest_url, kg_facts</span>
+              </div>
+              <div>
+                <span class="text-accent">stack:</span>
+                <span class="dim">Neo4j · SearXNG · LangGraph</span>
+              </div>
+            </div>
+          </div>
+          <!-- MythXEngine -->
+          <div
+            class="rounded-xl border border-white/5 bg-surface-1/50 p-6 flex flex-col gap-4 hover:border-accent/20 transition-colors"
+          >
+            <div class="flex items-center justify-between">
+              <span class="text-base font-semibold text-white">MythXEngine</span>
+              <span class="badge badge-green">Shipped</span>
+            </div>
+            <p class="text-sm text-zinc-400 leading-relaxed flex-1">
+              AI-powered tabletop RPG engine. Generative game systems designed and built end-to-end
+              by autonomous agents — creative AI, not just tooling.
+            </p>
+            <div class="mockup-panel p-3 text-xs space-y-1">
+              <div>
+                <span class="text-accent">category:</span>
+                <span class="dim">generative AI · game engine</span>
+              </div>
+              <div>
+                <span class="text-accent">built by:</span>
+                <span class="dim">protoLabs agent pipeline</span>
+              </div>
+            </div>
+          </div>
+          <!-- SVGVal -->
+          <div
+            class="rounded-xl border border-white/5 bg-surface-1/50 p-6 flex flex-col gap-4 hover:border-accent/20 transition-colors"
+          >
+            <div class="flex items-center justify-between">
+              <span class="text-base font-semibold text-white">SVGVal</span>
+              <span class="badge badge-green">Shipped</span>
+            </div>
+            <p class="text-sm text-zinc-400 leading-relaxed flex-1">
+              SVG validation toolkit. A focused developer tool shipped from spec to production — the
+              kind of scoped, well-tested utility the autonomous pipeline excels at.
+            </p>
+            <div class="mockup-panel p-3 text-xs space-y-1">
+              <div>
+                <span class="text-accent">category:</span>
+                <span class="dim">developer tooling · validation</span>
+              </div>
+              <div>
+                <span class="text-accent">built by:</span>
+                <span class="dim">protoLabs agent pipeline</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="mt-8 text-center text-zinc-500 text-xs fade-section">
+          protoLabs itself is built with protoLabs. The pipeline shipped
+          <span class="text-zinc-400 font-mono">1,034</span> features building this platform.
+        </p>
+      </section>
+
       <!-- Docs CTA -->
       <section class="border-t border-white/5 bg-surface-1/30">
         <div class="max-w-5xl mx-auto px-6 py-16 md:py-24 text-center fade-section">
@@ -1219,47 +1337,81 @@
         </div>
       </section>
 
-      <!-- Newsletter CTA -->
-      <div id="notify" class="border-t border-white/5">
+      <!-- Community / Newsletter CTA -->
+      <div class="border-t border-white/5">
         <div class="max-w-5xl mx-auto px-6 py-20 md:py-28">
-          <div class="max-w-lg mx-auto text-center fade-section">
-            <h2 class="text-2xl md:text-3xl font-semibold text-white">Get launch-day access</h2>
-            <p class="mt-3 text-zinc-400 text-sm leading-relaxed">
-              protoLabs is going open source. Get launch-day access to the repo, docs, and
-              methodology. No spam. Unsubscribe anytime.
+          <div class="max-w-2xl mx-auto text-center fade-section">
+            <p class="text-accent text-sm font-mono uppercase tracking-widest">Community</p>
+            <h2 class="mt-4 text-2xl md:text-3xl font-semibold text-white">
+              Build in public with us.
+            </h2>
+            <p class="mt-4 text-zinc-400 text-sm leading-relaxed max-w-lg mx-auto">
+              protoLabs is open source and actively maintained. Follow along as we ship features
+              with our own pipeline, share the architecture decisions openly, and grow the community
+              of builders who are done writing every line themselves.
             </p>
-
-            <form
-              action="https://buttondown.com/api/emails/embed-subscribe/protoLabsAI"
-              method="post"
-              target="popupwindow"
-              class="mt-8"
-            >
-              <label for="email-input" class="sr-only">Email address</label>
-              <div class="flex flex-col sm:flex-row gap-3">
-                <input
-                  type="email"
-                  id="email-input"
-                  name="email"
-                  required
-                  autocomplete="email"
-                  placeholder="you@example.com"
-                  class="flex-1 px-4 py-3 bg-surface-2 border border-white/10 rounded-lg text-white placeholder:text-zinc-500 text-sm input-glow focus:outline-none focus:border-accent/50 transition-all"
-                />
-                <input type="hidden" name="embed" value="1" />
-                <input type="hidden" name="tag" value="launch-list" />
-                <button
-                  type="submit"
-                  class="px-6 py-3 bg-accent hover:bg-accent-dim text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
-                >
-                  Notify me
-                </button>
-              </div>
-            </form>
-
-            <p class="mt-6 text-xs text-zinc-500">
-              We respect your privacy. One email at launch, then you choose what's next.
-            </p>
+            <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <a
+                href="https://github.com/protoLabsAI/protoMaker"
+                target="_blank"
+                rel="noopener"
+                class="inline-flex items-center gap-2 px-6 py-3 bg-accent hover:bg-accent-dim text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    fill-rule="evenodd"
+                    clip-rule="evenodd"
+                    d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                  />
+                </svg>
+                View on GitHub
+              </a>
+              <a
+                href="https://x.com/protoLabsAI"
+                target="_blank"
+                rel="noopener"
+                class="inline-flex items-center gap-2 px-6 py-3 border border-white/10 hover:border-white/20 text-zinc-300 hover:text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.736-8.84L2 2.25h6.944l4.254 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"
+                  />
+                </svg>
+                Follow @protoLabsAI
+              </a>
+            </div>
+            <div class="mt-10 pt-10 border-t border-white/5">
+              <p class="text-sm text-zinc-500 mb-5">Or get the build log in your inbox.</p>
+              <form
+                action="https://buttondown.com/api/emails/embed-subscribe/protoLabsAI"
+                method="post"
+                target="popupwindow"
+              >
+                <label for="email-input" class="sr-only">Email address</label>
+                <div class="flex flex-col sm:flex-row gap-3 max-w-sm mx-auto">
+                  <input
+                    type="email"
+                    id="email-input"
+                    name="email"
+                    required
+                    autocomplete="email"
+                    placeholder="you@example.com"
+                    class="flex-1 px-4 py-3 bg-surface-2 border border-white/10 rounded-lg text-white placeholder:text-zinc-500 text-sm input-glow focus:outline-none focus:border-accent/50 transition-all"
+                  />
+                  <input type="hidden" name="embed" value="1" />
+                  <input type="hidden" name="tag" value="community" />
+                  <button
+                    type="submit"
+                    class="px-6 py-3 bg-surface-2 hover:bg-surface-3 border border-white/10 hover:border-white/20 text-zinc-300 hover:text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    Subscribe
+                  </button>
+                </div>
+                <p class="mt-4 text-xs text-zinc-600">
+                  No spam. Architecture decisions, not marketing.
+                </p>
+              </form>
+            </div>
           </div>
         </div>
       </div>
@@ -1293,7 +1445,7 @@
           </svg>
           <span>proto<span class="text-zinc-400">Labs</span></span>
           <span class="text-zinc-700">&middot;</span>
-          <span>AI-native development agency</span>
+          <span>Open-source autonomous development</span>
         </div>
         <div class="flex items-center gap-5 text-sm text-zinc-500">
           <a
