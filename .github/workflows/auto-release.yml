@@ -128,7 +128,7 @@ jobs:
       - name: Rewrite and post release notes to Discord
         if: steps.version.outputs.already_tagged != 'true' && env.DISCORD_DEV_WEBHOOK != ''
         continue-on-error: true
-        uses: protoLabsAI/release-tools@v0.1.1
+        uses: protoLabsAI/release-tools@v0.1.2
         with:
           version: v${{ steps.version.outputs.version }}
           previous-version: ${{ steps.prev_tag.outputs.tag }}
