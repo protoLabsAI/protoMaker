@@ -42,16 +42,16 @@ Raw commits like `feat(ui): wire file editor to upstream parity` become grouped,
 
 ```bash
 # Auto-detect latest two tags
-node scripts/rewrite-release-notes.mjs
+npx @protolabsai/release-tools rewrite-release-notes
 
 # Specify versions explicitly
-node scripts/rewrite-release-notes.mjs v0.30.1 v0.29.0
+npx @protolabsai/release-tools rewrite-release-notes v0.30.1 v0.29.0
 
 # Preview the prompt without calling Claude
-node scripts/rewrite-release-notes.mjs --dry-run
+npx @protolabsai/release-tools rewrite-release-notes --dry-run
 
 # Generate and post to Discord #dev
-node scripts/rewrite-release-notes.mjs --post-discord
+npx @protolabsai/release-tools rewrite-release-notes --post-discord
 ```
 
 ### Flags
@@ -124,7 +124,7 @@ The `auto-release.yml` workflow calls the rewriter script as the final step afte
   run: |
     VERSION="v${{ steps.version.outputs.version }}"
     PREV_TAG=$(git tag --sort=-v:refname | grep -v "^${VERSION}$" | head -1)
-    node scripts/rewrite-release-notes.mjs "$VERSION" "$PREV_TAG" --post-discord
+    npx @protolabsai/release-tools rewrite-release-notes "$VERSION" "$PREV_TAG" --post-discord
   env:
     ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
@@ -133,7 +133,7 @@ The `auto-release.yml` workflow calls the rewriter script as the final step afte
 
 - **Enabled by default**: Wired into `auto-release.yml` — runs on every `staging->main` merge
 - **Requires**: `ANTHROPIC_API_KEY` (Claude API)
-- **Manual runs**: `node scripts/rewrite-release-notes.mjs` locally with `ANTHROPIC_API_KEY` set
+- **Manual runs**: `npx @protolabsai/release-tools rewrite-release-notes` locally with `ANTHROPIC_API_KEY` set
 - **Disable in CI**: Remove or comment out the "Rewrite and post release notes" step in `auto-release.yml`; the GitHub Release body still contains the raw auto-generated notes from `gh release create`
 
 ## Model Selection
