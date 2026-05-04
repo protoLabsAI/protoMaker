@@ -28,16 +28,6 @@ const pages = [
     subtitle: 'protoLabs Consulting',
   },
   {
-    name: 'roadmap',
-    title: 'Roadmap',
-    subtitle: 'protoLabs',
-  },
-  {
-    name: 'changelog',
-    title: 'Changelog',
-    subtitle: 'protoLabs',
-  },
-  {
     name: 'report',
     title: 'setupLab Report',
     subtitle: 'protoLabs',

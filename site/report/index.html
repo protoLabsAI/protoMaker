@@ -44,24 +44,9 @@
       src="https://umami.proto-labs.ai/script.js"
       data-website-id="3258a55d-2c56-49ca-ad04-679376101de3"
     ></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/styles.css" />
     <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Geist', 'system-ui', 'sans-serif'],
-              mono: ['Geist Mono', 'monospace'],
-            },
-            colors: {
-              surface: { 0: '#09090b', 1: '#111113', 2: '#18181b', 3: '#222225' },
-              accent: { DEFAULT: '#a78bfa', dim: '#7c5cbf' },
-              muted: '#71717a',
-            },
-          },
-        },
-      };
+      document.documentElement.classList.add('js');
     </script>
     <style>
       html {
@@ -153,15 +138,15 @@
         box-shadow: 0 0 80px rgba(167, 139, 250, 0.08);
       }
 
-      /* Scroll-triggered fade-in */
-      .fade-section {
+      /* Scroll-triggered fade-in — only hidden when JS is available to reveal it */
+      html.js .fade-section {
         opacity: 0;
         transform: translateY(24px);
         transition:
           opacity 0.7s ease-out,
           transform 0.7s ease-out;
       }
-      .fade-section.visible {
+      html.js .fade-section.visible {
         opacity: 1;
         transform: translateY(0);
       }
