@@ -1,0 +1,18 @@
+@import 'tailwindcss';
+
+@source "../**/*.html";
+
+@theme {
+  --color-surface-0: #09090b;
+  --color-surface-1: #111113;
+  --color-surface-2: #18181b;
+  --color-surface-3: #222225;
+
+  --color-accent: #a78bfa;
+  --color-accent-dim: #7c5cbf;
+
+  --color-muted: #71717a;
+
+  --font-sans: 'Geist', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', monospace;
+}
