@@ -56,8 +56,6 @@ import { ProjectService } from '../services/project-service.js';
 import { getSpecGenerationMonitor } from '../services/spec-generation-monitor.js';
 import { FeatureHealthService } from '../services/feature-health-service.js';
 import { getAvaGatewayService } from '../services/ava-gateway-service.js';
-import { TriageService } from '../services/triage-service.js';
-import { IssueCreationService } from '../services/issue-creation-service.js';
 import { EventStreamBuffer } from '../lib/event-stream-buffer.js';
 import { AntagonisticReviewService } from '../services/antagonistic-review-service.js';
 import { AgentScoringService } from '../services/agent-scoring-service.js';
@@ -248,10 +246,6 @@ export interface ServiceContainer {
   worktreeLifecycleService: WorktreeLifecycleService;
   githubStateChecker: GitHubStateChecker;
   reconciliationService: ReconciliationService;
-
-  // Issue management
-  triageService: TriageService;
-  issueCreationService: IssueCreationService;
 
   // Project PM Agent
   projectPmService: ProjectPMService;
@@ -693,15 +687,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     { enabled: presenceEnabled, discordRecipients: discordDmRecipients }
   );
 
-  // Issue Management Pipeline (failure → triage → GitHub issue → Discord)
-  const triageService = new TriageService(events);
-  const issueCreationService = new IssueCreationService(
-    events,
-    featureLoader,
-    triageService,
-    settingsService
-  );
-
   // Agent Discord Router for agent-to-Discord message routing
   const agentDiscordRouter = new AgentDiscordRouter(events, discordBotService);
 
@@ -879,9 +864,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Initialize Changelog Service for generating changelogs on milestone/project completion
   changelogService.initialize(events, settingsService, featureLoader, projectService);
 
-  // Issue Management Pipeline initialization
-  issueCreationService.initialize();
-
   // Wire project-pm module event subscriptions (status sync)
   await projectPmModule.register({ events, projectPmService, projectService, authorityService });
 
@@ -952,8 +934,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     worktreeLifecycleService,
     githubStateChecker,
     reconciliationService,
-    triageService,
-    issueCreationService,
     agentDiscordRouter,
     specGenerationMonitor,
     gitWorkflowService,

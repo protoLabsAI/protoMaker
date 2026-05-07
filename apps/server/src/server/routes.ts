@@ -64,7 +64,6 @@ import { ProjectRegistryService } from '../services/project-registry-service.js'
 import { createAvaRoutes } from '../routes/ava/index.js';
 import { createKnowledgeRoutes } from '../routes/knowledge/index.js';
 import { createPromotionsRoutes } from '../routes/promotions/index.js';
-import { createIssuesRoutes } from '../routes/issues/index.js';
 import { createDeployRoutes } from '../routes/deploy/index.js';
 import { createIntegrityRoutes } from '../routes/integrity.js';
 import { createAnalyticsRoutes } from '../routes/analytics.js';
@@ -387,7 +386,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     '/api/ceremonies',
     createCeremoniesRoutes(events, featureLoader, projectService, ceremonyService, ceremonyAuditLog)
   );
-  app.use('/api/issues', createIssuesRoutes(events));
   app.use('/api/deploy', createDeployRoutes(autoModeService, services.deploymentTrackerService));
   app.use('/api/docs', createDocsRoutes(settingsService));
   app.use('/api/integrity', createIntegrityRoutes(integrityWatchdogService));
