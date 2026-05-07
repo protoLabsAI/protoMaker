@@ -31,12 +31,26 @@ if [ "$(id -u)" != "0" ]; then
         # Only the OAuth-injection block above creates it, and that runs
         # conditionally on $CLAUDE_OAUTH_CREDENTIALS being set.
         mkdir -p /home/automaker/.claude 2>/dev/null || true
-        if [ -f /home/automaker/.claude.json ] && [ ! -f "$PERSISTENT_CLAUDE_JSON" ]; then
-            cp /home/automaker/.claude.json "$PERSISTENT_CLAUDE_JSON" 2>/dev/null || true
+
+        # Ensure persistent file exists. Migrate from tmpfs if possible; init if neither
+        # source nor destination exists. Critically: never delete the original tmpfs
+        # file unless the persistent destination is in place — a failed cp followed
+        # by `rm + echo {}` would silently replace a valid config with an empty one,
+        # recreating the same misleading auth failures this PR is meant to remove.
+        if [ ! -f "$PERSISTENT_CLAUDE_JSON" ]; then
+            if [ -f /home/automaker/.claude.json ]; then
+                cp /home/automaker/.claude.json "$PERSISTENT_CLAUDE_JSON" 2>/dev/null \
+                    || echo "WARN: failed to migrate ~/.claude.json to persistent volume; leaving original in place" >&2
+            else
+                echo '{}' > "$PERSISTENT_CLAUDE_JSON"
+            fi
         fi
-        [ ! -f "$PERSISTENT_CLAUDE_JSON" ] && echo '{}' > "$PERSISTENT_CLAUDE_JSON"
-        rm -f /home/automaker/.claude.json 2>/dev/null || true
-        ln -sf "$PERSISTENT_CLAUDE_JSON" /home/automaker/.claude.json
+
+        # Symlink only when the persistent file is actually present.
+        if [ -f "$PERSISTENT_CLAUDE_JSON" ]; then
+            rm -f /home/automaker/.claude.json 2>/dev/null || true
+            ln -sf "$PERSISTENT_CLAUDE_JSON" /home/automaker/.claude.json
+        fi
     fi
 
     # Warn if /home/automaker tmpfs is under pressure — surfaces the underlying
@@ -121,14 +135,22 @@ chown -R automaker:automaker "$NPM_CACHE_DIR"
 # matching block in the non-root branch above for the full rationale.
 PERSISTENT_CLAUDE_JSON="/home/automaker/.claude/claude.json"
 if [ ! -L /home/automaker/.claude.json ]; then
-    if [ -f /home/automaker/.claude.json ] && [ ! -f "$PERSISTENT_CLAUDE_JSON" ]; then
-        cp /home/automaker/.claude.json "$PERSISTENT_CLAUDE_JSON" 2>/dev/null || true
+    # Ensure persistent file exists; never destroy a valid original if cp fails.
+    if [ ! -f "$PERSISTENT_CLAUDE_JSON" ]; then
+        if [ -f /home/automaker/.claude.json ]; then
+            cp /home/automaker/.claude.json "$PERSISTENT_CLAUDE_JSON" 2>/dev/null \
+                || echo "WARN: failed to migrate ~/.claude.json to persistent volume; leaving original in place" >&2
+        else
+            echo '{}' > "$PERSISTENT_CLAUDE_JSON"
+        fi
     fi
-    [ ! -f "$PERSISTENT_CLAUDE_JSON" ] && echo '{}' > "$PERSISTENT_CLAUDE_JSON"
-    rm -f /home/automaker/.claude.json 2>/dev/null || true
-    ln -sf "$PERSISTENT_CLAUDE_JSON" /home/automaker/.claude.json
-    chown -h automaker:automaker /home/automaker/.claude.json 2>/dev/null || true
-    chown automaker:automaker "$PERSISTENT_CLAUDE_JSON" 2>/dev/null || true
+
+    if [ -f "$PERSISTENT_CLAUDE_JSON" ]; then
+        rm -f /home/automaker/.claude.json 2>/dev/null || true
+        ln -sf "$PERSISTENT_CLAUDE_JSON" /home/automaker/.claude.json
+        chown -h automaker:automaker /home/automaker/.claude.json 2>/dev/null || true
+        chown automaker:automaker "$PERSISTENT_CLAUDE_JSON" 2>/dev/null || true
+    fi
 fi
 
 # Warn if /home/automaker tmpfs is under pressure
