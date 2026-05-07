@@ -209,7 +209,7 @@ auto-release.yml
 
 ## Release Notes Rewriting
 
-An LLM-powered release notes rewriter transforms raw conventional commits into polished, user-facing release notes. Available as both a reusable prompt template (`libs/prompts/src/release-notes.ts`) and a standalone CLI script (`scripts/rewrite-release-notes.mjs`).
+An LLM-powered release notes rewriter transforms raw conventional commits into polished, user-facing release notes. Available as both a reusable prompt template (`libs/prompts/src/release-notes.ts`) and the shared `@protolabsai/release-tools` CLI (run via `npx @protolabsai/release-tools rewrite-release-notes` or as the `protoLabsAI/release-tools@v0.1.0` GitHub Action).
 
 ### How It Works
 
@@ -223,16 +223,16 @@ An LLM-powered release notes rewriter transforms raw conventional commits into p
 
 ```bash
 # Auto-detect latest two tags
-node scripts/rewrite-release-notes.mjs
+npx @protolabsai/release-tools rewrite-release-notes
 
 # Specify versions
-node scripts/rewrite-release-notes.mjs v0.30.1 v0.29.0
+npx @protolabsai/release-tools rewrite-release-notes v0.30.1 v0.29.0
 
 # Preview prompt without calling API
-node scripts/rewrite-release-notes.mjs --dry-run
+npx @protolabsai/release-tools rewrite-release-notes --dry-run
 
 # Generate and post to Discord
-node scripts/rewrite-release-notes.mjs --post-discord
+npx @protolabsai/release-tools rewrite-release-notes --post-discord
 ```
 
 ### CI Integration
