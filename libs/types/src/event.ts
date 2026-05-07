@@ -244,8 +244,6 @@ export type EventType =
   | 'feature:updated'
   // Issue management events (failure-to-issue pipeline)
   | 'feature:permanently-blocked'
-  | 'issue:created'
-  | 'issue:triage-completed'
   // Escalation router events (signal routing to channels)
   | 'escalation:signal-received'
   | 'escalation:signal-routed'

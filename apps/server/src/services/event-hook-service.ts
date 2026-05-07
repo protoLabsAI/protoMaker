@@ -85,7 +85,6 @@ const GENERIC_EVENT_TYPE_TO_TRIGGER: Partial<Record<string, EventHookTrigger>> =
   'coderabbit:review-received': 'coderabbit_review_received',
   'discord:message:detected': 'discord_message_detected',
   // Project / planning
-  'issue:created': 'issue_created',
   'prd:created': 'prd_created',
   'project:analysis-completed': 'project_analysis_completed',
   'project:status-changed': 'project_status_changed',

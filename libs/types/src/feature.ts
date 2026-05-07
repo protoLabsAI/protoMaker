@@ -407,8 +407,9 @@ export interface Feature {
    */
   prLastPolledAt?: string;
   /**
-   * GitHub issue number (if an issue was auto-created for this feature).
-   * Set by IssueCreationService when a feature exceeds max retries or is escalated.
+   * GitHub issue number this feature is linked to (if any).
+   * Used by SignalIntakeService for dedup and by gitWorkflowService to add
+   * `Closes #N` to PR descriptions.
    */
   githubIssueNumber?: number;
   /**
