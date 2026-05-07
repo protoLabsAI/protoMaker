@@ -27,6 +27,10 @@ if [ "$(id -u)" != "0" ]; then
     # errors. See GitHub #3564.
     PERSISTENT_CLAUDE_JSON="/home/automaker/.claude/claude.json"
     if [ ! -L /home/automaker/.claude.json ]; then
+        # Ensure the parent .claude/ volume mountpoint exists before any cp/echo/ln.
+        # Only the OAuth-injection block above creates it, and that runs
+        # conditionally on $CLAUDE_OAUTH_CREDENTIALS being set.
+        mkdir -p /home/automaker/.claude 2>/dev/null || true
         if [ -f /home/automaker/.claude.json ] && [ ! -f "$PERSISTENT_CLAUDE_JSON" ]; then
             cp /home/automaker/.claude.json "$PERSISTENT_CLAUDE_JSON" 2>/dev/null || true
         fi
