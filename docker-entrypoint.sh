@@ -4,8 +4,11 @@ set -e
 # If already running as non-root (e.g. staging with user: directive and reduced caps),
 # skip chown/gosu but still handle credential injection and npm cache setup.
 if [ "$(id -u)" != "0" ]; then
-    # Ensure npm cache directory exists at the configured path
-    NPM_CACHE_DIR="${NPM_CONFIG_CACHE:-/home/automaker/.npm}"
+    # Ensure npm cache directory exists at the configured path.
+    # Default to /npm-cache (matching the tmpfs mount in compose) — never default
+    # to /home/automaker/.npm, which lives on a small tmpfs and triggered the
+    # claude.json corruption issue (see GitHub #3564).
+    NPM_CACHE_DIR="${NPM_CONFIG_CACHE:-/npm-cache}"
     if [ ! -d "$NPM_CACHE_DIR" ]; then
         mkdir -p "$NPM_CACHE_DIR" 2>/dev/null || true
     fi
@@ -15,6 +18,28 @@ if [ "$(id -u)" != "0" ]; then
         mkdir -p /home/automaker/.claude 2>/dev/null || true
         echo "$CLAUDE_OAUTH_CREDENTIALS" > /home/automaker/.claude/.credentials.json
         chmod 600 /home/automaker/.claude/.credentials.json
+    fi
+
+    # Persist ~/.claude.json on the named volume so it survives disk pressure
+    # on the parent /home/automaker tmpfs. Without this, npm cache or other
+    # transient writes can fill the home tmpfs and silently truncate
+    # .claude.json mid-write, masquerading as "Invalid or expired API key"
+    # errors. See GitHub #3564.
+    PERSISTENT_CLAUDE_JSON="/home/automaker/.claude/claude.json"
+    if [ ! -L /home/automaker/.claude.json ]; then
+        if [ -f /home/automaker/.claude.json ] && [ ! -f "$PERSISTENT_CLAUDE_JSON" ]; then
+            cp /home/automaker/.claude.json "$PERSISTENT_CLAUDE_JSON" 2>/dev/null || true
+        fi
+        [ ! -f "$PERSISTENT_CLAUDE_JSON" ] && echo '{}' > "$PERSISTENT_CLAUDE_JSON"
+        rm -f /home/automaker/.claude.json 2>/dev/null || true
+        ln -sf "$PERSISTENT_CLAUDE_JSON" /home/automaker/.claude.json
+    fi
+
+    # Warn if /home/automaker tmpfs is under pressure — surfaces the underlying
+    # condition that caused #3564 before agents start failing.
+    HOME_USED_PCT=$(df -P /home/automaker 2>/dev/null | awk 'NR==2 {gsub("%",""); print $5}')
+    if [ -n "$HOME_USED_PCT" ] && [ "$HOME_USED_PCT" -ge 80 ]; then
+        echo "WARN: /home/automaker is ${HOME_USED_PCT}% full — tmpfs pressure may corrupt CLI configs" >&2
     fi
 
     # Write Cursor auth token if provided
@@ -78,14 +103,35 @@ fi
 chown -R automaker:automaker /home/automaker/.cache/opencode
 chmod -R 700 /home/automaker/.cache/opencode
 
-# Ensure npm cache directory exists with correct permissions
-# NPM_CONFIG_CACHE may redirect to a tmpfs mount (e.g. /npm-cache) for read-only root fs
-# This is needed for using npx to run MCP servers
-NPM_CACHE_DIR="${NPM_CONFIG_CACHE:-/home/automaker/.npm}"
+# Ensure npm cache directory exists with correct permissions.
+# NPM_CONFIG_CACHE may redirect to a tmpfs mount (e.g. /npm-cache) for read-only root fs.
+# Default to /npm-cache, NOT /home/automaker/.npm — the latter shares a small tmpfs
+# with .claude.json and caused GitHub #3564 (silent credential-file truncation).
+NPM_CACHE_DIR="${NPM_CONFIG_CACHE:-/npm-cache}"
 if [ ! -d "$NPM_CACHE_DIR" ]; then
     mkdir -p "$NPM_CACHE_DIR"
 fi
 chown -R automaker:automaker "$NPM_CACHE_DIR"
+
+# Persist ~/.claude.json on the named volume — see GitHub #3564 and the
+# matching block in the non-root branch above for the full rationale.
+PERSISTENT_CLAUDE_JSON="/home/automaker/.claude/claude.json"
+if [ ! -L /home/automaker/.claude.json ]; then
+    if [ -f /home/automaker/.claude.json ] && [ ! -f "$PERSISTENT_CLAUDE_JSON" ]; then
+        cp /home/automaker/.claude.json "$PERSISTENT_CLAUDE_JSON" 2>/dev/null || true
+    fi
+    [ ! -f "$PERSISTENT_CLAUDE_JSON" ] && echo '{}' > "$PERSISTENT_CLAUDE_JSON"
+    rm -f /home/automaker/.claude.json 2>/dev/null || true
+    ln -sf "$PERSISTENT_CLAUDE_JSON" /home/automaker/.claude.json
+    chown -h automaker:automaker /home/automaker/.claude.json 2>/dev/null || true
+    chown automaker:automaker "$PERSISTENT_CLAUDE_JSON" 2>/dev/null || true
+fi
+
+# Warn if /home/automaker tmpfs is under pressure
+HOME_USED_PCT=$(df -P /home/automaker 2>/dev/null | awk 'NR==2 {gsub("%",""); print $5}')
+if [ -n "$HOME_USED_PCT" ] && [ "$HOME_USED_PCT" -ge 80 ]; then
+    echo "WARN: /home/automaker is ${HOME_USED_PCT}% full — tmpfs pressure may corrupt CLI configs" >&2
+fi
 
 # If CURSOR_AUTH_TOKEN is set, write it to the cursor auth file
 # On Linux, cursor-agent uses ~/.config/cursor/auth.json for file-based credential storage

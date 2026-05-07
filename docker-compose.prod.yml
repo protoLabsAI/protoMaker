@@ -158,10 +158,16 @@ services:
       - 'com.automaker.service=server'
       - 'com.automaker.environment=production'
     # Security hardening
+    # /home/automaker tmpfs is required because the parent fs is read-only;
+    # without it, any write to ~/.claude.json or other transient dotfiles would
+    # fail with EROFS. The entrypoint symlinks ~/.claude.json into the
+    # persistent .claude/ named volume so credential state survives restarts
+    # and disk pressure. See GitHub #3564.
     read_only: true
     tmpfs:
       - /tmp:size=512m,mode=1777
       - /npm-cache:size=512m
+      - /home/automaker:size=256m,uid=${UID:-1001},gid=${GID:-1001},mode=0750
     cap_drop:
       - ALL
     cap_add:

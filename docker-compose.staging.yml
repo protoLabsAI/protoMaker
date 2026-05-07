@@ -142,14 +142,18 @@ services:
     user: '${UID:-1001}:${GID:-1001}'
 
     # Read-only root filesystem — writes go to named volumes or tmpfs mounts.
-    # /home/automaker tmpfs provides writable space for ~/.claude.json and other
-    # dotfiles; named volume mounts at subdirectories (.claude/, .cursor/, etc.)
-    # take precedence and remain persistent across restarts.
+    # /home/automaker tmpfs provides writable space for transient dotfiles from
+    # CLI tools we don't fully control (cursor, opencode subprocesses, etc.).
+    # Persistent state (.claude/, .cursor/, .config/, .cache/) lives on named
+    # volumes that mount over this tmpfs. ~/.claude.json is symlinked into the
+    # .claude/ named volume by the entrypoint — see GitHub #3564.
+    # 256M leaves headroom for misbehaving subprocesses; 64M was too tight and
+    # filled with npm cache, silently truncating .claude.json.
     read_only: true
     tmpfs:
       - /tmp:size=512m,mode=1777
       - /npm-cache:size=512m
-      - /home/automaker:size=64m,uid=${UID:-1001},gid=${GID:-1001},mode=0750
+      - /home/automaker:size=256m,uid=${UID:-1001},gid=${GID:-1001},mode=0750
 
     cap_drop:
       - ALL
