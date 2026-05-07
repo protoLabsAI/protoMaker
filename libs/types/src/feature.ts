@@ -413,7 +413,7 @@ export interface Feature {
    */
   githubIssueNumber?: number;
   /**
-   * GitHub issue URL (if an issue was auto-created for this feature).
+   * GitHub issue URL this feature is linked to (if any).
    */
   githubIssueUrl?: string;
   /**
