@@ -1061,7 +1061,7 @@ export class LeadEngineerService {
         projectPath: session.projectPath,
         reason: details,
       },
-      deduplicationKey: `reasoning_${reason}_${featureId ?? session.projectPath}_${Date.now()}`,
+      deduplicationKey: `reasoning_${reason}_${featureId ?? session.projectPath}_${eventType}`,
       timestamp: new Date().toISOString(),
     });
   }
@@ -1073,7 +1073,8 @@ export class LeadEngineerService {
    * statusChangeReason history) and invokes LLM to decide next action.
    *
    * Guards:
-   * - Context validation: escalates immediately if featureId is absent
+   * - Context validation: skips silently if featureId is absent (project-scoped
+   *   signals legitimately lack one and aren't actionable here)
    * - Cost cap: aborts if estimated prompt cost exceeds $0.50
    * - Timeout: aborts if LLM call exceeds 60 seconds
    * - Retry: retries once on malformed LLM response; escalates if still failing
@@ -1086,18 +1087,13 @@ export class LeadEngineerService {
     const p = payload as Record<string, unknown> | null;
     const featureId = p?.featureId as string | undefined;
 
-    // Guard: escalate immediately if signal context is missing required fields
+    // Project-scoped signals (no featureId) match some REASONING_RULES triggers
+    // but the reasoning path is per-feature, so there's nothing to do. Drop them
+    // silently; this is not a contract violation worth escalating to a human.
     if (!featureId) {
-      logger.warn('[Reasoning] Signal context incomplete: missing featureId — escalating', {
+      logger.debug('[Reasoning] Skipping reasoning path: signal lacks featureId', {
         eventType,
       });
-      this.emitReasoningEscalation(
-        session,
-        eventType,
-        undefined,
-        'context_incomplete',
-        'Signal context missing featureId — cannot invoke reasoning path'
-      );
       return;
     }
 
