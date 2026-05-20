@@ -12,7 +12,6 @@ import { z } from 'zod';
 import { createLogger } from '@protolabsai/utils';
 import { resolveModelString } from '@protolabsai/model-resolver';
 import type { ProjectService } from '../../services/project-service.js';
-import type { CeremonyService } from '../../services/ceremony-service.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { EventEmitter } from '../../lib/events.js';
 import { buildCeremonyTools } from './pm-tools.js';
@@ -132,7 +131,6 @@ function makeTool<TSchema extends z.ZodType<any>>(config: {
 export interface QueryPmDeps {
   projectPath: string;
   projectService: ProjectService;
-  ceremonyService: CeremonyService;
   featureLoader: FeatureLoader;
   /** Minimal interface: only getOrCreateSession is required. */
   projectPmService: {
@@ -160,8 +158,7 @@ export async function queryPm(
   projectSlug: string,
   question: string
 ): Promise<string> {
-  const { projectPath, projectService, ceremonyService, featureLoader, projectPmService, events } =
-    deps;
+  const { projectPath, projectService, featureLoader, projectPmService, events } = deps;
 
   // Load project data
   const project = await projectService.getProject(projectPath, projectSlug).catch(() => null);
@@ -228,50 +225,6 @@ export async function queryPm(
           milestoneCount: p.milestones?.length ?? 0,
           updatedAt: p.updatedAt,
         };
-      },
-    }),
-
-    get_ceremony_state: makeTool({
-      description:
-        'Get the current ceremony phase, transition history, and cadence for this project.',
-      inputSchema: z.object({}),
-      execute: async () => {
-        try {
-          const state = await ceremonyService.getCeremonyState(projectPath, projectSlug);
-          return {
-            phase: state.phase,
-            currentMilestone: state.currentMilestone ?? null,
-            lastStandup: state.lastStandup || null,
-            lastRetro: state.lastRetro || null,
-            standupCadence: state.standupCadence,
-            transitionCount: state.history.length,
-            recentTransitions: state.history.slice(-5),
-          };
-        } catch {
-          return { error: 'Ceremony state unavailable' };
-        }
-      },
-    }),
-
-    trigger_ceremony: makeTool({
-      description: 'Trigger a ceremony (standup or retro) for the project.',
-      inputSchema: z.object({
-        ceremonyType: z
-          .enum(['standup', 'retro', 'project-retro'])
-          .describe('The type of ceremony to trigger'),
-        milestoneSlug: z
-          .string()
-          .optional()
-          .describe('Milestone slug (required for retro and project-retro)'),
-      }),
-      execute: async ({ ceremonyType, milestoneSlug }) => {
-        events.emit('ceremony:trigger-requested', {
-          projectPath,
-          projectSlug,
-          ceremonyType,
-          milestoneSlug,
-        });
-        return { ok: true, ceremonyType, milestoneSlug };
       },
     }),
 

@@ -8,7 +8,6 @@ export type TimelineEventType =
   | 'feature:started'
   | 'feature:status-changed'
   | 'milestone:completed'
-  | 'ceremony:fired'
   | 'escalation'
   | 'pr:merged'
   | 'standup'
@@ -21,8 +20,7 @@ export type TimelineEventType =
   | 'project:completed';
 
 /**
- * Structured timeline entry types for the ceremony engine paper trail.
- * Maps ceremony audit types to display-oriented categories.
+ * Structured timeline entry types for display-oriented categories.
  */
 export type TimelineEntryCategory =
   | 'standup'
@@ -41,10 +39,8 @@ export interface TimelineEvent {
   occurredAt: string;
   /** Who authored / triggered this entry */
   author?: string;
-  /** URL to an associated artifact (e.g. ceremony report markdown) */
+  /** URL to an associated artifact (e.g. report markdown) */
   artifactUrl?: string;
-  /** Human-readable ceremony type label, e.g. "Standup", "Milestone Retro" */
-  ceremonyLabel?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -95,15 +91,6 @@ export const EVENT_DISPLAY_CONFIG: Record<TimelineEventType, EventDisplayConfig>
   'milestone:completed': {
     iconName: 'Trophy',
     label: 'Milestone',
-    color: 'text-purple-500',
-    borderColor: 'border-purple-500',
-    bgColor: 'bg-purple-500/5',
-    badgeClass: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
-    category: 'milestone',
-  },
-  'ceremony:fired': {
-    iconName: 'PartyPopper',
-    label: 'Ceremony',
     color: 'text-purple-500',
     borderColor: 'border-purple-500',
     bgColor: 'bg-purple-500/5',
@@ -215,19 +202,6 @@ export const DEFAULT_EVENT_DISPLAY_CONFIG: EventDisplayConfig = {
 export function getEventDisplayConfig(type: string): EventDisplayConfig {
   return EVENT_DISPLAY_CONFIG[type as TimelineEventType] ?? DEFAULT_EVENT_DISPLAY_CONFIG;
 }
-
-/**
- * Maps CeremonyAuditType values (from the server) to timeline entry types.
- */
-export const CEREMONY_TYPE_MAP: Record<string, TimelineEventType> = {
-  standup: 'standup',
-  milestone_retro: 'retro',
-  project_retro: 'retro',
-  epic_delivery: 'milestone:completed',
-  epic_kickoff: 'decision',
-  content_brief: 'decision',
-  post_project_docs: 'retro',
-};
 
 /** All filterable categories shown in the filter UI */
 export const FILTER_CATEGORIES: Array<{ value: TimelineEntryCategory | 'all'; label: string }> = [

@@ -66,10 +66,6 @@ const GENERIC_EVENT_TYPE_TO_TRIGGER: Partial<Record<string, EventHookTrigger>> =
   'pr:approved': 'pr_approved',
   'pr:changes-requested': 'pr_changes_requested',
   'pr:ci-failure': 'pr_ci_failure',
-  // Ceremony events
-  'ceremony:milestone-update': 'ceremony_milestone_update',
-  'ceremony:project-retro': 'ceremony_project_retro',
-  'ceremony:triggered': 'ceremony_triggered',
   // Infrastructure / health
   'worktree:drift-detected': 'worktree_drift_detected',
   'health:issue-detected': 'health_issue_detected',
@@ -131,9 +127,6 @@ function classifySeverity(trigger: EventHookTrigger): EventSeverity {
     trigger === 'feature_blocked' ||
     trigger === 'feature_unblocked' ||
     trigger === 'pr_changes_requested' ||
-    trigger === 'ceremony_triggered' ||
-    trigger === 'ceremony_milestone_update' ||
-    trigger === 'ceremony_project_retro' ||
     trigger === 'auto_mode_stopped'
   ) {
     return 'medium';

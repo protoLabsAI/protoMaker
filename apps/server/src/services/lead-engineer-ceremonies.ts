@@ -1,9 +1,8 @@
 /**
- * Lead Engineer — Ceremony Orchestrator
+ * Lead Engineer — Project Completion Orchestrator
  *
- * Handles project completion ceremonies: aggregates final metrics,
+ * Handles project completion: aggregates final metrics,
  * emits completion events, and tears down the session.
- * CeremonyService handles retro + Discord automatically (already subscribed to project:completed).
  */
 
 import { createLogger } from '@protolabsai/utils';

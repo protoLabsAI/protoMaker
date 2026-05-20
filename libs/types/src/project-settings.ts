@@ -6,7 +6,7 @@
  */
 
 import type { ThemeMode, BoardBackgroundSettings } from './ui-settings.js';
-import type { PhaseModelConfig, CeremonySettings } from './agent-settings.js';
+import type { PhaseModelConfig } from './agent-settings.js';
 import type { ProjectIntegrations, DiscordSettings } from './integration-settings.js';
 import type { WorkflowSettings } from './workflow-settings.js';
 import type { AgentDefinition } from './provider.js';
@@ -238,14 +238,6 @@ export interface ProjectSettings {
    * @see DiscordSettings
    */
   discord?: DiscordSettings;
-
-  // Ceremony Settings (per-project)
-  /**
-   * Project-specific ceremony configuration for milestone updates and retrospectives.
-   * Overrides global ceremony settings for this project.
-   * @see CeremonySettings
-   */
-  ceremonySettings?: CeremonySettings;
 
   // Workflow Settings (per-project)
   /**

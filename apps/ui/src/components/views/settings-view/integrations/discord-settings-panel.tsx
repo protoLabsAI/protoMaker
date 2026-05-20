@@ -27,7 +27,6 @@ const WELL_KNOWN_CHANNELS = [
   { key: 'bugs', label: 'Bug Reports', description: 'Bug triage channel' },
   { key: 'suggestions', label: 'Suggestions', description: 'Ideas and suggestions' },
   { key: 'agentLogs', label: 'Agent Logs', description: 'Agent activity logs' },
-  { key: 'ceremonies', label: 'Ceremonies', description: 'Ceremony announcements' },
 ] as const;
 
 /** Notification preference toggles with labels and descriptions */

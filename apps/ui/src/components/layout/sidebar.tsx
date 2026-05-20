@@ -6,9 +6,7 @@ const logger = createLogger('Sidebar');
 import { cn, isMac } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
 import { useActionableItemsStore } from '@/store/actionable-items-store';
-import { useCeremonyStore } from '@/store/ceremony-store';
 import { useLoadActionableItems, useActionableItemEvents } from '@/hooks/use-actionable-items';
-import { useLoadCeremonyEntries, useCeremonyEventStream } from '@/hooks/use-ceremony-events';
 import { useKeyboardShortcuts, useKeyboardShortcutsConfig } from '@/hooks/use-keyboard-shortcuts';
 import { getElectronAPI } from '@/lib/electron';
 import { initializeProject, hasAppSpec, hasAutomakerDir } from '@/lib/project-init';
@@ -101,14 +99,9 @@ export function Sidebar() {
   const projectPath = currentProject?.path ?? null;
   useLoadActionableItems(projectPath);
   useActionableItemEvents(projectPath);
-  useLoadCeremonyEntries(projectPath);
-  useCeremonyEventStream(projectPath);
 
   // Get unread actionable items count (drives the inbox badge)
   const unreadNotificationsCount = useActionableItemsStore((s) => s.unreadCount);
-
-  // Get unread ceremony event count
-  const unreadCeremonyCount = useCeremonyStore((s) => s.unreadCount);
 
   // State for delete project confirmation dialog
   const [showDeleteProjectDialog, setShowDeleteProjectDialog] = useState(false);
@@ -268,7 +261,6 @@ export function Sidebar() {
     cyclePrevProject,
     cycleNextProject,
     unreadNotificationsCount,
-    unreadCeremonyCount,
     isSpecGenerating: isCurrentProjectGeneratingSpec,
   });
 

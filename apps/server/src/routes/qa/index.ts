@@ -120,7 +120,6 @@ function gatherWiring(services: ServiceContainer) {
     { name: 'discordBotService', ref: services.discordBotService },
     { name: 'escalationRouter', ref: services.escalationRouter },
     { name: 'authorityService', ref: services.authorityService },
-    { name: 'ceremonyService', ref: services.ceremonyService },
     { name: 'projectService', ref: services.projectService },
     { name: 'gitWorkflowService', ref: services.gitWorkflowService },
   ];

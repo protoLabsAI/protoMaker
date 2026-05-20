@@ -158,7 +158,6 @@ export function ActiveProjectView({ project, projectSlug, onBack }: ActiveProjec
     const TIMELINE_TRIGGER_EVENTS: EventType[] = [
       'feature:status-changed',
       'milestone:completed',
-      'ceremony:fired',
       'pr:merged',
       'escalation:signal-received',
     ];

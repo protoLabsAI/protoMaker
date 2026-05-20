@@ -1,5 +1,5 @@
 /**
- * EventLedgerService tests — verifies that all 13 lifecycle event types
+ * EventLedgerService tests — verifies that all 12 lifecycle event types
  * produce correctly-shaped ledger entries with proper correlation IDs.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -236,38 +236,6 @@ describe('EventLedgerService.subscribeToLifecycleEvents', () => {
   });
 
   // -------------------------------------------------------------------------
-  // ceremony:fired
-  // -------------------------------------------------------------------------
-
-  it('ceremony:fired — produces ledger entry with ceremonyType and projectSlug', () => {
-    mockEvents.emit('ceremony:fired', {
-      type: 'standup',
-      projectSlug: 'proj-ceremony',
-      milestoneSlug: 'ms-1',
-      projectPath: '/path',
-    });
-
-    expect(appendSpy).toHaveBeenCalledOnce();
-    const call = appendSpy.mock.calls[0][0];
-    expect(call.eventType).toBe('ceremony:fired');
-    expect(call.correlationIds.projectSlug).toBe('proj-ceremony');
-    expect(call.correlationIds.milestoneSlug).toBe('ms-1');
-    expect((call.payload as Record<string, unknown>).ceremonyType).toBe('standup');
-  });
-
-  it('ceremony:fired — milestoneSlug is optional', () => {
-    mockEvents.emit('ceremony:fired', {
-      type: 'project_retro',
-      projectSlug: 'proj-retro',
-      projectPath: '/path',
-    });
-
-    const call = appendSpy.mock.calls[0][0];
-    expect(call.correlationIds.milestoneSlug).toBeUndefined();
-    expect((call.payload as Record<string, unknown>).ceremonyType).toBe('project_retro');
-  });
-
-  // -------------------------------------------------------------------------
   // escalation:signal-received
   // -------------------------------------------------------------------------
 
@@ -371,7 +339,7 @@ describe('EventLedgerService.subscribeToLifecycleEvents', () => {
   // All 13 event types are handled
   // -------------------------------------------------------------------------
 
-  it('all 13 lifecycle event types produce at least one ledger entry', () => {
+  it('all 12 lifecycle event types produce at least one ledger entry', () => {
     const allEvents: Array<[string, Record<string, unknown>]> = [
       [
         'feature:status-changed',
@@ -386,7 +354,6 @@ describe('EventLedgerService.subscribeToLifecycleEvents', () => {
       ['milestone:completed', { projectSlug: 'proj', milestoneSlug: 'ms-1' }],
       ['project:completed', { projectSlug: 'proj' }],
       ['project:lifecycle:launched', { projectSlug: 'proj' }],
-      ['ceremony:fired', { type: 'standup', projectSlug: 'proj' }],
       ['escalation:signal-received', { featureId: 'f11' }],
       ['auto-mode:event', { type: 'feature_started', featureId: 'f12' }],
     ];
@@ -399,6 +366,6 @@ describe('EventLedgerService.subscribeToLifecycleEvents', () => {
       newEvents.emit(eventType, payload);
     }
 
-    expect(spy).toHaveBeenCalledTimes(13);
+    expect(spy).toHaveBeenCalledTimes(12);
   });
 });

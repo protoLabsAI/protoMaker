@@ -58,7 +58,6 @@ import { createIntegrationRoutes } from '../routes/integrations/index.js';
 import { createDashboardRoutes } from '../routes/dashboard.js';
 import { createAuthorityRoutes } from '../routes/authority/index.js';
 import { createCosRoutes } from '../routes/cos/index.js';
-import { createCeremoniesRoutes } from '../routes/ceremonies/index.js';
 import { createWebhooksRoutes } from '../routes/webhooks/index.js';
 import { createAvaRoutes } from '../routes/ava/index.js';
 import { createKnowledgeRoutes } from '../routes/knowledge/index.js';
@@ -134,8 +133,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     automationService,
     avaGatewayService,
     discordBotService,
-    ceremonyService,
-    ceremonyAuditLog,
     escalationRouter,
     authorityService,
     knowledgeStoreService,
@@ -363,10 +360,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   );
   app.use('/api/automations', createAutomationsRoutes(automationService));
   app.use('/api/ava', createAvaRoutes(services));
-  app.use(
-    '/api/ceremonies',
-    createCeremoniesRoutes(events, featureLoader, projectService, ceremonyService, ceremonyAuditLog)
-  );
   app.use('/api/issues', createIssuesRoutes(events));
   app.use('/api/deploy', createDeployRoutes(autoModeService, services.deploymentTrackerService));
   app.use('/api/docs', createDocsRoutes(settingsService));
@@ -390,7 +383,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
       featureLoader,
       events,
       gtmAgent,
-      ceremonyService,
       completionDetectorService,
       settingsService
     )
@@ -425,7 +417,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // Project PM Agent routes
   app.use(
     '/api/project-pm',
-    createProjectPmRoutes(projectPmService, projectService, ceremonyService, featureLoader, events)
+    createProjectPmRoutes(projectPmService, projectService, featureLoader, events)
   );
   logger.info('Project PM routes mounted at /api/project-pm');
 
