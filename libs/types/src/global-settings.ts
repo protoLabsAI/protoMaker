@@ -190,12 +190,6 @@ export interface FeatureFlags {
    */
   userPresenceDetection: boolean;
   /**
-   * Ava Channel Reactor — enables the reactive orchestrator that monitors the
-   * CRDT-backed Ava Channel and auto-responds to incoming messages.
-   * Requires hivemind to be enabled in proto.config.yaml. Off by default.
-   */
-  reactorEnabled: boolean;
-  /**
    * HITL Forms — enables human-in-the-loop interrupt forms from PM Agent,
    * Signal Intake, and Lead Engineer. When disabled, HITL-gated actions
    * are auto-approved or escalated to Ava instead. Off by default.
@@ -214,7 +208,6 @@ export interface FeatureFlags {
 export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   specEditor: false,
   userPresenceDetection: false,
-  reactorEnabled: false,
   hitlForms: false,
   gatewayAutoRemediate: false,
 };
@@ -636,17 +629,15 @@ export interface GlobalSettings {
    */
   portfolioGate?: boolean;
 
-  // Hivemind Configuration
   /**
-   * Unique identifier for this Automaker instance in a hivemind mesh.
-   * Also used for PR ownership watermarking to prevent multi-instance conflicts.
+   * Stable identifier for this Automaker installation. Used to watermark PR
+   * ownership so other tooling can attribute PRs back to this install.
    * Auto-generated UUID on first call and persisted for subsequent calls.
    */
   instanceId?: string;
 
   /**
-   * Team or organization identifier for grouping instances.
-   * Used in PR ownership watermarks to identify which org created a PR.
+   * Team or organization identifier for PR ownership watermarks.
    * Example: "protoLabsAI"
    */
   teamId?: string;

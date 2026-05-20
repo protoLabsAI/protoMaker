@@ -147,18 +147,6 @@ export type { FeatureStore } from './feature-store.js';
 // Event bus interface (pluggable event transport abstraction)
 export type { EventBus, EventSubscription } from './event-bus.js';
 
-// Hivemind types (multi-instance mesh coordination)
-export type {
-  InstanceCapacity,
-  HivemindDomain,
-  InstanceIdentity,
-  HivemindPeer,
-  HivemindConfig,
-  PeerCapacitySummary,
-  SyncRole,
-  SyncServerStatus,
-} from './hivemind.js';
-
 // Project orchestration types
 export type {
   PhaseComplexity,

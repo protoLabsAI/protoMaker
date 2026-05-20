@@ -2,8 +2,7 @@
  * EventBus interface — pluggable event transport abstraction.
  *
  * Extracted from createEventEmitter() in lib/events.ts. The current
- * in-memory implementation uses a Set<Callback>. Future implementations
- * (NATS, Redis pub/sub) can be swapped in for hivemind distribution.
+ * in-memory implementation uses a Set<Callback>.
  */
 
 import type { EventType, EventCallback, TypedEventCallback } from './event.js';
@@ -30,9 +29,9 @@ export interface EventBus {
   on<T extends EventType>(type: T, callback: TypedEventCallback<T>): EventSubscription;
 
   /**
-   * Broadcast an event to all subscribers, including remote peers.
-   * In single-instance mode, this is identical to emit().
-   * In hivemind mode, this also publishes to the mesh.
+   * Broadcast an event to all subscribers. Alias for emit() in the in-memory
+   * implementation; preserved so consumers can express the intent of fanning
+   * out across transports without coupling to the underlying mechanism.
    */
   broadcast(type: EventType, payload?: unknown): void;
 }

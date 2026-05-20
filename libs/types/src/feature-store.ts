@@ -2,8 +2,7 @@
  * FeatureStore interface — pluggable storage abstraction for features.
  *
  * Extracted from FeatureLoader's public API. The current filesystem-based
- * FeatureLoader implements this interface. Future implementations (SQLite,
- * Postgres, network) can be swapped in for hivemind distribution.
+ * FeatureLoader implements this interface.
  */
 
 import type { Feature, FeatureStatus } from './feature.js';

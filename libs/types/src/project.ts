@@ -232,15 +232,6 @@ export interface Project {
   /** @deprecated Use `type` field instead. */
   ongoing?: boolean;
 
-  /** Instance ID or agent name this project is assigned to */
-  assignedTo?: string;
-
-  /** ISO 8601 timestamp when the project was assigned */
-  assignedAt?: string;
-
-  /** Who performed the assignment (agent ID, instance name, or 'user') */
-  assignedBy?: string;
-
   /** External links */
   links?: ProjectLink[];
 
@@ -483,15 +474,6 @@ export interface UpdateProjectInput {
 
   /** Feedback from "request changes" review */
   reviewFeedback?: string;
-
-  /** Instance ID or agent name to assign this project to */
-  assignedTo?: string;
-
-  /** ISO 8601 timestamp when the project was assigned */
-  assignedAt?: string;
-
-  /** Who performed the assignment (agent ID, instance name, or 'user') */
-  assignedBy?: string;
 }
 
 /**

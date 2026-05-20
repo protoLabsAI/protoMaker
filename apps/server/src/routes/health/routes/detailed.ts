@@ -5,9 +5,8 @@
 import type { Request, Response } from 'express';
 import { getAuthStatus } from '../../../lib/auth.js';
 import { getVersion } from '../../../lib/version.js';
-import type { PeerMeshService } from '../../../services/peer-mesh-service.js';
 
-export function createDetailedHandler(crdtSyncService?: PeerMeshService) {
+export function createDetailedHandler() {
   return (_req: Request, res: Response): void => {
     res.json({
       status: 'ok',
@@ -22,7 +21,6 @@ export function createDetailedHandler(crdtSyncService?: PeerMeshService) {
         platform: process.platform,
         arch: process.arch,
       },
-      sync: crdtSyncService ? crdtSyncService.getSyncStatus() : null,
     });
   };
 }

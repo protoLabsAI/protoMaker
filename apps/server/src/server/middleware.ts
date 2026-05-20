@@ -34,7 +34,7 @@ export function isRequestLoggingEnabled(): boolean {
 /**
  * Register all Express middleware: logging, CORS, Prometheus, body parsing
  */
-export function setupMiddleware(app: Express, options?: { allowAllOrigins?: boolean }): void {
+export function setupMiddleware(app: Express): void {
   // Custom colored logger showing only endpoint and status code (dynamically configurable)
   morgan.token('status-colored', (_req, res) => {
     const status = res.statusCode;
@@ -57,19 +57,12 @@ export function setupMiddleware(app: Express, options?: { allowAllOrigins?: bool
   // CORS configuration
   // When using credentials (cookies), origin cannot be '*'
   // We dynamically allow the requesting origin for local development
-  const allowAllOrigins = options?.allowAllOrigins === true;
   app.use(
     cors({
       origin: (origin, callback) => {
         // Allow requests with no origin (like mobile apps, curl, Electron)
         if (!origin) {
           callback(null, true);
-          return;
-        }
-
-        // When hivemind is enabled, accept requests from any origin
-        if (allowAllOrigins) {
-          callback(null, origin);
           return;
         }
 

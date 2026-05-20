@@ -11,7 +11,6 @@
 
 import fs from 'node:fs';
 import * as v8 from 'node:v8';
-import { freemem, totalmem, cpus, loadavg } from 'node:os';
 import { ProviderFactory } from '../providers/provider-factory.js';
 import { simpleQuery } from '../providers/simple-query-service.js';
 import { StreamObserver } from './stream-observer-service.js';
@@ -224,8 +223,6 @@ export class AutoModeService {
   // Track which projects have already been checked for interrupted features this server lifecycle.
   // Prevents the UI from re-triggering resumeInterruptedFeatures on every board mount.
   private resumeCheckedProjects = new Set<string>();
-  // Cached backlog count refreshed asynchronously on each capacity read.
-  private _backlogCountCache = 0;
   // Portfolio scheduler for cross-project capacity allocation (optional, set externally)
   private _portfolioScheduler: import('./portfolio-scheduler.js').PortfolioScheduler | null = null;
   /**
@@ -479,36 +476,6 @@ export class AutoModeService {
 
   setWorkIntakeService(service: import('./work-intake-service.js').WorkIntakeService): void {
     this.workIntakeService = service;
-  }
-
-  /**
-   * Wire up project-affinity filtering for multi-instance deployments.
-   *
-   * When set, the scheduler will filter pending features by project ownership and sort them
-   * (assigned projects first, then own unassigned, then overflow). The featureLoader will
-   * also stamp createdByInstance on newly created features.
-   *
-   * Not required for single-instance setups — omitting this call preserves the existing
-   * behavior (all eligible features are candidates, sorted only by priority).
-   *
-   * @param instanceId - This instance's identity string (from CrdtSyncService.getInstanceId())
-   * @param projectAssignmentService - Service that tracks project-to-instance assignments
-   * @param overflowEnabled - Whether this instance accepts features from non-assigned projects
-   */
-  setProjectAssignmentService(
-    instanceId: string,
-    projectAssignmentService: import('./project-assignment-service.js').ProjectAssignmentService,
-    overflowEnabled = true
-  ): void {
-    // Stamp instance ID on newly created features
-    this.featureLoader.setInstanceId(instanceId);
-
-    // Wire project affinity into the scheduler
-    const getAssignedProjectSlugs = async (projectPath: string): Promise<Set<string>> => {
-      const projects = await projectAssignmentService.getMyAssignedProjects(projectPath);
-      return new Set(projects.map((p) => p.slug));
-    };
-    this.scheduler.setProjectAffinity(instanceId, getAssignedProjectSlugs, overflowEnabled);
   }
 
   /** Total number of currently running agent features across all projects. */
@@ -2600,77 +2567,6 @@ Format your response as a structured markdown document.`;
       runningFeatures: Array.from(this.runningFeatures.keys()),
       runningCount: this.runningFeatures.size,
     };
-  }
-
-  /**
-   * Returns a synchronous snapshot of this instance's capacity metrics for
-   * publication via CRDT heartbeat. OS metrics (CPU, RAM) are computed fresh
-   * on each call. Backlog count is served from a cache that is refreshed
-   * asynchronously on each call (non-blocking — first call returns 0).
-   */
-  getCapacityMetrics(): import('@protolabsai/types').InstanceCapacity {
-    const totalMem = totalmem();
-    const usedMem = totalMem - freemem();
-    const ramUsagePercent = Math.round((usedMem / totalMem) * 100);
-
-    const coreCount = cpus().length || 1;
-    const cpuPercent = Math.min(Math.round((loadavg()[0] / coreCount) * 100), 100);
-
-    // Resolve global max concurrency across all active loops (use first active or default).
-    let maxAgents = DEFAULT_MAX_CONCURRENCY;
-    for (const [, state] of this.coordinator.loops) {
-      if (state.isRunning) {
-        maxAgents = state.config.maxConcurrency;
-        break;
-      }
-    }
-
-    // Refresh backlog cache async (fire-and-forget, non-blocking).
-    void this._refreshBacklogCount();
-
-    return {
-      cores: coreCount,
-      ramMb: Math.round(totalMem / (1024 * 1024)),
-      runningAgents: this.runningFeatures.size,
-      maxAgents,
-      backlogCount: this._backlogCountCache,
-      ramUsagePercent,
-      cpuPercent,
-    };
-  }
-
-  /** Async refresh of the backlog count cache from all active project paths. */
-  private async _refreshBacklogCount(): Promise<void> {
-    try {
-      // Collect unique project paths from running features and active loops.
-      const projectPaths = new Set<string>();
-      for (const rf of this.runningFeatures.values()) {
-        projectPaths.add(rf.projectPath);
-      }
-      for (const [, state] of this.coordinator.loops) {
-        projectPaths.add(state.config.projectPath);
-      }
-
-      if (projectPaths.size === 0) {
-        this._backlogCountCache = 0;
-        return;
-      }
-
-      let total = 0;
-      await Promise.all(
-        [...projectPaths].map(async (projectPath) => {
-          try {
-            const features = await this.featureLoader.getAll(projectPath);
-            total += features.filter((f) => f.status === 'backlog').length;
-          } catch {
-            // Best effort — skip project paths that fail to load.
-          }
-        })
-      );
-      this._backlogCountCache = total;
-    } catch {
-      // Best effort — keep last cached value on error.
-    }
   }
 
   /**

@@ -4,7 +4,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { createLogger } from '@protolabsai/utils';
-import { loadProtoConfig } from '@protolabsai/platform';
 import { createEventEmitter, type EventEmitter } from '../lib/events.js';
 import { TopicBus } from '../lib/topic-bus.js';
 
@@ -107,8 +106,6 @@ import {
 import { changelogService } from '../services/changelog-service.js';
 import { ProjectPMService } from '../services/project-pm-service.js';
 import * as projectPmModule from '../services/project-pm.module.js';
-import { PeerMeshService } from '../services/peer-mesh-service.js';
-import { ProjectAssignmentService } from '../services/project-assignment-service.js';
 import { WorkIntakeService } from '../services/work-intake-service.js';
 import { TodoService } from '../services/todo-service.js';
 import { CommandRegistryService } from '../services/command-registry-service.js';
@@ -223,7 +220,6 @@ export interface ServiceContainer {
   projectService: ProjectService;
   projectLifecycleService: ProjectLifecycleService;
   completionDetectorService: CompletionDetectorService;
-  projectAssignmentService: ProjectAssignmentService;
 
   // Ceremonies
   ceremonyAuditLog: CeremonyAuditLogService;
@@ -259,10 +255,7 @@ export interface ServiceContainer {
   // Content flow (singleton)
   contentFlowService: typeof contentFlowService;
 
-  // Peer mesh service (multi-instance coordination)
-  crdtSyncService: PeerMeshService;
-
-  // Todo workspace (per-project todo lists synced via CRDT)
+  // Todo workspace (per-project todo lists)
   todoService: TodoService;
 
   // DORA metrics (lead time, deployment frequency, change failure rate, recovery time, rework rate)
@@ -699,20 +692,13 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Project PM Service — session store for PM Agent chat
   const projectPmService = new ProjectPMService();
 
-  // Todo Service — per-project workspace, CRDT-synced when hivemind active
+  // Todo Service — per-project workspace
   const todoService = new TodoService();
-
-  // Peer Mesh Service — multi-instance coordination via WebSocket sync server
-  const crdtSyncService = new PeerMeshService();
-
-  // Project Assignment Service — manages project-to-instance assignment
-  const projectAssignmentService = new ProjectAssignmentService(projectService, crdtSyncService);
 
   // Friction Tracker Service — self-improvement loop (requires featureLoader)
   const frictionTrackerService = new FrictionTrackerService({
     featureLoader,
     projectPath: repoRoot,
-    instanceId: crdtSyncService.getInstanceId(),
   });
 
   // HITL Pattern Analysis Service — recurring stuck-PR pattern detection + auto-filing
@@ -797,32 +783,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   leadEngineerService.setWorkflowLoader(workflowLoader);
   await leadEngineerService.initialize();
 
-  // Wire project-affinity filtering into auto-mode when projectPreferences are configured.
-  // This enables multi-instance deployments to scope feature pickup to assigned projects.
-  // Single-instance setups (no proto.config.yaml projectPreferences) are unaffected.
-  try {
-    const protoConfig = await loadProtoConfig(repoRoot);
-    const projectPreferences = protoConfig?.['projectPreferences'] as
-      | { preferredProjects?: string[]; overflowEnabled?: boolean }
-      | undefined;
-    const hasPreferredProjects =
-      Array.isArray(projectPreferences?.preferredProjects) &&
-      projectPreferences.preferredProjects.length > 0;
-    if (hasPreferredProjects) {
-      const overflowEnabled = projectPreferences?.overflowEnabled ?? true;
-      autoModeService.setProjectAssignmentService(
-        crdtSyncService.getInstanceId(),
-        projectAssignmentService,
-        overflowEnabled
-      );
-      logger.info(
-        `[Affinity] Project-affinity filtering enabled (instanceId=${crdtSyncService.getInstanceId()}, preferredProjects=${projectPreferences?.preferredProjects?.join(',') ?? ''}, overflow=${overflowEnabled})`
-      );
-    }
-  } catch (err) {
-    logger.warn('[Affinity] Failed to load project preferences — affinity filtering skipped:', err);
-  }
-
   // Initialize Ceremony Service
   ceremonyService.initialize(
     events,
@@ -904,7 +864,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     projectService,
     projectLifecycleService,
     completionDetectorService,
-    projectAssignmentService,
     ceremonyAuditLog,
     ceremonyService,
     leadEngineerService,
@@ -923,7 +882,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     gitWorkflowService,
     contentFlowService,
     projectPmService,
-    crdtSyncService,
     todoService,
     doraMetricsService,
     deploymentTrackerService,
