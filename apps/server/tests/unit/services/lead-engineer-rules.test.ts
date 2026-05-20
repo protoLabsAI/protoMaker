@@ -11,10 +11,8 @@ import {
   projectCompleting,
   prApproved,
   threadsBlocking,
-  remediationStalled,
   classifiedRecovery,
   hitlFormResponse,
-  missingCIChecks,
   reviewQueueSaturated,
   errorBudgetExhausted,
   evaluateRules,
@@ -646,63 +644,6 @@ describe('threadsBlocking', () => {
   });
 });
 
-// ────────────────────────── remediationStalled ──────────────────────────
-
-describe('remediationStalled', () => {
-  it('resets feature when remediation stalled >1h', () => {
-    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
-    const feature = createFeature({
-      id: 'f1',
-      status: 'review',
-      startedAt: twoHoursAgo,
-    });
-    const ws = createMockWorldState({
-      features: { f1: feature },
-      openPRs: [{ featureId: 'f1', prNumber: 42, isRemediating: true, prCreatedAt: twoHoursAgo }],
-    });
-    const actions = remediationStalled.evaluate(ws, 'lead-engineer:rule-evaluated', {});
-    expect(actions).toHaveLength(1);
-    expect(actions[0].type).toBe('reset_feature');
-  });
-
-  it('no-ops when PR is not remediating', () => {
-    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
-    const feature = createFeature({ id: 'f1', status: 'review', startedAt: twoHoursAgo });
-    const ws = createMockWorldState({
-      features: { f1: feature },
-      openPRs: [{ featureId: 'f1', prNumber: 42, isRemediating: false, prCreatedAt: twoHoursAgo }],
-    });
-    const actions = remediationStalled.evaluate(ws, 'lead-engineer:rule-evaluated', {});
-    expect(actions).toHaveLength(0);
-  });
-
-  it('no-ops when remediation is under 1h', () => {
-    const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-    const feature = createFeature({ id: 'f1', status: 'review', startedAt: thirtyMinAgo });
-    const ws = createMockWorldState({
-      features: { f1: feature },
-      openPRs: [{ featureId: 'f1', prNumber: 42, isRemediating: true, prCreatedAt: thirtyMinAgo }],
-    });
-    const actions = remediationStalled.evaluate(ws, 'lead-engineer:rule-evaluated', {});
-    expect(actions).toHaveLength(0);
-  });
-
-  it('checks multiple PRs', () => {
-    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
-    const f1 = createFeature({ id: 'f1', status: 'review', startedAt: twoHoursAgo });
-    const f2 = createFeature({ id: 'f2', status: 'review', startedAt: twoHoursAgo });
-    const ws = createMockWorldState({
-      features: { f1, f2 },
-      openPRs: [
-        { featureId: 'f1', prNumber: 41, isRemediating: true, prCreatedAt: twoHoursAgo },
-        { featureId: 'f2', prNumber: 42, isRemediating: true, prCreatedAt: twoHoursAgo },
-      ],
-    });
-    const actions = remediationStalled.evaluate(ws, 'lead-engineer:rule-evaluated', {});
-    expect(actions).toHaveLength(2);
-  });
-});
-
 // ────────────────────────── errorBudgetExhausted ──────────────────────────
 
 describe('errorBudgetExhausted', () => {
@@ -1054,38 +995,6 @@ describe('hitlFormResponse', () => {
   });
 });
 
-// ────────────────────────── missingCIChecks ──────────────────────────
-
-describe('missingCIChecks', () => {
-  it('logs diagnostic warning when CI checks are missing', () => {
-    const ws = createMockWorldState();
-    const payload = {
-      featureId: 'f1',
-      prNumber: 42,
-      baseBranch: 'dev',
-      missingChecks: ['build', 'test'],
-      waitingMinutes: 35,
-      possibleCause: 'CI workflow may target a different branch',
-    };
-    const actions = missingCIChecks.evaluate(ws, 'pr:missing-ci-checks', payload);
-    expect(actions).toHaveLength(1);
-    expect(actions[0].type).toBe('log');
-    const logAction = actions[0] as { type: 'log'; message: string };
-    expect(logAction.message).toContain('build');
-    expect(logAction.message).toContain('test');
-    expect(logAction.message).toContain('PR #42');
-  });
-
-  it('no-ops when required fields are missing', () => {
-    const ws = createMockWorldState();
-    const actions = missingCIChecks.evaluate(ws, 'pr:missing-ci-checks', {
-      featureId: 'f1',
-      prNumber: 42,
-    });
-    expect(actions).toHaveLength(0);
-  });
-});
-
 // ────────────────────────── reviewQueueSaturated ──────────────────────────
 
 describe('reviewQueueSaturated', () => {
@@ -1214,8 +1123,8 @@ describe('LeadFastPathRule.ruleType', () => {
     expect(MECHANICAL_RULES.length).toBeGreaterThan(REASONING_RULES.length);
   });
 
-  it('MECHANICAL_RULES count is at least 15', () => {
-    expect(MECHANICAL_RULES.length).toBeGreaterThanOrEqual(15);
+  it('MECHANICAL_RULES count is at least 13', () => {
+    expect(MECHANICAL_RULES.length).toBeGreaterThanOrEqual(13);
   });
 
   it('REASONING_RULES count is exactly 1 (classifiedRecovery)', () => {

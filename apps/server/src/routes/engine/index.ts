@@ -12,7 +12,6 @@ import type { Request, Response } from 'express';
 import { createLogger } from '@protolabsai/utils';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
 import type { LeadEngineerService } from '../../services/lead-engineer-service.js';
-import type { PRFeedbackService } from '../../services/pr-feedback-service.js';
 import type { ProjectService } from '../../services/project-service.js';
 import type { EventStreamBuffer } from '../../lib/event-stream-buffer.js';
 import type { ContentFlowService } from '../../services/content-flow-service.js';
@@ -32,7 +31,6 @@ const logger = createLogger('EngineRoutes');
 export function createEngineRoutes(
   autoModeService: AutoModeService,
   leadEngineerService: LeadEngineerService | undefined,
-  prFeedbackService: PRFeedbackService,
   signalIntakeService: SignalIntakeService,
   gitWorkflowService: GitWorkflowService,
   eventStreamBuffer?: EventStreamBuffer,
@@ -73,12 +71,6 @@ export function createEngineRoutes(
 
       // Lead engineer sessions
       const leadEngineerSessions = leadEngineerService ? leadEngineerService.getAllSessions() : [];
-
-      // PR feedback tracked PRs
-      const trackedPRs = prFeedbackService.getTrackedPRs();
-      const remediationActive = trackedPRs.filter(
-        (pr) => pr.reviewState === 'changes_requested'
-      ).length;
 
       // Git workflow status
       const gitWorkflowStatus = gitWorkflowService.getStatus();
@@ -139,17 +131,6 @@ export function createEngineRoutes(
         gitWorkflow: {
           activeWorkflows: gitWorkflowStatus.activeWorkflows,
           recentOperations: gitWorkflowStatus.recentOperations,
-        },
-        prFeedback: {
-          trackedPRs: trackedPRs.length,
-          remediationActive,
-          prs: trackedPRs.map((pr) => ({
-            featureId: pr.featureId,
-            prNumber: pr.prNumber,
-            prUrl: pr.prUrl,
-            reviewState: pr.reviewState,
-            iterationCount: pr.iterationCount,
-          })),
         },
         leadEngineer: {
           running: leadEngineerSessions.length > 0,
@@ -239,41 +220,6 @@ export function createEngineRoutes(
     } catch (error) {
       logger.error('Failed to get auto-mode detail:', error);
       res.status(500).json({ success: false, error: 'Failed to get auto-mode detail' });
-    }
-  });
-
-  /**
-   * POST /api/engine/pr-feedback/detail
-   * Detailed PR feedback: tracked PRs with review state, iteration counts.
-   */
-  router.post('/pr-feedback/detail', (_req: Request, res: Response) => {
-    try {
-      const trackedPRs = prFeedbackService.getTrackedPRs();
-
-      res.json({
-        success: true,
-        trackedPRs: trackedPRs.map((pr) => ({
-          featureId: pr.featureId,
-          projectPath: pr.projectPath,
-          prNumber: pr.prNumber,
-          prUrl: pr.prUrl,
-          branchName: pr.branchName,
-          reviewState: pr.reviewState,
-          iterationCount: pr.iterationCount,
-          lastCheckedAt: pr.lastCheckedAt,
-        })),
-        totalTracked: trackedPRs.length,
-        byState: {
-          pending: trackedPRs.filter((pr) => pr.reviewState === 'pending').length,
-          changes_requested: trackedPRs.filter((pr) => pr.reviewState === 'changes_requested')
-            .length,
-          approved: trackedPRs.filter((pr) => pr.reviewState === 'approved').length,
-          commented: trackedPRs.filter((pr) => pr.reviewState === 'commented').length,
-        },
-      });
-    } catch (error) {
-      logger.error('Failed to get PR feedback detail:', error);
-      res.status(500).json({ success: false, error: 'Failed to get PR feedback detail' });
     }
   });
 

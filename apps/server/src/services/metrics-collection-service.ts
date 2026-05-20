@@ -117,11 +117,6 @@ export class MetricsCollectionService {
           this.onCiFailure(p);
           break;
 
-        case 'pr:remediation-started':
-          // Post-merge remediation also counts as a change failure.
-          this.onRemediationStarted(p);
-          break;
-
         default:
           break;
       }
@@ -237,20 +232,6 @@ export class MetricsCollectionService {
         detectedAt: new Date().toISOString(),
       });
       logger.info(`[DORA] CI failure recorded featureId=${featureId}`);
-    }
-  }
-
-  private onRemediationStarted(payload: Record<string, unknown>): void {
-    const featureId = payload['featureId'] as string | undefined;
-    if (!featureId) return;
-
-    if (!this.pendingFailures.has(featureId)) {
-      this.totalFailures += 1;
-      this.pendingFailures.set(featureId, {
-        featureId,
-        detectedAt: new Date().toISOString(),
-      });
-      logger.info(`[DORA] Remediation started (counted as failure) featureId=${featureId}`);
     }
   }
 

@@ -298,34 +298,6 @@ export class WorldStateBuilder {
         break;
       }
 
-      case 'pr:remediation-started': {
-        if (featureId) {
-          const pr = this.findOrCreatePR(state, featureId, p);
-          if (pr) {
-            pr.isRemediating = true;
-            pr.remediationCount = (pr.remediationCount || 0) + 1;
-          }
-        }
-        break;
-      }
-
-      case 'pr:remediation-completed':
-      case 'pr:remediation-failed': {
-        if (featureId) {
-          const pr = this.findOrCreatePR(state, featureId, p);
-          if (pr) pr.isRemediating = false;
-        }
-        break;
-      }
-
-      case 'pr:threads-resolved': {
-        if (featureId) {
-          const pr = this.findOrCreatePR(state, featureId, p);
-          if (pr) pr.unresolvedThreads = 0;
-        }
-        break;
-      }
-
       case 'pr:merge-blocked-critical-threads': {
         if (featureId) {
           const pr = this.findOrCreatePR(state, featureId, p);

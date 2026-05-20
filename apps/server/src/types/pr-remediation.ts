@@ -51,16 +51,6 @@ export interface FormatRemediationResult {
   details?: Record<string, unknown>;
 }
 
-/** Payload of the pr:remediation-completed event emitted after successful format remediation */
-export interface PRFormatRemediatedPayload {
-  prNumber: number;
-  filesFixed: string[];
-  commitSha: string;
-  timestamp: string;
-  /** Discriminator: identifies this as a format remediation (not a conflict remediation) */
-  remediationType: 'format';
-}
-
 // ---------------------------------------------------------------------------
 // CI check run shape (subset of GitHub check_runs API response)
 // ---------------------------------------------------------------------------

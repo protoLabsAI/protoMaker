@@ -85,7 +85,6 @@ export async function runStartup(
     settingsService,
     featureLoader: _featureLoader,
     autoModeService,
-    prFeedbackService,
     leadEngineerService,
     worktreeLifecycleService,
     githubStateChecker,
@@ -354,9 +353,6 @@ export async function runStartup(
           logger.info(
             `[AUTO-START] Auto-mode started successfully for ${worktreeDesc} in ${projectPath} with maxConcurrency: ${resolvedMaxConcurrency}`
           );
-
-          // Restore tracked PRs for this project
-          await prFeedbackService.restoreTrackedPRsForProject(projectPath);
         } catch (err) {
           // If auto-mode is already running, that's OK (might have been restored from state)
           const errorMsg = err instanceof Error ? err.message : String(err);

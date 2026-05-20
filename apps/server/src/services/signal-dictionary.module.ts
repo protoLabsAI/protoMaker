@@ -42,18 +42,6 @@ export function register(container: ServiceContainer): void {
     });
   });
 
-  // Remediation Loop: feature with high remediation cycle count
-  events.subscribe((type, payload) => {
-    if (type !== 'pr:remediation-started') return;
-    const p = payload as { featureId?: string; projectPath?: string; cycleCount?: number };
-    if (!p.featureId || !p.projectPath || p.cycleCount == null) return;
-
-    void signalDictionaryService.evaluate('remediation-loop', p.cycleCount, {
-      projectPath: p.projectPath,
-      featureId: p.featureId,
-    });
-  });
-
   // Cost Cap: feature cost approaching limit
   events.subscribe((type, payload) => {
     if (type !== 'feature:completed' && type !== 'feature:status-changed') return;
@@ -187,7 +175,7 @@ export function register(container: ServiceContainer): void {
     { category: 'monitor' }
   );
 
-  logger.info('Signal dictionary wired: 3 event-driven, 3 polling-based signals active');
+  logger.info('Signal dictionary wired: 2 event-driven, 3 polling-based signals active');
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

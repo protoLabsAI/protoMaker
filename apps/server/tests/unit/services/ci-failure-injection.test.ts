@@ -8,7 +8,6 @@
  * Covers:
  * - AgentService.isAgentRunning / sendCIFailureToAgent
  * - AutoModeService.isAgentRunning / sendCIFailureToAgent / consumePendingCIInjection
- * - PRFeedbackService.handleCIFailure injection vs restart branching
  * - Race condition: injection attempt when agent finishes between check and enqueue
  */
 
@@ -219,108 +218,5 @@ describe('AutoModeService CI injection methods', () => {
       expect(wasRunning).toBe(true); // Was running at check time
       expect(injected).toBe(false); // Stopped before injection
     });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// PRFeedbackService handleCIFailure — injection vs restart branching
-// ---------------------------------------------------------------------------
-
-describe('PRFeedbackService handleCIFailure — injection vs restart', () => {
-  it('injection path: agent running → inject, do not restart', async () => {
-    // When isAgentRunning is true and sendCIFailureToAgent succeeds,
-    // executeFeature must NOT be called.
-    const mockAutoMode = {
-      isAgentRunning: vi.fn().mockReturnValue(true),
-      sendCIFailureToAgent: vi.fn().mockResolvedValue(true),
-      executeFeature: vi.fn(),
-    };
-    const mockLoader = { update: vi.fn().mockResolvedValue(undefined) };
-    const feature = { ciInjectionCount: 0 };
-    const featureId = 'feat-inject';
-    const continuationPrompt = 'Fix CI failures';
-
-    // Reproduce the handleCIFailure branching logic
-    if (mockAutoMode.isAgentRunning(featureId)) {
-      const injected = await mockAutoMode.sendCIFailureToAgent(featureId, continuationPrompt);
-      if (injected) {
-        const current = (feature.ciInjectionCount as number | undefined) ?? 0;
-        await mockLoader.update('/proj', featureId, { ciInjectionCount: current + 1 });
-        // Return — no restart
-      }
-    } else {
-      mockAutoMode.executeFeature('/proj', featureId, true, true, undefined, {
-        continuationPrompt,
-      });
-    }
-
-    expect(mockAutoMode.isAgentRunning).toHaveBeenCalledWith(featureId);
-    expect(mockAutoMode.sendCIFailureToAgent).toHaveBeenCalledWith(featureId, continuationPrompt);
-    expect(mockAutoMode.executeFeature).not.toHaveBeenCalled();
-    expect(mockLoader.update).toHaveBeenCalledWith(
-      '/proj',
-      featureId,
-      expect.objectContaining({ ciInjectionCount: 1 })
-    );
-  });
-
-  it('fallthrough path: agent not running → restart as normal', async () => {
-    const mockAutoMode = {
-      isAgentRunning: vi.fn().mockReturnValue(false),
-      sendCIFailureToAgent: vi.fn(),
-      executeFeature: vi.fn(),
-    };
-    const mockLoader = { update: vi.fn().mockResolvedValue(undefined) };
-    const featureId = 'feat-restart';
-    const continuationPrompt = 'Fix CI failures';
-
-    if (mockAutoMode.isAgentRunning(featureId)) {
-      await mockAutoMode.sendCIFailureToAgent(featureId, continuationPrompt);
-    } else {
-      await mockLoader.update('/proj', featureId, { status: 'backlog' });
-      mockAutoMode.executeFeature('/proj', featureId, true, true, undefined, {
-        continuationPrompt,
-      });
-    }
-
-    expect(mockAutoMode.isAgentRunning).toHaveBeenCalledWith(featureId);
-    expect(mockAutoMode.sendCIFailureToAgent).not.toHaveBeenCalled();
-    expect(mockAutoMode.executeFeature).toHaveBeenCalledWith(
-      '/proj',
-      featureId,
-      true,
-      true,
-      undefined,
-      expect.objectContaining({ continuationPrompt })
-    );
-    expect(mockLoader.update).toHaveBeenCalledWith(
-      '/proj',
-      featureId,
-      expect.objectContaining({ status: 'backlog' })
-    );
-  });
-
-  it('ciInjectionCount increments on each injection', async () => {
-    const mockAutoMode = {
-      isAgentRunning: vi.fn().mockReturnValue(true),
-      sendCIFailureToAgent: vi.fn().mockResolvedValue(true),
-    };
-    const mockLoader = { update: vi.fn().mockResolvedValue(undefined) };
-    const feature = { ciInjectionCount: 2 };
-    const featureId = 'feat-count';
-
-    if (mockAutoMode.isAgentRunning(featureId)) {
-      const injected = await mockAutoMode.sendCIFailureToAgent(featureId, 'msg');
-      if (injected) {
-        const current = (feature.ciInjectionCount as number | undefined) ?? 0;
-        await mockLoader.update('/proj', featureId, { ciInjectionCount: current + 1 });
-      }
-    }
-
-    expect(mockLoader.update).toHaveBeenCalledWith(
-      '/proj',
-      featureId,
-      expect.objectContaining({ ciInjectionCount: 3 })
-    );
   });
 });

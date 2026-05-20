@@ -66,9 +66,6 @@ const GENERIC_EVENT_TYPE_TO_TRIGGER: Partial<Record<string, EventHookTrigger>> =
   'pr:approved': 'pr_approved',
   'pr:changes-requested': 'pr_changes_requested',
   'pr:ci-failure': 'pr_ci_failure',
-  'pr:remediation-started': 'pr_remediation_started',
-  'pr:remediation-completed': 'pr_remediation_completed',
-  'pr:remediation-failed': 'pr_remediation_failed',
   // Ceremony events
   'ceremony:milestone-update': 'ceremony_milestone_update',
   'ceremony:project-retro': 'ceremony_project_retro',
@@ -96,7 +93,7 @@ const GENERIC_EVENT_TYPE_TO_TRIGGER: Partial<Record<string, EventHookTrigger>> =
  * - Critical: feature_error, auto_mode_error, health_check_critical
  * - High: feature_success, auto_mode_complete
  * - Medium: feature_created, feature_retry, feature_recovery
- * - Low: everything else (auto_mode_health_check, skill_created, memory_learning, pr_feedback_received, project_scaffolded, project_deleted)
+ * - Low: everything else (auto_mode_health_check, skill_created, memory_learning, project_scaffolded, project_deleted)
  */
 function classifySeverity(trigger: EventHookTrigger): EventSeverity {
   // Critical events - require immediate attention
@@ -118,7 +115,6 @@ function classifySeverity(trigger: EventHookTrigger): EventSeverity {
     trigger === 'feature_completed' ||
     trigger === 'feature_pr_merged' ||
     trigger === 'pr_approved' ||
-    trigger === 'pr_remediation_completed' ||
     trigger === 'auto_mode_started'
   ) {
     return 'high';
@@ -135,7 +131,6 @@ function classifySeverity(trigger: EventHookTrigger): EventSeverity {
     trigger === 'feature_blocked' ||
     trigger === 'feature_unblocked' ||
     trigger === 'pr_changes_requested' ||
-    trigger === 'pr_remediation_started' ||
     trigger === 'ceremony_triggered' ||
     trigger === 'ceremony_milestone_update' ||
     trigger === 'ceremony_project_retro' ||

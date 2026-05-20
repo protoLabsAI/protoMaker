@@ -9,7 +9,6 @@
  *     → fetch check runs for the failed suite (via GitHub API)
  *     → filter for a failed "Check formatting" check run
  *     → call remediateFormatFailure() from pr-remediation-service
- *     → emit pr:remediation-completed on success
  *
  * Safety gates (enforced inside remediateFormatFailure):
  *   - Protected branch guard (never touch main/staging/dev)

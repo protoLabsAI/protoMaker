@@ -53,7 +53,7 @@ export const CI_FAILURE_CLASS_FIXABLE: Record<CIFailureClass, boolean> = {
 
 /**
  * A CI check failure enriched with classification metadata.
- * Replaces the plain `FailedCheck` type in PRStatusChecker output.
+ * Produced by CIFailureClassifierService from a raw FailedCheck.
  */
 export interface ClassifiedCIFailure {
   /** Check name as reported by GitHub (e.g. "test / unit") */
