@@ -66,7 +66,6 @@ import { LedgerService } from '../services/ledger-service.js';
 import { ArchivalService } from '../services/archival-service.js';
 import { KnowledgeStoreService } from '../services/knowledge-store-service.js';
 import { DocsUpdateDetector } from '../services/docs-update-detector.js';
-import { HeadsdownService } from '../services/headsdown-service.js';
 import { AgentDiscordRouter } from '../services/agent-discord-router.js';
 import { FactStoreService } from '../services/fact-store-service.js';
 import { TrajectoryStoreService } from '../services/trajectory-store-service.js';
@@ -150,7 +149,6 @@ export interface ServiceContainer {
   // Sensor registry
   sensorRegistryService: SensorRegistryService;
   contextAggregator: ContextAggregator;
-  headsdownService: HeadsdownService;
 
   // Metrics & ledger
   metricsService: MetricsService;
@@ -470,9 +468,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Agent Scoring Service (auto-scores agent traces based on feature lifecycle)
   // Created for side effects only (event subscriptions in constructor)
   new AgentScoringService(events, featureLoader);
-
-  // HeadsdownService for autonomous agent management
-  const headsdownService = HeadsdownService.getInstance(events, settingsService, featureLoader);
 
   // DevServerService with event emitter for real-time log streaming
   const devServerService = getDevServerService();
@@ -871,7 +866,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     featureLoader,
     trustTierService,
     agentService,
-    headsdownService,
     metricsService,
     ledgerService,
     archivalService,

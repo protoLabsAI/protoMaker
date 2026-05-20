@@ -43,7 +43,6 @@ const TRIGGER_SEVERITY_MAP: Record<EventHookTrigger, BriefingSeverity> = {
   health_check_critical: 'critical',
   feature_permanently_blocked: 'critical',
   feature_pr_closed_unmerged: 'critical',
-  headsdown_agent_work_failed: 'critical',
   pr_ci_failure: 'critical',
 
   // High: Feature failures, completions, retries, recoveries, key successes
@@ -55,7 +54,6 @@ const TRIGGER_SEVERITY_MAP: Record<EventHookTrigger, BriefingSeverity> = {
   feature_completed: 'high',
   feature_pr_merged: 'high',
   pr_approved: 'high',
-  headsdown_agent_work_completed: 'high',
   pr_remediation_completed: 'high',
   auto_mode_started: 'high',
 
@@ -84,8 +82,6 @@ const TRIGGER_SEVERITY_MAP: Record<EventHookTrigger, BriefingSeverity> = {
   project_deleted: 'low',
   feature_status_changed: 'low',
   feature_agent_suggested: 'low',
-  headsdown_agent_started: 'low',
-  headsdown_agent_stopped: 'low',
   worktree_drift_detected: 'low',
   coderabbit_review_received: 'low',
   issue_created: 'low',

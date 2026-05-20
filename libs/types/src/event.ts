@@ -96,15 +96,6 @@ export type EventType =
   | 'recovery_escalated'
   | 'recovery_lesson_generated'
   // Headsdown agent events (autonomous agents)
-  | 'headsdown:agent:started'
-  | 'headsdown:agent:stopped'
-  | 'headsdown:agent:working'
-  | 'headsdown:agent:idle'
-  | 'headsdown:agent:error'
-  | 'headsdown:agent:paused'
-  | 'headsdown:agent:resumed'
-  | 'headsdown:agent:work-completed'
-  | 'headsdown:agent:work-failed'
   // CodeRabbit review events
   | 'coderabbit:review-received'
   | 'coderabbit:feedback-processed'

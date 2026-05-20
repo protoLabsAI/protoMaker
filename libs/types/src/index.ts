@@ -642,29 +642,12 @@ export type {
 } from './discord.js';
 
 // Agent role types (headsdown agents)
-export type {
-  AgentRole,
-  AgentTaskType,
-  AgentTask,
-  DiscordMonitorConfig,
-  GitHubMonitorConfig,
-  AgentMonitoring,
-  AgentStats,
-  AgentInstance,
-  IdleTaskType,
-  IdleTaskConfig,
-  WorkItem,
-  RoleCapabilities,
-} from './agent-roles.js';
+export type { AgentRole, RoleCapabilities } from './agent-roles.js';
 export { BUILT_IN_AGENT_ROLES, ROLE_CAPABILITIES } from './agent-roles.js';
 
 // Agent manifest types (project-defined custom agents)
 export type { AgentMatchRules, ProjectAgent, AgentManifest } from './agent-manifest.js';
 export { DEFAULT_PROJECT_AGENT } from './agent-manifest.js';
-
-// Headsdown configuration types
-export type { HeadsdownLoopConfig, HeadsdownConfig, HeadsdownState } from './headsdown.js';
-export { DEFAULT_HEADSDOWN_CONFIGS } from './headsdown.js';
 
 // Policy engine types (used by @protolabsai/policy-engine)
 export type {
@@ -738,7 +721,6 @@ export {
   AgentTemplateSchema,
   DiscordAssignmentSchema,
   GitHubAssignmentSchema,
-  HeadsdownConfigSchema,
   DesiredStateConditionSchema,
   StateOperatorSchema,
   MCPServerConfigSchema,
@@ -749,7 +731,6 @@ export type {
   AgentTemplate,
   DiscordAssignment,
   GitHubAssignment,
-  AgentHeadsdownConfig,
   DesiredStateCondition,
   StateOperator,
   AgentMCPServerConfig,
