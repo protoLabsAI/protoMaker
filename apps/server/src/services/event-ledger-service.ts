@@ -39,7 +39,6 @@ const LIFECYCLE_EVENT_TYPES = [
   'project:lifecycle:prd-approved',
   'project:lifecycle:launched',
   'project:scaffolded',
-  'ceremony:fired',
   'escalation:signal-received',
   'auto-mode:event',
 ] as const;
@@ -273,7 +272,6 @@ export class EventLedgerService {
    * - pipeline:state-entered → featureId
    * - milestone:completed → projectSlug + milestoneSlug
    * - project:completed / project:lifecycle:* / project:scaffolded → projectSlug
-   * - ceremony:fired → projectSlug + milestoneSlug
    * - escalation:signal-received → featureId (if present)
    * - auto-mode:event (feature types only) → featureId (if present)
    */
@@ -452,22 +450,6 @@ export class EventLedgerService {
             eventType: type,
             correlationIds: { projectSlug },
             payload,
-            source: 'EventLedgerService',
-          });
-          break;
-        }
-
-        case 'ceremony:fired': {
-          const projectSlug = payload.projectSlug as string | undefined;
-          const milestoneSlug = payload.milestoneSlug as string | undefined;
-          this.append({
-            eventType: type,
-            correlationIds: { projectSlug, milestoneSlug },
-            payload: {
-              ceremonyType: payload.type,
-              projectSlug,
-              ...payload,
-            },
             source: 'EventLedgerService',
           });
           break;

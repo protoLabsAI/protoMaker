@@ -27,7 +27,6 @@ export async function register(container: ServiceContainer): Promise<void> {
     avaGatewayService,
     escalationRouter,
     eventHistoryService,
-    ceremonyAuditLog,
     integrationRegistryService,
   } = container;
 
@@ -79,7 +78,6 @@ export async function register(container: ServiceContainer): Promise<void> {
         timestamp?: string;
       };
       action?: string;
-      correlationId?: string;
     };
     if (!p.channelId) return;
     if (p.action !== 'send_message' && p.action !== 'send_embed') return;
@@ -89,22 +87,9 @@ export async function register(container: ServiceContainer): Promise<void> {
         await discordBotService.sendEmbed(p.channelId, p.embed);
       } else if (p.content) {
         await discordBotService.sendToChannel(p.channelId, p.content);
-      } else {
-        return;
-      }
-      if (p.correlationId) {
-        ceremonyAuditLog.updateDeliveryStatus(p.correlationId, 'delivered');
       }
     } catch (error) {
       logger.error('Failed to deliver integration:discord event:', error);
-      if (p.correlationId) {
-        ceremonyAuditLog.updateDeliveryStatus(
-          p.correlationId,
-          'failed',
-          undefined,
-          error instanceof Error ? error.message : String(error)
-        );
-      }
     }
   });
 

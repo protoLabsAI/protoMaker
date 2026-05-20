@@ -1,6 +1,6 @@
 // Startup sequence: settings migration, reconciliation, worktree recovery, auto-mode start, Codex cache
 
-import { access, unlink, rename, mkdir, readdir } from 'node:fs/promises';
+import { access, unlink, rename, mkdir } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { createLogger, setLogLevel, LogLevel } from '@protolabsai/utils';
 
@@ -42,18 +42,6 @@ async function migrateRuntimeStateFiles(repoRoot: string, dataDir: string): Prom
       to: join(dataDir, 'pr-tracking.json'),
     },
   ];
-
-  // Ceremony state: .automaker/projects/*/ceremony-state.json → DATA_DIR/ceremony-state/{slug}.json
-  try {
-    const projectsDir = join(repoRoot, '.automaker', 'projects');
-    const slugs = await readdir(projectsDir).catch(() => [] as string[]);
-    for (const slug of slugs) {
-      const fromPath = join(projectsDir, slug, 'ceremony-state.json');
-      moves.push({ from: fromPath, to: join(dataDir, 'ceremony-state', `${slug}.json`) });
-    }
-  } catch {
-    // No projects dir
-  }
 
   for (const { from, to } of moves) {
     try {

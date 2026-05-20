@@ -20,7 +20,6 @@ import type { GitWorkflowService } from '../../services/git-workflow-service.js'
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { EventEmitter } from '../../lib/events.js';
 import type { GTMAuthorityAgent } from '../../services/authority-agents/gtm-agent.js';
-import type { CeremonyService } from '../../services/ceremony-service.js';
 import type { CompletionDetectorService } from '../../services/completion-detector-service.js';
 import type { SettingsService } from '../../services/settings-service.js';
 import { getNotesWorkspacePath, ensureNotesDir, secureFs } from '@protolabsai/platform';
@@ -39,7 +38,6 @@ export function createEngineRoutes(
   featureLoader?: FeatureLoader,
   events?: EventEmitter,
   gtmAgent?: GTMAuthorityAgent,
-  ceremonyService?: CeremonyService,
   completionDetectorService?: CompletionDetectorService,
   settingsService?: SettingsService
 ): Router {
@@ -155,17 +153,6 @@ export function createEngineRoutes(
               pendingDrafts: gtmAgent ? gtmAgent.getPendingDraftCount() : 0,
             },
         reflection: {
-          ceremonies: ceremonyService?.getStatus() ?? {
-            counts: {},
-            total: 0,
-            lastCeremonyAt: null,
-          },
-          reflections: ceremonyService?.getReflectionStatus() ?? {
-            active: false,
-            activeProject: null,
-            reflectionCount: 0,
-            lastReflection: null,
-          },
           completions: completionDetectorService?.getStatus() ?? {
             completionCounts: { epics: 0, milestones: 0, projects: 0 },
             emittedMilestones: 0,

@@ -9,7 +9,6 @@ import { WorktreePreferencesSection } from './worktree-preferences-section';
 import { ProjectDocsSection } from './project-docs-section';
 import { ProjectModelsSection } from './project-models-section';
 import { ProjectWebhooksSection } from './project-webhooks-section';
-import { ProjectCeremoniesSection } from './project-ceremonies-section';
 import { ProjectAgentsSection } from './project-agents-section';
 import { DangerZoneSection } from '../settings-view/danger-zone/danger-zone-section';
 import { DeleteProjectDialog } from '../settings-view/components/delete-project-dialog';
@@ -72,8 +71,6 @@ export function ProjectSettingsView() {
         return <ProjectModelsSection project={currentProject} />;
       case 'webhooks':
         return <ProjectWebhooksSection project={currentProject} />;
-      case 'ceremonies':
-        return <ProjectCeremoniesSection project={currentProject} />;
       case 'agents':
         return <ProjectAgentsSection project={currentProject} />;
       case 'danger':

@@ -36,7 +36,6 @@ import type { SettingsService } from '../../services/settings-service.js';
 import type { AvaMemoryService } from '../../services/ava-memory-service.js';
 import type { DiscordBotService } from '../../services/discord-bot-service.js';
 import type { HealthMonitorService } from '../../services/health-monitor-service.js';
-import type { CeremonyService } from '../../services/ceremony-service.js';
 import type { SchedulerService } from '../../services/scheduler-service.js';
 import type { ToolProgressEmitter } from './tool-progress.js';
 import { githubMergeService } from '../../services/github-merge-service.js';
@@ -100,8 +99,6 @@ export interface AvaToolsServices {
       createdAt: string;
     };
   };
-  /** Ceremony service — optional, required for delegate_to_pm tool */
-  ceremonyService?: CeremonyService;
   /** Tool progress emitter — optional, enables real-time progress labels in chat */
   toolProgressEmitter?: ToolProgressEmitter;
   /**
@@ -1994,7 +1991,7 @@ export function buildAvaTools(
     tools['delegate_to_pm'] = makeTool({
       description:
         'Delegate a question about a project to the Project Manager (PM). ' +
-        'The PM has full project context (goals, milestones, features, ceremony state) ' +
+        'The PM has full project context (goals, milestones, features) ' +
         'and can answer questions about project status, health, and planning. ' +
         "Returns the PM's text response.",
       inputSchema: z.object({
@@ -2007,9 +2004,6 @@ export function buildAvaTools(
         }
         if (!services.projectService) {
           return { error: 'Project service not available' };
-        }
-        if (!services.ceremonyService) {
-          return { error: 'Ceremony service not available' };
         }
         if (!services.events) {
           return { error: 'Event emitter not available' };
@@ -2024,7 +2018,6 @@ export function buildAvaTools(
             {
               projectPath,
               projectService: services.projectService,
-              ceremonyService: services.ceremonyService,
               featureLoader: services.featureLoader,
               projectPmService: services.projectPMService,
               events: services.events,

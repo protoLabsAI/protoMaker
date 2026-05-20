@@ -53,7 +53,6 @@ function makeProjectJson(overrides: object = {}): string {
 function setupMockFs(
   opts: {
     projects?: Array<{ slug: string; projectJson?: string }>;
-    ceremonyState?: object;
     timeline?: object;
   } = {}
 ) {
@@ -79,12 +78,6 @@ function setupMockFs(
       if (p.endsWith(`${proj.slug}/project.json`)) {
         return proj.projectJson ?? makeProjectJson();
       }
-    }
-
-    // ceremony-state.json
-    if (p.endsWith('ceremony-state.json')) {
-      if (opts.ceremonyState) return JSON.stringify(opts.ceremonyState);
-      throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
     }
 
     // timeline.json
@@ -125,7 +118,6 @@ describe('PMWorldStateBuilder', () => {
       const state = builder.getState();
       expect(state.projects).toEqual({});
       expect(state.milestones).toEqual({});
-      expect(state.ceremonies).toEqual({});
       expect(state.upcomingDeadlines).toEqual([]);
     });
   });
@@ -192,21 +184,6 @@ describe('PMWorldStateBuilder', () => {
       expect(state.milestones['my-feature-set']).toBeDefined();
     });
 
-    it('should load ceremony schedules from ceremony-state.json', async () => {
-      setupMockFs({
-        ceremonyState: {
-          standup: { type: 'standup', nextRunAt: '2026-03-11T09:00:00.000Z' },
-          retro: { type: 'retro', nextRunAt: '2026-03-15T14:00:00.000Z' },
-        },
-      });
-
-      await builder.buildState();
-      const state = builder.getState();
-
-      expect(state.ceremonies['standup']).toBe('2026-03-11T09:00:00.000Z');
-      expect(state.ceremonies['retro']).toBe('2026-03-15T14:00:00.000Z');
-    });
-
     it('should load timeline deadlines from timeline.json', async () => {
       setupMockFs({
         timeline: [
@@ -254,13 +231,6 @@ describe('PMWorldStateBuilder', () => {
       await builder.buildState();
       const state = builder.getState();
       expect(state.projects['bad-proj']).toBeUndefined();
-    });
-
-    it('should handle missing ceremony-state.json gracefully', async () => {
-      setupMockFs({ projects: [] }); // no ceremony file set → mock throws ENOENT
-
-      await builder.buildState();
-      expect(builder.getState().ceremonies).toEqual({});
     });
 
     it('should handle missing timeline.json gracefully', async () => {
@@ -340,19 +310,6 @@ describe('PMWorldStateBuilder', () => {
       const summary = builder.getDistilledSummary();
       expect(summary).toContain('Launch v1');
       expect(summary).toContain('2099-05-01');
-    });
-
-    it('should include ceremony dates in upcoming items', async () => {
-      setupMockFs({
-        ceremonyState: {
-          standup: { type: 'standup', nextRunAt: '2099-06-01T09:00:00.000Z' },
-        },
-      });
-      await builder.buildState();
-
-      const summary = builder.getDistilledSummary();
-      expect(summary).toContain('standup');
-      expect(summary).toContain('2099-06-01');
     });
 
     it('should not show past items in upcoming items', async () => {

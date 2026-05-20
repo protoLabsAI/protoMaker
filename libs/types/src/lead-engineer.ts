@@ -108,7 +108,7 @@ export interface AvaWorldState {
 }
 
 /**
- * Project Manager's world state — projects, milestones, ceremonies, timelines.
+ * Project Manager's world state — projects, milestones, timelines.
  */
 export interface PMWorldState {
   /** Domain tag */
@@ -138,9 +138,6 @@ export interface PMWorldState {
       dueAt?: string;
     }
   >;
-
-  /** Upcoming ceremony dates (ceremonyType → ISO datetime) */
-  ceremonies: Record<string, string>;
 
   /** Timeline entries for active projects */
   upcomingDeadlines: Array<{

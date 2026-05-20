@@ -692,7 +692,6 @@ export interface ProjectSummary {
   featureCount: Record<string, number>;
   milestones: MilestoneSummary[];
   artifacts: {
-    ceremonies: ArtifactIndexEntry[];
     changelogs: ArtifactIndexEntry[];
     escalations: ArtifactIndexEntry[];
   };
@@ -700,7 +699,7 @@ export interface ProjectSummary {
 }
 
 /**
- * Entry type for the ceremony timeline
+ * Entry type for the project timeline
  */
 export type TimelineEntryType =
   | 'standup'

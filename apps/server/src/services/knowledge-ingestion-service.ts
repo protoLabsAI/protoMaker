@@ -429,10 +429,9 @@ Output the compressed memory file:`;
   /**
    * Ingest PM project state changes into the knowledge store with domain='project'.
    *
-   * Creates or updates four snapshot chunks:
+   * Creates or updates three snapshot chunks:
    * - project-overview-snapshot: high-level project status
    * - project-milestones-snapshot: milestone completion progress
-   * - project-ceremonies-snapshot: upcoming ceremony dates
    * - project-timeline-snapshot: upcoming deadline entries
    *
    * All chunks are tagged with ['project', ...] so they are retrievable
@@ -441,7 +440,7 @@ Output the compressed memory file:`;
    * @param db - Database instance
    * @param projectPath - Project path (used as source_file prefix)
    * @param state - Current PMWorldState snapshot
-   * @returns Number of chunks indexed (0–4)
+   * @returns Number of chunks indexed (0–3)
    */
   async ingestProjectStateChanges(
     db: BetterSqlite3.Database,
@@ -501,36 +500,7 @@ Output the compressed memory file:`;
       indexedCount++;
     }
 
-    // ── 3. Upcoming Ceremonies ────────────────────────────────────────
-    const ceremonyEntries = Object.entries(state.ceremonies);
-    if (ceremonyEntries.length > 0) {
-      const lines: string[] = [`# Upcoming Ceremonies`, `_Updated: ${state.updatedAt}_`, ''];
-      const now = new Date().toISOString();
-      const upcoming = ceremonyEntries
-        .filter(([, iso]) => iso >= now)
-        .sort(([, a], [, b]) => a.localeCompare(b));
-      if (upcoming.length === 0) {
-        lines.push('_No upcoming ceremonies_');
-      } else {
-        for (const [type, iso] of upcoming) {
-          lines.push(`- **${type}**: ${iso.slice(0, 10)}`);
-        }
-      }
-      this.upsertChunk(db, {
-        chunkId: 'project-ceremonies-snapshot',
-        sourceType: 'reflection',
-        sourceFile: '.automaker/ceremony-state.json',
-        projectPath,
-        heading: 'Upcoming Ceremonies',
-        content: lines.join('\n'),
-        tags: JSON.stringify(['project', 'ceremony']),
-        importance: 0.7,
-        timestamp,
-      });
-      indexedCount++;
-    }
-
-    // ── 4. Timeline Deadlines ─────────────────────────────────────────
+    // ── 3. Timeline Deadlines ─────────────────────────────────────────
     if (state.upcomingDeadlines.length > 0) {
       const now = new Date().toISOString();
       const future = state.upcomingDeadlines

@@ -73,7 +73,6 @@ import { ChannelRouter } from '../services/channel-router.js';
 import { NotificationRouter } from '../services/notification-router.js';
 import { DoraMetricsService } from '../services/dora-metrics-service.js';
 import { DeploymentTrackerService } from '../services/deployment-tracker-service.js';
-import { SignalDictionaryService } from '../services/signal-dictionary-service.js';
 import { ProjectHealthService } from '../services/project-health-service.js';
 import { MetricsCollectionService } from '../services/metrics-collection-service.js';
 import { ErrorBudgetService } from '../services/error-budget-service.js';
@@ -94,8 +93,6 @@ import {
 
 // Services originally loaded via top-level dynamic imports — now static for proper typing
 import { ProjectLifecycleService } from '../services/project-lifecycle-service.js';
-import { CeremonyAuditLogService } from '../services/ceremony-audit-service.js';
-import { CeremonyService, ceremonyService } from '../services/ceremony-service.js';
 import { LeadEngineerService } from '../services/lead-engineer-service.js';
 import { PipelineCheckpointService } from '../services/pipeline-checkpoint-service.js';
 import { ContextFidelityService } from '../services/context-fidelity-service.js';
@@ -221,10 +218,6 @@ export interface ServiceContainer {
   projectLifecycleService: ProjectLifecycleService;
   completionDetectorService: CompletionDetectorService;
 
-  // Ceremonies
-  ceremonyAuditLog: CeremonyAuditLogService;
-  ceremonyService: CeremonyService;
-
   // Lead Engineer
   leadEngineerService: LeadEngineerService;
   pipelineCheckpointService: PipelineCheckpointService;
@@ -263,9 +256,6 @@ export interface ServiceContainer {
 
   // Deployment tracking (real CI/CD pipeline event capture for DORA metrics)
   deploymentTrackerService: DeploymentTrackerService;
-
-  // Signal Dictionary (portfolio attention engine — threshold-based escalation)
-  signalDictionaryService: SignalDictionaryService;
 
   // Project Health (auto-computed from signals, milestones, WIP, blocked features)
   projectHealthService: ProjectHealthService;
@@ -469,13 +459,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Actionable Items Service with event emitter
   const actionableItemService = getActionableItemService();
 
-  // Signal Dictionary Service — portfolio attention engine (threshold-based escalation)
-  const signalDictionaryService = new SignalDictionaryService(
-    actionableItemService,
-    events,
-    settingsService
-  );
-
   // Actionable Item Bridge — auto-creates items from HITL forms, notifications, escalations, pipeline gates
   const actionableItemBridge = new ActionableItemBridgeService({
     actionableItemService,
@@ -559,11 +542,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     autoModeService,
     events
   );
-
-  // Ceremony Audit Log and Ceremony Service
-  const ceremonyAuditLog = new CeremonyAuditLogService();
-  // Wire DATA_DIR into ceremony service so state files write to DATA_DIR/ceremony-state/
-  ceremonyService.setDataDir(dataDir);
 
   // Completion Detector Service — cascades feature done → epic → milestone → project
   const completionDetectorService = new CompletionDetectorService();
@@ -783,17 +761,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   leadEngineerService.setWorkflowLoader(workflowLoader);
   await leadEngineerService.initialize();
 
-  // Initialize Ceremony Service
-  ceremonyService.initialize(
-    events,
-    settingsService,
-    featureLoader,
-    projectService,
-    metricsService,
-    dataDir
-  );
-  ceremonyService.setAuditLog(ceremonyAuditLog);
-
   // Initialize Completion Detector Service
   await completionDetectorService.initialize(
     events,
@@ -864,8 +831,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     projectService,
     projectLifecycleService,
     completionDetectorService,
-    ceremonyAuditLog,
-    ceremonyService,
     leadEngineerService,
     pipelineCheckpointService,
     factStoreService,
@@ -885,7 +850,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     todoService,
     doraMetricsService,
     deploymentTrackerService,
-    signalDictionaryService,
     projectHealthService,
     metricsCollectionService,
     errorBudgetService,

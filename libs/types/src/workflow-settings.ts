@@ -12,8 +12,6 @@ import type { DeviationRule } from './lead-engineer.js';
 import type { PipelineGateConfig } from './pipeline-phase.js';
 import type { RiskLevel } from './policy.js';
 import type { CustomPrompt } from './prompts.js';
-import type { SignalDictionaryConfig } from './signal-dictionary.js';
-
 // ============================================================================
 // Pre-Push Validation Configuration
 // ============================================================================
@@ -426,13 +424,6 @@ export interface WorkflowSettings {
    * and custom manifest paths. When absent, system defaults apply.
    */
   agentConfig?: AgentConfig;
-  /**
-   * Signal Dictionary configuration for the portfolio attention engine.
-   * Controls which signals are active and overrides default thresholds.
-   * When absent, all default signals are active with default thresholds.
-   * @see docs/internal/portfolio-philosophy.md
-   */
-  signalDictionary?: SignalDictionaryConfig;
   /**
    * Context engine compaction and large-file interception configuration.
    * When absent or disabled, context management is left to the model provider.

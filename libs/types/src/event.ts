@@ -194,20 +194,6 @@ export type EventType =
   | 'decision:logged'
   | 'decision:superseded'
   | 'decision:reverted'
-  // Ceremony events (milestone updates and project retrospectives)
-  | 'ceremony:milestone-update'
-  | 'ceremony:project-retro'
-  | 'ceremony:triggered'
-  | 'ceremony:fired'
-  | 'ceremony:trigger-requested'
-  | 'ceremony:post-project-docs'
-  | 'ceremony:post-project-docs:complete'
-  | 'ceremony:post-project-docs:failed'
-  | 'ceremony:retro-completed'
-  // Retro improvement events (reflection loop: REFLECT → REPEAT)
-  | 'retro:improvements:created'
-  // Gate tuning signals (from retro unresolved challenges → Lead Engineer rules)
-  | 'gate:tuning-signal'
   // Bug triage workflow events (channel workflow → investigation → board feature)
   | 'bug:reported'
   | 'bug:reaction-triggered'
@@ -339,8 +325,6 @@ export type EventType =
   | 'deploy:started'
   | 'deploy:succeeded'
   | 'deploy:failed'
-  // Signal dictionary events (portfolio attention engine)
-  | 'signal:triggered'
   // Planning pipeline events (A2A plan + plan_resume skills)
   | 'plan:hitl-requested'
   | 'plan:created'
@@ -877,14 +861,6 @@ export interface EventPayloadMap {
     rolledBack: boolean;
     durationMs: number;
     timestamp: string;
-  };
-
-  // Signal dictionary events (portfolio attention engine)
-  'signal:triggered': {
-    signalName: string;
-    currentValue: number;
-    category: import('./signal-dictionary.js').SignalCategory;
-    context: import('./signal-dictionary.js').SignalContext;
   };
 }
 

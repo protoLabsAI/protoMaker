@@ -335,8 +335,6 @@ export type {
   // Discord integration types
   DiscordSettings,
   DiscordUserDMConfig,
-  // Ceremony types (CeremonySettings only — audit types from ceremony.ts)
-  CeremonySettings,
   // Project integration types
   ReactionAbility,
   DiscordChannelSignalConfig,
@@ -398,8 +396,6 @@ export {
   DEFAULT_GIT_WORKFLOW_SETTINGS,
   // Discord integration defaults
   DEFAULT_DISCORD_SETTINGS,
-  // Ceremony defaults
-  DEFAULT_CEREMONY_SETTINGS,
   // Trust boundary defaults
   DEFAULT_TRUST_BOUNDARY_CONFIG,
   // Workflow settings defaults
@@ -671,19 +667,6 @@ export { ROLE_NAME_TO_AUTHORITY, AUTHORITY_TO_ROLE_NAME } from './policy.js';
 // Authority and work item types
 export type { WorkItemState, AuthorityAgent, AuthorizedWorkItem } from './authority.js';
 
-// Ceremony types (milestone updates and project retrospectives)
-export type {
-  CeremonyType,
-  MilestoneUpdateData,
-  ProjectRetroData,
-  CeremonyAuditType,
-  CeremonyDeliveryStatus,
-  CeremonyAuditEntry,
-  CeremonyPhase,
-  CeremonyState,
-  CeremonyTransition,
-} from './ceremony.js';
-
 // Setup pipeline types (ProtoLabs agency setup)
 export type {
   RepoResearchResult,
@@ -871,19 +854,6 @@ export type {
 // Signal provenance types (originating channel tracking & routing)
 export type { SignalChannel, SignalMetadata } from './signal-channel.js';
 export type { SignalIntent, RecentSignal, RecentSignalStatus } from './signal-intent.js';
-
-// Signal Dictionary types (portfolio attention engine — threshold-based escalation)
-export type {
-  SignalCategory,
-  SignalName,
-  SignalThreshold,
-  SignalDefinition,
-  SignalThresholdOverride,
-  SignalDictionaryConfig,
-  SignalContext,
-  SignalEvaluation,
-} from './signal-dictionary.js';
-export { DEFAULT_SIGNAL_DEFINITIONS } from './signal-dictionary.js';
 
 // Channel Router types (HITL routing interface)
 export type { ChannelHandler } from './channel-router.js';
