@@ -18,9 +18,18 @@ import type {
   ClassifiedCIFailure,
 } from '@protolabsai/types';
 import { CI_FAILURE_CLASS_FIXABLE } from '@protolabsai/types';
-import type { FailedCheck } from './pr-status-checker.js';
 
 const logger = createLogger('CIFailureClassifier');
+
+/**
+ * Failed CI check with output details.
+ * Inputs to {@link CIFailureClassifierService.classify}.
+ */
+export interface FailedCheck {
+  name: string;
+  conclusion: string;
+  output: string;
+}
 
 // ============================================================================
 // Built-in default classification rules (ordered — first match wins)
@@ -133,7 +142,7 @@ export class CIFailureClassifierService {
    * A rule matches when ALL specified patterns match (AND logic).
    * When only one pattern is specified, only that field is tested.
    *
-   * @param check  - Raw FailedCheck from PRStatusChecker
+   * @param check  - Failed CI check details (name, conclusion, output)
    * @param config - Optional per-project ciClassification config
    * @returns ClassifiedCIFailure with failureClass, isAgentFixable, classificationReason
    */

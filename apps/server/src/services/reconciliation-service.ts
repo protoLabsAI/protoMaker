@@ -16,7 +16,6 @@ import type { AutoModeService } from './auto-mode-service.js';
 import type { WorktreeLifecycleService } from './worktree-lifecycle-service.js';
 import type { GitHubMergeService } from './github-merge-service.js';
 import type { FailureClassifierService } from './failure-classifier-service.js';
-import type { PRFeedbackService } from './pr-feedback-service.js';
 import type { HITLFormService } from './hitl-form-service.js';
 import * as secureFs from '../lib/secure-fs.js';
 
@@ -68,7 +67,6 @@ export class ReconciliationService {
     private worktreeLifecycleService?: WorktreeLifecycleService,
     private githubMergeService?: GitHubMergeService,
     private failureClassifierService?: FailureClassifierService,
-    private prFeedbackService?: PRFeedbackService,
     private hitlFormService?: HITLFormService
   ) {}
 
@@ -432,8 +430,7 @@ export class ReconciliationService {
 
     if (isTransient) {
       // Re-trigger CI by emitting the existing ci-failure event with a transient marker.
-      // Downstream consumers (PRFeedbackService) already handle ci-failure and will re-run
-      // the agent to push an empty commit or re-run the workflow as appropriate.
+      // Downstream lead engineer rules pick up the event and react accordingly.
       logger.info(
         `Re-triggering CI for PR #${drift.prNumber} (transient failure: ${classification?.category ?? 'unknown'})`
       );
@@ -477,7 +474,10 @@ export class ReconciliationService {
   }
 
   /**
-   * PR has requested changes (feedback)
+   * PR has requested changes (feedback).
+   *
+   * Emits `pr:changes-requested` so the Lead Engineer state machine can pick
+   * the feature back up for remediation via its normal REVIEW processor.
    */
   private async reconcilePRHasFeedback(drift: Drift): Promise<string> {
     if (!drift.featureId) {
@@ -488,41 +488,18 @@ export class ReconciliationService {
       throw new Error('prNumber required for pr-has-feedback');
     }
 
-    if (!this.prFeedbackService) {
-      // Fall back to emitting event for downstream handling
-      logger.warn('PRFeedbackService not available, emitting pr:changes-requested event');
-      this.events.emit('pr:changes-requested', {
-        projectPath: drift.projectPath,
-        featureId: drift.featureId,
-        prNumber: drift.prNumber,
-        feedback: drift.details.reviews,
-      });
-      return 'event-emitted-no-service';
-    }
-
-    // Check iteration cap before routing to PRFeedbackService
-    const feature = await this.featureLoader.get(drift.projectPath, drift.featureId);
-    const iterationCount = (feature?.prIterationCount as number | undefined) ?? 0;
-    const MAX_PR_ITERATIONS = 2;
-
-    if (iterationCount >= MAX_PR_ITERATIONS) {
-      logger.warn(
-        `PR #${drift.prNumber} for feature ${drift.featureId} has reached max iterations (${iterationCount}/${MAX_PR_ITERATIONS}), skipping remediation`
-      );
-      return 'max-iterations-reached';
-    }
-
     logger.info(
-      `Routing PR #${drift.prNumber} feedback to PRFeedbackService for remediation (iteration ${iterationCount})`
+      `PR #${drift.prNumber} for feature ${drift.featureId} has changes requested, emitting pr:changes-requested`
     );
 
-    await this.prFeedbackService.processThreadFeedback(
-      drift.projectPath,
-      drift.featureId,
-      drift.prNumber
-    );
+    this.events.emit('pr:changes-requested', {
+      projectPath: drift.projectPath,
+      featureId: drift.featureId,
+      prNumber: drift.prNumber,
+      feedback: drift.details.reviews,
+    });
 
-    return 'feedback-routed-to-pr-feedback-service';
+    return 'pr-changes-requested-emitted';
   }
 
   /**
@@ -542,23 +519,6 @@ export class ReconciliationService {
       featureId: drift.featureId,
       projectPath: drift.projectPath,
     });
-
-    // Check for unresolved threads first via PRFeedbackService
-    if (this.prFeedbackService && drift.featureId) {
-      try {
-        await this.prFeedbackService.processThreadFeedback(
-          drift.projectPath,
-          drift.featureId,
-          drift.prNumber
-        );
-        logger.info(`Processed unresolved threads for PR #${drift.prNumber} before merge`);
-      } catch (err) {
-        logger.warn(
-          `Failed to process threads for PR #${drift.prNumber}, proceeding with merge:`,
-          err
-        );
-      }
-    }
 
     const mergeResult = await this.githubMergeService.mergePR(
       drift.projectPath,

@@ -9,8 +9,9 @@
  * - Handles PR approvals: merges PRs if CI passes and auto-merge is enabled
  * - Manages the full dev lifecycle: assign → work → PR → review → merge
  *
- * PR feedback handling is delegated exclusively to PRFeedbackService to avoid race conditions.
- * All actions go through AuthorityService.submitProposal().
+ * PR feedback is consumed by the Lead Engineer state machine via webhook-driven
+ * events (pr:changes-requested, pr:ci-failure). All actions go through
+ * AuthorityService.submitProposal().
  */
 
 import type { Feature } from '@protolabsai/types';
@@ -110,7 +111,10 @@ export class EMAuthorityAgent {
 
   /**
    * Listen for PR approval events and handle merge.
-   * PR feedback is handled exclusively by PRFeedbackService to avoid race conditions.
+   *
+   * Webhook-driven `pr:changes-requested` and `pr:ci-failure` events drive
+   * the Lead Engineer state machine directly — the EM agent only reacts to
+   * `pr:approved` to kick off the merge flow.
    */
   private listenForPRFeedback(): void {
     this.events.subscribe((type, payload) => {

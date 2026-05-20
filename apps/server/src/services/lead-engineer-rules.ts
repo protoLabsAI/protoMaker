@@ -17,7 +17,6 @@ import type {
 const ORPHANED_IN_PROGRESS_MS = 4 * 60 * 60 * 1000; // 4 hours (backstop)
 const STUCK_AGENT_MS = 2 * 60 * 60 * 1000; // 2 hours
 const STALE_REVIEW_MS = 30 * 60 * 1000; // 30 minutes
-const REMEDIATION_STALL_MS = 60 * 60 * 1000; // 1 hour
 // Escalation thresholds for stale in_progress detection (faster than the 4h backstop)
 const FAILURE_STALE_MS = 30 * 60 * 1000; // 30 min: trigger when failureCount > 0 + no agent
 const UNPUSHED_BRANCH_STALE_MS = 45 * 60 * 1000; // 45 min: trigger when worktree created but branch never pushed
@@ -434,43 +433,6 @@ export const threadsBlocking: LeadFastPathRule = {
 };
 
 /**
- * remediationStalled — Feature remediating >1h → reset to backlog for retry.
- */
-export const remediationStalled: LeadFastPathRule = {
-  name: 'remediationStalled',
-  description: 'Remediation in-progress >1h → reset to backlog',
-  triggers: ['lead-engineer:rule-evaluated'],
-  ruleType: 'mechanical',
-
-  evaluate(worldState): LeadRuleAction[] {
-    const actions: LeadRuleAction[] = [];
-    const now = Date.now();
-
-    for (const pr of worldState.openPRs) {
-      if (!pr.isRemediating) continue;
-
-      const feature = worldState.features[pr.featureId];
-      if (!feature) continue;
-
-      // Use feature startedAt or PR creation time as proxy for remediation start
-      const startTime = feature.startedAt || pr.prCreatedAt;
-      if (!startTime) continue;
-
-      const age = now - new Date(startTime).getTime();
-      if (age > REMEDIATION_STALL_MS) {
-        actions.push({
-          type: 'reset_feature',
-          featureId: pr.featureId,
-          reason: `PR remediation stalled for >${Math.round(age / (60 * 60 * 1000))}h`,
-        });
-      }
-    }
-
-    return actions;
-  },
-};
-
-/**
  * classifiedRecovery — Escalated feature with retryable failure → auto-retry.
  * Uses FailureClassifier analysis from the escalation event payload.
  */
@@ -620,45 +582,6 @@ export const hitlFormResponse: LeadFastPathRule = {
   },
 };
 
-/**
- * missingCIChecks — PR waiting >30min for required CI checks that have never registered.
- * Surfaces a diagnostic warning with the missing check names and a suggested cause
- * (e.g., a CI workflow configured to only trigger on PRs targeting a different base branch).
- */
-export const missingCIChecks: LeadFastPathRule = {
-  name: 'missingCIChecks',
-  description:
-    'PR waiting >30min for required CI checks that never registered → log diagnostic warning',
-  triggers: ['pr:missing-ci-checks'],
-  ruleType: 'mechanical',
-
-  evaluate(_worldState, _eventType, payload): LeadRuleAction[] {
-    const event = payload as Record<string, unknown> | null;
-    if (!event) return [];
-
-    const featureId = event.featureId as string | undefined;
-    const prNumber = event.prNumber as number | undefined;
-    const baseBranch = event.baseBranch as string | undefined;
-    const missingChecks = event.missingChecks as string[] | undefined;
-    const waitingMinutes = event.waitingMinutes as number | undefined;
-    const possibleCause = event.possibleCause as string | undefined;
-
-    if (!featureId || !prNumber || !missingChecks?.length) return [];
-
-    return [
-      {
-        type: 'log',
-        level: 'warn',
-        message:
-          `PR #${prNumber} (feature ${featureId}) has been waiting ${waitingMinutes ?? '?'} min — ` +
-          `required CI checks have never registered: [${missingChecks.join(', ')}]. ` +
-          `Base branch: ${baseBranch ?? 'unknown'}. ` +
-          `Possible cause: ${possibleCause ?? 'CI workflow may target a different branch'}`,
-      },
-    ];
-  },
-};
-
 // ────────────────────────── Error Budget Rule ──────────────────────────
 
 /**
@@ -673,12 +596,7 @@ export const errorBudgetExhausted: LeadFastPathRule = {
   name: 'errorBudgetExhausted',
   description:
     'Error budget exhausted — log warning (scheduler restricts pickup to bug-fix features)',
-  triggers: [
-    'feature:pr-merged',
-    'pr:ci-failure',
-    'pr:remediation-started',
-    'lead-engineer:rule-evaluated',
-  ],
+  triggers: ['feature:pr-merged', 'pr:ci-failure', 'lead-engineer:rule-evaluated'],
   ruleType: 'mechanical',
 
   evaluate(worldState): LeadRuleAction[] {
@@ -796,10 +714,8 @@ export const DEFAULT_RULES: LeadFastPathRule[] = [
   projectCompleting,
   prApproved,
   threadsBlocking,
-  remediationStalled,
   classifiedRecovery,
   hitlFormResponse,
-  missingCIChecks,
   reviewQueueSaturated,
   errorBudgetExhausted,
 ];

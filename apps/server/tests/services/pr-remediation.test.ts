@@ -8,7 +8,7 @@
  * - Agent-author verification (non-agent branch → skipped)
  * - Protected branch rejection (main/staging/dev → skipped)
  * - HITL escalation paths (prettier error, push error, scope drift)
- * - pr:remediation-completed event emission on success
+ * - successful remediation returns success with files fixed and commit SHA
  * - Synthesized unformatted PR scenario (regression)
  * - GitHubWebhookHandler: filters non-format CI failures correctly
  * - GitHubWebhookHandler: triggers remediation on format failure confirmation
@@ -345,31 +345,6 @@ describe('successful remediation', () => {
     expect(result.status).toBe('success');
     expect(result.filesFixed).toHaveLength(3);
     expect(result.filesFixed).toContain('src/utils.ts');
-  });
-
-  it('emits pr:remediation-completed event on success', async () => {
-    mockWorker.runPrettier.mockResolvedValue(['src/index.ts']);
-    mockWorker.commitRemediationFix.mockResolvedValue('event-test-sha');
-
-    const events = makeEventEmitter();
-
-    await remediateFormatFailure(
-      {
-        projectPath: '/project',
-        prNumber: 12,
-        headBranch: 'feature/event-test-abc',
-        headSha: 'abc',
-        repository: 'owner/repo',
-      },
-      events as unknown as EventEmitter
-    );
-
-    const emitted = events.getEmitted();
-    const remediationEvent = emitted.find((e) => e.type === 'pr:remediation-completed');
-    expect(remediationEvent).toBeDefined();
-    const p = remediationEvent?.payload as { prNumber: number; remediationType: string };
-    expect(p.prNumber).toBe(12);
-    expect(p.remediationType).toBe('format');
   });
 
   it('prettier makes no changes — returns skipped (not an error)', async () => {

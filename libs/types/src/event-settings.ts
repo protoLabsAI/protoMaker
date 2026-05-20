@@ -41,10 +41,6 @@
  * - pr_approved: A PR was approved
  * - pr_changes_requested: Changes were requested on a PR
  * - pr_ci_failure: CI checks failed on a PR
- * - pr_remediation_started: PR remediation workflow began
- * - pr_remediation_completed: PR remediation completed successfully
- * - pr_remediation_failed: PR remediation failed
- * - pr_feedback_received: Pull request received feedback that needs addressing
  *
  * Ceremony events:
  * - ceremony_milestone_update: A milestone update ceremony was triggered
@@ -100,10 +96,6 @@ export type EventHookTrigger =
   | 'pr_approved'
   | 'pr_changes_requested'
   | 'pr_ci_failure'
-  | 'pr_remediation_started'
-  | 'pr_remediation_completed'
-  | 'pr_remediation_failed'
-  | 'pr_feedback_received'
   // Ceremony events
   | 'ceremony_milestone_update'
   | 'ceremony_project_retro'
@@ -251,10 +243,6 @@ export const EVENT_HOOK_TRIGGER_LABELS: Record<EventHookTrigger, string> = {
   pr_approved: 'PR approved',
   pr_changes_requested: 'PR changes requested',
   pr_ci_failure: 'PR CI checks failed',
-  pr_remediation_started: 'PR remediation started',
-  pr_remediation_completed: 'PR remediation completed',
-  pr_remediation_failed: 'PR remediation failed',
-  pr_feedback_received: 'PR feedback received',
   // Ceremony events
   ceremony_milestone_update: 'Milestone update ceremony triggered',
   ceremony_project_retro: 'Project retrospective ceremony triggered',

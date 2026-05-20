@@ -39,7 +39,6 @@ import { GTMAuthorityAgent } from '../services/authority-agents/gtm-agent.js';
 import { ProjMAuthorityAgent } from '../services/authority-agents/projm-agent.js';
 import { EMAuthorityAgent } from '../services/authority-agents/em-agent.js';
 import { AuditService } from '../services/audit-service.js';
-import { PRFeedbackService } from '../services/pr-feedback-service.js';
 import { GitHubWebhookHandler } from '../services/github-webhook-handler.js';
 import { WorktreeLifecycleService } from '../services/worktree-lifecycle-service.js';
 import { DiscordBotService } from '../services/discord-bot-service.js';
@@ -239,7 +238,6 @@ export interface ServiceContainer {
   leadHandoffService: LeadHandoffService;
 
   // PR & worktree lifecycle
-  prFeedbackService: PRFeedbackService;
   githubWebhookHandler: GitHubWebhookHandler;
   worktreeLifecycleService: WorktreeLifecycleService;
   githubStateChecker: GitHubStateChecker;
@@ -389,7 +387,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
 
     if (type === 'feature:pr-merged') {
       errorBudgetService.recordMerge(featureId, false);
-    } else if (type === 'pr:ci-failure' || type === 'pr:remediation-started') {
+    } else if (type === 'pr:ci-failure') {
       errorBudgetService.markCiFailure(featureId);
     }
   });
@@ -626,9 +624,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     settingsService,
     hitlFormService
   );
-
-  // PR Feedback Service (monitors open PRs for review comments)
-  const prFeedbackService = new PRFeedbackService(events, featureLoader, dataDir);
 
   // GitHub Webhook Handler (subscribes to pr:ci-failure, triggers format auto-remediation)
   const githubWebhookHandler = new GitHubWebhookHandler(events, repoRoot);
@@ -918,7 +913,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     trajectoryStoreService,
     trajectoryQueryService,
     leadHandoffService,
-    prFeedbackService,
     githubWebhookHandler,
     worktreeLifecycleService,
     githubStateChecker,

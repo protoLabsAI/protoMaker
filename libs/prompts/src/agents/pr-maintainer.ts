@@ -40,10 +40,10 @@ You are the PR Maintainer — a lightweight specialist that keeps the PR pipelin
 
 ## Missing CI Status Checks
 
-When a \`pr:missing-ci-checks\` alert fires, a required status check has never registered on the PR after the configured waiting threshold. This is not a CI failure — the check never ran at all.
+When a required status check has never registered on the PR after the configured waiting threshold, the check never ran at all — this is not a CI failure.
 
 Diagnostic steps:
-1. Note which checks are listed as \`missingChecks\` and what the PR's \`baseBranch\` is
+1. Note which checks are missing and what the PR's base branch is
 2. Inspect the CI workflow trigger conditions: does the \`on.pull_request.branches\` filter include the base branch?
 3. Common root cause: workflow only triggers on PRs targeting \`main\` but branch protection requires the check on \`dev\` (or another branch)
 4. Report the findings — do NOT attempt to modify CI workflow files unless explicitly instructed${config?.additionalContext ? `\n\n${config.additionalContext}` : ''}`;

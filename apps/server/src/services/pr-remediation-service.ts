@@ -27,11 +27,7 @@ import {
   type ConflictVerdict,
 } from './pr-conflict-classifier.js';
 import { PrRemediationWorker } from './pr-remediation-worker.js';
-import type {
-  FormatRemediationInput,
-  FormatRemediationResult,
-  PRFormatRemediatedPayload,
-} from '../types/pr-remediation.js';
+import type { FormatRemediationInput, FormatRemediationResult } from '../types/pr-remediation.js';
 import type { EventEmitter } from '../lib/events.js';
 
 const execAsync = promisify(exec);
@@ -817,21 +813,6 @@ export async function remediateFormatFailure(
         reason: `Push failed: ${msg}. The format fix was committed locally but not pushed.`,
         details: { error: msg, commitSha, filesFixed },
       };
-    }
-
-    // ------------------------------------------------------------------
-    // Emit observability event
-    // ------------------------------------------------------------------
-    const eventPayload: PRFormatRemediatedPayload = {
-      prNumber,
-      filesFixed,
-      commitSha,
-      timestamp: new Date().toISOString(),
-      remediationType: 'format',
-    };
-
-    if (events) {
-      events.emit('pr:remediation-completed', eventPayload);
     }
 
     logger.info('[FormatRemediation:outcome] Success', {
