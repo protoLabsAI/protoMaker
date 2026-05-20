@@ -40,7 +40,6 @@ import type { CeremonyService } from '../../services/ceremony-service.js';
 import type { SchedulerService } from '../../services/scheduler-service.js';
 import type { ToolProgressEmitter } from './tool-progress.js';
 import { githubMergeService } from '../../services/github-merge-service.js';
-import { getPRWatcherService } from '../../services/pr-watcher-service.js';
 import { getEventHistoryService } from '../../services/event-history-service.js';
 import { getBriefingCursorService } from '../../services/briefing-cursor-service.js';
 import { queryPm } from '../project-pm/pm-agent.js';
@@ -1102,22 +1101,6 @@ export function buildAvaTools(
       }),
       execute: async ({ prNumber }) => {
         return githubMergeService.checkPRStatus(projectPath, prNumber);
-      },
-    });
-
-    tools['watch_pr'] = makeTool({
-      description:
-        'Register a PR for background CI monitoring. Returns immediately. When all checks pass or any check fails, a push notification is injected into this chat session — no polling needed.',
-      inputSchema: z.object({
-        prNumber: z.number().int().describe('PR number to watch'),
-      }),
-      execute: async ({ prNumber }) => {
-        const watcher = getPRWatcherService();
-        if (!watcher) {
-          return { error: 'PR watcher service unavailable' };
-        }
-        watcher.addWatch(prNumber, projectPath);
-        return { watching: true, prNumber };
       },
     });
 

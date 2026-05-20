@@ -56,12 +56,6 @@
  * - health_issue_detected: A health issue was detected
  * - health_check_critical: Health check detected critical or degraded status
  *
- * Headsdown agents:
- * - headsdown_agent_started: A headsdown agent started
- * - headsdown_agent_stopped: A headsdown agent stopped
- * - headsdown_agent_work_completed: A headsdown agent completed work
- * - headsdown_agent_work_failed: A headsdown agent failed
- *
  * Integrations:
  * - coderabbit_review_received: CodeRabbit posted a review
  * - discord_message_detected: A Discord message was detected
@@ -118,11 +112,6 @@ export type EventHookTrigger =
   | 'worktree_drift_detected'
   | 'health_issue_detected'
   | 'health_check_critical'
-  // Headsdown agents
-  | 'headsdown_agent_started'
-  | 'headsdown_agent_stopped'
-  | 'headsdown_agent_work_completed'
-  | 'headsdown_agent_work_failed'
   // Integrations
   | 'coderabbit_review_received'
   | 'discord_message_detected'
@@ -274,11 +263,6 @@ export const EVENT_HOOK_TRIGGER_LABELS: Record<EventHookTrigger, string> = {
   worktree_drift_detected: 'Worktree drift detected',
   health_issue_detected: 'Health issue detected',
   health_check_critical: 'Health check critical',
-  // Headsdown agents
-  headsdown_agent_started: 'Headsdown agent started',
-  headsdown_agent_stopped: 'Headsdown agent stopped',
-  headsdown_agent_work_completed: 'Headsdown agent work completed',
-  headsdown_agent_work_failed: 'Headsdown agent work failed',
   // Integrations
   coderabbit_review_received: 'CodeRabbit review received',
   discord_message_detected: 'Discord message detected',

@@ -1,7 +1,6 @@
 import { createLogger } from '@protolabsai/utils';
 
 import type { ServiceContainer } from '../server/services.js';
-import { getPRWatcherService } from './pr-watcher-service.js';
 
 const logger = createLogger('Server:Wiring');
 
@@ -23,7 +22,6 @@ export function register(container: ServiceContainer): void {
     integrityWatchdogService,
     featureLoader,
     healthMonitorService,
-    specGenerationMonitor,
     leadEngineerService,
     archivalService,
     prFeedbackService,
@@ -32,12 +30,7 @@ export function register(container: ServiceContainer): void {
   // Wire schedulerService into interval-tracked services so their timers
   // appear in schedulerService.listAll() and can be inspected centrally.
   healthMonitorService.setSchedulerService(schedulerService);
-  specGenerationMonitor.setSchedulerService(schedulerService);
   leadEngineerService.setSchedulerService(schedulerService);
-  const prWatcher = getPRWatcherService();
-  if (prWatcher) {
-    prWatcher.setSchedulerService(schedulerService);
-  }
   archivalService.setSchedulerService(schedulerService);
   // Wire CI watchdog — registers a 15-min interval to poll for CI failures as a
   // fallback when GitHub check_suite webhooks are missed.

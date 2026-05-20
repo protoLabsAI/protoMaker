@@ -53,7 +53,6 @@ import {
 import { ReconciliationService } from '../services/reconciliation-service.js';
 import { GitHubStateChecker } from '../services/github-state-checker.js';
 import { ProjectService } from '../services/project-service.js';
-import { getSpecGenerationMonitor } from '../services/spec-generation-monitor.js';
 import { FeatureHealthService } from '../services/feature-health-service.js';
 import { getAvaGatewayService } from '../services/ava-gateway-service.js';
 import { TriageService } from '../services/triage-service.js';
@@ -67,7 +66,6 @@ import { LedgerService } from '../services/ledger-service.js';
 import { ArchivalService } from '../services/archival-service.js';
 import { KnowledgeStoreService } from '../services/knowledge-store-service.js';
 import { DocsUpdateDetector } from '../services/docs-update-detector.js';
-import { HeadsdownService } from '../services/headsdown-service.js';
 import { AgentDiscordRouter } from '../services/agent-discord-router.js';
 import { FactStoreService } from '../services/fact-store-service.js';
 import { TrajectoryStoreService } from '../services/trajectory-store-service.js';
@@ -91,7 +89,6 @@ import {
   getReactiveSpawnerService,
   ReactiveSpawnerService,
 } from '../services/reactive-spawner-service.js';
-import { registerAvaCronTasks } from '../services/ava-cron-tasks.js';
 import {
   MaintenanceOrchestrator,
   getMaintenanceOrchestrator,
@@ -152,7 +149,6 @@ export interface ServiceContainer {
   // Sensor registry
   sensorRegistryService: SensorRegistryService;
   contextAggregator: ContextAggregator;
-  headsdownService: HeadsdownService;
 
   // Metrics & ledger
   metricsService: MetricsService;
@@ -258,9 +254,6 @@ export interface ServiceContainer {
 
   // Discord routing
   agentDiscordRouter: AgentDiscordRouter;
-
-  // Spec monitoring
-  specGenerationMonitor: ReturnType<typeof getSpecGenerationMonitor>;
 
   // Git workflow (singleton)
   gitWorkflowService: typeof gitWorkflowService;
@@ -475,9 +468,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Agent Scoring Service (auto-scores agent traces based on feature lifecycle)
   // Created for side effects only (event subscriptions in constructor)
   new AgentScoringService(events, featureLoader);
-
-  // HeadsdownService for autonomous agent management
-  const headsdownService = HeadsdownService.getInstance(events, settingsService, featureLoader);
 
   // DevServerService with event emitter for real-time log streaming
   const devServerService = getDevServerService();
@@ -711,13 +701,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Automation Service — manages automation registry and cron/manual execution
   const automationService = new AutomationService(schedulerService, dataDir);
 
-  // Spec Generation Monitor for detecting and cleaning up stalled spec regeneration jobs
-  const specGenerationMonitor = getSpecGenerationMonitor(events, {
-    checkIntervalMs: 30000, // Check every 30 seconds
-    stallThresholdMs: 5 * 60 * 1000, // 5 minutes of inactivity
-    enabled: true,
-  });
-
   // Project PM Service — session store for PM Agent chat
   const projectPmService = new ProjectPMService();
 
@@ -797,17 +780,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
 
   // Deviation Rule Service — evaluates agent scope against per-feature constraints
   const deviationRuleService = new DeviationRuleService();
-
-  // Register Ava cron tasks (daily board health, PR triage, staging ping) — deterministic, no LLM
-  void registerAvaCronTasks({
-    schedulerService,
-    projectPath: repoRoot,
-    featureLoader,
-    autoModeService,
-    discordBotService,
-    settingsService,
-    escalationRouter,
-  });
 
   // Wire integrations health checks (requires integrationService + integrationRegistryService)
   integrationService.initialize(events, settingsService, featureLoader);
@@ -894,7 +866,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     featureLoader,
     trustTierService,
     agentService,
-    headsdownService,
     metricsService,
     ledgerService,
     archivalService,
@@ -955,7 +926,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     triageService,
     issueCreationService,
     agentDiscordRouter,
-    specGenerationMonitor,
     gitWorkflowService,
     contentFlowService,
     projectPmService,

@@ -5,12 +5,10 @@ import type { ServiceContainer } from '../server/services.js';
 const logger = createLogger('Server:Wiring');
 
 /**
- * Wires health monitor, Ava Gateway initialization,
- * and spec generation monitor.
+ * Wires health monitor and Ava Gateway initialization.
  */
 export function register(container: ServiceContainer): void {
-  const { events, repoRoot, healthMonitorService, avaGatewayService, specGenerationMonitor } =
-    container;
+  const { events, repoRoot, healthMonitorService, avaGatewayService } = container;
 
   // Health Monitor Service event emitter wiring
   healthMonitorService.setEventEmitter(events);
@@ -25,7 +23,4 @@ export function register(container: ServiceContainer): void {
     .catch((err) => {
       logger.error('Ava Gateway Service initialization failed:', err);
     });
-
-  // Spec Generation Monitor start
-  specGenerationMonitor.startMonitoring();
 }

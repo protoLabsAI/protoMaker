@@ -831,7 +831,6 @@ export async function getWorkflowSettings(
           ...projectSettings.workflow.gitWorkflow,
         },
         ciClassification: projectSettings.workflow.ciClassification,
-        heartbeat: projectSettings.workflow.heartbeat,
         a2aSkillExecution: projectSettings.workflow.a2aSkillExecution,
       };
     }

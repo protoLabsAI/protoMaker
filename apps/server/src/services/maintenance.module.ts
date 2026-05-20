@@ -22,7 +22,6 @@ import { PostMergeReconcilerCheck } from './maintenance/checks/post-merge-reconc
 import { DoneWorktreeCleanupCheck } from './maintenance/checks/done-worktree-cleanup-check.js';
 import { EpicAdoptionSweepCheck } from './maintenance/checks/epic-adoption-sweep-check.js';
 import { BacklogTitleReconcilerCheck } from './maintenance/checks/backlog-title-reconciler-check.js';
-import { PrettierDriftAutofixCheck } from './maintenance/checks/prettier-drift-autofix.js';
 
 const logger = createLogger('Server:Wiring');
 
@@ -194,52 +193,6 @@ export function register(container: ServiceContainer): void {
   // See protoLabsAI/protoMaker#3511.
   const backlogTitleReconcilerCheck = new BacklogTitleReconcilerCheck(featureLoader, events);
 
-  // Prettier drift autofix (full tier) — auto-fixes PRs whose 'checks' CI job fails solely on
-  // format:check by running prettier --write on the offending files and pushing a fix commit.
-  // Gated by featureFlags.autoPrettierFix (default: true). Idempotent.
-  const prettierDriftAutofixCheck = new PrettierDriftAutofixCheck(featureLoader, settingsService);
-  const prettierDriftCheck: MaintenanceCheck = {
-    id: 'prettier-drift-autofix',
-    name: 'Prettier Drift Auto-Fix',
-    tier: 'full',
-    async run(context: MaintenanceCheckContext): Promise<MaintenanceCheckResult> {
-      const t0 = Date.now();
-      let totalFixed = 0;
-      let totalFailed = 0;
-
-      for (const projectPath of context.projectPaths) {
-        try {
-          const issues = await prettierDriftAutofixCheck.run(projectPath);
-          for (const issue of issues) {
-            if (issue.severity === 'info') {
-              totalFixed++;
-            } else {
-              totalFailed++;
-              logger.warn(`[prettier-drift-autofix] ${issue.message}`);
-            }
-          }
-        } catch (err) {
-          logger.error(`Prettier drift autofix failed for ${projectPath}:`, err);
-        }
-      }
-
-      const summary =
-        totalFixed === 0 && totalFailed === 0
-          ? 'Prettier drift: no formatting drift detected'
-          : totalFailed > 0
-            ? `Prettier drift: ${totalFixed} fixed, ${totalFailed} failed (manual fix needed)`
-            : `Prettier drift: auto-fixed ${totalFixed} PR(s)`;
-
-      return {
-        checkId: 'prettier-drift-autofix',
-        passed: totalFailed === 0,
-        summary,
-        details: { totalFixed, totalFailed, projectCount: context.projectPaths.length },
-        durationMs: Date.now() - t0,
-      };
-    },
-  };
-
   maintenanceOrchestrator.register(boardHealthCheck);
   maintenanceOrchestrator.register(resourceUsageCheck);
   maintenanceOrchestrator.register(webhookHealthCheck);
@@ -247,7 +200,6 @@ export function register(container: ServiceContainer): void {
   maintenanceOrchestrator.register(doneWorktreeCleanupCheck);
   maintenanceOrchestrator.register(epicAdoptionSweepCheck);
   maintenanceOrchestrator.register(backlogTitleReconcilerCheck);
-  maintenanceOrchestrator.register(prettierDriftCheck);
 
   // Wire TopicBus for hierarchical event routing of sweep results
   if (container.topicBus) {
@@ -308,6 +260,6 @@ export function register(container: ServiceContainer): void {
   );
 
   logger.info(
-    'MaintenanceOrchestrator started with board-health, resource-usage, webhook-health, post-merge-reconciler, done-worktree-cleanup, epic-adoption-sweep, backlog-title-reconciler, and prettier-drift-autofix checks'
+    'MaintenanceOrchestrator started with board-health, resource-usage, webhook-health, post-merge-reconciler, done-worktree-cleanup, epic-adoption-sweep, and backlog-title-reconciler checks'
   );
 }

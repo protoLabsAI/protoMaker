@@ -53,10 +53,6 @@ vi.mock('@/lib/webhook-signature.js', () => ({
   verifyWebhookSignature: vi.fn(),
 }));
 
-vi.mock('@/services/pr-watcher-service.js', () => ({
-  getPRWatcherService: vi.fn(),
-}));
-
 vi.mock('@/services/webhook-delivery-service.js', () => ({
   getWebhookDeliveryService: vi.fn(),
 }));
@@ -65,7 +61,6 @@ import { createGitHubWebhookHandler } from '@/routes/webhooks/routes/github.js';
 import { FeatureLoader } from '@/services/feature-loader.js';
 import { StagingPromotionService } from '@/services/staging-promotion-service.js';
 import { verifyWebhookSignature } from '@/lib/webhook-signature.js';
-import { getPRWatcherService } from '@/services/pr-watcher-service.js';
 import { getWebhookDeliveryService } from '@/services/webhook-delivery-service.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -150,10 +145,6 @@ describe('external-repo PR merge → feature done (issue #3115)', () => {
     });
 
     vi.mocked(verifyWebhookSignature).mockReturnValue({ valid: true });
-    vi.mocked(getPRWatcherService).mockReturnValue({
-      isWatching: vi.fn().mockReturnValue(false),
-      triggerCheck: vi.fn().mockResolvedValue(undefined),
-    } as any);
     vi.mocked(getWebhookDeliveryService).mockReturnValue(null as any);
 
     // Default exec: git diff returns a source file, gh pr list returns []
