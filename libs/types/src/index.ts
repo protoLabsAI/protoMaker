@@ -614,7 +614,7 @@ export type {
   DiscordUserMessageRoutedPayload,
 } from './discord.js';
 
-// Agent role types (headsdown agents)
+// Agent role types
 export type { AgentRole, RoleCapabilities } from './agent-roles.js';
 export { BUILT_IN_AGENT_ROLES, ROLE_CAPABILITIES } from './agent-roles.js';
 
