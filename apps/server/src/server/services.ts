@@ -53,7 +53,6 @@ import {
 import { ReconciliationService } from '../services/reconciliation-service.js';
 import { GitHubStateChecker } from '../services/github-state-checker.js';
 import { ProjectService } from '../services/project-service.js';
-import { getSpecGenerationMonitor } from '../services/spec-generation-monitor.js';
 import { FeatureHealthService } from '../services/feature-health-service.js';
 import { getAvaGatewayService } from '../services/ava-gateway-service.js';
 import { TriageService } from '../services/triage-service.js';
@@ -91,7 +90,6 @@ import {
   getReactiveSpawnerService,
   ReactiveSpawnerService,
 } from '../services/reactive-spawner-service.js';
-import { registerAvaCronTasks } from '../services/ava-cron-tasks.js';
 import {
   MaintenanceOrchestrator,
   getMaintenanceOrchestrator,
@@ -258,9 +256,6 @@ export interface ServiceContainer {
 
   // Discord routing
   agentDiscordRouter: AgentDiscordRouter;
-
-  // Spec monitoring
-  specGenerationMonitor: ReturnType<typeof getSpecGenerationMonitor>;
 
   // Git workflow (singleton)
   gitWorkflowService: typeof gitWorkflowService;
@@ -711,13 +706,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Automation Service — manages automation registry and cron/manual execution
   const automationService = new AutomationService(schedulerService, dataDir);
 
-  // Spec Generation Monitor for detecting and cleaning up stalled spec regeneration jobs
-  const specGenerationMonitor = getSpecGenerationMonitor(events, {
-    checkIntervalMs: 30000, // Check every 30 seconds
-    stallThresholdMs: 5 * 60 * 1000, // 5 minutes of inactivity
-    enabled: true,
-  });
-
   // Project PM Service — session store for PM Agent chat
   const projectPmService = new ProjectPMService();
 
@@ -797,17 +785,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
 
   // Deviation Rule Service — evaluates agent scope against per-feature constraints
   const deviationRuleService = new DeviationRuleService();
-
-  // Register Ava cron tasks (daily board health, PR triage, staging ping) — deterministic, no LLM
-  void registerAvaCronTasks({
-    schedulerService,
-    projectPath: repoRoot,
-    featureLoader,
-    autoModeService,
-    discordBotService,
-    settingsService,
-    escalationRouter,
-  });
 
   // Wire integrations health checks (requires integrationService + integrationRegistryService)
   integrationService.initialize(events, settingsService, featureLoader);
@@ -955,7 +932,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     triageService,
     issueCreationService,
     agentDiscordRouter,
-    specGenerationMonitor,
     gitWorkflowService,
     contentFlowService,
     projectPmService,

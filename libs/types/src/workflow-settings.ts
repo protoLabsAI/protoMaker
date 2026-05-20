@@ -221,33 +221,6 @@ export interface AgentConfig {
 // ============================================================================
 
 /**
- * HeartbeatSettings — Per-project opt-in adaptive heartbeat configuration.
- *
- * When enabled, reads `.automaker/HEARTBEAT.md` on a configurable interval,
- * runs a lightweight LLM call (Haiku by default), and routes alerts through
- * the EscalationRouter. Agents and Ava can rewrite HEARTBEAT.md to change
- * what future heartbeats watch for (self-programming pattern).
- */
-export interface HeartbeatSettings {
-  /** Whether the adaptive heartbeat is enabled (default: false — opt-in) */
-  enabled: boolean;
-  /** Interval in minutes between heartbeat runs (default: 30) */
-  intervalMinutes: number;
-  /** Model alias to use for the heartbeat LLM call (default: 'haiku') */
-  model: string;
-  /** Target for routing alerts — only 'escalation-router' is supported (default: 'escalation-router') */
-  target: 'escalation-router';
-}
-
-/** Default heartbeat settings — disabled by default */
-export const DEFAULT_HEARTBEAT_SETTINGS: HeartbeatSettings = {
-  enabled: false,
-  intervalMinutes: 30,
-  model: 'haiku',
-  target: 'escalation-router',
-};
-
-/**
  * WorkflowSettings — Configuration for pipeline hardening features.
  * Controls goal gates, checkpointing, loop detection, supervisor,
  * retro feedback, cleanup, and signal intake behavior.
@@ -475,30 +448,6 @@ export interface WorkflowSettings {
   gitWorkflow?: {
     /** Base branch for PR creation (overrides global gitWorkflow.prBaseBranch) */
     prBaseBranch?: string;
-  };
-  /**
-   * Adaptive heartbeat configuration.
-   * When enabled, reads `.automaker/HEARTBEAT.md` on a configurable interval
-   * and runs a lightweight LLM call to detect issues. Agents can rewrite
-   * HEARTBEAT.md to self-program what future heartbeats monitor.
-   * @see HeartbeatSettings
-   */
-  heartbeat?: HeartbeatSettings;
-  /**
-   * Pattern mining configuration.
-   * When enabled, runs daily to mine execution trajectories for recurring patterns
-   * and writes learned patterns to .automaker/context/learned-patterns.md,
-   * which is auto-loaded into agent prompts via loadContextFiles().
-   * Confidence decays 50% for patterns not reinforced in 90 days.
-   * Patterns below 0.2 confidence are pruned.
-   */
-  patternMining?: {
-    /** Whether pattern mining is enabled (default: true) */
-    enabled: boolean;
-    /** Minimum confidence threshold for writing patterns to context file (default: 0.5) */
-    confidenceThreshold?: number;
-    /** Minimum sample size for a pattern to be considered (default: 3) */
-    minSampleSize?: number;
   };
   /**
    * Fresh-eyes review configuration.

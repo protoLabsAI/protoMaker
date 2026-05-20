@@ -23,7 +23,6 @@ export function register(container: ServiceContainer): void {
     integrityWatchdogService,
     featureLoader,
     healthMonitorService,
-    specGenerationMonitor,
     leadEngineerService,
     archivalService,
     prFeedbackService,
@@ -32,7 +31,6 @@ export function register(container: ServiceContainer): void {
   // Wire schedulerService into interval-tracked services so their timers
   // appear in schedulerService.listAll() and can be inspected centrally.
   healthMonitorService.setSchedulerService(schedulerService);
-  specGenerationMonitor.setSchedulerService(schedulerService);
   leadEngineerService.setSchedulerService(schedulerService);
   const prWatcher = getPRWatcherService();
   if (prWatcher) {
