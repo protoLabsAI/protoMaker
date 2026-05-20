@@ -18,7 +18,6 @@ import {
 const KNOWN_EVENT_TYPES: TimelineEventType[] = [
   'feature:done',
   'milestone:completed',
-  'ceremony:fired',
   'escalation',
   'pr:merged',
 ];
@@ -58,12 +57,6 @@ describe('getEventDisplayConfig', () => {
     expect(config.iconName).toBe('Trophy');
   });
 
-  it('ceremony:fired has PartyPopper icon and label including Ceremony', () => {
-    const config = getEventDisplayConfig('ceremony:fired');
-    expect(config.label).toMatch(/ceremony/i);
-    expect(config.iconName).toBe('PartyPopper');
-  });
-
   it('escalation has AlertTriangle icon and Escalation label', () => {
     const config = getEventDisplayConfig('escalation');
     expect(config.label).toMatch(/escalation/i);
@@ -91,7 +84,6 @@ describe('getEventDisplayConfig', () => {
     const required: TimelineEventType[] = [
       'feature:done',
       'milestone:completed',
-      'ceremony:fired',
       'escalation',
       'pr:merged',
     ];

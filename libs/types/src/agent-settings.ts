@@ -2,7 +2,7 @@
  * Agent Settings - AI model and agent configuration types
  *
  * Covers thinking levels, model providers, deployment environments,
- * phase model configuration, and ceremony settings.
+ * and phase model configuration.
  */
 
 import type { ModelId } from './model.js';
@@ -197,10 +197,6 @@ export interface PhaseModelConfig {
   /** Model for generating git branch names from feature titles/descriptions */
   branchNameModel: PhaseModelEntry;
 
-  // Ceremony tasks - retrospectives and milestone announcements
-  /** Model for generating project retrospectives and ceremony content */
-  ceremonyModel: PhaseModelEntry;
-
   // Agent execution - the model that implements features in worktrees
   /** Model for agent feature execution (auto-mode and manual agent launches) */
   agentExecutionModel: PhaseModelEntry;
@@ -258,9 +254,6 @@ export const DEFAULT_PHASE_MODELS: PhaseModelConfig = {
   // Branch names - use fast model for speed
   branchNameModel: { model: 'claude-haiku' },
 
-  // Ceremony - use capable model for retrospectives and announcements
-  ceremonyModel: { model: 'claude-sonnet' },
-
   // Agent execution - default to sonnet for reliable feature implementation
   agentExecutionModel: { model: 'claude-sonnet' },
 
@@ -281,67 +274,4 @@ export const DEFAULT_PHASE_MODELS: PhaseModelConfig = {
 export const DEFAULT_FLOW_MODELS: Record<string, PhaseModelEntry> = {
   'content-creation': { model: 'claude-sonnet' },
   'antagonistic-review': { model: 'claude-sonnet' },
-};
-
-// ============================================================================
-// Ceremony Settings - Milestone and project ceremony configuration
-// ============================================================================
-
-/**
- * CeremonySettings - Configuration for milestone and project ceremony features
- *
- * Ceremonies are automated events that mark significant project progress:
- * - Epic kickoffs: Posted to Discord when an epic is created with planned scope and complexity
- * - Milestone standups: Posted to Discord when a milestone starts with planned scope
- * - Milestone retros: Sent to Discord when all features in a milestone are done
- * - Epic delivery announcements: Posted when all child features in an epic are complete
- * - Project retrospectives: AI-generated reflections when projects complete
- */
-export interface CeremonySettings {
-  /** Whether ceremony features are enabled for this project */
-  enabled: boolean;
-  /** Discord channel ID for ceremony announcements (overrides project default) */
-  discordChannelId?: string;
-  /**
-   * Discord webhook URL for ceremony announcements.
-   * When set, ceremony output is POSTed directly to this webhook URL instead of
-   * routing through the Discord bot channel. Takes precedence over discordChannelId.
-   */
-  discordWebhookUrl?: string;
-  /** Enable epic kickoff announcements when created (default: true) */
-  enableEpicKickoff?: boolean;
-  /** Enable milestone standup announcements at start (default: true) */
-  enableStandups?: boolean;
-  /** Enable milestone completion announcements (default: true) */
-  enableMilestoneUpdates?: boolean;
-  /** Enable epic delivery announcements (default: true) */
-  enableEpicDelivery?: boolean;
-  /** Enable project retrospective generation (default: true) */
-  enableProjectRetros?: boolean;
-  /** Enable content brief generation on milestone completion (default: true) */
-  enableContentBriefs?: boolean;
-  /** Discord channel ID for content briefs (separate from ceremony channel) */
-  contentBriefChannelId?: string;
-  /** Enable automated documentation updates after project completion (default: true) */
-  enablePostProjectDocs?: boolean;
-  /** Model configuration for generating retrospectives */
-  retroModel?: PhaseModelEntry;
-}
-
-/**
- * DEFAULT_CEREMONY_SETTINGS - Default ceremony configuration.
- *
- * `enabled` defaults to `true` — ceremonies are active out-of-the-box when a
- * `discordChannelId` is configured. Individual ceremony types can be toggled
- * independently. See docs/agents/ceremonies.md for the full reference.
- */
-export const DEFAULT_CEREMONY_SETTINGS: CeremonySettings = {
-  enabled: true,
-  enableEpicKickoff: true,
-  enableStandups: true,
-  enableMilestoneUpdates: true,
-  enableEpicDelivery: true,
-  enableProjectRetros: true,
-  enableContentBriefs: true,
-  enablePostProjectDocs: true,
 };

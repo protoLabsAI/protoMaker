@@ -5,7 +5,6 @@ import {
   AlertTriangle,
   Workflow,
   Webhook,
-  PartyPopper,
   Bot,
   Library,
 } from 'lucide-react';
@@ -31,7 +30,6 @@ export const PROJECT_NAV_GROUPS: ProjectNavigationGroup[] = [
       { id: 'theme', label: 'Theme', icon: Palette },
       { id: 'claude', label: 'Models', icon: Workflow },
       { id: 'webhooks', label: 'Webhooks', icon: Webhook },
-      { id: 'ceremonies', label: 'Ceremonies', icon: PartyPopper },
       { id: 'agents', label: 'Agents', icon: Bot },
     ],
   },

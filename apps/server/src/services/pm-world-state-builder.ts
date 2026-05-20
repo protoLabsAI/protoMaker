@@ -2,7 +2,7 @@
  * PM World State Builder
  *
  * Constructs and maintains PMWorldState from project files, milestone status,
- * ceremony schedules, and timeline data. Exposes getDistilledSummary() returning
+ * milestone snapshots, and timeline data. Exposes getDistilledSummary() returning
  * concise markdown. Runs on a 60s refresh interval.
  */
 
@@ -131,7 +131,7 @@ export class PMWorldStateBuilder {
    * - dueAt label (projectSlug)
    */
   getDistilledSummary(): string {
-    const { projects, milestones, upcomingDeadlines, ceremonies, updatedAt } = this.state;
+    const { projects, milestones, upcomingDeadlines, updatedAt } = this.state;
 
     const lines: string[] = [`_Last refreshed: ${updatedAt}_`, ''];
 
@@ -169,17 +169,7 @@ export class PMWorldStateBuilder {
     // ── Upcoming Items ────────────────────────────────────────────
     lines.push('## Upcoming Items');
 
-    // Merge upcomingDeadlines and ceremonies into a single sorted list
-    const upcoming: Array<{ dueAt: string; label: string; source: string }> = [];
-
-    for (const d of upcomingDeadlines) {
-      upcoming.push({ dueAt: d.dueAt, label: d.label, source: d.projectSlug });
-    }
-    for (const [type, iso] of Object.entries(ceremonies)) {
-      upcoming.push({ dueAt: iso, label: type, source: 'ceremony' });
-    }
-
-    upcoming.sort((a, b) => a.dueAt.localeCompare(b.dueAt));
+    const upcoming = [...upcomingDeadlines].sort((a, b) => a.dueAt.localeCompare(b.dueAt));
 
     const now = new Date().toISOString();
     const future = upcoming.filter((u) => u.dueAt >= now);
@@ -189,7 +179,7 @@ export class PMWorldStateBuilder {
     } else {
       for (const item of future.slice(0, 10)) {
         const dateStr = item.dueAt.slice(0, 10);
-        lines.push(`- ${dateStr} — ${item.label} _(${item.source})_`);
+        lines.push(`- ${dateStr} — ${item.label} _(${item.projectSlug})_`);
       }
     }
 
@@ -248,7 +238,6 @@ export class PMWorldStateBuilder {
       const next = this.emptyState();
 
       await this.loadProjects(next);
-      await this.loadCeremonies(next);
       await this.loadTimelines(next);
 
       next.updatedAt = new Date().toISOString();
@@ -281,7 +270,6 @@ export class PMWorldStateBuilder {
       updatedAt: new Date().toISOString(),
       projects: {},
       milestones: {},
-      ceremonies: {},
       upcomingDeadlines: [],
     };
   }
@@ -354,29 +342,6 @@ export class PMWorldStateBuilder {
         // Skip malformed or missing project.json
         logger.debug(`Skipping project ${slug}: could not read project.json`);
       }
-    }
-  }
-
-  /**
-   * Load upcoming ceremony dates from .automaker/ceremony-state.json.
-   */
-  private async loadCeremonies(state: PMWorldState): Promise<void> {
-    const ceremonyStatePath = path.join(this.projectRoot, '.automaker', 'ceremony-state.json');
-    try {
-      const raw = await fs.readFile(ceremonyStatePath, 'utf-8');
-      const data = JSON.parse(raw) as Record<
-        string,
-        { nextRunAt?: string; nextAt?: string; type?: string }
-      >;
-
-      for (const [key, entry] of Object.entries(data)) {
-        const nextAt = entry.nextRunAt ?? entry.nextAt;
-        if (nextAt) {
-          state.ceremonies[entry.type ?? key] = nextAt;
-        }
-      }
-    } catch {
-      // ceremony-state.json may not exist — that's fine
     }
   }
 

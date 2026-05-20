@@ -752,7 +752,6 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
           ),
           commitMessageModel: migratePhaseModelEntry(serverSettings.phaseModels.commitMessageModel),
           branchNameModel: migratePhaseModelEntry(serverSettings.phaseModels.branchNameModel),
-          ceremonyModel: migratePhaseModelEntry(serverSettings.phaseModels.ceremonyModel),
           agentExecutionModel: migratePhaseModelEntry(
             serverSettings.phaseModels.agentExecutionModel
           ),

@@ -72,8 +72,6 @@ interface UseNavigationProps {
   cycleNextProject: () => void;
   /** Count of unread notifications to show on Notifications nav item */
   unreadNotificationsCount?: number;
-  /** Count of unread ceremony events */
-  unreadCeremonyCount?: number;
   /** Whether spec generation is currently running for the current project */
   isSpecGenerating?: boolean;
 }
@@ -91,7 +89,6 @@ export function useNavigation({
   cyclePrevProject,
   cycleNextProject,
   unreadNotificationsCount,
-  unreadCeremonyCount,
   isSpecGenerating,
 }: UseNavigationProps) {
   // Build navigation sections
@@ -180,7 +177,7 @@ export function useNavigation({
     ];
 
     // Add Inbox and Project Settings as a standalone section (no label for visual separation)
-    const inboxCount = (unreadNotificationsCount ?? 0) + (unreadCeremonyCount ?? 0);
+    const inboxCount = unreadNotificationsCount ?? 0;
     sections.push({
       label: '',
       items: [
@@ -201,14 +198,7 @@ export function useNavigation({
     });
 
     return sections;
-  }, [
-    shortcuts,
-    hideSpecEditor,
-    hideFileEditor,
-    unreadNotificationsCount,
-    unreadCeremonyCount,
-    isSpecGenerating,
-  ]);
+  }, [shortcuts, hideSpecEditor, hideFileEditor, unreadNotificationsCount, isSpecGenerating]);
 
   // Build keyboard shortcuts for navigation
   const navigationShortcuts: KeyboardShortcut[] = useMemo(() => {

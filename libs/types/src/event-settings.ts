@@ -42,11 +42,6 @@
  * - pr_changes_requested: Changes were requested on a PR
  * - pr_ci_failure: CI checks failed on a PR
  *
- * Ceremony events:
- * - ceremony_milestone_update: A milestone update ceremony was triggered
- * - ceremony_project_retro: A project retrospective ceremony was triggered
- * - ceremony_triggered: A ceremony was triggered
- *
  * Infrastructure / health:
  * - worktree_drift_detected: Worktree drift was detected
  * - health_issue_detected: A health issue was detected
@@ -96,10 +91,6 @@ export type EventHookTrigger =
   | 'pr_approved'
   | 'pr_changes_requested'
   | 'pr_ci_failure'
-  // Ceremony events
-  | 'ceremony_milestone_update'
-  | 'ceremony_project_retro'
-  | 'ceremony_triggered'
   // Infrastructure / health
   | 'worktree_drift_detected'
   | 'health_issue_detected'
@@ -243,10 +234,6 @@ export const EVENT_HOOK_TRIGGER_LABELS: Record<EventHookTrigger, string> = {
   pr_approved: 'PR approved',
   pr_changes_requested: 'PR changes requested',
   pr_ci_failure: 'PR CI checks failed',
-  // Ceremony events
-  ceremony_milestone_update: 'Milestone update ceremony triggered',
-  ceremony_project_retro: 'Project retrospective ceremony triggered',
-  ceremony_triggered: 'Ceremony triggered',
   // Infrastructure / health
   worktree_drift_detected: 'Worktree drift detected',
   health_issue_detected: 'Health issue detected',

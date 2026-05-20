@@ -414,62 +414,9 @@ describe('AutomationService', () => {
       expect(registerMaintenanceFlows).toHaveBeenCalledOnce();
       // 2 always-on built-ins + 1 enabled user automation; disabled user automation is skipped
       // (branch-cleanup consolidated into stale-worktrees, auto-merge/rebase removed)
-      // Ceremony automations are event-triggered and do NOT add to registerTask count
       expect(scheduler.registerTask).toHaveBeenCalledTimes(3);
       const taskIds = vi.mocked(scheduler.registerTask).mock.calls.map(([id]) => id);
       expect(taskIds.every((id) => id.startsWith('automation:'))).toBe(true);
-    });
-
-    it('seeds 3 ceremony automations with correct triggers and flowIds', async () => {
-      const mockDeps = {
-        events: { subscribe: vi.fn().mockReturnValue(() => {}) } as never,
-        autoModeService: {} as never,
-        featureHealthService: null as never,
-        integrityWatchdogService: null as never,
-        featureLoader: null as never,
-        settingsService: {} as never,
-      };
-
-      await service.syncWithScheduler(mockDeps);
-
-      const all = await service.list();
-      const standup = all.find((a) => a.id === 'ceremony:standup');
-      const retro = all.find((a) => a.id === 'ceremony:retro');
-      const projectRetro = all.find((a) => a.id === 'ceremony:project-retro');
-
-      expect(standup).toBeDefined();
-      expect(standup?.trigger).toEqual({ type: 'event', eventType: 'feature:completed' });
-      expect(standup?.flowId).toBe('standup-flow');
-      expect(standup?.enabled).toBe(true);
-
-      expect(retro).toBeDefined();
-      expect(retro?.trigger).toEqual({ type: 'event', eventType: 'ceremony:milestone-update' });
-      expect(retro?.flowId).toBe('retro-flow');
-
-      expect(projectRetro).toBeDefined();
-      expect(projectRetro?.trigger).toEqual({
-        type: 'event',
-        eventType: 'ceremony:project-retro',
-      });
-      expect(projectRetro?.flowId).toBe('project-retro-flow');
-    });
-
-    it('ceremony automations are idempotent — not duplicated on second sync', async () => {
-      const mockDeps = {
-        events: { subscribe: vi.fn().mockReturnValue(() => {}) } as never,
-        autoModeService: {} as never,
-        featureHealthService: null as never,
-        integrityWatchdogService: null as never,
-        featureLoader: null as never,
-        settingsService: {} as never,
-      };
-
-      await service.syncWithScheduler(mockDeps);
-      await service.syncWithScheduler(mockDeps);
-
-      const all = await service.list();
-      const standupCount = all.filter((a) => a.id === 'ceremony:standup').length;
-      expect(standupCount).toBe(1);
     });
 
     it('wires event subscription when events emitter is provided', async () => {
@@ -485,43 +432,6 @@ describe('AutomationService', () => {
       });
 
       expect(subscribeSpy).toHaveBeenCalledOnce();
-    });
-
-    it('feature:completed event triggers standup-flow execution', async () => {
-      const flowFn = vi.fn().mockResolvedValue(undefined);
-      flowRegistry.register('standup-flow', flowFn);
-
-      let capturedCallback: ((type: string, payload: unknown) => void) | null = null;
-      const mockEvents = {
-        subscribe: vi.fn((cb: (type: string, payload: unknown) => void) => {
-          capturedCallback = cb;
-          return () => {};
-        }),
-      };
-
-      await service.syncWithScheduler({
-        events: mockEvents as never,
-        autoModeService: {} as never,
-        featureHealthService: null as never,
-        integrityWatchdogService: null as never,
-        featureLoader: null as never,
-        settingsService: {} as never,
-      });
-
-      expect(capturedCallback).not.toBeNull();
-
-      // Register the standup flow in flowRegistry so executeAutomation can find it
-      // (already registered above)
-
-      // Simulate feature:completed event
-      capturedCallback!('feature:completed', { featureId: 'f1', projectPath: '/test' });
-
-      // Wait for async chain to settle
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      expect(flowFn).toHaveBeenCalledOnce();
-
-      flowRegistry.unregister('standup-flow');
     });
   });
 

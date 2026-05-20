@@ -11,13 +11,11 @@ import { register as registerLeadEngineer } from '../services/lead-engineer.modu
 import { register as registerWorktreeLifecycle } from '../services/worktree-lifecycle.module.js';
 import { register as registerDiscord } from '../services/discord.module.js';
 import { register as registerScheduler } from '../services/scheduler.module.js';
-import { register as registerCeremony } from '../services/ceremony.module.js';
 import { register as registerInfrastructure } from '../services/infrastructure.module.js';
 import { register as registerProjectPm } from '../services/project-pm.module.js';
 import { register as registerEventLedger } from '../services/event-ledger.module.js';
 import { register as registerWorkIntake } from '../services/work-intake.module.js';
 import { register as registerMaintenance } from '../services/maintenance.module.js';
-import { register as registerSignalDictionary } from '../services/signal-dictionary.module.js';
 import { register as registerProjectHealth } from '../services/project-health.module.js';
 import { register as registerTrajectoryQuery } from '../services/trajectory-query.module.js';
 import { register as registerLiteLLMGateway } from '../services/litellm-gateway.module.js';
@@ -42,13 +40,11 @@ export async function wireServices(services: ServiceContainer): Promise<void> {
   await registerWorktreeLifecycle(services);
   await registerDiscord(services);
   await registerScheduler(services);
-  registerCeremony(services);
   await registerInfrastructure(services);
   await registerProjectPm(services);
   await registerEventLedger(services);
   await registerWorkIntake(services);
   registerMaintenance(services);
-  registerSignalDictionary(services);
   registerProjectHealth(services);
   registerTrajectoryQuery(services);
   registerLiteLLMGateway(services);

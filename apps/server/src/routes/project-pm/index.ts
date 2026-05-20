@@ -8,7 +8,7 @@
  *   PM agent defaults to sonnet model; supports extended thinking on sonnet/opus.
  *
  * GET /api/project-pm/sessions — returns all active PM sessions.
- * GET /api/project-pm/session/:slug — returns session history + ceremony state.
+ * GET /api/project-pm/session/:slug — returns session history.
  */
 
 import { readFileSync } from 'node:fs';
@@ -31,7 +31,6 @@ import { createLogger } from '@protolabsai/utils';
 import { resolveModelString } from '@protolabsai/model-resolver';
 import type { ProjectPMService } from '../../services/project-pm-service.js';
 import type { ProjectService } from '../../services/project-service.js';
-import type { CeremonyService } from '../../services/ceremony-service.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { LeadEngineerService } from '../../services/lead-engineer-service.js';
 import type { EventEmitter } from '../../lib/events.js';
@@ -99,20 +98,13 @@ function buildPmSystemPrompt(opts: {
     }>;
     updates?: Array<{ health: string; body: string; author: string; createdAt: string }>;
   } | null;
-  ceremonyStatus: {
-    phase?: string;
-    currentMilestone?: string;
-    lastStandup?: string;
-    lastRetro?: string;
-    standupCadence?: string;
-  } | null;
   activeFeatures: Array<{ title: string; status: string; epicId?: string }>;
   leadState: {
     activeCount: number;
     activeSessions: Array<{ featureId: string; startedAt: string }>;
   } | null;
 }): string {
-  const { project, ceremonyStatus, activeFeatures, leadState } = opts;
+  const { project, activeFeatures, leadState } = opts;
 
   const parts: string[] = [];
 
@@ -163,18 +155,6 @@ function buildPmSystemPrompt(opts: {
     }
   }
 
-  // ── Ceremony state ──────────────────────────────────────────────────────────
-  if (ceremonyStatus) {
-    parts.push('', '## Ceremony State');
-    if (ceremonyStatus.phase) parts.push(`**Current Phase:** ${ceremonyStatus.phase}`);
-    if (ceremonyStatus.currentMilestone)
-      parts.push(`**Active Milestone:** ${ceremonyStatus.currentMilestone}`);
-    if (ceremonyStatus.lastStandup) parts.push(`**Last Standup:** ${ceremonyStatus.lastStandup}`);
-    if (ceremonyStatus.lastRetro) parts.push(`**Last Retro:** ${ceremonyStatus.lastRetro}`);
-    if (ceremonyStatus.standupCadence)
-      parts.push(`**Standup Cadence:** ${ceremonyStatus.standupCadence}`);
-  }
-
   // ── Active features (non-done, capped at 15) ────────────────────────────────
   if (activeFeatures.length > 0) {
     parts.push('', '## Active Features');
@@ -219,7 +199,6 @@ function makeTool<TSchema extends z.ZodType<any>>(config: {
 export function createProjectPmRoutes(
   projectPmService: ProjectPMService,
   projectService: ProjectService,
-  ceremonyService: CeremonyService,
   featureLoader: FeatureLoader,
   events: EventEmitter,
   leadEngineerService?: LeadEngineerService
@@ -255,21 +234,6 @@ export function createProjectPmRoutes(
 
       // Load project data for system prompt
       const project = await projectService.getProject(projectPath, projectSlug).catch(() => null);
-
-      const ceremonyStatus = await (async () => {
-        try {
-          const state = await ceremonyService.getCeremonyState(projectPath, projectSlug);
-          return {
-            phase: state.phase,
-            currentMilestone: state.currentMilestone,
-            lastStandup: state.lastStandup || undefined,
-            lastRetro: state.lastRetro || undefined,
-            standupCadence: state.standupCadence,
-          };
-        } catch {
-          return null;
-        }
-      })();
 
       let activeFeatures: Array<{ title: string; status: string; epicId?: string }> = [];
       try {
@@ -325,7 +289,6 @@ export function createProjectPmRoutes(
               updates: project.updates,
             }
           : null,
-        ceremonyStatus,
         activeFeatures,
         leadState,
       });
@@ -347,50 +310,6 @@ export function createProjectPmRoutes(
               milestoneCount: p.milestones?.length ?? 0,
               updatedAt: p.updatedAt,
             };
-          },
-        }),
-
-        get_ceremony_state: makeTool({
-          description:
-            'Get the current ceremony phase, transition history, and cadence for this project.',
-          inputSchema: z.object({}),
-          execute: async () => {
-            try {
-              const state = await ceremonyService.getCeremonyState(projectPath, projectSlug);
-              return {
-                phase: state.phase,
-                currentMilestone: state.currentMilestone ?? null,
-                lastStandup: state.lastStandup || null,
-                lastRetro: state.lastRetro || null,
-                standupCadence: state.standupCadence,
-                transitionCount: state.history.length,
-                recentTransitions: state.history.slice(-5),
-              };
-            } catch {
-              return { error: 'Ceremony state unavailable' };
-            }
-          },
-        }),
-
-        trigger_ceremony: makeTool({
-          description: 'Trigger a ceremony (standup or retro) for the project.',
-          inputSchema: z.object({
-            ceremonyType: z
-              .enum(['standup', 'retro', 'project-retro'])
-              .describe('The type of ceremony to trigger'),
-            milestoneSlug: z
-              .string()
-              .optional()
-              .describe('Milestone slug (required for retro and project-retro)'),
-          }),
-          execute: async ({ ceremonyType, milestoneSlug }) => {
-            events.emit('ceremony:trigger-requested', {
-              projectPath,
-              projectSlug,
-              ceremonyType,
-              milestoneSlug,
-            });
-            return { ok: true, ceremonyType, milestoneSlug };
           },
         }),
 
@@ -597,7 +516,7 @@ export function createProjectPmRoutes(
   /**
    * GET /api/project-pm/session/:slug
    *
-   * Returns full session history + ceremony state for a project slug.
+   * Returns full session history for a project slug.
    * Query param: projectPath (required)
    */
   router.get('/session/:slug', async (req: Request, res: Response) => {
@@ -615,14 +534,7 @@ export function createProjectPmRoutes(
       return;
     }
 
-    let ceremonyState: unknown = null;
-    try {
-      ceremonyState = await ceremonyService.getCeremonyState(projectPath, slug);
-    } catch {
-      // Non-fatal
-    }
-
-    res.json({ session, ceremonyState });
+    res.json({ session });
   });
 
   return router;

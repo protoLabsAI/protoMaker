@@ -206,8 +206,6 @@ export interface DiscordChannelMap {
   projectPlanning?: string;
   /** Agent logs channel */
   agentLogs?: string;
-  /** Ceremony announcements channel */
-  ceremonies?: string;
   /** Content briefs channel */
   contentBriefs?: string;
   /** CI/CD failures and system alerts */

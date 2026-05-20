@@ -595,32 +595,6 @@ export class AutomationService {
       });
     }
 
-    // Ceremony automations (always seeded — event-triggered)
-    await this.upsertBuiltIn({
-      id: 'ceremony:standup',
-      name: 'Standup Ceremony',
-      description: 'Runs standup flow when a feature completes execution.',
-      trigger: { type: 'event', eventType: 'feature:completed' },
-      flowId: 'standup-flow',
-      enabled: true,
-    });
-    await this.upsertBuiltIn({
-      id: 'ceremony:retro',
-      name: 'Retrospective Ceremony',
-      description: 'Runs retro flow on milestone updates.',
-      trigger: { type: 'event', eventType: 'ceremony:milestone-update' },
-      flowId: 'retro-flow',
-      enabled: true,
-    });
-    await this.upsertBuiltIn({
-      id: 'ceremony:project-retro',
-      name: 'Project Retrospective Ceremony',
-      description: 'Runs project retro flow when a project retrospective is triggered.',
-      trigger: { type: 'event', eventType: 'ceremony:project-retro' },
-      flowId: 'project-retro-flow',
-      enabled: true,
-    });
-
     // Note: purgeStaleBuiltIns() runs BEFORE seeding (top of this method)
     // to avoid accidentally purging freshly-seeded records whose flows
     // haven't registered yet in the test environment.

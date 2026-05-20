@@ -48,7 +48,6 @@ const PHASE_LABELS: Record<PhaseModelKey, string> = {
   projectAnalysisModel: 'Project Analysis',
   suggestionsModel: 'AI Suggestions',
   memoryExtractionModel: 'Memory Extraction',
-  ceremonyModel: 'Ceremonies & Retrospectives',
   agentExecutionModel: 'Agent Execution',
   complexitySmallModel: 'Small Features',
   complexityMediumModel: 'Medium Features',

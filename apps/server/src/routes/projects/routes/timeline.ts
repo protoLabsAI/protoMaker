@@ -31,10 +31,8 @@ interface TimelineEvent {
   description?: string;
   occurredAt: string;
   author?: string;
-  /** URL to an associated artifact (e.g. ceremony report markdown) */
+  /** URL to an associated artifact (e.g. report markdown) */
   artifactUrl?: string;
-  /** Human-readable ceremony type label, e.g. "Standup", "Milestone Retro" */
-  ceremonyLabel?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -217,7 +215,7 @@ function toTimelineEvent(entry: EventLedgerEntry): TimelineEvent {
       };
     }
 
-    // ─── Milestones & ceremonies ──────────────────────────────────
+    // ─── Milestones ──────────────────────────────────────────────
     case 'milestone:completed': {
       const milestoneTitle =
         (payload.title as string) ?? entry.correlationIds.milestoneSlug ?? 'Milestone';
@@ -227,53 +225,6 @@ function toTimelineEvent(entry: EventLedgerEntry): TimelineEvent {
         title: `Milestone completed: ${milestoneTitle}`,
         occurredAt: entry.timestamp,
         author: entry.source,
-      };
-    }
-
-    case 'ceremony:fired': {
-      const ceremonyType =
-        (payload.ceremonyType as string) ?? (payload.type as string) ?? 'ceremony';
-
-      // Human-readable labels for known ceremony types
-      const CEREMONY_LABELS: Record<string, string> = {
-        standup: 'Standup',
-        milestone_retro: 'Milestone Retro',
-        project_retro: 'Project Retro',
-        epic_delivery: 'Epic Delivery',
-        epic_kickoff: 'Epic Kickoff',
-        content_brief: 'Content Brief',
-        post_project_docs: 'Post-Project Docs',
-      };
-      const ceremonyLabel = CEREMONY_LABELS[ceremonyType] ?? ceremonyType;
-
-      // Map to more specific types for filtering
-      let type: string = 'ceremony:fired';
-      if (ceremonyType === 'standup') type = 'standup';
-      else if (
-        ceremonyType === 'retro' ||
-        ceremonyType === 'milestone_retro' ||
-        ceremonyType === 'project_retro'
-      )
-        type = 'retro';
-
-      // Extract artifact URL from payload if present (ceremony report)
-      const artifactUrl =
-        (payload.artifactUrl as string | undefined) ??
-        (payload.reportUrl as string | undefined) ??
-        (payload.reportPath as string | undefined) ??
-        undefined;
-
-      return {
-        id: entry.id,
-        type,
-        title: `Ceremony: ${ceremonyLabel}`,
-        ceremonyLabel,
-        description: entry.correlationIds.milestoneSlug
-          ? `Milestone: ${entry.correlationIds.milestoneSlug}`
-          : undefined,
-        occurredAt: entry.timestamp,
-        author: entry.source,
-        ...(artifactUrl !== undefined ? { artifactUrl } : {}),
       };
     }
 

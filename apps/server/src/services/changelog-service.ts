@@ -485,12 +485,6 @@ export class ChangelogService {
         return;
       }
 
-      const ceremonySettings = projectSettings.ceremonySettings;
-      if (!ceremonySettings?.enabled) {
-        logger.debug('Ceremony settings not enabled, skipping changelog post');
-        return;
-      }
-
       const groups = this.groupFeaturesByCategory(features);
       const fields = this.buildEmbedFields(groups);
 
@@ -510,10 +504,7 @@ export class ChangelogService {
         featureId: 'changelog',
         feature: { id: 'changelog', title } as Feature,
         serverId: discordConfig.serverId,
-        channelId:
-          discordConfig.channels?.ceremonies ||
-          ceremonySettings.discordChannelId ||
-          discordConfig.channelId,
+        channelId: discordConfig.channels?.releases || discordConfig.channelId,
         action: 'send_embed',
         embed: {
           title,

@@ -4,9 +4,8 @@
  * Reacts to feature status changes and cascades through:
  *   feature done → epic done → milestone completed → project completed
  *
- * Emits events that CeremonyService already listens for (milestone:completed,
- * project:completed) so ceremonies fire automatically when the board reflects
- * completion — no polling required.
+ * Emits milestone:completed and project:completed so downstream consumers
+ * can react when the board reflects completion — no polling required.
  */
 
 import { execFile } from 'node:child_process';
@@ -527,7 +526,7 @@ export class CompletionDetectorService {
    * Uses milestoneSlug on features as the primary signal; falls back to
    * phase featureId links when features lack milestoneSlug (e.g. epic-child features).
    * All milestone phases must also be scaffolded (have featureId) before completion fires.
-   * If so, emit milestone:completed (CeremonyService picks this up).
+   * If so, emit milestone:completed.
    */
   private async checkMilestoneCompletion(
     projectPath: string,
@@ -601,7 +600,7 @@ export class CompletionDetectorService {
 
   /**
    * Check if all milestones in a project are completed.
-   * If so, emit project:completed (CeremonyService picks this up).
+   * If so, emit project:completed.
    */
   private async checkProjectCompletion(projectPath: string, projectSlug: string): Promise<void> {
     const dedupeKey = `${projectPath}:${projectSlug}`;

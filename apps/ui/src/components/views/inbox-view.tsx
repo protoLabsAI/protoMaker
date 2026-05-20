@@ -1,11 +1,10 @@
 /**
  * Inbox View - Full page view for unified actionable items.
  *
- * Consolidated into 4 category tabs:
+ * Consolidated category tabs:
  * - All: everything (including informational notifications)
  * - Decisions: HITL forms, approvals, pipeline gates, reviews (human decision required)
  * - Escalations: blocking issues needing attention
- * - Ceremonies: standup/retro/delivery audit log
  *
  * With status filtering, snooze, and bulk actions.
  */
@@ -14,7 +13,6 @@ import { useCallback, useMemo, useState } from 'react';
 import { useAppStore } from '@/store/app-store';
 import { useActionableItemsStore } from '@/store/actionable-items-store';
 import { useHITLFormStore } from '@/store/hitl-form-store';
-import { useCeremonyStore } from '@/store/ceremony-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { Button } from '@protolabsai/ui/atoms';
 import { Spinner } from '@protolabsai/ui/atoms';
@@ -32,27 +30,19 @@ import {
   BellOff,
   Filter,
   X,
-  PartyPopper,
-  CalendarCheck,
-  BarChart2,
-  Trophy,
-  CheckCircle2,
-  XCircle,
-  HelpCircle,
 } from 'lucide-react';
 import { PanelHeader } from '@/components/shared/panel-header';
 import type {
   ActionableItem,
   ActionableItemActionType,
   ActionableItemPriority,
-  CeremonyAuditEntry,
 } from '@protolabsai/types';
 import type { Feature } from '@/store/types';
 import { getEffectivePriority } from '@protolabsai/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
-type CategoryFilter = 'all' | 'exceptions' | 'decisions' | 'escalation' | 'ceremony';
+type CategoryFilter = 'all' | 'exceptions' | 'decisions' | 'escalation';
 type StatusFilter = 'pending' | 'snoozed' | 'acted' | 'dismissed' | 'all';
 
 /**
@@ -60,7 +50,6 @@ type StatusFilter = 'pending' | 'snoozed' | 'acted' | 'dismissed' | 'all';
  * - All: everything (including informational notifications)
  * - Decisions: merges Forms + Approvals + Gates (all require a human decision)
  * - Escalations: blocking issues needing attention
- * - Ceremonies: standup/retro/delivery logs
  */
 const CATEGORY_TABS: { value: CategoryFilter; label: string; icon: React.ReactNode }[] = [
   { value: 'all', label: 'All', icon: <Inbox className="h-3.5 w-3.5" /> },
@@ -71,7 +60,6 @@ const CATEGORY_TABS: { value: CategoryFilter; label: string; icon: React.ReactNo
   },
   { value: 'decisions', label: 'Decisions', icon: <ShieldCheck className="h-3.5 w-3.5" /> },
   { value: 'escalation', label: 'Escalations', icon: <AlertTriangle className="h-3.5 w-3.5" /> },
-  { value: 'ceremony', label: 'Ceremonies', icon: <PartyPopper className="h-3.5 w-3.5" /> },
 ];
 
 /** Action types that map to the "Decisions" category tab */
@@ -90,30 +78,6 @@ const SNOOZE_OPTIONS = [
   { label: '4 hours', ms: 4 * 60 * 60 * 1000 },
   { label: 'Tomorrow', ms: 24 * 60 * 60 * 1000 },
 ];
-
-const CEREMONY_META: Record<
-  string,
-  { label: string; icon: React.ReactNode; color: string; bg: string }
-> = {
-  standup: {
-    label: 'Standup',
-    icon: <CalendarCheck className="h-4 w-4" />,
-    color: 'text-blue-500',
-    bg: 'bg-blue-500/10',
-  },
-  retro: {
-    label: 'Milestone Retro',
-    icon: <BarChart2 className="h-4 w-4" />,
-    color: 'text-purple-500',
-    bg: 'bg-purple-500/10',
-  },
-  'project-retro': {
-    label: 'Project Retro',
-    icon: <Trophy className="h-4 w-4" />,
-    color: 'text-amber-500',
-    bg: 'bg-amber-500/10',
-  },
-};
 
 function formatRelativeTime(date: Date): string {
   const now = new Date();
@@ -170,50 +134,12 @@ function getPriorityBadge(priority: ActionableItemPriority) {
   );
 }
 
-function CeremonyDeliveryBadge({ status }: { status: CeremonyAuditEntry['deliveryStatus'] }) {
-  const config = {
-    pending: {
-      icon: <HelpCircle className="h-3 w-3" />,
-      label: 'Pending',
-      cls: 'text-yellow-500 bg-yellow-500/10',
-    },
-    success: {
-      icon: <CheckCircle2 className="h-3 w-3" />,
-      label: 'Delivered',
-      cls: 'text-green-500 bg-green-500/10',
-    },
-    failed: {
-      icon: <XCircle className="h-3 w-3" />,
-      label: 'Failed',
-      cls: 'text-red-500 bg-red-500/10',
-    },
-  };
-  const { icon, label, cls } = config[status as keyof typeof config] ?? config.pending;
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium',
-        cls
-      )}
-    >
-      {icon}
-      {label}
-    </span>
-  );
-}
-
 export function InboxView() {
   const { currentProject } = useAppStore();
   const projectPath = currentProject?.path ?? null;
   const { items, isLoading, dismissItem, markAsRead, markAllAsRead, dismissAll } =
     useActionableItemsStore();
   const openForm = useHITLFormStore((s) => s.openForm);
-  const {
-    entries: ceremonyEntries,
-    isLoading: ceremoniesLoading,
-    unreadCount: ceremonyUnreadCount,
-    markAllRead: markCeremoniesRead,
-  } = useCeremonyStore();
 
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
@@ -244,9 +170,6 @@ export function InboxView() {
       filtered = filtered.filter(
         (i) => i.actionType === 'escalation' && i.category !== 'exception'
       );
-    } else if (categoryFilter === 'ceremony') {
-      // Hide all actionable items when ceremony tab is active
-      return [];
     }
     // 'all' shows everything — no filter needed
 
@@ -259,15 +182,6 @@ export function InboxView() {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   }, [items, categoryFilter, statusFilter]);
-
-  // Ceremonies sorted newest-first
-  const sortedCeremonies = useMemo(
-    () =>
-      [...ceremonyEntries].sort(
-        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      ),
-    [ceremonyEntries]
-  );
 
   const handleItemClick = useCallback(
     async (item: ActionableItem) => {
@@ -341,10 +255,9 @@ export function InboxView() {
   const handleMarkAllRead = useCallback(async () => {
     if (!projectPath) return;
     markAllAsRead();
-    markCeremoniesRead();
     const api = getHttpApiClient();
     await api.actionableItems.markRead(projectPath);
-  }, [projectPath, markAllAsRead, markCeremoniesRead]);
+  }, [projectPath, markAllAsRead]);
 
   const handleDismissAll = useCallback(async () => {
     if (!projectPath) return;
@@ -361,7 +274,6 @@ export function InboxView() {
       exceptions: 0,
       decisions: 0,
       escalation: 0,
-      ceremony: 0,
     };
     for (const item of items) {
       if (item.status !== 'pending' || item.read) continue;
@@ -374,9 +286,8 @@ export function InboxView() {
         counts.escalation++;
       }
     }
-    counts.ceremony = ceremonyUnreadCount;
     return counts;
-  }, [items, ceremonyUnreadCount]);
+  }, [items]);
 
   if (!projectPath) {
     return (
@@ -386,8 +297,6 @@ export function InboxView() {
       </div>
     );
   }
-
-  const isCeremonyView = categoryFilter === 'ceremony';
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -403,16 +312,12 @@ export function InboxView() {
         }
         actions={[
           { icon: CheckCheck, label: 'Mark all read', onClick: handleMarkAllRead },
-          ...(!isCeremonyView
-            ? [
-                {
-                  icon: Trash2,
-                  label: 'Dismiss all',
-                  onClick: handleDismissAll,
-                  destructive: true,
-                } as const,
-              ]
-            : []),
+          {
+            icon: Trash2,
+            label: 'Dismiss all',
+            onClick: handleDismissAll,
+            destructive: true,
+          } as const,
         ]}
       />
 
@@ -447,204 +352,134 @@ export function InboxView() {
         ))}
       </div>
 
-      {isCeremonyView ? (
-        /* Ceremony view — no status tabs, different list */
-        <div className="flex-1 overflow-y-auto">
-          {ceremoniesLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <Spinner className="h-6 w-6" />
-            </div>
-          ) : sortedCeremonies.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <PartyPopper className="h-10 w-10 text-muted-foreground/30 mb-3" />
-              <p className="text-sm text-muted-foreground">No ceremonies yet</p>
-            </div>
-          ) : (
-            <div className="divide-y">
-              {sortedCeremonies.map((entry) => {
-                const meta = CEREMONY_META[entry.ceremonyType] ?? CEREMONY_META['standup'];
-                return (
-                  <div key={entry.id} className="flex items-start gap-4 px-6 py-4">
-                    {/* Icon */}
-                    <div
-                      className={cn(
-                        'flex-shrink-0 mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg',
-                        meta.bg,
-                        meta.color
-                      )}
-                    >
-                      {meta.icon}
-                    </div>
+      {/* Status tabs */}
+      <div className="flex items-center gap-1 px-6 py-2 border-b">
+        <Filter className="h-3.5 w-3.5 text-muted-foreground mr-1" />
+        {STATUS_TABS.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => setStatusFilter(tab.value)}
+            className={cn(
+              'rounded-md px-2 py-1 text-xs font-medium transition-colors',
+              statusFilter === tab.value
+                ? 'bg-accent text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <p className="text-sm font-medium truncate">{entry.payload.title}</p>
-                        <span
-                          className={cn(
-                            'inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium',
-                            meta.color,
-                            meta.bg
-                          )}
-                        >
-                          {meta.label}
-                        </span>
-                      </div>
-                      {entry.payload.summary && (
-                        <p className="text-xs text-muted-foreground line-clamp-2 mb-1.5">
-                          {entry.payload.summary}
-                        </p>
+      {/* Items list */}
+      <div className="flex-1 overflow-y-auto">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Spinner className="h-6 w-6" />
+          </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16">
+            <BellOff className="h-10 w-10 text-muted-foreground/30 mb-3" />
+            <p className="text-sm text-muted-foreground">No items match your filters</p>
+          </div>
+        ) : (
+          <div className="divide-y">
+            {filteredItems.map((item) => {
+              const effectivePriority = getEffectivePriority(item);
+              const isSnoozed = item.status === 'snoozed';
+
+              return (
+                <div
+                  key={item.id}
+                  className={cn(
+                    'flex items-start gap-4 px-6 py-4 cursor-pointer hover:bg-accent/50 transition-colors',
+                    !item.read && item.status === 'pending' && 'bg-primary/5',
+                    effectivePriority === 'urgent' && 'border-l-2 border-l-red-500',
+                    effectivePriority === 'high' && 'border-l-2 border-l-orange-500'
+                  )}
+                  onClick={() => handleItemClick(item)}
+                >
+                  <div className="flex-shrink-0 mt-1">{getActionIcon(item.actionType)}</div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="text-sm font-medium truncate">{item.title}</p>
+                      {!item.read && item.status === 'pending' && (
+                        <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
                       )}
-                      <div className="flex items-center gap-3">
-                        <span className="text-[11px] text-muted-foreground">
-                          {formatRelativeTime(new Date(entry.timestamp))}
+                      {getPriorityBadge(effectivePriority)}
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{item.message}</p>
+                    <div className="flex items-center gap-3 mt-1.5">
+                      <span className="text-[11px] text-muted-foreground">
+                        {formatRelativeTime(new Date(item.createdAt))}
+                      </span>
+                      {isSnoozed && item.snoozedUntil && (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          until {new Date(item.snoozedUntil).toLocaleString()}
                         </span>
-                        {entry.milestoneSlug && (
-                          <span className="text-[11px] text-muted-foreground/60">
-                            {entry.milestoneSlug}
-                          </span>
-                        )}
-                        <CeremonyDeliveryBadge status={entry.deliveryStatus} />
-                      </div>
+                      )}
+                      <span className="text-[11px] text-muted-foreground/60">
+                        {item.actionType.replace('_', ' ')}
+                      </span>
+                      {item.category && (
+                        <span className="text-[11px] text-muted-foreground/60">
+                          {item.category}
+                        </span>
+                      )}
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      ) : (
-        <>
-          {/* Status tabs */}
-          <div className="flex items-center gap-1 px-6 py-2 border-b">
-            <Filter className="h-3.5 w-3.5 text-muted-foreground mr-1" />
-            {STATUS_TABS.map((tab) => (
-              <button
-                key={tab.value}
-                onClick={() => setStatusFilter(tab.value)}
-                className={cn(
-                  'rounded-md px-2 py-1 text-xs font-medium transition-colors',
-                  statusFilter === tab.value
-                    ? 'bg-accent text-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
 
-          {/* Items list */}
-          <div className="flex-1 overflow-y-auto">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-16">
-                <Spinner className="h-6 w-6" />
-              </div>
-            ) : filteredItems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16">
-                <BellOff className="h-10 w-10 text-muted-foreground/30 mb-3" />
-                <p className="text-sm text-muted-foreground">No items match your filters</p>
-              </div>
-            ) : (
-              <div className="divide-y">
-                {filteredItems.map((item) => {
-                  const effectivePriority = getEffectivePriority(item);
-                  const isSnoozed = item.status === 'snoozed';
-
-                  return (
-                    <div
-                      key={item.id}
-                      className={cn(
-                        'flex items-start gap-4 px-6 py-4 cursor-pointer hover:bg-accent/50 transition-colors',
-                        !item.read && item.status === 'pending' && 'bg-primary/5',
-                        effectivePriority === 'urgent' && 'border-l-2 border-l-red-500',
-                        effectivePriority === 'high' && 'border-l-2 border-l-orange-500'
-                      )}
-                      onClick={() => handleItemClick(item)}
-                    >
-                      <div className="flex-shrink-0 mt-1">{getActionIcon(item.actionType)}</div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <p className="text-sm font-medium truncate">{item.title}</p>
-                          {!item.read && item.status === 'pending' && (
-                            <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
-                          )}
-                          {getPriorityBadge(effectivePriority)}
-                        </div>
-                        <p className="text-xs text-muted-foreground line-clamp-2">{item.message}</p>
-                        <div className="flex items-center gap-3 mt-1.5">
-                          <span className="text-[11px] text-muted-foreground">
-                            {formatRelativeTime(new Date(item.createdAt))}
-                          </span>
-                          {isSnoozed && item.snoozedUntil && (
-                            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                              <Clock className="h-3 w-3" />
-                              until {new Date(item.snoozedUntil).toLocaleString()}
-                            </span>
-                          )}
-                          <span className="text-[11px] text-muted-foreground/60">
-                            {item.actionType.replace('_', ' ')}
-                          </span>
-                          {item.category && (
-                            <span className="text-[11px] text-muted-foreground/60">
-                              {item.category}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        {/* Snooze */}
-                        {item.status === 'pending' && (
-                          <div className="relative">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSnoozeMenuOpen(snoozeMenuOpen === item.id ? null : item.id);
-                              }}
-                              title="Snooze"
-                            >
-                              <Clock className="h-3.5 w-3.5" />
-                            </Button>
-                            {snoozeMenuOpen === item.id && (
-                              <div className="absolute right-0 top-full mt-1 z-10 bg-popover border rounded-md shadow-md py-1 min-w-[120px]">
-                                {SNOOZE_OPTIONS.map((opt) => (
-                                  <button
-                                    key={opt.label}
-                                    className="w-full text-left px-3 py-1.5 text-xs hover:bg-accent transition-colors"
-                                    onClick={(e) => handleSnooze(e, item.id, opt.ms)}
-                                  >
-                                    {opt.label}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Dismiss */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {/* Snooze */}
+                    {item.status === 'pending' && (
+                      <div className="relative">
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7"
-                          onClick={(e) => handleDismiss(e, item.id)}
-                          title="Dismiss"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSnoozeMenuOpen(snoozeMenuOpen === item.id ? null : item.id);
+                          }}
+                          title="Snooze"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <Clock className="h-3.5 w-3.5" />
                         </Button>
+                        {snoozeMenuOpen === item.id && (
+                          <div className="absolute right-0 top-full mt-1 z-10 bg-popover border rounded-md shadow-md py-1 min-w-[120px]">
+                            {SNOOZE_OPTIONS.map((opt) => (
+                              <button
+                                key={opt.label}
+                                className="w-full text-left px-3 py-1.5 text-xs hover:bg-accent transition-colors"
+                                onClick={(e) => handleSnooze(e, item.id, opt.ms)}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    )}
+
+                    {/* Dismiss */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={(e) => handleDismiss(e, item.id)}
+                      title="Dismiss"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </>
-      )}
+        )}
+      </div>
 
       {/* Approval Preview Dialog */}
       {approvalItem && (

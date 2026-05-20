@@ -130,20 +130,18 @@ function TimelineCard({ event, isLast }: { event: TimelineEvent; isLast: boolean
           <span
             className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${config.badgeClass}`}
           >
-            {/* Show ceremony type label in badge when available (e.g. "Standup", "Milestone Retro") */}
-            {event.ceremonyLabel ?? config.label}
+            {config.label}
           </span>
           <span className="text-sm font-medium text-foreground flex-1 min-w-0 mt-0.5">
             {event.title}
           </span>
-          {/* Artifact link for ceremony events */}
           {event.artifactUrl && (
             <a
               href={event.artifactUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline mt-0.5 flex-shrink-0"
-              aria-label="Open ceremony report"
+              aria-label="Open artifact"
               data-testid="timeline-artifact-link"
             >
               <ExternalLink className="w-3 h-3" />

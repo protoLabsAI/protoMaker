@@ -358,14 +358,6 @@ export const queryKeys = {
   },
 
   // ============================================
-  // Ceremonies
-  // ============================================
-  ceremonies: {
-    /** Ceremony observability status */
-    status: () => ['ceremonies', 'status'] as const,
-  },
-
-  // ============================================
   // Todo Lists
   // ============================================
   todoLists: {
