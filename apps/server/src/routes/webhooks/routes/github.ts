@@ -212,7 +212,6 @@ async function findFeatureByBranch(
  * Mirrors handleCheckSuiteEvent from the per-project route at
  * apps/server/src/routes/github/routes/webhook.ts. The projectPath is
  * resolved to process.cwd() since this route is not project-scoped.
- * Deduplication happens downstream in PRFeedbackService via lastCheckSuiteId.
  */
 async function handleGlobalCheckSuiteEvent(
   payload: GitHubCheckSuiteWebhookPayload,
@@ -236,9 +235,8 @@ async function handleGlobalCheckSuiteEvent(
     return;
   }
 
-  // Emit CI failure event for each associated PR.
-  // projectPath is left as empty string — PRFeedbackService resolves it
-  // from the tracked PR registry via prNumber.
+  // Emit CI failure event for each associated PR. projectPath is left as
+  // empty string — downstream consumers resolve it from the feature/PR linkage.
   for (const pr of check_suite.pull_requests) {
     logger.info(
       `[global] CI failure detected for PR #${pr.number} (check_suite: ${check_suite.id}, sha: ${check_suite.head_sha})`

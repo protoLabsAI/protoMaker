@@ -175,23 +175,12 @@ export type EventType =
   | 'project:prd:changes-requested'
   // CoS intake events
   | 'cos:prd-submitted'
-  // PR feedback loop events (EM dev lifecycle)
-  | 'pr:feedback-received'
+  // PR lifecycle events (consumed by Lead Engineer state machine)
   | 'pr:changes-requested'
   | 'pr:approved'
   | 'pr:ci-failure'
-  | 'pr:agent-restart-failed'
-  | 'feature:reassigned-for-fixes'
   | 'feature:worktree-cleaned'
-  // PR remediation events (automated PR maintenance and thread resolution)
-  | 'pr:feedback-queued' // Fired when feedback arrives while remediation is in progress
-  | 'pr:remediation-started' // Fired when PR remediation workflow begins (agent spawned to address feedback)
-  | 'pr:remediation-completed' // Fired when PR remediation workflow completes successfully
-  | 'pr:remediation-failed' // Fired when PR remediation workflow fails
-  | 'pr:thread-evaluated' // Fired when a single PR review thread is evaluated for resolution status
-  | 'pr:threads-resolved' // Fired when all PR review threads are marked as resolved
   | 'pr:merge-blocked-critical-threads' // Fired when merge is blocked due to critical review threads
-  | 'pr:missing-ci-checks' // Fired when required CI checks have never been registered after threshold wait
   // Worktree recovery events
   | 'worktree:drift-detected'
   | 'worktree:phantom-pruned'
@@ -377,64 +366,6 @@ export type EventCallback = (type: EventType, payload: unknown) => void;
 export type EventSeverity = 'critical' | 'high' | 'medium' | 'low';
 
 /**
- * PR Remediation Event Payloads
- * Used by the PR maintenance workflow to track thread resolution and feedback processing
- */
-
-/**
- * pr:remediation-started - Fired when PR remediation workflow begins
- * Triggered when an agent is spawned to address PR feedback or review comments
- */
-export interface PRRemediationStartedPayload {
-  /** Feature ID being remediated */
-  featureId: string;
-  /** PR number in GitHub */
-  prNumber: number;
-  /** Number of review threads requiring attention */
-  threadCount: number;
-  /** Agent ID spawned for remediation */
-  agentId?: string;
-  /** Timestamp when remediation started */
-  timestamp: string;
-}
-
-/**
- * pr:thread-evaluated - Fired when a single PR review thread is evaluated
- * Indicates whether a thread has been addressed and can be resolved
- */
-export interface PRThreadEvaluatedPayload {
-  /** Feature ID being remediated */
-  featureId: string;
-  /** PR number in GitHub */
-  prNumber: number;
-  /** Thread/comment ID being evaluated */
-  threadId: string;
-  /** Whether the thread is ready to be resolved */
-  canResolve: boolean;
-  /** Reason for resolution status (e.g., "changes committed", "not addressed yet") */
-  reason?: string;
-  /** Timestamp of evaluation */
-  timestamp: string;
-}
-
-/**
- * pr:threads-resolved - Fired when all PR review threads are marked as resolved
- * Signals that PR is ready for re-review or approval
- */
-export interface PRThreadsResolvedPayload {
-  /** Feature ID being remediated */
-  featureId: string;
-  /** PR number in GitHub */
-  prNumber: number;
-  /** Total number of threads resolved */
-  resolvedCount: number;
-  /** Whether PR is now ready for approval */
-  readyForReview: boolean;
-  /** Timestamp when all threads were resolved */
-  timestamp: string;
-}
-
-/**
  * GitHub PR State Change Event Payloads
  * Emitted by GitHubStateChecker when PR state changes are detected
  */
@@ -519,11 +450,6 @@ export interface GitHubPRChangesRequestedPayload {
  * Events without an explicit entry default to Record<string, unknown>.
  */
 export interface EventPayloadMap {
-  // PR remediation events
-  'pr:remediation-started': PRRemediationStartedPayload;
-  'pr:thread-evaluated': PRThreadEvaluatedPayload;
-  'pr:threads-resolved': PRThreadsResolvedPayload;
-
   // GitHub PR state events
   'github:pr:review-submitted': GitHubPRReviewSubmittedPayload;
   'github:pr:checks-updated': GitHubPRChecksUpdatedPayload;

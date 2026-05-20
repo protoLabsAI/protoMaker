@@ -32,7 +32,6 @@ import type { ProjectLifecycleService } from './project-lifecycle-service.js';
 import type { SettingsService } from './settings-service.js';
 import type { MetricsService } from './metrics-service.js';
 import type { CodeRabbitResolverService } from './coderabbit-resolver-service.js';
-import type { PRFeedbackService } from './pr-feedback-service.js';
 import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
 import type { ContextFidelityService } from './context-fidelity-service.js';
 import type { KnowledgeStoreService } from './knowledge-store-service.js';
@@ -129,7 +128,6 @@ export class LeadEngineerService {
     sendToChannel(channelId: string, content: string): Promise<boolean>;
   };
   private codeRabbitResolver?: CodeRabbitResolverService;
-  private prFeedbackService?: PRFeedbackService;
   private checkpointService?: PipelineCheckpointService;
   /** Features suspended in REVIEW/MERGE awaiting external re-trigger */
   private readonly pendingResumes = new Map<string, { projectPath: string; featureId: string }>();
@@ -189,9 +187,6 @@ export class LeadEngineerService {
   }
   setCodeRabbitResolver(r: CodeRabbitResolverService): void {
     this.codeRabbitResolver = r;
-  }
-  setPRFeedbackService(s: PRFeedbackService): void {
-    this.prFeedbackService = s;
   }
   setHandoffService(s: LeadHandoffService): void {
     this.handoffService = s;
@@ -628,7 +623,6 @@ export class LeadEngineerService {
         events: this.events,
         featureLoader: this.featureLoader,
         autoModeService: this.autoModeService,
-        prFeedbackService: this.prFeedbackService,
         checkpointService: this.checkpointService,
         contextFidelityService: this.contextFidelityService,
         knowledgeStoreService: this.knowledgeStoreService,

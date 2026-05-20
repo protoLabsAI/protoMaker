@@ -8,7 +8,6 @@ import type { ContextMetrics, Feature, AgentRole, StructuredPlan } from '@protol
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
-import type { PRFeedbackService } from './pr-feedback-service.js';
 import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
 import type { ContextFidelityService } from './context-fidelity-service.js';
 import type { KnowledgeStoreService } from './knowledge-store-service.js';
@@ -83,7 +82,6 @@ export interface ProcessorServiceContext {
   events: EventEmitter;
   featureLoader: FeatureLoader;
   autoModeService: AutoModeService;
-  prFeedbackService?: PRFeedbackService;
   checkpointService?: PipelineCheckpointService;
   contextFidelityService?: ContextFidelityService;
   knowledgeStoreService?: KnowledgeStoreService;

@@ -113,7 +113,6 @@ function gatherWiring(services: ServiceContainer) {
     { name: 'actionableItemService', ref: services.actionableItemService },
     { name: 'signalIntakeService', ref: services.signalIntakeService },
     { name: 'eventRouterService', ref: services.eventRouterService },
-    { name: 'prFeedbackService', ref: services.prFeedbackService },
     { name: 'completionDetectorService', ref: services.completionDetectorService },
     { name: 'reconciliationService', ref: services.reconciliationService },
     { name: 'healthMonitorService', ref: services.healthMonitorService },

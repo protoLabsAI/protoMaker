@@ -3,8 +3,8 @@ import { describe, it, expect } from 'vitest';
 import {
   CIFailureClassifierService,
   ciFailureClassifier,
+  type FailedCheck,
 } from '../../../src/services/ci-failure-classifier-service.js';
-import type { FailedCheck } from '../../../src/services/pr-status-checker.js';
 
 const makeCheck = (name: string, output = ''): FailedCheck => ({
   name,

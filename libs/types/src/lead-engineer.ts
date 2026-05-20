@@ -50,8 +50,6 @@ export interface LeadPRSnapshot {
   unresolvedThreads?: number;
   reviewState?: 'pending' | 'approved' | 'changes_requested';
   ciStatus?: 'pending' | 'passing' | 'failing';
-  isRemediating?: boolean;
-  remediationCount?: number;
 }
 
 /** Milestone progress snapshot */

@@ -398,12 +398,12 @@ export interface Feature {
   lastReviewFeedback?: string;
   /**
    * Timestamp when PR tracking started (ISO 8601).
-   * Set by PRFeedbackService when a PR is first tracked.
+   * Set when a PR is first opened for the feature.
    */
   prTrackedSince?: string;
   /**
    * Timestamp of the last PR polling check (ISO 8601).
-   * Updated by PRFeedbackService after each GitHub API poll.
+   * Updated after each GitHub API poll for the feature's PR.
    */
   prLastPolledAt?: string;
   /**

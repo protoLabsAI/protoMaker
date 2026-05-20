@@ -145,7 +145,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     integrityWatchdogService,
     featureHealthService,
     userIdentityService,
-    prFeedbackService,
     signalIntakeService,
     gitWorkflowService,
     eventStreamBuffer,
@@ -402,7 +401,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     createEngineRoutes(
       autoModeService,
       leadEngineerService,
-      prFeedbackService,
       signalIntakeService,
       gitWorkflowService,
       eventStreamBuffer,

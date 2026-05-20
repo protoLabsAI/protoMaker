@@ -49,12 +49,10 @@ const TRIGGER_SEVERITY_MAP: Record<EventHookTrigger, BriefingSeverity> = {
   feature_error: 'high',
   feature_retry: 'high',
   feature_recovery: 'high',
-  pr_feedback_received: 'high',
   feature_success: 'high',
   feature_completed: 'high',
   feature_pr_merged: 'high',
   pr_approved: 'high',
-  pr_remediation_completed: 'high',
   auto_mode_started: 'high',
 
   // Medium: Routine state changes, completions, ceremonies
@@ -72,7 +70,6 @@ const TRIGGER_SEVERITY_MAP: Record<EventHookTrigger, BriefingSeverity> = {
   feature_blocked: 'medium',
   feature_unblocked: 'medium',
   pr_changes_requested: 'medium',
-  pr_remediation_started: 'medium',
   ceremony_triggered: 'medium',
   ceremony_milestone_update: 'medium',
   ceremony_project_retro: 'medium',
@@ -89,7 +86,6 @@ const TRIGGER_SEVERITY_MAP: Record<EventHookTrigger, BriefingSeverity> = {
   project_analysis_completed: 'low',
   discord_message_detected: 'low',
   project_status_changed: 'low',
-  pr_remediation_failed: 'low',
   health_issue_detected: 'low',
 };
 

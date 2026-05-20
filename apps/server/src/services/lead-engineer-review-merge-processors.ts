@@ -180,7 +180,7 @@ export function analyzeScopeBudget(
 /**
  * REVIEW State: PR created. CI runs. If fails → back to EXECUTE (bounded). If passes → MERGE.
  *
- * Queries PRFeedbackService for tracked PR state. Falls back to gh CLI if needed.
+ * Queries gh CLI directly for PR review state.
  */
 export class ReviewProcessor implements StateProcessor {
   constructor(private serviceContext: ProcessorServiceContext) {}
@@ -291,7 +291,7 @@ export class ReviewProcessor implements StateProcessor {
     // Normalize PR: patch ownership watermark and enable auto-merge if missing
     await this.normalizePR(ctx);
 
-    // Query PRFeedbackService for tracked PR state (falls back to gh CLI)
+    // Query gh CLI for the current PR review state
     const reviewState = await this.getPRReviewState(ctx);
 
     logger.info('[REVIEW] PR status check', {
@@ -339,20 +339,6 @@ export class ReviewProcessor implements StateProcessor {
     }
 
     if (reviewState === 'changes_requested') {
-      // Concurrency guard: if PRFeedbackService is already remediating this feature,
-      // defer to it — wait and re-check instead of launching a competing agent.
-      if (this.serviceContext.prFeedbackService?.isFeatureRemediating(ctx.feature.id)) {
-        logger.info('[REVIEW] PRFeedbackService is already remediating this feature, deferring', {
-          featureId: ctx.feature.id,
-        });
-        await new Promise((r) => setTimeout(r, REVIEW_POLL_DELAY_MS));
-        return {
-          nextState: 'REVIEW',
-          shouldContinue: true,
-          reason: 'Deferring to PRFeedbackService remediation',
-        };
-      }
-
       // Check remediation budget using split budget enforcer
       const reviewWorkflowSettings = await getWorkflowSettings(
         ctx.projectPath,
@@ -387,8 +373,8 @@ export class ReviewProcessor implements StateProcessor {
       }
 
       // Check iteration budget (use >= for consistent boundary semantics)
-      const trackedPR = this.getTrackedPR(ctx);
-      if (trackedPR && trackedPR.iterationCount >= MAX_PR_ITERATIONS) {
+      const persistedIterationCount = (ctx.feature.prIterationCount as number | undefined) ?? 0;
+      if (persistedIterationCount >= MAX_PR_ITERATIONS) {
         ctx.escalationReason = `Max PR iterations exceeded (${MAX_PR_ITERATIONS})`;
         return {
           nextState: 'ESCALATE',
@@ -422,19 +408,6 @@ export class ReviewProcessor implements StateProcessor {
     }
 
     if (reviewState === 'ci_failed') {
-      // Concurrency guard: defer if PRFeedbackService is already remediating this feature
-      if (this.serviceContext.prFeedbackService?.isFeatureRemediating(ctx.feature.id)) {
-        logger.info('[REVIEW] PRFeedbackService is already remediating this feature, deferring', {
-          featureId: ctx.feature.id,
-        });
-        await new Promise((r) => setTimeout(r, REVIEW_POLL_DELAY_MS));
-        return {
-          nextState: 'REVIEW',
-          shouldContinue: true,
-          reason: 'Deferring to PRFeedbackService remediation',
-        };
-      }
-
       // Check CI remediation budget
       const ciWorkflowSettings = await getWorkflowSettings(
         ctx.projectPath,
@@ -468,8 +441,8 @@ export class ReviewProcessor implements StateProcessor {
       }
 
       // Check iteration budget
-      const ciTrackedPR = this.getTrackedPR(ctx);
-      if (ciTrackedPR && ciTrackedPR.iterationCount >= MAX_PR_ITERATIONS) {
+      const persistedCiIterationCount = (ctx.feature.prIterationCount as number | undefined) ?? 0;
+      if (persistedCiIterationCount >= MAX_PR_ITERATIONS) {
         ctx.escalationReason = `Max PR iterations exceeded (${MAX_PR_ITERATIONS})`;
         return {
           nextState: 'ESCALATE',
@@ -1004,10 +977,6 @@ export class ReviewProcessor implements StateProcessor {
   }
 
   private async getPRReviewState(ctx: StateContext): Promise<string> {
-    const trackedPR = this.getTrackedPR(ctx);
-    if (trackedPR?.reviewState) return trackedPR.reviewState;
-
-    // Fallback: query gh CLI when PRFeedbackService hasn't tracked the PR yet
     if (!ctx.prNumber) return 'pending';
 
     // Fast path: if the PR is already merged, skip review state resolution entirely.
@@ -1131,12 +1100,6 @@ export class ReviewProcessor implements StateProcessor {
       logger.error(`[REVIEW] gh CLI fallback failed for PR #${ctx.prNumber}:`, err);
       return 'error';
     }
-  }
-
-  private getTrackedPR(ctx: StateContext) {
-    if (!this.serviceContext.prFeedbackService) return undefined;
-    const prs = this.serviceContext.prFeedbackService.getTrackedPRs();
-    return prs.find((pr) => pr.featureId === ctx.feature.id || pr.prNumber === ctx.prNumber);
   }
 
   /**

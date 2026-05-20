@@ -3,14 +3,12 @@ import { codeRabbitResolverService } from './coderabbit-resolver-service.js';
 import type { ServiceContainer } from '../server/services.js';
 
 /**
- * Wires Lead Engineer service, EM agent lifecycle control, and PR feedback service.
+ * Wires Lead Engineer service and EM agent lifecycle control.
  */
 export function register(container: ServiceContainer): void {
   const {
     leadEngineerService,
     emAgent,
-    prFeedbackService,
-    autoModeService,
     discordBotService,
     factStoreService,
     trajectoryStoreService,
@@ -21,7 +19,6 @@ export function register(container: ServiceContainer): void {
 
   // Lead Engineer cross-service wiring
   leadEngineerService.setCodeRabbitResolver(codeRabbitResolverService);
-  leadEngineerService.setPRFeedbackService(prFeedbackService);
   leadEngineerService.setDiscordBot(discordBotService);
   leadEngineerService.setFactStoreService(factStoreService);
   leadEngineerService.setTrajectoryStoreService(trajectoryStoreService);
@@ -31,9 +28,4 @@ export function register(container: ServiceContainer): void {
 
   // EM Agent: yield lifecycle control to Lead Engineer when active
   emAgent.setLeadEngineerService(leadEngineerService);
-
-  // PR Feedback service wiring
-  prFeedbackService.setAutoModeService(autoModeService);
-  prFeedbackService.initialize();
-  prFeedbackService.setLeadEngineerService(leadEngineerService);
 }
