@@ -54,7 +54,7 @@ Timers serve different operational purposes. Choose the right category to help o
 | `maintenance` | Board health checks, data cleanup, worktree pruning      | 5 min -- 6 hours |
 | `health`      | Service health monitoring, memory checks, runner status  | 30 sec -- 5 min  |
 | `monitor`     | Stale feature detection, stuck build detection           | 5 -- 30 min      |
-| `sync`        | Calendar sync, peer mesh heartbeat, CRDT propagation     | 1 -- 15 min      |
+| `sync`        | Calendar sync, external integration sync                 | 1 -- 15 min      |
 | `system`      | Low-level housekeeping (temp file cleanup, log rotation) | 1 -- 24 hours    |
 
 The category is metadata only -- it does not affect scheduling behavior.
@@ -141,12 +141,12 @@ Design your handler to fail fast and provide clear error messages. The scheduler
 
 ## Key Files
 
-| File                                            | Role                                                                            |
-| ----------------------------------------------- | ------------------------------------------------------------------------------- |
-| `apps/server/src/services/scheduler-service.ts` | Timer registry, cron parsing, persistence                                       |
-| `apps/server/src/services/scheduler.module.ts`  | Wiring: registers built-in timers                                               |
-| `apps/server/src/services/maintenance-tasks.ts` | Maintenance task handlers                                                       |
-| `apps/server/src/services/ava-cron-tasks.ts`    | Ava heartbeat tasks (staging ping, board health, PR triage, adaptive heartbeat) |
+| File                                            | Role                                          |
+| ----------------------------------------------- | --------------------------------------------- |
+| `apps/server/src/services/scheduler-service.ts` | Timer registry, cron parsing, persistence     |
+| `apps/server/src/services/scheduler.module.ts`  | Wiring: registers built-in timers             |
+| `apps/server/src/services/maintenance-tasks.ts` | Maintenance task handlers                     |
+| `apps/server/src/services/ava-cron-tasks.ts`    | Ava scheduled tasks (board health, PR triage) |
 
 ## Ava-Created Tasks (`ava:` namespace)
 

@@ -323,35 +323,9 @@ Every event in the system falls into exactly one of three categories:
 
 **Rules:**
 
-- Ava never promotes Information to Decision unless the Signal Dictionary explicitly defines a threshold.
-- Ava never promotes Decision to Exception unless the Signal Dictionary explicitly defines a threshold.
+- Ava only promotes Information to Decision when an explicit, configured threshold is crossed.
+- Ava only promotes Decision to Exception when an explicit, configured threshold is crossed.
 - Alert inflation (everything becoming "urgent") is a system failure that must be fixed by adjusting thresholds.
-
----
-
-## Signal Dictionary
-
-The Signal Dictionary is the contract between the operator and Ava. It defines a finite list of named signals, each with explicit thresholds for when they become a Decision or an Exception, and what Ava should do automatically.
-
-If a condition is not in the dictionary, Ava handles it silently. If it is, the thresholds govern escalation.
-
-### Default Signals
-
-| Signal                  | Decision Threshold       | Exception Threshold      | Ava Auto-Action                                                  |
-| ----------------------- | ------------------------ | ------------------------ | ---------------------------------------------------------------- |
-| **Stale Review**        | PR in review > 48h       | PR in review > 96h       | Enable auto-merge at 30m. Ping reviewer at 48h. Escalate at 96h. |
-| **Stuck Agent**         | No progress > 60min      | Stuck + 2 retries failed | Kill and re-queue at 60m. Escalate after 2 failures.             |
-| **Remediation Loop**    | > 3 review cycles        | > 5 review cycles        | Pause at 3, queue Decision. Kill at 5, queue Exception.          |
-| **WIP Overload**        | WIP at limit             | WIP > 2x limit           | Block intake at limit. Exception at 2x.                          |
-| **Error Budget**        | > 50% burn in window     | > 80% burn in window     | Queue Decision at 50%. Freeze non-bug releases at 80%.           |
-| **Cost Cap**            | Feature at 80% of cap    | Feature at 100% of cap   | Queue Decision at 80%. Kill agent at 100%.                       |
-| **Project Drift**       | Milestone > 1 week late  | 2+ milestones late       | Flag project at-risk at 1 week. Exception at 2.                  |
-| **CI Saturation**       | Pending jobs at limit    | Pending jobs > 2x limit  | Pause feature pickup at limit. Exception at 2x.                  |
-| **Agent Failure Storm** | 3+ failures same feature | 5+ failures same feature | Block at 3 (existing). Exception at 5.                           |
-
-### Signal Configuration
-
-Signals are configurable per-app via workflow settings. The operator tunes thresholds based on experience — if daily reviews consistently have > 10 items, thresholds are too sensitive. If exceptions are missed, thresholds are too loose.
 
 ---
 
@@ -410,7 +384,6 @@ The Action Queue unifies items from multiple existing systems:
 - **Actionable Items** — policy approvals, gate decisions, review requests
 - **Escalations** — system alerts surfaced by EscalationRouter
 - **HITL Forms** — structured input requests from agents or flows
-- **Signal Dictionary triggers** — threshold crossings that generate Decision or Exception items
 
 ### Presentation
 
@@ -422,7 +395,7 @@ DECISIONS (3)          <-- daily review handles these
   [ ] Priority conflict: two apps need CI capacity this window
 RECENT (5)             <-- collapsed by default, information only
   Feature shipped: DORA deployment tracking (protoMaker)
-  PR merged: #2717 dev->staging
+  PR merged: #2717
   ...
 ```
 
@@ -457,14 +430,9 @@ Portfolio-level views query all registered apps and merge results:
 - **WIP**: Per-app and total WIP vs limits
 - **Cost**: Per-app and total cost tracking
 
-### Conflict Avoidance (Distributed Instances)
+### Conflict Avoidance Between Instances
 
-When multiple instances manage the same app:
-
-- Features in `in_progress` are claimed by the instance that started them.
-- A feature's `claimedBy` field (instance ID) prevents other instances from picking it up.
-- Claim expires if the instance doesn't heartbeat within 5 minutes.
-- The Action Queue surfaces conflicts as Exceptions if detected.
+protoLabs Studio runs as a single instance per machine. Instances are blind to each other and do not coordinate at runtime. When two operators happen to run instances against the same GitHub repo, the only shared state is the repo itself — coordination is the users' responsibility (branch protection, PR review, and not running auto-mode on the same project from multiple machines).
 
 ---
 
@@ -529,13 +497,13 @@ This operating model builds on primitives that already exist in protoLabs Studio
 | Concept         | Existing Primitive                                 | Gap                                      |
 | --------------- | -------------------------------------------------- | ---------------------------------------- |
 | Action Queue    | `ActionableItem` with priority, snooze, expiry     | Needs unified UI as primary surface      |
-| Signal routing  | `EscalationRouter` with dedup, multi-channel       | Needs Signal Dictionary config layer     |
+| Signal routing  | `EscalationRouter` with dedup, multi-channel       | Tune per-signal thresholds               |
 | Trust boundary  | `TrustBoundaryConfig` in WorkflowSettings          | Needs per-app trust level (0-3 dial)     |
 | HITL approval   | `HITLFormService` with JSON Schema forms           | Already wired, needs queue integration   |
-| Fast-path rules | `LeadEngineerRules` (11 rules, pure functions)     | Needs portfolio-level rules added        |
+| Fast-path rules | `LeadEngineerRules` (pure functions)               | Needs portfolio-level rules added        |
 | WIP limits      | `maxInProgress`, `maxInReview` in WorkflowSettings | Already enforced by execution gate       |
 | Error budget    | `errorBudgetWindow/Threshold/AutoFreeze`           | Already enforced by Lead Engineer        |
 | Cross-app query | `/api/actionable-items/global`                     | Needs expansion to metrics, health       |
 | Project health  | `Project.health` field with statusUpdates          | Needs auto-computation from signals      |
 | Notifications   | `Notification` type (simple, no priority)          | Subsumed by ActionableItem for decisions |
-| Signal intake   | `SignalIntakeService` with intent classification   | Foundation for Signal Dictionary         |
+| Signal intake   | `SignalIntakeService` with intent classification   | Routes incoming signals                  |

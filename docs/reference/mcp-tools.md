@@ -303,7 +303,6 @@ When `createEpics: true`, each milestone becomes an epic feature. Phase 1 of eac
 | `send_discord_dm`   | Send a Discord direct message          |
 | `read_discord_dms`  | Read recent Discord DMs                |
 | `provision_discord` | Provision Discord server for a project |
-| `trigger_ceremony`  | Trigger an agile ceremony via Discord  |
 
 ## Settings & Health (4 tools)
 

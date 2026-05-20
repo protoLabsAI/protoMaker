@@ -216,7 +216,7 @@ protoLabs stores data in two locations:
 ### Deploy and Integrate
 
 - **[Installation (Fedora/RHEL)](./installation-fedora)** — Install the desktop app on Linux
-- **[Deployment Options](../self-hosting/deployment)** — Docker, systemd, and staging setups
+- **[Deployment Options](../self-hosting/deployment)** — Docker, systemd, and production setups
 - **[MCP Plugin](../integrations/claude-plugin)** — Control protoLabs from Claude Code CLI
 
 ### Go Deeper

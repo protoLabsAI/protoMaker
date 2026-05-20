@@ -54,7 +54,6 @@ interface AvaConfig {
     notes: boolean; // list_note_tabs, read_note_tab, write_note_tab
     metrics: boolean; // get_project_metrics, get_capacity_metrics
     prWorkflow: boolean; // check_pr_status, get_pr_feedback, merge_pr
-    promotion: boolean; // list_staging_candidates, promote_to_staging
     contextFiles: boolean; // list_context_files, get_context_file, create_context_file
     projects: boolean; // list_projects, get_project, create_project
     briefing: boolean; // get_briefing, get_board_summary_extended

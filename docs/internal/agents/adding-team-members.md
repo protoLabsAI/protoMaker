@@ -6,15 +6,14 @@ Agent roles are defined in the type system with capabilities, prompts, and routi
 
 ## Quick Reference
 
-| Step                | Files                                              | Description                                   |
-| ------------------- | -------------------------------------------------- | --------------------------------------------- |
-| 1. Define role      | `libs/types/src/agent-roles.ts`                    | Add to `AgentRole` union, `ROLE_CAPABILITIES` |
-| 2. Headsdown config | `libs/types/src/headsdown.ts`                      | Add to `DEFAULT_HEADSDOWN_CONFIGS`            |
-| 3. Create prompt    | `libs/prompts/src/agents/{role}-prompt.ts`         | System prompt template                        |
-| 4. Export prompt    | `libs/prompts/src/index.ts`                        | Re-export the prompt function                 |
-| 5. Discord routing  | `apps/server/src/services/agent-discord-router.ts` | Channel/command mapping                       |
-| 6. UI integration   | Agent Runner panel                                 | Role selector dropdown                        |
-| 7. Build & test     | `npm run build:packages`                           | Verify types compile                          |
+| Step               | Files                                              | Description                                   |
+| ------------------ | -------------------------------------------------- | --------------------------------------------- |
+| 1. Define role     | `libs/types/src/agent-roles.ts`                    | Add to `AgentRole` union, `ROLE_CAPABILITIES` |
+| 2. Create prompt   | `libs/prompts/src/agents/{role}-prompt.ts`         | System prompt template                        |
+| 3. Export prompt   | `libs/prompts/src/index.ts`                        | Re-export the prompt function                 |
+| 4. Discord routing | `apps/server/src/services/agent-discord-router.ts` | Channel/command mapping                       |
+| 5. UI integration  | Agent Runner panel                                 | Role selector dropdown                        |
+| 6. Build & test    | `npm run build:packages`                           | Verify types compile                          |
 
 ## Step 1: Define the Role Type
 
@@ -74,30 +73,6 @@ export const ROLE_CAPABILITIES: Record<AgentRole, RoleCapabilities> = {
 | `canCommit`      | Role creates git commits                              |
 | `canCreatePRs`   | Role creates pull requests                            |
 
-## Step 2: Add Headsdown Configuration
-
-Add to `libs/types/src/headsdown.ts`:
-
-```typescript
-export const DEFAULT_HEADSDOWN_CONFIGS: Record<AgentRole, Partial<HeadsdownConfig>> = {
-  // ... existing roles
-  'your-new-role': {
-    model: 'sonnet', // haiku (fast/cheap), sonnet (balanced), opus (best)
-    maxTurns: 150, // Prevent infinite loops
-    loop: {
-      enabled: true,
-      checkInterval: 30000, // 30s between work checks
-      maxConsecutiveErrors: 5, // Stop after 5 failures
-      workTimeout: 3600000, // 1hr max work session
-    },
-    idleTasks: {
-      enabled: false, // Enable if role should do cleanup when idle
-      tasks: [],
-    },
-  },
-};
-```
-
 ### Model Selection Guide
 
 | Model    | Cost   | Speed  | Use When                                  |
@@ -106,7 +81,7 @@ export const DEFAULT_HEADSDOWN_CONFIGS: Record<AgentRole, Partial<HeadsdownConfi
 | `sonnet` | Medium | Medium | Standard work, most roles                 |
 | `opus`   | High   | Slow   | Complex reasoning, architecture decisions |
 
-## Step 3: Create the Prompt Template
+## Step 2: Create the Prompt Template
 
 Create `libs/prompts/src/agents/{role}-prompt.ts`:
 
@@ -147,7 +122,7 @@ ${focus ? `\n## Current Focus\n${focus}` : ''}
 - Keep under 2000 tokens for the base prompt
 - Reference existing prompts at `libs/prompts/src/agents/` for patterns
 
-## Step 4: Export the Prompt
+## Step 3: Export the Prompt
 
 Add to `libs/prompts/src/index.ts`:
 
@@ -155,7 +130,7 @@ Add to `libs/prompts/src/index.ts`:
 export { getYourRolePrompt } from './agents/your-role-prompt.js';
 ```
 
-## Step 5: Wire Discord Routing
+## Step 4: Wire Discord Routing
 
 In `apps/server/src/services/agent-discord-router.ts`, add channel/command mapping so the agent can be summoned from Discord:
 
@@ -173,13 +148,13 @@ const CHANNEL_ROLE_MAP: Record<string, AgentRole> = {
 - **Command-based**: `@agent /role-name` routes to the role
 - **Keyword-based**: Messages containing keywords trigger the role
 
-## Step 6: UI Integration
+## Step 5: UI Integration
 
 The Agent Runner panel (`apps/ui/src/components/views/`) shows a role selector dropdown populated from `ROLE_CAPABILITIES`. Once you add the role to the type system, it appears automatically in the dropdown.
 
 For custom UI (role-specific settings, tool displays), modify the Agent Runner view components.
 
-## Step 7: Build and Verify
+## Step 6: Build and Verify
 
 ```bash
 # Build all shared packages (types + prompts)

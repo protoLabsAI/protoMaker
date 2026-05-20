@@ -129,11 +129,10 @@ All tools are defined as static schemas in separate module files under `packages
 | Orchestration      | `orchestration-tools.ts` | Auto-mode, dependencies, execution order       |
 | Context & Skills   | `context-tools.ts`       | Context files, skills CRUD                     |
 | Git & GitHub       | `git-tools.ts`           | PRs, reviews, worktree management              |
-| Git Operations     | `git-ops-tools.ts`       | Staging, file details                          |
+| Git Operations     | `git-ops-tools.ts`       | Repository status and file details             |
 | Worktree Git       | `worktree-git-tools.ts`  | Cherry-pick, stash, abort/continue             |
 | File Operations    | `file-ops-tools.ts`      | Copy, move, browse files                       |
 | Project Lifecycle  | `project-tools.ts`       | Projects, PRD, milestones, phases              |
-| Promotion          | `promotion-tools.ts`     | Staging/main promotion pipeline                |
 | Content            | `content-tools.ts`       | Content pipeline (blog, docs)                  |
 | Integrations       | `integration-tools.ts`   | Discord, HITL forms                            |
 | Lead Engineer      | `lead-engineer-tools.ts` | Lead engineer state machine control            |

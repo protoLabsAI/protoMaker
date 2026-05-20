@@ -1,6 +1,6 @@
 # Inbox system
 
-The unified inbox consolidates all user-attention signals into a single surface. HITL forms, approvals, pipeline gates, escalations, notifications, and ceremony entries all flow through the `ActionableItemService` and appear in a 4-tab UI.
+The unified inbox consolidates all user-attention signals into a single surface. HITL forms, approvals, pipeline gates, escalations, and notifications all flow through the `ActionableItemService` and appear in a 4-tab UI.
 
 ## Architecture
 
@@ -11,7 +11,6 @@ hitl:form-requested     -->
 notification:created    -->  ActionableItemBridgeService --> ActionableItemService
 escalation:ui-notif     -->                                  (disk-persistent JSON)
 pipeline:gate-waiting   -->
-ceremony:fired          -->
 
                                                                |
                                                                v
@@ -85,7 +84,6 @@ The `ActionableItemBridgeService` subscribes to system events and auto-creates a
 | `notification:created`        | `notification`    | low      | Informational                                                     |
 | `escalation:ui-notification`  | `escalation`      | varies   | Maps escalation severity to priority                              |
 | `pipeline:gate-waiting`       | `gate`            | high     | Links to feature via `featureId`                                  |
-| `ceremony:fired`              | `notification`    | low      | Ceremony delivery status                                          |
 | `authority:awaiting-approval` | `approval`        | high     | Authority system queued a proposal for human review               |
 | `feature:status-changed`      | (auto-dismiss)    | —        | Dismisses pending gate/escalation items when feature is unblocked |
 | `hitl:form-responded`         | (auto-dismiss)    | —        | Resolves authority approval items when HITL form is submitted     |
@@ -111,12 +109,12 @@ Previously (before the bridge handled this directly), the auto-dismiss was trigg
 
 The inbox page (`/inbox`) organizes items into four tabs:
 
-| Tab             | Contains                                     | Rationale                                              |
-| --------------- | -------------------------------------------- | ------------------------------------------------------ |
-| **All**         | Every pending item, including notifications  | Overview of everything needing attention               |
-| **Decisions**   | `hitl_form` + `approval` + `gate` + `review` | Items requiring a human decision (approve/reject/fill) |
-| **Escalations** | `escalation` items                           | Critical system signals needing investigation          |
-| **Ceremonies**  | Ceremony-related notifications               | Project milestone and retro updates                    |
+| Tab               | Contains                                     | Rationale                                              |
+| ----------------- | -------------------------------------------- | ------------------------------------------------------ |
+| **All**           | Every pending item, including notifications  | Overview of everything needing attention               |
+| **Decisions**     | `hitl_form` + `approval` + `gate` + `review` | Items requiring a human decision (approve/reject/fill) |
+| **Escalations**   | `escalation` items                           | Critical system signals needing investigation          |
+| **Notifications** | Other low-priority notification items        | Informational items that do not require action         |
 
 ### Gate items
 
@@ -212,5 +210,4 @@ The `use-browser-notifications.ts` hook (mounted at app root) provides two notif
 
 - [Actionable items (server reference)](../server/actionable-items) -- REST API and HITL form details
 - [Escalation routing](../../concepts/escalation-routing) -- How escalation signals create inbox items
-- [Agile ceremonies](../agents/ceremonies) -- How ceremony events create inbox items
 - [Idea to production](./idea-to-production) -- Pipeline gates that create inbox items

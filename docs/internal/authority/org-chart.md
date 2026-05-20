@@ -39,10 +39,10 @@ Project Owner (CEO, Human)
 | Role                | Code     | Trust           | Owns                       | Description                                                                                         |
 | ------------------- | -------- | --------------- | -------------------------- | --------------------------------------------------------------------------------------------------- |
 | Project Owner       | `CTO`    | 3 (Autonomous)  | Strategy & direction       | **The human user.** Full access to all actions. Sets vision, approves proposals, sets trust levels. |
-| Chief of Staff      | `CoS`    | 2 (Conditional) | Operations & orchestration | AI operational leader. Signal triage, antagonistic review, ceremonies.                              |
+| Chief of Staff      | `CoS`    | 2 (Conditional) | Operations & orchestration | AI operational leader. Signal triage, antagonistic review.                                          |
 | GTM Specialist      | `GTM`    | 2 (Conditional) | Growth & Go-to-Market      | Content pipeline, brand strategy, antagonistic review (market perspective).                         |
 | Lead Engineer       | —        | —               | Production orchestration   | Service (not an agent). Fast-path rules, auto-mode management, event-driven actions.                |
-| DevOps Engineer     | `DevOps` | 1 (Assisted)    | Infrastructure             | Deployment, monitoring, staging, Docker, CI/CD, system health.                                      |
+| DevOps Engineer     | `DevOps` | 1 (Assisted)    | Infrastructure             | Deployment, monitoring, Docker, CI/CD, system health.                                               |
 | Product Manager     | `PM`     | 1 (Assisted)    | What & Why                 | PRD generation pipeline step. Creates work and manages scope changes.                               |
 | Project Manager     | `ProjM`  | 1 (Assisted)    | When & How                 | Milestone decomposition pipeline step. Manages dependencies.                                        |
 | Engineering Manager | `EM`     | 1 (Assisted)    | Who & Capacity             | Auto-mode orchestration step. Capacity/WIP limits, quality gates.                                   |
@@ -270,16 +270,12 @@ The authority system emits these events via WebSocket:
 | `authority:pm-research-completed` | `{ projectPath, featureId, analysis }`      | PM finished research    |
 | `authority:pm-epic-created`       | `{ epicId, title, childCount }`             | PM created epic         |
 
-### PR Feedback Events
+### PR Lifecycle Events
 
-| Event                          | Payload                                   | When                     |
-| ------------------------------ | ----------------------------------------- | ------------------------ |
-| `pr:feedback-received`         | `{ featureId, prNumber, type }`           | Any PR review activity   |
-| `pr:changes-requested`         | `{ featureId, prNumber, feedback }`       | Reviewer requested fixes |
-| `pr:approved`                  | `{ featureId, prNumber, approvers }`      | PR approved              |
-| `feature:reassigned-for-fixes` | `{ featureId, prNumber, iterationCount }` | EM sent back for fixes   |
-| `feature:worktree-cleaned`     | `{ featureId, branchName }`               | Worktree auto-removed    |
-| `feature:pr-merged`            | `{ featureId, prNumber, branchName }`     | PR merged via webhook    |
+| Event                      | Payload                               | When                  |
+| -------------------------- | ------------------------------------- | --------------------- |
+| `feature:worktree-cleaned` | `{ featureId, branchName }`           | Worktree auto-removed |
+| `feature:pr-merged`        | `{ featureId, prNumber, branchName }` | PR merged via webhook |
 
 ## File Locations
 
@@ -294,10 +290,9 @@ The authority system emits these events via WebSocket:
 | `apps/server/src/routes/authority/index.ts`                | REST API routes                                    |
 | `apps/server/src/services/authority-agents/pm-agent.ts`    | PM agent (idea research + PRD + epics)             |
 | `apps/server/src/services/authority-agents/projm-agent.ts` | ProjM agent (epic decomposition + deps)            |
-| `apps/server/src/services/authority-agents/em-agent.ts`    | EM agent (assignment + capacity + PR feedback)     |
+| `apps/server/src/services/authority-agents/em-agent.ts`    | EM agent (assignment + capacity)                   |
 | `apps/server/src/services/lead-engineer-service.ts`        | Lead Engineer state machine, fast-path rules       |
 | `apps/server/src/services/audit-service.ts`                | Append-only JSONL audit trail                      |
-| `apps/server/src/services/pr-feedback-service.ts`          | GitHub PR review monitoring                        |
 | `apps/server/src/services/worktree-lifecycle-service.ts`   | Auto-cleanup on merge/complete                     |
 
 ## Persistence

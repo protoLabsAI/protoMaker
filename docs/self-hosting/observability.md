@@ -22,7 +22,7 @@ Set these environment variables to enable tracing:
 | `LANGFUSE_BASE_URL`   | No       | `https://cloud.langfuse.com` | Override for self-hosted Langfuse.                                             |
 | `OTEL_SERVICE_NAME`   | No       | `protolabs-server`           | Service name that appears in Langfuse trace metadata.                          |
 
-The staging `docker-compose.staging.yml` maps all four from the host environment with safe defaults:
+Map these into your compose file or systemd unit. Example compose snippet:
 
 ```yaml
 - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}

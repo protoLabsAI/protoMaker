@@ -195,19 +195,14 @@ interface ProjectStats {
 ```text
 {projectPath}/.automaker/projects/{slug}/artifacts/
 ├── index.json                      # Artifact index (id, type, timestamp)
-├── ceremony-report/
-│   └── {id}.json                   # Ceremony retro or standup report
 ├── escalation/
 │   └── {id}.json                   # Escalation events with project context
-├── changelog/
-│   └── {id}.json                   # Project changelog entries
-└── standup/
-    └── {id}.json                   # Standup report artifacts
+└── changelog/
+    └── {id}.json                   # Project changelog entries
 ```
 
 Artifacts are saved automatically by:
 
-- `CeremonyService` — saves `ceremony-report` artifacts after milestone and project retros
 - `EventLedgerService` — saves `escalation` artifacts when `escalation:signal-received` events have project context
 
 **Service:** `apps/server/src/services/project-artifact-service.ts`

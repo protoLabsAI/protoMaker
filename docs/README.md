@@ -71,25 +71,23 @@
 
 ## Self-Hosting
 
-| Document                                                      | Description                                      |
-| ------------------------------------------------------------- | ------------------------------------------------ |
-| [Architecture](./self-hosting/architecture.md)                | System diagrams, multi-instance topology         |
-| [Docker](./self-hosting/docker.md)                            | Dockerfile architecture, multi-stage builds      |
-| [Docker Compose](./self-hosting/docker-compose.md)            | Compose variants, volumes, environment           |
-| [Deployment](./self-hosting/deployment.md)                    | Deployment options (local, Docker, systemd)      |
-| [High-Concurrency](./self-hosting/staging-deployment.md)      | High-concurrency deployment for many agents      |
-| [Multi-Instance](./self-hosting/multi-instance-deployment.md) | Multi-instance deployment and coordination       |
-| [Orchestration](./self-hosting/orchestration.md)              | Multi-instance orchestration and coordination    |
-| [Secrets](./self-hosting/secrets.md)                          | Infisical setup, MCP secret injection            |
-| [Networking](./self-hosting/networking.md)                    | Ports, nginx, CORS, WebSocket, reverse proxy     |
-| [Security](./self-hosting/security.md)                        | Container security, credential management        |
-| [CI/CD](./self-hosting/ci-cd.md)                              | GitHub Actions workflows                         |
-| [Runners](./self-hosting/runners.md)                          | Self-hosted runner setup, memory limits, cleanup |
-| [Monitoring](./self-hosting/monitoring.md)                    | Health checks, logging, observability            |
-| [Observability](./self-hosting/observability.md)              | Infrastructure observability and metrics         |
-| [Backup & Recovery](./self-hosting/backup-recovery.md)        | Volume backups, restore procedures               |
-| [systemd](./self-hosting/systemd.md)                          | systemd service configuration                    |
-| [Troubleshooting](./self-hosting/troubleshooting.md)          | Common issues and solutions                      |
+| Document                                               | Description                                       |
+| ------------------------------------------------------ | ------------------------------------------------- |
+| [Architecture](./self-hosting/architecture.md)         | System diagrams, multi-instance topology          |
+| [Docker](./self-hosting/docker.md)                     | Dockerfile architecture, multi-stage builds       |
+| [Docker Compose](./self-hosting/docker-compose.md)     | Compose variants, volumes, environment            |
+| [Deployment](./self-hosting/deployment.md)             | Deployment options (local, Docker, systemd)       |
+| [Orchestration](./self-hosting/orchestration.md)       | Project orchestration (epics, milestones, phases) |
+| [Secrets](./self-hosting/secrets.md)                   | Infisical setup, MCP secret injection             |
+| [Networking](./self-hosting/networking.md)             | Ports, nginx, CORS, WebSocket, reverse proxy      |
+| [Security](./self-hosting/security.md)                 | Container security, credential management         |
+| [CI/CD](./self-hosting/ci-cd.md)                       | GitHub Actions workflows                          |
+| [Runners](./self-hosting/runners.md)                   | Self-hosted runner setup, memory limits, cleanup  |
+| [Monitoring](./self-hosting/monitoring.md)             | Health checks, logging, observability             |
+| [Observability](./self-hosting/observability.md)       | Infrastructure observability and metrics          |
+| [Backup & Recovery](./self-hosting/backup-recovery.md) | Volume backups, restore procedures                |
+| [systemd](./self-hosting/systemd.md)                   | systemd service configuration                     |
+| [Troubleshooting](./self-hosting/troubleshooting.md)   | Common issues and solutions                       |
 
 ## Legal
 

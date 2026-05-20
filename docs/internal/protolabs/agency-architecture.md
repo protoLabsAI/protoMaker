@@ -231,8 +231,7 @@ Communication channels:
 | **PR pipeline**                 | `apps/server/src/services/git-workflow-service.ts`          | Create, push, merge                                     |
 | **CodeRabbit integration**      | Branch protection + `resolve_review_threads`                | Required check                                          |
 | **CI/CD**                       | `.github/workflows/`                                        | Build, test, format, audit                              |
-| **Ceremony service**            | `apps/server/src/services/ceremony-service.ts`              | Standup, retro, project-retro                           |
-| **Lead Engineer rules**         | `apps/server/src/services/lead-engineer-rules.ts`           | 8 pure-function rules (no LLM, no service imports)      |
+| **Lead Engineer rules**         | `apps/server/src/services/lead-engineer-rules.ts`           | Pure-function rules (no LLM, no service imports)        |
 | **Escalation pipeline**         | `apps/server/src/services/escalation-router.ts`             | 5 channels, SLA engine                                  |
 | **Signal accumulator**          | `apps/server/src/services/`                                 | Severity classification + briefing                      |
 | **Agent memory**                | `.automaker/memory/*.md`                                    | Per-agent learning files                                |
@@ -318,27 +317,24 @@ Required checks on every PR before merge:
 ### Current Limits
 
 - 2-3 concurrent agents on dev hardware (8GB heap)
-- 6-10 concurrent agents on staging (48GB heap limit, 125GB RAM, 24 CPUs)
+- 6-10 concurrent agents on a beefier host (48GB+ heap, 100GB+ RAM, 16+ CPUs)
 - Agent turns limited (hit turn limit = uncommitted work)
 - Lead Engineer fast-path rules run with zero LLM cost
 
 ### Scaling Strategy
 
-- **Vertical**: Staging hardware handles more concurrent agents
-- **Horizontal**: Multiple protoLabs instances via [Hivemind](../dev/instance-state.md#hivemind-multi-instance-mesh) — domain-scoped mesh where each instance owns a slice of the codebase
+- **Vertical**: A larger host handles more concurrent agents
 - **Efficiency**: Model routing (Haiku for mechanical work, Sonnet default, Opus only for architectural decisions or 2+ failures)
 - **Fast-path rules**: Lead Engineer handles routine orchestration decisions (mergedNotDone, orphanedInProgress, staleDeps, autoModeHealth, staleReview, stuckAgent, capacityRestart, projectCompleting) without LLM calls
 - **Automation**: Every manual step today becomes automated tomorrow — this is the self-improvement loop
 
 ### Instance State Model
 
-protoLabs follows a **fresh state per instance** design. Operational state (board, task queue, project plans) is instance-local and ephemeral. Knowledge (agent memory, context files, skills, project spec) is shared via git.
+protoLabs runs as a single instance per machine. Operational state (board, task queue, project plans) is instance-local and ephemeral. Knowledge (agent memory, context files, skills, project spec) is shared via git.
 
-This split is foundational for multi-instance scaling:
+This split keeps the system simple:
 
 - **No distributed consensus** needed for operational state
-- **Domain isolation** — each instance works on its assigned slice
+- **Git is the only shared substrate** — instances see each other's knowledge through commits, not through a runtime mesh
 - **Crash resilience** — code lives in git; a dead instance loses nothing permanent
 - **setupLab onboarding** — new instances build context from research, not inherited state
-
-See [Instance State Architecture](../dev/instance-state.md) for the full design.
