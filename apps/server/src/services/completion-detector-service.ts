@@ -267,15 +267,15 @@ export class CompletionDetectorService {
 
   /**
    * Check if all children of an epic are done. If the epic has a branch,
-   * create a PR from the epic branch to dev (or the configured base branch)
-   * and move the epic to "review". The epic only reaches "done" when the
-   * GitHub webhook detects that the epic-to-dev PR has merged.
+   * create a PR from the epic branch to the configured base branch and move
+   * the epic to "review". The epic only reaches "done" when the GitHub
+   * webhook detects that the epic-to-base PR has merged.
    *
    * If the epic has no branch (manual or non-git epic), mark done directly.
    *
-   * Special case: when children merged directly to the base branch
-   * (prBaseBranch = 'dev') the epic branch is never created on the remote.
-   * In that scenario we skip the PR step and mark the epic done immediately.
+   * Special case: when children merged directly to the base branch, the
+   * epic branch is never created on the remote. In that scenario we skip
+   * the PR step and mark the epic done immediately.
    */
   /**
    * Public entry point for retrying epic completion from the health sweep.
@@ -302,9 +302,9 @@ export class CompletionDetectorService {
     if (!epic || epic.status === 'done' || epic.status === 'review') return;
 
     // If the epic has a branch, check whether it actually exists on the remote
-    // before attempting to create a PR. When prBaseBranch is 'dev', child PRs
-    // merge directly to dev and the epic branch is never pushed, so the branch
-    // won't exist. In that case skip the PR step and mark the epic done directly.
+    // before attempting to create a PR. When child PRs merge directly to the
+    // base branch, the epic branch is never pushed, so the branch won't exist.
+    // In that case skip the PR step and mark the epic done directly.
     if (epic.branchName) {
       const branchExists = await this.epicBranchExistsOnRemote(projectPath, epic.branchName);
 
@@ -316,7 +316,7 @@ export class CompletionDetectorService {
         this.completionCounts.epics++;
         await this.featureLoader!.update(projectPath, epicId, { status: 'done' });
         logger.info(
-          `Epic "${epic.title}" completed — children merged directly to dev, skipping epic PR (branch ${epic.branchName} not found on remote)`
+          `Epic "${epic.title}" completed — children merged directly to base, skipping epic PR (branch ${epic.branchName} not found on remote)`
         );
         this.emitter!.emit('feature:completed', {
           projectPath,
@@ -338,9 +338,9 @@ export class CompletionDetectorService {
         return;
       }
 
-      // Branch exists on remote — create the epic-to-dev PR as normal.
+      // Branch exists on remote — create the epic-to-base PR as normal.
       // Dedup is claimed only after a successful PR creation so that failures are retryable.
-      const result = await this.createEpicToDevPR(projectPath, epicId, epic);
+      const result = await this.createEpicToBasePR(projectPath, epicId, epic);
       if (result) {
         // PR created successfully — claim dedup and move epic to review
         this.emittedEpics.add(dedupeKey);
@@ -350,7 +350,7 @@ export class CompletionDetectorService {
           status: 'review',
           prNumber: result.prNumber,
           prUrl: result.prUrl,
-          statusChangeReason: `All ${children.length} child features completed — epic-to-dev PR #${result.prNumber} created with auto-merge`,
+          statusChangeReason: `All ${children.length} child features completed — epic PR #${result.prNumber} created with auto-merge`,
         });
         this.emitter!.emit('epic:pr-created', {
           epicFeatureId: epicId,
@@ -360,7 +360,7 @@ export class CompletionDetectorService {
           prUrl: result.prUrl,
         });
         logger.info(
-          `Epic "${epic.title}" moved to review — PR #${result.prNumber} created to merge ${epic.branchName} into dev`
+          `Epic "${epic.title}" moved to review — PR #${result.prNumber} created from ${epic.branchName}`
         );
         return;
       }
@@ -368,11 +368,9 @@ export class CompletionDetectorService {
       // feature:done event can retry the PR creation
       await this.featureLoader!.update(projectPath, epicId, {
         status: 'blocked',
-        statusChangeReason: `All child features done but epic-to-dev PR creation failed for branch ${epic.branchName}. Manual intervention required — create PR from ${epic.branchName} to dev.`,
+        statusChangeReason: `All child features done but epic PR creation failed for branch ${epic.branchName}. Manual intervention required — create PR from ${epic.branchName} to the project's base branch.`,
       });
-      logger.warn(
-        `Epic "${epic.title}" blocked — failed to create epic-to-dev PR for ${epic.branchName}`
-      );
+      logger.warn(`Epic "${epic.title}" blocked — failed to create epic PR for ${epic.branchName}`);
       return;
     }
 
@@ -408,12 +406,12 @@ export class CompletionDetectorService {
   }
 
   /**
-   * Create a PR from the epic branch to the project's base branch (default: dev)
+   * Create a PR from the epic branch to the project's base branch (default: main)
    * and enable auto-merge with --merge strategy.
    *
    * Returns { prNumber, prUrl } on success, or null on failure.
    */
-  private async createEpicToDevPR(
+  private async createEpicToBasePR(
     projectPath: string,
     epicId: string,
     epic: Feature
@@ -503,7 +501,7 @@ export class CompletionDetectorService {
       }
       const prNumber = parseInt(prNumberMatch[1], 10);
 
-      // Enable auto-merge with --merge strategy (never squash on promotion PRs)
+      // Enable auto-merge with --merge strategy (never squash on epic PRs)
       await execFileAsync('gh', ['pr', 'merge', String(prNumber), '--merge', '--auto'], {
         cwd: projectPath,
         timeout: 15000,
@@ -511,12 +509,10 @@ export class CompletionDetectorService {
         logger.warn(`Failed to enable auto-merge on epic PR #${prNumber} (non-fatal):`, err);
       });
 
-      logger.info(
-        `Created epic-to-dev PR #${prNumber}: ${epicBranch} → ${baseBranch} with auto-merge`
-      );
+      logger.info(`Created epic PR #${prNumber}: ${epicBranch} → ${baseBranch} with auto-merge`);
       return { prNumber, prUrl };
     } catch (err) {
-      logger.error(`Failed to create epic-to-dev PR for ${epicBranch}:`, err);
+      logger.error(`Failed to create epic PR for ${epicBranch}:`, err);
       return null;
     }
   }

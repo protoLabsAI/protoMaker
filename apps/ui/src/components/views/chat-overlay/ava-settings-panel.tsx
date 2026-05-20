@@ -56,7 +56,6 @@ const TOOL_GROUP_ENTRIES: Array<{
   { key: 'notes', label: 'Notes', description: 'Read and write project notes' },
   { key: 'metrics', label: 'Metrics', description: 'View project and capacity metrics' },
   { key: 'prWorkflow', label: 'PR Workflow', description: 'Check PR status, feedback, and merge' },
-  { key: 'promotion', label: 'Promotion', description: 'List staging candidates and promote' },
   { key: 'contextFiles', label: 'Context Files', description: 'Manage agent context files' },
   { key: 'projects', label: 'Projects', description: 'List, view, and create projects' },
   { key: 'briefing', label: 'Briefing', description: 'Daily briefing and event digest' },

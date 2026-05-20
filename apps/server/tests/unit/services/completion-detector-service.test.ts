@@ -184,7 +184,7 @@ describe('CompletionDetectorService', () => {
     });
   });
 
-  describe('createEpicToDevPR shell safety', () => {
+  describe('createEpicToBasePR shell safety', () => {
     beforeEach(() => {
       mockExecFile.mockReset();
     });

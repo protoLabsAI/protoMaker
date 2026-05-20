@@ -399,9 +399,9 @@ describe('settings-helpers.ts', () => {
       vi.clearAllMocks();
     });
 
-    it('should return DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch (dev) when settingsService is null and git detect fails', async () => {
+    it('should return DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch (main) when settingsService is null and git detect fails', async () => {
       const result = await getEffectivePrBaseBranch('/some/path', null);
-      expect(result).toBe('dev');
+      expect(result).toBe('main');
     });
 
     it('should return project-level prBaseBranch when set in project workflow gitWorkflow settings', async () => {
@@ -429,24 +429,24 @@ describe('settings-helpers.ts', () => {
       expect(result).toBe('staging');
     });
 
-    it('should fall back to dev when neither project nor global settings define prBaseBranch and git detect fails', async () => {
+    it('should fall back to main when neither project nor global settings define prBaseBranch and git detect fails', async () => {
       const mockSettingsService = {
         getProjectSettings: vi.fn().mockResolvedValue({}),
         getGlobalSettings: vi.fn().mockResolvedValue({}),
       } as unknown as SettingsService;
 
       const result = await getEffectivePrBaseBranch('/nonexistent/path', mockSettingsService);
-      expect(result).toBe('dev');
+      expect(result).toBe('main');
     });
 
-    it('should fall back to dev when settings service throws', async () => {
+    it('should fall back to main when settings service throws', async () => {
       const mockSettingsService = {
         getProjectSettings: vi.fn().mockRejectedValue(new Error('Settings read error')),
         getGlobalSettings: vi.fn().mockRejectedValue(new Error('Settings read error')),
       } as unknown as SettingsService;
 
       const result = await getEffectivePrBaseBranch('/nonexistent/path', mockSettingsService);
-      expect(result).toBe('dev');
+      expect(result).toBe('main');
     });
 
     it('should prefer project-level over global-level when both are set', async () => {

@@ -508,7 +508,7 @@ export function getRemediationCountForPR(projectPath: string, prNumber: number):
  * Protected branches that should never be touched by auto-remediation.
  * Only feature branches (feature/, fix/, chore/, etc.) are eligible.
  */
-const PROTECTED_BRANCHES = new Set(['main', 'staging', 'dev']);
+const PROTECTED_BRANCHES = new Set(['main']);
 
 /**
  * Branch prefixes that identify agent-authored branches.
@@ -603,7 +603,7 @@ export async function remediateFormatFailure(
   // ------------------------------------------------------------------
   // Guard 3: One-remediation-per-PR cap
   // ------------------------------------------------------------------
-  let baseBranch = 'dev'; // default; we'll try to detect from gh
+  let baseBranch = 'main'; // default; we'll try to detect from gh
   try {
     const { stdout: prJson } = await execAsync(
       `gh pr view ${prNumber} --repo ${repository} --json baseRefName`,

@@ -30,63 +30,22 @@ protoLabs Studio is a **platform for building apps**, not just our internal tool
 
 ## Git Workflow
 
-This repo uses a **three-branch environment-pinned flow**:
+This repo uses a **single integration branch flow**:
 
 ```
-feature/* → dev → staging → main
+feature/* → main
 ```
 
-- **`dev`** — active development, agent playground. Feature branches PR here. Josh may push directly.
-- **`staging`** — integration / user QA. Auto-deploys to staging env on push. PR from `dev` only.
-- **`main`** — stable release. Every commit is tagged. PR from `staging` only. Enforced by `promotion-check.yml` CI.
-
-See `docs/dev/branch-strategy.md` for the full strategy.
+- **`main`** — the only long-lived branch. Feature branches PR here. Releases fire automatically on merge to main.
 
 **Rules:**
 
-- Never push directly to `main` or `staging`. Always use a PR.
-- Agent feature PRs target `dev` by default (`prBaseBranch: 'dev'` in `DEFAULT_GIT_WORKFLOW_SETTINGS`).
-- **All promotion PRs use `--merge` (merge commit).** Squash breaks the DAG — the next promotion finds a synthetic commit as the new base and produces conflicts. Feature PRs to `dev` may squash (branch discarded). `dev→staging` and `staging→main` must always use `--merge`. See `docs/dev/branch-strategy.md` for full commands.
+- Never push directly to `main`. Always use a PR.
+- Agent feature PRs target `main` by default (`prBaseBranch: 'main'` in `DEFAULT_GIT_WORKFLOW_SETTINGS`).
+- Epic PRs use `--merge` (merge commit) to preserve the DAG; feature PRs to `main` may squash. See `libs/types/src/git-settings.ts`.
 - Before committing, run `git status` and verify only intended files are staged. Watch for accidentally staged deletions from previously merged PRs.
-- **Never force-push base branch HEAD onto PR feature branches.** This overwrites the agent's code changes (branch becomes identical to base = zero diff) and GitHub auto-closes the PR. Some PRs cannot be reopened after this. To update a PR branch with changes from dev, use `gh pr update-branch <number>` (merge strategy) or let auto-mode handle rebasing. Never use `git push origin $(git rev-parse origin/dev):refs/heads/<branch> --force`.
+- **Never force-push the base branch HEAD onto PR feature branches.** This overwrites the agent's code changes (branch becomes identical to base = zero diff) and GitHub auto-closes the PR. Some PRs cannot be reopened after this. To update a PR branch with changes from main, use `gh pr update-branch <number>` (merge strategy) or let auto-mode handle rebasing.
 - `.automaker/memory/` files are updated by agents during autonomous work. Include memory changes in your commits alongside related code changes — don't leave them as unstaged drift.
-
-## Release Workflow
-
-Releases follow a two-step CI workflow. Version bumps happen on staging BEFORE promotion to main.
-
-### Step 1: Prepare Release (bump version on staging)
-
-Trigger the `prepare-release.yml` workflow on staging. This bumps `version` in all `package.json` files across the monorepo (root, apps, libs), commits, and optionally syncs the bump to dev.
-
-```bash
-# Trigger version bump (auto-detects next minor from git tags)
-gh workflow run prepare-release.yml --ref staging
-
-# Or dry run first
-gh workflow run prepare-release.yml --ref staging -f dry_run=true
-```
-
-Wait for the workflow to complete before proceeding.
-
-### Step 2: Promote staging to main
-
-Create a merge-commit PR from staging to main. The PR title should include the version.
-
-```bash
-gh pr create --base main --head staging --title "Promote staging to main (vX.Y.Z)"
-gh pr merge <number> --merge --auto
-```
-
-### Step 3: Auto Release (automatic)
-
-When the staging→main PR merges, `auto-release.yml` fires automatically. It reads the version from `package.json`, creates a git tag (`vX.Y.Z`), and publishes a GitHub Release.
-
-If the tag already exists, the workflow skips with `WARNING: vX.Y.Z is already tagged. Skipping.` — this means Step 1 was missed or the version wasn't bumped.
-
-### Common Mistake
-
-Promoting staging→main WITHOUT running prepare-release first. The auto-release sees the existing tag and does nothing. Always bump version on staging first.
 
 ## Session Continuation
 
@@ -106,7 +65,7 @@ git -C /path/to/.worktrees/<branch> add -A
 git -C /path/to/.worktrees/<branch> commit --no-verify -m "<feat/fix/refactor>: <title>"
 ```
 
-Then use `create_pr_from_worktree` targeting `dev`, move feature to `review`, enable auto-merge on the PR.
+Then use `create_pr_from_worktree` targeting `main`, move feature to `review`, enable auto-merge on the PR.
 
 **Prettier check fails in CI (worktree path masking):**
 Fixed at the source — `worktree-recovery-service.ts` and `git-workflow-service.ts` now use `node "${projectPath}/node_modules/.bin/prettier" --ignore-path /dev/null` instead of `npx prettier`. If you still hit this manually, use: `npx prettier --write <file> --ignore-path /dev/null`.
@@ -127,7 +86,7 @@ Recovery:
 node /path/to/project/node_modules/.bin/prettier --ignore-path /dev/null --write <files>
 ```
 
-Prevention: After any merge or back-merge, run `npm run format:check` before opening a PR. This check runs first in the `checks` CI workflow and blocks promotion.
+Prevention: After any merge or back-merge, run `npm run format:check` before opening a PR. This check runs first in the `checks` CI workflow and blocks merging.
 
 **Feature blocked with "merge_conflict" / "unmerged files" (stuck MERGE_HEAD):**
 A previous `git merge` failed with conflicts and left `.git/MERGE_HEAD` in the worktree. Every subsequent merge or stash attempt immediately fails with "Merging is not possible because you have unmerged files", creating an unrecoverable loop. The system now auto-clears this via `ensureCleanMergeState()` before each merge attempt (`libs/git-utils/src/rebase.ts`). If a feature is still stuck:
@@ -157,25 +116,23 @@ mv .automaker/features/<id>/handoff-EXECUTE.json .automaker/features/<id>/handof
 
 Then reset `failureCount: 0` in `feature.json` and call `start_agent`. Resetting feature `status` alone is NOT enough — the stale output file is what triggers the resume path.
 
-**"source-branch" CI failure / wrong branch prefix (feature/ instead of fix/):**
-Agent-created fix/bug branches used `feature/` prefix instead of `fix/`, causing `source-branch` check failures when those PRs targeted `main`. Root cause (fixed in PR #3346): `generateBranchName()` hardcoded `"feature/"` regardless of the feature's `category`. The `promotion-check.yml` `source-branch` job also rejects any PR to `main` that doesn't originate from `staging` — even a correctly-prefixed `fix/` branch targeting `main` directly will fail.
+**Wrong branch prefix (feature/ instead of fix/):**
+Agent-created fix/bug branches used `feature/` prefix instead of `fix/`. Root cause (fixed in PR #3346): `generateBranchName()` hardcoded `"feature/"` regardless of the feature's `category`.
 
-Symptom: `source-branch` check FAIL, `checks` ×2 blocked, `test` ×2 blocked, `build` PASS.
-
-Recovery — when a feature has a wrong-prefix branch or a PR targeting `main` instead of `dev`:
+Recovery — when a feature has a wrong-prefix branch:
 
 ```bash
-# Create correctly-prefixed replacement branch targeting dev
-git checkout dev && git pull origin dev
+# Create correctly-prefixed replacement branch targeting main
+git checkout main && git pull origin main
 git checkout -b fix/<slug>
 git cherry-pick <bad-branch-sha>
 git push origin fix/<slug>
-gh pr create --base dev --title "fix(ci): <title>"
+gh pr create --base main --title "fix(ci): <title>"
 # Close the bad PR
-gh pr close <old-number> --comment "Replaced by #<new-number> with correct fix/ prefix targeting dev"
+gh pr close <old-number> --comment "Replaced by #<new-number> with correct fix/ prefix"
 ```
 
-Prevention: Always set `category: 'fix'` (or `'bug'`) when creating fix features via MCP — `branchPrefixForCategory()` will automatically use `fix/`. Agent feature PRs ALWAYS target `dev`, never `main`. See `.automaker/memory/ops-lessons.md` for the full pattern.
+Prevention: Always set `category: 'fix'` (or `'bug'`) when creating fix features via MCP — `branchPrefixForCategory()` will automatically use `fix/`. See `.automaker/memory/ops-lessons.md` for the full pattern.
 
 **Self-improvement rule:** When you observe a recurring failure pattern that blocks agents, you MUST immediately:
 

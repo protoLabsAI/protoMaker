@@ -1,7 +1,7 @@
 /**
  * Shared merge strategy resolution for PRs.
  *
- * PRs targeting staging, main, or epic/* always use --merge to preserve the DAG.
+ * PRs targeting main or epic/* always use --merge to preserve the DAG.
  * All others default to --squash.
  */
 
@@ -12,7 +12,7 @@ const execAsync = promisify(exec);
 
 /**
  * Resolve the gh CLI merge flag for a PR based on its base branch.
- * PRs targeting staging, main, or epic/* always use --merge.
+ * PRs targeting main or epic/* always use --merge.
  * All others default to --squash.
  */
 export async function resolveMergeStrategy(
@@ -25,7 +25,7 @@ export async function resolveMergeStrategy(
       { cwd, timeout: 15000 }
     );
     const baseBranch = stdout.trim();
-    if (baseBranch === 'staging' || baseBranch === 'main' || baseBranch.startsWith('epic/')) {
+    if (baseBranch === 'main' || baseBranch.startsWith('epic/')) {
       return '--merge';
     }
   } catch {

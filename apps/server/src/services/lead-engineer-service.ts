@@ -9,8 +9,6 @@
  *   LeadEngineerSessionStore  — session persistence + checkpoint reconciliation
  */
 
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import { createLogger } from '@protolabsai/utils';
 import type {
   EventType,
@@ -55,7 +53,6 @@ import type { ProcessorRegistry } from './processor-registry.js';
 import type { WorkflowLoader } from './workflow-loader.js';
 import type { HITLFormService } from './hitl-form-service.js';
 import type { AuthorityService } from './authority-service.js';
-import type { SchedulerService } from './scheduler-service.js';
 
 export type { FeatureProcessingState, StateContext };
 export type { ProcessorServiceContext } from './lead-engineer-types.js';
@@ -96,12 +93,8 @@ export interface IPMWorldStateProvider {
   getNextAssignablePhase(): PMNextAssignablePhase | null;
 }
 
-const execAsync = promisify(exec);
 const logger = createLogger('LeadEngineerService');
-const WORLD_STATE_REFRESH_MS = 5 * 60 * 1000;
 const MAX_RULE_LOG_ENTRIES = 200;
-const SUPERVISOR_CHECK_MS = 30 * 1000;
-const PR_MERGE_POLL_MS = 2.5 * 60 * 1000;
 
 /** Maximum cost cap for a single LLM reasoning invocation */
 const MAX_REASONING_COST_USD = 0.5;
@@ -114,21 +107,13 @@ const HAIKU_OUTPUT_USD_PER_CHAR = 1.25 / (1_000_000 * 4);
 export class LeadEngineerService {
   private sessions = new Map<string, LeadEngineerSession>();
   private subscriptions: EventSubscription[] = [];
-  private refreshIntervals = new Map<string, ReturnType<typeof setInterval>>();
-  private supervisorIntervals = new Map<string, ReturnType<typeof setInterval>>();
-  private prMergeIntervals = new Map<string, ReturnType<typeof setInterval>>();
-  private readonly resumeIntervals = new Map<string, NodeJS.Timeout>();
   private activeFeatures = new Set<string>();
-
-  private schedulerService?: SchedulerService;
 
   private discordBotService?: {
     sendToChannel(channelId: string, content: string): Promise<boolean>;
   };
   private codeRabbitResolver?: CodeRabbitResolverService;
   private checkpointService?: PipelineCheckpointService;
-  /** Features suspended in REVIEW/MERGE awaiting external re-trigger */
-  private readonly pendingResumes = new Map<string, { projectPath: string; featureId: string }>();
   private contextFidelityService?: ContextFidelityService;
   private knowledgeStoreService?: KnowledgeStoreService;
   private handoffService?: LeadHandoffService;
@@ -206,9 +191,6 @@ export class LeadEngineerService {
   }
   setAuthorityService(s: AuthorityService): void {
     this.authorityService = s;
-  }
-  setSchedulerService(s: SchedulerService): void {
-    this.schedulerService = s;
   }
   setProcessorRegistry(r: ProcessorRegistry): void {
     this.processorRegistry = r;
@@ -301,7 +283,6 @@ export class LeadEngineerService {
   destroy(): void {
     for (const sub of this.subscriptions) sub.unsubscribe();
     this.subscriptions = [];
-    for (const [projectPath] of this.sessions) this.clearIntervals(projectPath);
     this.sessions.clear();
     logger.info('LeadEngineerService destroyed');
   }
@@ -339,38 +320,6 @@ export class LeadEngineerService {
         .catch((err) => logger.warn(`Failed to start auto-mode for ${projectSlug}:`, err));
     }
 
-    const refreshHandler = async () => {
-      const s = this.sessions.get(projectPath);
-      if (!s || s.flowState !== 'running') return;
-      try {
-        s.worldState = await this.worldStateBuilder.build(
-          projectPath,
-          projectSlug,
-          s.worldState.maxConcurrency
-        );
-        this.getActionExecutor(undefined, projectPath).evaluateAndExecute(
-          s,
-          MECHANICAL_RULES,
-          'lead-engineer:rule-evaluated',
-          {},
-          MAX_RULE_LOG_ENTRIES
-        );
-      } catch (err) {
-        logger.error(`WorldState refresh failed for ${projectSlug}:`, err);
-      }
-    };
-
-    if (this.schedulerService) {
-      this.schedulerService.registerInterval(
-        `lead-engineer:${projectPath}:refresh`,
-        `Lead Engineer World State Refresh (${projectSlug})`,
-        WORLD_STATE_REFRESH_MS,
-        refreshHandler
-      );
-    } else {
-      this.refreshIntervals.set(projectPath, setInterval(refreshHandler, WORLD_STATE_REFRESH_MS));
-    }
-
     const workflowSettings = await getWorkflowSettings(
       projectPath,
       this.settingsService,
@@ -378,100 +327,7 @@ export class LeadEngineerService {
     );
     this.workflowSettingsCache.set(projectPath, workflowSettings);
 
-    if (workflowSettings.pipeline.supervisorEnabled) {
-      const executor = this.getActionExecutor(workflowSettings);
-      const supervisorHandler = () => {
-        const s = this.sessions.get(projectPath);
-        if (s?.flowState === 'running') executor.supervisorCheck(s, workflowSettings);
-      };
-
-      if (this.schedulerService) {
-        this.schedulerService.registerInterval(
-          `lead-engineer:${projectPath}:supervisor`,
-          `Lead Engineer Supervisor (${projectSlug})`,
-          SUPERVISOR_CHECK_MS,
-          supervisorHandler
-        );
-      } else {
-        this.supervisorIntervals.set(
-          projectPath,
-          setInterval(supervisorHandler, SUPERVISOR_CHECK_MS)
-        );
-      }
-    }
-
-    const prMergeHandler = () => {
-      const s = this.sessions.get(projectPath);
-      if (s?.flowState === 'running') {
-        this.checkMergedPRs(projectPath).catch((err) =>
-          logger.error(`PR merge poll failed for ${projectSlug}:`, err)
-        );
-      }
-    };
-
-    if (this.schedulerService) {
-      this.schedulerService.registerInterval(
-        `lead-engineer:${projectPath}:pr-merge-poll`,
-        `Lead Engineer PR Merge Poll (${projectSlug})`,
-        PR_MERGE_POLL_MS,
-        prMergeHandler
-      );
-    } else {
-      this.prMergeIntervals.set(projectPath, setInterval(prMergeHandler, PR_MERGE_POLL_MS));
-    }
-
-    const resumeSuspendedHandler = async () => {
-      const s = this.sessions.get(projectPath);
-      if (!s || s.flowState !== 'running') return;
-      // Collect items to process (snapshot to avoid mutation during iteration)
-      const toResume: Array<{ projectPath: string; featureId: string }> = [];
-      for (const [fid, info] of this.pendingResumes.entries()) {
-        if (info.projectPath !== projectPath) continue;
-        if (this.activeFeatures.has(fid)) continue;
-        toResume.push(info);
-        this.pendingResumes.delete(fid);
-      }
-      for (const { featureId: fid } of toResume) {
-        logger.info(`[LeadEngineer] Resuming suspended/checkpointed feature ${fid}`);
-        void this.process(projectPath, fid).catch((err) =>
-          logger.error(`[LeadEngineer] Resume failed for ${fid}:`, err)
-        );
-      }
-    };
-
-    const RESUME_POLL_MS = 60_000; // 1-minute resume poll
-    if (this.schedulerService) {
-      this.schedulerService.registerInterval(
-        `lead-engineer:${projectPath}:resume-suspended`,
-        `Lead Engineer Suspended Feature Resume (${projectSlug})`,
-        RESUME_POLL_MS,
-        resumeSuspendedHandler
-      );
-    } else {
-      this.resumeIntervals.set(projectPath, setInterval(resumeSuspendedHandler, RESUME_POLL_MS));
-    }
-
     await this.sessionStore.save(session);
-
-    // Recover any checkpointed features from a previous server run.
-    // On restart, features in REVIEW/MERGE (suspended) or mid-processing need re-queuing.
-    if (this.checkpointService) {
-      try {
-        const checkpoints = await this.checkpointService.listAll(projectPath);
-        for (const cp of checkpoints) {
-          if (!this.activeFeatures.has(cp.featureId)) {
-            this.pendingResumes.set(cp.featureId, { projectPath, featureId: cp.featureId });
-          }
-        }
-        if (checkpoints.length > 0) {
-          logger.info(
-            `[LeadEngineer] Scheduled crash-recovery resume for ${checkpoints.length} checkpointed feature(s) in ${projectPath}`
-          );
-        }
-      } catch (err) {
-        logger.warn(`[LeadEngineer] Failed to scan checkpoints for crash recovery:`, err);
-      }
-    }
 
     this.events.emit('lead-engineer:started', { projectPath, projectSlug });
     logger.info(`Lead Engineer started for ${projectSlug}`);
@@ -484,7 +340,6 @@ export class LeadEngineerService {
       logger.warn(`No session found for ${projectPath}`);
       return;
     }
-    this.clearIntervals(projectPath);
     this.workflowSettingsCache.delete(projectPath);
     session.flowState = 'stopped';
     session.stoppedAt = new Date().toISOString();
@@ -528,10 +383,7 @@ export class LeadEngineerService {
     try {
       const feature = await this.featureLoader.get(projectPath, featureId);
       if (!feature) {
-        logger.warn(
-          `[LeadEngineer] Feature ${featureId} no longer exists — removing from resume queue`
-        );
-        this.pendingResumes.delete(featureId);
+        logger.warn(`[LeadEngineer] Feature ${featureId} no longer exists`);
         this.activeFeatures.delete(featureId);
         return { outcome: 'completed', finalState: FeatureState.DONE, failureCount: 0 };
       }
@@ -711,13 +563,14 @@ export class LeadEngineerService {
         failureCount: result.context.retryCount,
       };
 
-      // Track suspended features (REVIEW/MERGE) for external re-trigger.
+      // Features ending in REVIEW or MERGE are suspended awaiting external events
+      // (PR-merged webhook, CI completion). They are re-entered via event triggers,
+      // not polling — see onEvent() below for the event-driven resume flow.
       const SUSPEND_STATES = new Set<string>(['REVIEW', 'MERGE']);
       if (SUSPEND_STATES.has(result.finalState)) {
         logger.info(
-          `[LeadEngineer] Feature ${featureId} suspended in ${result.finalState} — queued for resume`
+          `[LeadEngineer] Feature ${featureId} suspended in ${result.finalState} — awaiting external event`
         );
-        this.pendingResumes.set(featureId, { projectPath, featureId });
       }
 
       logger.info(`[LeadEngineer] Feature processing completed`, {
@@ -795,116 +648,6 @@ export class LeadEngineerService {
     });
   }
 
-  private clearIntervals(projectPath: string): void {
-    if (this.schedulerService) {
-      this.schedulerService.unregisterInterval(`lead-engineer:${projectPath}:refresh`);
-      this.schedulerService.unregisterInterval(`lead-engineer:${projectPath}:supervisor`);
-      this.schedulerService.unregisterInterval(`lead-engineer:${projectPath}:pr-merge-poll`);
-      this.schedulerService.unregisterInterval(`lead-engineer:${projectPath}:resume-suspended`);
-    } else {
-      const r = this.refreshIntervals.get(projectPath);
-      if (r) {
-        clearInterval(r);
-        this.refreshIntervals.delete(projectPath);
-      }
-      const s = this.supervisorIntervals.get(projectPath);
-      if (s) {
-        clearInterval(s);
-        this.supervisorIntervals.delete(projectPath);
-      }
-      const p = this.prMergeIntervals.get(projectPath);
-      if (p) {
-        clearInterval(p);
-        this.prMergeIntervals.delete(projectPath);
-      }
-      const resumeInterval = this.resumeIntervals.get(projectPath);
-      if (resumeInterval) {
-        clearInterval(resumeInterval);
-        this.resumeIntervals.delete(projectPath);
-      }
-    }
-  }
-
-  /** @internal exported for testing */
-  async checkMergedPRs(projectPath: string): Promise<void> {
-    const session = this.sessions.get(projectPath);
-    if (!session || session.flowState !== 'running') return;
-
-    let features: Awaited<ReturnType<typeof this.featureLoader.getAll>>;
-    try {
-      features = await this.featureLoader.getAll(projectPath);
-    } catch (err) {
-      logger.error(`[PRMergePoller] Failed to load features for ${projectPath}:`, err);
-      return;
-    }
-
-    const reviewFeaturesWithPR = features.filter(
-      (f) => f.status === 'review' && f.prNumber != null
-    );
-
-    if (reviewFeaturesWithPR.length === 0) return;
-
-    logger.debug(
-      `[PRMergePoller] Checking ${reviewFeaturesWithPR.length} review feature(s) for merged PRs in ${session.projectSlug}`
-    );
-
-    for (const feature of reviewFeaturesWithPR) {
-      try {
-        const { stdout } = await execAsync(`gh pr view ${feature.prNumber} --json state,mergedAt`, {
-          cwd: projectPath,
-          timeout: 15000,
-        });
-        const prData = JSON.parse(stdout.trim()) as { state: string; mergedAt?: string | null };
-
-        if (prData.state !== 'MERGED') continue;
-
-        // Skip if already handled (e.g., by ReviewProcessor or MergeProcessor)
-        const currentFeature = await this.featureLoader.get(projectPath, feature.id);
-        if (currentFeature?.status === 'done') {
-          logger.debug(
-            `[PRMergePoller] Feature "${feature.id}" already done, skipping duplicate processing`
-          );
-          continue;
-        }
-
-        const prMergedAt = prData.mergedAt ?? new Date().toISOString();
-
-        logger.info(
-          `[PRMergePoller] PR #${feature.prNumber} for feature "${feature.id}" is merged — transitioning to done`
-        );
-
-        await this.featureLoader.update(projectPath, feature.id, {
-          status: 'done',
-          prMergedAt,
-        });
-
-        this.events.emit('feature:pr-merged' as EventType, {
-          featureId: feature.id,
-          featureTitle: feature.title,
-          prNumber: feature.prNumber,
-          projectPath,
-        });
-
-        // Index engineering learnings when feature reaches DONE via PR merge
-        if (this.knowledgeStoreService) {
-          this.knowledgeStoreService
-            .ingestFeatureCompletionLearnings(projectPath, feature.id)
-            .catch((err) =>
-              logger.warn(
-                `[PRMergePoller] Failed to ingest learnings for ${feature.id} (non-fatal):`,
-                err
-              )
-            );
-        }
-      } catch (err) {
-        logger.warn(
-          `[PRMergePoller] Failed to check PR #${feature.prNumber} for feature "${feature.id}" (non-fatal):`,
-          err
-        );
-      }
-    }
-  }
-
   private async onEvent(type: EventType, payload: unknown): Promise<void> {
     const p = payload as Record<string, unknown> | null;
     const nested = p?.payload as Record<string, unknown> | null;
@@ -971,14 +714,10 @@ export class LeadEngineerService {
       events: this.events,
       featureLoader: this.featureLoader,
       worldStateBuilder: this.worldStateBuilder,
-    }).handleProjectCompleting(
-      session,
-      (projectPath) => this.clearIntervals(projectPath),
-      async (projectPath) => {
-        this.sessions.delete(projectPath);
-        await this.sessionStore.remove(projectPath);
-      }
-    );
+    }).handleProjectCompleting(session, async (projectPath) => {
+      this.sessions.delete(projectPath);
+      await this.sessionStore.remove(projectPath);
+    });
   }
 
   /**
