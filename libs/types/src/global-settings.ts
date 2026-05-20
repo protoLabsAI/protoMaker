@@ -208,14 +208,6 @@ export interface FeatureFlags {
    * Off by default.
    */
   gatewayAutoRemediate: boolean;
-  /**
-   * Auto Prettier Fix — enables the prettier-drift-autofix maintenance check.
-   * When a PR's "checks" CI job fails solely on `npm run format:check`, this check
-   * automatically applies `prettier --write` to the offending files, commits, and pushes.
-   * Idempotent: re-running on an already-clean PR is a no-op.
-   * On by default.
-   */
-  autoPrettierFix: boolean;
 }
 
 /** Default feature flags — all off by default, opt-in per environment */
@@ -225,7 +217,6 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   reactorEnabled: false,
   hitlForms: false,
   gatewayAutoRemediate: false,
-  autoPrettierFix: true,
 };
 
 // ============================================================================

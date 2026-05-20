@@ -3,7 +3,6 @@ import { createLogger } from '@protolabsai/utils';
 import type { ServiceContainer } from '../server/services.js';
 import { DiscordDMChannel } from './escalation-channels/discord-dm-channel.js';
 import { eventHookService } from './event-hook-service.js';
-import { DiscordMonitor } from './discord-monitor.js';
 import { hasWebhooksConfigured } from './discord-webhook.service.js';
 
 const logger = createLogger('Server:Wiring');
@@ -27,7 +26,6 @@ export async function register(container: ServiceContainer): Promise<void> {
     discordBotService,
     avaGatewayService,
     escalationRouter,
-    headsdownService,
     eventHistoryService,
     ceremonyAuditLog,
     integrationRegistryService,
@@ -110,9 +108,6 @@ export async function register(container: ServiceContainer): Promise<void> {
     }
   });
 
-  // Wire Discord bot service (webhook stub) to headsdown service
-  headsdownService.setDiscordBotService(discordBotService);
-
   // Register Discord DM escalation channel.
   // In webhook mode, sendDM() returns false — DMs are not supported without a bot session.
   // The channel remains registered so the escalation router can attempt delivery.
@@ -134,18 +129,6 @@ export async function register(container: ServiceContainer): Promise<void> {
       escalationRouter
     )
   );
-
-  // Discord monitor wiring is kept for structural compatibility.
-  // In webhook mode, readMessages() returns [] — no messages are actually polled.
-  const discordMonitor = new DiscordMonitor(events);
-  discordMonitor.setDiscordBotService(discordBotService);
-
-  const configs = integrationRegistryService.getAllEnabledChannelConfigs();
-  if (configs.length > 0) {
-    logger.debug(
-      `Discord channel monitor configured (${configs.length} channel(s)) — message polling disabled in webhook mode`
-    );
-  }
 
   logger.info('Discord wiring complete (webhook mode)');
 }

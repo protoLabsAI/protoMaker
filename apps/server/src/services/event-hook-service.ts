@@ -76,11 +76,6 @@ const GENERIC_EVENT_TYPE_TO_TRIGGER: Partial<Record<string, EventHookTrigger>> =
   // Infrastructure / health
   'worktree:drift-detected': 'worktree_drift_detected',
   'health:issue-detected': 'health_issue_detected',
-  // Headsdown agents
-  'headsdown:agent:started': 'headsdown_agent_started',
-  'headsdown:agent:stopped': 'headsdown_agent_stopped',
-  'headsdown:agent:work-completed': 'headsdown_agent_work_completed',
-  'headsdown:agent:work-failed': 'headsdown_agent_work_failed',
   // Integrations
   'coderabbit:review-received': 'coderabbit_review_received',
   'discord:message:detected': 'discord_message_detected',
@@ -111,7 +106,6 @@ function classifySeverity(trigger: EventHookTrigger): EventSeverity {
     trigger === 'health_check_critical' ||
     trigger === 'feature_permanently_blocked' ||
     trigger === 'feature_pr_closed_unmerged' ||
-    trigger === 'headsdown_agent_work_failed' ||
     trigger === 'pr_ci_failure'
   ) {
     return 'critical';
@@ -124,7 +118,6 @@ function classifySeverity(trigger: EventHookTrigger): EventSeverity {
     trigger === 'feature_completed' ||
     trigger === 'feature_pr_merged' ||
     trigger === 'pr_approved' ||
-    trigger === 'headsdown_agent_work_completed' ||
     trigger === 'pr_remediation_completed' ||
     trigger === 'auto_mode_started'
   ) {

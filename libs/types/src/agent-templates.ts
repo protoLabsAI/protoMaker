@@ -108,35 +108,6 @@ export const WORLD_STATE_KEYS = {
 } as const;
 
 /**
- * Headsdown loop configuration for persistent agents.
- */
-const HeadsdownConfigSchema = z.object({
-  /** Model to use in headsdown mode */
-  model: z.enum(['haiku', 'sonnet', 'opus']).optional(),
-  /** Maximum turns per headsdown cycle */
-  maxTurns: z.number().int().positive().optional(),
-  /** Loop settings */
-  loop: z
-    .object({
-      enabled: z.boolean(),
-      /** Milliseconds between loop iterations */
-      checkInterval: z.number().int().positive().optional(),
-      /** Max consecutive errors before stopping */
-      maxConsecutiveErrors: z.number().int().positive().optional(),
-      /** Max milliseconds before force-stopping the loop */
-      workTimeout: z.number().int().positive().optional(),
-    })
-    .optional(),
-  /** Idle task settings (what to do when no primary work) */
-  idleTasks: z
-    .object({
-      enabled: z.boolean(),
-      tasks: z.array(z.string()),
-    })
-    .optional(),
-});
-
-/**
  * MCP Server Configuration Schema for agent templates.
  *
  * Defines connection details for Model Context Protocol servers
@@ -225,10 +196,6 @@ export const AgentTemplateSchema = z.object({
     })
     .optional(),
 
-  // --- Headsdown Config ---
-  /** Configuration for persistent agent loops */
-  headsdownConfig: HeadsdownConfigSchema.optional(),
-
   // --- Desired State (Reactive Invariants) ---
   /** Conditions the agent is responsible for maintaining.
    *  When world state diverges from these conditions, the agent activates. */
@@ -264,13 +231,11 @@ export type AgentTemplate = z.infer<typeof AgentTemplateSchema>;
 export {
   DiscordAssignmentSchema,
   GitHubAssignmentSchema,
-  HeadsdownConfigSchema,
   DesiredStateConditionSchema,
   StateOperatorSchema,
 };
 export type DiscordAssignment = z.infer<typeof DiscordAssignmentSchema>;
 export type GitHubAssignment = z.infer<typeof GitHubAssignmentSchema>;
-export type AgentHeadsdownConfig = z.infer<typeof HeadsdownConfigSchema>;
 export type DesiredStateCondition = z.infer<typeof DesiredStateConditionSchema>;
 export type StateOperator = z.infer<typeof StateOperatorSchema>;
 /** Inferred TypeScript type for an MCP server entry in agent templates */
