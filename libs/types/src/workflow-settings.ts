@@ -233,12 +233,6 @@ export interface WorkflowSettings {
     checkpointEnabled: boolean;
     /** Enable stream observer loop detection (default: true) */
     loopDetectionEnabled: boolean;
-    /** Enable supervisor interval for stuck agent detection (default: true) */
-    supervisorEnabled: boolean;
-    /** Max agent runtime in minutes before supervisor warning (default: 45) */
-    maxAgentRuntimeMinutes: number;
-    /** Max agent cost in USD before supervisor abort (default: 15) */
-    maxAgentCostUsd: number;
     /** Enable antagonistic plan review for large/architectural features (default: true) */
     antagonisticPlanReview?: boolean;
     /**
@@ -563,9 +557,6 @@ export const DEFAULT_WORKFLOW_SETTINGS: WorkflowSettings = {
     goalGatesEnabled: true,
     checkpointEnabled: true,
     loopDetectionEnabled: true,
-    supervisorEnabled: true,
-    maxAgentRuntimeMinutes: 45,
-    maxAgentCostUsd: 15,
     antagonisticPlanReview: true,
     maxAgentRetries: 3,
     maxInfraRetries: 3,

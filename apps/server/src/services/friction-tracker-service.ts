@@ -4,18 +4,18 @@
  * Maintains an in-memory map of pattern → occurrenceCount. Each time a feature
  * hits blocked status, the FailureClassifierService classification is logged here.
  * When a pattern reaches 3 occurrences **within a rolling time window**, the
- * service files a System Improvement feature via FeatureLoader.create() and
- * logs a friction_report so peer instances can de-duplicate.
+ * service files a System Improvement feature via FeatureLoader.create().
  *
  * Sliding-window counters: failures older than COUNTER_WINDOW_MS reset the
  * counter for that pattern, preventing unrelated failures spread across weeks
  * from triggering spurious System Improvement tickets.
  *
- * Peer de-duplication: skips filing if a peer already filed the same pattern
- * in the last 24 hours.
+ * In-process dedup: `recentFilings` short-circuits concurrent `recordFailure`
+ * calls so we don't fire multiple `featureLoader.create()` calls for the same
+ * pattern while the first one is still in flight. The durable dedup is the
+ * `featureLoader.findByTitle` lookup against the feature store.
  */
 
-import type { FrictionReport } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
 import type { FeatureLoader } from './feature-loader.js';
 
@@ -43,8 +43,9 @@ const OCCURRENCE_THRESHOLD = 3;
  */
 const EXCLUDED_FROM_FRICTION_TRACKING = new Set<string>(['rate_limit', 'transient', 'unknown']);
 
-/** How long (ms) to consider a peer-filed report as "recent" for de-duplication */
-const PEER_DEDUP_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
+/** How long (ms) to remember in-process filings so concurrent `recordFailure` calls
+ *  don't double-fire `featureLoader.create()` for the same pattern. */
+const RECENT_FILING_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 /**
  * Sliding window for failure counters (7 days).
@@ -85,8 +86,6 @@ export interface FrictionTrackerDependencies {
   featureLoader: FeatureLoader;
   /** Project path for filing System Improvement features */
   projectPath: string;
-  /** This instance's ID (used in friction_report broadcasts) */
-  instanceId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -180,27 +179,6 @@ export class FrictionTrackerService {
   }
 
   /**
-   * Handle an incoming friction_report from a peer instance.
-   * Records the pattern as recently-filed so this instance skips duplicates.
-   */
-  handlePeerReport(report: FrictionReport): void {
-    const filedAt = new Date(report.filedAt).getTime();
-    if (isNaN(filedAt)) {
-      logger.warn(`Received friction_report with invalid filedAt: ${report.filedAt}`);
-      return;
-    }
-
-    const existing = this.recentFilings.get(report.pattern) ?? 0;
-    // Keep the most recent filing timestamp
-    if (filedAt > existing) {
-      this.recentFilings.set(report.pattern, filedAt);
-      logger.debug(
-        `Peer de-dup: recorded filing for pattern="${report.pattern}" from instance=${report.instanceId}`
-      );
-    }
-  }
-
-  /**
    * Return the current occurrence count for a pattern (for testing / observability).
    * Returns 0 if the pattern has no entry or its window has expired.
    */
@@ -243,12 +221,12 @@ export class FrictionTrackerService {
   }
 
   /**
-   * Check whether a peer recently filed for this pattern (within the dedup window).
+   * Check whether this instance recently filed for this pattern (in-process dedup).
    */
-  isPeerRecentlyFiled(pattern: string): boolean {
+  isRecentlyFiled(pattern: string): boolean {
     const lastFiled = this.recentFilings.get(pattern);
     if (!lastFiled) return false;
-    return Date.now() - lastFiled < PEER_DEDUP_WINDOW_MS;
+    return Date.now() - lastFiled < RECENT_FILING_WINDOW_MS;
   }
 
   // ---------------------------------------------------------------------------
@@ -256,10 +234,9 @@ export class FrictionTrackerService {
   // ---------------------------------------------------------------------------
 
   private async maybeFileImprovement(pattern: string): Promise<void> {
-    // Peer de-duplication guard
-    if (this.isPeerRecentlyFiled(pattern)) {
+    if (this.isRecentlyFiled(pattern)) {
       logger.info(
-        `Skipping System Improvement filing for pattern="${pattern}" — peer already filed recently`
+        `Skipping System Improvement filing for pattern="${pattern}" — already filed recently in this process`
       );
       return;
     }
@@ -311,9 +288,6 @@ export class FrictionTrackerService {
       } as Parameters<FeatureLoader['create']>[1]);
 
       logger.info(`Filed System Improvement feature ${feature.id} for pattern="${pattern}"`);
-
-      // Broadcast to backchannel so peers can de-duplicate
-      await this.broadcastFrictionReport(pattern, feature.id);
     } catch (err) {
       // Roll back the dedup guard so a future attempt can retry
       this.recentFilings.delete(pattern);
@@ -350,16 +324,5 @@ export class FrictionTrackerService {
     }
 
     return lines.join('\n');
-  }
-
-  private async broadcastFrictionReport(pattern: string, featureId: string): Promise<void> {
-    const report: FrictionReport = {
-      pattern,
-      filedAt: new Date().toISOString(),
-      featureId,
-      instanceId: this.deps.instanceId ?? 'unknown',
-    };
-
-    logger.info(`Filed friction_report for pattern="${pattern}" featureId=${featureId}`);
   }
 }

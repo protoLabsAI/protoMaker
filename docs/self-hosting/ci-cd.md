@@ -1,6 +1,6 @@
 # CI/CD Pipelines
 
-protoLabs uses GitHub Actions for continuous integration and delivery. CI runs on every PR targeting `main` and on every push to `main`. Releases are tagged automatically on merge.
+protoLabs.studio uses GitHub Actions for continuous integration and delivery. CI runs on every PR targeting `main` and on every push to `main`. Releases are tagged automatically on push to `main`.
 
 ## Workflows Overview
 
@@ -186,7 +186,7 @@ Automatically tags a release and publishes a GitHub Release on every push to `ma
 
 ### Release Flow
 
-```
+```text
 PR merged to main
     ↓
 auto-release.yml
@@ -274,7 +274,7 @@ The `main` branch is protected by a single consolidated ruleset ("Protect main",
 - **Required status checks**: `checks`, `test`, `build`
 - **Required reviews**: CodeRabbit
 - **Required review thread resolution**: Yes (CodeRabbit comments must be resolved)
-- **Squash-only merges**: Yes (epic PRs use merge commits)
+- **Merge strategies**: Squash for feature/fix PRs (`DEFAULT_GIT_WORKFLOW_SETTINGS.prMergeStrategy` is `'squash'`); merge commits for epic-to-`main` PRs to preserve epic history.
 - **Admin bypass**: Enabled
 - **Branches do NOT need to be up-to-date**: `strict_required_status_checks_policy` is `false` — PRs can merge without rebasing onto the latest main. This eliminates the cascade problem where each merge forces all other PRs to update and re-run CI.
 

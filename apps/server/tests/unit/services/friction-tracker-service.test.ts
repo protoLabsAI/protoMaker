@@ -3,7 +3,6 @@ import {
   FrictionTrackerService,
   type FrictionTrackerDependencies,
 } from '@/services/friction-tracker-service.js';
-import type { FrictionReport } from '@protolabsai/types';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -21,7 +20,6 @@ function makeDeps(
   return {
     featureLoader,
     projectPath: '/test/project',
-    instanceId: 'instance-test',
     ...overrides,
   };
 }
@@ -175,113 +173,6 @@ describe('FrictionTrackerService', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Peer de-duplication
-  // -------------------------------------------------------------------------
-
-  describe('peer de-duplication', () => {
-    it('returns false for isPeerRecentlyFiled when no report received', () => {
-      expect(service.isPeerRecentlyFiled('rate_limit')).toBe(false);
-    });
-
-    it('returns true after handlePeerReport with recent timestamp', () => {
-      const report: FrictionReport = {
-        pattern: 'rate_limit',
-        filedAt: new Date().toISOString(),
-        featureId: 'feature-peer-001',
-        instanceId: 'peer-instance',
-      };
-
-      service.handlePeerReport(report);
-
-      expect(service.isPeerRecentlyFiled('rate_limit')).toBe(true);
-    });
-
-    it('returns false after handlePeerReport with old timestamp (>24h)', () => {
-      const oldTimestamp = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString();
-      const report: FrictionReport = {
-        pattern: 'rate_limit',
-        filedAt: oldTimestamp,
-        featureId: 'feature-peer-001',
-        instanceId: 'peer-instance',
-      };
-
-      service.handlePeerReport(report);
-
-      expect(service.isPeerRecentlyFiled('rate_limit')).toBe(false);
-    });
-
-    it('skips filing when a peer recently filed the same pattern', async () => {
-      // Simulate a peer report arriving before the threshold
-      const report: FrictionReport = {
-        pattern: 'dependency',
-        filedAt: new Date().toISOString(),
-        featureId: 'feature-peer-002',
-        instanceId: 'peer-instance',
-      };
-      service.handlePeerReport(report);
-
-      // Now hit the threshold — should be suppressed
-      for (let i = 0; i < 3; i++) {
-        await service.recordFailure('dependency');
-      }
-
-      expect(deps.featureLoader.create).not.toHaveBeenCalled();
-    });
-
-    it('ignores peer reports with invalid filedAt', () => {
-      const report: FrictionReport = {
-        pattern: 'unknown',
-        filedAt: 'not-a-date',
-        featureId: 'feature-peer-003',
-        instanceId: 'peer-instance',
-      };
-
-      // Should not throw
-      service.handlePeerReport(report);
-
-      // Should not mark as recently filed
-      expect(service.isPeerRecentlyFiled('unknown')).toBe(false);
-    });
-
-    it('keeps the most recent filing timestamp when multiple peer reports arrive', () => {
-      const olderTime = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(); // 2h ago
-      const newerTime = new Date().toISOString();
-
-      service.handlePeerReport({
-        pattern: 'transient',
-        filedAt: olderTime,
-        featureId: 'f1',
-        instanceId: 'peer-a',
-      });
-      service.handlePeerReport({
-        pattern: 'transient',
-        filedAt: newerTime,
-        featureId: 'f2',
-        instanceId: 'peer-b',
-      });
-
-      // Newer report keeps it as "recently filed"
-      expect(service.isPeerRecentlyFiled('transient')).toBe(true);
-    });
-
-    it('does not suppress filing when peer report has expired', async () => {
-      const expiredTime = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString();
-      service.handlePeerReport({
-        pattern: 'tool_error',
-        filedAt: expiredTime,
-        featureId: 'f-old',
-        instanceId: 'peer-old',
-      });
-
-      for (let i = 0; i < 3; i++) {
-        await service.recordFailure('tool_error');
-      }
-
-      expect(deps.featureLoader.create).toHaveBeenCalledOnce();
-    });
-  });
-
-  // -------------------------------------------------------------------------
   // Durable de-duplication (feature store check)
   // -------------------------------------------------------------------------
 
@@ -299,7 +190,7 @@ describe('FrictionTrackerService', () => {
 
       expect(deps.featureLoader.create).not.toHaveBeenCalled();
       // Should populate local dedup guard
-      expect(service.isPeerRecentlyFiled('tool_error')).toBe(true);
+      expect(service.isRecentlyFiled('tool_error')).toBe(true);
     });
 
     it('skips filing when existing feature is in backlog', async () => {
@@ -458,7 +349,7 @@ describe('FrictionTrackerService', () => {
       }
 
       // The dedup guard should be rolled back so the next attempt can retry
-      expect(service.isPeerRecentlyFiled('validation')).toBe(false);
+      expect(service.isRecentlyFiled('validation')).toBe(false);
     });
   });
 });

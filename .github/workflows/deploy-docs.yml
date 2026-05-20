@@ -1,8 +1,8 @@
 # Deploy docs site to Cloudflare Pages via Wrangler CLI.
 #
-# Triggers on docs/** changes pushed to dev, staging, or main.
+# Triggers on docs/** changes pushed to main.
 # PR pushes get a preview deployment with URL posted as a comment.
-# Production branch = staging (matches current user-facing surface).
+# Production branch = main.
 #
 # Required secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
 
@@ -10,7 +10,7 @@ name: Deploy Docs
 
 on:
   push:
-    branches: [dev, staging, main]
+    branches: [main]
     paths:
       - 'docs/**'
       - 'package.json'

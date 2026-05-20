@@ -1,8 +1,9 @@
 # System Architecture
 
-This document covers both the single-instance architecture (what runs on one machine)
-and the multi-instance topology (how multiple protoLabs instances coordinate as
-autonomous dev teams via Discord).
+This document covers how a single protoLabs.studio instance is structured —
+what runs on the machine, how the services connect, and how the instance
+coordinates with external systems (GitHub, Discord) for code and team
+communication.
 
 ## High-Level Architecture
 
@@ -359,70 +360,37 @@ Browser                 nginx (UI)              Express (Server)
 └──────────────────────────────────────────────────┘
 ```
 
-## Multi-Instance Topology
+## Deployment Topology
 
-protoLabs is designed to run as multiple independent instances, each acting as an
-autonomous development team. Coordination happens through Discord (communication)
-and GitHub (PRs, issues), not through direct instance-to-instance communication.
+A protoLabs.studio instance is a single-process deployment that hosts the
+board, AI agents, and worktrees on one machine. It coordinates with the
+outside world through two channels:
 
-### Organizational Hierarchy
+- **GitHub** — feature PRs, reviews, CI, and merge events.
+- **Discord** — async team communication, status notifications, HITL prompts.
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         Coordination Layer                                │
-│                                                                           │
-│  ┌──────────────────────────┐    ┌──────────────────────────────────┐   │
-│  │        GitHub              │    │           Discord                 │   │
-│  │  (Code & PRs)              │    │      (Team Communication)        │   │
-│  │                           │    │                                   │   │
-│  │  Issues                   │    │  #dev - status updates           │   │
-│  │   └─ Pull Requests        │    │  #alerts - CI/deploy notifs      │   │
-│  │       └─ Reviews          │    │  #approvals - HITL requests      │   │
-│  │                           │    │                                   │   │
-│  └──────────────────────────┘    └──────────────────────────────────┘   │
-│              │                                    │                       │
-│              │  PR status, reviews                │  notifications        │
-│              │  (pertinent info only)             │  (summaries only)     │
-│              │                                    │                       │
-├──────────────┼────────────────────────────────────┼───────────────────────┤
-│              │         Execution Layer             │                       │
-│              ▼                                    ▼                       │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐       │
-│  │  protoLabs        │  │  protoLabs        │  │  protoLabs        │       │
-│  │  Instance A       │  │  Instance B       │  │  Instance N       │       │
-│  │  (Team Alpha)     │  │  (Team Beta)      │  │  (Team ...)       │       │
-│  │                   │  │                   │  │                   │       │
-│  │  Kanban Board     │  │  Kanban Board     │  │  Kanban Board     │       │
-│  │  AI Agents        │  │  AI Agents        │  │  AI Agents        │       │
-│  │  Git Worktrees    │  │  Git Worktrees    │  │  Git Worktrees    │       │
-│  │  Local Context    │  │  Local Context    │  │  Local Context    │       │
-│  └──────────────────┘  └──────────────────┘  └──────────────────┘       │
-│                                                                           │
-└─────────────────────────────────────────────────────────────────────────┘
+```text
+┌──────────────────────────────────────────────────────────────────┐
+│                       External Coordination                       │
+│                                                                    │
+│   ┌────────────────────┐         ┌─────────────────────────┐     │
+│   │      GitHub         │         │         Discord          │     │
+│   │  (Code, PRs, CI)    │         │  (Comms, notifications)  │     │
+│   └────────────────────┘         └─────────────────────────┘     │
+│            ▲                                  ▲                    │
+│            │ webhooks, PR ops                 │ events, alerts     │
+└────────────┼──────────────────────────────────┼───────────────────┘
+             │                                  │
+             ▼                                  ▼
+   ┌──────────────────────────────────────────────────────────┐
+   │                 protoLabs.studio instance                  │
+   │                                                            │
+   │   Kanban board · auto-mode · AI agents · git worktrees    │
+   │   .automaker/ project context · settings · features       │
+   └──────────────────────────────────────────────────────────┘
 ```
 
-### Information Flow (Bottom-Up Distillation)
-
-Each layer only pushes the most pertinent information upward. Raw agent output
-stays local; summaries and outcomes propagate to coordination tools.
-
-```
-AI Agent (PE)                    Does the work, produces code + output
-    │
-    │ completion status, errors, PR links
-    ▼
-protoLabs Board (Team Lead)      Local Kanban tracks features, manages agents
-    │
-    │ milestone progress, blockers, key decisions
-    ▼
-GitHub Issues (Project Manager)  Cross-team visibility, priority, scheduling
-    │
-    │ project health, risk flags, milestone rollups
-    ▼
-Project Plans (PM / Owner)      Strategic view, resource allocation
-```
-
-**What stays local (protoLabs instance):**
+**What stays local to the instance:**
 
 - Agent conversation logs and raw output
 - Individual feature status transitions
@@ -431,39 +399,15 @@ Project Plans (PM / Owner)      Strategic view, resource allocation
 
 **What propagates to GitHub:**
 
-- Feature completion (PR status updates)
-- Blockers requiring cross-team coordination
-- PR reviews and architecture discussions
+- Feature completion (PRs, reviews, merges)
+- CI status
+- Cross-team coordination (issues, comments)
 
 **What goes to Discord:**
 
 - Status notifications (feature started/completed)
 - Escalation requests (HITL approval needed)
-- Cross-team announcements
-- CI/CD pipeline results
-
-### Role Mapping
-
-| Role                     | Where It Lives     | Responsibility                            |
-| ------------------------ | ------------------ | ----------------------------------------- |
-| Project Owner (Human)    | GitHub + Discord   | Strategic direction, final approvals      |
-| PM                       | Project plans      | What to build, why, priorities            |
-| Project Manager          | GitHub issues      | When, how, milestone tracking             |
-| EM (Engineering Manager) | protoLabs instance | Who does what, capacity, agent assignment |
-| PE (Product Engineer)    | protoLabs agent    | Implementation, code, tests, PRs          |
-
-### Each Instance is Autonomous
-
-Each protoLabs instance:
-
-- Has its own Kanban board with features and backlog
-- Runs its own AI agents in isolated git worktrees
-- Maintains its own project context (`.automaker/context/`)
-- Manages its own auto-mode and feature queue
-- Reports upward via MCP integrations (GitHub, Discord)
-
-Instances do NOT communicate directly with each other. All cross-team
-coordination happens through the coordination layer (GitHub + Discord).
+- Deploy / release notifications
 
 ### Secret Flow
 

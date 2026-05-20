@@ -194,7 +194,16 @@ agent-browser is a Rust CLI that controls Chrome for Testing via the Chrome DevT
 
 ## Integration with Release Pipeline
 
-Quinn runs on candidate PRs before merge and re-verifies after auto-deploy to production. The verification sequence:
+Quinn runs in two passes: (1) candidate PR pre-merge and (2) post-deploy production re-verification.
+
+### Pre-merge (candidate PR)
+
+1. **Typecheck and tests** -- Run `npm run typecheck` and `npm run test:all`. All must pass before sign-off.
+2. **Wiring verification** -- Confirm new services have a non-test importer and integration tests cover wiring points.
+3. **API and UI regression** -- Exercise affected endpoints and load impacted UI views via agent-browser. Verify schemas and rendering.
+4. **Report** -- Post QA report to the candidate PR thread with a PASS/FAIL verdict.
+
+### Post-deploy (production)
 
 1. **Post-deploy health check** -- `GET /api/health` returns 200 with all subsystems healthy.
 2. **API endpoint regression** -- Hit critical endpoints (features, board, settings, metrics) and verify response schemas.

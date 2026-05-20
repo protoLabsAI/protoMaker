@@ -142,17 +142,14 @@ export class GitHubWebhookHandler {
     const projectPath = this.projectPath || process.cwd();
 
     try {
-      const result = await remediateFormatFailure(
-        {
-          projectPath,
-          prNumber,
-          headBranch,
-          headSha,
-          repository,
-          checksUrl,
-        },
-        this.events
-      );
+      const result = await remediateFormatFailure({
+        projectPath,
+        prNumber,
+        headBranch,
+        headSha,
+        repository,
+        checksUrl,
+      });
 
       logger.info('[GitHubWebhookHandler] Remediation complete', {
         prNumber,

@@ -614,7 +614,7 @@ export type {
   DiscordUserMessageRoutedPayload,
 } from './discord.js';
 
-// Agent role types (headsdown agents)
+// Agent role types
 export type { AgentRole, RoleCapabilities } from './agent-roles.js';
 export { BUILT_IN_AGENT_ROLES, ROLE_CAPABILITIES } from './agent-roles.js';
 
@@ -943,9 +943,6 @@ export type {
   DeploymentDocument,
   DeploymentStats,
 } from './deployment.js';
-
-// Friction tracker types (self-improvement loop — recurring failure pattern detection)
-export type { FrictionReport } from './friction-report.js';
 
 // ReactiveSpawner types (trigger-based agent spawning with rate limiting and circuit breaking)
 export type {

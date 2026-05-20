@@ -1959,12 +1959,16 @@ export function buildAvaTools(
               featureLoader: services.featureLoader,
               projectPmService: services.projectPMService,
               events: services.events,
+              abortSignal: controller.signal,
             },
             projectSlug,
             question
           );
           return { response };
         } catch (err: unknown) {
+          if (controller.signal.aborted) {
+            return { error: `PM delegation timed out after ${timeoutMs / 1000}s` };
+          }
           const message = err instanceof Error ? err.message : 'Unknown error';
           return { error: `PM delegation failed: ${message}` };
         } finally {

@@ -73,7 +73,7 @@
 
 | Document                                               | Description                                       |
 | ------------------------------------------------------ | ------------------------------------------------- |
-| [Architecture](./self-hosting/architecture.md)         | System diagrams, multi-instance topology          |
+| [Architecture](./self-hosting/architecture.md)         | System diagrams and deployment topology           |
 | [Docker](./self-hosting/docker.md)                     | Dockerfile architecture, multi-stage builds       |
 | [Docker Compose](./self-hosting/docker-compose.md)     | Compose variants, volumes, environment            |
 | [Deployment](./self-hosting/deployment.md)             | Deployment options (local, Docker, systemd)       |

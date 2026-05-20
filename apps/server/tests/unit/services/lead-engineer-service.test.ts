@@ -134,7 +134,6 @@ describe('LeadEngineerService', () => {
     // Re-establish settings mock cleared by vitest's mockReset: true
     mockGetWorkflowSettings.mockResolvedValue({
       pipeline: {
-        supervisorEnabled: false,
         checkpointEnabled: false,
         goalGatesEnabled: false,
         antagonisticPlanReview: false,
