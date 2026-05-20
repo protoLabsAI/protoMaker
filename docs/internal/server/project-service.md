@@ -11,7 +11,7 @@ Key responsibilities:
 - **Project CRUD** — create, read, update, delete projects and their sub-structure
 - **Milestone and phase management** — full lifecycle for milestones and phases within a project
 - **In-memory cache** — lazy-loaded read cache backed by disk as source of truth
-- **Event broadcasting** — emits project events via EventBus for multi-instance sync
+- **Event emission** — emits project events via EventBus for in-process subscribers (UI streams, ledger)
 - **Human-readable output** — generates Markdown files alongside JSON for git history
 
 ## Storage Layout
@@ -28,7 +28,7 @@ Key responsibilities:
           {phase-slug}.md
 ```
 
-All projects for a given repo root are stored as JSON and Markdown files on disk. An in-memory `Map<string, Project>` cache accelerates reads; all writes go to disk first, then broadcast events via the peer mesh for multi-instance sync.
+All projects for a given repo root are stored as JSON and Markdown files on disk. An in-memory `Map<string, Project>` cache accelerates reads; all writes go to disk first, then emit local events for subscribers (UI streams, ledger, etc.).
 
 ## Key APIs
 
@@ -126,4 +126,3 @@ When `CalendarService` is wired in via `setCalendarService()`, project milestone
 ## See Also
 
 - [Work Intake Service](./work-intake-service) — reads phase state and updates claim status
-- [Peer Mesh Service](./peer-mesh-service) — broadcasts project change events to peer instances

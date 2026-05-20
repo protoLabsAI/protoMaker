@@ -1,26 +1,24 @@
 # Infrastructure Documentation
 
-Deploy protoLabs. Docker, systemd, staging — pick what fits your stack.
+Deploy protoLabs. Docker, systemd, or bare metal — pick what fits your stack.
 
 ## Quick Links
 
-| Document                                                      | Description                                                 |
-| ------------------------------------------------------------- | ----------------------------------------------------------- |
-| [Docker](./docker.md)                                         | Dockerfile architecture, multi-stage builds, base images    |
-| [Docker Compose](./docker-compose.md)                         | Compose variants, environment variables, volumes            |
-| [Deployment](./deployment.md)                                 | Production deployment options (systemd, Docker)             |
-| [CI/CD](./ci-cd.md)                                           | GitHub Actions workflows explained                          |
-| [Monitoring](./monitoring.md)                                 | Health checks, logging, observability                       |
-| [Backup & Recovery](./backup-recovery.md)                     | Volume backups, restore procedures                          |
-| [systemd](./systemd.md)                                       | systemd service configuration                               |
-| [Networking](./networking.md)                                 | Ports, nginx, CORS, WebSocket proxying                      |
-| [Secrets](./secrets.md)                                       | Infisical deployment, MCP secret injection, team setup      |
-| [Security](./security.md)                                     | Container security, credentials management                  |
-| [Troubleshooting](./troubleshooting.md)                       | Common issues and solutions                                 |
-| [Staging](./staging-deployment.md)                            | Staging server setup, high-concurrency agent config         |
-| [Architecture](./architecture.md)                             | System architecture diagrams                                |
-| [Multi-Instance Deployment](./multi-instance-deployment.md)   | Tailscale mesh setup, trust model, drain procedure, runbook |
-| [Landing Page](./deployment.md#landing-page-cloudflare-pages) | Cloudflare Pages config for protolabs.studio                |
+| Document                                                      | Description                                              |
+| ------------------------------------------------------------- | -------------------------------------------------------- |
+| [Docker](./docker.md)                                         | Dockerfile architecture, multi-stage builds, base images |
+| [Docker Compose](./docker-compose.md)                         | Compose variants, environment variables, volumes         |
+| [Deployment](./deployment.md)                                 | Production deployment options (systemd, Docker)          |
+| [CI/CD](./ci-cd.md)                                           | GitHub Actions workflows explained                       |
+| [Monitoring](./monitoring.md)                                 | Health checks, logging, observability                    |
+| [Backup & Recovery](./backup-recovery.md)                     | Volume backups, restore procedures                       |
+| [systemd](./systemd.md)                                       | systemd service configuration                            |
+| [Networking](./networking.md)                                 | Ports, nginx, CORS, WebSocket proxying                   |
+| [Secrets](./secrets.md)                                       | Infisical deployment, MCP secret injection, team setup   |
+| [Security](./security.md)                                     | Container security, credentials management               |
+| [Troubleshooting](./troubleshooting.md)                       | Common issues and solutions                              |
+| [Architecture](./architecture.md)                             | System architecture diagrams                             |
+| [Landing Page](./deployment.md#landing-page-cloudflare-pages) | Cloudflare Pages config for protolabs.studio             |
 
 ## Infrastructure Overview
 
@@ -96,30 +94,27 @@ sudo systemctl start protomaker
 | ----------------------------- | ------------------------------------------ |
 | `docker-compose.yml`          | Production (isolated, named volumes only)  |
 | `docker-compose.dev.yml`      | Development (source mounted, live reload)  |
-| `docker-compose.staging.yml`  | Staging app services (server + UI)         |
 | `docker-compose.docs.yml`     | Docs site (independent lifecycle from app) |
 | `docker-compose.override.yml` | Local customization (gitignored)           |
 
 ### CI/CD Workflows
 
-| File                                   | Purpose                                            |
-| -------------------------------------- | -------------------------------------------------- |
-| `.github/workflows/test.yml`           | Unit tests (Vitest)                                |
-| `.github/workflows/e2e-tests.yml`      | E2E tests (Playwright)                             |
-| `.github/workflows/pr-check.yml`       | Build verification                                 |
-| `.github/workflows/format-check.yml`   | Prettier formatting                                |
-| `.github/workflows/security-audit.yml` | npm audit                                          |
-| `.github/workflows/auto-release.yml`   | Version bump + tag + GitHub Release (staging→main) |
-| `.github/workflows/deploy-staging.yml` | Auto-deploy to staging on push to staging          |
+| File                                 | Purpose                                          |
+| ------------------------------------ | ------------------------------------------------ |
+| `.github/workflows/test.yml`         | Unit tests (Vitest)                              |
+| `.github/workflows/e2e-tests.yml`    | E2E tests (Playwright)                           |
+| `.github/workflows/pr-check.yml`     | Build verification                               |
+| `.github/workflows/checks.yml`       | Format, lint, and security audit on PRs to main  |
+| `.github/workflows/auto-release.yml` | Tag and publish a GitHub Release on push to main |
+| `.github/workflows/deploy-docs.yml`  | Publish the VitePress docs site                  |
 
 ### Scripts
 
-| File                          | Purpose                                         |
-| ----------------------------- | ----------------------------------------------- |
-| `scripts/setup-staging.sh`    | One-command staging setup (build, start, drain) |
-| `scripts/smoke-test.sh`       | Post-deploy smoke tests (API, UI, docs, WS)     |
-| `scripts/get-claude-token.sh` | Extract Claude OAuth from macOS Keychain        |
-| `scripts/get-cursor-token.sh` | Extract Cursor OAuth from macOS Keychain        |
+| File                          | Purpose                                     |
+| ----------------------------- | ------------------------------------------- |
+| `scripts/smoke-test.sh`       | Post-deploy smoke tests (API, UI, docs, WS) |
+| `scripts/get-claude-token.sh` | Extract Claude OAuth from macOS Keychain    |
+| `scripts/get-cursor-token.sh` | Extract Cursor OAuth from macOS Keychain    |
 
 ### Service
 

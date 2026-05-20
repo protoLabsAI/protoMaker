@@ -70,7 +70,7 @@ These run in CI automatically but Quinn re-runs them locally when verifying a re
 
 ### Release QA
 
-Full verification suite for a staging or production release. Run after every `dev -> staging` or `staging -> main` promotion.
+Full verification suite for a release. Run on the candidate PR before merging to `main` and re-verify after auto-deploy completes.
 
 1. **Scope** -- Identify what changed since the last release using `git log`.
 2. **Type safety** -- Run `npm run typecheck` to catch broken types across the monorepo.
@@ -194,7 +194,7 @@ agent-browser is a Rust CLI that controls Chrome for Testing via the Chrome DevT
 
 ## Integration with Release Pipeline
 
-Quinn runs after each promotion to staging or production. The verification sequence:
+Quinn runs on candidate PRs before merge and re-verifies after auto-deploy to production. The verification sequence:
 
 1. **Post-deploy health check** -- `GET /api/health` returns 200 with all subsystems healthy.
 2. **API endpoint regression** -- Hit critical endpoints (features, board, settings, metrics) and verify response schemas.
@@ -202,12 +202,7 @@ Quinn runs after each promotion to staging or production. The verification seque
 4. **Signal/timer registration** -- Verify all expected timers appear in `GET /api/ops/timers`. Check signal processing via `GET /api/ops/signals`.
 5. **Report** -- Generate the QA report and post findings to the `#dev` Discord channel.
 
-### Staging vs Production
-
-| Stage      | Scope                              | Blocking                             |
-| ---------- | ---------------------------------- | ------------------------------------ |
-| Staging    | Full playbook (all 9 steps)        | Yes -- FAIL blocks promotion to main |
-| Production | Health + API regression + UI smoke | Yes -- FAIL triggers rollback        |
+A `FAIL` verdict on a release PR blocks merge to `main`. A `FAIL` on the post-deploy run triggers rollback.
 
 ## API Reference
 

@@ -2,7 +2,7 @@
 
 The complete runtime architecture of protoLabs Studio -- from signal entry through feature completion, with all timing, concurrency, and self-healing behaviors documented.
 
-This is the canonical reference for how the system works at runtime. For the design rationale, see [Engine Architecture](../archived/engine-architecture.md). For the 8-phase pipeline abstraction, see [Idea to Production](./idea-to-production.md).
+This is the canonical reference for how the system works at runtime. For the 8-phase pipeline abstraction, see [Idea to Production](./idea-to-production.md).
 
 ## System Diagram
 
@@ -67,14 +67,7 @@ This is the canonical reference for how the system works at runtime. For the des
     +-------------------+     +-------------------+
     | GIT WORKFLOW      |     | MAINTENANCE       |
     | commit -> push    |     | TASKS             |
-    | -> PR -> merge    |     | (8 cron jobs)     |
-    +-------------------+     +-------------------+
-              |
-              v
-    +-------------------+     +-------------------+
-    | CEREMONY SYSTEM   |     | PEER MESH         |
-    | standup | retro   |     | Multi-instance    |
-    | milestone | proj  |     | coordination      |
+    | -> PR -> merge    |     | (cron jobs)       |
     +-------------------+     +-------------------+
 ```
 
@@ -284,7 +277,7 @@ Pure functions evaluated on every event. No LLM calls.
 
 | Rule                 | Trigger                  | Condition               | Action                                |
 | -------------------- | ------------------------ | ----------------------- | ------------------------------------- |
-| projectCompleting    | `project:completed`      | All features done       | Trigger project completion ceremony   |
+| projectCompleting    | `project:completed`      | All features done       | Mark project complete, archive state  |
 | errorBudgetExhausted | Multiple                 | Budget exhausted        | Log warning, scheduler freezes pickup |
 | reviewQueueSaturated | `feature:status-changed` | Review count >= max (5) | Log warning, scheduler pauses         |
 
@@ -300,12 +293,12 @@ What happens inside EXECUTE state, from agent spawn to PR creation.
 T+0s      executeFeature() called
 T+0.5s    Load feature, validate guards, check stale context
 T+1s      Create/find worktree, write lock file
-T+1.5s    Pre-merge sync: git merge origin/main (abort on conflict)
+T+1.5s    Pre-merge sync: git merge origin/{prBaseBranch} (abort on conflict)
 T+2s      Authority check (if enabled)
 T+2.5s    Status -> in_progress, emit auto_mode_feature_start
 T+3s      Load context files, build prompt, assign agent role
 T+3.5s    Resolve model (complexity -> haiku/sonnet/opus)
-T+4s      Git sync: fetch origin, merge origin/dev
+T+4s      Git sync: fetch origin, merge origin/{prBaseBranch}
 T+5s      Create Claude SDK session, invoke provider
 T+6s      Stream starts, agent begins working
             |
@@ -319,7 +312,7 @@ T+~30m    Stream ends (or 30min timeout)
 T+30.5m   Post-agent hook: recover uncommitted work if needed
 T+31m     Record execution (cost, duration, tokens)
 T+32m     Git workflow: commit changes
-T+33m     Git workflow: rebase onto origin/dev
+T+33m     Git workflow: rebase onto origin/{prBaseBranch}
 T+34m     Git workflow: push to remote
 T+35m     Git workflow: create PR (or find existing)
 T+36m     Git workflow: check PR size (non-blocking)
@@ -345,10 +338,10 @@ T+39m     Schedule worktree cleanup (delayed)
 2. Rebase:   git fetch origin -> git rebase origin/{baseBranch}
 3. Push:     git push (--force-with-lease if rebased)
 4. PR:       gh pr create --base {baseBranch} --head {branch}
-5. Merge:    gh pr merge --squash (feature) or --merge (epic/promotion)
+5. Merge:    gh pr merge --squash (feature) or --merge (epic)
 ```
 
-PR base branch resolution: feature in epic -> epic branch; epic itself -> dev; standalone -> dev.
+PR base branch resolution: feature in epic -> epic branch; epic itself -> main; standalone -> main.
 
 ---
 
@@ -368,75 +361,22 @@ Eight scheduled tasks run alongside the main loop.
 
 ### Ava Cron Tasks
 
-| Task                   | Cron / Interval            | Description                                                                       |
-| ---------------------- | -------------------------- | --------------------------------------------------------------------------------- |
-| ava-daily-board-health | `0 9 * * *`                | Daily 9 AM -- check stale features, blocked agents, failing CI                    |
-| ava-pr-triage          | `0 */4 * * *`              | Every 4 hours -- scan CodeRabbit threads, CI failures, conflicts                  |
-| ava-staging-ping       | `*/30 * * * *`             | Every 30 min -- heartbeat to Ava Channel, report if quiet >2h                     |
-| ava-adaptive-heartbeat | Configurable (default 30m) | Opt-in -- reads HEARTBEAT.md, runs Haiku call, routes alerts via EscalationRouter |
-
-`ava-adaptive-heartbeat` is registered as an interval timer (not a cron task) and is only active when `workflowSettings.heartbeat.enabled` is `true`. Agents can rewrite `.automaker/HEARTBEAT.md` to change what the heartbeat monitors.
-
----
-
-## Ceremony System
-
-### Ceremony State Machine
-
-```
-awaiting_kickoff
-    | (project:lifecycle:launched)
-    v
-milestone_active
-    | (milestone:completed)
-    v
-milestone_retro
-    | (retro fired + remaining milestones > 0)
-    +-------> milestone_active  (loop)
-    |
-    | (retro fired + no remaining milestones)
-    v
-project_retro
-    | (project retro fired)
-    v
-project_complete  (terminal)
-```
-
-### Ceremony Types and Timing
-
-| Ceremony            | Trigger                                    | Cadence                  | Default Cron               | Duration                          |
-| ------------------- | ------------------------------------------ | ------------------------ | -------------------------- | --------------------------------- |
-| **Standup**         | Registered on `project:lifecycle:launched` | Configurable per-project | `0 9 * * 1` (Mon 9 AM UTC) | ~30s LLM                          |
-| **Milestone Retro** | `milestone:completed` event                | On-demand (automatic)    | --                         | ~60s LLM + Discord post           |
-| **Project Retro**   | `project:completed` event                  | On-demand (automatic)    | --                         | ~90s LLM + Discord post + archive |
-
-### Ceremony Artifacts
-
-Saved to `.automaker/projects/{slug}/artifacts/`:
-
-```
-artifacts/
-  index.json              # Type, timestamp, filename
-  ceremony-report/        # Standup and retro reports
-  research-report/        # Deep research outputs
-  changelog/              # Changelog entries
-  escalation/             # Escalation events with context
-  standup/                # Standup artifacts
-```
-
-Timeline entries (append-only): `.automaker/projects/{slug}/timeline.json`
+| Task                   | Cron / Interval | Description                                                      |
+| ---------------------- | --------------- | ---------------------------------------------------------------- |
+| ava-daily-board-health | `0 9 * * *`     | Daily 9 AM -- check stale features, blocked agents, failing CI   |
+| ava-pr-triage          | `0 */4 * * *`   | Every 4 hours -- scan CodeRabbit threads, CI failures, conflicts |
 
 ---
 
 ## CI/CD Pipeline
 
-### Required Checks by Branch
+### Required Checks on main
 
-| Workflow                                                      | dev               | staging  | main     |
-| ------------------------------------------------------------- | ----------------- | -------- | -------- |
-| checks.yml (format, lint, typecheck, audit, Dockerfile)       | Required          | Required | Required |
-| test.yml (package tests, server tests)                        | Runs but optional | Required | Required |
-| promotion-check.yml (source branch = staging, version bumped) | --                | --       | Required |
+| Workflow                                                | PRs to main | Push to main |
+| ------------------------------------------------------- | ----------- | ------------ |
+| checks.yml (format, lint, typecheck, audit, Dockerfile) | Required    | Required     |
+| test.yml (package tests, server tests)                  | Required    | Required     |
+| pr-check.yml (build)                                    | Required    | Required     |
 
 ### checks.yml Sequence
 
@@ -451,25 +391,13 @@ Timeline entries (append-only): `.automaker/projects/{slug}/timeline.json`
 ### Release Flow
 
 ```
-1. Bump version on staging:
-   gh workflow run prepare-release.yml --ref staging
-
-2. Promote staging to main:
-   gh pr create --base main --head staging --title "Promote vX.Y.Z"
-   gh pr merge N --merge --auto
-
-3. Auto-release (automatic on merge):
+1. PR merged to main
+2. auto-release.yml fires:
    - Read version from package.json
    - Create git tag + GitHub Release
-   - Sync main back to staging + dev
+3. deploy-main.yml fires:
+   - Drain -> build Docker -> deploy -> e2e tests -> rollback on failure
 ```
-
-### Deploy Pipeline
-
-| Event           | Workflow           | Steps                                                               |
-| --------------- | ------------------ | ------------------------------------------------------------------- |
-| Push to staging | deploy-staging.yml | Build Docker -> deploy -> health check                              |
-| Push to main    | deploy-main.yml    | Drain -> build Docker -> deploy -> e2e tests -> rollback on failure |
 
 ---
 
@@ -478,13 +406,10 @@ Timeline entries (append-only): `.automaker/projects/{slug}/timeline.json`
 ### Core Event Bus
 
 ```typescript
-events.emit(type, payload); // Local subscribers
-events.broadcast(type, payload); // Local + remote (peer mesh)
+events.emit(type, payload); // Notify local subscribers
 ```
 
-**Broadcast events** (use `broadcast()`): `project:created`, `project:updated`, `project:deleted`, `categories:updated`, `job:*`, `settings:updated`
-
-**Local-only events** (use `emit()`): All feature events, agent events, escalation events
+All events are emitted locally within the single instance. There is no cross-instance event bus.
 
 ### Key Event Flows
 
@@ -494,8 +419,7 @@ Feature lifecycle:
   feature:output -> feature:completed | feature:error | feature:stopped
 
 PR lifecycle:
-  pr:created -> pr:approved | pr:ci-failure ->
-  pr:remediation-started -> pr:merged
+  pr:created -> pr:approved | pr:ci-failure -> pr:merged
 
 Project lifecycle:
   project:created -> project:updated -> milestone:completed ->
@@ -525,46 +449,15 @@ Two WebSocket servers:
 
 ---
 
-## Multi-Instance Coordination (Peer Mesh)
-
-### Architecture
-
-Primary instance runs WebSocket sync server (port 4444). Workers connect as clients.
-
-### Timing
-
-| Parameter | Interval | Description                         |
-| --------- | -------- | ----------------------------------- |
-| Heartbeat | 15s      | Peer identity + capacity broadcast  |
-| TTL check | 30s      | Remove peers without heartbeat      |
-| Peer TTL  | 120s     | Time before peer is considered dead |
-| Reconnect | 5s       | Worker retry on connection loss     |
-
-### Project Assignment
-
-- `claimPreferredProjects()` on boot (reads `proto.config.yaml`)
-- `reassignOrphanedProjects()` every 60s (detect stale peers >120s)
-- Three-tier feature sort: assigned projects > own unassigned > overflow
-
----
-
 ## Periodic Interval Tasks (setInterval)
 
 Non-cron periodic tasks running in the server process.
 
-| Service                   | Interval                    | Description                                            |
-| ------------------------- | --------------------------- | ------------------------------------------------------ |
-| Health monitor            | 5 min                       | Check stuck features (30min threshold), auto-remediate |
-| Spec generation monitor   | 30s                         | Detect stalled spec regen (5min threshold), cleanup    |
-| Lead Engineer world state | 5 min                       | Full rebuild of LeadWorldState                         |
-| Lead Engineer supervisor  | 30s                         | Monitor active features for anomalies                  |
-| PR merge poller           | 2.5 min                     | Check for merged PRs                                   |
-| PR watcher                | 30s poll, 30min auto-expire | Monitor PR CI status                                   |
-| Feature health audit      | ~100s (50 loop iterations)  | Board health sweep in auto-mode loop                   |
-| Peer mesh heartbeat       | 15s                         | Peer mesh heartbeat                                    |
-| Peer mesh TTL enforcement | 30s                         | Evict unreachable peers                                |
-| Peer mesh reconnect       | 5s                          | Worker reconnect to primary                            |
-| Worktree drift check      | 6 hours                     | Detect phantom/orphan worktrees                        |
+| Service              | Interval                   | Description                                            |
+| -------------------- | -------------------------- | ------------------------------------------------------ |
+| Health monitor       | 5 min                      | Check stuck features (30min threshold), auto-remediate |
+| Feature health audit | ~100s (50 loop iterations) | Board health sweep in auto-mode loop                   |
+| Worktree drift check | 6 hours                    | Detect phantom/orphan worktrees                        |
 
 ---
 
@@ -575,40 +468,36 @@ Non-cron periodic tasks running in the server process.
 | Group                     | Count | Key Services                                                                                                                          |
 | ------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | Core Event Infrastructure | 2     | EventEmitter, EventStreamBuffer                                                                                                       |
-| Feature & Project         | 6     | FeatureLoader, ProjectService, ProjectLifecycleService, ProjectAssignmentService, ProjectSlugResolver, ProjectPMService               |
+| Feature & Project         | 5     | FeatureLoader, ProjectService, ProjectLifecycleService, ProjectSlugResolver, ProjectPMService                                         |
 | Agent Execution           | 4     | AgentService, AutoModeService, LeadEngineerService, WorkIntakeService                                                                 |
 | Knowledge & Metrics       | 6     | KnowledgeStoreService, MetricsService, DoraMetricsService, ErrorBudgetService, LedgerService, ArchivalService                         |
 | Scheduling & Automation   | 3     | SchedulerService, AutomationService, JobExecutorService                                                                               |
-| Multi-Instance (Hivemind) | 3     | PeerMeshService, AvaChannelService, AvaChannelReactorService                                                                          |
 | Discord                   | 4     | DiscordService, DiscordBotService, AgentDiscordRouter, NotificationRouter                                                             |
 | Authority & Governance    | 6     | AuthorityService, PM/GTM/EM/ProjM Agents, AuditService                                                                                |
 | Pipeline & State          | 6     | PipelineOrchestrator, PipelineCheckpointService, LeadHandoffService, FactStoreService, TrajectoryStoreService, ContextFidelityService |
-| Health & Monitoring       | 4     | HealthMonitorService, FeatureHealthService, SpecGenerationMonitor, IntegrityWatchdogService                                           |
+| Health & Monitoring       | 3     | HealthMonitorService, FeatureHealthService, IntegrityWatchdogService                                                                  |
 | WebSocket & Real-Time     | 4     | DevServerService, NotificationService, ActionableItemService, ActionableItemBridge                                                    |
 | Settings & Context        | 4     | SettingsService, UserIdentityService, ContextAggregator, SensorRegistryService                                                        |
 | Communication & Routing   | 4     | ChannelRouter, EscalationRouter, SignalIntakeService, HITLFormService                                                                 |
-| Review & Feedback         | 4     | PRFeedbackService, AntagonisticReviewService, WorktreeLifecycleService, ReconciliationService                                         |
+| Review                    | 3     | AntagonisticReviewService, WorktreeLifecycleService, ReconciliationService                                                            |
 
 ### Wiring Order
 
-Services are wired in strict order via 15 register modules in `server/wiring.ts`:
+Services are wired in strict order via register modules in `server/wiring.ts`:
 
 ```
 1.  registerCore                  Settings, calendar, notifications, auto-mode
 2.  registerEscalationChannels    Escalation routing infrastructure
 3.  registerEventSubscriptions    Board reconciliation watchers
 4.  registerChannelHandlers       HITL routing
-5.  registerLeadEngineer          State machine + PR feedback + EM agent
+5.  registerLeadEngineer          State machine + EM agent
 6.  registerWorktreeLifecycle     Auto-cleanup + drift detection
 7.  registerDiscord               Bot + event routing
 8.  registerScheduler             Cron executor + task registration
-9.  registerCeremony              Completion ceremonies
-10. registerInfrastructure        Health monitor + Ava Gateway
-11. registerProjectPm             PM Agent event sync
-12. registerEventLedger           13 lifecycle events -> audit log
-13. registerPeerMesh              Event bus <-> remote peer sync
-14. registerWorkIntake            Work distribution across instances
-15. registerAvaChannel            Auto-narration to private Ava Channel
+9.  registerInfrastructure        Health monitor + Ava Gateway
+10. registerProjectPm             PM Agent event sync
+11. registerEventLedger           Lifecycle events -> audit log
+12. registerWorkIntake            Pull-based phase claiming
 ```
 
 ### Startup Sequence
@@ -616,18 +505,14 @@ Services are wired in strict order via 15 register modules in `server/wiring.ts`
 ```
 1. Settings migration
 2. Runtime state migration (.automaker/ -> DATA_DIR)
-3. PeerMeshService.start()
-4. ProjectAssignmentService.claimPreferredProjects()
-5. Peer mesh init
-6. AvaChannelReactorService init
-7. KnowledgeStoreService.initialize() for all projects
-8. ProjectService.ensureBugsProject()
-9. ProjectService.ensureSystemImprovementsProject()
-10. AutoModeService.reconcileFeatureStates()
-11. LeadEngineerService.reconcileCheckpoints()
-12. WorktreeLifecycleService.prunePhantomWorktrees()
-13. Crash detection (clean shutdown marker)
-14. Auto-mode auto-start (if settings.autoModeAlwaysOn.enabled)
+3. KnowledgeStoreService.initialize() for all projects
+4. ProjectService.ensureBugsProject()
+5. ProjectService.ensureSystemImprovementsProject()
+6. AutoModeService.reconcileFeatureStates()
+7. LeadEngineerService.reconcileCheckpoints()
+8. WorktreeLifecycleService.prunePhantomWorktrees()
+9. Crash detection (clean shutdown marker)
+10. Auto-mode auto-start (if settings.autoModeAlwaysOn.enabled)
 ```
 
 ### Shutdown Sequence
@@ -643,11 +528,9 @@ Services are wired in strict order via 15 register modules in `server/wiring.ts`
 8. Shutdown WorktreeLifecycleService
 9. Shutdown HITLFormService
 10. Stop AgentDiscordRouter
-11. Stop AvaChannelReactorService
-12. Shutdown PeerMeshService
-13. Dispose AgentManifestService
-14. Shutdown Langfuse + OTel
-15. Close HTTP server (5s force-exit timeout)
+11. Dispose AgentManifestService
+12. Shutdown Langfuse + OTel
+13. Close HTTP server (5s force-exit timeout)
 ```
 
 ---
@@ -677,25 +560,12 @@ Services are wired in strict order via 15 register modules in `server/wiring.ts`
 | Circuit breaker cooldown | 5 min   | Auto-resume after pause          |
 | Failure window           | 60s     | Rolling window for failure count |
 
-### Lead Engineer Intervals
-
-| Parameter           | Default | Description                    |
-| ------------------- | ------- | ------------------------------ |
-| World state refresh | 5 min   | Full rebuild of board snapshot |
-| Supervisor check    | 30s     | Monitor active features        |
-| PR merge poll       | 2.5 min | Check for merged PRs           |
-
 ### Infrastructure Intervals
 
 | Parameter            | Default | Description              |
 | -------------------- | ------- | ------------------------ |
-| Peer mesh heartbeat  | 15s     | Peer identity broadcast  |
-| Peer mesh TTL check  | 30s     | Remove unreachable peers |
-| Peer mesh peer TTL   | 120s    | Time before peer is dead |
-| Peer mesh reconnect  | 5s      | Worker retry delay       |
 | Worktree drift check | 6 hours | Phantom/orphan detection |
 | Health monitor       | 5 min   | Stuck feature check      |
-| Spec gen monitor     | 30s     | Stalled spec cleanup     |
 
 ### Fast-Path Rule Thresholds
 
@@ -704,7 +574,6 @@ Services are wired in strict order via 15 register modules in `server/wiring.ts`
 | orphanedInProgress | 4 hours   | In-progress with no agent      |
 | stuckAgent         | 2 hours   | Agent running without progress |
 | staleReview        | 30 min    | PR in review, no auto-merge    |
-| remediationStalled | 1 hour    | Remediation attempt timeout    |
 | stuckFeature       | 30 min    | In-progress without activity   |
 
 ---
@@ -723,10 +592,7 @@ Services are wired in strict order via 15 register modules in `server/wiring.ts`
 | Claude provider          | `apps/server/src/providers/claude-provider.ts`               |
 | Dependency resolver      | `libs/dependency-resolver/src/resolver.ts`                   |
 | Deploy processor         | `apps/server/src/services/lead-engineer-deploy-processor.ts` |
-| Ceremony service         | `apps/server/src/services/ceremony-service.ts`               |
-| Ceremony action executor | `apps/server/src/services/ceremony-action-executor.ts`       |
 | Maintenance tasks        | `apps/server/src/services/maintenance-tasks.ts`              |
-| PR feedback service      | `apps/server/src/services/pr-feedback-service.ts`            |
 | Signal intake service    | `apps/server/src/services/signal-intake-service.ts`          |
 | Pipeline orchestrator    | `apps/server/src/services/pipeline-orchestrator.ts`          |
 | Service container        | `apps/server/src/server/services.ts`                         |
@@ -744,9 +610,6 @@ Services are wired in strict order via 15 register modules in `server/wiring.ts`
 - [Idea to Production](./idea-to-production.md) -- 8-phase pipeline abstraction
 - [Lead Engineer Pipeline](./lead-engineer-pipeline.md) -- Detailed processor logic (INTAKE, PLAN, EXECUTE)
 - [Project Lifecycle](./project-lifecycle.md) -- Project-level state machine
-- [Engine Architecture](../archived/engine-architecture.md) -- Design rationale ADR
 - [Feature Status System](./feature-status-system.md) -- Canonical 5-status board lifecycle
-- [PR Remediation Loop](./pr-remediation-loop.md) -- CI failure handling
-- [Branch Strategy](./branch-strategy.md) -- Three-branch git workflow
-- [Distributed Sync](./distributed-sync.md) -- Multi-instance CRDT mesh
+- [Branch Strategy](./branch-strategy.md) -- Single-trunk git workflow
 - [Event Ledger](./event-ledger.md) -- Append-only event persistence

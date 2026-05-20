@@ -1,12 +1,10 @@
 # Notes Workspace
 
-How the notes workspace is stored and served across protoLabs instances.
-
-> **Updated March 2026:** CRDT/Automerge sync was removed from the notes routes. The workspace is now disk-only (`workspace.json`). Each instance maintains its own copy; there is no cross-instance replication of notes.
+How the notes workspace is stored and served within an instance.
 
 ## Overview
 
-The notes workspace is stored as a JSON file at `.automaker/notes/workspace.json`. All reads and writes go directly to disk — there is no in-memory CRDT layer.
+The notes workspace is stored as a JSON file at `.automaker/notes/workspace.json`. All reads and writes go directly to disk — there is no in-memory cache or cross-instance replication.
 
 ```
 HTTP Request
@@ -107,10 +105,9 @@ If no `workspace.json` exists, routes return:
 
 ## Multi-Instance Behavior
 
-Notes are **not replicated** across Hivemind instances. Each instance has its own `workspace.json`. If you need the same notes on multiple instances, copy the file manually or use git to sync it.
+Notes are **not replicated** across instances. Each instance has its own `workspace.json`. If you need the same notes on multiple instances, copy the file manually or check it into git.
 
 ## Related
 
-- [Distributed Sync](./distributed-sync.md) — Peer mesh architecture and sync protocol
 - [Notes Panel](./notes-panel.md) — Frontend UI for the notes workspace
 - `apps/server/src/routes/notes/index.ts` — Route implementations

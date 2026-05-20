@@ -131,7 +131,7 @@ The `auto-release.yml` workflow calls the rewriter script as the final step afte
 
 ### Enabling/Disabling
 
-- **Enabled by default**: Wired into `auto-release.yml` — runs on every `staging->main` merge
+- **Enabled by default**: Wired into `auto-release.yml` — runs on every merge to `main`
 - **Requires**: `ANTHROPIC_API_KEY` (Claude API)
 - **Manual runs**: `node scripts/rewrite-release-notes.mjs` locally with `ANTHROPIC_API_KEY` set
 - **Disable in CI**: Remove or comment out the "Rewrite and post release notes" step in `auto-release.yml`; the GitHub Release body still contains the raw auto-generated notes from `gh release create`

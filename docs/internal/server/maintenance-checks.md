@@ -2,7 +2,7 @@
 
 ## Cross-Repo Triage Signals
 
-When a health-check ceremony creates features that describe problems in **external repos** (e.g. "CI failing on rabbit-hole.io main branch", "PR #72 in protoCLI has no reviewer"), those features must be filed as **signal** features, not `code` features.
+When a maintenance check creates features that describe problems in **external repos** (e.g. "CI failing on rabbit-hole.io main branch", "PR #72 in protoCLI has no reviewer"), those features must be filed as **signal** features, not `code` features.
 
 Signal features:
 

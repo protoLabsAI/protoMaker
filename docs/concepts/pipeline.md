@@ -108,9 +108,9 @@ The Lead Engineer state machine takes over. See the Lead Engineer section below 
 
 ### Phase 8: PUBLISH
 
-**Gate:** review (ops) / manual (gtm) | **Agent:** PR feedback service | **workItemState:** `done`
+**Gate:** review (ops) / manual (gtm) | **Agent:** Merge orchestrator | **workItemState:** `done`
 
-**Second human gate.** PR is created, CI runs, CodeRabbit reviews. The pipeline can hold here for human review if issues are found. On clean pass, auto-proceeds. PR merges to target branch (dev, epic, or main). Board status updates to `done`. Emits `feature:pr-merged`.
+**Second human gate.** PR is created, CI runs, CodeRabbit reviews. The pipeline can hold here for human review if issues are found. On clean pass, auto-proceeds. PR merges to target branch (main, or the parent epic branch for epic children). Board status updates to `done`. Emits `feature:pr-merged`.
 
 ## Gate system
 
@@ -227,16 +227,16 @@ Persona agent runs in isolated worktree. On success → REVIEW. On failure: retr
 
 ### REVIEW
 
-PR created, CI runs, CodeRabbit reviews. ReviewProcessor polls PR state every 30 seconds via PRFeedbackService (fallback: gh CLI):
+PR created, CI runs, CodeRabbit reviews. ReviewProcessor inspects PR state via the `gh` CLI on each phase tick:
 
-- On `changes_requested`: collect review feedback, loop back to EXECUTE (max 4 remediation cycles, max 2 PR iterations)
+- On `changes_requested`: surface the feedback and return the feature to the operator for follow-up
 - On `approved` + CI passing → MERGE
 - On pending >45 minutes → ESCALATE with diagnostic
 - External merge detection: if the branch has a merged PR on GitHub, transition directly to DONE
 
 ### MERGE
 
-Merge PR via `gh pr merge`. Strategy: promotion PRs (targeting staging/main) always use `--merge`; feature PRs use `prMergeStrategy` from global settings (default: squash). Retries with 60-second delay on failure. On success → DEPLOY.
+Merge PR via `gh pr merge`. Strategy: epic PRs (`epic/* → main`) always use `--merge`; feature PRs use `prMergeStrategy` from global settings (default: squash). Retries with 60-second delay on failure. On success → DEPLOY.
 
 ### DEPLOY
 
@@ -346,7 +346,6 @@ The flow graph view tracks all concurrent pipelines, not just one. When multiple
 | `apps/server/src/services/auto-mode-service.ts`                          | Orchestration, worktree mgmt      |
 | `apps/server/src/services/feature-scheduler.ts`                          | Scheduling loop, dep resolution   |
 | `apps/server/src/services/notification-router.ts`                        | Notification signal routing       |
-| `apps/server/src/services/pr-feedback-service.ts`                        | PR polling and remediation        |
 | `apps/server/src/services/hitl-form-service.ts`                          | HITL form creation and responses  |
 | `apps/server/src/services/escalation-router.ts`                          | Escalation signal routing         |
 | `apps/server/src/services/authority-agents/pm-agent.ts`                  | PM (research + PRD + HITL)        |

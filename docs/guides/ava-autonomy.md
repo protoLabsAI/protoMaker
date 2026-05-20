@@ -137,9 +137,9 @@ Tags: git, workflow
 ```
 
 ```
-Remember that the staging environment URL is https://staging.example.com and deploys happen automatically on push to staging.
-Key: staging-env
-Tags: ops, deploy, staging
+Remember that production deploys happen automatically on every push to main.
+Key: deploy-flow
+Tags: ops, deploy
 ```
 
 ## Enable Gateway Auto-Remediation

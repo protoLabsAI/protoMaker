@@ -1,21 +1,19 @@
 # CI/CD Pipelines
 
-protoLabs uses GitHub Actions for continuous integration and delivery. All workflows run on a self-hosted runner (`ava-staging`) with access to Claude CLI, Docker, and the staging environment.
+protoLabs uses GitHub Actions for continuous integration and delivery. CI runs on every PR targeting `main` and on every push to `main`. Releases are tagged automatically on merge.
 
 ## Workflows Overview
 
-| Workflow                | Trigger                  | Runner      | Purpose                             |
-| ----------------------- | ------------------------ | ----------- | ----------------------------------- |
-| `checks.yml`            | PR, push to main, weekly | self-hosted | Format, lint, audit                 |
-| `test.yml`              | PR, push to main         | self-hosted | Unit tests                          |
-| `e2e-tests.yml`         | Push to main, manual     | self-hosted | End-to-end tests                    |
-| `pr-check.yml`          | PR, push to main         | self-hosted | Build verification                  |
-| `deploy-staging.yml`    | Push to staging, manual  | self-hosted | Auto-deploy staging environment     |
-| `deploy-main.yml`       | Push to main, manual     | self-hosted | Auto-deploy production environment  |
-| `auto-release.yml`      | staging→main PR merged   | self-hosted | Version bump + tag + GitHub Release |
-| `rewrite-release-notes` | Manual / CI step         | self-hosted | LLM-powered release notes rewriting |
+| Workflow           | Trigger                  | Runner      | Purpose                      |
+| ------------------ | ------------------------ | ----------- | ---------------------------- |
+| `checks.yml`       | PR, push to main, weekly | self-hosted | Format, lint, audit          |
+| `test.yml`         | PR, push to main         | self-hosted | Unit tests                   |
+| `e2e-tests.yml`    | Push to main, manual     | self-hosted | End-to-end tests             |
+| `pr-check.yml`     | PR, push to main         | self-hosted | Build verification           |
+| `auto-release.yml` | Push to main             | self-hosted | Version tag + GitHub Release |
+| `deploy-docs.yml`  | Push to main             | self-hosted | Publish VitePress docs site  |
 
-> **Note:** There are no separate `format-check.yml` or `security-audit.yml` workflows. Format checking, linting, and security audit are consolidated into `checks.yml`.
+> **Note:** Format checking, linting, and security audit are consolidated into `checks.yml`. There is no separate `format-check.yml` or `security-audit.yml`.
 
 ## Checks (`checks.yml`)
 
@@ -73,7 +71,7 @@ on:
   pull_request:
     branches: ['*']
   push:
-    branches: [main, master]
+    branches: [main]
 
 jobs:
   test:
@@ -115,7 +113,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run build --workspace=apps/server
 
-      # Start backend on port 3018 (avoids conflict with staging on 3008)
+      # Start backend on a test port
       - run: npm run start --workspace=apps/server &
         env:
           PORT: 3018
@@ -143,7 +141,6 @@ jobs:
 
 - `AUTOMAKER_MOCK_AGENT=true` — Uses mock agent instead of real API
 - `IS_CONTAINERIZED=true` — Skips sandbox confirmation dialogs
-- Port 3018 for server, 3017 for UI (avoids conflict with staging)
 - Deterministic API key for reliable login
 
 ### Artifacts
@@ -164,7 +161,7 @@ on:
   pull_request:
     branches: ['*']
   push:
-    branches: [main, master]
+    branches: [main]
 
 jobs:
   build:
@@ -185,22 +182,18 @@ jobs:
 
 ## Auto Release (`auto-release.yml`)
 
-Automatically cuts a version bump and GitHub Release whenever a `staging→main` PR is merged.
+Automatically tags a release and publishes a GitHub Release on every push to `main`.
 
 ### Release Flow
 
 ```
-staging → main PR merged
+PR merged to main
     ↓
 auto-release.yml
-    ├── clean stale changesets (find .changeset -name '*.md' ! -name 'README.md' -delete)
-    ├── npm run release:prepare  (analyze commits since last tag → bump type)
-    ├── npm run changeset:version  (bump @protolabsai/* in lockstep, write CHANGELOG)
-    ├── git commit "chore: release vX.Y.Z" → pushed to main
+    ├── derive version from package.json
     ├── git tag vX.Y.Z → pushed via GH_PAT
-    └── sync version bump back to staging and dev
-            ├── gh pr create --base staging --head main → auto-merge
-            └── gh pr create --base dev --head main → auto-merge
+    ├── gh release create vX.Y.Z
+    └── (optional) Rewrite release notes via Claude and post to Discord #dev
 ```
 
 ### Token Requirement
@@ -244,59 +237,6 @@ Wired into `auto-release.yml` as the "Rewrite and post release notes to Discord"
 - `ANTHROPIC_API_KEY` — required for Claude API calls
 - Git tags must exist locally (`git fetch origin --tags` if needed)
 
-The release workflow is documented in the internal development docs.
-
-## Deploy Staging (`deploy-staging.yml`)
-
-Auto-deploys to the staging server when code is pushed to the `staging` branch (i.e., when a `dev→staging` PR merges). Staging always runs staging-branch code — **not** main. Includes agent draining, rollback support, and smoke tests.
-
-### Deployment Pipeline
-
-1. **Setup** — Clone/pull repo into persistent deploy directory (`/home/deploy/staging/automaker`)
-2. **Disk check** — Require at least 10GB free, prune dangling Docker images
-3. **Drain agents** — POST to `/api/deploy/drain` to gracefully stop auto-mode and wait for agents to finish
-4. **Tag rollback** — Tag current working Docker images as `rollback` for restore on failure
-5. **Build & start** — `./scripts/setup-staging.sh --build && --start`
-6. **Verify** — Health check with 15 retries (30s total), docs site check (non-fatal)
-7. **Smoke tests** — `./scripts/smoke-test.sh` verifies critical functionality
-8. **Rollback** — On failure, restores rollback-tagged images and verifies recovery
-9. **Cleanup** — Prune rollback tags and unused images
-10. **Notify Discord** — Posts deploy result to `#deployments` via webhook
-
-See [staging-deployment.md](./staging-deployment.md#deployment-steps) for full setup.
-
-## Deploy Production (`deploy-main.yml`)
-
-Auto-deploys to the production server (`/opt/protomaker`) when code is pushed to the `main` branch (i.e., when a `staging→main` PR merges). Includes agent draining, rollback support, and fatal smoke tests.
-
-### Deployment Pipeline
-
-1. **Pull** — `git fetch origin main && git reset --hard origin/main` at `/opt/protomaker`
-2. **Disk check** — Require at least 5GB free, prune dangling Docker images
-3. **Tag rollback** — Tag current working Docker images (`protomaker-{svc}:rollback`) for restore on failure
-4. **Drain agents** — POST to `/api/deploy/drain` to gracefully stop auto-mode and wait for agents to finish
-5. **Rebuild** — `docker compose build --no-cache`
-6. **Restart** — `docker compose down && docker compose up -d`
-7. **Verify** — Health check with 20 retries (60s total)
-8. **Smoke tests** — `./scripts/smoke-test.sh` — **fatal**: failure triggers rollback
-9. **Rollback** — On verify or smoke failure, restores rollback-tagged images
-10. **Cleanup** — Prune rollback tags and unused images
-11. **Notify Discord** — Posts deploy result to `#deployments` or `#alerts` via webhook
-
-### Runner
-
-Runs on `[self-hosted, protolabs]` — the production runner inside CT 104 on pve01.
-
-### Self-Hosted Runner
-
-```bash
-# Install runner
-./scripts/setup-runner.sh
-
-# Check status
-./scripts/setup-runner.sh --status
-```
-
 ## Composite Actions
 
 ### `setup-project`
@@ -334,7 +274,7 @@ The `main` branch is protected by a single consolidated ruleset ("Protect main",
 - **Required status checks**: `checks`, `test`, `build`
 - **Required reviews**: CodeRabbit
 - **Required review thread resolution**: Yes (CodeRabbit comments must be resolved)
-- **Squash-only merges**: Yes
+- **Squash-only merges**: Yes (epic PRs use merge commits)
 - **Admin bypass**: Enabled
 - **Branches do NOT need to be up-to-date**: `strict_required_status_checks_policy` is `false` — PRs can merge without rebasing onto the latest main. This eliminates the cascade problem where each merge forces all other PRs to update and re-run CI.
 
@@ -350,16 +290,16 @@ IaC source of truth: `scripts/infra/rulesets/main.json`
 
 ## Self-Hosted Runner Capabilities
 
-The `ava-staging` runner has access to resources that GitHub-hosted runners don't:
+The self-hosted runner has access to resources that GitHub-hosted runners don't:
 
-| Capability                 | What It Enables                                       |
-| -------------------------- | ----------------------------------------------------- |
-| Claude CLI (authenticated) | AI-assisted tasks, release notes rewriting            |
-| Anthropic API key          | Agent execution, code analysis                        |
-| protoLabs MCP server       | Board updates, feature status, agent orchestration    |
-| Docker (host)              | Staging deploys, integration tests against real infra |
-| gh CLI (authenticated)     | PR creation, issue management, release publishing     |
-| 125GB RAM / 24 CPUs        | Full E2E test suites, parallel builds                 |
+| Capability                 | What It Enables                                          |
+| -------------------------- | -------------------------------------------------------- |
+| Claude CLI (authenticated) | AI-assisted tasks, release notes rewriting               |
+| Anthropic API key          | Agent execution, code analysis                           |
+| protoLabs MCP server       | Board updates, feature status, agent orchestration       |
+| Docker (host)              | Production deploys, integration tests against real infra |
+| gh CLI (authenticated)     | PR creation, issue management, release publishing        |
+| Large memory / CPU         | Full E2E test suites, parallel builds                    |
 
 ## Local CI Simulation
 

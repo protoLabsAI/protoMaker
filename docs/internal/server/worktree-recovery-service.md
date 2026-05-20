@@ -59,7 +59,7 @@ interface WorktreeRecoveryResult {
 
 ## Staging Behaviour
 
-Staging uses `buildGitAddCommand()` from `git-staging-utils` which generates a pathspec that excludes `.automaker/` (except `memory/` and `skills/` subdirectories). This prevents accidental staging of execution state, secrets, or CRDT data.
+Git staging uses `buildGitAddCommand()` from `git-staging-utils` which generates a pathspec that excludes `.automaker/` (except `memory/` and `skills/` subdirectories). This prevents accidental staging of execution state or secrets.
 
 If the pathspec stages nothing (e.g., all files are in unusual locations), the service falls back to `git add .` — safe because worktrees are isolated per-feature.
 
