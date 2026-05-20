@@ -79,7 +79,6 @@ export const DEFAULT_AVA_CONFIG: AvaConfig = {
     agentControl: true,
     autoMode: true,
     prWorkflow: true,
-    promotion: true,
     contextFiles: true,
     orchestration: true,
     projectMgmt: true,

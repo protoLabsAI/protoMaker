@@ -38,7 +38,6 @@ The following tool groups are available in the UI chat, gated by per-project `av
 | `notes`           | `list_notes`, `get_note`, `create_note`, `update_note`, `delete_note`, `rename_note`               |
 | `metrics`         | `get_project_metrics`, `get_agent_metrics`, `get_cost_summary`                                     |
 | `prWorkflow`      | `list_pull_requests`, `get_pull_request`, `resolve_pr_threads`, `request_pr_review`                |
-| `promotion`       | `promote_feature`, `get_promotion_status`, `list_promotable_features`                              |
 | `contextFiles`    | `list_context_files`, `get_context_file`, `update_context_file`                                    |
 | `projects`        | `list_projects`, `get_project`, `create_project`, `update_project`                                 |
 | `briefing`        | `get_briefing` — daily situation report, board summary, running agents                             |

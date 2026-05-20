@@ -6,7 +6,7 @@
  * - Scope-check validation (out-of-scope drift detected → escalated)
  * - Loop prevention (one-per-PR cap → skipped)
  * - Agent-author verification (non-agent branch → skipped)
- * - Protected branch rejection (main/staging/dev → skipped)
+ * - Protected branch rejection (main → skipped)
  * - HITL escalation paths (prettier error, push error, scope drift)
  * - successful remediation returns success with files fixed and commit SHA
  * - Synthesized unformatted PR scenario (regression)
@@ -207,32 +207,6 @@ describe('safety guards', () => {
     expect(result.details?.guard).toBe('protected-branch');
     // Should never proceed to git operations for protected branches
     expect(mockWorker.runPrettier).not.toHaveBeenCalled();
-  });
-
-  it('protected branch — staging — returns skipped', async () => {
-    const result = await remediateFormatFailure({
-      projectPath: '/project',
-      prNumber: 2,
-      headBranch: 'staging',
-      headSha: 'abc',
-      repository: 'owner/repo',
-    });
-
-    expect(result.status).toBe('skipped');
-    expect(result.details?.guard).toBe('protected-branch');
-  });
-
-  it('protected branch — dev — returns skipped', async () => {
-    const result = await remediateFormatFailure({
-      projectPath: '/project',
-      prNumber: 3,
-      headBranch: 'dev',
-      headSha: 'abc',
-      repository: 'owner/repo',
-    });
-
-    expect(result.status).toBe('skipped');
-    expect(result.details?.guard).toBe('protected-branch');
   });
 
   it('non-agent branch — no recognized prefix — returns skipped', async () => {

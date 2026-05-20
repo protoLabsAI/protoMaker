@@ -99,8 +99,8 @@ describe('PR base branch resolution (getEffectivePrBaseBranch)', () => {
     expect(result).toBe(DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch);
   });
 
-  it('default prBaseBranch is "dev"', () => {
-    expect(DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch).toBe('dev');
+  it('default prBaseBranch is "main"', () => {
+    expect(DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch).toBe('main');
   });
 });
 

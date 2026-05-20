@@ -88,7 +88,7 @@
       "autoAssignEnabled": true
     },
     "gitWorkflow": {
-      "prBaseBranch": "dev"
+      "prBaseBranch": "main"
     },
     "heartbeat": {
       "enabled": true,

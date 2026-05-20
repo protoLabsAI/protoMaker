@@ -103,16 +103,6 @@ function compactProjectSummary(result: unknown): unknown {
   return result;
 }
 
-function compactListStagingCandidates(result: unknown): unknown {
-  if (!Array.isArray(result)) return result;
-  return result.map((c: Record<string, unknown>) => ({
-    featureId: c['featureId'],
-    title: c['title'],
-    status: c['status'],
-    prNumber: c['prNumber'],
-  }));
-}
-
 function compactBoardSummaryExtended(result: unknown): unknown {
   if (result && typeof result === 'object' && !Array.isArray(result)) {
     const r = result as Record<string, unknown>;
@@ -228,12 +218,6 @@ export function compactToolResult(toolName: string, result: unknown): unknown {
       return result;
     case 'get_pr_feedback':
       return compactBySize(result);
-
-    // staging
-    case 'list_staging_candidates':
-      return compactListStagingCandidates(result);
-    case 'promote_to_staging':
-      return result;
 
     // context files
     case 'list_context_files':

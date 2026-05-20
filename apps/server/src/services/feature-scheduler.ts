@@ -1103,7 +1103,7 @@ export class FeatureScheduler {
       );
 
       if (mergeConflictBlocked.length > 0) {
-        let resolvedPrBaseBranch = 'dev';
+        let resolvedPrBaseBranch = 'main';
         try {
           resolvedPrBaseBranch = await getEffectivePrBaseBranch(
             projectPath,

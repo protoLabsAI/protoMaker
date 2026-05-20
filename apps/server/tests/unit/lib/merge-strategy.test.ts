@@ -19,12 +19,6 @@ describe('resolveMergeStrategy', () => {
     vi.clearAllMocks();
   });
 
-  it('returns --merge for PRs targeting staging', async () => {
-    mockExecAsync.mockResolvedValue({ stdout: 'staging\n', stderr: '' });
-    const result = await resolveMergeStrategy(42, '/test/project');
-    expect(result).toBe('--merge');
-  });
-
   it('returns --merge for PRs targeting main', async () => {
     mockExecAsync.mockResolvedValue({ stdout: 'main\n', stderr: '' });
     const result = await resolveMergeStrategy(42, '/test/project');
@@ -35,12 +29,6 @@ describe('resolveMergeStrategy', () => {
     mockExecAsync.mockResolvedValue({ stdout: 'epic/auth-overhaul\n', stderr: '' });
     const result = await resolveMergeStrategy(42, '/test/project');
     expect(result).toBe('--merge');
-  });
-
-  it('returns --squash for PRs targeting dev', async () => {
-    mockExecAsync.mockResolvedValue({ stdout: 'dev\n', stderr: '' });
-    const result = await resolveMergeStrategy(42, '/test/project');
-    expect(result).toBe('--squash');
   });
 
   it('returns --squash for PRs targeting feature branches', async () => {
