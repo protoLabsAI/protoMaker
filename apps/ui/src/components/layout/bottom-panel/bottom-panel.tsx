@@ -91,25 +91,9 @@ export function BottomPanel() {
 
   // Server connection state
   const serverUrlOverride = useAppStore((s) => s.serverUrlOverride);
-  const instanceName = useAppStore((s) => s.instanceName);
-  const instanceRole = useAppStore((s) => s.instanceRole);
-  const peers = useAppStore((s) => s.peers);
-  const fetchSelfInstanceId = useAppStore((s) => s.fetchSelfInstanceId);
-  const fetchPeers = useAppStore((s) => s.fetchPeers);
 
   const [tickerPopoverOpen, setTickerPopoverOpen] = useState(false);
   const tickerHoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hasFetchedRef = useRef(false);
-
-  // Fetch instance info and peers on mount (once)
-  useEffect(() => {
-    if (!hasFetchedRef.current) {
-      hasFetchedRef.current = true;
-      fetchSelfInstanceId().catch(() => {});
-      // TODO: Re-enable when mesh system is revisited
-      // fetchPeers().catch(() => {});
-    }
-  }, [fetchSelfInstanceId, fetchPeers]);
 
   const [time, setTime] = useState(() => new Date());
   useEffect(() => {
@@ -143,14 +127,9 @@ export function BottomPanel() {
     error: 'text-red-500',
   }[systemStatus];
 
-  // Derive display label: instanceName > hostname of current URL > 'Server'
+  // Derive display label from connected URL hostname
   const currentServerUrl = serverUrlOverride ?? getServerUrlSync();
-  const displayLabel =
-    instanceName ?? (currentServerUrl ? getHostname(currentServerUrl) : 'Server');
-
-  // Peer stats
-  const onlinePeers = peers.filter((p) => p.identity.status !== 'offline');
-  const totalPeers = peers.length;
+  const displayLabel = currentServerUrl ? getHostname(currentServerUrl) : 'Server';
 
   const handleTickerMouseEnter = () => {
     if (tickerHoverTimerRef.current) clearTimeout(tickerHoverTimerRef.current);
@@ -362,75 +341,11 @@ export function BottomPanel() {
                 </span>
               </div>
 
-              {/* Instance name & role */}
+              {/* Instance name */}
               <div className="flex items-center justify-between mb-1">
                 <span className="text-muted-foreground">Instance</span>
                 <span className="font-medium truncate max-w-[130px]">{displayLabel}</span>
               </div>
-              {instanceRole && (
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-muted-foreground">Role</span>
-                  <span className="capitalize text-blue-400">{instanceRole}</span>
-                </div>
-              )}
-
-              {/* TODO: Re-enable when mesh system is revisited
-              <div className="flex items-center justify-between mt-1 mb-2">
-                <span className="text-muted-foreground">Peers</span>
-                <span>
-                  <span className="text-emerald-400 font-medium">{onlinePeers.length}</span>
-                  <span className="text-muted-foreground"> / {totalPeers} total</span>
-                </span>
-              </div>
-
-              {peers.length > 0 && (
-                <div className="space-y-1.5 border-t border-border pt-2">
-                  <p className="text-[10px] text-muted-foreground/70 mb-1">Peers</p>
-                  {peers.map((peer) => {
-                    const { identity } = peer;
-                    const isOnline = identity.status !== 'offline';
-                    const agentUsage =
-                      identity.capacity.maxAgents > 0
-                        ? identity.capacity.runningAgents / identity.capacity.maxAgents
-                        : 0;
-                    return (
-                      <div key={identity.instanceId} className="flex items-center gap-2">
-                        <span
-                          className={cn(
-                            'h-1.5 w-1.5 rounded-full shrink-0',
-                            isOnline ? 'bg-emerald-500' : 'bg-muted-foreground/40'
-                          )}
-                        />
-                        <span className="truncate flex-1 max-w-[100px]">
-                          {identity.name ?? identity.instanceId}
-                        </span>
-                        {identity.role && (
-                          <span className="text-[10px] text-muted-foreground/60 shrink-0">
-                            {identity.role}
-                          </span>
-                        )}
-                        <div className="w-14 h-1 rounded-full bg-muted overflow-hidden shrink-0">
-                          <div
-                            className={cn(
-                              'h-full rounded-full transition-all',
-                              agentUsage > 0.85
-                                ? 'bg-red-500'
-                                : agentUsage > 0.6
-                                  ? 'bg-yellow-500'
-                                  : 'bg-emerald-500'
-                            )}
-                            style={{ width: `${Math.min(agentUsage * 100, 100)}%` }}
-                          />
-                        </div>
-                        <span className="text-[10px] text-muted-foreground/70 shrink-0 tabular-nums">
-                          {identity.capacity.runningAgents}/{identity.capacity.maxAgents}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              */}
             </PopoverContent>
           </Popover>
         </div>

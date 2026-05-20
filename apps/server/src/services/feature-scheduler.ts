@@ -144,22 +144,6 @@ export class FeatureScheduler {
   private lastCooldownSkippedCount = 0;
   /** Features already warned about needing human intervention — suppress repeat logs. */
   private warnedHumanIntervention = new Set<string>();
-  /**
-   * Instance identity for project-affinity filtering.
-   * When null, no affinity filtering is applied (single-instance backward compat).
-   */
-  private instanceId: string | null = null;
-  /**
-   * Async callback that returns the set of project slugs currently assigned to this instance.
-   * Injected from AutoModeService to avoid a hard dependency on ProjectAssignmentService.
-   * When null, affinity filtering is bypassed.
-   */
-  private getAssignedProjectSlugs: ((projectPath: string) => Promise<Set<string>>) | null = null;
-  /**
-   * Whether this instance accepts overflow work from projects not explicitly assigned to it.
-   * Read from proto.config.yaml projectPreferences.overflowEnabled (default: true).
-   */
-  private overflowEnabled = true;
 
   constructor(deps: {
     featureLoader: FeatureLoader;
@@ -177,25 +161,6 @@ export class FeatureScheduler {
 
   setFeatureHealthAuditor(auditor: FeatureHealthAuditor): void {
     this.featureHealthAuditor = auditor;
-  }
-
-  /**
-   * Configure project-affinity filtering for multi-instance deployments.
-   * When set, loadPendingFeatures() will filter and sort features by project ownership.
-   * Leave unset for single-instance deployments (backward compatible).
-   *
-   * @param instanceId - This instance's identity string
-   * @param getAssignedProjectSlugs - Async fn returning slugs of projects assigned to this instance
-   * @param overflowEnabled - Whether to accept features from non-assigned projects (default: true)
-   */
-  setProjectAffinity(
-    instanceId: string,
-    getAssignedProjectSlugs: (projectPath: string) => Promise<Set<string>>,
-    overflowEnabled = true
-  ): void {
-    this.instanceId = instanceId;
-    this.getAssignedProjectSlugs = getAssignedProjectSlugs;
-    this.overflowEnabled = overflowEnabled;
   }
 
   // ── Hot-file overlap detection ───────────────────────────────────────────
@@ -1734,63 +1699,11 @@ export class FeatureScheduler {
         }
       }
 
-      // ── Project affinity filtering and sorting ──
-      // Only applied when instance identity is configured (multi-instance deployments).
-      // Single-instance setups with no proto.config.yaml identity pass through unmodified.
-      let affinityFilteredFeatures = gatedFeatures;
-      if (this.instanceId && this.getAssignedProjectSlugs) {
-        try {
-          const assignedSlugs = await this.getAssignedProjectSlugs(projectPath);
-
-          // Categorise each feature by affinity tier:
-          //   0 = assigned project    (projectSlug explicitly assigned to this instance)
-          //   1 = own unassigned      (no projectSlug but createdByInstance matches this instance)
-          //   2 = overflow            (all other features — eligible only when overflowEnabled)
-          const affinityTier = (f: Feature): 0 | 1 | 2 => {
-            if (f.projectSlug && assignedSlugs.has(f.projectSlug)) return 0;
-            if (!f.projectSlug && f.createdByInstance === this.instanceId) return 1;
-            return 2;
-          };
-
-          const beforeCount = gatedFeatures.length;
-          affinityFilteredFeatures = gatedFeatures.filter((f) => {
-            const tier = affinityTier(f);
-            if (tier === 2 && !this.overflowEnabled) {
-              logger.debug(
-                `[loadPendingFeatures] Affinity: skipping overflow feature ${f.id} (overflowEnabled=false)`
-              );
-              return false;
-            }
-            return true;
-          });
-
-          // Sort: assigned (0) > own unassigned (1) > overflow (2)
-          // Within the same tier, preserve the existing priority order.
-          affinityFilteredFeatures.sort((a, b) => {
-            const tierDiff = affinityTier(a) - affinityTier(b);
-            if (tierDiff !== 0) return tierDiff;
-            return priorityOrder(a.priority) - priorityOrder(b.priority);
-          });
-
-          logger.info(
-            `[loadPendingFeatures] Affinity filter (instanceId=${this.instanceId}): ${beforeCount} → ${affinityFilteredFeatures.length} features ` +
-              `(assigned=${assignedSlugs.size} projects, overflow=${this.overflowEnabled})`
-          );
-        } catch (err) {
-          // On error, fall back to the unfiltered list (safe degradation)
-          logger.warn(
-            '[loadPendingFeatures] Affinity filtering failed, using unfiltered list:',
-            err
-          );
-          affinityFilteredFeatures = gatedFeatures;
-        }
-      }
-
       logger.info(
-        `[loadPendingFeatures] After dependency filtering: ${affinityFilteredFeatures.length} ready features (skipVerification=${skipVerification})`
+        `[loadPendingFeatures] After dependency filtering: ${gatedFeatures.length} ready features (skipVerification=${skipVerification})`
       );
 
-      return affinityFilteredFeatures;
+      return gatedFeatures;
     } catch (error) {
       logger.error(`[loadPendingFeatures] Error loading features:`, error);
       return [];

@@ -319,13 +319,6 @@ export type EventType =
   | 'subagent:tool-approval-response'
   // Server lifecycle events
   | 'server:shutdown'
-  // Sync mesh partition and peer health events
-  | 'sync:partition-recovered'
-  | 'sync:peer-unreachable'
-  // Work-stealing handshake events (cross-instance feature assignment)
-  | 'work_stealing:request'
-  | 'work_stealing:offer'
-  | 'work_stealing:accept'
   | 'agent:completed'
   | 'pr:merged'
   | 'pr:review-requested'
@@ -333,9 +326,7 @@ export type EventType =
   // Error budget events (burn rate threshold enforcement)
   | 'error_budget:exhausted'
   | 'error_budget:recovered'
-  // Project failover events (auto-claim of orphaned projects)
-  | 'project:failover'
-  // Categories sync events (lightweight LWW config sync via CRDT bridge)
+  // Categories sync events (lightweight LWW config sync)
   | 'categories:updated'
   // Research agent events (deep research pipeline)
   | 'project:research:completed'
@@ -606,19 +597,6 @@ export interface EventPayloadMap {
     projectPath: string;
     feedback: string;
   };
-  // Project failover event (auto-claim of orphaned project)
-  'project:failover': {
-    projectSlug: string;
-    projectPath: string;
-    /** Instance ID that previously owned the project (now stale) */
-    previousOwner: string;
-    /** Instance ID that claimed the project */
-    newOwner: string;
-    /** Milliseconds since the previous owner's last heartbeat */
-    stalenessMs: number;
-    timestamp: string;
-  };
-
   // Lead Engineer events
   'lead-engineer:started': { projectPath: string; projectSlug: string };
   'lead-engineer:stopped': { projectPath: string; projectSlug: string };

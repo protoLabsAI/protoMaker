@@ -172,23 +172,13 @@ function applyEnvOverrides(config: ProtoConfig): ProtoConfig {
  *
  * Priority:
  *   1. protolab.instanceId already set in config (from YAML or settings.json)
- *   2. hivemind.instanceId from config
- *   3. Match by hostname against the `instances` registry in config
- *   4. Fall back to os.hostname() directly
+ *   2. Match by hostname against the `instances` registry in config
+ *   3. Fall back to os.hostname() directly
  */
 function resolveInstanceIdentity(config: ProtoConfig): ProtoConfig {
   if (config.protolab?.instanceId) {
     // Already explicitly set — nothing to do
     return config;
-  }
-
-  // Check hivemind.instanceId as alternative config path
-  const hivemind = config['hivemind'] as { instanceId?: string } | undefined;
-  if (hivemind?.instanceId) {
-    return {
-      ...config,
-      protolab: { ...config.protolab, instanceId: hivemind.instanceId },
-    };
   }
 
   const hostname = os.hostname();

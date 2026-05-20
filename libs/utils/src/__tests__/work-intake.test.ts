@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import type { Phase, Milestone, Project, InstanceIdentity } from '@protolabsai/types';
+import type { Phase, Milestone, Project } from '@protolabsai/types';
 
 import {
   roleMatchesPhase,
@@ -48,23 +48,6 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,
-  };
-}
-
-function makePeer(instanceId: string, status: 'online' | 'offline' = 'online'): InstanceIdentity {
-  return {
-    instanceId,
-    status,
-    capacity: {
-      cores: 4,
-      ramMb: 8192,
-      maxAgents: 3,
-      runningAgents: 0,
-      backlogCount: 0,
-      ramUsagePercent: 50,
-      cpuPercent: 30,
-    },
-    domains: [],
   };
 }
 
@@ -268,41 +251,27 @@ describe('holdsClaim', () => {
 describe('isReclaimable', () => {
   const TIMEOUT = 30 * 60 * 1000; // 30 minutes
 
-  it('reclaimable when instance is offline and claim is stale', () => {
+  it('reclaimable when claim is stale', () => {
     const phase = makePhase({
       executionStatus: 'in_progress',
-      claimedBy: 'dead-instance',
+      claimedBy: 'past-claimer',
       claimedAt: new Date(Date.now() - TIMEOUT - 1000).toISOString(),
     });
-    const peers = new Map<string, InstanceIdentity>();
-    // dead-instance not in peers at all
-    expect(isReclaimable(phase, peers, TIMEOUT)).toBe(true);
-  });
-
-  it('not reclaimable when instance is online', () => {
-    const phase = makePhase({
-      executionStatus: 'in_progress',
-      claimedBy: 'alive-instance',
-      claimedAt: new Date(Date.now() - TIMEOUT - 1000).toISOString(),
-    });
-    const peers = new Map([['alive-instance', makePeer('alive-instance', 'online')]]);
-    expect(isReclaimable(phase, peers, TIMEOUT)).toBe(false);
+    expect(isReclaimable(phase, TIMEOUT)).toBe(true);
   });
 
   it('not reclaimable when claim is fresh', () => {
     const phase = makePhase({
       executionStatus: 'in_progress',
-      claimedBy: 'dead-instance',
-      claimedAt: new Date().toISOString(), // just now
+      claimedBy: 'fresh-claimer',
+      claimedAt: new Date().toISOString(),
     });
-    const peers = new Map<string, InstanceIdentity>();
-    expect(isReclaimable(phase, peers, TIMEOUT)).toBe(false);
+    expect(isReclaimable(phase, TIMEOUT)).toBe(false);
   });
 
   it('not reclaimable when status is unclaimed', () => {
     const phase = makePhase({ executionStatus: 'unclaimed' });
-    const peers = new Map<string, InstanceIdentity>();
-    expect(isReclaimable(phase, peers, TIMEOUT)).toBe(false);
+    expect(isReclaimable(phase, TIMEOUT)).toBe(false);
   });
 
   it('not reclaimable when status is done', () => {
@@ -311,8 +280,7 @@ describe('isReclaimable', () => {
       claimedBy: 'instance-1',
       claimedAt: new Date(0).toISOString(),
     });
-    const peers = new Map<string, InstanceIdentity>();
-    expect(isReclaimable(phase, peers, TIMEOUT)).toBe(false);
+    expect(isReclaimable(phase, TIMEOUT)).toBe(false);
   });
 });
 

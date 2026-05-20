@@ -6,14 +6,7 @@
  * All state is passed in, all results are returned.
  */
 
-import type {
-  Phase,
-  Milestone,
-  Project,
-  InstanceRole,
-  InstanceIdentity,
-  PhaseComplexity,
-} from '@protolabsai/types';
+import type { Phase, Milestone, Project, InstanceRole, PhaseComplexity } from '@protolabsai/types';
 
 // ---------------------------------------------------------------------------
 // Role affinity — maps file paths to roles
@@ -168,22 +161,16 @@ export function holdsClaim(phase: Phase, instanceId: string): boolean {
  * Check if a phase's claim is stale and can be reclaimed.
  * A claim is reclaimable when:
  *   1. executionStatus is 'claimed' or 'in_progress'
- *   2. The claiming instance is offline (not in peerStatus or status === 'offline')
- *   3. The claim age exceeds claimTimeoutMs
+ *   2. The claim age exceeds claimTimeoutMs
  */
 export function isReclaimable(
   phase: Phase,
-  peerStatus: Map<string, InstanceIdentity>,
   claimTimeoutMs: number,
   now: number = Date.now()
 ): boolean {
   const status = phase.executionStatus ?? 'unclaimed';
   if (status !== 'claimed' && status !== 'in_progress') return false;
   if (!phase.claimedBy || !phase.claimedAt) return false;
-
-  // Check if the claiming instance is still online
-  const peer = peerStatus.get(phase.claimedBy);
-  if (peer && peer.status === 'online') return false;
 
   // Check claim age
   const claimAge = now - new Date(phase.claimedAt).getTime();

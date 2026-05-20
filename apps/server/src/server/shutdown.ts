@@ -35,7 +35,6 @@ async function gracefulShutdown(server: http.Server, services: ServiceContainer)
     actionableItemBridge,
     agentDiscordRouter,
     agentService,
-    crdtSyncService,
     githubWebhookHandler,
     dataDir,
   } = services;
@@ -73,7 +72,6 @@ async function gracefulShutdown(server: http.Server, services: ServiceContainer)
   hitlFormService.shutdown();
   actionableItemBridge.shutdown();
   agentDiscordRouter.stop();
-  await crdtSyncService.shutdown();
   // Close context-engine SQLite connection
   agentService.shutdown();
   // Dispose AgentManifestService fs.watch handles to prevent leaked watchers

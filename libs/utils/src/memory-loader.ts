@@ -45,11 +45,9 @@ export interface UsageStats {
 export type MemoryStatsCrdtWriter = (filename: string, stat: keyof UsageStats) => Promise<void>;
 
 /**
- * Callback for reading aggregated usage stats for a file from the CRDT
- * Metrics document.  Aggregates across ALL instanceId keys so callers see
- * the combined count from every instance in the hivemind.
- *
- * Returns null when CRDT is unavailable or the file has no recorded stats yet.
+ * Callback for reading aggregated usage stats for a file from an external
+ * metrics store. Returns null when no metrics store is wired up or the file
+ * has no recorded stats yet.
  *
  * @param filename - Basename of the memory file (e.g. "gotchas.md")
  */
@@ -371,9 +369,9 @@ export function calculateUsageScore(stats: UsageStats): number {
  *
  * Always includes gotchas.md
  *
- * @param crdtReader - Optional callback to read aggregated CRDT usage stats.
- *   When provided, CRDT stats replace the per-file YAML frontmatter stats for
- *   scoring so that hivemind-wide usage signal is used instead of local-only stats.
+ * @param crdtReader - Optional callback to read aggregated usage stats from an
+ *   external metrics store. When provided, those stats replace per-file YAML
+ *   frontmatter stats for scoring.
  */
 export async function loadRelevantMemory(
   projectPath: string,
@@ -412,8 +410,8 @@ export async function loadRelevantMemory(
       const summaryTerms = extractTerms(metadata.summary);
       const summaryScore = countMatches(summaryTerms, featureTerms);
 
-      // Usage-based scoring — prefer aggregated CRDT stats when available so
-      // hivemind-wide signal (all instances combined) is used for ranking.
+      // Usage-based scoring — prefer aggregated stats from the external metrics
+      // store when available; fall back to per-file frontmatter otherwise.
       let statsForScoring = metadata.usageStats;
       if (crdtReader) {
         const crdtStats = await crdtReader(file).catch(() => null);

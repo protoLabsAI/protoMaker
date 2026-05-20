@@ -85,12 +85,10 @@ export async function runStartup(
     settingsService,
     featureLoader: _featureLoader,
     autoModeService,
-    leadEngineerService,
     worktreeLifecycleService,
     githubStateChecker,
     agentService,
     knowledgeStoreService,
-    projectAssignmentService,
     dataDir,
     repoRoot,
   } = services;
@@ -133,18 +131,6 @@ export async function runStartup(
 
   await agentService.initialize();
   logger.info('Agent service initialized');
-
-  // Claim preferred projects at boot (reads projectPreferences from proto.config.yaml)
-  try {
-    const claimed = await projectAssignmentService.claimPreferredProjects(repoRoot);
-    if (claimed.length > 0) {
-      logger.info(
-        `[ASSIGN] Claimed ${claimed.length} preferred project(s) at boot: ${claimed.join(', ')}`
-      );
-    }
-  } catch (err) {
-    logger.warn('[ASSIGN] Failed to claim preferred projects at boot:', err);
-  }
 
   // Initialize Knowledge Store Service for all known projects
   if (knowledgeStoreService) {

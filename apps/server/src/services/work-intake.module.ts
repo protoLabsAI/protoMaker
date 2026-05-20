@@ -1,10 +1,9 @@
 // Work Intake module — wires WorkIntakeService dependencies from proto.config.yaml and ServiceContainer.
-// Safe to call in single-instance mode — configures deps unconditionally so the service is ready
-// when auto-mode starts (the service itself gates on config.enabled and deps being set).
+// Configures deps unconditionally so the service is ready when auto-mode starts (the service itself
+// gates on config.enabled and deps being set).
 
 import { loadProtoConfig } from '@protolabsai/platform';
 import { createLogger } from '@protolabsai/utils';
-import type { InstanceIdentity } from '@protolabsai/types';
 import type { ServiceContainer } from '../server/services.js';
 
 const logger = createLogger('WorkIntakeModule');
@@ -57,14 +56,6 @@ export async function register(container: ServiceContainer): Promise<void> {
     },
     getRunningAgentCount: () => container.autoModeService.getRunningAgentCount(),
     getMaxConcurrency: () => container.autoModeService.getMaxConcurrency(),
-    getPeerStatus: () => {
-      const peers = container.crdtSyncService.getPeers();
-      const map = new Map<string, InstanceIdentity>();
-      for (const peer of peers) {
-        map.set(peer.identity.instanceId, peer.identity);
-      }
-      return map;
-    },
   });
 
   // Wire work intake into auto-mode start/stop lifecycle

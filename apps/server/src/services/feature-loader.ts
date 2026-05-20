@@ -112,8 +112,6 @@ export class FeatureLoader implements FeatureStore {
   private integrityWatchdog: DataIntegrityWatchdogService | null = null;
   private events: EventEmitter | null = null;
   private topicBus: TopicBus | null = null;
-  /** Instance ID stamped onto newly created features as createdByInstance */
-  private instanceId: string | null = null;
   private projectSlugResolver: ProjectSlugResolver | null = null;
 
   setIntegrityWatchdog(watchdog: DataIntegrityWatchdogService): void {
@@ -126,14 +124,6 @@ export class FeatureLoader implements FeatureStore {
 
   setTopicBus(topicBus: TopicBus): void {
     this.topicBus = topicBus;
-  }
-
-  /**
-   * Set the instance ID used to stamp createdByInstance on new features.
-   * Call this once at startup when multi-instance identity is configured.
-   */
-  setInstanceId(instanceId: string): void {
-    this.instanceId = instanceId;
   }
 
   /**
@@ -974,11 +964,6 @@ export class FeatureLoader implements FeatureStore {
           reason: 'Feature created',
         },
       ],
-      // Stamp the creating instance ID when multi-instance identity is configured.
-      // Caller-supplied createdByInstance takes precedence (e.g. CRDT sync from peer).
-      ...(featureData.createdByInstance == null && this.instanceId != null
-        ? { createdByInstance: this.instanceId }
-        : {}),
       // Apply resolved projectSlug (resolver result takes precedence over featureData when
       // the caller did not supply one, ensuring auto-assignment for all creation paths).
       ...(resolvedProjectSlug != null ? { projectSlug: resolvedProjectSlug } : {}),
