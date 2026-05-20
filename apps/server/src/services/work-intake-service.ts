@@ -1,14 +1,15 @@
 /**
- * WorkIntakeService — pull-based phase claiming from shared projects.
+ * WorkIntakeService — pull-based phase claiming from project docs.
  *
  * Runs on a configurable tick when auto-mode is active. Each tick:
- *   1. Reads shared project docs (synced via peer mesh)
+ *   1. Reads project docs from disk
  *   2. Finds claimable phases using pure functions from @protolabsai/utils
- *   3. Claims phases by writing to the shared project doc
- *   4. Creates LOCAL features from claimed phases
- *   5. On completion, updates phase executionStatus in the shared doc
+ *   3. Claims phases by writing to the project doc
+ *   4. Creates features from claimed phases
+ *   5. On completion, updates phase executionStatus in the project doc
  *
- * Features never cross the wire. Phases are the coordination unit.
+ * Phases are the unit of coordination between high-level project planning
+ * (milestones/phases) and per-feature execution.
  */
 
 import { createLogger } from '@protolabsai/utils';
@@ -240,10 +241,11 @@ export class WorkIntakeService {
       executionStatus: 'claimed',
     });
 
-    // Wait for peer mesh sync to settle
+    // Small delay before re-reading to catch any concurrent writes (e.g.,
+    // user editing the project doc by hand)
     await new Promise((resolve) => setTimeout(resolve, CLAIM_VERIFY_DELAY_MS));
 
-    // Verify claim survived merge
+    // Verify claim survived
     const latest = await this.deps.getPhase(
       this.projectPath,
       project.slug,

@@ -330,30 +330,6 @@ export function WorkflowSettingsPanel() {
             checked={localSettings.pipeline.loopDetectionEnabled}
             onChange={(v) => update('pipeline', 'loopDetectionEnabled', v)}
           />
-          <ToggleRow
-            label="Supervisor"
-            description="Monitor agent runtime and cost"
-            checked={localSettings.pipeline.supervisorEnabled}
-            onChange={(v) => update('pipeline', 'supervisorEnabled', v)}
-          />
-          <NumberRow
-            label="Max Runtime"
-            description="Warning threshold for agent runtime"
-            value={localSettings.pipeline.maxAgentRuntimeMinutes}
-            onChange={(v) => update('pipeline', 'maxAgentRuntimeMinutes', v)}
-            min={10}
-            max={180}
-            suffix="min"
-          />
-          <NumberRow
-            label="Max Cost"
-            description="Abort threshold for agent cost"
-            value={localSettings.pipeline.maxAgentCostUsd}
-            onChange={(v) => update('pipeline', 'maxAgentCostUsd', v)}
-            min={1}
-            max={100}
-            suffix="USD"
-          />
         </div>
 
         <div className="py-3">

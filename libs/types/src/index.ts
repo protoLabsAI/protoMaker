@@ -944,9 +944,6 @@ export type {
   DeploymentStats,
 } from './deployment.js';
 
-// Friction tracker types (self-improvement loop — recurring failure pattern detection)
-export type { FrictionReport } from './friction-report.js';
-
 // ReactiveSpawner types (trigger-based agent spawning with rate limiting and circuit breaking)
 export type {
   TriggerCategory,

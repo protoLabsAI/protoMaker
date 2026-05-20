@@ -1,8 +1,8 @@
 /**
- * Lead Engineer — Action Executor & Supervisor
+ * Lead Engineer — Action Executor
  *
- * ActionExecutor: Executes fast-path rule actions (move_feature, restart_auto_mode, etc.)
- * supervisorCheck: Monitors agent runtime and cost, aborts if thresholds are breached.
+ * Executes fast-path rule actions (move_feature, restart_auto_mode, etc.) on
+ * behalf of the Lead Engineer state machine.
  */
 
 import { exec } from 'node:child_process';
@@ -26,9 +26,6 @@ import type { AuthorityService } from './authority-service.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('LeadEngineerService');
-
-const SUPERVISOR_WARN_RUNTIME_MS = 45 * 60 * 1000; // 45 minutes
-const SUPERVISOR_ABORT_COST_USD = 15;
 
 export interface ActionExecutorDeps {
   events: EventEmitter;
@@ -361,67 +358,6 @@ export class ActionExecutor {
           logger.error(`Failed to rollback feature ${action.featureId}:`, err);
         }
         break;
-      }
-    }
-  }
-
-  /**
-   * Supervisor check: evaluate agent runtime and cost, take corrective action.
-   */
-  supervisorCheck(session: LeadEngineerSession, settings?: WorkflowSettings): void {
-    const now = Date.now();
-
-    const abortCostUsd = settings?.pipeline.maxAgentCostUsd ?? SUPERVISOR_ABORT_COST_USD;
-    const warnCostUsd = abortCostUsd * 0.53;
-    const warnRuntimeMs =
-      (settings?.pipeline.maxAgentRuntimeMinutes ?? SUPERVISOR_WARN_RUNTIME_MS / 60000) * 60000;
-    const abortRuntimeMs = warnRuntimeMs * 2;
-
-    for (const agent of session.worldState.agents) {
-      const runtimeMs = now - new Date(agent.startTime).getTime();
-      const feature = session.worldState.features[agent.featureId];
-      const costUsd = feature?.costUsd ?? 0;
-
-      if (costUsd >= abortCostUsd) {
-        logger.warn(
-          `[Supervisor] Aborting ${agent.featureId}: cost $${costUsd.toFixed(2)} exceeds limit ($${abortCostUsd})`
-        );
-        this.executeAction(session, {
-          type: 'abort_and_resume',
-          featureId: agent.featureId,
-          resumePrompt: `Budget limit reached ($${costUsd.toFixed(2)}). Wrap up immediately: commit what you have, create a PR, and stop.`,
-        }).catch((err) => logger.error('Supervisor abort failed:', err));
-        continue;
-      }
-
-      if (runtimeMs >= abortRuntimeMs) {
-        const minutes = Math.round(runtimeMs / 60000);
-        logger.warn(`[Supervisor] Aborting ${agent.featureId}: running ${minutes}min`);
-        this.executeAction(session, {
-          type: 'abort_and_resume',
-          featureId: agent.featureId,
-          resumePrompt: `You have been running for ${minutes} minutes. Wrap up: commit changes, create a PR, and finish.`,
-        }).catch((err) => logger.error('Supervisor abort failed:', err));
-        continue;
-      }
-
-      if (costUsd >= warnCostUsd) {
-        logger.info(`[Supervisor] Warning: ${agent.featureId} cost $${costUsd.toFixed(2)}`);
-        this.deps.events.emit('pipeline:supervisor-action' as EventType, {
-          featureId: agent.featureId,
-          action: 'cost_warning',
-          reason: `Agent cost $${costUsd.toFixed(2)} approaching limit ($${abortCostUsd})`,
-        });
-      }
-
-      if (runtimeMs >= warnRuntimeMs) {
-        const minutes = Math.round(runtimeMs / 60000);
-        logger.info(`[Supervisor] Warning: ${agent.featureId} running ${minutes}min`);
-        this.deps.events.emit('pipeline:supervisor-action' as EventType, {
-          featureId: agent.featureId,
-          action: 'runtime_warning',
-          reason: `Agent running for ${minutes} minutes`,
-        });
       }
     }
   }

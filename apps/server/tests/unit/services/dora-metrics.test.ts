@@ -21,7 +21,6 @@ import {
   FrictionTrackerService,
   type FrictionTrackerDependencies,
 } from '@/services/friction-tracker-service.js';
-import type { FrictionReport } from '@protolabsai/types';
 
 // ---------------------------------------------------------------------------
 // FrictionTrackerService.resolvePattern() tests
@@ -35,7 +34,6 @@ function makeFrictionDeps(
       create: vi.fn().mockResolvedValue({ id: 'feature-abc' }),
     } as unknown as FrictionTrackerDependencies['featureLoader'],
     projectPath: '/test/project',
-    instanceId: 'instance-test',
     ...overrides,
   };
 }
@@ -57,19 +55,16 @@ describe('FrictionTrackerService.resolvePattern()', () => {
     expect(service.getCount('test_friction_pattern')).toBe(0);
   });
 
-  it('clears the dedup entry so the pattern can be filed again', () => {
-    const report: FrictionReport = {
-      pattern: 'test_friction_pattern',
-      filedAt: new Date().toISOString(),
-      featureId: 'feature-peer-001',
-      instanceId: 'peer-instance',
-    };
-    service.handlePeerReport(report);
-    expect(service.isPeerRecentlyFiled('test_friction_pattern')).toBe(true);
+  it('clears the dedup entry so the pattern can be filed again', async () => {
+    // File once to populate the in-process dedup map
+    for (let i = 0; i < 3; i++) {
+      await service.recordFailure('test_friction_pattern');
+    }
+    expect(service.isRecentlyFiled('test_friction_pattern')).toBe(true);
 
     service.resolvePattern('test_friction_pattern');
 
-    expect(service.isPeerRecentlyFiled('test_friction_pattern')).toBe(false);
+    expect(service.isRecentlyFiled('test_friction_pattern')).toBe(false);
   });
 
   it('does not throw for empty or unknown patterns', () => {
