@@ -4,14 +4,13 @@ protoLabs provides multiple Docker Compose configurations for different use case
 
 ## Compose Files
 
-| File                          | Purpose                    | Isolation Level                             |
-| ----------------------------- | -------------------------- | ------------------------------------------- |
-| `docker-compose.yml`          | Production (default)       | Full isolation - named volumes only         |
-| `docker-compose.dev.yml`      | Development                | Source mounted, live reload                 |
-| `docker-compose.prod.yml`     | Production (hardened)      | Docker secrets, Prometheus, Grafana         |
-| `docker-compose.staging.yml`  | Staging (high-concurrency) | Host paths mounted for MCP compat           |
-| `docker-compose.docs.yml`     | Docs site (independent)    | Standalone lifecycle, survives app restarts |
-| `docker-compose.override.yml` | Local customization        | User-defined (gitignored)                   |
+| File                          | Purpose                 | Isolation Level                             |
+| ----------------------------- | ----------------------- | ------------------------------------------- |
+| `docker-compose.yml`          | Production (default)    | Full isolation - named volumes only         |
+| `docker-compose.dev.yml`      | Development             | Source mounted, live reload                 |
+| `docker-compose.prod.yml`     | Production (hardened)   | Docker secrets, Prometheus, Grafana         |
+| `docker-compose.docs.yml`     | Docs site (independent) | Standalone lifecycle, survives app restarts |
+| `docker-compose.override.yml` | Local customization     | User-defined (gitignored)                   |
 
 ## Production Configuration
 
@@ -328,9 +327,9 @@ Services communicate via Docker's internal network:
 
 The UI container uses `http://server:3008` internally, while the docs container serves the VitePress site independently. External access uses `localhost` on the mapped ports.
 
-## Docs Isolation (Staging)
+## Docs Isolation
 
-In staging, the docs site runs via a separate compose file (`docker-compose.docs.yml`) with its own project name (`automaker-docs`). This gives docs a completely independent lifecycle from the app services:
+The docs site runs via a separate compose file (`docker-compose.docs.yml`) with its own project name (`automaker-docs`). This gives docs a completely independent lifecycle from the app services:
 
 - App deploys (server + UI rebuild/restart) do not touch docs
 - App rollbacks only affect server + UI containers
@@ -344,7 +343,5 @@ docker compose -f docker-compose.docs.yml logs -f
 docker compose -f docker-compose.docs.yml down
 
 # App services are separate
-docker compose -f docker-compose.staging.yml up -d server ui
+docker compose up -d server ui
 ```
-
-The `setup-staging.sh` script handles both compose files automatically.

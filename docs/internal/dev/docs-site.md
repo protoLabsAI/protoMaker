@@ -95,10 +95,10 @@ The build output is in `docs/.vitepress/dist/`. Hosted on Cloudflare Pages at `d
 
 The docs site deploys via Wrangler CLI in `.github/workflows/deploy-docs.yml`. The workflow:
 
-1. Triggers on `docs/**` changes pushed to dev, staging, or main
+1. Triggers on `docs/**` changes pushed to `main`
 2. Builds VitePress on `ubuntu-latest` (no self-hosted runner needed)
 3. Deploys to Cloudflare Pages project `protolabs-docs` via `wrangler pages deploy`
-4. Production branch is `staging` (user-facing surface)
+4. Production branch is `main` (user-facing surface)
 
 PR preview deployments are automatic — a comment with the preview URL is posted on every PR that touches docs.
 

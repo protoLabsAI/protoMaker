@@ -170,7 +170,7 @@ find docs -name '*.md' -not -path '*/archived/*' -not -path '*/.vitepress/*' | \
 
 ### VitePress Build Validation
 
-The docs build runs automatically in Docker during staging deploys. If the build fails:
+The docs build runs automatically in Docker on every push to `main`. If the build fails:
 
 1. Check for angle brackets outside code fences (most common cause)
 2. Check for missing frontmatter in `index.md` files

@@ -149,7 +149,7 @@ Env Var: LITELLM_MASTER_KEY
 Auto-discover: true
 ```
 
-The `ava` hostname resolves via `extra_hosts: ava:host-gateway` in the staging Docker Compose.
+When running in Docker, expose the host gateway as a named host (e.g., `extra_hosts: ava:host-gateway`) so the container can resolve `ava` to the proxy on the host.
 
 ---
 

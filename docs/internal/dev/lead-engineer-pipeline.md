@@ -329,7 +329,7 @@ If the merge command fails (e.g., branch protection, CI still running), the proc
 
 The merge strategy is resolved per-PR:
 
-1. **Promotion PRs** (base branch is `staging` or `main`) always use `--merge` to preserve the DAG
+1. **Epic PRs** (base branch is `main`, source branch starts with `epic/`) always use `--merge` to preserve the epic's commit history
 2. **Feature PRs** use the `prMergeStrategy` from global settings (default: `--squash`)
 
 Supported strategies: `squash`, `merge`, `rebase`. Configure via `gitWorkflow.prMergeStrategy` in global settings.
@@ -451,7 +451,6 @@ See [Workflow Settings](../../reference/workflow-settings.md) for the full confi
 | `apps/server/src/services/lead-engineer-execute-processor.ts` | `ExecuteProcessor`                                 |
 | `apps/server/src/services/lead-engineer-deploy-processor.ts`  | `DeployProcessor` (post-merge + goal verification) |
 | `apps/server/src/services/lead-engineer-rules.ts`             | 16 fast-path rules (pure functions)                |
-| `apps/server/src/services/pr-feedback-service.ts`             | PR polling and remediation for REVIEW              |
 | `apps/server/src/services/antagonistic-review-service.ts`     | Plan review gate                                   |
 | `apps/server/src/services/git-workflow-service.ts`            | Post-completion git workflow for DEPLOY            |
 | `libs/types/src/workflow-settings.ts`                         | Configuration types                                |

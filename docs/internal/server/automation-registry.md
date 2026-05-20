@@ -166,14 +166,9 @@ If `schedulerService` is unavailable (e.g. in unit tests), services fall back to
 
 ### Interval Timer IDs
 
-| Service                 | Timer ID pattern                                                                | Purpose                                  |
-| ----------------------- | ------------------------------------------------------------------------------- | ---------------------------------------- |
-| `HealthMonitorService`  | `health-monitor:*`                                                              | Server health polling                    |
-| `SpecGenerationMonitor` | `spec-generation-monitor:*`                                                     | Spec generation polling                  |
-| `PRWatcherService`      | `pr-watcher:*`                                                                  | PR status polling                        |
-| `GitHubMonitor`         | `github-monitor:poll`                                                           | GitHub PR label polling                  |
-| `DiscordMonitor`        | `discord-monitor:channel:{channelId}`                                           | Discord channel polling                  |
-| `LeadEngineerService`   | `lead-engineer:{projectPath}:refresh`, `lead-engineer:{projectPath}:supervisor` | Per-project refresh and supervisor loops |
+| Service                | Timer ID pattern   | Purpose               |
+| ---------------------- | ------------------ | --------------------- |
+| `HealthMonitorService` | `health-monitor:*` | Server health polling |
 
 ### TypeScript Types
 
@@ -378,13 +373,6 @@ Tasks marked "Branch-Aware" in the table above call `resolveIntegrationBranch()`
 Tasks that don't operate on git branches (data-integrity, stale-features, runner-health) are unaffected.
 
 The `resolveIntegrationBranch()` function reads `prBaseBranch` from `settingsService` and falls back to `main` then `master` if the configured branch doesn't exist on the remote.
-
-### Event-Triggered Tasks
-
-| ID                       | Name                           | Event                       | Description                            |
-| ------------------------ | ------------------------------ | --------------------------- | -------------------------------------- |
-| `ceremony:retro`         | Retrospective Ceremony         | `ceremony:milestone-update` | Runs retro flow on milestone updates   |
-| `ceremony:project-retro` | Project Retrospective Ceremony | `ceremony:project-retro`    | Runs project retro flow when triggered |
 
 ### Startup Tasks (Non-Automation)
 

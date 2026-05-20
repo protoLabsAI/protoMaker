@@ -206,24 +206,23 @@ You'll be notified when the PR is merged.
 
 After merging:
 
-1. **Staging deployment**: Changes deploy to staging environment (automatic)
-2. **Smoke testing**: Maintainers verify in staging
-3. **Release**: Included in next version release (weekly or milestone-based)
-4. **Changelog**: Your issue is linked in the release notes
+1. **Tag and release**: `auto-release.yml` tags the commit and publishes a GitHub Release
+2. **Production deployment**: Changes deploy automatically on push to `main`
+3. **Changelog**: Your issue is linked in the release notes
 
 You can track releases at [github.com/protoLabsAI/protomaker/releases](https://github.com/protoLabsAI/protomaker/releases).
 
 ### Timeline expectations
 
-| Stage              | Duration            | Notes                               |
-| ------------------ | ------------------- | ----------------------------------- |
-| Triage             | 2-3 business days   | May be faster for critical bugs     |
-| Agent assignment   | Immediate           | Automatic once approved             |
-| Implementation     | 1-7 days            | Varies by size and complexity       |
-| Code review        | 1-2 days            | Automated + human review            |
-| Merge to main      | After review pass   | Immediate if checks pass            |
-| Staging deployment | Immediate           | Automatic via GitHub Actions        |
-| Production release | Weekly or milestone | Check roadmap for next release date |
+| Stage                 | Duration          | Notes                            |
+| --------------------- | ----------------- | -------------------------------- |
+| Triage                | 2-3 business days | May be faster for critical bugs  |
+| Agent assignment      | Immediate         | Automatic once approved          |
+| Implementation        | 1-7 days          | Varies by size and complexity    |
+| Code review           | 1-2 days          | Automated + human review         |
+| Merge to main         | After review pass | Immediate if checks pass         |
+| Production deployment | Immediate         | Automatic on push to `main`      |
+| Release tag           | Immediate         | `auto-release.yml` runs on merge |
 
 **Note**: Timelines are estimates. High-priority bugs may be expedited; large features may take longer.
 

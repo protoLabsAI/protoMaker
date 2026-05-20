@@ -89,21 +89,20 @@ npx changeset add --empty  # Creates an empty changeset (for chore/docs changes)
 
 ### Automated Pipeline (CI)
 
-The full release flow is automated via `auto-release.yml`, triggered automatically when a `staging→main` PR merges:
+The full release flow is automated via `auto-release.yml`, triggered automatically on every push to `main`:
 
 ```
-staging → main PR merged
+PR merged to main
     ↓
 auto-release.yml
     ├── clean stale changesets
     ├── npm run release:prepare  (analyze commits since last tag → minor/patch/major)
     ├── npm run changeset:version  (bump all @protolabsai/* in lockstep, write CHANGELOG)
     ├── git commit "chore: release vX.Y.Z" → pushed to main
-    ├── git tag vX.Y.Z → pushed via GH_PAT
-    └── sync version bump back: main → staging (auto-merge PR) + main → dev (auto-merge PR)
+    └── git tag vX.Y.Z → pushed via GH_PAT
 ```
 
-No manual changeset creation or "Version Packages" PR is required for normal releases — `release:prepare` analyzes conventional commits automatically. The sync-back step ensures `staging` and `dev` always reflect the version bump commit that lands on `main`, preventing version drift across branches.
+No manual changeset creation or "Version Packages" PR is required for normal releases — `release:prepare` analyzes conventional commits automatically.
 
 ### Release Notes Rewriting
 

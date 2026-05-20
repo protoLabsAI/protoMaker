@@ -106,11 +106,11 @@ recordFailureWithContext(pattern, context)
 
 ### Thresholds
 
-| Constant               | Value      | Meaning                                                |
-| ---------------------- | ---------- | ------------------------------------------------------ |
-| `OCCURRENCE_THRESHOLD` | `3`        | Occurrences within the window to trigger filing        |
-| `COUNTER_WINDOW_MS`    | `7 days`   | Sliding window for pattern counting                    |
-| `PEER_DEDUP_WINDOW_MS` | `24 hours` | Dedup window to avoid multi-instance duplicate filings |
+| Constant               | Value      | Meaning                                                     |
+| ---------------------- | ---------- | ----------------------------------------------------------- |
+| `OCCURRENCE_THRESHOLD` | `3`        | Occurrences within the window to trigger filing             |
+| `COUNTER_WINDOW_MS`    | `7 days`   | Sliding window for pattern counting                         |
+| `PEER_DEDUP_WINDOW_MS` | `24 hours` | Dedup window to avoid duplicate filings on the same pattern |
 
 ### Excluded patterns
 
@@ -151,17 +151,8 @@ class FrictionTrackerService {
 
   // Mark a pattern as resolved (resets counter)
   resolvePattern(pattern: string): void;
-
-  // Check if a peer instance recently filed for this pattern
-  isPeerRecentlyFiled(pattern: string): boolean;
 }
 ```
-
-### Multi-instance deduplication
-
-When multiple server instances are running (see [Peer Mesh Service](./peer-mesh-service)), each instance tracks patterns independently. Before filing a System Improvement feature, the service checks whether a peer has already filed for the same pattern within the last 24 hours. If so, it skips filing to avoid duplicate features.
-
-Peer reports are broadcast via the Peer Mesh and handled by `handlePeerReport()`.
 
 ---
 
@@ -213,4 +204,3 @@ New features written by agents will always use the split counts. The legacy fiel
 
 - [DORA Metrics](./dora-metrics) — Friction patterns are one input to change failure rate
 - [Auto Mode Service](./auto-mode-service) — Drives CI reaction and remediation cycles
-- [Peer Mesh Service](./peer-mesh-service) — Used for friction deduplication across instances

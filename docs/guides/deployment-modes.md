@@ -43,7 +43,7 @@ npm --workspace=apps/server run start:headless
 - `AUTO_MODE=true` — agents start and operate without manual intervention.
 - No browser window, no UI dependencies.
 - Exposes the same HTTP/WebSocket API as the web application.
-- Suitable for 24/7 agent servers, staging environments, and headless CI builds.
+- Suitable for 24/7 agent servers and headless CI builds.
 
 **Prerequisites:** Build the server first.
 

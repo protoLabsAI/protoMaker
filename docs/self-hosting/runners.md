@@ -268,5 +268,4 @@ cd /home/YOUR_USERNAME/actions-runners/runner-N
 ## Next steps
 
 - **[CI/CD](./ci-cd)** — Workflow definitions and what each workflow does
-- **[High-concurrency deployment](./staging-deployment)** — Tuning the server for many concurrent agents
 - **[Troubleshooting](./troubleshooting)** — Common container and infrastructure issues

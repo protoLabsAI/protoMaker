@@ -501,11 +501,10 @@ The starter kit README follows the protoLabs Documentation Design rules: outcome
 
 ### 5.3 Rollout Plan
 
-1. **Milestone 1** merges to `dev` via normal feature PR. The new starter directory is present but the integration points (`scaffold-starter.ts`, `templates.ts`) are not yet updated — the kit is not selectable in the UI yet.
-2. **Milestones 2–4** merge to `dev` incrementally. Each PR targets `dev`. Starter content evolves in place.
-3. **Milestone 5** is the integration PR. It updates all five integration points simultaneously. This is the PR that makes the kit selectable in the UI. After Milestone 5 merges to `dev`, the feature is in a promotable state.
-4. **Staging promotion** follows the normal `dev → staging → main` flow. No data migration required; the scaffold system is additive.
-5. **No migration steps** — existing projects are unaffected. The new `StarterKitType` union value is additive. The route handler's validation array is additive.
+1. **Milestone 1** merges to `main` via normal feature PR. The new starter directory is present but the integration points (`scaffold-starter.ts`, `templates.ts`) are not yet updated — the kit is not selectable in the UI yet.
+2. **Milestones 2–4** merge to `main` incrementally. Starter content evolves in place.
+3. **Milestone 5** is the integration PR. It updates all five integration points simultaneously. This is the PR that makes the kit selectable in the UI. When Milestone 5 lands on `main`, the auto-release workflow publishes a new tagged release.
+4. **No migration steps** — existing projects are unaffected. The new `StarterKitType` union value is additive. The route handler's validation array is additive.
 
 ### 5.4 Monitoring
 

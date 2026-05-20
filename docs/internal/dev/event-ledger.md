@@ -49,7 +49,6 @@ interface EventLedgerEntry {
 | `milestone:completed`                  | `projectSlug`, `milestoneSlug` |
 | `project:completed`                    | `projectSlug`                  |
 | `project:lifecycle:launched`           | `projectSlug`                  |
-| `ceremony:fired`                       | `projectSlug`, `milestoneSlug` |
 | `escalation:signal-received`           | `featureId`                    |
 | `auto-mode:event` (feature types only) | `featureId`                    |
 
@@ -71,7 +70,7 @@ await eventLedger.getByTimeRange(startDate, endDate);
 await eventLedger.getByEventType('feature:status-changed');
 
 // Chronological events for a project, with optional filtering
-await eventLedger.queryByProject(slug, { since: '2025-01-01T00:00:00Z', type: 'ceremony:fired' });
+await eventLedger.queryByProject(slug, { since: '2025-01-01T00:00:00Z', type: 'feature:done' });
 ```
 
 Each query reads the JSONL file and filters in a single pass.
@@ -88,11 +87,11 @@ Raw `EventLedgerEntry` records are transformed into display-ready `TimelineEvent
 
 **Query parameters:**
 
-| Parameter     | Type     | Description                                                          |
-| ------------- | -------- | -------------------------------------------------------------------- |
-| `projectPath` | string   | Project root path — required for the feature-metadata fallback       |
-| `since`       | ISO 8601 | Return only events after this timestamp (exclusive)                  |
-| `type`        | string   | Filter by display event type (e.g. `feature:done`, `ceremony:fired`) |
+| Parameter     | Type     | Description                                                     |
+| ------------- | -------- | --------------------------------------------------------------- |
+| `projectPath` | string   | Project root path — required for the feature-metadata fallback  |
+| `since`       | ISO 8601 | Return only events after this timestamp (exclusive)             |
+| `type`        | string   | Filter by display event type (e.g. `feature:done`, `pr:merged`) |
 
 **Response:**
 
@@ -122,23 +121,20 @@ The fallback requires `?projectPath=` to be present in the query. When the ledge
 
 ### Display event types
 
-| Display type           | Ledger source                                                  |
-| ---------------------- | -------------------------------------------------------------- |
-| `feature:created`      | Feature metadata fallback (`createdAt`)                        |
-| `feature:started`      | `feature:started`, `feature:status-changed` (to started)       |
-| `feature:done`         | `feature:completed`, `feature:status-changed` (to done)        |
-| `pr:merged`            | `feature:pr-merged`, `feature:status-changed` (to review)      |
-| `escalation`           | `feature:error`, `escalation:signal-received`                  |
-| `decision`             | `pipeline:state-entered`                                       |
-| `milestone:completed`  | `milestone:completed`                                          |
-| `project:initiated`    | `project:lifecycle:initiated`                                  |
-| `project:prd-approved` | `project:lifecycle:prd-approved`                               |
-| `project:scaffolded`   | `project:scaffolded`                                           |
-| `project:launched`     | `project:lifecycle:launched`                                   |
-| `project:completed`    | `project:completed`                                            |
-| `standup`              | `ceremony:fired` (ceremonyType: standup)                       |
-| `retro`                | `ceremony:fired` (ceremonyType: milestone_retro/project_retro) |
-| `ceremony:fired`       | `ceremony:fired` (other ceremony types)                        |
+| Display type           | Ledger source                                             |
+| ---------------------- | --------------------------------------------------------- |
+| `feature:created`      | Feature metadata fallback (`createdAt`)                   |
+| `feature:started`      | `feature:started`, `feature:status-changed` (to started)  |
+| `feature:done`         | `feature:completed`, `feature:status-changed` (to done)   |
+| `pr:merged`            | `feature:pr-merged`, `feature:status-changed` (to review) |
+| `escalation`           | `feature:error`, `escalation:signal-received`             |
+| `decision`             | `pipeline:state-entered`                                  |
+| `milestone:completed`  | `milestone:completed`                                     |
+| `project:initiated`    | `project:lifecycle:initiated`                             |
+| `project:prd-approved` | `project:lifecycle:prd-approved`                          |
+| `project:scaffolded`   | `project:scaffolded`                                      |
+| `project:launched`     | `project:lifecycle:launched`                              |
+| `project:completed`    | `project:completed`                                       |
 
 ## Initialization
 
@@ -152,7 +148,7 @@ const unsubscribe = ledger.subscribeToLifecycleEvents(eventEmitter);
 
 ## Escalation artifacts
 
-When `escalation:signal-received` events contain project context (`projectPath` and `projectSlug`), the ledger additionally persists the escalation as a project artifact via `ProjectArtifactService` (type: `escalation`). This allows escalations to appear in the project artifacts view alongside ceremony reports.
+When `escalation:signal-received` events contain project context (`projectPath` and `projectSlug`), the ledger additionally persists the escalation as a project artifact via `ProjectArtifactService` (type: `escalation`). This allows escalations to appear in the project artifacts view.
 
 ## Key files
 
@@ -166,4 +162,3 @@ When `escalation:signal-received` events contain project context (`projectPath` 
 
 - [Project Lifecycle](./project-lifecycle) — Project state machine and API endpoints
 - [Project Artifacts](./project-lifecycle#project-artifacts) — Persisted project artifacts
-- [Ceremonies](../agents/ceremonies) — Ceremony events recorded in the ledger

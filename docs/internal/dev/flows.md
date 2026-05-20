@@ -499,17 +499,6 @@ const flow = createProjectPlanningFlow({
 | `project-planning/nodes/research.ts`        | Research executor node                       |
 | `project-planning/nodes/generate-prd.ts`    | SPARC PRD generation node                    |
 
-## Ceremony Flows
-
-The `@protolabsai/flows` package exports ceremony flows for automated team rituals. These are thin LangGraph wrappers around the server-side ceremony logic:
-
-| Export                   | Description                                                                        |
-| ------------------------ | ---------------------------------------------------------------------------------- |
-| `createRetroFlow`        | Sprint/cycle retrospective — generates insights from completed and failed features |
-| `createProjectRetroFlow` | Project-level retrospective — holistic review across milestones and epics          |
-
-For full ceremony configuration, trigger mechanics, and audit logging, see [Ceremonies](../agents/ceremonies.md).
-
 ### Maintenance Flows
 
 The flows package also exports maintenance utilities used by the lead engineer pipeline:

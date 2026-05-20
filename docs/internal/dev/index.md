@@ -16,9 +16,8 @@ Extend protoLabs. Architecture, packages, code standards, and how to contribute.
 - **[Observability](./observability-package)** — Langfuse tracing and cost tracking
 - **[Langfuse Integration](../integrations/langfuse)** — Tracing, scoring, cost tracking
 
-## Distributed Systems
+## Storage
 
-- **[Distributed Sync](./distributed-sync)** — Peer mesh architecture, partition detection, leader election, and pull-based work intake protocol
 - **[Notes Sync](./notes-sync)** — Notes workspace: disk-based storage model, read/write paths, and MCP tool reference
 
 ## Pipeline & Orchestration
@@ -28,7 +27,6 @@ Extend protoLabs. Architecture, packages, code standards, and how to contribute.
 - **[Lead Engineer Pipeline](./lead-engineer-pipeline)** — Detailed processor logic (INTAKE through DEPLOY)
 - **[Project Lifecycle](./project-lifecycle)** — Board-driven project state machine
 - **[Event Ledger](./event-ledger)** — Append-only lifecycle event persistence and timeline API
-- **[PR Remediation Loop](./pr-remediation-loop)** — Autonomous PR review feedback handling
 - **[Issue Management](./issue-management)** — Automated failure-to-issue pipeline
 
 ## Guides

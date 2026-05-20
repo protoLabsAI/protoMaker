@@ -248,7 +248,7 @@ Status transitions emit typed events (via pipeline processors and `FeatureLoader
 | `feature:completed`      | Feature reaches `done`                                             |
 | `feature:error`          | Feature reaches `failed` or `blocked`                              |
 
-These events drive downstream integrations: Langfuse scoring, ceremony triggers, UI real-time updates.
+These events drive downstream integrations: Langfuse scoring, UI real-time updates, and any custom listeners.
 
 ## Drift Detection & Auto-Reconciliation
 

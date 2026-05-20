@@ -115,16 +115,15 @@ All `spawnForError` calls produce a prompt that includes:
 
 ## Cron-Trigger Patterns
 
-Three built-in Ava cron tasks are registered via `registerAvaCronTasks()`. These are **deterministic** — they query services directly and format Discord embeds. No LLM calls.
+Two built-in Ava cron tasks are registered via `registerAvaCronTasks()`. These are **deterministic** — they query services directly and format Discord embeds. No LLM calls.
 
 **File:** `apps/server/src/services/ava-cron-tasks.ts`
 **Registered in:** `apps/server/src/server/services.ts` after services are initialized.
 
-| Task ID                  | Schedule       | Purpose                                                             |
-| ------------------------ | -------------- | ------------------------------------------------------------------- |
-| `ava-staging-ping`       | `*/30 * * * *` | Capacity heartbeat: version, uptime, board counts, auto-mode status |
-| `ava-daily-board-health` | `0 9 * * *`    | Board summary with blocked features (with reasons) and stale (>24h) |
-| `ava-pr-triage`          | `0 */4 * * *`  | Open PR count via `gh pr list`, flags stale PRs (>7 days no update) |
+| Task ID                  | Schedule      | Purpose                                                             |
+| ------------------------ | ------------- | ------------------------------------------------------------------- |
+| `ava-daily-board-health` | `0 9 * * *`   | Board summary with blocked features (with reasons) and stale (>24h) |
+| `ava-pr-triage`          | `0 */4 * * *` | Open PR count via `gh pr list`, flags stale PRs (>7 days no update) |
 
 ### Calendar Reminder Integration
 

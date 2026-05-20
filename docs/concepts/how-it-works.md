@@ -93,7 +93,7 @@ flowchart TD
         BC -->|No| BE[Continue with next feature]
         BD --> BF{All epics in milestone done?}
         BE --> Q
-        BF -->|Yes| BG[Milestone retro ceremony]
+        BF -->|Yes| BG[Mark milestone complete]
         BF -->|No| BE
         BG --> BH{More milestones?}
         BH -->|Yes| BE
@@ -199,4 +199,4 @@ Knowledge compounds across all instances via git. Operations are ephemeral by de
 - **Learning flow** (agent memory) writes to `.automaker/memory/` — git-tracked, shared across instances
 - **Onboarding flow** (setupLab) scans a repo, analyzes gaps, and initializes `.automaker/` — builds understanding from scratch
 
-This architecture is the foundation for Hivemind, where multiple instances form a domain-scoped mesh, each owning a slice of the codebase.
+Each instance is autonomous and operates on its own `.automaker/` directory. Instances do not communicate directly — coordination across machines goes through GitHub (PRs) and Discord (notifications).

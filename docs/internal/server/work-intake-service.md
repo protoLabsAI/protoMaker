@@ -1,34 +1,34 @@
 # Work Intake Service
 
-Pull-based phase claiming that distributes work across the Hivemind mesh — instances independently claim phases from shared project documents, then create local features to execute.
+Pull-based phase claiming. The auto-mode loop reads project documents, claims claimable phases, and materializes them into board features for execution.
 
 ## Overview
 
-`WorkIntakeService` is the distributed work distribution mechanism. It runs a configurable tick loop when auto-mode is active. Each tick:
+`WorkIntakeService` is the work distribution mechanism. It runs a configurable tick loop when auto-mode is active. Each tick:
 
-1. Reads shared project docs (synced via peer mesh)
+1. Reads project docs from disk
 2. Finds claimable phases using pure functions from `@protolabsai/utils`
-3. Claims phases by atomically writing to the shared project doc
-4. Verifies the claim survived sync merge (race condition check)
-5. Creates **local** features from claimed phases
-6. On feature completion, updates `executionStatus: 'done'` in the shared doc
+3. Claims phases by writing `claimedBy` into the project doc
+4. Verifies the claim survived (race condition check against any concurrent writer)
+5. Creates local features from claimed phases
+6. On feature completion, updates `executionStatus: 'done'` in the project doc
 
-**Key design principle:** Features never cross the wire. Phases are the coordination unit. Each instance executes only what it owns.
+**Key design principle:** Phases are the coordination unit. The instance executes only what it owns.
 
 ## Architecture
 
 ```text
 WorkIntakeService.tick()
-  --> getProjects(projectPath)               // Read project docs (synced via peer mesh)
-  --> getClaimablePhases(project, instanceId, role, tags)   // Pure function
+  --> getProjects(projectPath)                                  // Read project docs
+  --> getClaimablePhases(project, instanceId, role, tags)       // Pure function
   --> [for each claimable phase, by priority]
         --> updatePhaseClaim(projectSlug, milestoneSlug, phaseName, { claimedBy: instanceId })
         --> wait CLAIM_VERIFY_DELAY_MS (200ms)
-        --> getPhase(...)                     // Re-read after sync merge
-        --> holdsClaim(phase, instanceId)?    // Did our claim win?
+        --> getPhase(...)                                        // Re-read
+        --> holdsClaim(phase, instanceId)?
               YES --> materializeFeature()
                   --> createFeature(projectPath, feature)
-              NO  --> skip (another instance won the race)
+              NO  --> skip
 ```
 
 ## Phase Lifecycle
@@ -41,7 +41,7 @@ claimable
       --> failed (executionStatus: 'failed')
 ```
 
-Stale claims (no activity for `claimTimeoutMs`, default 30 min) become reclaimable if the claiming instance is no longer alive in the peer registry or if the claim has exceeded `claimTimeoutMs`.
+Stale claims (no activity for `claimTimeoutMs`, default 30 min) become reclaimable so work does not get stuck when an instance crashes mid-execution.
 
 ## Pure Functions (from `@protolabsai/utils`)
 
@@ -49,7 +49,7 @@ Stale claims (no activity for `claimTimeoutMs`, default 30 min) become reclaimab
 | -------------------- | ---------------------------------------------------------------------- |
 | `getClaimablePhases` | Returns phases this instance can claim based on role, tags, and status |
 | `holdsClaim`         | Returns true if the given instanceId owns the claim on a phase         |
-| `isReclaimable`      | Returns true if a stale claim can be recovered by another instance     |
+| `isReclaimable`      | Returns true if a stale claim can be recovered                         |
 | `materializeFeature` | Converts a `Phase` into a `Feature` record ready for execution         |
 | `phasePriority`      | Numeric priority for ordering claims (milestone order × phase index)   |
 
@@ -83,7 +83,6 @@ interface WorkIntakeDependencies {
   createFeature: (projectPath, feature) => Promise<{ id: string }>;
   getRunningAgentCount: () => number;
   getMaxConcurrency: () => number;
-  getPeerStatus: () => Map<string, InstanceIdentity>;
 }
 ```
 
@@ -98,7 +97,7 @@ workIntakeService.start(projectPath: string)
 // Stop tick loop (call when auto-mode stops)
 workIntakeService.stop()
 
-// Report phase completion back to the shared project doc
+// Report phase completion back to the project doc
 workIntakeService.reportCompletion(
   projectPath, projectSlug, milestoneSlug, phaseName, prUrl?
 )
@@ -108,12 +107,7 @@ The tick runs immediately on `start()`, then at `tickIntervalMs` intervals.
 
 ## Stale Claim Recovery
 
-When `isReclaimable(phase, peerStatus, claimTimeoutMs)` is true:
-
-- The claiming instance is not in `peerStatus` (it went offline)
-- OR the claim is older than `claimTimeoutMs`
-
-The next available instance can re-claim the phase. This prevents work from getting stuck when an instance crashes mid-execution.
+When `isReclaimable(phase, claimTimeoutMs)` is true (the claim is older than `claimTimeoutMs`), the phase becomes available again on the next tick. This prevents work from getting stuck when an agent crashes mid-execution.
 
 ## Concurrency Gating
 
@@ -130,27 +124,25 @@ This prevents over-claiming when the instance is already fully utilized.
 
 ## Instance Role Matching
 
-`getClaimablePhases` uses `role` and `tags` to match phases to instances:
+`getClaimablePhases` uses `role` and `tags` to match phases to the executing context:
 
-- **Frontend phases** → claimed by `frontend` role instances
-- **Backend phases** → claimed by `backend` role instances
-- **Full-stack phases** → any instance can claim
+- **Frontend phases** → claimed by `frontend` role
+- **Backend phases** → claimed by `backend` role
+- **Full-stack phases** → any role can claim
 - **Tags** — additional capability matching (e.g., `['infra', 'database']`)
 
-When a phase has no role constraint, any instance can claim it.
+When a phase has no role constraint, any role can claim it.
 
 ## Key Files
 
 | File                                              | Role                                                     |
 | ------------------------------------------------- | -------------------------------------------------------- |
 | `apps/server/src/services/work-intake-service.ts` | Core service — tick loop, claim protocol, completion     |
-| `apps/server/src/services/work-intake.module.ts`  | NestJS module wiring — wires dependencies at startup     |
-| `libs/utils/src/work-intake-utils.ts`             | Pure functions: `getClaimablePhases`, `holdsClaim`, etc. |
+| `apps/server/src/services/work-intake.module.ts`  | Wires dependencies at startup                            |
+| `libs/utils/src/work-intake.ts`                   | Pure functions: `getClaimablePhases`, `holdsClaim`, etc. |
 | `libs/types/src/project.ts`                       | `Phase`, `InstanceRole`, `InstanceIdentity` types        |
 
 ## See Also
 
 - [Project Service](./project-service) — reads and writes phase state
-- [Peer Mesh Service](./peer-mesh-service) — project change events that keep replicas in sync
 - [Auto Mode Service](./auto-mode-service) — executes the local features created by work intake
-- [Distributed Sync](../dev/distributed-sync.md#work-intake-protocol) — full protocol spec, pure functions, instance role descriptions
