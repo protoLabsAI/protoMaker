@@ -5,7 +5,7 @@
  * - An explicit baseBranch in the request body is always respected
  * - When baseBranch is omitted, getEffectivePrBaseBranch resolves from project settings
  * - When project settings have no prBaseBranch, auto-detection falls back to git remote HEAD
- * - Final fallback is DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch ('dev')
+ * - Final fallback is DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch ('main')
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';

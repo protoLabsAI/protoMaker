@@ -144,6 +144,8 @@ export interface QueryPmDeps {
     };
   };
   events: EventEmitter;
+  /** Optional abort signal to cancel a slow PM call. */
+  abortSignal?: AbortSignal;
 }
 
 /**
@@ -158,7 +160,8 @@ export async function queryPm(
   projectSlug: string,
   question: string
 ): Promise<string> {
-  const { projectPath, projectService, featureLoader, projectPmService, events } = deps;
+  const { projectPath, projectService, featureLoader, projectPmService, events, abortSignal } =
+    deps;
 
   // Load project data
   const project = await projectService.getProject(projectPath, projectSlug).catch(() => null);
@@ -317,6 +320,7 @@ export async function queryPm(
       { role: 'user' as const, content: question },
     ],
     tools,
+    abortSignal,
     stopWhen: stepCountIs(5),
     providerOptions: {
       anthropic: {

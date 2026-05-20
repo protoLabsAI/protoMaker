@@ -169,10 +169,12 @@ export class PMWorldStateBuilder {
     // ── Upcoming Items ────────────────────────────────────────────
     lines.push('## Upcoming Items');
 
-    const upcoming = [...upcomingDeadlines].sort((a, b) => a.dueAt.localeCompare(b.dueAt));
+    const upcoming = [...upcomingDeadlines].sort(
+      (a, b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime()
+    );
 
-    const now = new Date().toISOString();
-    const future = upcoming.filter((u) => u.dueAt >= now);
+    const nowMs = Date.now();
+    const future = upcoming.filter((u) => new Date(u.dueAt).getTime() >= nowMs);
 
     if (future.length === 0) {
       lines.push('_No upcoming items_');

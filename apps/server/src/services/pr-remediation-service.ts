@@ -28,7 +28,6 @@ import {
 } from './pr-conflict-classifier.js';
 import { PrRemediationWorker } from './pr-remediation-worker.js';
 import type { FormatRemediationInput, FormatRemediationResult } from '../types/pr-remediation.js';
-import type { EventEmitter } from '../lib/events.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('PRRemediationService');
@@ -549,8 +548,7 @@ function isAgentBranch(branch: string): boolean {
  * On scope drift: escalates to HITL (does not push).
  */
 export async function remediateFormatFailure(
-  input: FormatRemediationInput,
-  events?: EventEmitter
+  input: FormatRemediationInput
 ): Promise<FormatRemediationResult> {
   const { prNumber, headBranch, headSha, projectPath, repository } = input;
 

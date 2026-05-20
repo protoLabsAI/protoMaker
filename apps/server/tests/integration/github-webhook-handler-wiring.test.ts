@@ -116,8 +116,7 @@ describe('GitHubWebhookHandler — real EventEmitter wiring', () => {
         prNumber: 42,
         headBranch: 'feature/integration-test-abc',
         repository: 'owner/repo',
-      }),
-      events
+      })
     );
   });
 
