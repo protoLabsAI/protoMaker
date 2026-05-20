@@ -22,14 +22,12 @@ export function register(container: ServiceContainer): void {
     integrityWatchdogService,
     featureLoader,
     healthMonitorService,
-    leadEngineerService,
     archivalService,
   } = container;
 
   // Wire schedulerService into interval-tracked services so their timers
   // appear in schedulerService.listAll() and can be inspected centrally.
   healthMonitorService.setSchedulerService(schedulerService);
-  leadEngineerService.setSchedulerService(schedulerService);
   archivalService.setSchedulerService(schedulerService);
 
   // Scheduler Service initialization and task registration via AutomationService

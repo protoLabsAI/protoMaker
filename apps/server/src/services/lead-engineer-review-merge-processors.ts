@@ -950,7 +950,7 @@ export class ReviewProcessor implements StateProcessor {
 
   /**
    * Resolve merge flag for normalization (same logic as MergeProcessor.resolveMergeFlag).
-   * Promotion PRs always use --merge. Feature PRs use the configured prMergeStrategy.
+   * Epic PRs always use --merge. Feature PRs use the configured prMergeStrategy.
    */
   private async resolveNormalizeMergeFlag(ctx: StateContext): Promise<string> {
     if (ctx.prNumber) {
@@ -1197,7 +1197,7 @@ export class MergeProcessor implements StateProcessor {
       };
     }
 
-    // Resolve merge strategy: promotion PRs always use --merge
+    // Resolve merge strategy: epic PRs always use --merge
     const mergeFlag = await this.resolveMergeFlag(ctx);
 
     logger.info(
@@ -1349,10 +1349,10 @@ export class MergeProcessor implements StateProcessor {
 
   /**
    * Resolve the gh CLI merge flag based on workflow settings and PR base branch.
-   * Promotion PRs (base is staging or main) always use --merge regardless of setting.
+   * Epic PRs (base is main or epic/*) always use --merge regardless of setting.
    */
   private async resolveMergeFlag(ctx: StateContext): Promise<string> {
-    // Check if this is a promotion/epic PR — those must always use --merge
+    // Check if this is an epic PR — those must always use --merge
     if (ctx.prNumber) {
       const baseBranchFlag = await resolveMergeStrategy(ctx.prNumber, ctx.projectPath);
       if (baseBranchFlag === '--merge') {

@@ -1138,10 +1138,10 @@ export class ExecuteProcessor implements StateProcessor {
       // Non-fatal: network blip should not block the agent
     }
 
-    // Determine base branch: feature-level → project-level → global → git auto-detect → 'dev'
+    // Determine base branch: feature-level → project-level → global → git auto-detect → 'main'
     // Per-feature gitWorkflow.prBaseBranch is critical for epic branch targeting —
-    // without it, features targeting epic/* get merged against origin/dev and conflict.
-    let baseBranch = 'dev';
+    // without it, features targeting epic/* get merged against origin/main and conflict.
+    let baseBranch = 'main';
     if (feature.gitWorkflow?.prBaseBranch) {
       baseBranch = feature.gitWorkflow.prBaseBranch;
     } else {
@@ -1448,7 +1448,7 @@ export class ExecuteProcessor implements StateProcessor {
       }
 
       const execEnv = createGitExecEnv();
-      const baseBranch = feature.gitWorkflow?.prBaseBranch || 'dev';
+      const baseBranch = feature.gitWorkflow?.prBaseBranch || 'main';
 
       // Fetch to ensure origin/<baseBranch> ref is up-to-date
       try {

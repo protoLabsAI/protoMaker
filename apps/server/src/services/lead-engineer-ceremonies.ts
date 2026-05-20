@@ -29,7 +29,6 @@ export class CeremonyOrchestrator {
    */
   async handleProjectCompleting(
     session: LeadEngineerSession,
-    stopSession: (projectPath: string) => void,
     removeSession: (projectPath: string) => Promise<void>
   ): Promise<void> {
     session.flowState = 'completing';
@@ -59,7 +58,6 @@ export class CeremonyOrchestrator {
 
     // Transition to idle and clean up
     session.flowState = 'idle';
-    stopSession(session.projectPath);
 
     try {
       await removeSession(session.projectPath);

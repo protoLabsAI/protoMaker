@@ -61,7 +61,6 @@ import { createCosRoutes } from '../routes/cos/index.js';
 import { createWebhooksRoutes } from '../routes/webhooks/index.js';
 import { createAvaRoutes } from '../routes/ava/index.js';
 import { createKnowledgeRoutes } from '../routes/knowledge/index.js';
-import { createPromotionsRoutes } from '../routes/promotions/index.js';
 import { createIssuesRoutes } from '../routes/issues/index.js';
 import { createDeployRoutes } from '../routes/deploy/index.js';
 import { createIntegrityRoutes } from '../routes/integrity.js';
@@ -405,10 +404,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     app.use('/api/knowledge', createKnowledgeRoutes(knowledgeStoreService));
     logger.info('Knowledge store routes mounted at /api/knowledge');
   }
-
-  // Promotion orchestration routes
-  app.use('/api/promotions', createPromotionsRoutes());
-  logger.info('Promotion routes mounted at /api/promotions');
 
   // Sensor registry routes (core sensor framework)
   app.use('/api/sensors', createSensorRoutes(sensorRegistryService));

@@ -133,14 +133,6 @@ export type {
   TrustTierRecord,
 } from './quarantine.js';
 
-// Promotion pipeline types (Detection & Candidate Tracking)
-export type {
-  PromotionStatus,
-  PromotionCandidate,
-  PromotionBatch,
-  PromotionConfig,
-} from './promotion.js';
-
 // Feature store interface (pluggable storage abstraction)
 export type { FeatureStore } from './feature-store.js';
 

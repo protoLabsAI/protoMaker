@@ -252,12 +252,10 @@ export async function checkAndRecoverUncommittedWork(
     result.recovered = true;
 
     // Enable auto-merge so PRs don't sit BLOCKED waiting for manual intervention
-    // Use --merge for promotion/epic PRs to preserve DAG integrity
+    // Use --merge for epic PRs to preserve DAG integrity
     if (prNumber) {
       const mergeFlag =
-        baseBranch === 'staging' || baseBranch === 'main' || baseBranch.startsWith('epic/')
-          ? '--merge'
-          : '--squash';
+        baseBranch === 'main' || baseBranch.startsWith('epic/') ? '--merge' : '--squash';
       try {
         await execFileAsync('gh', ['pr', 'merge', String(prNumber), '--auto', mergeFlag], {
           cwd: worktreePath,

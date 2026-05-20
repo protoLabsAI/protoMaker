@@ -18,7 +18,6 @@ export interface AvaToolGroups {
   notes: boolean;
   metrics: boolean;
   prWorkflow: boolean;
-  promotion: boolean;
   contextFiles: boolean;
   projects: boolean;
   briefing: boolean;

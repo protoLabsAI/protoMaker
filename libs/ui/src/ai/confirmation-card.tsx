@@ -67,8 +67,6 @@ function buildSummary(toolName: string, input: unknown): string {
       const strat = (args.strategy as string) ?? 'squash';
       return pr ? `Merge PR #${pr} (${strat})` : 'Merge pull request';
     }
-    case 'promote_to_staging':
-      return 'Promote dev to staging';
     default:
       return formatToolName(toolName);
   }

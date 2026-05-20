@@ -20,7 +20,6 @@ import type { TopicBus } from '../../../lib/topic-bus.js';
 import type { SettingsService } from '../../../services/settings-service.js';
 import { FeatureLoader } from '../../../services/feature-loader.js';
 import { getWebhookDeliveryService } from '../../../services/webhook-delivery-service.js';
-import { StagingPromotionService } from '../../../services/staging-promotion-service.js';
 import type { GitHubCheckSuiteWebhookPayload } from '@protolabsai/types';
 
 const logger = createLogger('webhooks/github');
@@ -271,7 +270,6 @@ export function createGitHubWebhookHandler(
   topicBus?: TopicBus
 ) {
   const featureLoader = new FeatureLoader();
-  const stagingPromotionService = new StagingPromotionService();
 
   return async (req: Request, res: Response): Promise<void> => {
     try {
@@ -649,32 +647,11 @@ export function createGitHubWebhookHandler(
         }
       }
 
-      // Dev-merge detection: create a staging promotion candidate when the PR
-      // targets the dev branch and autoCandidateOnDevMerge is enabled.
-      if (baseBranch === 'dev') {
-        const shouldCreate = stagingPromotionService.detectDevMerge(
-          { id: feature.featureId, title: feature.title, branchName },
-          mergeCommitSha
-        );
-
-        if (shouldCreate && settings.promotion?.autoCandidateOnDevMerge) {
-          const candidate = await stagingPromotionService.createCandidate(
-            projectPath,
-            feature.featureId,
-            mergeCommitSha,
-            feature.title,
-            branchName
-          );
-          logger.info(
-            `Staging promotion candidate created for feature "${feature.featureId}" (commit: ${candidate.commitSha})`
-          );
-        }
-      }
-
-      // Epic-to-dev merge detection: when an epic branch merges into dev,
-      // mark the epic feature as done and clean up the branch. This completes
-      // the epic lifecycle started by CompletionDetectorService.createEpicToDevPR().
-      if (baseBranch === 'dev' && branchName.startsWith('epic/')) {
+      // Epic-to-base merge detection: when an epic branch merges into its
+      // base (configured prBaseBranch — typically 'main'), mark the epic
+      // feature as done and clean up the branch. This completes the epic
+      // lifecycle started by CompletionDetectorService.createEpicToBasePR().
+      if (!baseBranch.startsWith('epic/') && branchName.startsWith('epic/')) {
         try {
           const allFeatures = await featureLoader.getAll(projectPath);
           const epicFeature = allFeatures.find((f) => f.isEpic && f.branchName === branchName);
@@ -684,7 +661,7 @@ export function createGitHubWebhookHandler(
               status: 'done',
               prMergedAt: now,
               completedAt: now,
-              statusChangeReason: `Epic branch merged to dev (PR #${prNumber})`,
+              statusChangeReason: `Epic branch merged to ${baseBranch} (PR #${prNumber})`,
             });
             events.emit('feature:completed', {
               featureId: epicFeature.id,
@@ -693,7 +670,7 @@ export function createGitHubWebhookHandler(
               isEpic: true,
             });
             logger.info(
-              `Epic "${epicFeature.title}" marked done after epic-to-dev PR #${prNumber} merged`
+              `Epic "${epicFeature.title}" marked done after epic-to-${baseBranch} PR #${prNumber} merged`
             );
 
             // Clean up epic branch (fire-and-forget)
@@ -713,7 +690,7 @@ export function createGitHubWebhookHandler(
             );
           }
         } catch (epicErr) {
-          logger.warn('Epic-to-dev merge detection failed (non-fatal):', epicErr);
+          logger.warn('Epic-to-base merge detection failed (non-fatal):', epicErr);
         }
       }
 

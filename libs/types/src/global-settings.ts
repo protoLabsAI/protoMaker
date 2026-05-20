@@ -35,7 +35,6 @@ import type { EventHook } from './event-settings.js';
 import type { DiscordSettings, ErrorTrackingSettings } from './integration-settings.js';
 import type { ProjectRef, TrashedProjectRef } from './project-settings.js';
 import type { TrustBoundaryConfig } from './workflow-settings.js';
-import type { PromotionConfig } from './promotion.js';
 
 // Re-export ModelAlias for convenience (settings.ts historically re-exported this)
 export type { ModelAlias };
@@ -656,13 +655,6 @@ export interface GlobalSettings {
   userName?: string;
 
   /**
-   * Promotion pipeline configuration for staging/production candidate tracking.
-   * Controls how features are detected as promotion candidates and batched for release.
-   * @see PromotionConfig in promotion.ts
-   */
-  promotion?: PromotionConfig;
-
-  /**
    * Feature flags for toggling in-development UI features.
    * Defaults to all enabled in development, disabled in staging/production.
    * Toggled per-installation via Settings > Developer > Feature Flags.
@@ -767,10 +759,6 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   autoModeAlwaysOn: {
     enabled: false,
     projects: [],
-  },
-  // Promotion pipeline — auto-register candidates when features merge to dev
-  promotion: {
-    autoCandidateOnDevMerge: true,
   },
   // Feature flags — all on in development by default
   featureFlags: DEFAULT_FEATURE_FLAGS,

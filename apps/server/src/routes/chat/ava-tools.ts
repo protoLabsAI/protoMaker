@@ -138,8 +138,6 @@ export interface AvaToolsConfig {
   metrics?: boolean;
   /** Enable PR workflow tools (check_pr_status, get_pr_feedback, merge_pr) */
   prWorkflow?: boolean;
-  /** Enable promotion tools (list_staging_candidates, promote_to_staging) */
-  promotion?: boolean;
   /** Enable context file tools (list_context_files, get_context_file, create_context_file) */
   contextFiles?: boolean;
   /** Enable project orchestration tools (list_projects, get_project, create_project) */
@@ -1242,66 +1240,6 @@ export function buildAvaTools(
         } catch (err) {
           return {
             error: `Failed to diagnose PR conflict: ${err instanceof Error ? err.message : String(err)}`,
-          };
-        }
-      },
-    });
-  }
-
-  // -----------------------------------------------------------------------
-  // promotion – staging candidate listing and promotion
-  // -----------------------------------------------------------------------
-  if (config.promotion) {
-    tools['list_staging_candidates'] = makeTool({
-      description:
-        'List commits on dev that have not been merged into staging. These are candidates for promotion.',
-      inputSchema: z.object({}),
-      execute: async () => {
-        try {
-          const { exec: execCb } = await import('child_process');
-          const { promisify } = await import('util');
-          const execP = promisify(execCb);
-          // Fetch latest remote state
-          await execP('git fetch origin dev staging', { cwd: projectPath }).catch(() => {});
-          const { stdout } = await execP(
-            'git log origin/staging..origin/dev --oneline --no-merges --format="%h %s"',
-            { cwd: projectPath }
-          );
-          const commits = stdout
-            .trim()
-            .split('\n')
-            .filter(Boolean)
-            .map((line) => {
-              const [hash, ...rest] = line.split(' ');
-              return { hash, message: rest.join(' ') };
-            });
-          return { count: commits.length, commits };
-        } catch (err) {
-          return {
-            error: `Failed to list staging candidates: ${err instanceof Error ? err.message : String(err)}`,
-          };
-        }
-      },
-    });
-
-    tools['promote_to_staging'] = makeTool({
-      description:
-        'Promote dev to staging by creating a merge PR from dev into staging. Requires user confirmation.',
-      inputSchema: z.object({}),
-      needsApproval: destructiveNeedsApproval,
-      execute: async () => {
-        try {
-          const { exec: execCb } = await import('child_process');
-          const { promisify } = await import('util');
-          const execP = promisify(execCb);
-          const { stdout } = await execP(
-            'gh pr create --base staging --head dev --title "chore: promote dev to staging" --body "Automated promotion from dev to staging" --no-maintainer-edit',
-            { cwd: projectPath }
-          );
-          return { success: true, prUrl: stdout.trim() };
-        } catch (err) {
-          return {
-            error: `Failed to create promotion PR: ${err instanceof Error ? err.message : String(err)}`,
           };
         }
       },

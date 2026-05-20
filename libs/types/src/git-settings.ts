@@ -35,7 +35,7 @@ export interface GitWorkflowSettings {
   prMergeStrategy?: PRMergeStrategy;
   /** Wait for CI checks to pass before merging (default: true) */
   waitForCI?: boolean;
-  /** Base branch for PR creation (default: 'dev') */
+  /** Base branch for PR creation (default: 'main') */
   prBaseBranch?: string;
   /**
    * Maximum total lines changed (insertions + deletions) before flagging PR as oversized.
@@ -84,7 +84,7 @@ export const DEFAULT_GIT_WORKFLOW_SETTINGS: Required<GitWorkflowSettings> = {
   autoMergePR: true,
   prMergeStrategy: 'squash',
   waitForCI: true,
-  prBaseBranch: 'dev',
+  prBaseBranch: 'main',
   maxPRLinesChanged: 500,
   maxPRFilesTouched: 20,
   excludeFromStaging: [],

@@ -847,12 +847,11 @@ export async function getWorkflowSettings(
  * Resolution order:
  *   1. Per-project workflow.gitWorkflow.prBaseBranch (from .automaker/settings.json)
  *   2. Auto-detect from remote HEAD via `git symbolic-ref refs/remotes/origin/HEAD`
- *   3. DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch ('dev')
+ *   3. DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch ('main')
  *
  * Global settings are intentionally excluded from the fallback chain. The global
  * gitWorkflow.prBaseBranch belongs to the automaker project itself and must not
- * bleed into other projects with a different default branch (e.g. mythxengine uses
- * 'main', not 'dev').
+ * bleed into other projects with a different default branch.
  *
  * @param projectPath - Absolute path to the project (used for project settings + git detection)
  * @param settingsService - Settings service instance
