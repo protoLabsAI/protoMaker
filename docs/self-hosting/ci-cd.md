@@ -1,6 +1,6 @@
 # CI/CD Pipelines
 
-protoLabs.studio uses GitHub Actions for continuous integration and delivery. CI runs on every PR targeting `main` and on every push to `main`. Releases are tagged automatically on merge.
+protoLabs.studio uses GitHub Actions for continuous integration and delivery. CI runs on every PR targeting `main` and on every push to `main`. Releases are tagged automatically on push to `main`.
 
 ## Workflows Overview
 
