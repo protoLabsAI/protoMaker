@@ -91,7 +91,7 @@ npx changeset add --empty  # Creates an empty changeset (for chore/docs changes)
 
 The full release flow is automated via `auto-release.yml`, triggered automatically on every push to `main`:
 
-```
+```text
 PR merged to main
     ↓
 auto-release.yml

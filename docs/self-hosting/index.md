@@ -1,6 +1,6 @@
 # Infrastructure Documentation
 
-Deploy protoLabs. Docker, systemd, or bare metal — pick what fits your stack.
+Deploy protoLabs.studio. Docker, systemd, or bare metal — pick what fits your stack.
 
 ## Quick Links
 

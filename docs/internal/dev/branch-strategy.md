@@ -5,11 +5,11 @@ description: Single-trunk flow — feature branches merge directly into main
 
 # Branch Strategy
 
-protoLabs uses a **single-trunk flow**. Feature branches merge directly into `main`. Every commit on `main` is a release candidate.
+We use a **single-trunk flow**. Feature branches merge directly into `main`. Every commit on `main` is a release candidate.
 
 ## The Model
 
-```
+```text
 feature/* ──▶ main ──────────────────────────────────── (stable trunk)
                        Tagged + released on merge
                        Auto-deploys to production
@@ -40,7 +40,7 @@ Agent-generated PRs always target `main`. `DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseB
 
 For larger features grouped under an epic, use a hierarchical PR structure:
 
-```
+```text
 main
   ↑
 epic/foundation ────────── Epic PR (targets main, merge commit)

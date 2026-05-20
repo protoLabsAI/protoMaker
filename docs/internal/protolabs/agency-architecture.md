@@ -231,7 +231,6 @@ Communication channels:
 | **PR pipeline**                 | `apps/server/src/services/git-workflow-service.ts`          | Create, push, merge                                     |
 | **CodeRabbit integration**      | Branch protection + `resolve_review_threads`                | Required check                                          |
 | **CI/CD**                       | `.github/workflows/`                                        | Build, test, format, audit                              |
-| **Lead Engineer rules**         | `apps/server/src/services/lead-engineer-rules.ts`           | Pure-function rules (no LLM, no service imports)        |
 | **Escalation pipeline**         | `apps/server/src/services/escalation-router.ts`             | 5 channels, SLA engine                                  |
 | **Signal accumulator**          | `apps/server/src/services/`                                 | Severity classification + briefing                      |
 | **Agent memory**                | `.automaker/memory/*.md`                                    | Per-agent learning files                                |

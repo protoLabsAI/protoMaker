@@ -35,7 +35,7 @@ interface EventLedgerEntry {
 
 ## Subscribed event types
 
-`EventLedgerService` subscribes to 13 lifecycle event types:
+`EventLedgerService` subscribes to 15 lifecycle event types:
 
 | Event type                             | Correlation IDs                |
 | -------------------------------------- | ------------------------------ |
@@ -48,7 +48,10 @@ interface EventLedgerEntry {
 | `pipeline:state-entered`               | `featureId`                    |
 | `milestone:completed`                  | `projectSlug`, `milestoneSlug` |
 | `project:completed`                    | `projectSlug`                  |
+| `project:lifecycle:initiated`          | `projectSlug`                  |
+| `project:lifecycle:prd-approved`       | `projectSlug`                  |
 | `project:lifecycle:launched`           | `projectSlug`                  |
+| `project:scaffolded`                   | `projectSlug`                  |
 | `escalation:signal-received`           | `featureId`                    |
 | `auto-mode:event` (feature types only) | `featureId`                    |
 

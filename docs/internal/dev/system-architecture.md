@@ -485,7 +485,7 @@ Non-cron periodic tasks running in the server process.
 
 Services are wired in strict order via register modules in `server/wiring.ts`:
 
-```
+```text
 1.  registerCore                  Settings, calendar, notifications, auto-mode
 2.  registerEscalationChannels    Escalation routing infrastructure
 3.  registerEventSubscriptions    Board reconciliation watchers
@@ -502,7 +502,7 @@ Services are wired in strict order via register modules in `server/wiring.ts`:
 
 ### Startup Sequence
 
-```
+```text
 1. Settings migration
 2. Runtime state migration (.automaker/ -> DATA_DIR)
 3. KnowledgeStoreService.initialize() for all projects
@@ -517,7 +517,7 @@ Services are wired in strict order via register modules in `server/wiring.ts`:
 
 ### Shutdown Sequence
 
-```
+```text
 1. Emit server:shutdown (200ms for WebSocket clients)
 2. Write .clean-shutdown marker
 3. Destroy LeadEngineerService
