@@ -3,8 +3,8 @@
  *
  * Handles GitHub webhook events, specifically pull_request events
  * to automatically transition features when their PRs are merged.
- * Also handles check_suite and check_run CI events on this global route,
- * mirroring the per-project route at /github/webhook.
+ * Also handles check_suite CI events on this global route, mirroring
+ * the per-project route at /github/webhook.
  */
 
 import type { Request, Response } from 'express';
