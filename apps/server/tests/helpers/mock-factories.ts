@@ -174,7 +174,6 @@ export function createMockEventEmitter(
     broadcast: vi.fn((type: EventType, payload: unknown) => {
       dispatch(type, payload);
     }),
-    setRemoteBroadcaster: vi.fn(),
     setCorrelationContext: vi.fn(),
     getCorrelationContext: vi.fn().mockReturnValue(undefined),
     clearCorrelationContext: vi.fn(),

@@ -11,7 +11,6 @@
  *   - polling        : loop sleep intervals and retry delays
  *   - networking     : shell command and HTTP request timeouts
  *   - cleanup        : post-merge / maintenance delays
- *   - crdt           : sync server heartbeat/reconnect timing
  *   - health         : health monitor check intervals
  *   - archival       : feature archival check intervals
  *   - worktree       : worktree lifecycle timing
@@ -85,26 +84,6 @@ export const EVENT_HOOK_HTTP_TIMEOUT_MS = parseInt(
 /** Delay between merge retry attempts (default: 60 s). */
 export const MERGE_RETRY_DELAY_MS = parseInt(
   process.env.MERGE_RETRY_DELAY_MS ?? String(60 * 1000),
-  10
-);
-
-// ── CRDT Sync ─────────────────────────────────────────────────────────────────
-
-/** Interval between heartbeat pings in the CRDT sync server (default: 30 s). */
-export const CRDT_HEARTBEAT_MS = parseInt(process.env.CRDT_HEARTBEAT_MS ?? '30000', 10);
-
-/** Time-to-live for a peer without a heartbeat before eviction (default: 120 s). */
-export const CRDT_TTL_MS = parseInt(process.env.CRDT_TTL_MS ?? '120000', 10);
-
-/** Delay before attempting to reconnect to the CRDT sync server (default: 5 s). */
-export const CRDT_RECONNECT_INTERVAL_MS = parseInt(
-  process.env.CRDT_RECONNECT_INTERVAL_MS ?? '5000',
-  10
-);
-
-/** Interval at which peer TTLs are checked and expired peers evicted (default: 10 s). */
-export const CRDT_TTL_CHECK_INTERVAL_MS = parseInt(
-  process.env.CRDT_TTL_CHECK_INTERVAL_MS ?? '10000',
   10
 );
 

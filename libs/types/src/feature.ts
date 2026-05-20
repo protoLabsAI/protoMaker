@@ -540,35 +540,15 @@ export interface Feature {
     timestamp: string; // ISO 8601 timestamp when the error occurred
   };
 
-  // Hivemind fields
-  /** Domain this feature belongs to (e.g. "frontend", "server") for mesh routing */
+  // Ownership / routing fields
+  /** Domain this feature belongs to (e.g. "frontend", "server"). */
   domain?: string;
-  /** Instance ID that has claimed this feature for execution */
+  /** Identifier of the worker that has claimed this feature for execution. */
   claimedBy?: string;
-  /**
-   * Instance ID this feature has been cross-assigned to via work-stealing.
-   * Set when a busy peer transfers this feature to an idle instance.
-   * Propagates to all peers via CRDT sync on the feature:updated event.
-   */
+  /** Identifier of the instance that owns execution of this feature. */
   assignedInstance?: string;
-  /**
-   * Whether this feature is eligible for work-stealing by other instances.
-   * When false, this feature will never be included in a WORK_OFFER.
-   * Defaults to true (all features are stealable unless opted out).
-   */
-  stealable?: boolean;
-  /**
-   * List of file paths this feature is expected to modify.
-   * Used for domain-routing work-stealing: features are only offered to
-   * instances whose domains cover these paths.
-   */
+  /** List of file paths this feature is expected to modify. */
   filesToModify?: string[];
-
-  /**
-   * Instance ID of the agent or process that created this feature.
-   * Used for multi-instance mesh coordination to track feature origin.
-   */
-  createdByInstance?: string;
 
   /**
    * Computed downstream impact score: number of features that transitively depend on this one.

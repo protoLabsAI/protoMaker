@@ -67,8 +67,6 @@ export interface WorkIntakeDependencies {
   getRunningAgentCount: () => number;
   /** Get max concurrency */
   getMaxConcurrency: () => number;
-  /** Get peer status for stale claim recovery */
-  getPeerStatus: () => Map<string, import('@protolabsai/types').InstanceIdentity>;
 }
 
 export class WorkIntakeService {
@@ -281,14 +279,13 @@ export class WorkIntakeService {
   private async reclaimStalePhases(): Promise<void> {
     if (!this.deps || !this.projectPath) return;
 
-    const peerStatus = this.deps.getPeerStatus();
     const projects = await this.deps.getProjects(this.projectPath);
 
     for (const project of projects) {
       if (project.status !== 'active' && project.status !== 'scaffolded') continue;
       for (const milestone of project.milestones) {
         for (const phase of milestone.phases) {
-          if (isReclaimable(phase, peerStatus, this.config.claimTimeoutMs)) {
+          if (isReclaimable(phase, this.config.claimTimeoutMs)) {
             logger.info(
               `Reclaiming stale phase ${project.slug}/${milestone.slug}/${phase.name} ` +
                 `(was claimed by ${phase.claimedBy})`
@@ -302,7 +299,7 @@ export class WorkIntakeService {
                 claimedBy: undefined,
                 claimedAt: undefined,
                 executionStatus: 'unclaimed',
-                lastError: `Reclaimed from offline instance ${phase.claimedBy}`,
+                lastError: `Reclaimed stale claim from ${phase.claimedBy}`,
               }
             );
           }

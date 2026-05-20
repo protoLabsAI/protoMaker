@@ -60,7 +60,6 @@ import { createAuthorityRoutes } from '../routes/authority/index.js';
 import { createCosRoutes } from '../routes/cos/index.js';
 import { createCeremoniesRoutes } from '../routes/ceremonies/index.js';
 import { createWebhooksRoutes } from '../routes/webhooks/index.js';
-import { ProjectRegistryService } from '../services/project-registry-service.js';
 import { createAvaRoutes } from '../routes/ava/index.js';
 import { createKnowledgeRoutes } from '../routes/knowledge/index.js';
 import { createPromotionsRoutes } from '../routes/promotions/index.js';
@@ -88,7 +87,6 @@ import { createSensorRoutes } from '../routes/sensors/index.js';
 import { createProjectPmRoutes } from '../routes/project-pm/index.js';
 import { createLedgerRoutes } from '../routes/ledger/index.js';
 import { createBackfillLedgerProjectSlugHandler } from '../routes/ledger/routes/backfill.js';
-import { createHivemindRoutes } from '../routes/hivemind/index.js';
 import { createDoraRoutes } from '../routes/dora/index.js';
 import { createAgentRoutes } from '../routes/agents.js';
 import { createOpsRoutes } from '../routes/ops/index.js';
@@ -133,7 +131,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     briefingCursorService,
     projectService,
     projectLifecycleService,
-    projectAssignmentService,
     automationService,
     avaGatewayService,
     discordBotService,
@@ -155,7 +152,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     repoRoot,
     sensorRegistryService,
     projectPmService,
-    crdtSyncService,
     todoService,
     schedulerService,
     eventRouterService,
@@ -211,16 +207,8 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // Prometheus metrics endpoint (unauthenticated for Prometheus scraping)
   app.use('/api/metrics', createPrometheusRoute());
 
-  // Project registry — sourced from workspace/projects.yaml (with Workstacean fallback).
-  // Created here (before webhook routes) so the webhook handler can resolve external
-  // repo full_names (e.g. "protoLabsAI/mythxengine") to their local projectPaths.
-  const projectRegistry = new ProjectRegistryService({ projectRoot: repoRoot });
-  projectRegistry
-    .start()
-    .catch((err: unknown) => logger.warn('ProjectRegistry start failed:', err));
-
   // Webhooks at root level (unauthenticated - uses signature verification)
-  app.use('/webhooks', createWebhooksRoutes(events, settingsService, topicBus, projectRegistry));
+  app.use('/webhooks', createWebhooksRoutes(events, settingsService, topicBus));
   // Alerts webhook routes (unauthenticated - Grafana webhooks)
   app.use('/webhooks/alerts', createAlertsRoutes(settingsService, discordBotService));
 
@@ -246,7 +234,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api', authMiddleware);
 
   // --- PROTECTED HEALTH ENDPOINTS (detailed info requires auth) ---
-  app.get('/api/health/detailed', createDetailedHandler(crdtSyncService));
+  app.get('/api/health/detailed', createDetailedHandler());
   app.get('/api/health/quick', createQuickHandler());
   app.get(
     '/api/health/standard',
@@ -371,14 +359,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   );
   app.use(
     '/api/projects',
-    createProjectsRoutes(
-      featureLoader,
-      events,
-      projectService,
-      projectLifecycleService,
-      undefined,
-      projectAssignmentService
-    )
+    createProjectsRoutes(featureLoader, events, projectService, projectLifecycleService)
   );
   app.use('/api/automations', createAutomationsRoutes(automationService));
   app.use('/api/ava', createAvaRoutes(services));
@@ -455,10 +436,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     createBackfillLedgerProjectSlugHandler(featureLoader, services.dataDir)
   );
   logger.info('Ledger routes mounted at /api/ledger');
-
-  // Hivemind routes (peer discovery and instance status for the unified dashboard)
-  app.use('/api/hivemind', createHivemindRoutes(crdtSyncService));
-  logger.info('Hivemind routes mounted at /api/hivemind');
 
   // DORA metrics routes (lead time, deployment frequency, change failure rate, recovery, rework)
   app.use('/api/dora', createDoraRoutes(services.doraMetricsService));

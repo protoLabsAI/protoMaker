@@ -12,7 +12,6 @@ import type {
   ServerLogLevel,
   EventHook,
   FeatureFlags,
-  HivemindPeer,
 } from '@protolabsai/types';
 import { DEFAULT_FEATURE_FLAGS } from '@protolabsai/types';
 import { DEFAULT_KEYBOARD_SHORTCUTS } from './types';
@@ -154,11 +153,8 @@ export interface AppState {
   // User Identity (for board assignment)
   userIdentity: string | null;
 
-  // Hivemind / Cross-instance dashboard
-  peers: HivemindPeer[];
-  instanceFilter: 'all' | 'mine'; // 'all' = show features from all instances, 'mine' = local only
+  // Board view filters
   boardProjectFilter: string | null; // null = show all projects, slug = hide project badge for that project
-  selfInstanceId: string | null; // The instanceId of this Automaker instance
 
   // Server URL runtime override
   serverUrlOverride: string | null; // Runtime server URL override (null = use env var / default)
@@ -168,10 +164,6 @@ export interface AppState {
   serverStatus: 'connected' | 'disconnected' | 'connecting'; // Current connection status
   serverInfo: { version: string; status: string; timestamp: string } | null; // Info from /api/health
   recentConnections: Array<{ url: string; lastConnected: string }>; // Recent connections with timestamps
-
-  // Connected instance identity
-  instanceName: string | null; // Human-readable name of the connected instance (e.g. 'Dev Server', 'Staging')
-  instanceRole: string | null; // Role of the connected instance (e.g. 'primary', 'worker')
 }
 
 export interface AppActions {
@@ -322,13 +314,8 @@ export interface AppActions {
   // User Identity actions
   setUserIdentity: (identity: string | null) => void;
 
-  // Hivemind / Cross-instance dashboard actions
-  setPeers: (peers: HivemindPeer[]) => void;
-  setInstanceFilter: (filter: 'all' | 'mine') => void;
+  // Board view filter actions
   setBoardProjectFilter: (slug: string | null) => void;
-  fetchPeers: () => Promise<void>;
-  setSelfInstanceId: (id: string | null) => void;
-  fetchSelfInstanceId: () => Promise<void>;
 
   // Server URL runtime override actions
   setServerUrlOverride: (url: string | null) => void;
@@ -339,8 +326,6 @@ export interface AppActions {
   // Server connection actions
   connectToServer: (url: string) => Promise<void>;
   removeRecentConnection: (url: string) => void;
-  setInstanceName: (name: string | null) => void;
-  fetchInstanceInfo: () => Promise<void>;
 
   // Reset
   reset: () => void;
@@ -416,11 +401,8 @@ const initialState: AppState = {
   lastProjectDir: '',
   recentFolders: [],
   userIdentity: null,
-  // Hivemind / Cross-instance dashboard
-  peers: [],
-  instanceFilter: 'all',
+  // Board view filters
   boardProjectFilter: null,
-  selfInstanceId: null,
   // Server URL runtime override
   serverUrlOverride: (() => {
     try {
@@ -448,9 +430,6 @@ const initialState: AppState = {
       return [];
     }
   })(),
-  // Connected instance identity
-  instanceName: null,
-  instanceRole: null,
 };
 
 export const useAppStore = create<AppState & AppActions>()((set, get) => ({
@@ -1205,39 +1184,8 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
   // User Identity actions
   setUserIdentity: (identity) => set({ userIdentity: identity }),
 
-  // Hivemind / Cross-instance dashboard actions
-  setPeers: (peers) => set({ peers }),
-  setInstanceFilter: (instanceFilter) => set({ instanceFilter }),
+  // Board view filter actions
   setBoardProjectFilter: (boardProjectFilter) => set({ boardProjectFilter }),
-  fetchPeers: async () => {
-    try {
-      const api = getHttpApiClient();
-      const data = await api.hivemind.getPeers();
-      set({ peers: data.peers });
-    } catch (err) {
-      logger.warn('[AppStore] Failed to fetch hivemind peers:', err);
-    }
-  },
-  setSelfInstanceId: (selfInstanceId) => set({ selfInstanceId }),
-  fetchSelfInstanceId: async () => {
-    try {
-      const api = getHttpApiClient();
-      const data = await api.hivemind.getSelf();
-      const selfId = data.instanceId;
-      // Try to find a human-readable name via hivemind status (self shows up in onlinePeers)
-      let displayName: string | null = null;
-      try {
-        const status = await api.hivemind.getStatus();
-        const selfPeer = status.onlinePeers.find((p) => p.identity.instanceId === selfId);
-        displayName = selfPeer?.identity.name ?? null;
-      } catch {
-        // Status endpoint may fail — fall back to instanceId
-      }
-      set({ selfInstanceId: selfId, instanceName: displayName ?? selfId });
-    } catch (err) {
-      logger.warn('[AppStore] Failed to fetch self instanceId:', err);
-    }
-  },
 
   // Server URL runtime override actions
   setServerUrlOverride: (url) => {
@@ -1295,7 +1243,7 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
 
   // Server connection actions
   connectToServer: async (url) => {
-    set({ serverStatus: 'connecting', serverInfo: null, instanceName: null, instanceRole: null });
+    set({ serverStatus: 'connecting', serverInfo: null });
     try {
       const response = await fetch(`${url}/api/health`, {
         method: 'GET',
@@ -1351,31 +1299,6 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
       // localStorage might be disabled
     }
     set({ recentConnections, recentServerUrls });
-  },
-
-  setInstanceName: (name) => set({ instanceName: name }),
-
-  fetchInstanceInfo: async () => {
-    try {
-      const api = getHttpApiClient();
-      // Fetch self instanceId
-      const selfData = await api.hivemind.getSelf();
-      const selfId = selfData.instanceId;
-      // Fetch hivemind status to get role and display name
-      let displayName: string | null = null;
-      let instanceRole: string | null = null;
-      try {
-        const status = await api.hivemind.getStatus();
-        instanceRole = status.role ?? null;
-        const selfPeer = status.onlinePeers.find((p) => p.identity.instanceId === selfId);
-        displayName = selfPeer?.identity.name ?? null;
-      } catch {
-        // Status endpoint may fail — fall back gracefully
-      }
-      set({ selfInstanceId: selfId, instanceName: displayName ?? selfId, instanceRole });
-    } catch (err) {
-      logger.warn('[AppStore] Failed to fetch instance info:', err);
-    }
   },
 
   // Reset
