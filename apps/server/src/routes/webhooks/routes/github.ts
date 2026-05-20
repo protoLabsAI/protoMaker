@@ -22,11 +22,7 @@ import type { ProjectRegistryService } from '../../../services/project-registry-
 import { FeatureLoader } from '../../../services/feature-loader.js';
 import { getWebhookDeliveryService } from '../../../services/webhook-delivery-service.js';
 import { StagingPromotionService } from '../../../services/staging-promotion-service.js';
-import { getPRWatcherService } from '../../../services/pr-watcher-service.js';
-import type {
-  GitHubCheckSuiteWebhookPayload,
-  GitHubCheckRunWebhookPayload,
-} from '@protolabsai/types';
+import type { GitHubCheckSuiteWebhookPayload } from '@protolabsai/types';
 
 const logger = createLogger('webhooks/github');
 
@@ -272,39 +268,6 @@ async function handleGlobalCheckSuiteEvent(
   }
 }
 
-/**
- * Handle check_run completed event on the global webhook route.
- *
- * Mirrors handleCheckRunEvent from the per-project route. Uses PRWatcherService
- * to trigger fast-path checks for watched PRs.
- */
-async function handleGlobalCheckRunEvent(
-  payload: GitHubCheckRunWebhookPayload,
-  events: EventEmitter
-): Promise<void> {
-  const { action, check_run } = payload;
-
-  // Only react to completed check runs
-  if (action !== 'completed') return;
-
-  const prs = check_run.pull_requests ?? [];
-  if (prs.length === 0) return;
-
-  const watcher = getPRWatcherService(events);
-  if (!watcher) return;
-
-  for (const pr of prs) {
-    if (watcher.isWatching(pr.number)) {
-      logger.info(
-        `[global] check_run completed for PR #${pr.number} (${check_run.name}) — triggering watcher check`
-      );
-      await watcher.triggerCheck(pr.number);
-    }
-  }
-
-  logger.debug(`[global] Processed check_run ${check_run.id} (${check_run.name})`);
-}
-
 export function createGitHubWebhookHandler(
   events: EventEmitter,
   settingsService: SettingsService,
@@ -370,13 +333,6 @@ export function createGitHubWebhookHandler(
           topicBus
         );
         res.json({ success: true, message: 'check_suite event processed' });
-        return;
-      }
-
-      // Handle check_run events — fast-path PRWatcher trigger
-      if (eventType === 'check_run') {
-        await handleGlobalCheckRunEvent(req.body as GitHubCheckRunWebhookPayload, events);
-        res.json({ success: true, message: 'check_run event processed' });
         return;
       }
 

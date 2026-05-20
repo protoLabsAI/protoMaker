@@ -50,10 +50,6 @@ vi.mock('../../src/services/github-merge-service.js', () => ({
   githubMergeService: { merge: vi.fn(), getPRStatus: vi.fn() },
 }));
 
-vi.mock('../../src/services/pr-watcher-service.js', () => ({
-  getPRWatcherService: vi.fn().mockReturnValue(null),
-}));
-
 vi.mock('../../src/services/event-history-service.js', () => ({
   getEventHistoryService: vi.fn().mockReturnValue(null),
 }));
