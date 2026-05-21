@@ -1696,7 +1696,7 @@ Generate a comprehensive SPARC PRD as JSON.`;
           featureId,
           title: feature.title || 'Untitled',
           description: feature.description || '',
-          injectedBy: 'pipeline-orchestrator',
+          injectedBy: 'pm-agent',
           injectedAt: new Date().toISOString(),
         });
         break;
