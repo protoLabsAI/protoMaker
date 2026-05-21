@@ -15,8 +15,8 @@ function makeInput(toolName: string, toolInput: Record<string, unknown>): PreToo
 }
 
 describe('createWorktreeWriteGuard', () => {
-  const projectPath = '/Users/kj/dev/automaker';
-  const workDir = '/Users/kj/dev/automaker/.worktrees/feature-branch';
+  const projectPath = '/Users/kj/dev/protoMaker';
+  const workDir = '/Users/kj/dev/protoMaker/.worktrees/feature-branch';
 
   it('returns undefined when workDir === projectPath (no worktree)', () => {
     const guard = createWorktreeWriteGuard(projectPath, projectPath);
@@ -33,7 +33,7 @@ describe('createWorktreeWriteGuard', () => {
       const guard = createWorktreeWriteGuard(workDir, projectPath)!;
       const result = await guard(
         makeInput('Write', {
-          file_path: '/Users/kj/dev/automaker/apps/server/src/services/foo.ts',
+          file_path: '/Users/kj/dev/protoMaker/apps/server/src/services/foo.ts',
         }),
         'test-tool-use',
         { signal: new AbortController().signal }
@@ -46,7 +46,7 @@ describe('createWorktreeWriteGuard', () => {
       const guard = createWorktreeWriteGuard(workDir, projectPath)!;
       const result = await guard(
         makeInput('Edit', {
-          file_path: '/Users/kj/dev/automaker/apps/server/src/services/foo.ts',
+          file_path: '/Users/kj/dev/protoMaker/apps/server/src/services/foo.ts',
           old_string: 'old',
           new_string: 'new',
         }),
@@ -61,7 +61,7 @@ describe('createWorktreeWriteGuard', () => {
       const guard = createWorktreeWriteGuard(workDir, projectPath)!;
       const result = await guard(
         makeInput('Write', {
-          file_path: '/Users/kj/dev/automaker/.worktrees/feature-branch/apps/server/src/foo.ts',
+          file_path: '/Users/kj/dev/protoMaker/.worktrees/feature-branch/apps/server/src/foo.ts',
         }),
         'test-tool-use',
         { signal: new AbortController().signal }
@@ -73,7 +73,7 @@ describe('createWorktreeWriteGuard', () => {
       const guard = createWorktreeWriteGuard(workDir, projectPath)!;
       const result = await guard(
         makeInput('Write', {
-          file_path: '/Users/kj/dev/automaker/.automaker/features/feat-123/agent-output.md',
+          file_path: '/Users/kj/dev/protoMaker/.automaker/features/feat-123/agent-output.md',
         }),
         'test-tool-use',
         { signal: new AbortController().signal }
@@ -97,7 +97,7 @@ describe('createWorktreeWriteGuard', () => {
       const guard = createWorktreeWriteGuard(workDir, projectPath)!;
       const result = await guard(
         makeInput('Bash', {
-          command: `echo "hello" > /Users/kj/dev/automaker/apps/server/src/foo.ts`,
+          command: `echo "hello" > /Users/kj/dev/protoMaker/apps/server/src/foo.ts`,
         }),
         'test-tool-use',
         { signal: new AbortController().signal }
@@ -109,7 +109,7 @@ describe('createWorktreeWriteGuard', () => {
       const guard = createWorktreeWriteGuard(workDir, projectPath)!;
       const result = await guard(
         makeInput('Bash', {
-          command: `git -C /Users/kj/dev/automaker commit -m "test"`,
+          command: `git -C /Users/kj/dev/protoMaker commit -m "test"`,
         }),
         'test-tool-use',
         { signal: new AbortController().signal }
@@ -131,7 +131,7 @@ describe('createWorktreeWriteGuard', () => {
       const guard = createWorktreeWriteGuard(workDir, projectPath)!;
       const result = await guard(
         makeInput('Bash', {
-          command: `git -C /Users/kj/dev/automaker/.worktrees/feature-branch add -A`,
+          command: `git -C /Users/kj/dev/protoMaker/.worktrees/feature-branch add -A`,
         }),
         'test-tool-use',
         { signal: new AbortController().signal }
@@ -145,7 +145,7 @@ describe('createWorktreeWriteGuard', () => {
       const guard = createWorktreeWriteGuard(workDir, projectPath)!;
       const result = await guard(
         makeInput('Read', {
-          file_path: '/Users/kj/dev/automaker/apps/server/src/services/foo.ts',
+          file_path: '/Users/kj/dev/protoMaker/apps/server/src/services/foo.ts',
         }),
         'test-tool-use',
         { signal: new AbortController().signal }
@@ -156,7 +156,7 @@ describe('createWorktreeWriteGuard', () => {
     it('allows Grep from main repo', async () => {
       const guard = createWorktreeWriteGuard(workDir, projectPath)!;
       const result = await guard(
-        makeInput('Grep', { pattern: 'foo', path: '/Users/kj/dev/automaker' }),
+        makeInput('Grep', { pattern: 'foo', path: '/Users/kj/dev/protoMaker' }),
         'test-tool-use',
         { signal: new AbortController().signal }
       );

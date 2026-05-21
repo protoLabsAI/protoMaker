@@ -8,7 +8,7 @@ set -euo pipefail
 # Extract tool name and error from hook context
 TOOL_NAME="${TOOL_NAME:-unknown}"
 ERROR_MESSAGE="${ERROR_MESSAGE:-No error message available}"
-PROJECT_PATH="${PROJECT_PATH:-/Users/kj/dev/automaker}"
+PROJECT_PATH="${PROJECT_PATH:-/Users/kj/dev/protoMaker}"
 
 # Check if this is an MCP tool failure
 if [[ ! "$TOOL_NAME" =~ ^mcp__plugin_protolabs_studio__ ]]; then
