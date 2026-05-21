@@ -603,16 +603,14 @@ export class AutomationService {
   }
 
   /**
-   * Remove any persisted `maintenance:*` automation records whose flowId is not registered
+   * Remove any persisted built-in automation records whose flowId is not registered
    * in the flow registry, and unregister their corresponding scheduler tasks.
    * Called at the end of seedBuiltInAutomations() to clean up stale records left behind
    * when built-in flows are removed from code.
    */
   private async purgeStaleBuiltIns(): Promise<void> {
     const automations = await this.readAutomations();
-    const stale = automations.filter(
-      (a) => a.id.startsWith('maintenance:') && !flowRegistry.has(a.flowId)
-    );
+    const stale = automations.filter((a) => a.isBuiltIn && !flowRegistry.has(a.flowId));
 
     if (stale.length === 0) return;
 
