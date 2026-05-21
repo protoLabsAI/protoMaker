@@ -46,7 +46,6 @@ import { createContentRoutes } from '../routes/content/index.js';
 import { createFlowsRoutes } from '../routes/flows/index.js';
 import { createBacklogPlanRoutes } from '../routes/backlog-plan/index.js';
 import { createMCPRoutes } from '../routes/mcp/index.js';
-import { createEscalationRoutes } from '../routes/escalation.js';
 import { createMetricsRoutes } from '../routes/metrics/index.js';
 import { createNotificationsRoutes } from '../routes/notifications/index.js';
 import { createHITLFormRoutes } from '../routes/hitl-forms/index.js';
@@ -63,13 +62,10 @@ import { createAvaRoutes } from '../routes/ava/index.js';
 import { createKnowledgeRoutes } from '../routes/knowledge/index.js';
 import { createIssuesRoutes } from '../routes/issues/index.js';
 import { createDeployRoutes } from '../routes/deploy/index.js';
-import { createIntegrityRoutes } from '../routes/integrity.js';
 import { createAnalyticsRoutes } from '../routes/analytics.js';
 import { createQuarantineRoutes } from '../routes/quarantine.js';
 import { createDocsRoutes } from '../routes/docs.js';
-import { createAlertsRoutes } from '../routes/alerts/index.js';
 import { createEngineRoutes } from '../routes/engine/index.js';
-import { createLangfuseRoutes } from '../routes/langfuse/index.js';
 import { createChatRoutes } from '../routes/chat/index.js';
 import { createCodexRoutes } from '../routes/codex/index.js';
 import { createAIRoutes } from '../routes/ai/index.js';
@@ -204,8 +200,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
 
   // Webhooks at root level (unauthenticated - uses signature verification)
   app.use('/webhooks', createWebhooksRoutes(events, settingsService, topicBus));
-  // Alerts webhook routes (unauthenticated - Grafana webhooks)
-  app.use('/webhooks/alerts', createAlertsRoutes(settingsService, discordBotService));
 
   // A2A agent discovery — unauthenticated (spec requires open discovery)
   app.use('/.well-known', createA2ARoutes());
@@ -358,8 +352,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/issues', createIssuesRoutes(events));
   app.use('/api/deploy', createDeployRoutes(autoModeService, services.deploymentTrackerService));
   app.use('/api/docs', createDocsRoutes(settingsService));
-  app.use('/api/integrity', createIntegrityRoutes(integrityWatchdogService));
-  app.use('/api/escalation', createEscalationRoutes(escalationRouter));
   app.use('/api/analytics', createAnalyticsRoutes());
   app.use('/api/quarantine', createQuarantineRoutes());
 
@@ -382,7 +374,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
       settingsService
     )
   );
-  app.use('/api/langfuse', createLangfuseRoutes());
   app.use('/api/flows', createFlowsRoutes(antagonisticReviewService));
   app.use('/api/chat', createChatRoutes(services));
   app.use('/api/codex', createCodexRoutes());
