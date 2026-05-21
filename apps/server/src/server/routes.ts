@@ -60,10 +60,8 @@ import { createCosRoutes } from '../routes/cos/index.js';
 import { createWebhooksRoutes } from '../routes/webhooks/index.js';
 import { createAvaRoutes } from '../routes/ava/index.js';
 import { createKnowledgeRoutes } from '../routes/knowledge/index.js';
-import { createIssuesRoutes } from '../routes/issues/index.js';
 import { createDeployRoutes } from '../routes/deploy/index.js';
 import { createAnalyticsRoutes } from '../routes/analytics.js';
-import { createQuarantineRoutes } from '../routes/quarantine.js';
 import { createDocsRoutes } from '../routes/docs.js';
 import { createEngineRoutes } from '../routes/engine/index.js';
 import { createChatRoutes } from '../routes/chat/index.js';
@@ -79,8 +77,6 @@ import { createPrometheusRoute } from '../routes/metrics/prometheus.js';
 import { createAutomationsRoutes } from '../routes/automations/index.js';
 import { createSensorRoutes } from '../routes/sensors/index.js';
 import { createProjectPmRoutes } from '../routes/project-pm/index.js';
-import { createLedgerRoutes } from '../routes/ledger/index.js';
-import { createBackfillLedgerProjectSlugHandler } from '../routes/ledger/routes/backfill.js';
 import { createDoraRoutes } from '../routes/dora/index.js';
 import { createAgentRoutes } from '../routes/agents.js';
 import { createOpsRoutes } from '../routes/ops/index.js';
@@ -349,11 +345,9 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   );
   app.use('/api/automations', createAutomationsRoutes(automationService));
   app.use('/api/ava', createAvaRoutes(services));
-  app.use('/api/issues', createIssuesRoutes(events));
   app.use('/api/deploy', createDeployRoutes(autoModeService, services.deploymentTrackerService));
   app.use('/api/docs', createDocsRoutes(settingsService));
   app.use('/api/analytics', createAnalyticsRoutes());
-  app.use('/api/quarantine', createQuarantineRoutes());
 
   // Lead Engineer routes (production-phase nerve center)
   app.use('/api/lead-engineer', createLeadEngineerRoutes(leadEngineerService));
@@ -402,14 +396,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     createProjectPmRoutes(projectPmService, projectService, featureLoader, events)
   );
   logger.info('Project PM routes mounted at /api/project-pm');
-
-  // Ledger REST endpoints (event persistence layer)
-  app.use('/api/ledger', createLedgerRoutes(ledgerService, featureLoader));
-  app.post(
-    '/api/ledger/backfill-project-slug',
-    createBackfillLedgerProjectSlugHandler(featureLoader, services.dataDir)
-  );
-  logger.info('Ledger routes mounted at /api/ledger');
 
   // DORA metrics routes (lead time, deployment frequency, change failure rate, recovery, rework)
   app.use('/api/dora', createDoraRoutes(services.doraMetricsService));
