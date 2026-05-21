@@ -110,43 +110,34 @@ const lines = [];
 lines.push('# MCP Tools Reference');
 lines.push('');
 lines.push(
-  `Complete catalog of **${total} MCP tools** exposed by the protoLabs server. See \`packages/mcp-server/src/tools/\` for the full definitions.`,
+  `Complete catalog of **${total} MCP tools** exposed by the protoLabs server. See \`packages/mcp-server/src/tools/\` for the full definitions.`
 );
 lines.push('');
 lines.push(
-  'For installation and configuration, see [Claude Plugin Setup](../integrations/claude-plugin.md). For commands and examples, see [Plugin Commands](../integrations/plugin-commands.md).',
+  'For installation and configuration, see [Claude Plugin Setup](../integrations/claude-plugin.md). For commands and examples, see [Plugin Commands](../integrations/plugin-commands.md).'
 );
 lines.push('');
 lines.push(
-  '> This page is generated from `packages/mcp-server/src/tools/*.ts`. Regenerate with `node scripts/gen-mcp-tools-doc.mjs`.',
+  '> This page is generated from `packages/mcp-server/src/tools/*.ts`. Regenerate with `node scripts/gen-mcp-tools-doc.mjs`.'
 );
 lines.push('');
 
 for (const f of orderedFiles) {
   const tools = byFile.get(f);
-  const section =
-    FILE_TO_SECTION[f] || f.replace(/-tools\.ts$/, '').replace(/-/g, ' ');
+  const section = FILE_TO_SECTION[f] || f.replace(/-tools\.ts$/, '').replace(/-/g, ' ');
   lines.push(`## ${section} (${tools.length} tools)`);
   lines.push('');
-  const nameW = Math.max(
-    'Tool'.length,
-    ...tools.map((t) => `\`${t.name}\``.length),
-  );
-  const descW = Math.max(
-    'Description'.length,
-    ...tools.map((t) => t.description.length),
-  );
+  const nameW = Math.max('Tool'.length, ...tools.map((t) => `\`${t.name}\``.length));
+  const descW = Math.max('Description'.length, ...tools.map((t) => t.description.length));
   lines.push(`| ${'Tool'.padEnd(nameW)} | ${'Description'.padEnd(descW)} |`);
   lines.push(`| ${'-'.repeat(nameW)} | ${'-'.repeat(descW)} |`);
   for (const t of tools) {
-    lines.push(
-      `| ${('`' + t.name + '`').padEnd(nameW)} | ${t.description.padEnd(descW)} |`,
-    );
+    lines.push(`| ${('`' + t.name + '`').padEnd(nameW)} | ${t.description.padEnd(descW)} |`);
   }
   lines.push('');
 }
 
 writeFileSync(OUT_PATH, lines.join('\n'));
 process.stderr.write(
-  `Wrote ${OUT_PATH} — ${total} tools across ${orderedFiles.length} sections.\n`,
+  `Wrote ${OUT_PATH} — ${total} tools across ${orderedFiles.length} sections.\n`
 );
