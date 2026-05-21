@@ -964,6 +964,23 @@ export async function installWorktreeDependencies(
     return false;
   }
 
+  // If symlinkBuildArtifacts() symlinked the host's node_modules into the worktree,
+  // a fresh `npm ci` here would rewrite that shared directory and kill the running
+  // dev server (which depends on the same node_modules). The symlinked deps are
+  // already sufficient — skip the install.
+  const worktreeNodeModules = path.join(worktreePath, 'node_modules');
+  try {
+    const stat = await fs.promises.lstat(worktreeNodeModules);
+    if (stat.isSymbolicLink()) {
+      logger.info(
+        `Worktree ${path.basename(worktreePath)} node_modules is symlinked — skipping ${detected.command} ${detected.args.join(' ')} to avoid disturbing the host install`
+      );
+      return true;
+    }
+  } catch {
+    // node_modules doesn't exist yet — proceed with install
+  }
+
   const { command, args } = detected;
   const fullCommand = [command, ...args].join(' ');
 
