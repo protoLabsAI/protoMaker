@@ -383,19 +383,32 @@ export class ReviewProcessor implements StateProcessor {
         };
       }
 
-      // Fetch review comments so the agent knows what to fix
+      // Fetch review comments so the agent knows what to fix.
+      // Two sources: (a) human/bot reviews with state CHANGES_REQUESTED, and
+      // (b) unresolved CodeRabbit review threads (CR doesn't submit reviews —
+      // it posts thread comments). Bodies are concatenated; either may be empty.
+      const feedbackParts: string[] = [];
       try {
         const { stdout } = await execAsync(
           `gh pr view ${ctx.prNumber} --json reviews --jq '[.reviews[] | select(.state == "CHANGES_REQUESTED") | .body] | join("\\n---\\n")'`,
           { cwd: ctx.projectPath, timeout: 15000 }
         );
-        const feedback = stdout.trim();
-        if (feedback) {
-          ctx.reviewFeedback = feedback;
-          logger.info(`[REVIEW] Captured review feedback (${feedback.length} chars)`);
-        }
+        const reviewFeedback = stdout.trim();
+        if (reviewFeedback) feedbackParts.push(`## Human review feedback\n\n${reviewFeedback}`);
       } catch (err) {
-        logger.warn('[REVIEW] Failed to fetch review comments:', err);
+        logger.warn('[REVIEW] Failed to fetch CHANGES_REQUESTED review bodies:', err);
+      }
+      const crThreads = await this.getUnresolvedCodeRabbitThreads(ctx);
+      if (crThreads.bodies.length > 0) {
+        feedbackParts.push(
+          `## Unresolved CodeRabbit threads (${crThreads.count})\n\n${crThreads.bodies.join('\n\n---\n\n')}`
+        );
+      }
+      if (feedbackParts.length > 0) {
+        ctx.reviewFeedback = feedbackParts.join('\n\n');
+        logger.info(
+          `[REVIEW] Captured review feedback (${ctx.reviewFeedback.length} chars, ${feedbackParts.length} source(s))`
+        );
       }
 
       ctx.remediationAttempts++;
@@ -1016,6 +1029,18 @@ export class ReviewProcessor implements StateProcessor {
       if (data.decision === 'APPROVED') return 'approved';
       if (data.decision === 'CHANGES_REQUESTED') return 'changes_requested';
 
+      // CodeRabbit posts review THREADS, not CHANGES_REQUESTED reviews, by default.
+      // Its findings sit in `reviewThreads` and never affect `reviewDecision`. If we
+      // wait for `CHANGES_REQUESTED` alone we time out at 45m while CR feedback rots
+      // unaddressed. Treat any unresolved CR-authored thread as a remediation signal.
+      const crThreads = await this.getUnresolvedCodeRabbitThreads(ctx);
+      if (crThreads.count > 0) {
+        logger.info(
+          `[REVIEW] PR #${ctx.prNumber} has ${crThreads.count} unresolved CodeRabbit thread(s) — treating as changes_requested`
+        );
+        return 'changes_requested';
+      }
+
       // Read soft checks from settings (failures logged but don't block approval)
       let softChecks: string[] = [];
       if (this.serviceContext.settingsService) {
@@ -1099,6 +1124,88 @@ export class ReviewProcessor implements StateProcessor {
     } catch (err) {
       logger.error(`[REVIEW] gh CLI fallback failed for PR #${ctx.prNumber}:`, err);
       return 'error';
+    }
+  }
+
+  /**
+   * Query GitHub for review threads on the PR and return the count plus bodies
+   * of any threads where (a) CodeRabbit is among the authors and (b) the thread
+   * isn't yet resolved.
+   *
+   * Used to drive remediation when CR posts comments but doesn't submit a
+   * CHANGES_REQUESTED review (its default behavior). Returns `{ count: 0, bodies: [] }`
+   * on any GraphQL or shell failure so a transient gh outage doesn't mistakenly
+   * unblock merge.
+   */
+  private async getUnresolvedCodeRabbitThreads(
+    ctx: StateContext
+  ): Promise<{ count: number; bodies: string[] }> {
+    if (!ctx.prNumber) return { count: 0, bodies: [] };
+
+    try {
+      const { stdout: repoOut } = await execAsync(
+        "gh repo view --json owner,name --jq '{owner: .owner.login, name: .name}'",
+        { cwd: ctx.projectPath, timeout: 10000 }
+      );
+      const repoInfo = JSON.parse(repoOut.trim()) as { owner?: string; name?: string };
+      if (!repoInfo.owner || !repoInfo.name) return { count: 0, bodies: [] };
+
+      const query = `
+        query {
+          repository(owner: "${repoInfo.owner}", name: "${repoInfo.name}") {
+            pullRequest(number: ${ctx.prNumber}) {
+              reviewThreads(first: 100) {
+                nodes {
+                  isResolved
+                  path
+                  line
+                  comments(first: 5) {
+                    nodes {
+                      author { login }
+                      body
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      `;
+      const { stdout } = await execAsync(`gh api graphql -f query='${query}'`, {
+        cwd: ctx.projectPath,
+        timeout: 15000,
+      });
+      const data = JSON.parse(stdout);
+      const threads = (data?.data?.repository?.pullRequest?.reviewThreads?.nodes ?? []) as Array<{
+        isResolved?: boolean;
+        path?: string;
+        line?: number;
+        comments?: { nodes?: Array<{ author?: { login?: string }; body?: string }> };
+      }>;
+
+      const bodies: string[] = [];
+      for (const thread of threads) {
+        if (thread.isResolved) continue;
+        const comments = thread.comments?.nodes ?? [];
+        const crComments = comments.filter((c) =>
+          (c.author?.login ?? '').toLowerCase().includes('coderabbit')
+        );
+        if (crComments.length === 0) continue;
+        for (const c of crComments) {
+          bodies.push(`### ${thread.path ?? '?'}:${thread.line ?? '?'}\n${c.body ?? ''}`);
+        }
+      }
+      // Count unique threads, not comments — one thread may have several CR replies.
+      const unresolvedThreadCount = threads.filter((t) => {
+        if (t.isResolved) return false;
+        const comments = t.comments?.nodes ?? [];
+        return comments.some((c) => (c.author?.login ?? '').toLowerCase().includes('coderabbit'));
+      }).length;
+
+      return { count: unresolvedThreadCount, bodies };
+    } catch (err) {
+      logger.debug(`[REVIEW] Failed to query CodeRabbit threads for PR #${ctx.prNumber}: ${err}`);
+      return { count: 0, bodies: [] };
     }
   }
 

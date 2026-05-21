@@ -219,8 +219,20 @@ describe('ReviewProcessor', () => {
             stderr: '',
           })
         )
-        // Call 5: fetch CI failure names
-        .mockImplementationOnce(execSuccess({ stdout: ciCheckName, stderr: '' }));
+        // Call 5: gh repo view (from getUnresolvedCodeRabbitThreads) — fails fast
+        .mockImplementationOnce(execFailure(new Error('test: gh repo view stub')))
+        // Call 6: fetch CI failure names
+        .mockImplementationOnce(execSuccess({ stdout: ciCheckName, stderr: '' }))
+        // Safety tail: any further unexpected exec calls fail fast so tests don't hang
+        .mockImplementation(
+          (
+            _cmd: string,
+            _opts: unknown,
+            cb: (err: Error, result: { stdout: string; stderr: string }) => void
+          ) => {
+            cb(new Error('test: unmocked exec'), { stdout: '', stderr: '' });
+          }
+        );
     }
 
     it('transitions to EXECUTE when CI checks fail', async () => {
