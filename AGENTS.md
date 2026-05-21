@@ -24,26 +24,29 @@ Treat this file as the stable operating contract for all Codex sessions in this 
 
 ## Git Workflow
 
-This repo uses:
+This repo uses a single-trunk flow:
 
 ```text
-feature/* -> dev -> staging -> main
+feature/* -> main
 ```
 
 Rules:
 
-- Never push directly to `main` or `staging`.
-- Feature PRs target `dev` by default.
-- Promotion PRs from `dev` to `staging` and `staging` to `main` must use merge commits, not squash.
+- Never push directly to `main`.
+- Feature, fix, refactor, and docs branches PR directly to `main`.
+- `feature/*` and `fix/*` PRs squash-merge. `epic/*` PRs use merge commits to preserve epic history.
 - Never force-push base branch state onto an agent feature branch.
+
+See `docs/internal/dev/branch-strategy.md` for the full reference.
 
 ## Project Defaults
 
 - Public product name: `protoLabs.studio`
 - Internal codename and filesystem namespace: `Automaker` / `.automaker/`
 - Main apps:
-  - `apps/ui`: React, Vite, Electron
-  - `apps/server`: Express, WebSocket backend
+  - `apps/ui`: React + Vite (browser-served at `:3007`)
+  - `apps/server`: Express + WebSocket backend (`:3008`)
+  - `apps/desktop`: Electron wrapper around the UI
 - Shared packages live under `libs/` and `packages/`
 
 ## Codex-Native Ava

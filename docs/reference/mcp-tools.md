@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-Complete catalog of **159 MCP tools** exposed by the protoLabs server. See `packages/mcp-server/src/tools/` for the full definitions.
+Complete catalog of **154 MCP tools** exposed by the protoLabs server. See `packages/mcp-server/src/tools/` for the full definitions.
 
 For installation and configuration, see [Claude Plugin Setup](../integrations/claude-plugin.md). For commands and examples, see [Plugin Commands](../integrations/plugin-commands.md).
 
@@ -259,16 +259,6 @@ When `createEpics: true`, each milestone becomes an epic feature. Phase 1 of eac
 | `rename_note_tab`             | Rename a tab                                   |
 | `update_note_tab_permissions` | Update agentRead/agentWrite permissions        |
 | `reorder_note_tabs`           | Reorder tabs in the workspace                  |
-
-## Promotion Pipeline (5 tools)
-
-| Tool                      | Description                               |
-| ------------------------- | ----------------------------------------- |
-| `list_staging_candidates` | List features ready for staging promotion |
-| `create_promotion_batch`  | Create a promotion batch                  |
-| `promote_to_staging`      | Promote a batch to staging                |
-| `promote_to_main`         | Promote staging to main                   |
-| `list_promotion_batches`  | List all promotion batches                |
 
 ## Scheduler (2 tools)
 

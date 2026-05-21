@@ -6,6 +6,4 @@
 
 - [ ] Tests pass locally
 - [ ] No lint errors
-- [ ] Manually verified on dev
-
-<!-- For staging → main promotions, use the promote-to-main template instead -->
+- [ ] Manually verified
