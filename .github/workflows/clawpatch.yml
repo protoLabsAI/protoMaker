@@ -12,6 +12,14 @@
 #
 # Mirror these from the Infisical "secret-management" project before merging
 # this workflow; otherwise the run will fail at the review step.
+#
+# MIGRATION NOTE (clawpatch v0.3.1+): when v0.3.1 publishes to npm, collapse
+# the init/map/review steps into a single `clawpatch ci --include-dirty`
+# invocation. v0.3.1 also adds bounded source grouping that splits large flat
+# directories (like apps/server/src/services/) into finer review slices,
+# which should materially cut per-PR runtime. As of this commit, `npm view
+# clawpatch dist-tags.latest` is 0.3.0 — the migration is gated on
+# publication.
 
 name: ClawPatch Review
 
