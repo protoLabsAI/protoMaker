@@ -1,0 +1,103 @@
+# ClawPatch async-parallel review.
+#
+# Runs alongside CodeRabbit on every PR to main. Findings post as a PR
+# comment when the run completes. Non-blocking: clawpatch failures or
+# timeouts do not block the PR.
+#
+# Auth: clawpatch uses the local Codex CLI (codex-cli 0.132.0+), which talks
+# to our OpenAI-compatible LLM gateway. The workflow points OPENAI_BASE_URL
+# and OPENAI_API_KEY at the gateway via GH Actions secrets:
+#   secrets.GATEWAY_BASE_URL  → OPENAI_BASE_URL
+#   secrets.GATEWAY_API_KEY   → OPENAI_API_KEY
+#
+# Mirror these from the Infisical "secret-management" project before merging
+# this workflow; otherwise the run will fail at the review step.
+#
+# MIGRATION NOTE (clawpatch v0.3.1+): when v0.3.1 publishes to npm, collapse
+# the init/map/review steps into a single `clawpatch ci --include-dirty`
+# invocation. v0.3.1 also adds bounded source grouping that splits large flat
+# directories (like apps/server/src/services/) into finer review slices,
+# which should materially cut per-PR runtime. As of this commit, `npm view
+# clawpatch dist-tags.latest` is 0.3.0 — the migration is gated on
+# publication.
+
+name: ClawPatch Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: clawpatch-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4
+        with:
+          node-version: '22'
+
+      - name: Install clawpatch + Codex CLI
+        run: |
+          npm install -g clawpatch @openai/codex
+
+      - name: Initialize clawpatch
+        run: clawpatch init
+
+      - name: Map features (heuristic)
+        run: clawpatch map --source heuristic
+
+      - name: Run review against PR diff
+        id: review
+        env:
+          OPENAI_BASE_URL: ${{ secrets.GATEWAY_BASE_URL }}
+          OPENAI_API_KEY: ${{ secrets.GATEWAY_API_KEY }}
+        run: |
+          set +e
+          clawpatch review --since "origin/${{ github.base_ref }}" --json > /tmp/clawpatch.json
+          rc=$?
+          echo "exitcode=$rc" >> "$GITHUB_OUTPUT"
+          if [ -f /tmp/clawpatch.json ]; then
+            REPORT=$(jq -r '.report // empty' /tmp/clawpatch.json 2>/dev/null)
+            if [ -n "$REPORT" ] && [ -f "$REPORT" ]; then
+              echo "report_path=$REPORT" >> "$GITHUB_OUTPUT"
+              FINDINGS=$(jq -r '.findings // 0' /tmp/clawpatch.json)
+              echo "findings=$FINDINGS" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+          exit 0
+
+      - name: Post findings as PR comment
+        if: always() && steps.review.outputs.report_path != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPORT_PATH: ${{ steps.review.outputs.report_path }}
+          FINDINGS_COUNT: ${{ steps.review.outputs.findings }}
+        run: node scripts/post-clawpatch-findings.mjs
+
+      - name: Append findings to step summary
+        if: always() && steps.review.outputs.report_path != ''
+        run: |
+          {
+            echo "## ClawPatch — ${{ steps.review.outputs.findings }} findings"
+            echo
+            cat "${{ steps.review.outputs.report_path }}"
+          } >> "$GITHUB_STEP_SUMMARY"

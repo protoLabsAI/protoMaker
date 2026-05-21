@@ -36,7 +36,7 @@ hard-coded default below. Start executing Step 0 right now.
 | ----------------------------- | ------------------------------------------------- |
 | Where is the repo cloned?     | `~/dev/labs/{repoName}` — clone it if missing     |
 | What is the project?          | Fetch README from GitHub API                      |
-| What is the branch strategy?  | `feature/* → dev → staging → main`                |
+| What is the branch strategy?  | `feature/* → main` (single-trunk)                 |
 | What is the onboarding scope? | Full — features, bugs, roadmap, auto-mode capable |
 | Any existing work to capture? | Check open GitHub issues/PRs via API              |
 | What model tier?              | sonnet                                            |

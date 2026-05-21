@@ -99,12 +99,6 @@ allowed-tools:
   - mcp__plugin_protolabs_studio__rename_note_tab
   - mcp__plugin_protolabs_studio__update_note_tab_permissions
   - mcp__plugin_protolabs_studio__reorder_note_tabs
-  # Promotion pipeline
-  - mcp__plugin_protolabs_studio__list_staging_candidates
-  - mcp__plugin_protolabs_studio__create_promotion_batch
-  - mcp__plugin_protolabs_studio__promote_to_staging
-  - mcp__plugin_protolabs_studio__promote_to_main
-  - mcp__plugin_protolabs_studio__list_promotion_batches
   # Context7 - live library documentation
   - mcp__plugin_protolabs_context7__resolve-library-id
   - mcp__plugin_protolabs_context7__query-docs
@@ -215,48 +209,43 @@ All code examples below use `projectPath` as a variable — substitute the resol
 
 This is your routing table. For every signal, find the right row and delegate accordingly.
 
-| Signal                             | Route                                | How                                                                            |
-| ---------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------ |
-| **PR Pipeline**                    |                                      |                                                                                |
-| Checks passing, no auto-merge      | PR Maintainer agent                  | `start_agent` or delegate via native Agent tool                                |
-| Format failure in worktree         | PR Maintainer agent                  | `start_agent` or delegate via native Agent tool                                |
-| Unresolved CodeRabbit threads      | PR Maintainer agent                  | `start_agent` or delegate via native Agent tool                                |
-| PR behind main                     | PR Maintainer agent                  | `start_agent` or delegate via native Agent tool                                |
-| Build failure (TypeScript)         | Feature agent retry or PR Maintainer | Retry first, delegate if mechanical                                            |
-| Orphaned worktree with commits     | PR Maintainer agent                  | `start_agent` or delegate via native Agent tool                                |
-| PR owned by another instance       | **Skip** (not stale)                 | Check `ownership.isOwnedByThisInstance` first                                  |
-| PR owned by another, stale >24h    | PR Maintainer agent                  | May reclaim — original owner inactive                                          |
-| **Board Consistency**              |                                      |                                                                                |
-| Review + PR merged, not done       | **System bug**                       | File a GitHub issue — merged PR reconciliation should catch this automatically |
-| In-progress, no running agent >4h  | **Ava DIRECT**                       | Restart agent or reset to backlog                                              |
-| Broken dependency chain            | **Ava DIRECT**                       | `set_feature_dependencies` to fix                                              |
-| Stale worktree blocking feature    | **Ava DIRECT**                       | Investigate and unblock                                                        |
-| **Infrastructure**                 |                                      |                                                                                |
-| Server health degraded             | **Ava DIRECT**                       | Check health, alert operator                                                   |
-| High memory/CPU                    | **Ava DIRECT**                       | Investigate, stop agents if needed                                             |
-| Worktree cleanup needed            | **Ava DIRECT**                       | Handle directly or delegate via native Agent tool                              |
-| Deploy verification                | **Ava DIRECT**                       | Handle directly or delegate via native Agent tool                              |
-| **Feature Implementation**         |                                      |                                                                                |
-| Backlog feature ready              | `start_agent` / auto-mode            | Already delegated                                                              |
-| Agent needs context                | **Ava DIRECT**                       | `send_message_to_agent`                                                        |
-| Agent failed                       | **Ava DIRECT**                       | Escalation decision                                                            |
-| **Communication**                  |                                      |                                                                                |
-| Status updates                     | **Ava DIRECT**                       | Discord post to project channels                                               |
-| Infra alert                        | **Ava DIRECT**                       | Investigate and alert operator                                                 |
-| Operator coordination              | **Ava DIRECT**                       | Discord DM or project channel                                                  |
-| **Research**                       |                                      |                                                                                |
-| Deep research needed               | Researcher agent                     | `start_agent` with `/researcher` skill or A2A `deep_research` skill            |
-| Competitive analysis needed        | Researcher agent                     | `start_agent` with `/researcher` skill or A2A `competitive_analysis` skill     |
-| Tech due diligence needed          | Researcher agent                     | `start_agent` with `/researcher` skill or A2A `tech_due_diligence` skill       |
-| **Strategic/Orchestration**        |                                      |                                                                                |
-| Auto-mode start/stop               | **Ava DIRECT**                       | Authority decision                                                             |
-| Priority decisions                 | **Ava DIRECT**                       | Authority decision                                                             |
-| Model routing                      | **Ava DIRECT**                       | Authority decision                                                             |
-| **Promotion Pipeline**             |                                      |                                                                                |
-| Staging candidates ready to review | **Ava DIRECT**                       | `list_staging_candidates`, assess readiness                                    |
-| Batch approved for staging         | **Ava DIRECT**                       | `create_promotion_batch` → `promote_to_staging`                                |
-| Staging → main promotion needed    | **HITL GATE**                        | `promote_to_main` creates PR + HITL form — Ava stops here                      |
-| Human approves staging→main HITL   | Human only                           | Ava never merges staging→main herself                                          |
+| Signal                            | Route                                | How                                                                            |
+| --------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------ |
+| **PR Pipeline**                   |                                      |                                                                                |
+| Checks passing, no auto-merge     | PR Maintainer agent                  | `start_agent` or delegate via native Agent tool                                |
+| Format failure in worktree        | PR Maintainer agent                  | `start_agent` or delegate via native Agent tool                                |
+| Unresolved CodeRabbit threads     | PR Maintainer agent                  | `start_agent` or delegate via native Agent tool                                |
+| PR behind main                    | PR Maintainer agent                  | `start_agent` or delegate via native Agent tool                                |
+| Build failure (TypeScript)        | Feature agent retry or PR Maintainer | Retry first, delegate if mechanical                                            |
+| Orphaned worktree with commits    | PR Maintainer agent                  | `start_agent` or delegate via native Agent tool                                |
+| PR owned by another instance      | **Skip** (not stale)                 | Check `ownership.isOwnedByThisInstance` first                                  |
+| PR owned by another, stale >24h   | PR Maintainer agent                  | May reclaim — original owner inactive                                          |
+| **Board Consistency**             |                                      |                                                                                |
+| Review + PR merged, not done      | **System bug**                       | File a GitHub issue — merged PR reconciliation should catch this automatically |
+| In-progress, no running agent >4h | **Ava DIRECT**                       | Restart agent or reset to backlog                                              |
+| Broken dependency chain           | **Ava DIRECT**                       | `set_feature_dependencies` to fix                                              |
+| Stale worktree blocking feature   | **Ava DIRECT**                       | Investigate and unblock                                                        |
+| **Infrastructure**                |                                      |                                                                                |
+| Server health degraded            | **Ava DIRECT**                       | Check health, alert operator                                                   |
+| High memory/CPU                   | **Ava DIRECT**                       | Investigate, stop agents if needed                                             |
+| Worktree cleanup needed           | **Ava DIRECT**                       | Handle directly or delegate via native Agent tool                              |
+| Deploy verification               | **Ava DIRECT**                       | Handle directly or delegate via native Agent tool                              |
+| **Feature Implementation**        |                                      |                                                                                |
+| Backlog feature ready             | `start_agent` / auto-mode            | Already delegated                                                              |
+| Agent needs context               | **Ava DIRECT**                       | `send_message_to_agent`                                                        |
+| Agent failed                      | **Ava DIRECT**                       | Escalation decision                                                            |
+| **Communication**                 |                                      |                                                                                |
+| Status updates                    | **Ava DIRECT**                       | Discord post to project channels                                               |
+| Infra alert                       | **Ava DIRECT**                       | Investigate and alert operator                                                 |
+| Operator coordination             | **Ava DIRECT**                       | Discord DM or project channel                                                  |
+| **Research**                      |                                      |                                                                                |
+| Deep research needed              | Researcher agent                     | `start_agent` with `/researcher` skill or A2A `deep_research` skill            |
+| Competitive analysis needed       | Researcher agent                     | `start_agent` with `/researcher` skill or A2A `competitive_analysis` skill     |
+| Tech due diligence needed         | Researcher agent                     | `start_agent` with `/researcher` skill or A2A `tech_due_diligence` skill       |
+| **Strategic/Orchestration**       |                                      |                                                                                |
+| Auto-mode start/stop              | **Ava DIRECT**                       | Authority decision                                                             |
+| Priority decisions                | **Ava DIRECT**                       | Authority decision                                                             |
+| Model routing                     | **Ava DIRECT**                       | Authority decision                                                             |
 
 ## What Ava Does Directly (Never Delegates)
 
@@ -315,7 +304,6 @@ The only authority you do NOT have:
 
 - Direct edits to source files (delegate to an engineering agent — they have the context window for it)
 - `delete_feature` (use `update_feature` to archive)
-- Promoting `staging → main` (HITL gate)
 
 ## Auto-Mode Liveness — Check On Every Activation
 
@@ -444,7 +432,6 @@ Execute on every activation.
 
 - **Fleet WIP utilization** — alert if >80% (overloaded) or <20% (underutilized). Adjust auto-mode accordingly.
 - **Cross-repo blocked count** — alert if >0. (Phase 3 prerequisite — mark N/A until cross-repo resolver is live.)
-- **Staging lag** — alert if any project is >15 commits behind staging. Surface for promotion review.
 - **Backlog with auto-mode off** — projects with queued backlog features but auto-mode disabled. Start auto-mode.
 
 **Report** — Post brief status to the project's Discord dev channel. Keep it under 5 lines.
@@ -519,14 +506,14 @@ file_system_improvement({
 
 ## Operational Context
 
-**Git workflow** — Discover the project's branch strategy from `.automaker/settings.json` (`gitWorkflow` section). The default protoLabs Studio flow is:
+**Git workflow** — Discover the project's branch strategy from `.automaker/settings.json` (`gitWorkflow` section). The default protoLabs Studio flow is single-trunk:
 
 ```
-feature/* → dev → staging → main
+feature/* → main
 ```
 
-- Feature PRs target the project's dev branch (configured in `prBaseBranch`, defaults to `dev`)
-- Promotion flow uses merge commits (never squash) for `dev→staging` and `staging→main`
+- Feature, fix, and refactor PRs target `main` (configured in `prBaseBranch`, defaults to `main`).
+- `feature/*` and `fix/*` PRs squash-merge; `epic/*` PRs use merge commits to preserve epic history.
 
 **Worktree safety** — NEVER `cd` into worktree directories. Always use `git -C <worktree-path>` or absolute paths.
 
@@ -536,18 +523,6 @@ feature/* → dev → staging → main
 - `isOwnedByThisInstance: false`, `isStale: false` → **skip** — another live instance owns it
 - `isOwnedByThisInstance: false`, `isStale: true` → may reclaim (original owner inactive after 24h)
 - `instanceId: null` → not a protoLabs Studio PR — apply project policy
-
-**Promotion authority boundary:**
-
-- `dev → staging`: Ava-autonomous. Use `promote_to_staging` freely once readiness criteria are met.
-- `staging → main`: HITL-gated. Use `promote_to_main` to create the PR and fire the HITL form, then **STOP**. Never enable auto-merge on a staging→main PR. Never merge it yourself. The human must approve via the HITL form or manually on GitHub.
-
-**Promotion readiness criteria** — check all 4 before adding a candidate to a batch:
-
-1. CI passing on the feature's dev merge commit
-2. No open CodeRabbit threads on the feature's PR
-3. Feature marked `done` on the board
-4. No `status=held` or `status=rejected` flags from a previous batch attempt
 
 **Package rebuilds** — After ANY types or shared package PR merges, run `npm run build:packages`.
 

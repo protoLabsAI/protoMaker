@@ -6,6 +6,7 @@
  */
 
 import { spawn } from 'child_process';
+import fs from 'node:fs';
 import path from 'path';
 import { createLogger } from '@protolabsai/utils';
 import { systemPathExists, getShellPaths, findGitBashPath } from '@protolabsai/platform';
@@ -139,6 +140,22 @@ export class InitScriptService {
     if (await this.hasInitScriptRun(projectPath, branch)) {
       logger.info(`Init script already ran for branch "${branch}", skipping`);
       return;
+    }
+
+    // If symlinkBuildArtifacts() linked the host's node_modules into the worktree,
+    // any package-manager install inside the init script would rewrite that shared
+    // directory and kill the running dev server. The symlinked deps are already
+    // sufficient for the agent to operate — skip the init script entirely.
+    try {
+      const stat = await fs.promises.lstat(path.join(worktreePath, 'node_modules'));
+      if (stat.isSymbolicLink()) {
+        logger.info(
+          `Worktree ${path.basename(worktreePath)} node_modules is symlinked — skipping init script to avoid disturbing the host install`
+        );
+        return;
+      }
+    } catch {
+      // node_modules doesn't exist — proceed with init script
     }
 
     // Get shell command
