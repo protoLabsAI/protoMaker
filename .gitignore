@@ -18,6 +18,9 @@ docs/.vitepress/cache/
 .automaker-lock
 .automaker/
 
+# ClawPatch — per-checkout review state (reports, runs, findings)
+.clawpatch/
+
 .worktrees/
 worktrees/
 
