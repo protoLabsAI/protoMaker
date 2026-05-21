@@ -124,6 +124,12 @@ export default defineConfig({
           items: generateSidebar('dev', '/dev'),
         },
       ],
+      '/how-to/': [
+        {
+          text: 'How-To Guides',
+          items: generateSidebar('how-to', '/how-to'),
+        },
+      ],
       '/agents/': [
         {
           text: 'Agent System',
