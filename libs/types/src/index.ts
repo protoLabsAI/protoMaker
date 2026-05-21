@@ -81,20 +81,6 @@ export type {
 } from './codex.js';
 export * from './codex-models.js';
 
-// Codex App-Server JSON-RPC types
-export type {
-  AppServerModelResponse,
-  AppServerModel,
-  AppServerReasoningEffort,
-  AppServerAccountResponse,
-  AppServerAccount,
-  AppServerRateLimitsResponse,
-  AppServerRateLimits,
-  AppServerRateLimitWindow,
-  JsonRpcRequest,
-  JsonRpcResponse,
-} from './codex-app-server.js';
-
 // Auto-mode types (lease tracking, auto-loop lifecycle, execution state persistence)
 export type { RunningFeatureLease, AutoLoopState, ExecutionState } from './auto-mode.js';
 
@@ -675,26 +661,6 @@ export type {
   AlignmentProposal,
   SetupPipelineResult,
 } from './setup.js';
-
-// Agent template types (dynamic role registry)
-export {
-  AgentTemplateSchema,
-  DiscordAssignmentSchema,
-  GitHubAssignmentSchema,
-  DesiredStateConditionSchema,
-  StateOperatorSchema,
-  MCPServerConfigSchema,
-  KNOWN_AGENT_ROLES,
-  WORLD_STATE_KEYS,
-} from './agent-templates.js';
-export type {
-  AgentTemplate,
-  DiscordAssignment,
-  GitHubAssignment,
-  DesiredStateCondition,
-  StateOperator,
-  AgentMCPServerConfig,
-} from './agent-templates.js';
 
 // ConversationSurface types (platform-agnostic agent interaction)
 export type {
