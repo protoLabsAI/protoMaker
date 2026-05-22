@@ -178,7 +178,6 @@ import { workspaceTools } from './tools/workspace-tools.js';
 import { setupTools } from './tools/setup-tools.js';
 import { utilityTools } from './tools/utility-tools.js';
 import { schedulerTools } from './tools/scheduler-tools.js';
-import { quarantineTools } from './tools/quarantine-tools.js';
 import { gitOpsTools } from './tools/git-ops-tools.js';
 import { leadEngineerTools } from './tools/lead-engineer-tools.js';
 import { knowledgeTools } from './tools/knowledge-tools.js';
@@ -202,7 +201,6 @@ const tools: Tool[] = [
   ...setupTools,
   ...utilityTools,
   ...schedulerTools,
-  ...quarantineTools,
   ...leadEngineerTools,
   ...knowledgeTools,
   ...qaTools,
