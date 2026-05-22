@@ -14,6 +14,7 @@ import { createVerifyCodexAuthHandler } from './routes/verify-codex-auth.js';
 import { createGhStatusHandler } from './routes/gh-status.js';
 import { createCursorStatusHandler } from './routes/cursor-status.js';
 import { createCodexStatusHandler } from './routes/codex-status.js';
+import { createProtoStatusHandler } from './routes/proto-status.js';
 import { createInstallCodexHandler } from './routes/install-codex.js';
 import { createAuthCodexHandler } from './routes/auth-codex.js';
 import { createAuthCursorHandler } from './routes/auth-cursor.js';
@@ -80,6 +81,11 @@ export function createSetupRoutes(
   router.get('/cursor-status', createCursorStatusHandler());
   router.post('/auth-cursor', createAuthCursorHandler());
   router.post('/deauth-cursor', createDeauthCursorHandler());
+
+  // protoCLI / protoLabs gateway status. Reports binary install, version,
+  // gateway auth presence, and reachability of /v1/models. Used by the
+  // protoCLI onboarding step and settings tab.
+  router.get('/proto-status', createProtoStatusHandler());
 
   // Codex CLI routes
   router.get('/codex-status', createCodexStatusHandler());

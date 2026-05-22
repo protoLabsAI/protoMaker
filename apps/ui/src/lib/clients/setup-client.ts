@@ -326,6 +326,30 @@ export const withSetupClient = <TBase extends Constructor<BaseHttpClient>>(Base:
         error?: string;
       }> => this.get('/api/setup/codex-status'),
 
+      /**
+       * Detect protoCLI installation + gateway connectivity. Returns the union
+       * of binary install state and gateway reachability so onboarding can
+       * render a single status card with actionable CTAs.
+       */
+      protoStatus: (): Promise<{
+        success: boolean;
+        installed: boolean;
+        version: string | null;
+        path: string | null;
+        gateway: {
+          hasApiKey: boolean;
+          apiKeySource: 'GATEWAY_API_KEY' | 'OPENAI_API_KEY' | 'none';
+          baseUrl: string;
+          reachable: boolean;
+          status?: number | null;
+          modelCount: number | null;
+          error: string | null;
+        };
+        installCommand: string;
+        loginCommand: string;
+        error?: string;
+      }> => this.get('/api/setup/proto-status'),
+
       installCodex: (): Promise<{
         success: boolean;
         message?: string;
