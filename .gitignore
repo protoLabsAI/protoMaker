@@ -18,7 +18,10 @@ docs/.vitepress/cache/
 .automaker-lock
 .automaker/
 
-# ClawPatch — per-checkout review state (reports, runs, findings)
+# release-tools review-code — per-checkout review state (features, findings, reports)
+.release-tools-review/
+
+# Legacy ClawPatch state dir — keep ignored in case the CLI is still installed locally.
 .clawpatch/
 
 .worktrees/

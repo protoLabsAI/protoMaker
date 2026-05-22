@@ -1,19 +1,20 @@
 #!/usr/bin/env node
 /**
- * Posts a clawpatch findings report as a PR comment.
+ * Posts a code-review findings report as a sticky PR comment.
  *
- * Reads from REPORT_PATH and PR_NUMBER env vars; uses the `gh` CLI to post
- * (or update) a single sticky comment so re-runs replace prior output
- * instead of stacking comments.
+ * Reads from REPORT_PATH and PR_NUMBER env vars; uses the `gh` CLI to PATCH
+ * an existing marker-tagged comment on re-runs instead of stacking new ones.
  *
- * Designed to be called from .github/workflows/clawpatch.yml.
+ * Designed to be called from .github/workflows/code-review.yml. The review
+ * itself is produced by `@protolabsai/release-tools review-code` via the
+ * LiteLLM gateway.
  */
 import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-const MARKER = '<!-- clawpatch:findings -->';
+const MARKER = '<!-- code-review:findings -->';
 
 const reportPath = process.env.REPORT_PATH;
 const prNumber = process.env.PR_NUMBER;
@@ -33,7 +34,7 @@ try {
 }
 
 const body = `${MARKER}
-## ClawPatch — ${findingsCount} finding(s)
+## Code Review — ${findingsCount} finding(s)
 
 > Async review running parallel to CodeRabbit. Findings are advisory; not all are merge blockers.
 
@@ -44,7 +45,7 @@ function gh(args, opts = {}) {
   return execFileSync('gh', args, { encoding: 'utf8', ...opts });
 }
 
-const workdir = mkdtempSync(join(tmpdir(), 'clawpatch-'));
+const workdir = mkdtempSync(join(tmpdir(), 'code-review-'));
 const bodyFile = join(workdir, 'body.md');
 writeFileSync(bodyFile, body);
 
@@ -69,7 +70,7 @@ if (existingId) {
       '--input',
       payloadFile,
     ]);
-    console.log(`Updated existing clawpatch comment ${existingId}`);
+    console.log(`Updated existing code-review comment ${existingId}`);
     process.exit(0);
   } catch (err) {
     console.error(`Patch failed, posting new comment instead: ${err.message}`);
@@ -78,7 +79,7 @@ if (existingId) {
 
 try {
   gh(['pr', 'comment', prNumber, '--body-file', bodyFile]);
-  console.log('Posted new clawpatch comment');
+  console.log('Posted new code-review comment');
 } catch (err) {
   console.error(`Failed to post comment: ${err.message}`);
   process.exit(0);
