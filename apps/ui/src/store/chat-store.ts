@@ -37,6 +37,13 @@ interface ChatStoreState {
   sessions: ChatSession[];
   currentSessionId: string | null;
   historyOpen: boolean;
+  // settingsOpen / queueOpen live in the store (not in chat-overlay-content
+  // local state) because ChatSessionSlot consumes them directly — see
+  // chat-session-slot.tsx. The header buttons in chat-overlay-content toggle
+  // these via setSettingsOpen / setQueueOpen.
+  settingsOpen: boolean;
+  queueOpen: boolean;
+  queuePaused: boolean;
   chatModalOpen: boolean;
   /** Session ID that is currently streaming — used for the background streaming indicator */
   activeStreamingSessionId: string | null;
@@ -56,6 +63,12 @@ interface ChatActions {
   updateEffort: (id: string, effortLevel: ChatEffortLevel) => void;
   setHistoryOpen: (open: boolean) => void;
   toggleHistory: () => void;
+  setSettingsOpen: (open: boolean) => void;
+  toggleSettings: () => void;
+  setQueueOpen: (open: boolean) => void;
+  toggleQueue: () => void;
+  setQueuePaused: (paused: boolean) => void;
+  toggleQueuePaused: () => void;
   setChatModalOpen: (open: boolean) => void;
   setActiveStreamingSession: (sessionId: string | null) => void;
   getCurrentSession: () => ChatSession | null;
@@ -104,6 +117,9 @@ export const useChatStore = create<ChatStoreState & ChatActions>()(
       sessions: [],
       currentSessionId: null,
       historyOpen: false,
+      settingsOpen: false,
+      queueOpen: false,
+      queuePaused: false,
       chatModalOpen: false,
       activeStreamingSessionId: null,
       activeSessions: [],
@@ -182,6 +198,12 @@ export const useChatStore = create<ChatStoreState & ChatActions>()(
 
       setHistoryOpen: (open) => set({ historyOpen: open }),
       toggleHistory: () => set({ historyOpen: !get().historyOpen }),
+      setSettingsOpen: (open) => set({ settingsOpen: open }),
+      toggleSettings: () => set({ settingsOpen: !get().settingsOpen }),
+      setQueueOpen: (open) => set({ queueOpen: open }),
+      toggleQueue: () => set({ queueOpen: !get().queueOpen }),
+      setQueuePaused: (paused) => set({ queuePaused: paused }),
+      toggleQueuePaused: () => set({ queuePaused: !get().queuePaused }),
       setChatModalOpen: (open) => set({ chatModalOpen: open }),
       setActiveStreamingSession: (sessionId) => set({ activeStreamingSessionId: sessionId }),
 

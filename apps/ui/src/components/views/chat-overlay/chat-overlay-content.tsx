@@ -41,12 +41,15 @@ export function ChatOverlayContent({
   const historyOpen = useChatStore((s) => s.historyOpen);
   const toggleHistory = useChatStore((s) => s.toggleHistory);
   const setHistoryOpen = useChatStore((s) => s.setHistoryOpen);
+  // settingsOpen + queueOpen are read by ChatSessionSlot through the store
+  // (not as props), so the toggle buttons here must drive store state — local
+  // useState wouldn't propagate to the rendered panel.
+  const toggleSettings = useChatStore((s) => s.toggleSettings);
+  const toggleQueue = useChatStore((s) => s.toggleQueue);
   const createSession = useChatStore((s) => s.createSession);
   const activateSession = useChatStore((s) => s.activateSession);
 
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [queueOpen, setQueueOpen] = useState(false);
 
   // Bootstrap: on mount, ensure currentSessionId is set and in activeSessions so
   // ChatSessionPool has a slot to render. activeSessions is runtime-only (not persisted).
@@ -139,7 +142,7 @@ export function ChatOverlayContent({
             variant="ghost"
             size="icon"
             className="size-7"
-            onClick={() => setQueueOpen((v) => !v)}
+            onClick={toggleQueue}
             title="Feature queue"
             aria-label="Toggle feature queue"
             data-testid="queue-panel-toggle"
@@ -172,7 +175,7 @@ export function ChatOverlayContent({
             variant="ghost"
             size="icon"
             className="size-7"
-            onClick={() => setSettingsOpen((v) => !v)}
+            onClick={toggleSettings}
             title="Settings"
             aria-label="Toggle settings"
           >

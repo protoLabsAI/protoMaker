@@ -39,6 +39,12 @@ export function ChatSessionSlot({
     setSessionStreaming,
     historyOpen,
     setHistoryOpen,
+    // settingsOpen + queueOpen are pure read state — the gear / queue
+    // buttons in chat-overlay-content's header are what toggle them.
+    settingsOpen,
+    queueOpen,
+    queuePaused,
+    toggleQueuePaused,
     switchSession,
     createSession,
     deleteSession,
@@ -207,10 +213,10 @@ export function ChatSessionSlot({
         tokenUsage={{ total: 0, input: 0, output: 0, estimated: true }}
         branchInfoMap={new Map()}
         pendingBranchOrigId={null}
-        settingsOpen={false}
+        settingsOpen={settingsOpen}
         historyOpen={historyOpen}
-        queueOpen={false}
-        queuePaused={false}
+        queueOpen={queueOpen}
+        queuePaused={queuePaused}
         stepCount={0}
         effortLevel={effortLevel}
         onSubmit={handleSubmit}
@@ -227,7 +233,7 @@ export function ChatSessionSlot({
         onNewChat={handleNewChat}
         onDeleteSession={handleDeleteSession}
         onCloseHistory={handleCloseHistory}
-        onToggleQueuePause={() => {}}
+        onToggleQueuePause={toggleQueuePaused}
         onModelChange={handleModelChange}
         onEffortChange={handleEffortChange}
         getToolProgressLabel={() => undefined}
