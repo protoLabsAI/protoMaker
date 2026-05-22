@@ -27,30 +27,36 @@ interface CodexModelInfo {
 }
 
 const CODEX_MODEL_INFO: Record<CodexModelId, CodexModelInfo> = {
-  'codex-gpt-5.2-codex': {
-    id: 'codex-gpt-5.2-codex',
-    label: 'GPT-5.2-Codex',
-    description: 'Most advanced agentic coding model for complex software engineering',
+  'codex-gpt-5.5': {
+    id: 'codex-gpt-5.5',
+    label: 'GPT-5.5',
+    description: 'Flagship for complex coding, computer use, knowledge work, and research',
   },
-  'codex-gpt-5.1-codex-max': {
-    id: 'codex-gpt-5.1-codex-max',
-    label: 'GPT-5.1-Codex-Max',
-    description: 'Optimized for long-horizon, agentic coding tasks in Codex',
+  'codex-gpt-5.4': {
+    id: 'codex-gpt-5.4',
+    label: 'GPT-5.4',
+    description: 'Professional coding with stronger reasoning and agentic capabilities',
   },
-  'codex-gpt-5.1-codex-mini': {
-    id: 'codex-gpt-5.1-codex-mini',
-    label: 'GPT-5.1-Codex-Mini',
-    description: 'Smaller, more cost-effective version for faster workflows',
+  'codex-gpt-5.4-mini': {
+    id: 'codex-gpt-5.4-mini',
+    label: 'GPT-5.4-mini',
+    description: 'Fast, lightweight tasks and subagent operations',
+  },
+  'codex-gpt-5.3-codex': {
+    id: 'codex-gpt-5.3-codex',
+    label: 'GPT-5.3-Codex',
+    description:
+      'Codex-tuned: industry-leading coding performance for complex software engineering',
+  },
+  'codex-gpt-5.3-codex-spark': {
+    id: 'codex-gpt-5.3-codex-spark',
+    label: 'GPT-5.3-Codex-Spark',
+    description: 'Near-instant real-time iteration (ChatGPT Pro research preview)',
   },
   'codex-gpt-5.2': {
     id: 'codex-gpt-5.2',
-    label: 'GPT-5.2',
-    description: 'Best general agentic model for tasks across industries and domains',
-  },
-  'codex-gpt-5.1': {
-    id: 'codex-gpt-5.1',
-    label: 'GPT-5.1',
-    description: 'Great for coding and agentic tasks across domains',
+    label: 'GPT-5.2 (legacy)',
+    description: 'Legacy general-purpose model for debugging tasks requiring deeper analysis',
   },
 };
 
@@ -159,11 +165,10 @@ export function CodexModelConfiguration({
 }
 
 function supportsReasoningEffort(modelId: string): boolean {
-  const reasoningModels = [
-    'codex-gpt-5.2-codex',
-    'codex-gpt-5.1-codex-max',
-    'codex-gpt-5.2',
-    'codex-gpt-5.1',
-  ];
+  // Mirrors REASONING_CAPABLE_MODELS in libs/types/src/model.ts. Per the
+  // OpenAI Codex docs (https://developers.openai.com/codex/models/), only the
+  // 5.5 / 5.4 family exposes reasoning effort; the 5.4-mini, 5.3-codex line,
+  // and 5.2 legacy do not.
+  const reasoningModels = ['codex-gpt-5.5', 'codex-gpt-5.4'];
   return reasoningModels.includes(modelId);
 }

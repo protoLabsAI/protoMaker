@@ -48,19 +48,18 @@ export const LEGACY_CLAUDE_ALIAS_MAP: Record<string, ClaudeCanonicalId> = {
  * IMPORTANT: All Codex models use 'codex-' prefix to distinguish from Cursor CLI models
  */
 export const CODEX_MODEL_MAP = {
-  // Recommended Codex-specific models
-  /** Most advanced agentic coding model for complex software engineering (default for ChatGPT users) */
-  gpt52Codex: 'codex-gpt-5.2-codex',
-  /** Optimized for long-horizon, agentic coding tasks in Codex */
-  gpt51CodexMax: 'codex-gpt-5.1-codex-max',
-  /** Smaller, more cost-effective version for faster workflows */
-  gpt51CodexMini: 'codex-gpt-5.1-codex-mini',
-
-  // General-purpose GPT models (also available in Codex)
-  /** Best general agentic model for tasks across industries and domains */
+  // Flagship: complex coding, computer use, knowledge work, and research workflows
+  gpt55: 'codex-gpt-5.5',
+  // Professional coding combined with stronger reasoning + agentic capabilities
+  gpt54: 'codex-gpt-5.4',
+  // Fast, lightweight tasks and subagent operations (limited reasoning/vision)
+  gpt54Mini: 'codex-gpt-5.4-mini',
+  // Codex-tuned: industry-leading coding performance for complex software engineering
+  gpt53Codex: 'codex-gpt-5.3-codex',
+  // Codex-tuned, near-instant real-time iteration (ChatGPT Pro research preview)
+  gpt53CodexSpark: 'codex-gpt-5.3-codex-spark',
+  // Legacy general-purpose, kept for users who pinned it before the 5.5 release
   gpt52: 'codex-gpt-5.2',
-  /** Great for coding and agentic tasks across domains */
-  gpt51: 'codex-gpt-5.1',
 } as const;
 
 export const CODEX_MODEL_IDS = Object.values(CODEX_MODEL_MAP);
@@ -68,13 +67,12 @@ export const CODEX_MODEL_IDS = Object.values(CODEX_MODEL_MAP);
 /**
  * Models that support reasoning effort configuration
  * These models can use reasoning.effort parameter
+ *
+ * Per the OpenAI Codex docs (https://developers.openai.com/codex/models/), the
+ * 5.5 / 5.4 line exposes reasoning effort; the 5.4-mini, 5.3-codex line, and
+ * the 5.2 legacy model do not.
  */
-export const REASONING_CAPABLE_MODELS = new Set([
-  CODEX_MODEL_MAP.gpt52Codex,
-  CODEX_MODEL_MAP.gpt51CodexMax,
-  CODEX_MODEL_MAP.gpt52,
-  CODEX_MODEL_MAP.gpt51,
-]);
+export const REASONING_CAPABLE_MODELS = new Set([CODEX_MODEL_MAP.gpt55, CODEX_MODEL_MAP.gpt54]);
 
 /**
  * Check if a model supports reasoning effort configuration
@@ -107,7 +105,7 @@ export const DEFAULT_MODELS = {
   /** Default for trivial/quick tasks - haiku */
   trivial: 'claude-haiku-4-5-20251001',
   cursor: 'cursor-auto', // Cursor's recommended default (with prefix)
-  codex: CODEX_MODEL_MAP.gpt52Codex, // GPT-5.2-Codex is the most advanced agentic coding model
+  codex: CODEX_MODEL_MAP.gpt55, // GPT-5.5 is the current flagship Codex model
 } as const;
 
 export type ModelAlias = keyof typeof CLAUDE_MODEL_MAP;

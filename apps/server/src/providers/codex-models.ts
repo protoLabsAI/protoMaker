@@ -17,14 +17,14 @@ const MAX_OUTPUT_16K = 16000;
  * Based on https://developers.openai.com/codex/models/
  */
 export const CODEX_MODELS: ModelDefinition[] = [
-  // ========== Recommended Codex Models ==========
+  // ========== Flagship + Professional ==========
   {
-    id: CODEX_MODEL_MAP.gpt52Codex,
-    name: 'GPT-5.2-Codex',
-    modelString: CODEX_MODEL_MAP.gpt52Codex,
+    id: CODEX_MODEL_MAP.gpt55,
+    name: 'GPT-5.5',
+    modelString: CODEX_MODEL_MAP.gpt55,
     provider: 'openai',
     description:
-      'Most advanced agentic coding model for complex software engineering (default for ChatGPT users).',
+      'Flagship for complex coding, computer use, knowledge work, and research workflows.',
     contextWindow: CONTEXT_WINDOW_256K,
     maxOutputTokens: MAX_OUTPUT_32K,
     supportsVision: true,
@@ -34,11 +34,11 @@ export const CODEX_MODELS: ModelDefinition[] = [
     hasReasoning: true,
   },
   {
-    id: CODEX_MODEL_MAP.gpt51CodexMax,
-    name: 'GPT-5.1-Codex-Max',
-    modelString: CODEX_MODEL_MAP.gpt51CodexMax,
+    id: CODEX_MODEL_MAP.gpt54,
+    name: 'GPT-5.4',
+    modelString: CODEX_MODEL_MAP.gpt54,
     provider: 'openai',
-    description: 'Optimized for long-horizon, agentic coding tasks in Codex.',
+    description: 'Professional coding with stronger reasoning and agentic capabilities.',
     contextWindow: CONTEXT_WINDOW_256K,
     maxOutputTokens: MAX_OUTPUT_32K,
     supportsVision: true,
@@ -47,45 +47,61 @@ export const CODEX_MODELS: ModelDefinition[] = [
     hasReasoning: true,
   },
   {
-    id: CODEX_MODEL_MAP.gpt51CodexMini,
-    name: 'GPT-5.1-Codex-Mini',
-    modelString: CODEX_MODEL_MAP.gpt51CodexMini,
+    id: CODEX_MODEL_MAP.gpt54Mini,
+    name: 'GPT-5.4-mini',
+    modelString: CODEX_MODEL_MAP.gpt54Mini,
     provider: 'openai',
-    description: 'Smaller, more cost-effective version for faster workflows.',
+    description: 'Fast, lightweight tasks and subagent operations.',
     contextWindow: CONTEXT_WINDOW_128K,
     maxOutputTokens: MAX_OUTPUT_16K,
-    supportsVision: true,
+    supportsVision: false,
     supportsTools: true,
     tier: 'basic' as const,
     hasReasoning: false,
   },
 
-  // ========== General-Purpose GPT Models ==========
+  // ========== Codex-Tuned ==========
   {
-    id: CODEX_MODEL_MAP.gpt52,
-    name: 'GPT-5.2',
-    modelString: CODEX_MODEL_MAP.gpt52,
+    id: CODEX_MODEL_MAP.gpt53Codex,
+    name: 'GPT-5.3-Codex',
+    modelString: CODEX_MODEL_MAP.gpt53Codex,
     provider: 'openai',
-    description: 'Best general agentic model for tasks across industries and domains.',
+    description:
+      'Codex-tuned: industry-leading coding performance for complex software engineering.',
     contextWindow: CONTEXT_WINDOW_256K,
     maxOutputTokens: MAX_OUTPUT_32K,
-    supportsVision: true,
+    supportsVision: false,
     supportsTools: true,
     tier: 'standard' as const,
-    hasReasoning: true,
+    hasReasoning: false,
   },
   {
-    id: CODEX_MODEL_MAP.gpt51,
-    name: 'GPT-5.1',
-    modelString: CODEX_MODEL_MAP.gpt51,
+    id: CODEX_MODEL_MAP.gpt53CodexSpark,
+    name: 'GPT-5.3-Codex-Spark',
+    modelString: CODEX_MODEL_MAP.gpt53CodexSpark,
     provider: 'openai',
-    description: 'Great for coding and agentic tasks across domains.',
+    description: 'Near-instant real-time iteration (ChatGPT Pro research preview).',
+    contextWindow: CONTEXT_WINDOW_128K,
+    maxOutputTokens: MAX_OUTPUT_16K,
+    supportsVision: false,
+    supportsTools: true,
+    tier: 'basic' as const,
+    hasReasoning: false,
+  },
+
+  // ========== Legacy ==========
+  {
+    id: CODEX_MODEL_MAP.gpt52,
+    name: 'GPT-5.2 (legacy)',
+    modelString: CODEX_MODEL_MAP.gpt52,
+    provider: 'openai',
+    description: 'Legacy general-purpose model for debugging tasks requiring deeper analysis.',
     contextWindow: CONTEXT_WINDOW_256K,
     maxOutputTokens: MAX_OUTPUT_32K,
-    supportsVision: true,
+    supportsVision: false,
     supportsTools: true,
     tier: 'standard' as const,
-    hasReasoning: true,
+    hasReasoning: false,
   },
 ];
 

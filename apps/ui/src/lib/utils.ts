@@ -72,11 +72,12 @@ export function getModelDisplayName(model: ModelAlias | string): string {
     sonnet: 'Claude Sonnet',
     opus: 'Claude Opus',
     // Codex models
-    'codex-gpt-5.2': 'GPT-5.2',
-    'codex-gpt-5.1-codex-max': 'GPT-5.1 Codex Max',
-    'codex-gpt-5.1-codex': 'GPT-5.1 Codex',
-    'codex-gpt-5.1-codex-mini': 'GPT-5.1 Codex Mini',
-    'codex-gpt-5.1': 'GPT-5.1',
+    'codex-gpt-5.5': 'GPT-5.5',
+    'codex-gpt-5.4': 'GPT-5.4',
+    'codex-gpt-5.4-mini': 'GPT-5.4-mini',
+    'codex-gpt-5.3-codex': 'GPT-5.3-Codex',
+    'codex-gpt-5.3-codex-spark': 'GPT-5.3-Codex-Spark',
+    'codex-gpt-5.2': 'GPT-5.2 (legacy)',
     // Cursor models (common ones)
     'cursor-auto': 'Cursor Auto',
     'cursor-composer-1': 'Composer 1',
