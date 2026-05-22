@@ -198,7 +198,7 @@ const initialState: AIModelsState = {
   enabledCursorModels: getAllCursorModelIds(),
   cursorDefaultModel: 'cursor-auto',
   enabledCodexModels: getAllCodexModelIds(),
-  codexDefaultModel: 'codex-gpt-5.2-codex',
+  codexDefaultModel: 'codex-gpt-5.5',
   codexAutoLoadAgents: false,
   codexSandboxMode: 'workspace-write',
   codexApprovalPolicy: 'on-request',

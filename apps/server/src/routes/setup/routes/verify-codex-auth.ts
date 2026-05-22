@@ -162,7 +162,7 @@ export function createVerifyCodexAuthHandler() {
         }
         const stream = provider.executeQuery({
           prompt: AUTH_PROMPT,
-          model: CODEX_MODEL_MAP.gpt52Codex,
+          model: CODEX_MODEL_MAP.gpt55,
           cwd: process.cwd(),
           maxTurns: 1,
           allowedTools: [],

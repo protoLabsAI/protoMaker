@@ -72,44 +72,53 @@ export const CLAUDE_MODELS: ModelOption[] = [
  */
 export const CODEX_MODELS: (ModelOption & { hasReasoning?: boolean })[] = [
   {
-    id: CODEX_MODEL_MAP.gpt52Codex,
-    label: 'GPT-5.2-Codex',
-    description: 'Most advanced agentic coding model for complex software engineering.',
+    id: CODEX_MODEL_MAP.gpt55,
+    label: 'GPT-5.5',
+    description: 'Flagship for complex coding, computer use, knowledge work, and research.',
     badge: 'Premium',
     provider: 'codex',
     hasReasoning: true,
   },
   {
-    id: CODEX_MODEL_MAP.gpt51CodexMax,
-    label: 'GPT-5.1-Codex-Max',
-    description: 'Optimized for long-horizon, agentic coding tasks in Codex.',
+    id: CODEX_MODEL_MAP.gpt54,
+    label: 'GPT-5.4',
+    description: 'Professional coding with stronger reasoning and agentic capabilities.',
     badge: 'Premium',
     provider: 'codex',
     hasReasoning: true,
   },
   {
-    id: CODEX_MODEL_MAP.gpt51CodexMini,
-    label: 'GPT-5.1-Codex-Mini',
-    description: 'Smaller, more cost-effective version for faster workflows.',
+    id: CODEX_MODEL_MAP.gpt54Mini,
+    label: 'GPT-5.4-mini',
+    description: 'Fast, lightweight tasks and subagent operations.',
+    badge: 'Speed',
+    provider: 'codex',
+    hasReasoning: false,
+  },
+  {
+    id: CODEX_MODEL_MAP.gpt53Codex,
+    label: 'GPT-5.3-Codex',
+    description:
+      'Codex-tuned: industry-leading coding performance for complex software engineering.',
+    badge: 'Balanced',
+    provider: 'codex',
+    hasReasoning: false,
+  },
+  {
+    id: CODEX_MODEL_MAP.gpt53CodexSpark,
+    label: 'GPT-5.3-Codex-Spark',
+    description: 'Near-instant real-time iteration (ChatGPT Pro research preview).',
     badge: 'Speed',
     provider: 'codex',
     hasReasoning: false,
   },
   {
     id: CODEX_MODEL_MAP.gpt52,
-    label: 'GPT-5.2',
-    description: 'Best general agentic model for tasks across industries and domains.',
+    label: 'GPT-5.2 (legacy)',
+    description: 'Legacy general-purpose model for debugging tasks requiring deeper analysis.',
     badge: 'Balanced',
     provider: 'codex',
-    hasReasoning: true,
-  },
-  {
-    id: CODEX_MODEL_MAP.gpt51,
-    label: 'GPT-5.1',
-    description: 'Great for coding and agentic tasks across domains.',
-    badge: 'Balanced',
-    provider: 'codex',
-    hasReasoning: true,
+    hasReasoning: false,
   },
 ];
 
@@ -156,12 +165,12 @@ export interface ReasoningEffortOption {
  * All models support reasoning effort levels
  */
 export const REASONING_EFFORT_LEVELS: ReasoningEffortOption[] = [
-  { id: 'none', label: 'None', description: 'No reasoning tokens (GPT-5.1 models only)' },
+  { id: 'none', label: 'None', description: 'No reasoning tokens' },
   { id: 'minimal', label: 'Minimal', description: 'Very quick reasoning' },
   { id: 'low', label: 'Low', description: 'Quick responses for simpler queries' },
   { id: 'medium', label: 'Medium', description: 'Balance between depth and speed (default)' },
   { id: 'high', label: 'High', description: 'Maximizes reasoning depth for critical tasks' },
-  { id: 'xhigh', label: 'XHigh', description: 'Highest level for gpt-5.1-codex-max and newer' },
+  { id: 'xhigh', label: 'XHigh', description: 'Highest reasoning depth on GPT-5.5 / GPT-5.4' },
 ];
 
 /**
@@ -194,11 +203,12 @@ export function getModelDisplayName(model: ModelAlias | string): string {
     haiku: 'Claude Haiku',
     sonnet: 'Claude Sonnet',
     opus: 'Claude Opus',
-    [CODEX_MODEL_MAP.gpt52Codex]: 'GPT-5.2-Codex',
-    [CODEX_MODEL_MAP.gpt51CodexMax]: 'GPT-5.1-Codex-Max',
-    [CODEX_MODEL_MAP.gpt51CodexMini]: 'GPT-5.1-Codex-Mini',
+    [CODEX_MODEL_MAP.gpt55]: 'GPT-5.5',
+    [CODEX_MODEL_MAP.gpt54]: 'GPT-5.4',
+    [CODEX_MODEL_MAP.gpt54Mini]: 'GPT-5.4-mini',
+    [CODEX_MODEL_MAP.gpt53Codex]: 'GPT-5.3-Codex',
+    [CODEX_MODEL_MAP.gpt53CodexSpark]: 'GPT-5.3-Codex-Spark',
     [CODEX_MODEL_MAP.gpt52]: 'GPT-5.2',
-    [CODEX_MODEL_MAP.gpt51]: 'GPT-5.1',
   };
   return displayNames[model] || model;
 }

@@ -6,11 +6,12 @@
  * IMPORTANT: All Codex models use 'codex-' prefix to distinguish from Cursor CLI models
  */
 export type CodexModelId =
-  | 'codex-gpt-5.2-codex'
-  | 'codex-gpt-5.1-codex-max'
-  | 'codex-gpt-5.1-codex-mini'
-  | 'codex-gpt-5.2'
-  | 'codex-gpt-5.1';
+  | 'codex-gpt-5.5'
+  | 'codex-gpt-5.4'
+  | 'codex-gpt-5.4-mini'
+  | 'codex-gpt-5.3-codex'
+  | 'codex-gpt-5.3-codex-spark'
+  | 'codex-gpt-5.2';
 
 /**
  * Codex model metadata
@@ -29,40 +30,48 @@ export interface CodexModelConfig {
  * All keys use 'codex-' prefix to distinguish from Cursor CLI models
  */
 export const CODEX_MODEL_CONFIG_MAP: Record<CodexModelId, CodexModelConfig> = {
-  'codex-gpt-5.2-codex': {
-    id: 'codex-gpt-5.2-codex',
-    label: 'GPT-5.2-Codex',
-    description: 'Most advanced agentic coding model for complex software engineering',
+  'codex-gpt-5.5': {
+    id: 'codex-gpt-5.5',
+    label: 'GPT-5.5',
+    description: 'Flagship for complex coding, computer use, knowledge work, and research',
     hasThinking: true,
     supportsVision: true,
   },
-  'codex-gpt-5.1-codex-max': {
-    id: 'codex-gpt-5.1-codex-max',
-    label: 'GPT-5.1-Codex-Max',
-    description: 'Optimized for long-horizon, agentic coding tasks in Codex',
+  'codex-gpt-5.4': {
+    id: 'codex-gpt-5.4',
+    label: 'GPT-5.4',
+    description: 'Professional coding with stronger reasoning and agentic capabilities',
     hasThinking: true,
     supportsVision: true,
   },
-  'codex-gpt-5.1-codex-mini': {
-    id: 'codex-gpt-5.1-codex-mini',
-    label: 'GPT-5.1-Codex-Mini',
-    description: 'Smaller, more cost-effective version for faster workflows',
+  'codex-gpt-5.4-mini': {
+    id: 'codex-gpt-5.4-mini',
+    label: 'GPT-5.4-mini',
+    description: 'Fast, lightweight tasks and subagent operations',
     hasThinking: false,
-    supportsVision: true,
+    supportsVision: false,
+  },
+  'codex-gpt-5.3-codex': {
+    id: 'codex-gpt-5.3-codex',
+    label: 'GPT-5.3-Codex',
+    description:
+      'Codex-tuned: industry-leading coding performance for complex software engineering',
+    hasThinking: false,
+    supportsVision: false,
+  },
+  'codex-gpt-5.3-codex-spark': {
+    id: 'codex-gpt-5.3-codex-spark',
+    label: 'GPT-5.3-Codex-Spark',
+    description: 'Near-instant real-time iteration (ChatGPT Pro research preview)',
+    hasThinking: false,
+    supportsVision: false,
   },
   'codex-gpt-5.2': {
     id: 'codex-gpt-5.2',
-    label: 'GPT-5.2 (Codex)',
-    description: 'Best general agentic model for tasks across industries and domains via Codex',
-    hasThinking: true,
-    supportsVision: true,
-  },
-  'codex-gpt-5.1': {
-    id: 'codex-gpt-5.1',
-    label: 'GPT-5.1 (Codex)',
-    description: 'Great for coding and agentic tasks across domains via Codex',
-    hasThinking: true,
-    supportsVision: true,
+    label: 'GPT-5.2 (legacy)',
+    description: 'Legacy general-purpose model for debugging tasks requiring deeper analysis',
+    hasThinking: false,
+    supportsVision: false,
   },
 };
 
