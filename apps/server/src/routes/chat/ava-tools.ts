@@ -346,49 +346,49 @@ export function buildAvaTools(
         '  • list   — enumerate features with optional status/priority filters and pagination\n' +
         '  • get    — retrieve full metadata for a single feature by ID\n' +
         '  • search — search feature titles and descriptions by keyword',
-      inputSchema: z.discriminatedUnion('action', [
-        z.object({
-          action: z.literal('list').describe('List features with optional filters'),
-          status: z.enum(FEATURE_STATUS_ENUM).optional().describe('Filter by status'),
-          priority: z.number().int().min(0).max(4).optional().describe('Filter by priority (0-4)'),
-          limit: z
-            .number()
-            .int()
-            .min(1)
-            .max(200)
-            .optional()
-            .describe('Max results to return (default 50)'),
-          offset: z
-            .number()
-            .int()
-            .min(0)
-            .optional()
-            .describe('Results to skip for pagination (default 0)'),
-        }),
-        z.object({
-          action: z.literal('get').describe('Get full metadata for a single feature'),
-          featureId: z.string().describe('The feature ID to retrieve'),
-        }),
-        z.object({
-          action: z.literal('search').describe('Search features by title or description'),
-          query: z.string().describe('Text to search in feature title and description'),
-          limit: z
-            .number()
-            .int()
-            .min(1)
-            .max(200)
-            .optional()
-            .describe('Max results to return (default 50)'),
-          offset: z
-            .number()
-            .int()
-            .min(0)
-            .optional()
-            .describe('Results to skip for pagination (default 0)'),
-        }),
-      ]),
+      // Flat schema (NOT discriminatedUnion): Anthropic's tool-use API requires
+      // input_schema.type === 'object' at the root, which discriminatedUnion
+      // doesn't emit (it produces anyOf instead). Branch by `action` at runtime
+      // and guard required-but-conditional fields with explicit error returns.
+      inputSchema: z.object({
+        action: z
+          .enum(['list', 'get', 'search'])
+          .describe('Which board action to run: list, get, or search'),
+        featureId: z.string().optional().describe('Feature ID (required when action=get)'),
+        query: z
+          .string()
+          .optional()
+          .describe('Search text — required when action=search; ignored otherwise'),
+        status: z
+          .enum(FEATURE_STATUS_ENUM)
+          .optional()
+          .describe('Filter by status (action=list only)'),
+        priority: z
+          .number()
+          .int()
+          .min(0)
+          .max(4)
+          .optional()
+          .describe('Filter by priority 0-4 (action=list only)'),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(200)
+          .optional()
+          .describe('Max results to return (default 50; action=list or action=search)'),
+        offset: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe('Results to skip for pagination (default 0; action=list or action=search)'),
+      }),
       execute: async (input) => {
         if (input.action === 'get') {
+          if (!input.featureId) {
+            return { error: 'featureId is required when action=get' };
+          }
           const feature = await services.featureLoader.get(projectPath, input.featureId);
           if (!feature) {
             return { error: `Feature '${input.featureId}' not found` };
@@ -407,6 +407,9 @@ export function buildAvaTools(
           }
         } else {
           // search
+          if (!input.query) {
+            return { error: 'query is required when action=search' };
+          }
           const q = input.query.toLowerCase();
           features = features.filter(
             (f) =>
