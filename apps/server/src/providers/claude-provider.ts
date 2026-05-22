@@ -12,7 +12,7 @@ import {
   type HookCallback,
   type HookCallbackMatcher,
   type CanUseTool,
-} from '@anthropic-ai/claude-agent-sdk';
+} from '@protolabsai/sdk/anthropic-compat';
 import {
   getThinkingTokenBudget,
   validateBareModelId,
@@ -281,13 +281,27 @@ export class ClaudeProvider extends BaseProvider {
       env['CLAUDE_CODE_EFFORT_LEVEL'] = claudeEffortLevel;
     }
 
-    // Build Claude SDK options
+    // Filter undefined values from env — the proto SDK's `Record<string, string>`
+    // contract rejects undefined, but `buildEnv()` may emit undefined entries
+    // when a passed-through env var isn't set. Strip them here rather than at
+    // every callsite of buildEnv.
+    const filteredEnv: Record<string, string> = {};
+    for (const [key, value] of Object.entries(env)) {
+      if (typeof value === 'string') filteredEnv[key] = value;
+    }
+
+    // Build Claude SDK options (compat layer translates to proto's QueryOptions)
     const sdkOptions: Options = {
       model,
-      systemPrompt,
+      // systemPrompt only honored in string form. `SystemPromptPreset` shapes
+      // (with `preset: 'claude_code'`) don't translate cleanly through the
+      // compat layer — proto SDK has its own preset taxonomy. Callers passing
+      // a preset should switch to providing a string at the ExecuteOptions
+      // layer.
+      ...(typeof systemPrompt === 'string' && { systemPrompt }),
       maxTurns,
       cwd,
-      env,
+      env: filteredEnv,
       // Pass through allowedTools if provided by caller (decided by sdk-options.ts)
       ...(allowedTools && { allowedTools }),
       // Permission mode: use 'default' when a canUseTool gating callback is active
@@ -303,7 +317,14 @@ export class ClaudeProvider extends BaseProvider {
       // Forward settingSources for CLAUDE.md file loading
       ...(options.settingSources && { settingSources: options.settingSources }),
       // Forward MCP servers configuration
-      ...(options.mcpServers && { mcpServers: options.mcpServers }),
+      // Cast to compat's loose Record<string, unknown> shape — the structured
+      // McpServerConfig union from @protolabsai/types is shape-compatible at
+      // runtime but TS doesn't see McpStdioServerConfig (no index signature)
+      // as assignable to Record<string, unknown>. The compat layer's runtime
+      // translation passes mcpServers through verbatim.
+      ...(options.mcpServers && {
+        mcpServers: options.mcpServers as unknown as Options['mcpServers'],
+      }),
       // Extended thinking configuration
       ...(maxThinkingTokens && { maxThinkingTokens }),
       // Subagents configuration for specialized task delegation
@@ -314,8 +335,13 @@ export class ClaudeProvider extends BaseProvider {
       ...(options.canUseTool && { canUseTool: options.canUseTool as CanUseTool }),
       // Explicitly disallowed tools
       ...(options.disallowedTools && { disallowedTools: options.disallowedTools }),
-      // Pass through outputFormat for structured JSON outputs
-      ...(options.outputFormat && { outputFormat: options.outputFormat }),
+      // Pass through outputFormat for structured JSON outputs. Cast to
+      // compat's narrower string-only typing — the runtime ignores
+      // outputFormat (Claude SDK feature, no proto equivalent yet) so the
+      // type-level cast is safe.
+      ...(options.outputFormat && {
+        outputFormat: options.outputFormat as unknown as Options['outputFormat'],
+      }),
     };
 
     // Build prompt payload

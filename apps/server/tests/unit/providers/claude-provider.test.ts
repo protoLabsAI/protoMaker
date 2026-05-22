@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ClaudeProvider } from '@/providers/claude-provider.js';
-import * as sdk from '@anthropic-ai/claude-agent-sdk';
+import * as sdk from '@protolabsai/sdk/anthropic-compat';
 import { collectAsyncGenerator } from '../../utils/helpers.js';
 
-vi.mock('@anthropic-ai/claude-agent-sdk');
+vi.mock('@protolabsai/sdk/anthropic-compat');
 vi.mock('@protolabsai/platform', async () => {
   const actual =
     await vi.importActual<typeof import('@protolabsai/platform')>('@protolabsai/platform');
