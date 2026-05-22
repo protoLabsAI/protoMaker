@@ -11,6 +11,16 @@ import type { GapAnalysisReport } from 'create-protolab';
 
 type GapItem = GapAnalysisReport['gaps'][number];
 
+/** Escape special HTML characters to prevent XSS injection. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export interface HtmlReportOptions {
   /** Output directory for the report (defaults to projectPath/.automaker/) */
   outputDir?: string;
@@ -24,11 +34,11 @@ function severityBadge(severity: GapItem['severity']): string {
     recommended: 'badge-recommended',
     optional: 'badge-optional',
   };
-  return `<span class="badge ${map[severity] ?? 'badge-optional'}">${severity}</span>`;
+  return `<span class="badge ${map[severity] ?? 'badge-optional'}">${escapeHtml(severity)}</span>`;
 }
 
 function effortBadge(effort: GapItem['effort']): string {
-  return `<span class="badge badge-effort">${effort} effort</span>`;
+  return `<span class="badge badge-effort">${escapeHtml(effort)} effort</span>`;
 }
 
 function scoreColor(score: number): string {
@@ -51,10 +61,10 @@ function renderGapRows(gaps: GapItem[]): string {
     .map(
       (g) => `
     <tr>
-      <td>${g.title}</td>
+      <td>${escapeHtml(g.title)}</td>
       <td>${severityBadge(g.severity)}</td>
-      <td class="dim">${g.current}</td>
-      <td class="dim">${g.target}</td>
+      <td class="dim">${escapeHtml(g.current)}</td>
+      <td class="dim">${escapeHtml(g.target)}</td>
       <td>${effortBadge(g.effort)}</td>
     </tr>`
     )
@@ -67,8 +77,8 @@ function renderCompliantRows(items: GapAnalysisReport['compliant']): string {
     .map(
       (c) => `
     <tr>
-      <td><span class="check">&#10003;</span> ${c.title}</td>
-      <td class="dim">${c.detail}</td>
+      <td><span class="check">&#10003;</span> ${escapeHtml(c.title)}</td>
+      <td class="dim">${escapeHtml(c.detail)}</td>
     </tr>`
     )
     .join('');
@@ -86,7 +96,7 @@ export function buildHtmlReport(report: GapAnalysisReport): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ProtoLabs Gap Report — ${report.projectPath}</title>
+  <title>ProtoLabs Gap Report — ${escapeHtml(report.projectPath)}</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f0f11; color: #e2e8f0; line-height: 1.6; }
@@ -131,8 +141,8 @@ export function buildHtmlReport(report: GapAnalysisReport): string {
   <header>
     <div>
       <div class="brand">proto<span>Labs</span> / Gap Report</div>
-      <h1>${path.basename(report.projectPath)}</h1>
-      <div class="meta">${report.projectPath} &nbsp;·&nbsp; ${new Date(report.analyzedAt).toLocaleString()}</div>
+      <h1>${escapeHtml(path.basename(report.projectPath))}</h1>
+      <div class="meta">${escapeHtml(report.projectPath)} &nbsp;·&nbsp; ${new Date(report.analyzedAt).toLocaleString()}</div>
     </div>
     <div class="score-ring">
       <div class="score-value" style="color:${color}">${report.overallScore}%</div>
