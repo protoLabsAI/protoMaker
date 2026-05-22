@@ -82,7 +82,13 @@ export function LiteLLMGatewayTab() {
     setTestResult(null);
 
     try {
-      const url = config.baseUrl.replace(/\/$/, '') + '/health';
+      // Use /models, not /health: LiteLLM exposes /health at the deployment
+      // root (not under /v1), so a baseUrl of "https://host/v1" produced a
+      // /v1/health URL that 404s. /models is reachable under the /v1 base
+      // and exercises the same auth path the rest of the integration uses —
+      // it's also what `handleRefreshModels` below and the server-side
+      // LiteLLMGatewayService.testConnection both probe.
+      const url = config.baseUrl.replace(/\/$/, '') + '/models';
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (config.apiKeySource === 'inline' && config.apiKey) {
         headers['Authorization'] = `Bearer ${config.apiKey}`;
@@ -94,8 +100,13 @@ export function LiteLLMGatewayTab() {
         signal: AbortSignal.timeout(5000),
       });
       if (response.ok) {
+        const data = (await response.json()) as { data?: Array<{ id?: string }> };
+        const modelCount = Array.isArray(data?.data) ? data.data.length : 0;
         setConnectionStatus('connected');
-        setTestResult({ success: true, message: 'Connected successfully to LiteLLM Gateway.' });
+        setTestResult({
+          success: true,
+          message: `Connected to LiteLLM Gateway (${modelCount} model${modelCount === 1 ? '' : 's'} available).`,
+        });
       } else {
         setConnectionStatus('error');
         setTestResult({
