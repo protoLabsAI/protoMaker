@@ -174,66 +174,60 @@ docker compose up -d
 - /projects:/home/youruser/dev
 ```
 
-## systemd + Docker
+## systemd
 
-For persistent server deployments, use systemd to manage Docker Compose.
+Two systemd units ship in the repo. Pick exactly one per host:
 
-### 1. Install Service File
+| Unit                       | Runs                                               | When to use                                                                                            |
+| -------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `automaker-docker.service` | `docker compose up -d`                             | Containerized prod, full filesystem isolation, no host CLI access from agents                          |
+| `automaker-host.service`   | `npm start` (= `start-automaker.mjs --production`) | Bare-metal prod. Agents can shell out to host CLIs (`gh`, `codex`, `opencode`, `infisical`, `claude`). |
+
+The host-process variant exists because agents spawn external tools via `child_process`; in containers those tools either aren't installed or can't see the host's auth files. If your operator workflow depends on `gh auth login` or `codex login` happening on the host, use `automaker-host.service`.
+
+### Install the host-process variant
 
 ```bash
 # Copy the service file
-sudo cp automaker.service /etc/systemd/system/
+sudo cp automaker-host.service /etc/systemd/system/
 
-# Edit for your environment
-sudo nano /etc/systemd/system/automaker.service
+# Edit for your environment if defaults don't match
+sudo nano /etc/systemd/system/automaker-host.service
+#   WorkingDirectory  = clone path (default: /opt/protomaker)
+#   User / Group      = deploy user (default: automaker)
+#   Environment=HOME  = $HOME for that user (default: /home/automaker)
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now automaker-host.service
+journalctl -u automaker-host -f
 ```
 
-### 2. Configure Service
-
-Edit the service file:
-
-```ini
-[Unit]
-Description=protoLabs AI Development Studio
-After=docker.service
-Requires=docker.service
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-WorkingDirectory=/home/youruser/automaker
-ExecStart=/usr/bin/docker compose up -d
-ExecStop=/usr/bin/docker compose down
-ExecReload=/usr/bin/docker compose restart
-TimeoutStartSec=120
-TimeoutStopSec=60
-Restart=on-failure
-RestartSec=10
-
-# Run as your user
-User=youruser
-Group=youruser
-
-Environment=COMPOSE_PROJECT_NAME=automaker
-
-[Install]
-WantedBy=multi-user.target
-```
-
-### 3. Enable and Start
+### Install the Docker variant
 
 ```bash
-# Reload systemd
+# Copy the service file
+sudo cp automaker-docker.service /etc/systemd/system/
+
+# Edit for your environment
+sudo nano /etc/systemd/system/automaker-docker.service
+#   WorkingDirectory = path containing the compose file
+#   User / Group     = deploy user
+```
+
+The shipped file uses the default `docker-compose.yml`. For a prod deploy, set `WorkingDirectory` to the directory containing `docker-compose.prod.yml` and add `Environment=COMPOSE_FILE=docker-compose.prod.yml` to the `[Service]` block.
+
+### Enable and start
+
+```bash
 sudo systemctl daemon-reload
 
-# Enable on boot
-sudo systemctl enable automaker
+# Pick exactly one:
+sudo systemctl enable --now automaker-host.service
+# OR
+sudo systemctl enable --now automaker-docker.service
 
-# Start now
-sudo systemctl start automaker
-
-# Check status
-sudo systemctl status automaker
+# Check status (substitute the unit you enabled):
+sudo systemctl status automaker-host
 ```
 
 ### 4. Management Commands
