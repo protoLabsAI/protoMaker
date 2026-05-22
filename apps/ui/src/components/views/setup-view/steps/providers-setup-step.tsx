@@ -45,7 +45,182 @@ interface ProvidersSetupStepProps {
   onBack: () => void;
 }
 
-type ProviderTab = 'claude' | 'cursor' | 'codex' | 'opencode';
+type ProviderTab = 'protocli' | 'claude' | 'cursor' | 'codex' | 'opencode';
+
+// ============================================================================
+// ProtoCLI Content — the namesake provider's onboarding card. Reads
+// /api/setup/proto-status (see apps/server/src/routes/setup/routes/proto-status.ts)
+// and renders install + gateway-auth + reachability status. Unlike the other
+// provider cards there's no per-user CLI login step here — protoCLI auths via
+// org-issued GATEWAY_API_KEY env, so the UI's job is to confirm that's wired
+// and surface the install command when it isn't.
+// ============================================================================
+interface ProtoStatusSummary {
+  installed: boolean;
+  version: string | null;
+  path: string | null;
+  gateway: {
+    hasApiKey: boolean;
+    apiKeySource: 'GATEWAY_API_KEY' | 'OPENAI_API_KEY' | 'none';
+    baseUrl: string;
+    reachable: boolean;
+    modelCount: number | null;
+    error: string | null;
+  };
+  installCommand: string;
+}
+
+function ProtoCliContent() {
+  const [status, setStatus] = useState<ProtoStatusSummary | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setFetchError(null);
+    try {
+      const api = getElectronAPI();
+      if (!api.setup?.protoStatus) {
+        throw new Error('Setup API not available — refresh the app.');
+      }
+      const result = await api.setup.protoStatus();
+      if (!result.success) {
+        throw new Error(result.error || 'Status request failed');
+      }
+      setStatus({
+        installed: result.installed,
+        version: result.version,
+        path: result.path,
+        gateway: {
+          hasApiKey: result.gateway.hasApiKey,
+          apiKeySource: result.gateway.apiKeySource,
+          baseUrl: result.gateway.baseUrl,
+          reachable: result.gateway.reachable,
+          modelCount: result.gateway.modelCount,
+          error: result.gateway.error,
+        },
+        installCommand: result.installCommand,
+      });
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const overallOk = !!status?.gateway.hasApiKey && !!status?.gateway.reachable;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <span
+            className={cn(
+              'inline-block w-2 h-2 rounded-full',
+              overallOk
+                ? 'bg-emerald-500 animate-pulse'
+                : status
+                  ? 'bg-amber-500'
+                  : 'bg-muted-foreground'
+            )}
+          />
+          protoCLI
+        </CardTitle>
+        <CardDescription>
+          The namesake SDK. Routes every agent run through the protoLabs gateway. No per-user login
+          — authenticates via the gateway API key configured at the server level.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {fetchError && (
+          <div className="flex items-start gap-2 p-3 rounded-md bg-destructive/10 border border-destructive/30 text-sm">
+            <AlertCircle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
+            <span>{fetchError}</span>
+          </div>
+        )}
+
+        {!status && !fetchError && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Spinner size="sm" />
+            Checking protoCLI status…
+          </div>
+        )}
+
+        {status && (
+          <div className="space-y-2 text-sm">
+            <ProtoRow
+              ok={status.installed}
+              label="CLI binary"
+              detail={
+                status.installed
+                  ? `${status.version ?? 'unknown version'}${status.path ? ` — ${status.path}` : ''}`
+                  : 'not on PATH (optional; the bundled SDK still works for in-app agents)'
+              }
+            />
+            <ProtoRow
+              ok={status.gateway.hasApiKey}
+              label="Gateway auth"
+              detail={
+                status.gateway.hasApiKey
+                  ? `via $${status.gateway.apiKeySource}`
+                  : 'no GATEWAY_API_KEY or OPENAI_API_KEY configured'
+              }
+            />
+            <ProtoRow
+              ok={status.gateway.reachable}
+              label="Gateway reachable"
+              detail={
+                status.gateway.reachable
+                  ? `${status.gateway.baseUrl} — ${status.gateway.modelCount ?? '?'} models`
+                  : (status.gateway.error ?? `unreachable at ${status.gateway.baseUrl}`)
+              }
+            />
+          </div>
+        )}
+
+        {status && !status.installed && (
+          <div className="mt-4 p-3 rounded-md border border-border/50 bg-muted/30 space-y-1.5">
+            <Label className="text-xs font-semibold">Install protoCLI (optional)</Label>
+            <code className="block bg-background/50 rounded px-2 py-1 text-xs font-mono">
+              {status.installCommand}
+            </code>
+          </div>
+        )}
+
+        <div className="flex justify-end pt-2">
+          <Button variant="outline" size="sm" onClick={() => void refresh()} disabled={loading}>
+            {loading ? (
+              <Spinner size="xs" className="mr-2" />
+            ) : (
+              <RefreshCw className="w-3 h-3 mr-2" />
+            )}
+            Recheck
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ProtoRow({ ok, label, detail }: { ok: boolean; label: string; detail: string }) {
+  return (
+    <div className="flex items-start gap-2">
+      {ok ? (
+        <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+      ) : (
+        <XCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="font-medium">{label}</div>
+        <div className="text-xs text-muted-foreground break-all">{detail}</div>
+      </div>
+    </div>
+  );
+}
 
 // ============================================================================
 // Claude Content
@@ -1186,7 +1361,7 @@ function OpencodeContent() {
 // Main Component
 // ============================================================================
 export function ProvidersSetupStep({ onNext, onBack }: ProvidersSetupStepProps) {
-  const [activeTab, setActiveTab] = useState<ProviderTab>('claude');
+  const [activeTab, setActiveTab] = useState<ProviderTab>('protocli');
   const [isInitialChecking, setIsInitialChecking] = useState(true);
   const hasCheckedRef = useRef(false);
 
@@ -1348,6 +1523,17 @@ export function ProvidersSetupStep({ onNext, onBack }: ProvidersSetupStepProps) 
 
   const providers = [
     {
+      // protoCLI sits first — the namesake SDK and the default runtime for
+      // new agent runs. Status comes from /api/setup/proto-status and is
+      // tracked inside ProtoCliContent itself rather than in the setup
+      // store (there's no auth / install state outside the env-var probe).
+      id: 'protocli' as const,
+      label: 'protoCLI',
+      icon: AnthropicIcon, // shared brand icon for now; see icon TODO in this file
+      status: 'authenticated' as ProviderStatus,
+      color: 'text-brand-500',
+    },
+    {
       id: 'claude' as const,
       label: 'Claude',
       icon: AnthropicIcon,
@@ -1411,7 +1597,7 @@ export function ProvidersSetupStep({ onNext, onBack }: ProvidersSetupStepProps) 
       )}
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ProviderTab)}>
-        <TabsList className="grid w-full grid-cols-4 h-auto p-1">
+        <TabsList className="grid w-full grid-cols-5 h-auto p-1">
           {providers.map((provider) => {
             const Icon = provider.icon;
             return (
@@ -1445,6 +1631,9 @@ export function ProvidersSetupStep({ onNext, onBack }: ProvidersSetupStepProps) 
         </TabsList>
 
         <div className="mt-6">
+          <TabsContent value="protocli" className="mt-0">
+            <ProtoCliContent />
+          </TabsContent>
           <TabsContent value="claude" className="mt-0">
             <ClaudeContent />
           </TabsContent>
