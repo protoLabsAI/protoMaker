@@ -56,6 +56,10 @@ export const GLOBAL_NAV_GROUPS: NavigationGroup[] = [
         label: 'AI Providers',
         icon: Bot,
         subItems: [
+          // protoCLI sits at the top — the namesake SDK + default runtime for
+          // new agent runs. Everything below is either a CLI we shell out to
+          // or a gateway flavor.
+          { id: 'protocli-provider', label: 'protoCLI', icon: Bot },
           { id: 'claude-provider', label: 'Claude', icon: AnthropicIcon },
           { id: 'cursor-provider', label: 'Cursor', icon: CursorIcon },
           { id: 'codex-provider', label: 'Codex', icon: OpenAIIcon },

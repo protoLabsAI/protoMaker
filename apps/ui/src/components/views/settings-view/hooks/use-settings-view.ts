@@ -4,6 +4,7 @@ export type SettingsViewId =
   | 'api-keys'
   | 'claude'
   | 'providers'
+  | 'protocli-provider'
   | 'claude-provider'
   | 'cursor-provider'
   | 'codex-provider'
