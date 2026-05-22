@@ -98,8 +98,15 @@ export function getAllCodexModelIds(): CodexModelId[] {
  * - haiku: Trivial tasks, quick operations
  */
 export const DEFAULT_MODELS = {
-  /** Default for general Claude usage - opus for orchestration/planning */
-  claude: 'claude-opus-4-6',
+  /**
+   * Default for agent orchestration / planning.
+   * Historically pointed at `claude-opus-4-6`; now routed through the protoLabs
+   * gateway via the proto SDK. Existing callers that key off
+   * `DEFAULT_MODELS.claude` continue to compile — only the resolved model id
+   * changes. The field name is intentionally NOT renamed in this PR to keep
+   * the diff focused; PR 3 (final SDK rip-out) will rename it to `proto`.
+   */
+  claude: 'protolabs/smart',
   /** Default for auto-mode feature implementation - sonnet for ticket work */
   autoMode: 'claude-sonnet-4-6',
   /** Default for trivial/quick tasks - haiku */
