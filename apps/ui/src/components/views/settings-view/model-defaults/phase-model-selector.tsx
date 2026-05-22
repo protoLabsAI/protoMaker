@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAIModelsStore } from '@/store/ai-models-store';
+import { useGlobalSettings } from '@/hooks/queries/use-settings';
 import { useIsMobile } from '@/hooks/use-media-query';
 import type {
   ModelAlias,
@@ -181,7 +182,16 @@ export function PhaseModelSelector({
     disabledProviders,
     claudeCompatibleProviders,
     openaiCompatibleProviders,
+    litellmGatewayModels,
+    litellmGatewayModelsLoading,
+    fetchLitellmGatewayModels,
   } = useAIModelsStore();
+
+  // LiteLLM gateway is configured in global settings; read it here so we can
+  // (a) fetch the model list on mount when the gateway is enabled, and
+  // (b) decide whether to render the "LiteLLM Gateway" group at all.
+  const { data: globalSettings } = useGlobalSettings();
+  const litellmGateway = globalSettings?.litellmGateway;
 
   // Detect mobile devices to use inline expansion instead of nested popovers
   const isMobile = useIsMobile();
@@ -219,6 +229,18 @@ export function PhaseModelSelector({
       });
     }
   }, [dynamicOpencodeModels.length, opencodeModelsLoading, fetchOpencodeModels]);
+
+  // Fetch LiteLLM Gateway models on mount when the gateway is enabled. The
+  // store dedupes/caches/cooldowns; calling it eagerly is safe. We don't gate
+  // on `litellmGatewayModels.length === 0` because the cache may legitimately
+  // return zero models from a fresh-but-empty gateway.
+  useEffect(() => {
+    if (!litellmGateway?.enabled || !litellmGateway.baseUrl) return;
+    fetchLitellmGatewayModels(litellmGateway).catch(() => {
+      // Silently fail — user will see no LiteLLM section, which is the correct
+      // visual signal that the gateway isn't reachable from the browser.
+    });
+  }, [litellmGateway, fetchLitellmGatewayModels]);
 
   // Close expanded group when trigger scrolls out of view
   useEffect(() => {
@@ -1126,6 +1148,62 @@ export function PhaseModelSelector({
   };
 
   // Render OpenAI-Compatible provider model item (simple selection, no thinking levels)
+  // Render a single LiteLLM Gateway model item. The gateway returns flat model
+  // IDs like `protolabs/smart` over OpenAI's `/v1/models` schema. We store the
+  // raw ID in the PhaseModelEntry (no UI prefix) so it round-trips correctly
+  // through the AI SDK / openai-compatible provider — the modelPrefix from
+  // settings is purely a label convention.
+  const renderLitellmModelItem = (modelId: string) => {
+    const isSelected = selectedModel === modelId;
+    const isFavorite = favoriteModels.includes(modelId);
+
+    return (
+      <CommandItem
+        key={`litellm-${modelId}`}
+        value={`LiteLLM Gateway ${modelId}`}
+        onSelect={() => {
+          onChange({ model: modelId });
+          setOpen(false);
+        }}
+        className="group flex items-center justify-between py-2"
+      >
+        <div className="flex items-center gap-3 overflow-hidden">
+          <Server
+            className={cn(
+              'h-4 w-4 shrink-0',
+              isSelected ? 'text-primary' : 'text-muted-foreground'
+            )}
+          />
+          <div className="flex flex-col truncate">
+            <span className={cn('truncate font-medium', isSelected && 'text-primary')}>
+              {modelId}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 ml-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              'h-6 w-6 hover:bg-transparent hover:text-yellow-500 focus:ring-0',
+              isFavorite
+                ? 'text-yellow-500 opacity-100'
+                : 'opacity-0 group-hover:opacity-100 text-muted-foreground'
+            )}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleFavoriteModel(modelId);
+            }}
+          >
+            <Star className={cn('h-3.5 w-3.5', isFavorite && 'fill-current')} />
+          </Button>
+          {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
+        </div>
+      </CommandItem>
+    );
+  };
+
   const renderOpenAICompatModelItem = (provider: OpenAICompatibleConfig, model: ProviderModel) => {
     const isSelected = selectedModel === model.id;
     const isFavorite = favoriteModels.includes(model.id);
@@ -2005,6 +2083,16 @@ export function PhaseModelSelector({
               </CommandGroup>
               <CommandSeparator />
             </>
+          )}
+
+          {/* LiteLLM Gateway models — first provider category. When the
+              gateway is enabled and returning models, surface them above all
+              other providers so the gateway-first defaults workflow is the
+              path of least resistance. Hidden entirely when disabled or empty. */}
+          {litellmGateway?.enabled && litellmGatewayModels.length > 0 && (
+            <CommandGroup heading="LiteLLM Gateway">
+              {litellmGatewayModels.map((modelId) => renderLitellmModelItem(modelId))}
+            </CommandGroup>
           )}
 
           {claude.length > 0 && (

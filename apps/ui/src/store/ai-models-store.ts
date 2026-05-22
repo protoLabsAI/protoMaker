@@ -11,6 +11,7 @@ import type {
   ModelDefinition,
   ClaudeCompatibleProvider,
   OpenAICompatibleConfig,
+  LiteLLMGatewayConfig,
 } from '@protolabsai/types';
 import {
   getAllCursorModelIds,
@@ -91,6 +92,12 @@ interface AIModelsState {
   codexModelsError: string | null;
   codexModelsLastFetched: number | null;
   codexModelsLastFailedAt: number | null;
+  // LiteLLM Gateway Models (dynamically fetched from gateway /v1/models)
+  litellmGatewayModels: string[];
+  litellmGatewayModelsLoading: boolean;
+  litellmGatewayModelsError: string | null;
+  litellmGatewayModelsLastFetched: number | null;
+  litellmGatewayModelsLastFailedAt: number | null;
 }
 
 interface AIModelsActions {
@@ -176,6 +183,11 @@ interface AIModelsActions {
   ) => void;
   // OpenCode Models actions
   fetchOpencodeModels: (forceRefresh?: boolean) => Promise<void>;
+  // LiteLLM Gateway Models actions
+  fetchLitellmGatewayModels: (
+    config: LiteLLMGatewayConfig,
+    forceRefresh?: boolean
+  ) => Promise<void>;
 }
 
 const initialState: AIModelsState = {
@@ -216,6 +228,11 @@ const initialState: AIModelsState = {
   codexModelsError: null,
   codexModelsLastFetched: null,
   codexModelsLastFailedAt: null,
+  litellmGatewayModels: [],
+  litellmGatewayModelsLoading: false,
+  litellmGatewayModelsError: null,
+  litellmGatewayModelsLastFetched: null,
+  litellmGatewayModelsLastFailedAt: null,
 };
 
 export const useAIModelsStore = create<AIModelsState & AIModelsActions>()((set, get) => ({
@@ -587,6 +604,81 @@ export const useAIModelsStore = create<AIModelsState & AIModelsActions>()((set, 
         opencodeModelsError: errorMessage,
         opencodeModelsLoading: false,
         opencodeModelsLastFailedAt: Date.now(),
+      });
+    }
+  },
+
+  // LiteLLM Gateway Models — fetched directly from the gateway's /v1/models
+  // endpoint (browser → gateway). The gateway response is OpenAI-compatible
+  // (`{data: [{id}, ...]}`). Cached for 5 min on success; cooled-down for 30s
+  // on failure so a missing/wrong base URL doesn't hammer the network.
+  fetchLitellmGatewayModels: async (config, forceRefresh = false) => {
+    const FAILURE_COOLDOWN_MS = 30 * 1000;
+    const SUCCESS_CACHE_MS = 5 * 60 * 1000;
+
+    const {
+      litellmGatewayModelsLastFetched,
+      litellmGatewayModelsLoading,
+      litellmGatewayModelsLastFailedAt,
+    } = get();
+
+    if (litellmGatewayModelsLoading) return;
+    if (!config.enabled || !config.baseUrl?.trim()) return;
+
+    if (
+      !forceRefresh &&
+      litellmGatewayModelsLastFailedAt &&
+      Date.now() - litellmGatewayModelsLastFailedAt < FAILURE_COOLDOWN_MS
+    ) {
+      return;
+    }
+
+    if (
+      !forceRefresh &&
+      litellmGatewayModelsLastFetched &&
+      Date.now() - litellmGatewayModelsLastFetched < SUCCESS_CACHE_MS
+    ) {
+      return;
+    }
+
+    set({ litellmGatewayModelsLoading: true, litellmGatewayModelsError: null });
+
+    try {
+      const url = config.baseUrl.replace(/\/$/, '') + '/models';
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (config.apiKeySource === 'inline' && config.apiKey) {
+        headers['Authorization'] = `Bearer ${config.apiKey}`;
+      }
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers,
+        signal: AbortSignal.timeout(10_000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Gateway returned HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = (await response.json()) as { data?: Array<{ id?: string }> };
+      const models = Array.isArray(data?.data)
+        ? data.data.map((m) => m.id ?? '').filter((id) => id.length > 0)
+        : [];
+
+      set({
+        litellmGatewayModels: models,
+        litellmGatewayModelsLastFetched: Date.now(),
+        litellmGatewayModelsLoading: false,
+        litellmGatewayModelsError: null,
+        litellmGatewayModelsLastFailedAt: null,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.warn(`LiteLLM gateway model fetch failed: ${errorMessage}`);
+      set({
+        litellmGatewayModelsError: errorMessage,
+        litellmGatewayModelsLoading: false,
+        litellmGatewayModelsLastFailedAt: Date.now(),
       });
     }
   },
