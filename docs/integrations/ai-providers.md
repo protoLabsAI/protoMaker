@@ -1,8 +1,16 @@
 # AI Providers
 
-Connect protoLabs Studio to AI models from any provider. Three provider systems are available, each serving a different integration pattern. All provider models appear in every model dropdown once configured.
+Connect protoLabs Studio to AI models from any provider. The default runtime is [**protoCLI**](./proto-cli) — the namesake SDK — which routes through the protoLabs gateway. The alternative provider systems below remain available for users who want to point at a different endpoint or run a local CLI directly.
 
-## Provider Types
+## Default: protoCLI
+
+protoCLI is the default agent runtime. The app embeds `@protolabsai/sdk` so no install is required for in-app agent runs; install the standalone `proto` binary if you also want it in your terminal.
+
+- **Setup status** — Settings → AI Providers → protoCLI (status card backed by `GET /api/setup/proto-status`)
+- **Quickstart + reference** — [github.com/protoLabsAI/protoCLI](https://github.com/protoLabsAI/protoCLI)
+- **Detailed integration notes** — see [protoCLI integration page](./proto-cli)
+
+## Alternative provider systems
 
 | Type                                              | Use Case                                                              | Format                  |
 | ------------------------------------------------- | --------------------------------------------------------------------- | ----------------------- |
