@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.45",
+    "@ai-sdk/openai-compatible": "^2.0.47",
     "@ai-sdk/react": "^3.0.92",
     "@anthropic-ai/claude-agent-sdk": "^0.2.36",
     "@anthropic-ai/sdk": "^0.65.0",
