@@ -15,32 +15,128 @@
  * security check that applies to ALL AI model invocations, regardless of provider.
  */
 
-// Still importing from @anthropic-ai/claude-agent-sdk for type-level only.
-// The runtime path (the `query()` call) is routed through
-// @protolabsai/sdk/anthropic-compat via claude-provider.ts. Migrating these
-// types to the compat layer requires the compat .d.ts to widen its
-// HookCallback (currently 1-arg, real signature is 3-arg with `signal`) and
-// systemPrompt + mcpServers shapes. Tracked as a follow-up; until then the
-// Anthropic SDK is a type-only dep here.
-import type { Options, HookCallback, PostToolUseHookInput } from '@anthropic-ai/claude-agent-sdk';
+// Local type shims for the agent-SDK shape.
+//
+// Historically these came from `@anthropic-ai/claude-agent-sdk`. The runtime
+// `query()` call is now routed through `@protolabsai/sdk/anthropic-compat`
+// (see claude-provider.ts). The compat layer's `Options` / `HookCallback`
+// types are slightly narrower than what `sdk-options.ts` actually emits
+// (compat `HookCallback` is 1-arg; real signature is 2- or 3-arg, etc.),
+// so rather than scatter casts across every callsite or block on a compat
+// widening (tracked at protoCLI#256), declare the shape we actually emit
+// right here. This module's job is to PRODUCE option objects; callers
+// (claude-provider.ts) translate when they hand the result to the runtime.
+//
+// Field set mirrors what sdk-options.ts actually populates. Add fields
+// only when this module starts emitting them.
 import path from 'path';
-import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { resolveModelString } from '@protolabsai/model-resolver';
 import { createLogger } from '@protolabsai/utils';
+import { resolveModelString } from '@protolabsai/model-resolver';
 import type { ToolExecutionEntry } from '../services/audit-service.js';
 
 const logger = createLogger('SdkOptions');
 
 /**
- * Resolved at module load time so it remains stable when CWD shifts during
- * worktree operations. Using import.meta.url anchors resolution to this file's
- * location rather than the process working directory.
+ * Input passed to PostToolUse hook callbacks. Matches the structured shape
+ * the underlying agent CLI sends in its `hook_callback` control request.
  */
-const CLAUDE_CODE_EXECUTABLE = path.resolve(
-  fileURLToPath(import.meta.url),
-  '../../../../../node_modules/@anthropic-ai/claude-agent-sdk/cli.js'
-);
+export interface PostToolUseHookInput {
+  hook_event_name: 'PostToolUse';
+  tool_name: string;
+  tool_input: unknown;
+  tool_use_id?: string | null;
+  tool_response?: unknown;
+}
+
+/**
+ * Input passed to PreToolUse hook callbacks.
+ */
+export interface PreToolUseHookInput {
+  hook_event_name: 'PreToolUse';
+  tool_name: string;
+  tool_input: unknown;
+  tool_use_id?: string | null;
+}
+
+/**
+ * Result a hook callback may return. `decision: 'block'` short-circuits the
+ * tool with the given `reason`; an empty object allows it to proceed.
+ */
+export interface HookCallbackResult {
+  decision?: 'block';
+  reason?: string;
+  continue?: boolean;
+  suppressOutput?: boolean;
+}
+
+/**
+ * Hook event payload the agent CLI sends. The full taxonomy matches Claude
+ * Agent SDK / proto SDK — both emit `Stop`, `Notification`, `SubagentStop`
+ * etc. in addition to the tool-use events. The structured fields are only
+ * guaranteed on PreToolUse / PostToolUse; other events arrive with just
+ * `hook_event_name` and an optional tool_use_id.
+ *
+ * Callbacks discriminate on `hook_event_name` and access fields via the
+ * narrowed union arm.
+ */
+export type HookEventInput =
+  | PreToolUseHookInput
+  | PostToolUseHookInput
+  | { hook_event_name: 'Stop' | 'Notification' | 'SubagentStop'; tool_use_id?: string | null };
+
+/**
+ * Hook callback signature: structured input plus an optional tool-use id.
+ * The compat layer's runtime translation accepts this shape and wraps it
+ * for proto's transport.
+ */
+export type HookCallback = (
+  input: HookEventInput,
+  toolUseID?: string | null
+) => HookCallbackResult | Promise<HookCallbackResult>;
+
+/**
+ * Matcher object used in Claude-shaped `hooks` config — `{ hooks: [fn] }`.
+ * The compat layer flattens these into proto's `hookCallbacks` record.
+ */
+export interface HookCallbackMatcher {
+  hooks?: HookCallback[];
+}
+
+/**
+ * Options shape this module emits. Intentionally a superset of the compat
+ * layer's `Options` — the runtime translation accepts the wider fields and
+ * drops anything proto doesn't understand. Tightening this only catches
+ * typos at the cost of cast-noise at callsites.
+ */
+export interface Options {
+  model?: string;
+  cwd?: string;
+  /**
+   * System prompt: either a raw string OR a preset reference. The preset
+   * literal mirrors `@protolabsai/types`' `SystemPromptPreset` shape
+   * (currently `'claude_code'` — Claude SDK's only documented preset) so the
+   * value round-trips into downstream `ExecuteOptions.systemPrompt`.
+   */
+  systemPrompt?: string | { type: 'preset'; preset: 'claude_code'; append?: string };
+  maxTurns?: number;
+  allowedTools?: string[];
+  disallowedTools?: string[];
+  permissionMode?: string;
+  allowDangerouslySkipPermissions?: boolean;
+  canUseTool?: unknown;
+  mcpServers?: Record<string, unknown>;
+  abortController?: AbortController;
+  env?: Record<string, string | undefined>;
+  hooks?: Partial<Record<string, HookCallbackMatcher[]>>;
+  settingSources?: Array<'user' | 'project' | 'local'>;
+  resume?: string;
+  agents?: Record<string, unknown>;
+  maxThinkingTokens?: number;
+  outputFormat?: string | { type: 'json_schema'; schema: Record<string, unknown> };
+  /** File-based session checkpointing for resumable agent runs. */
+  enableFileCheckpointing?: boolean;
+}
 
 /** Module-level tool execution logger, set via setToolExecutionLogger() from services.ts */
 let _toolExecutionLogger: ((entry: ToolExecutionEntry) => Promise<void>) | null = null;
@@ -467,14 +563,19 @@ export function getModelForUseCase(
 }
 
 /**
- * Base options that apply to all SDK calls
- * AUTONOMOUS MODE: Always bypass permissions for fully autonomous operation
+ * Base options that apply to all SDK calls.
+ *
+ * AUTONOMOUS MODE: Always bypass permissions for fully autonomous operation.
+ *
+ * No `pathToClaudeCodeExecutable` — the runtime path is
+ * `@protolabsai/sdk/anthropic-compat` which delegates to proto SDK, which
+ * bundles its own CLI binary. There's no path-pinning to do; the compat
+ * layer's runtime ignores any executable path field anyway.
  */
 function getBaseOptions(): Partial<Options> {
   return {
     permissionMode: 'bypassPermissions',
     allowDangerouslySkipPermissions: true,
-    pathToClaudeCodeExecutable: CLAUDE_CODE_EXECUTABLE,
   };
 }
 

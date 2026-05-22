@@ -10,7 +10,6 @@ import { createStoreApiKeyHandler } from './routes/store-api-key.js';
 import { createDeleteApiKeyHandler } from './routes/delete-api-key.js';
 import { createApiKeysHandler } from './routes/api-keys.js';
 import { createPlatformHandler } from './routes/platform.js';
-import { createVerifyClaudeAuthHandler } from './routes/verify-claude-auth.js';
 import { createVerifyCodexAuthHandler } from './routes/verify-codex-auth.js';
 import { createGhStatusHandler } from './routes/gh-status.js';
 import { createCursorStatusHandler } from './routes/cursor-status.js';
@@ -69,7 +68,11 @@ export function createSetupRoutes(
   router.post('/delete-api-key', createDeleteApiKeyHandler());
   router.get('/api-keys', createApiKeysHandler());
   router.get('/platform', createPlatformHandler());
-  router.post('/verify-claude-auth', createVerifyClaudeAuthHandler());
+  // /verify-claude-auth removed in the @anthropic-ai/claude-agent-sdk rip-out.
+  // Claude auth is no longer a first-class concept — the gateway terminates
+  // auth and every agent run routes through `@protolabsai/sdk`. UI surfaces
+  // that still target this endpoint receive a 404 and surface their error
+  // path; they're being removed in the protoCLI first-class provider work.
   router.post('/verify-codex-auth', createVerifyCodexAuthHandler());
   router.get('/gh-status', createGhStatusHandler());
 
