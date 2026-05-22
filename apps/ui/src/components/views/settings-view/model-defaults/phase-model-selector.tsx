@@ -496,6 +496,20 @@ export function PhaseModelSelector({
       }
     }
 
+    // Check LiteLLM Gateway models. The gateway returns flat model IDs; we
+    // store the raw ID in PhaseModelEntry.model. Without this branch the
+    // closed-popover trigger falls through to "Select model" even when a
+    // gateway model is selected.
+    if (litellmGatewayModels.includes(selectedModel)) {
+      return {
+        id: selectedModel,
+        label: selectedModel,
+        description: 'LiteLLM Gateway',
+        provider: 'openai-compatible' as const,
+        icon: Server,
+      };
+    }
+
     return null;
   }, [
     selectedModel,
@@ -506,6 +520,7 @@ export function PhaseModelSelector({
     dynamicOpencodeModels,
     enabledProviders,
     enabledOpenAICompatibleProviders,
+    litellmGatewayModels,
   ]);
 
   // Compute grouped vs standalone Cursor models
