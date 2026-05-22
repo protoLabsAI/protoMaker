@@ -327,11 +327,23 @@ export class ProtoProvider extends BaseProvider {
 }
 
 /**
- * Match any model that should route through the proto SDK. For PR 1 this is
- * conservative — only models that explicitly start with `protolabs/` are
- * claimed. PR 2 will widen this to "anything not claimed by a more-specific
- * provider" once we've validated the path end-to-end.
+ * Match any model that should route through the proto SDK.
+ *
+ * Claims:
+ *   - `protolabs/*` — first-party gateway model ids (smart, fast, ...)
+ *   - `claude-*` — legacy ClaudeProvider model ids. ProtoProvider speaks the
+ *     gateway protocol and the gateway resolves Anthropic Claude models
+ *     transparently, so these dispatch through the gateway with no change to
+ *     stored model strings.
+ *   - bare `opus` / `sonnet` / `haiku` aliases — the same legacy ids
+ *     `auto-mode-service.ts` and `lead-engineer-processors.ts` return from
+ *     `DEFAULT_MODELS.claude`. The gateway maps these to their Claude SKUs.
+ *
+ * The factory's `priority: 100` ensures ProtoProvider wins over the older
+ * Claude provider registration whenever both could claim the same model.
  */
 export function isProtoModel(model: string): boolean {
-  return model.startsWith('protolabs/');
+  if (model.startsWith('protolabs/')) return true;
+  if (model.startsWith('claude-')) return true;
+  return ['opus', 'sonnet', 'haiku'].includes(model);
 }

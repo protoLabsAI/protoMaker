@@ -155,7 +155,10 @@ describe('model-resolver.ts', () => {
     });
 
     it('should have valid default model', () => {
-      expect(DEFAULT_MODELS.claude).toContain('claude');
+      // DEFAULT_MODELS.claude resolves through the gateway via @protolabsai/sdk.
+      // The field name still says "claude" for callsite stability; PR 3 renames
+      // it to `proto` when ClaudeProvider is removed.
+      expect(DEFAULT_MODELS.claude).toBe('protolabs/smart');
     });
   });
 });

@@ -9,6 +9,7 @@ vi.mock('@/lib/langfuse-singleton.js', () => ({
 
 import { ProviderFactory } from '@/providers/provider-factory.js';
 import { ClaudeProvider } from '@/providers/claude-provider.js';
+import { ProtoProvider } from '@/providers/proto-provider.js';
 import { CursorProvider } from '@/providers/cursor-provider.js';
 import { CodexProvider } from '@/providers/codex-provider.js';
 import { OpencodeProvider } from '@/providers/opencode-provider.js';
@@ -55,52 +56,57 @@ describe('provider-factory.ts', () => {
   });
 
   describe('getProviderForModel', () => {
-    describe('Claude models (claude-* prefix)', () => {
-      it('should return ClaudeProvider for claude-opus-4-5-20251101', () => {
+    // Claude-shaped model ids now route through ProtoProvider via the
+    // gateway. The ClaudeProvider class still exists as a registered fallback
+    // but no claude-* / haiku / sonnet / opus id reaches it because Proto's
+    // higher-priority matcher claims them first. PR 3 deletes ClaudeProvider
+    // entirely along with sdk-options.ts's Anthropic SDK dependency.
+    describe('Claude-shaped model ids (now Proto-routed)', () => {
+      it('should return ProtoProvider for claude-opus-4-5-20251101', () => {
         const provider = ProviderFactory.getProviderForModel('claude-opus-4-5-20251101');
-        expect(provider).toBeInstanceOf(ClaudeProvider);
+        expect(provider).toBeInstanceOf(ProtoProvider);
       });
 
-      it('should return ClaudeProvider for claude-sonnet-4-20250514', () => {
+      it('should return ProtoProvider for claude-sonnet-4-20250514', () => {
         const provider = ProviderFactory.getProviderForModel('claude-sonnet-4-20250514');
-        expect(provider).toBeInstanceOf(ClaudeProvider);
+        expect(provider).toBeInstanceOf(ProtoProvider);
       });
 
-      it('should return ClaudeProvider for claude-haiku-4-5', () => {
+      it('should return ProtoProvider for claude-haiku-4-5', () => {
         const provider = ProviderFactory.getProviderForModel('claude-haiku-4-5');
-        expect(provider).toBeInstanceOf(ClaudeProvider);
+        expect(provider).toBeInstanceOf(ProtoProvider);
       });
 
-      it('should be case-insensitive for claude models', () => {
+      it('should be case-insensitive for claude-* ids', () => {
         const provider = ProviderFactory.getProviderForModel('CLAUDE-OPUS-4-5-20251101');
-        expect(provider).toBeInstanceOf(ClaudeProvider);
+        expect(provider).toBeInstanceOf(ProtoProvider);
       });
     });
 
-    describe('Claude aliases', () => {
-      it("should return ClaudeProvider for 'haiku'", () => {
+    describe('Bare claude aliases (now Proto-routed)', () => {
+      it("should return ProtoProvider for 'haiku'", () => {
         const provider = ProviderFactory.getProviderForModel('haiku');
-        expect(provider).toBeInstanceOf(ClaudeProvider);
+        expect(provider).toBeInstanceOf(ProtoProvider);
       });
 
-      it("should return ClaudeProvider for 'sonnet'", () => {
+      it("should return ProtoProvider for 'sonnet'", () => {
         const provider = ProviderFactory.getProviderForModel('sonnet');
-        expect(provider).toBeInstanceOf(ClaudeProvider);
+        expect(provider).toBeInstanceOf(ProtoProvider);
       });
 
-      it("should return ClaudeProvider for 'opus'", () => {
+      it("should return ProtoProvider for 'opus'", () => {
         const provider = ProviderFactory.getProviderForModel('opus');
-        expect(provider).toBeInstanceOf(ClaudeProvider);
+        expect(provider).toBeInstanceOf(ProtoProvider);
       });
 
-      it('should be case-insensitive for aliases', () => {
+      it('should be case-insensitive for bare aliases', () => {
         const provider1 = ProviderFactory.getProviderForModel('HAIKU');
         const provider2 = ProviderFactory.getProviderForModel('Sonnet');
         const provider3 = ProviderFactory.getProviderForModel('Opus');
 
-        expect(provider1).toBeInstanceOf(ClaudeProvider);
-        expect(provider2).toBeInstanceOf(ClaudeProvider);
-        expect(provider3).toBeInstanceOf(ClaudeProvider);
+        expect(provider1).toBeInstanceOf(ProtoProvider);
+        expect(provider2).toBeInstanceOf(ProtoProvider);
+        expect(provider3).toBeInstanceOf(ProtoProvider);
       });
     });
 

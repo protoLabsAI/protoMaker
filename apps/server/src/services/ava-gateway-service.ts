@@ -14,7 +14,7 @@ import { createLogger } from '@protolabsai/utils';
 import type { EventEmitter } from '../lib/events.js';
 import { FeatureLoader } from './feature-loader.js';
 import type { DiscordBotService } from './discord-bot-service.js';
-import { ClaudeProvider } from '../providers/claude-provider.js';
+import { ProtoProvider } from '../providers/proto-provider.js';
 import type { SettingsService } from './settings-service.js';
 import type { HealthMonitorService } from './health-monitor-service.js';
 import { withTimeout } from '../lib/timeout-enforcer.js';
@@ -194,7 +194,7 @@ interface BoardSummary {
 export class AvaGatewayService {
   private featureLoader: FeatureLoader;
   private discordBotService: DiscordBotService | null = null;
-  private provider: ClaudeProvider | null = null;
+  private provider: ProtoProvider | null = null;
   private events: EventEmitter | null = null;
   private settingsService: SettingsService | null = null;
   private healthMonitor: HealthMonitorService | null = null;
@@ -825,7 +825,7 @@ export class AvaGatewayService {
     }
 
     if (!this.provider) {
-      this.provider = new ClaudeProvider();
+      this.provider = new ProtoProvider();
     }
 
     try {
