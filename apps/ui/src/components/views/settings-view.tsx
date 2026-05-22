@@ -26,6 +26,7 @@ import { SecuritySection } from './settings-view/security';
 import { DeveloperSection } from './settings-view/developer/developer-section';
 import { HealthSection } from './settings-view/health';
 import {
+  ProtoCliSettingsTab,
   ClaudeSettingsTab,
   CursorSettingsTab,
   CodexSettingsTab,
@@ -116,6 +117,8 @@ export function SettingsView() {
   // Render the active section based on current view
   const renderActiveSection = () => {
     switch (activeView) {
+      case 'protocli-provider':
+        return <ProtoCliSettingsTab />;
       case 'claude-provider':
         return <ClaudeSettingsTab />;
       case 'cursor-provider':

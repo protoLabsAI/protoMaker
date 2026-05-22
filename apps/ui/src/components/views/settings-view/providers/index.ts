@@ -1,4 +1,5 @@
 export { ProviderTabs } from './provider-tabs';
+export { ProtoCliSettingsTab } from './protocli-settings-tab';
 export { ClaudeSettingsTab } from './claude-settings-tab';
 export { CursorSettingsTab } from './cursor-settings-tab';
 export { CodexSettingsTab } from './codex-settings-tab';
