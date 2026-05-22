@@ -103,6 +103,7 @@ libs/**/*.js.map
 docker-compose.override.yml
 .claude/docker-compose.override.yml
 .claude/hans/
+.claude/scheduled_tasks.lock
 
 pnpm-lock.yaml
 yarn.lock
