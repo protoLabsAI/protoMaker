@@ -15,6 +15,13 @@
  * security check that applies to ALL AI model invocations, regardless of provider.
  */
 
+// Still importing from @anthropic-ai/claude-agent-sdk for type-level only.
+// The runtime path (the `query()` call) is routed through
+// @protolabsai/sdk/anthropic-compat via claude-provider.ts. Migrating these
+// types to the compat layer requires the compat .d.ts to widen its
+// HookCallback (currently 1-arg, real signature is 3-arg with `signal`) and
+// systemPrompt + mcpServers shapes. Tracked as a follow-up; until then the
+// Anthropic SDK is a type-only dep here.
 import type { Options, HookCallback, PostToolUseHookInput } from '@anthropic-ai/claude-agent-sdk';
 import path from 'path';
 import { fileURLToPath } from 'node:url';
