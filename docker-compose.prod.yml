@@ -1,22 +1,21 @@
-# Automaker Production Docker Compose
-# Production-hardened configuration with:
-# - Docker secrets for sensitive data
-# - Resource limits and reservations
-# - Enhanced health checks
-# - Logging configuration
-# - Restart policies optimized for production
+# Automaker Production Docker Compose (single-machine)
+# High-memory configuration for concurrent agent execution. Standalone file —
+# replaces the docker-compose.yml + override pattern. No Swarm required.
 #
 # Usage:
-#   # Create secrets first:
-#   echo "your-api-key" | docker secret create anthropic_api_key -
-#   echo "your-automaker-key" | docker secret create automaker_api_key -
-#   echo "your-gh-token" | docker secret create gh_token -
+#   # Quick setup:
+#   ./scripts/setup-prod.sh
 #
-#   # Deploy stack:
-#   docker stack deploy -c docker-compose.prod.yml automaker
+#   # Or manually (source .env first, env vars are read from shell):
+#   set -a && source .env && set +a
+#   docker compose -f docker-compose.prod.yml up -d
+#   docker compose -f docker-compose.prod.yml logs -f
 #
-# Or with docker-compose (swarm mode required for secrets):
-#   docker-compose -f docker-compose.prod.yml up -d
+# Non-Docker alternative: run `npm start` on the host for a prod-like local
+# instance that keeps host CLIs (gh, codex, infisical) reachable from agents.
+# See docs/self-hosting/deployment.md for full documentation.
+
+name: automaker
 
 services:
   # Frontend UI
@@ -25,41 +24,34 @@ services:
       context: .
       dockerfile: Dockerfile
       target: ui
-    restart: on-failure
+      args:
+        GIT_COMMIT_SHA: ${GIT_COMMIT_SHA:-unknown}
+    container_name: automaker-ui
+    restart: unless-stopped
     ports:
-      - '3007:80'
+      - '${UI_PORT:-3007}:80'
     depends_on:
       server:
         condition: service_healthy
     deploy:
-      replicas: 1
       resources:
         limits:
-          cpus: '0.5'
-          memory: 512M
+          cpus: '2'
+          memory: 2G
         reservations:
-          cpus: '0.25'
+          cpus: '0.5'
           memory: 256M
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-        window: 120s
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:80/']
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:80/']
       interval: 30s
-      timeout: 3s
+      timeout: 5s
       retries: 3
       start_period: 10s
     logging:
-      driver: 'json-file'
+      driver: json-file
       options:
         max-size: '10m'
         max-file: '3'
-        labels: 'service,environment'
-    labels:
-      - 'com.automaker.service=ui'
-      - 'com.automaker.environment=production'
 
   # Backend API Server
   server:
@@ -70,233 +62,144 @@ services:
       args:
         UID: ${UID:-1001}
         GID: ${GID:-1001}
-    restart: on-failure
+        GIT_COMMIT_SHA: ${GIT_COMMIT_SHA:-unknown}
+    container_name: automaker-server
+    restart: on-failure:5
     ports:
-      - '3008:3008'
-    secrets:
-      - anthropic_api_key
-      - automaker_api_key
-      - gh_token
-      - claude_oauth_credentials
-      - cursor_auth_token
+      - '${API_PORT:-3008}:3008'
+      - '${CRDT_MESH_PORT:-4444}:4444'
+      - '${CRDT_STORE_PORT:-4445}:4445'
     environment:
-      # Read secrets from Docker secrets (mounted at /run/secrets/)
-      - ANTHROPIC_API_KEY_FILE=/run/secrets/anthropic_api_key
-      - AUTOMAKER_API_KEY_FILE=/run/secrets/automaker_api_key
-      - GH_TOKEN_FILE=/run/secrets/gh_token
-      - CLAUDE_OAUTH_CREDENTIALS_FILE=/run/secrets/claude_oauth_credentials
-      - CURSOR_AUTH_TOKEN_FILE=/run/secrets/cursor_auth_token
+      # API keys (from .env or environment)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - AUTOMAKER_API_KEY=${AUTOMAKER_API_KEY:-}
+      - GH_TOKEN=${GH_TOKEN:-}
+      - CLAUDE_OAUTH_CREDENTIALS=${CLAUDE_OAUTH_CREDENTIALS:-}
+      - CURSOR_AUTH_TOKEN=${CURSOR_AUTH_TOKEN:-}
+      - DISCORD_TOKEN=${DISCORD_TOKEN:-}
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-}
 
-      # Production configuration
+      # Langfuse observability
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
+      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL:-}
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-protolabs-server}
+
+      # Discord channel IDs for Ava Gateway and notifications
+      - DISCORD_GUILD_ID=${DISCORD_GUILD_ID:-1070606339363049492}
+      - DISCORD_CHANNEL_INFRA=${DISCORD_CHANNEL_INFRA:-1469109809939742814}
+      - DISCORD_CHANNEL_AGENT_LOGS=${DISCORD_CHANNEL_AGENT_LOGS:-}
+      - DISCORD_CHANNEL_CODE_REVIEW=${DISCORD_CHANNEL_CODE_REVIEW:-}
+      - DISCORD_CHANNEL_SUGGESTIONS=${DISCORD_CHANNEL_SUGGESTIONS:-}
+
+      # Staging configuration
       - NODE_ENV=production
-      - LOG_FORMAT=json
-      - LOG_LEVEL=info
-      - ENABLE_REQUEST_LOGGING=true
-
-      # Security
-      - ALLOWED_ROOT_DIRECTORY=/projects
-      - IS_CONTAINERIZED=true
-      - AUTOMAKER_SKIP_SANDBOX_WARNING=false
-
-      # Data persistence
-      - DATA_DIR=/data
-
-      # Network
       - HOST=0.0.0.0
       - PORT=3008
-      - CORS_ORIGIN=http://localhost:3007
+      - DATA_DIR=/data
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - ENABLE_REQUEST_LOGGING=true
+      - IS_CONTAINERIZED=true
 
-      # Monitoring
-      - ENABLE_METRICS=true
-      - METRICS_PORT=9090
+      # Project access - host path mounted at same path for MCP compatibility
+      - ALLOWED_ROOT_DIRECTORY=${ALLOWED_ROOT_DIRECTORY:-/home/josh/dev}
+      - AUTOMAKER_PROJECT_PATH=${AUTOMAKER_PROJECT_PATH:-/home/josh/dev/ava}
+
+      # Public callback URL advertised in the A2A agent card (/.well-known/agent.json).
+      # Must be externally routable so peers (e.g. Workstacean) can POST to /a2a.
+      # Example: PUBLIC_CALLBACK_URL=https://ava.proto-labs.ai
+      - PUBLIC_CALLBACK_URL=${PUBLIC_CALLBACK_URL:-}
+
+      # CORS
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3007}
+
+      # Agent concurrency limit (system hard cap)
+      - AUTOMAKER_MAX_CONCURRENCY=${AUTOMAKER_MAX_CONCURRENCY:-6}
+
+      # Node.js memory tuning for high-concurrency agent execution
+      - NODE_OPTIONS=--max-old-space-size=${NODE_MAX_OLD_SPACE:-4096} --max-semi-space-size=128
 
       # Redirect npm cache to tmpfs so read_only root filesystem works
       - NPM_CONFIG_CACHE=/npm-cache
+
     volumes:
-      # Production volumes - named volumes only
+      # Persistent data
       - automaker-data:/data
       - automaker-claude-config:/home/automaker/.claude
       - automaker-cursor-config:/home/automaker/.cursor
       - automaker-opencode-data:/home/automaker/.local/share/opencode
       - automaker-opencode-config:/home/automaker/.config/opencode
       - automaker-opencode-cache:/home/automaker/.cache/opencode
-    deploy:
-      replicas: 2
-      resources:
-        limits:
-          cpus: '2'
-          memory: 8G
-          pids: 512
-        reservations:
-          cpus: '1'
-          memory: 4G
-      restart_policy:
-        condition: on-failure
-        delay: 10s
-        max_attempts: 5
-        window: 180s
-      update_config:
-        parallelism: 1
-        delay: 30s
-        failure_action: rollback
-        monitor: 60s
-        order: start-first
-    healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:3008/api/health']
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-    logging:
-      driver: 'json-file'
-      options:
-        max-size: '100m'
-        max-file: '10'
-        labels: 'service,environment'
-        compress: 'true'
-    labels:
-      - 'com.automaker.service=server'
-      - 'com.automaker.environment=production'
-    # Security hardening
+
+      # Host project directories - mount at same path for MCP path compatibility
+      - ${PROJECTS_MOUNT:-/home/josh/dev}:${PROJECTS_MOUNT:-/home/josh/dev}:rw
+      - ${LABS_MOUNT:-/home/josh/labs}:${LABS_MOUNT:-/home/josh/labs}:rw
+
+    # Allow container to reach host-bound services (e.g. LiteLLM gateway at ava:4000)
+    # host-gateway is a Docker special value that resolves to the Docker host IP on Linux
+    extra_hosts:
+      - 'ava:host-gateway'
+
+    # Run as the automaker user so entrypoint works without CHOWN/SETUID caps
+    user: '${UID:-1001}:${GID:-1001}'
+
+    # Read-only root filesystem — writes go to named volumes or tmpfs mounts.
+    # /home/automaker tmpfs provides writable space for ~/.claude.json and other
+    # dotfiles; named volume mounts at subdirectories (.claude/, .cursor/, etc.)
+    # take precedence and remain persistent across restarts.
     read_only: true
     tmpfs:
       - /tmp:size=512m,mode=1777
       - /npm-cache:size=512m
+      - /home/automaker:size=64m,uid=${UID:-1001},gid=${GID:-1001},mode=0750
+
     cap_drop:
       - ALL
     cap_add:
-      - CHOWN
-      - SETUID
-      - SETGID
-      - DAC_OVERRIDE
+      - NET_RAW
     security_opt:
       - no-new-privileges:true
       - seccomp:./seccomp-profile.json
 
-  # Prometheus for metrics collection
-  prometheus:
-    image: prom/prometheus:v3.2.1
-    restart: unless-stopped
-    ports:
-      - '9091:9090'
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus-data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=30d'
-      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
-      - '--web.console.templates=/usr/share/prometheus/consoles'
     deploy:
       resources:
         limits:
-          cpus: '0.5'
-          memory: 1G
+          cpus: '${CPU_LIMIT:-6}'
+          memory: ${MEMORY_LIMIT:-32G}
         reservations:
-          cpus: '0.25'
-          memory: 512M
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    labels:
-      - 'com.automaker.service=prometheus'
-      - 'com.automaker.environment=production'
+          cpus: '2'
+          memory: 8G
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://127.0.0.1:3008/api/health/ready']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: '100m'
+        max-file: '10'
 
-  # Grafana for metrics visualization
-  # WARNING: Change the default admin password immediately after deployment!
-  grafana:
-    image: grafana/grafana:11.5.2
-    restart: unless-stopped
-    ports:
-      - '3000:3000'
-    secrets:
-      - grafana_admin_password
-    environment:
-      # Read password from Docker secret - CHANGE THIS after first login!
-      - GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/grafana_admin_password
-      - GF_USERS_ALLOW_SIGN_UP=false
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
-    depends_on:
-      - prometheus
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 512M
-        reservations:
-          cpus: '0.25'
-          memory: 256M
-    cap_drop:
-      - ALL
-    cap_add:
-      - CHOWN
-      - SETUID
-      - SETGID
-    security_opt:
-      - no-new-privileges:true
-    labels:
-      - 'com.automaker.service=grafana'
-      - 'com.automaker.environment=production'
-
-# Docker secrets (swarm mode)
-# Create secrets before deploying:
-#   echo "your-api-key" | docker secret create anthropic_api_key -
-#   echo "your-automaker-key" | docker secret create automaker_api_key -
-#   echo "your-gh-token" | docker secret create gh_token -
-#   echo "changeme" | docker secret create grafana_admin_password -
-#
-# Optional secrets (create empty if not used):
-#   echo "" | docker secret create claude_oauth_credentials -
-#   echo "" | docker secret create cursor_auth_token -
-secrets:
-  anthropic_api_key:
-    external: true
-  automaker_api_key:
-    external: true
-  gh_token:
-    external: true
-  grafana_admin_password:
-    external: true
-  claude_oauth_credentials:
-    external: true
-  cursor_auth_token:
-    external: true
+  # Documentation Site — hosted on Cloudflare Pages (docs.protolabs.studio).
+  # Deployed via .github/workflows/deploy-docs.yml, not Docker.
 
 volumes:
-  # Standard Docker-managed named volumes
-  # For bind mounts, create docker-compose.override.yml with:
-  #   volumes:
-  #     automaker-data:
-  #       driver: local
-  #       driver_opts:
-  #         type: none
-  #         o: bind
-  #         device: /var/lib/automaker/data
-  # And ensure the host directory exists: sudo mkdir -p /var/lib/automaker/data && sudo chown 1001:1001 /var/lib/automaker/data
   automaker-data:
-    name: automaker-data-prod
-
+    name: automaker-data
+    external: true
   automaker-claude-config:
-    name: automaker-claude-config-prod
-
+    name: automaker-claude-config
+    external: true
   automaker-cursor-config:
-    name: automaker-cursor-config-prod
-
+    name: automaker-cursor-config
+    external: true
   automaker-opencode-data:
-    name: automaker-opencode-data-prod
-
+    name: automaker-opencode-data
+    external: true
   automaker-opencode-config:
-    name: automaker-opencode-config-prod
-
+    name: automaker-opencode-config
+    external: true
   automaker-opencode-cache:
-    name: automaker-opencode-cache-prod
-
-  prometheus-data:
-    name: automaker-prometheus-data
-
-  grafana-data:
-    name: automaker-grafana-data
+    name: automaker-opencode-cache
+    external: true

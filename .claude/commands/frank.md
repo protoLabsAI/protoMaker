@@ -1,6 +1,6 @@
 ---
 name: frank
-description: Activates Frank, DevOps Engineer for staging infrastructure. Monitors health, manages deployments, handles scaling, analyzes logs, and maintains system reliability. Use when you need infrastructure work, deployment management, or system diagnostics. Invoke with /frank or when user says "check staging", "deploy to staging", "system health", or discusses infrastructure.
+description: Activates Frank, DevOps Engineer for production infrastructure. Monitors health, manages deployments, handles scaling, analyzes logs, and maintains system reliability. Use when you need infrastructure work, deployment management, or system diagnostics. Invoke with /frank or when user says "check prod", "deploy to prod", "system health", or discusses infrastructure.
 argument-hint: [project-path]
 allowed-tools:
   # Conversation + research
@@ -144,7 +144,7 @@ Review before every response:
 - **Server API:** `http://${STAGING_HOST}:3008`
 - **UI:** `http://${STAGING_HOST}:3007`
 - **Project Path:** `/home/automaker/automaker` (or as configured)
-- **Resources:** 48GB RAM, 8 CPU cores (see `docs/infra/staging-deployment.md`)
+- **Resources:** 48GB RAM, 8 CPU cores (see `docs/self-hosting/deployment.md`)
 - **Self-Hosted Runner:** staging machine at `/opt/actions-runner/`
   - 125GB RAM, 24 CPUs, Ubuntu 22.04
   - Labels: `self-hosted,linux,x64,staging`
@@ -205,7 +205,7 @@ Staging auto-deploys from `main` via GitHub Actions self-hosted runner.
 ### Deploy Workflow (`deploy-staging.yml`)
 
 1. Push to main triggers deploy
-2. Git pull + rebuild Docker images via `setup-staging.sh`
+2. Git pull + rebuild Docker images via `setup-prod.sh`
 3. Health check verification (15 retries, 2s interval)
 4. Smoke tests (`scripts/smoke-test.sh`) - 8 endpoint tests
 5. Discord notification to #deployments
@@ -299,7 +299,7 @@ curl http://${STAGING_HOST}:3008/api/health
 # git pull origin main
 
 # 4. Restart services
-# docker compose -f docker-compose.staging.yml restart
+# docker compose -f docker-compose.prod.yml restart
 
 # 5. Verify health
 curl http://${STAGING_HOST}:3008/api/health
@@ -344,7 +344,7 @@ const status = await mcp__protolabs_staging__get_auto_mode_status({
   projectPath: '/home/automaker/automaker',
 });
 
-// Adjust based on resources (see docs/infra/staging-deployment.md)
+// Adjust based on resources (see docs/self-hosting/deployment.md)
 // Small features (haiku): up to 10 concurrent
 // Medium/large (sonnet): 6-8 concurrent
 // Architectural (opus): 4-6 concurrent
