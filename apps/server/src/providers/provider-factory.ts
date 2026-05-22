@@ -296,6 +296,7 @@ import { CodexProvider } from './codex-provider.js';
 import { OpencodeProvider } from './opencode-provider.js';
 import { GroqProvider, isGroqModel } from './groq-provider.js';
 import { OpenAICompatibleProvider, isOpenAICompatibleModel } from './openai-compatible-provider.js';
+import { ProtoProvider, isProtoModel } from './proto-provider.js';
 
 // Register Claude provider
 registerProvider('claude', {
@@ -343,4 +344,19 @@ registerProvider('openai-compatible', {
   factory: () => new OpenAICompatibleProvider(),
   canHandleModel: (model: string) => isOpenAICompatibleModel(model),
   priority: 2, // Between opencode (3) and claude (0)
+});
+
+// Register Proto provider — the namesake SDK and the primary driver going
+// forward. Priority 100 makes ProtoProvider win whenever it claims a model,
+// even against more-specific provider matchers. Today it only claims models
+// prefixed `protolabs/` (Smart, Fast, etc.) so existing Claude / Cursor /
+// Codex / OpenCode flows are unaffected — see proto-provider.ts isProtoModel.
+//
+// PR 2 will widen isProtoModel to "anything not already claimed by a more
+// specific provider" and start retiring the Claude SDK code path entirely.
+registerProvider('proto', {
+  factory: () => new ProtoProvider(),
+  aliases: ['protolabs'],
+  canHandleModel: (model: string) => isProtoModel(model),
+  priority: 100,
 });

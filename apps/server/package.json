@@ -56,6 +56,7 @@
     "@protolabsai/observability": "^0.107.1",
     "@protolabsai/platform": "^0.107.1",
     "@protolabsai/prompts": "^0.107.1",
+    "@protolabsai/sdk": "^0.2.0",
     "@protolabsai/templates": "^0.56.0",
     "@protolabsai/tools": "^0.107.1",
     "@protolabsai/types": "^0.107.1",
