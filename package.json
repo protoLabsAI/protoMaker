@@ -72,7 +72,7 @@
     "site:css": "npx --yes -p tailwindcss@4.1.18 -p @tailwindcss/cli@4.1.18 tailwindcss -i site/styles/input.css -o site/styles.css --minify"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,mts,cts,json,css,md,html,yml,yaml}": [
+    "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,css,md,html,yml,yaml}": [
       "prettier --ignore-path .prettierignore --write"
     ],
     "*.{ts,tsx}": [
