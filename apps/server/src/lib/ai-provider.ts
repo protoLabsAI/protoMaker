@@ -1,41 +1,58 @@
 /**
- * AI Provider — shared Anthropic provider for @ai-sdk/anthropic routes.
+ * AI Provider — chat-route language model factory, routed through the protoLabs
+ * LiteLLM gateway by default.
  *
- * Resolves credentials using the same chain as the Claude Agent SDK:
- * 1. Credentials from settings UI (data/credentials.json via settingsService)
- * 2. ANTHROPIC_API_KEY environment variable
- * 3. ANTHROPIC_AUTH_TOKEN environment variable
- * 4. Claude CLI OAuth token from credential files (~/.claude/.credentials.json)
- * 5. Claude CLI OAuth token from macOS Keychain ("Claude Code-credentials")
+ * History: this file used to wrap `@ai-sdk/anthropic` for direct Anthropic
+ * calls. As of the gateway-first migration we no longer talk to api.anthropic.com
+ * directly — every chat request goes through the gateway via the OpenAI-compatible
+ * `/v1/chat/completions` endpoint. Anthropic OAuth (Claude Max/Pro) and bare
+ * ANTHROPIC_API_KEY are no longer used; the gateway terminates auth.
  *
- * All routes that call the Anthropic API via @ai-sdk/anthropic should use
- * getAnthropicModel() instead of importing `anthropic` directly, so they
- * work with CLI OAuth auth (Claude Max/Pro plans) and not just API keys.
+ * The export name `getAnthropicModel` is kept to avoid touching every caller in
+ * the same change; a follow-up can rename to `getChatModel`. Callers should
+ * pass any model identifier the gateway recognizes (e.g. `protolabs/smart`,
+ * `protolabs/fast`). Legacy Claude aliases (`sonnet`, `opus`, `claude-sonnet-4-6`)
+ * fall back to `protolabs/smart` so existing UI surfaces don't crash mid-migration.
+ *
+ * Auth resolution order:
+ * 1. GATEWAY_API_KEY env var
+ * 2. OPENAI_API_KEY env var (alias — the gateway speaks OpenAI's wire format)
+ * 3. `apiKeys.protolabsGateway` from settings credentials (when wired)
+ * 4. Empty string + warn (the gateway will reject the request — but the server
+ *    won't crash at boot, which keeps the rest of the API surface usable)
+ *
+ * Base URL: GATEWAY_BASE_URL or OPENAI_BASE_URL env var,
+ * default `https://api.proto-labs.ai/v1`.
  */
 
-import { execSync } from 'node:child_process';
-import { createAnthropic } from '@ai-sdk/anthropic';
-import { getClaudeCredentialPaths, systemPathReadFile } from '@protolabsai/platform';
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import type { LanguageModelV3 } from '@ai-sdk/provider';
 import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('AIProvider');
 
+const DEFAULT_BASE_URL = 'https://api.proto-labs.ai/v1';
+/** Models the gateway knows about that legacy Claude aliases should fall back to. */
+const FALLBACK_GATEWAY_MODEL = 'protolabs/smart';
+
 /** Cached provider instance — created once, reused across requests. */
-let cachedProvider: ReturnType<typeof createAnthropic> | null = null;
+let cachedProvider: ReturnType<typeof createOpenAICompatible> | null = null;
 
 /**
  * Credential resolver function — set by the server at boot to wire in
  * settingsService.getCredentials() without a circular import.
  */
-let credentialResolver: (() => Promise<{ apiKeys?: { anthropic?: string } }>) | null = null;
+let credentialResolver:
+  | (() => Promise<{ apiKeys?: { protolabsGateway?: string; anthropic?: string } }>)
+  | null = null;
 
 /**
  * Register the credential resolver (called once at server startup).
- * This allows ai-provider to read credentials from settingsService
- * without importing the service directly.
+ * Kept as the same export name as the legacy Anthropic version so callers
+ * don't need to change.
  */
 export function setCredentialResolver(
-  resolver: () => Promise<{ apiKeys?: { anthropic?: string } }>
+  resolver: () => Promise<{ apiKeys?: { protolabsGateway?: string; anthropic?: string } }>
 ): void {
   credentialResolver = resolver;
   // Invalidate cache so next request picks up the resolver
@@ -43,140 +60,87 @@ export function setCredentialResolver(
 }
 
 /**
- * Read the OAuth access token from Claude CLI credential files.
- * Supports:
- * - Claude Code format: { claudeAiOauth: { accessToken } }
- * - Legacy format: { oauth_token } or { access_token }
+ * Resolve a gateway API key from the chain above. Returns the key + a label
+ * for logging.
  */
-async function readCliOAuthToken(): Promise<string | null> {
-  const credentialPaths = getClaudeCredentialPaths();
-  for (const credPath of credentialPaths) {
-    try {
-      const content = await systemPathReadFile(credPath);
-      const creds = JSON.parse(content) as Record<string, unknown>;
-
-      // Claude Code CLI format
-      const claudeOauth = creds.claudeAiOauth as { accessToken?: string } | undefined;
-      if (claudeOauth?.accessToken) {
-        return claudeOauth.accessToken;
-      }
-
-      // Legacy formats
-      if (typeof creds.oauth_token === 'string') return creds.oauth_token;
-      if (typeof creds.access_token === 'string') return creds.access_token;
-    } catch {
-      // Continue to next credential path
-    }
-  }
-  return null;
-}
-
-/**
- * Read the OAuth access token from the macOS Keychain.
- * Claude Code stores credentials in the system keychain under
- * the service name "Claude Code-credentials" as a JSON blob:
- * { claudeAiOauth: { accessToken, refreshToken, expiresAt } }
- */
-function readKeychainOAuthToken(): string | null {
-  if (process.platform !== 'darwin') return null;
-
-  try {
-    const raw = execSync('security find-generic-password -s "Claude Code-credentials" -w', {
-      encoding: 'utf-8',
-      timeout: 5000,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    }).trim();
-
-    const creds = JSON.parse(raw) as Record<string, unknown>;
-    const claudeOauth = creds.claudeAiOauth as { accessToken?: string } | undefined;
-    if (claudeOauth?.accessToken) {
-      return claudeOauth.accessToken;
-    }
-  } catch {
-    // Keychain entry not found or not on macOS
-  }
-  return null;
-}
-
-/**
- * Create or return the cached Anthropic provider with proper auth.
- * Mirrors the credential resolution chain from claude-provider.ts buildEnv().
- */
-async function getOrCreateProvider(): Promise<ReturnType<typeof createAnthropic>> {
-  if (cachedProvider) return cachedProvider;
-
-  // 1. Check credentials from settings UI (data/credentials.json)
+async function resolveApiKey(): Promise<{ key: string; source: string }> {
   if (credentialResolver) {
     try {
       const credentials = await credentialResolver();
-      if (credentials.apiKeys?.anthropic) {
-        logger.info('Using API key from settings credentials');
-        cachedProvider = createAnthropic({ apiKey: credentials.apiKeys.anthropic });
-        return cachedProvider;
-      }
+      const fromSettings = credentials.apiKeys?.protolabsGateway;
+      if (fromSettings) return { key: fromSettings, source: 'settings.protolabsGateway' };
     } catch {
-      // Credentials not available, continue chain
+      // ignore, continue chain
     }
   }
+  if (process.env.GATEWAY_API_KEY) {
+    return { key: process.env.GATEWAY_API_KEY, source: 'env.GATEWAY_API_KEY' };
+  }
+  if (process.env.OPENAI_API_KEY) {
+    return { key: process.env.OPENAI_API_KEY, source: 'env.OPENAI_API_KEY' };
+  }
+  return { key: '', source: 'none' };
+}
 
-  // 2. Check ANTHROPIC_API_KEY env var
-  if (process.env.ANTHROPIC_API_KEY) {
-    logger.info('Using ANTHROPIC_API_KEY from environment');
-    cachedProvider = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    return cachedProvider;
+/**
+ * Build or return the cached OpenAI-compatible provider pointed at the gateway.
+ */
+async function getOrCreateProvider(): Promise<ReturnType<typeof createOpenAICompatible>> {
+  if (cachedProvider) return cachedProvider;
+
+  const baseURL = process.env.GATEWAY_BASE_URL || process.env.OPENAI_BASE_URL || DEFAULT_BASE_URL;
+  const { key, source } = await resolveApiKey();
+
+  if (!key) {
+    logger.warn(
+      'No gateway API key found. Chat requests will fail. ' +
+        'Set GATEWAY_API_KEY in the server environment or enter a key in Settings.'
+    );
+  } else {
+    logger.info(`Gateway provider initialized: baseURL=${baseURL} keySource=${source}`);
   }
 
-  // 3. Check ANTHROPIC_AUTH_TOKEN env var
-  if (process.env.ANTHROPIC_AUTH_TOKEN) {
-    logger.info('Using ANTHROPIC_AUTH_TOKEN from environment');
-    cachedProvider = createAnthropic({
-      authToken: process.env.ANTHROPIC_AUTH_TOKEN,
-      headers: { 'anthropic-beta': 'oauth-2025-04-20' },
-    });
-    return cachedProvider;
-  }
-
-  // 4. Read CLI OAuth token from credential files
-  const fileToken = await readCliOAuthToken();
-  if (fileToken) {
-    logger.info('Using Claude CLI OAuth token (file) for AI SDK provider');
-    cachedProvider = createAnthropic({
-      authToken: fileToken,
-      headers: { 'anthropic-beta': 'oauth-2025-04-20' },
-    });
-    return cachedProvider;
-  }
-
-  // 5. Read CLI OAuth token from macOS Keychain
-  const keychainToken = readKeychainOAuthToken();
-  if (keychainToken) {
-    logger.info('Using Claude CLI OAuth token (keychain) for AI SDK provider');
-    cachedProvider = createAnthropic({
-      authToken: keychainToken,
-      headers: { 'anthropic-beta': 'oauth-2025-04-20' },
-    });
-    return cachedProvider;
-  }
-
-  // 6. Fallback — let @ai-sdk/anthropic try its own defaults (will likely fail)
-  logger.warn(
-    'No API key or OAuth token found. AI SDK chat routes will fail. ' +
-      'Set ANTHROPIC_API_KEY, enter a key in Settings, or authenticate via Claude CLI.'
-  );
-  cachedProvider = createAnthropic();
+  cachedProvider = createOpenAICompatible({
+    name: 'protolabs-gateway',
+    baseURL,
+    apiKey: key,
+  });
   return cachedProvider;
 }
 
 /**
- * Get an Anthropic model instance with proper authentication.
- * Drop-in replacement for `anthropic(modelId)` from @ai-sdk/anthropic.
+ * Map a legacy Claude alias to a gateway model. Any non-Claude model name
+ * (e.g. `protolabs/smart`, `protolabs/fast`) passes through unchanged.
  *
- * @param modelId - The model ID (e.g., 'claude-sonnet-4-6')
- * @returns A language model instance ready for streamText/generateText
+ * Why: chat default falls through to `'sonnet'` in several places. Until that
+ * default is fully scrubbed, treat Claude-flavored names as a request for the
+ * gateway's smart model instead of letting them leak to a now-unsupported path.
  */
-export async function getAnthropicModel(modelId: string) {
+function mapLegacyClaudeModel(modelId: string): string {
+  const lower = modelId.toLowerCase();
+  if (lower === 'sonnet' || lower === 'opus' || lower === 'haiku' || lower.startsWith('claude-')) {
+    return FALLBACK_GATEWAY_MODEL;
+  }
+  return modelId;
+}
+
+/**
+ * Get a language model instance routed through the gateway.
+ *
+ * Drop-in replacement for the old `getAnthropicModel(...)` signature; callers
+ * pass a model id and receive a model object compatible with
+ * `streamText`/`generateText`.
+ *
+ * Legacy Claude aliases are silently remapped to `protolabs/smart` so existing
+ * UI flows don't 4xx during the migration window.
+ */
+export async function getAnthropicModel(modelId: string): Promise<LanguageModelV3> {
   const provider = await getOrCreateProvider();
-  return provider(modelId);
+  const mapped = mapLegacyClaudeModel(modelId);
+  if (mapped !== modelId) {
+    logger.debug(`Remapped legacy model id ${modelId} -> ${mapped}`);
+  }
+  return provider(mapped);
 }
 
 /**

@@ -382,7 +382,10 @@ export function createChatRoutes(services: ServiceContainer): Router {
       // Model selection: session picker (header/body) > AvaConfig.model > default (sonnet)
       // The inline ChatModelSelect sends x-model-alias; config model is the fallback for new chats.
       const modelAlias =
-        (req.headers['x-model-alias'] as string) || bodyModel || avaConfig.model || 'sonnet';
+        (req.headers['x-model-alias'] as string) ||
+        bodyModel ||
+        avaConfig.model ||
+        'protolabs/smart';
       const effortLevel = (req.headers['x-effort-level'] as string) || 'medium';
 
       const resolvedModelId = resolveModelString(modelAlias, 'sonnet');
