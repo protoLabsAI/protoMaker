@@ -137,8 +137,10 @@ describe('PostMergeReconcilerCheck', () => {
     expect(execFileAsync).not.toHaveBeenCalled();
   });
 
-  it('skips features without prNumber', async () => {
-    const feature = makeFeature({ prNumber: undefined });
+  it('skips features without prNumber AND without branchName', async () => {
+    // Phase 2 (branch-fallback) requires branchName. With neither, the feature
+    // can't be looked up at all and is skipped silently.
+    const feature = makeFeature({ prNumber: undefined, branchName: undefined });
     mockFeatureLoaderGetAll.mockResolvedValue([feature]);
 
     const execFileAsync = vi.fn();
@@ -150,17 +152,71 @@ describe('PostMergeReconcilerCheck', () => {
     expect(execFileAsync).not.toHaveBeenCalled();
   });
 
-  it('skips features without prUrl', async () => {
-    const feature = makeFeature({ prUrl: undefined });
+  it('falls back to branchName lookup when prNumber is missing (Phase 2)', async () => {
+    // Phase 2: feature has branchName but no prNumber → `gh pr list --head <branch> --state merged`
+    // discovers the merged PR and writes prNumber/prUrl back. This catches the
+    // case where the PR-creation write path dropped the metadata (#3613).
+    const feature = makeFeature({ prNumber: undefined, prUrl: undefined });
     mockFeatureLoaderGetAll.mockResolvedValue([feature]);
 
-    const execFileAsync = vi.fn();
-    const check = new PostMergeReconcilerCheck(makeLoader(), events as any, execFileAsync);
+    const execFileAsync = vi.fn(async (_file: string, args: string[]) => {
+      // Only `gh pr list ... --state merged ... --head <branch>` is expected.
+      if (args[0] === 'pr' && args[1] === 'list') {
+        return {
+          stdout: JSON.stringify([
+            {
+              number: 184,
+              url: 'https://github.com/protoLabsAI/mythxengine/pull/184',
+              mergedAt: '2026-05-22T12:00:00Z',
+            },
+          ]),
+          stderr: '',
+        };
+      }
+      throw new Error(`Unexpected gh invocation: ${args.join(' ')}`);
+    });
+    const check = new PostMergeReconcilerCheck(makeLoader(), events as any, execFileAsync as any);
 
     const result = await check.run('/project');
 
-    expect(result.checked).toBe(0);
-    expect(execFileAsync).not.toHaveBeenCalled();
+    expect(result.checked).toBe(1);
+    expect(result.reconciled).toBe(1);
+    expect(mockFeatureLoaderUpdate).toHaveBeenCalledWith(
+      '/project',
+      'feature-001',
+      expect.objectContaining({
+        status: 'done',
+        prNumber: 184,
+        prUrl: 'https://github.com/protoLabsAI/mythxengine/pull/184',
+      })
+    );
+  });
+
+  it('falls back to branchName lookup when prUrl is missing (Phase 2)', async () => {
+    const feature = makeFeature({ prUrl: undefined });
+    mockFeatureLoaderGetAll.mockResolvedValue([feature]);
+
+    const execFileAsync = vi.fn(async (_file: string, args: string[]) => {
+      if (args[0] === 'pr' && args[1] === 'list') {
+        return {
+          stdout: JSON.stringify([
+            {
+              number: 184,
+              url: 'https://github.com/protoLabsAI/mythxengine/pull/184',
+              mergedAt: '2026-05-22T12:00:00Z',
+            },
+          ]),
+          stderr: '',
+        };
+      }
+      throw new Error(`Unexpected gh invocation: ${args.join(' ')}`);
+    });
+    const check = new PostMergeReconcilerCheck(makeLoader(), events as any, execFileAsync as any);
+
+    const result = await check.run('/project');
+
+    expect(result.checked).toBe(1);
+    expect(result.reconciled).toBe(1);
   });
 
   it('does not transition a feature whose PR is still open', async () => {
@@ -266,9 +322,17 @@ describe('PostMergeReconcilerCheck', () => {
     );
   });
 
-  it('returns zero counts when no features are in review status', async () => {
+  it('returns zero counts when no features have any reconcilable identifier', async () => {
+    // Only features with prNumber+prUrl (Phase 1) OR a branchName (Phase 2) are
+    // checked. A backlog feature with neither prNumber nor branchName can't be
+    // looked up, and a done feature is filtered by the terminal-status guard.
     mockFeatureLoaderGetAll.mockResolvedValue([
-      makeFeature({ status: 'backlog', prNumber: undefined, prUrl: undefined }),
+      makeFeature({
+        status: 'backlog',
+        prNumber: undefined,
+        prUrl: undefined,
+        branchName: undefined,
+      }),
       makeFeature({ status: 'done' }),
     ]);
 
