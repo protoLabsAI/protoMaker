@@ -185,10 +185,24 @@ export class ProtoProvider extends BaseProvider {
 
     const env = buildEnv();
 
+    // Capture proto CLI stderr so failures surface in our logs. Without this
+    // the SDK exits with a bare "CLI process exited with code 1" and we have
+    // no clue why. Each line gets prefixed with `[proto-cli stderr]` for
+    // grep'ability.
+    const stderrLines: string[] = [];
+    const stderrCapture = (message: string) => {
+      const trimmed = message.replace(/\s+$/, '');
+      if (trimmed.length > 0) {
+        stderrLines.push(trimmed);
+        logger.warn(`[proto-cli stderr] ${trimmed}`);
+      }
+    };
+
     const queryOptions: QueryOptions = {
       model,
       cwd,
       env,
+      stderr: stderrCapture,
       // Field renames vs Claude SDK — see file header.
       maxSessionTurns: maxTurns,
       ...(allowedTools && { coreTools: allowedTools }),
@@ -248,6 +262,20 @@ export class ProtoProvider extends BaseProvider {
         yield msg as ProviderMessage;
       }
     } catch (error) {
+      // Surface the captured proto CLI stderr (if any) alongside the SDK's
+      // generic "CLI process exited with code 1" — those bare exits are
+      // useless without the stderr trail. Stash it on the error object too
+      // so upstream consumers (RecoveryService, ExecutionService) can read it.
+      if (stderrLines.length > 0) {
+        const stderrTail = stderrLines.slice(-20).join('\n');
+        logger.error('[ProtoProvider] proto CLI stderr (last 20 lines):\n' + stderrTail);
+        Object.assign(error as object, { protoCliStderr: stderrTail });
+      } else {
+        logger.warn(
+          '[ProtoProvider] proto CLI exited without writing to stderr — failure mode is opaque'
+        );
+      }
+
       const errorInfo = classifyError(error);
       const userMessage = getUserFriendlyErrorMessage(error);
       logger.error('executeQuery() error during execution:', {
