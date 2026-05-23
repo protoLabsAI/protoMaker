@@ -39,6 +39,13 @@ interface PRViewResult {
   merged: boolean;
 }
 
+/** GitHub CLI `gh pr list --head <branch> --state merged --json number,url,mergedAt` response item */
+interface PRListItem {
+  number: number;
+  url: string;
+  mergedAt: string | null;
+}
+
 /** Statuses that indicate the feature is already done — skip reconciliation. */
 const TERMINAL_STATUSES = new Set(['done', 'completed', 'verified']);
 
@@ -87,11 +94,12 @@ export class PostMergeReconcilerCheck {
     try {
       const features = await this.featureLoader.getAll(projectPath);
 
-      const reviewFeatures = features.filter(
+      // Phase 1: features that already have prNumber + prUrl — direct `gh pr view` lookup.
+      const featuresWithPr = features.filter(
         (f) => RECONCILABLE_STATUSES.has(f.status ?? '') && f.prNumber != null && f.prUrl
       );
 
-      for (const feature of reviewFeatures) {
+      for (const feature of featuresWithPr) {
         // Idempotency guard — skip if already in a terminal status
         if (TERMINAL_STATUSES.has(feature.status ?? '')) continue;
 
@@ -124,7 +132,7 @@ export class PostMergeReconcilerCheck {
 
           // PR is merged but we never received the webhook — reconcile now
           logger.info(
-            `[reconciler] PR #${feature.prNumber} on ${repo} is merged — transitioning feature "${feature.title}" (${feature.id}) from review → done (missed webhook)`
+            `[reconciler] PR #${feature.prNumber} on ${repo} is merged — transitioning feature "${feature.title}" (${feature.id}) from ${feature.status} → done (missed webhook)`
           );
 
           await this.featureLoader.update(projectPath, feature.id, {
@@ -146,6 +154,81 @@ export class PostMergeReconcilerCheck {
           // Non-fatal: log and continue to next feature
           logger.debug(
             `[reconciler] Could not check PR #${feature.prNumber} for feature ${feature.id} on ${repo}: ${prCheckErr instanceof Error ? prCheckErr.message : String(prCheckErr)}`
+          );
+        }
+      }
+
+      // Phase 2: features that have a branchName but NO prNumber yet.
+      // The PR-creation write path can drop `prNumber`/`prUrl` from `feature.json`
+      // when the recovery PostAgentHook owns the PR creation instead of the normal
+      // REVIEW phase. Without this fallback, such features stay stuck in review
+      // forever because Phase 1's filter (`prNumber != null && prUrl`) excludes
+      // them. `gh pr list --head <branch>` finds the merged PR by branch name and
+      // we write the discovered metadata back so subsequent ticks short-circuit.
+      const featuresWithoutPr = features.filter(
+        (f) =>
+          RECONCILABLE_STATUSES.has(f.status ?? '') &&
+          f.branchName &&
+          (f.prNumber == null || !f.prUrl)
+      );
+
+      for (const feature of featuresWithoutPr) {
+        if (TERMINAL_STATUSES.has(feature.status ?? '')) continue;
+
+        checked++;
+
+        try {
+          const { stdout } = await this.execFileAsync(
+            'gh',
+            [
+              'pr',
+              'list',
+              '--head',
+              feature.branchName!,
+              '--state',
+              'merged',
+              '--json',
+              'number,url,mergedAt',
+              '--limit',
+              '1',
+            ],
+            { encoding: 'utf-8', timeout: 10_000 }
+          );
+
+          const matches = JSON.parse(stdout) as PRListItem[];
+          if (matches.length === 0) {
+            logger.debug(
+              `[reconciler] No merged PR found for branch "${feature.branchName}" (feature ${feature.id}) — skipping`
+            );
+            continue;
+          }
+
+          const merged = matches[0];
+          logger.info(
+            `[reconciler] Merged PR #${merged.number} (${merged.url}) found for branch "${feature.branchName}" — transitioning feature "${feature.title}" (${feature.id}) from ${feature.status} → done (branch-fallback path)`
+          );
+
+          await this.featureLoader.update(projectPath, feature.id, {
+            status: 'done',
+            prNumber: merged.number,
+            prUrl: merged.url,
+            prMergedAt: merged.mergedAt ?? new Date().toISOString(),
+            statusChangeReason: 'merged PR detected via branch-fallback reconciliation',
+          });
+
+          this.events.emit('feature:pr-merged', {
+            featureId: feature.id,
+            title: feature.title ?? feature.id,
+            prNumber: merged.number,
+            prTitle: '',
+            branchName: feature.branchName ?? '',
+            projectPath,
+          });
+
+          reconciled++;
+        } catch (branchCheckErr) {
+          logger.debug(
+            `[reconciler] Branch-fallback lookup failed for "${feature.branchName}" (feature ${feature.id}): ${branchCheckErr instanceof Error ? branchCheckErr.message : String(branchCheckErr)}`
           );
         }
       }
