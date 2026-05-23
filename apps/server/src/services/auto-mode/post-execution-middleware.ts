@@ -58,7 +58,12 @@ export interface PostExecutionContext {
    * Optional: updates the feature status after successful recovery.
    * Called with status='review' after a recovery PR is created.
    */
-  updateFeatureStatus?: (projectPath: string, featureId: string, status: string) => Promise<void>;
+  updateFeatureStatus?: (
+    projectPath: string,
+    featureId: string,
+    status: string,
+    statusChangeReason?: string
+  ) => Promise<void>;
   /**
    * Optional: emits a structured event after recovery completes.
    * Called with recovery details when uncommitted work is recovered into a PR.

@@ -30,7 +30,12 @@ export class FeatureStateManager {
    * feature:status-changed. This prevents clients from reading stale status data
    * on refresh after a server restart triggered by status-change events.
    */
-  async updateFeatureStatus(projectPath: string, featureId: string, status: string): Promise<void> {
+  async updateFeatureStatus(
+    projectPath: string,
+    featureId: string,
+    status: string,
+    statusChangeReason?: string
+  ): Promise<void> {
     try {
       // Read the current feature to get its state for derived field computation
       const feature = await this.featureLoader.get(projectPath, featureId);
@@ -46,6 +51,13 @@ export class FeatureStateManager {
         status,
         updatedAt: timestamp,
       };
+
+      // Persist the reason for the transition so it surfaces on the board.
+      // Without this, recovery-failed transitions to backlog/blocked leave
+      // statusChangeReason null and the operator has no signal (#3635).
+      if (statusChangeReason !== undefined) {
+        updates.statusChangeReason = statusChangeReason;
+      }
 
       // Clear stale pipeline gate metadata when reaching terminal states.
       // Without this, completed features keep awaitingGate=true forever and the

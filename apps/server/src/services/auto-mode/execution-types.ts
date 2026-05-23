@@ -97,7 +97,12 @@ export interface IAutoModeCallbacks {
   getAutoLoopRunning(): boolean;
 
   // Status updates
-  updateFeatureStatus(projectPath: string, featureId: string, status: string): Promise<void>;
+  updateFeatureStatus(
+    projectPath: string,
+    featureId: string,
+    status: string,
+    statusChangeReason?: string
+  ): Promise<void>;
   updateFeaturePlanSpec(
     projectPath: string,
     featureId: string,

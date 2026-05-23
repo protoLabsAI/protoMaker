@@ -1921,7 +1921,13 @@ Output the branch name only.`,
               failureCategory: failureAnalysis.category,
             });
           } else {
-            await this.callbacks.updateFeatureStatus(projectPath, featureId, 'backlog');
+            // Propagate the provider error so the board surfaces it (#3635).
+            // Without this, the operator sees `statusChangeReason: null` and
+            // has to grep server logs to find out why the run failed.
+            const reason =
+              `Run failed (${failureAnalysis.category}, attempt ${newFailureCount}): ` +
+              errorInfo.message;
+            await this.callbacks.updateFeatureStatus(projectPath, featureId, 'backlog', reason);
             this.typedEventBus.emitAutoModeEvent('auto_mode_error', {
               featureId,
               featureName: feature?.title,
@@ -1970,7 +1976,8 @@ Output the branch name only.`,
         getRecoveryBaseBranch: async () => {
           return getEffectivePrBaseBranch(projectPath, this.settingsService, '[PostExecution]');
         },
-        updateFeatureStatus: (p, id, status) => this.callbacks.updateFeatureStatus(p, id, status),
+        updateFeatureStatus: (p, id, status, reason) =>
+          this.callbacks.updateFeatureStatus(p, id, status, reason),
         emitEvent: (eventType, data) => this.typedEventBus.emitAutoModeEvent(eventType, data),
       });
     }
