@@ -58,8 +58,18 @@ export class KnowledgeIngestionService {
     categoryFile: string,
     compactionThreshold: number = 50000
   ): Promise<void> {
-    const memoryDir = path.join(projectPath, '.automaker', 'memory');
-    const categoryPath = path.join(memoryDir, categoryFile);
+    const memoryDir = path.resolve(projectPath, '.automaker', 'memory');
+    const categoryPath = path.resolve(memoryDir, categoryFile);
+
+    // Containment guard (#3594): refuse paths that escape memoryDir.
+    // Without this, `categoryFile: '../../etc/passwd'` would resolve outside
+    // the project's memory directory and could read/write arbitrary files.
+    if (categoryPath !== memoryDir && !categoryPath.startsWith(memoryDir + path.sep)) {
+      logger.warn(
+        `Category file "${categoryFile}" resolves outside memory dir (${categoryPath}) — refusing`
+      );
+      return;
+    }
 
     if (!fs.existsSync(categoryPath)) {
       logger.debug(`Category file ${categoryFile} does not exist, skipping compaction`);

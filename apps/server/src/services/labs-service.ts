@@ -363,7 +363,20 @@ export class LabsService {
    * Cleanup a specific repository (delete it)
    */
   async cleanupRepo(repoName: string, labsDir: string = this.defaultLabsDir): Promise<boolean> {
-    const repoPath = path.join(labsDir, repoName);
+    const labsDirResolved = path.resolve(labsDir);
+    const repoPath = path.resolve(labsDirResolved, repoName);
+
+    // Containment guard (#3596): refuse paths that escape labsDir.
+    // `cloneRepo` validates `directoryName` before joining, but `cleanupRepo`
+    // had no equivalent check. Passing `repoName: '../victim'` would resolve
+    // outside `labsDir`; if that target had a `.git` directory, `repoExists`
+    // returned true and `fs.rm` deleted it.
+    if (repoPath !== labsDirResolved && !repoPath.startsWith(labsDirResolved + path.sep)) {
+      logger.warn(`Refusing to clean up "${repoName}" — resolves outside labsDir (${repoPath})`, {
+        labsDir: labsDirResolved,
+      });
+      return false;
+    }
 
     try {
       // Check if repository exists
