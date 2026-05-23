@@ -741,7 +741,10 @@ export class LeadEngineerService {
         projectPath: session.projectPath,
         reason: details,
       },
-      deduplicationKey: `reasoning_${reason}_${featureId ?? session.projectPath}_${Date.now()}`,
+      // Stable key so repeated identical missing-context escalations dedupe.
+      // Including Date.now() made every escalation unique and defeated dedup
+      // (see #3568 spam loop). The bus owns the time window.
+      deduplicationKey: `reasoning_${reason}_${featureId ?? session.projectPath}`,
       timestamp: new Date().toISOString(),
     });
   }
@@ -765,6 +768,22 @@ export class LeadEngineerService {
   ): Promise<void> {
     const p = payload as Record<string, unknown> | null;
     const featureId = p?.featureId as string | undefined;
+
+    // Re-entry guard: drop signals our own reasoning subsystem emitted.
+    // Without this, a missing-featureId signal escalates as
+    // `context_incomplete`, that escalation re-enters here, fails the same
+    // featureId guard, and emits another `context_incomplete` — looping until
+    // something else interrupts the bus. See #3568.
+    const source = p?.source as string | undefined;
+    const escType = p?.type as string | undefined;
+    if (source === 'lead_engineer_reasoning' || escType === 'context_incomplete') {
+      logger.debug('[Reasoning] Dropping self-emitted escalation to break re-entry loop', {
+        eventType,
+        source,
+        escType,
+      });
+      return;
+    }
 
     // Guard: escalate immediately if signal context is missing required fields
     if (!featureId) {
