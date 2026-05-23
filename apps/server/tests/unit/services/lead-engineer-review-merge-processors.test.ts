@@ -345,8 +345,10 @@ describe('ReviewProcessor', () => {
 
       const result = await processor.process(ctx);
 
-      // Should short-circuit after checkBranchMerged blocks the feature
-      expect(result.nextState).toBeNull();
+      // Should escalate (not continue) — unsafe branch name is unrecoverable
+      // without human intervention. The feature is also marked blocked via
+      // featureLoader.update so the operator sees a clear reason on the board.
+      expect(result.nextState).toBe('ESCALATE');
       expect(result.shouldContinue).toBe(false);
 
       // Feature should be updated to blocked
@@ -376,7 +378,7 @@ describe('ReviewProcessor', () => {
 
       const result = await processor.process(ctx);
 
-      expect(result.nextState).toBeNull();
+      expect(result.nextState).toBe('ESCALATE');
       expect(result.shouldContinue).toBe(false);
 
       const updateCalls = (serviceContext.featureLoader.update as ReturnType<typeof vi.fn>).mock
