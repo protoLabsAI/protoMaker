@@ -1,5 +1,77 @@
 # @protolabsai/observability
 
+## 0.108.0
+
+### Minor Changes
+
+- ### Features
+  - replace todo list with thin CRUD over `br` issue tracker (#3639)
+  - ProtoProvider captures CLI stderr on failure (#3634)
+  - add protocli onboarding tab + autodetect (#3632)
+  - add protocli as first-class provider tab (#3631)
+  - add proto-status endpoint for protocli autodetect (#3630)
+  - rip out @anthropic-ai/claude-agent-sdk entirely (#3629)
+  - migrate claude-provider to @protolabsai/sdk/anthropic-compat (#3628)
+  - make proto the primary driver for agent runs (#3626)
+  - add proto provider wrapping @protolabsai/sdk (#3625)
+  - refresh available models to the gpt-5.5 generation (#3623)
+  - surface litellm gateway models as the first category in model defaults (#3621)
+  - add host-process systemd unit alongside the Docker one (#3617)
+  - async-parallel ClawPatch review on PRs to main (#3598)
+
+  ### Bug Fixes
+  - drop brittle shouldContinue assertion in unsafe-branch tests
+  - assert nextState='ESCALATE' instead of null for unsafe branch path
+  - add path containment to KnowledgeIngestion + LabsService (#3644)
+  - break re-entry loop in lead-engineer reasoning path (#3643)
+  - branch-fallback Phase 2 so features without prNumber still reconcile (#3642)
+  - propagate run failure to feature.statusChangeReason (#3641)
+  - poll list/ready every 2s while panel is visible (#3640)
+  - wire ava chat overlay settings and queue panels through store (#3624)
+  - phase model selector shows litellm model in closed trigger (#3622)
+  - litellm gateway test connection probes /models, not /health (#3620)
+  - route through LiteLLM gateway, default to protolabs/smart (#3619)
+  - replace manage_board discriminatedUnion schema with flat object (#3618)
+  - replace clawpatch+codex with release-tools review-code via gateway (#3615)
+  - treat unresolved CodeRabbit threads as changes_requested (#3599)
+  - skip npm ci when node_modules is symlinked (#3592)
+  - purge any stale built-in automation, not just maintenance:\* (#3576)
+
+  ### Refactors
+  - Sanitize branch names + hard-fail unsafe-char merge gate (#3483)
+  - P1: ESCALATE checkpoint never invalidated, traps next dispatch
+  - Document start-automaker.mjs entry point
+  - consolidate prod compose, drop Swarm-only prod.yml (#3616)
+  - trim shadowed skills + dead-system command files (#3591)
+  - Fix XSS in setup-cli report-generator (HTML escape interpolated fields)
+  - Add .mjs (and .cjs) to lint-staged glob
+  - Add quick-fix PR how-to guide
+  - kill 6 dead UI lib files (no importers) (#3589)
+  - kill dead UI hooks + ui-cache-store (no importers) (#3588)
+  - kill 5 dead UI components in apps/ui/src/components (#3587)
+  - kill more dead UI components (10 files, no importers) (#3586)
+  - kill 4 dead UI view components (no importers) (#3585)
+  - kill 2 unmounted route groups (archive, categories) (#3584)
+  - kill portfolio-sitrep service (dead, 0 importers) (#3583)
+  - kill 3 more dead route groups (issues, quarantine, ledger) (#3582)
+  - kill 4 dead route groups (no consumers) (#3581)
+  - kill unused agent-templates + codex-app-server type files (#3580)
+  - kill /api/world routes (no consumers) (#3579)
+  - kill portfolio-tools service (no importers) (#3578)
+  - kill 8 dead services (no importers in production) (#3577)
+  - cleanup CI workflows, supervisor scaffold, peer mesh remnants (#3575)
+  - kill staging promotion, Lead Engineer loops, and dev branch (#3573)
+  - kill Signal Dictionary and Ceremony service stack (#3572)
+  - kill multi-instance mesh, project assignment, and project registry (#3571)
+  - kill PR Feedback Service and its remediation pipeline (#3570)
+  - kill cron/scheduler cruft (background loops, headsdown, PR watcher) (#3569)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.108.0
+  - @protolabsai/utils@0.108.0
+
 ## 0.107.1
 
 ### Patch Changes
