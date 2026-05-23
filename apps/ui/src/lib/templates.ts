@@ -13,7 +13,7 @@ export interface StarterTemplate {
   /** How the template is provisioned */
   source: 'scaffold' | 'clone';
   /** Kit type for scaffold source — maps to scaffold endpoint */
-  kitType?: 'docs' | 'portfolio' | 'landing-page' | 'extension' | 'ai-agent-app' | 'design-system';
+  kitType?: 'docs' | 'portfolio' | 'landing-page';
   /** GitHub URL for clone source */
   repoUrl?: string;
   techStack: string[];
@@ -77,94 +77,6 @@ export const starterTemplates: StarterTemplate[] = [
       'Content Collections for all section data (edit JSON, not code)',
       'SEO meta tags, Open Graph, Twitter Cards, sitemap',
       'Geist font family (sans + mono)',
-    ],
-    category: 'frontend',
-    author: 'protoLabs',
-  },
-  {
-    id: 'ai-agent-app',
-    name: 'AI Agent App',
-    description:
-      'Full-stack agentic chat application with a streaming React UI, Express server running an Anthropic tool-use loop, shared tool definitions (MCP/LangGraph/Express adapters), LangGraph flows, prompt registry, and Langfuse tracing.',
-    source: 'clone',
-    repoUrl: 'https://github.com/protoLabsAI/protoAgent-starter',
-    techStack: [
-      'React 19',
-      'Vite',
-      'TanStack Router',
-      'Express',
-      'Anthropic SDK',
-      'LangGraph',
-      'Vercel AI SDK',
-      'Langfuse',
-      'Tailwind CSS 4',
-    ],
-    features: [
-      'Streaming chat UI with tool invocation progress labels (WebSocket sideband)',
-      'Server-side Anthropic agentic loop with multi-turn tool use',
-      'defineSharedTool — define once, deploy to MCP, LangGraph, and Express',
-      'LangGraph flow builder with linear, loop, and branching topologies',
-      'Prompt registry with YAML frontmatter and {{variable}} interpolation',
-      'Langfuse observability with FileTracer fallback (zero-infra dev experience)',
-      'Session persistence with LRU eviction (localStorage)',
-      'Slash command system with system-prompt expansion',
-    ],
-    category: 'ai',
-    author: 'protoLabs',
-  },
-  {
-    id: 'design-system',
-    name: 'Design System',
-    description:
-      'Full-stack design system monorepo with AI-powered component generation, XCL codec, MCP server, and component registry.',
-    source: 'scaffold',
-    kitType: 'design-system',
-    techStack: [
-      'React 19',
-      'TypeScript',
-      'Vite',
-      'Express',
-      'Anthropic SDK',
-      'MCP SDK',
-      'axe-core',
-    ],
-    features: [
-      'DTCG-format design tokens with build-time CSS variable generation',
-      'XCL codec: bidirectional ComponentDef ↔ XCL XML ↔ TSX pipeline',
-      'In-memory component registry with CRUD operations',
-      'AI agents for component generation from .pen design files',
-      'MCP server exposing design system tools to AI coding assistants',
-      'Vite-powered component playground',
-      'Automated a11y checks with axe-core',
-    ],
-    category: 'ai',
-    author: 'protoLabs',
-  },
-  {
-    id: 'browser-extension',
-    name: 'Browser Extension',
-    description:
-      'Multi-browser extension template targeting Chrome and Firefox (Manifest V3). Includes typed messaging, storage helpers, popup/options pages, and CI pipeline for both stores.',
-    source: 'clone',
-    repoUrl: 'https://github.com/protoLabsAI/browser-extension-template',
-    techStack: [
-      'WXT',
-      'React 19',
-      'TypeScript',
-      'Tailwind CSS 4',
-      'Vitest',
-      'Playwright',
-      'web-ext',
-    ],
-    features: [
-      'Background service worker with typed message routing',
-      'Content script scaffold',
-      'Popup and Options pages (React)',
-      'Type-safe browser storage wrapper',
-      'Runtime permission helpers (cross-browser safe)',
-      'Chrome + Firefox builds from single codebase',
-      'CI/CD with build, lint, test, and zip artifacts',
-      'Firefox AMO linting via web-ext',
     ],
     category: 'frontend',
     author: 'protoLabs',

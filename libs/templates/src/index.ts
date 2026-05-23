@@ -39,21 +39,16 @@ export {
   getGitWorkflowSection,
   getAgentGuidelinesSection,
   getDocsCommandsSection,
-  getExtensionCommandsSection,
 } from './claude-md.js';
 
 // Coding rules
 export { getCodingRules } from './coding-rules.js';
 
 // CI templates
-export { getDocsCI, getExtensionCI } from './ci.js';
+export { getDocsCI } from './ci.js';
 
 // Starter kit context files (write to .automaker/CONTEXT.md in new projects)
-export {
-  getDocsStarterContext,
-  getPortfolioStarterContext,
-  getAiAgentAppStarterContext,
-} from './starters.js';
+export { getDocsStarterContext, getPortfolioStarterContext } from './starters.js';
 
 // Starter kit scaffolding (copies Astro projects with name/config substitution)
 export {
@@ -61,8 +56,6 @@ export {
   scaffoldPortfolioStarter,
   scaffoldLandingPageStarter,
   scaffoldGeneralStarter,
-  scaffoldAiAgentAppStarter,
-  scaffoldDesignSystemStarter,
 } from './scaffold.js';
 export type { ScaffoldResult } from './scaffold.js';
 

@@ -7,14 +7,7 @@
 /**
  * Starter kit type determines which features and coding rules to include.
  */
-export type StarterKitType =
-  | 'docs'
-  | 'portfolio'
-  | 'landing-page'
-  | 'extension'
-  | 'general'
-  | 'ai-agent-app'
-  | 'design-system';
+export type StarterKitType = 'docs' | 'portfolio' | 'landing-page' | 'general';
 
 /**
  * Options for scaffolding a new starter kit project.
@@ -29,7 +22,7 @@ export interface ScaffoldOptions {
 /**
  * Coding rules type determines which language/framework rules to include.
  */
-export type CodingRulesType = 'docs' | 'extension' | 'typescript' | 'react' | 'astro-react';
+export type CodingRulesType = 'docs' | 'typescript' | 'react' | 'astro-react';
 
 /**
  * A pre-written feature description for a starter kit.

@@ -17,8 +17,8 @@ import type { StarterKitType } from './phases/scaffold.js';
  *
  * Interactive flow:
  * 1. Intro banner with project name and path
- * 2. Starter kit type selection (docs, portfolio, extension, general)
- * 3. If docs or portfolio: scaffold Astro project into outputDir
+ * 2. Starter kit type selection (docs, portfolio, landing-page, general)
+ * 3. If docs, portfolio, or landing-page: scaffold Astro project into outputDir
  * 4. Spinner for research phase
  * 5. Display gap analysis results (score, compliant items, gaps by severity)
  * 6. Multi-select prompt for which phases to run (pre-select all recommended)
@@ -281,9 +281,9 @@ async function main() {
             hint: 'Astro + React + Tailwind — personal or agency portfolio',
           },
           {
-            value: 'extension' as StarterKitType,
-            label: 'Browser extension',
-            hint: 'Manifest v3, React popup + content script',
+            value: 'landing-page' as StarterKitType,
+            label: 'Landing page',
+            hint: 'Astro — dark-themed marketing landing page with composable sections',
           },
           {
             value: 'general' as StarterKitType,
