@@ -873,6 +873,62 @@ describe('FeatureStateMachine — pipeline state transitions', () => {
       })
     );
   });
+
+  it('ESCALATE does not leave a stale checkpoint (race with persistQueue)', async () => {
+    // Regression: post-transition save was enqueued (non-awaited) for ESCALATE,
+    // then delete() ran before the queued save, leaving a stale checkpoint on disk.
+    const mockCheckpointService = {
+      save: vi.fn().mockResolvedValue(undefined),
+      load: vi.fn().mockResolvedValue(null),
+      delete: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const feature = makeFeature({ failureCount: 0 });
+    mockFeatureLoader.update.mockResolvedValue(undefined);
+
+    const stateMachine = new FeatureStateMachine(serviceContext, {
+      goalGatesEnabled: false,
+      checkpointService: mockCheckpointService as any,
+    });
+
+    // INTAKE → ESCALATE
+    stateMachine.registerProcessor('INTAKE', {
+      enter: vi.fn().mockResolvedValue(undefined),
+      process: vi.fn().mockImplementation(async (ctx: StateContext) => {
+        ctx.escalationReason = 'Test escalation';
+        return { nextState: 'ESCALATE', shouldContinue: true, reason: 'Test' };
+      }),
+      exit: vi.fn().mockResolvedValue(undefined),
+    });
+
+    const { finalState } = await stateMachine.processFeature(
+      feature,
+      '/test/project',
+      makeOptions()
+    );
+
+    expect(finalState).toBe('ESCALATE');
+
+    // The checkpoint service's save() must NOT be called for terminal states.
+    // Previously, save() was enqueued for ESCALATE and delete() was awaited — the
+    // async save could run after delete(), leaving a stale checkpoint.
+    const terminalCalls = (mockCheckpointService.save.mock.calls as any[]).filter(
+      ([, , state]) => state === 'ESCALATE' || state === 'DONE' || state === 'DEPLOY'
+    );
+    expect(terminalCalls).toHaveLength(0);
+
+    // delete() should be called for terminal cleanup
+    expect(mockCheckpointService.delete).toHaveBeenCalledWith('/test/project', 'feat-1');
+
+    // Give the persist queue time to drain (in case anything slipped through)
+    await new Promise((r) => setTimeout(r, 200));
+
+    // No terminal-state saves should have appeared even after drain
+    const terminalCallsAfter = (mockCheckpointService.save.mock.calls as any[]).filter(
+      ([, , state]) => state === 'ESCALATE' || state === 'DONE' || state === 'DEPLOY'
+    );
+    expect(terminalCallsAfter).toHaveLength(0);
+  });
 });
 
 // ────────────────────────── Two-Tier Rule Routing Tests ──────────────────────────

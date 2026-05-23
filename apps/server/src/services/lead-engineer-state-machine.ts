@@ -402,7 +402,10 @@ export class FeatureStateMachine {
 
         // Pre-transition checkpoint: persist currentState before processing begins.
         // Ensures crash during processing is recoverable — resume starts at current state.
-        if (this.checkpointService) {
+        // Skip terminal states — they delete the checkpoint on exit, so saving
+        // a checkpoint for them would race with delete() and leave a stale file.
+        const terminalStates = new Set<FeatureProcessingState>(['ESCALATE', 'DONE', 'DEPLOY']);
+        if (this.checkpointService && !terminalStates.has(currentState)) {
           const cs = this.checkpointService;
           this.persistQueue.enqueue(() =>
             cs.save(projectPath, feature.id, currentState, ctx, completedStates, goalGateResults)
@@ -463,7 +466,10 @@ export class FeatureStateMachine {
         });
 
         // Post-transition checkpoint: update to nextState after successful transition.
-        if (this.checkpointService && result.nextState) {
+        // Skip terminal states — they delete the checkpoint immediately, so saving
+        // a checkpoint for them would race with delete() and leave a stale file.
+        const TERMINAL_STATES = new Set<FeatureProcessingState>(['ESCALATE', 'DONE', 'DEPLOY']);
+        if (this.checkpointService && result.nextState && !TERMINAL_STATES.has(result.nextState)) {
           const cs = this.checkpointService;
           const nextStateSnapshot = result.nextState;
           this.persistQueue.enqueue(() =>
