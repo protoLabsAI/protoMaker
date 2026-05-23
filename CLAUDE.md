@@ -134,6 +134,31 @@ gh pr close <old-number> --comment "Replaced by #<new-number> with correct fix/ 
 
 Prevention: Always set `category: 'fix'` (or `'bug'`) when creating fix features via MCP — `branchPrefixForCategory()` will automatically use `fix/`. See `.automaker/memory/ops-lessons.md` for the full pattern.
 
+**Stale ESCALATE checkpoint traps next dispatch (~40ms to blocked):**
+Symptom: `start_agent` / `run-feature` returns success, but the feature flips to `blocked` in well under a second with `statusChangeReason: "Max agent retries exceeded: 3 attempts, limit 3"` even after you reset `failureCount: 0`. Server log shows `Checkpoint loaded for <id> at state ESCALATE` → immediate ESCALATE → no execution attempted. `failureCount` may even be 1 (not 3) on the feature, but the checkpoint has stale `retryCount: 3` in its context.
+
+Root cause: `LeadEngineerStateMachine.processFeatureGraph()` enqueues a post-transition save of the ESCALATE checkpoint via the non-awaited `persistQueue`, then awaits `checkpointService.delete()`. The delete can run before the queued save, leaving a stale ESCALATE checkpoint on disk. Filed as P1 bug — `apps/server/src/services/lead-engineer-state-machine.ts` around lines 465 (save) and 583 (delete).
+
+Recovery — dispatch a second time:
+
+```bash
+# 1) Reset feature
+python3 -c "
+import json
+p = '.automaker/features/<featureId>/feature.json'
+d = json.load(open(p))
+d['failureCount'] = 0; d['status'] = 'backlog'; d['statusChangeReason'] = None
+json.dump(d, open(p, 'w'), indent=2)
+"
+# 2) Dispatch — this run reaches ESCALATE again and deletes the stale checkpoint as terminal cleanup
+curl -sS -X POST http://localhost:3008/api/auto-mode/run-feature \
+  -H "Content-Type: application/json" -H "x-api-key: $AUTOMAKER_API_KEY" \
+  -d '{"projectPath":"<absPath>","featureId":"<featureId>","useWorktrees":true}'
+# 3) Reset feature again, dispatch again — this run starts clean from INTAKE
+```
+
+Alternative: delete the file directly if you can find it (it lives at `<projectPath>/.automaker/checkpoints/<featureId>.json`). It may have already been deleted by the most recent ESCALATE run — if so, only one fresh dispatch is needed.
+
 **Self-improvement rule:** When you observe a recurring failure pattern that blocks agents, you MUST immediately:
 
 1. File a P1 bug feature on the board describing the root cause and fix
