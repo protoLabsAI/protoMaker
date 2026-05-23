@@ -3336,12 +3336,18 @@ Format your response as a structured markdown document.`;
   private async updateFeatureStatus(
     projectPath: string,
     featureId: string,
-    status: string
+    status: string,
+    statusChangeReason?: string
   ): Promise<void> {
     // Delegate to FeatureStateManager which guarantees persist-before-emit ordering:
     // writes to disk first, then emits events (prevents stale reads on client refresh
     // after server restart triggered by status-change events).
-    await this.featureStateManager.updateFeatureStatus(projectPath, featureId, status);
+    await this.featureStateManager.updateFeatureStatus(
+      projectPath,
+      featureId,
+      status,
+      statusChangeReason
+    );
   }
 
   private isFeatureFinished(feature: Feature): boolean {
