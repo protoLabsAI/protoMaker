@@ -358,11 +358,15 @@ export const queryKeys = {
   },
 
   // ============================================
-  // Todo Lists
+  // Beads (issue tracker)
   // ============================================
-  todoLists: {
-    /** All todo lists for a project */
-    all: (projectPath: string) => ['todoLists', projectPath] as const,
+  beads: {
+    /** All non-tombstoned issues for a project */
+    list: (projectPath: string) => ['beads', 'list', projectPath] as const,
+    /** Issues ready to work on (not blocked by deps) */
+    ready: (projectPath: string) => ['beads', 'ready', projectPath] as const,
+    /** Single issue by id */
+    show: (projectPath: string, id: string) => ['beads', 'show', projectPath, id] as const,
   },
 
   // ============================================

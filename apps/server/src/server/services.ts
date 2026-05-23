@@ -104,7 +104,7 @@ import { changelogService } from '../services/changelog-service.js';
 import { ProjectPMService } from '../services/project-pm-service.js';
 import * as projectPmModule from '../services/project-pm.module.js';
 import { WorkIntakeService } from '../services/work-intake-service.js';
-import { TodoService } from '../services/todo-service.js';
+import { BeadsService } from '../services/beads-service.js';
 import { CommandRegistryService } from '../services/command-registry-service.js';
 import { CheckpointService } from '../services/checkpoint-service.js';
 import { ProjectSlugResolver } from '../services/project-slug-resolver.js';
@@ -248,8 +248,8 @@ export interface ServiceContainer {
   // Content flow (singleton)
   contentFlowService: typeof contentFlowService;
 
-  // Todo workspace (per-project todo lists)
-  todoService: TodoService;
+  // Beads issue tracker (per-project; wraps the `br` CLI)
+  beadsService: BeadsService;
 
   // DORA metrics (lead time, deployment frequency, change failure rate, recovery time, rework rate)
   doraMetricsService: DoraMetricsService;
@@ -670,8 +670,8 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Project PM Service — session store for PM Agent chat
   const projectPmService = new ProjectPMService();
 
-  // Todo Service — per-project workspace
-  const todoService = new TodoService();
+  // Beads Service — wraps `br` CLI for per-project issue tracking
+  const beadsService = new BeadsService();
 
   // Friction Tracker Service — self-improvement loop (requires featureLoader)
   const frictionTrackerService = new FrictionTrackerService({
@@ -847,7 +847,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     gitWorkflowService,
     contentFlowService,
     projectPmService,
-    todoService,
+    beadsService,
     doraMetricsService,
     deploymentTrackerService,
     projectHealthService,

@@ -7,7 +7,13 @@
  *   - contentPipeline    (route text to content agents)
  *   - authorityPipeline  (route ideas to PM agent)
  */
-import type { NotesWorkspace, NoteTabPermissions, TodoList, TodoItem } from '@protolabsai/types';
+import type {
+  NotesWorkspace,
+  NoteTabPermissions,
+  BeadsIssue,
+  CreateBeadsIssueInput,
+  UpdateBeadsIssueInput,
+} from '@protolabsai/types';
 import { BaseHttpClient, type Constructor } from './base-http-client';
 
 export const withContentClient = <TBase extends Constructor<BaseHttpClient>>(Base: TBase) =>
@@ -118,59 +124,38 @@ export const withContentClient = <TBase extends Constructor<BaseHttpClient>>(Bas
         this.post('/api/authority/inject-idea', { projectPath, title, description }),
     };
 
-    // Todo API — per-project todo lists and items
-    todos = {
-      list: (projectPath: string): Promise<{ success: boolean; lists: TodoList[] }> =>
-        this.post('/api/todos/list', { projectPath }),
+    // Beads API — per-project issue tracker via the `br` CLI
+    beads = {
+      list: (projectPath: string): Promise<{ success: boolean; issues: BeadsIssue[] }> =>
+        this.post('/api/beads/list', { projectPath }),
 
-      createList: (
+      ready: (projectPath: string): Promise<{ success: boolean; issues: BeadsIssue[] }> =>
+        this.post('/api/beads/ready', { projectPath }),
+
+      show: (projectPath: string, id: string): Promise<{ success: boolean; issue: BeadsIssue }> =>
+        this.post('/api/beads/show', { projectPath, id }),
+
+      create: (
         projectPath: string,
-        name: string
-      ): Promise<{ success: boolean; list: TodoList }> =>
-        this.post('/api/todos/create-list', { projectPath, name }),
+        input: CreateBeadsIssueInput
+      ): Promise<{ success: boolean; issue: BeadsIssue }> =>
+        this.post('/api/beads/create', { projectPath, input }),
 
-      deleteList: (projectPath: string, listId: string): Promise<{ success: boolean }> =>
-        this.post('/api/todos/delete-list', { projectPath, listId }),
-
-      addItem: (
+      update: (
         projectPath: string,
-        listId: string,
-        title: string,
-        priority?: 0 | 1 | 2 | 3 | 4,
-        dueDate?: string,
-        linkedFeatureId?: string
-      ): Promise<{ success: boolean; item: TodoItem }> =>
-        this.post('/api/todos/add-item', {
-          projectPath,
-          listId,
-          title,
-          priority,
-          dueDate,
-          linkedFeatureId,
-        }),
+        id: string,
+        input: UpdateBeadsIssueInput
+      ): Promise<{ success: boolean; issue: BeadsIssue }> =>
+        this.post('/api/beads/update', { projectPath, id, input }),
 
-      updateItem: (
+      close: (
         projectPath: string,
-        listId: string,
-        itemId: string,
-        updates: Partial<
-          Pick<TodoItem, 'title' | 'completed' | 'completedAt' | 'dueDate' | 'priority'>
-        >
-      ): Promise<{ success: boolean; item: TodoItem }> =>
-        this.post('/api/todos/update-item', { projectPath, listId, itemId, updates }),
+        id: string,
+        reason?: string
+      ): Promise<{ success: boolean; issue: BeadsIssue }> =>
+        this.post('/api/beads/close', { projectPath, id, reason }),
 
-      completeItem: (
-        projectPath: string,
-        listId: string,
-        itemId: string
-      ): Promise<{ success: boolean; item: TodoItem }> =>
-        this.post('/api/todos/complete-item', { projectPath, listId, itemId }),
-
-      deleteItem: (
-        projectPath: string,
-        listId: string,
-        itemId: string
-      ): Promise<{ success: boolean }> =>
-        this.post('/api/todos/delete-item', { projectPath, listId, itemId }),
+      delete: (projectPath: string, id: string): Promise<{ success: boolean; deleted: string[] }> =>
+        this.post('/api/beads/delete', { projectPath, id }),
     };
   };

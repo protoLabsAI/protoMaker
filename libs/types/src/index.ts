@@ -766,8 +766,15 @@ export type {
 // Notes types (Tiptap-based project notes workspace)
 export type { NoteTab, NoteTabPermissions, NotesWorkspace } from './notes.js';
 
-// Todo types (project-level todo lists and items)
-export type { TodoItem, TodoList, TodoWorkspace } from './todo.js';
+// Beads issue tracker types (wraps the `br` CLI per project)
+export type {
+  BeadsIssue,
+  BeadsIssueStatus,
+  BeadsIssueType,
+  BeadsPriority,
+  CreateBeadsIssueInput,
+  UpdateBeadsIssueInput,
+} from './beads.js';
 
 // Pipeline checkpoint types (crash recovery and goal gates)
 export type { PipelineCheckpoint, GoalGateResult } from './pipeline-checkpoint.js';

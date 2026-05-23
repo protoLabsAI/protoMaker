@@ -224,7 +224,7 @@ export interface KeyboardShortcuts {
   docs: string;
   inbox: string;
   fileEditor: string;
-  todo: string;
+  beads: string;
   github: string;
   automations: string;
   projects: string;
@@ -265,7 +265,7 @@ export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
   docs: 'Cmd+D',
   inbox: 'B',
   fileEditor: 'E',
-  todo: 'Shift+T',
+  beads: 'Shift+T',
   github: 'G',
   automations: 'U',
   projects: 'R',

@@ -257,6 +257,41 @@ The single most important documentation metric. Measures: time from a new user's
 
 The in-app docs viewer is the interface for internal docs. A page about "how to deploy to staging" is internal. A page about "how to set up auto-mode" is public.
 
+## Local Issue Tracker: `br` (beads)
+
+This repo uses **[beads_rust](https://github.com/Dicklesworthstone/beads_rust)** (`br`) as its local-first issue tracker. It is the canonical TODO/issue surface — both for humans and for agents. The in-app "TODO view" is a thin CRUD wrapper over the same `.beads/` store.
+
+- **Binary**: `br` (installed at `~/.cargo/bin/br`, version 0.1.23+). Verify with `br --version`.
+- **State per project**: `.beads/beads.db` (SQLite, authoritative) + `.beads/issues.jsonl` (git-friendly export, auto-flushed on every mutation).
+- **One tracker per repo.** No multi-list concept — filter by `--type`, `--status`, `--priority`, or `--assignee` instead.
+
+### Common commands (agent use)
+
+Always pass `--json` and run with `RUST_LOG=error` to suppress dependency log spam:
+
+```bash
+RUST_LOG=error br list --json                                    # All issues
+RUST_LOG=error br ready --json                                   # Issues not blocked by deps
+RUST_LOG=error br show br-abc123 --json                          # Single issue
+RUST_LOG=error br create "Title" --type feature --priority 1 --json
+RUST_LOG=error br update br-abc123 --status in_progress --json
+RUST_LOG=error br close br-abc123 --reason "Done" --json
+RUST_LOG=error br dep add br-abc123 br-def456                    # abc depends on def
+```
+
+Types: `feature | task | bug | chore | epic`. Priority: `0` (critical) → `4` (backlog). Status: `open | in_progress | blocked | closed`.
+
+### Working with `.beads/` in this repo
+
+- `.beads/issues.jsonl` is checked in and merges cleanly in git — commit it alongside the code changes it tracks.
+- `.beads/beads.db` should be **gitignored** (SQLite binary, rebuildable from the JSONL via `br sync --import-only --rebuild`).
+- `br` is non-invasive: it never auto-commits, pushes, pulls, or installs hooks. Git handoff is the user's / agent's responsibility.
+- After agent work that mutated issues: `git add .beads/issues.jsonl && git commit -m "..."`.
+
+### Server integration
+
+Server-side issue CRUD goes through `BeadsService` (`apps/server/src/services/beads-service.ts`), which subprocesses `br --json` with `cwd: projectPath`. Routes mounted at `/api/beads/*`. Do not bypass — never read `.beads/beads.db` directly from app code; always go through `br` so concurrency and JSONL auto-flush stay consistent.
+
 ## Important Guidelines
 
 - **Dev Server Management**: Do not start, stop, restart, or otherwise manage the dev server yourself. Always ask the user to manage it, or you will break it.
