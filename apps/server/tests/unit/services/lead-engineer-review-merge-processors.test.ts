@@ -322,6 +322,69 @@ describe('ReviewProcessor', () => {
       vi.useRealTimers();
     });
   });
+
+  describe('unsafe branch name hard-fail', () => {
+    it('blocks the feature when branch name contains unsafe characters', async () => {
+      // Feature has an unsafe branch name (contains '+')
+      const ctx = makeCtx({
+        feature: makeFeature({
+          branchName: 'feature/skill-index-+-retrieval-injection-abc1234',
+        }) as any,
+      });
+
+      // checkBranchMerged is called early in process() — mock it to avoid further exec calls
+      mockExec.mockImplementation(
+        (
+          _cmd: string,
+          _opts: unknown,
+          cb: (err: Error, result: { stdout: string; stderr: string }) => void
+        ) => {
+          cb(new Error('test: unmocked exec'), { stdout: '', stderr: '' });
+        }
+      );
+
+      const result = await processor.process(ctx);
+
+      // Should short-circuit after checkBranchMerged blocks the feature
+      expect(result.nextState).toBeNull();
+      expect(result.shouldContinue).toBe(false);
+
+      // Feature should be updated to blocked
+      const updateCalls = (serviceContext.featureLoader.update as ReturnType<typeof vi.fn>).mock
+        .calls;
+      const blockedUpdate = updateCalls.find((call) => call[2]?.status === 'blocked');
+      expect(blockedUpdate).toBeDefined();
+      expect(blockedUpdate?.[2]?.statusChangeReason).toMatch(/unsafe characters/);
+    });
+
+    it('blocks the feature when branch name contains # character', async () => {
+      const ctx = makeCtx({
+        feature: makeFeature({
+          branchName: 'fix/bug-#42-auth-abc1234',
+        }) as any,
+      });
+
+      mockExec.mockImplementation(
+        (
+          _cmd: string,
+          _opts: unknown,
+          cb: (err: Error, result: { stdout: string; stderr: string }) => void
+        ) => {
+          cb(new Error('test: unmocked exec'), { stdout: '', stderr: '' });
+        }
+      );
+
+      const result = await processor.process(ctx);
+
+      expect(result.nextState).toBeNull();
+      expect(result.shouldContinue).toBe(false);
+
+      const updateCalls = (serviceContext.featureLoader.update as ReturnType<typeof vi.fn>).mock
+        .calls;
+      const blockedUpdate = updateCalls.find((call) => call[2]?.status === 'blocked');
+      expect(blockedUpdate).toBeDefined();
+    });
+  });
 });
 
 describe('MergeProcessor', () => {

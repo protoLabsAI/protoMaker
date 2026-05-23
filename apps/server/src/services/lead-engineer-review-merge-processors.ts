@@ -1217,14 +1217,18 @@ export class ReviewProcessor implements StateProcessor {
     const branchName = ctx.feature.branchName;
     if (!branchName) return false;
 
-    // Refuse to proceed with an unsafe branch name — shell injection risk and indicative
-    // of a generation bug. Hard-fail so the state machine escalates and the operator is
-    // notified rather than silently skipping the merge gate.
+    // Hard-fail on unsafe branch names — shell injection risk and indicative
+    // of a generation bug. Block the feature so the state machine escalates
+    // and the operator is notified. Returning false ensures callers short-circuit
+    // rather than silently skipping the merge gate.
     if (!/^[a-zA-Z0-9._\-/]+$/.test(branchName)) {
-      throw new Error(
-        `[REVIEW] Branch name "${branchName}" contains unsafe characters — merge gate aborted. ` +
-          `Rename the branch to use only [a-zA-Z0-9._-/] characters before retrying.`
-      );
+      const reason = `Branch name '${branchName}' contains unsafe characters — merge gate refused`;
+      logger.error(`[REVIEW] ${reason}`);
+      await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+        status: 'blocked',
+        statusChangeReason: reason,
+      });
+      return false;
     }
 
     try {
