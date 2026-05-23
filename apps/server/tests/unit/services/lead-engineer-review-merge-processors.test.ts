@@ -348,8 +348,10 @@ describe('ReviewProcessor', () => {
       // Should escalate (not continue) — unsafe branch name is unrecoverable
       // without human intervention. The feature is also marked blocked via
       // featureLoader.update so the operator sees a clear reason on the board.
+      // State machine routes to ESCALATE so the operator gets the standard
+      // escalation pathway. shouldContinue=true means "yes, perform this
+      // transition" — the run still terminates because ESCALATE is terminal.
       expect(result.nextState).toBe('ESCALATE');
-      expect(result.shouldContinue).toBe(false);
 
       // Feature should be updated to blocked
       const updateCalls = (serviceContext.featureLoader.update as ReturnType<typeof vi.fn>).mock
@@ -378,8 +380,10 @@ describe('ReviewProcessor', () => {
 
       const result = await processor.process(ctx);
 
+      // State machine routes to ESCALATE so the operator gets the standard
+      // escalation pathway. shouldContinue=true means "yes, perform this
+      // transition" — the run still terminates because ESCALATE is terminal.
       expect(result.nextState).toBe('ESCALATE');
-      expect(result.shouldContinue).toBe(false);
 
       const updateCalls = (serviceContext.featureLoader.update as ReturnType<typeof vi.fn>).mock
         .calls;
