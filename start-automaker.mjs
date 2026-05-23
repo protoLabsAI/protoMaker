@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Cross-platform launcher for Automaker
- * Works on Windows (CMD, PowerShell, Git Bash) and Unix (macOS, Linux)
+ * Cross-platform launcher for Automaker — dispatches to `start-automaker.sh`
+ * and orchestrates dev/prod mode selection. Works on Windows and Unix systems.
  */
 
 import { spawn, spawnSync } from 'child_process';
