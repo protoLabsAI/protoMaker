@@ -9,3 +9,6 @@
 # Temporary
 last-touched
 *.tmp
+
+# Br runtime history (per-process snapshots — not portable)
+.br_history/
