@@ -54,7 +54,7 @@ interface UseNavigationProps {
     projectSettings: string;
     inbox: string;
     fileEditor: string;
-    todo: string;
+    beads: string;
     github: string;
     automations: string;
     projects: string;
@@ -114,10 +114,10 @@ export function useNavigation({
         shortcut: shortcuts.notes,
       },
       {
-        id: 'todo',
-        label: 'Todo',
+        id: 'beads',
+        label: 'Beads',
         icon: ListTodo,
-        shortcut: shortcuts.todo,
+        shortcut: shortcuts.beads,
       },
       {
         id: 'github',

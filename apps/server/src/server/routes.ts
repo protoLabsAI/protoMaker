@@ -68,7 +68,7 @@ import { createChatRoutes } from '../routes/chat/index.js';
 import { createCodexRoutes } from '../routes/codex/index.js';
 import { createAIRoutes } from '../routes/ai/index.js';
 import { createNotesRoutes } from '../routes/notes/index.js';
-import { createTodoRoutes } from '../routes/todo/index.js';
+import { createBeadsRoutes } from '../routes/beads/index.js';
 import { createSitrepRoutes } from '../routes/sitrep/index.js';
 import { createPortfolioSitrepRoutes } from '../routes/portfolio/sitrep.js';
 import { createCrossRepoDepsRoutes } from '../routes/portfolio/cross-repo-deps.js';
@@ -139,7 +139,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     repoRoot,
     sensorRegistryService,
     projectPmService,
-    todoService,
+    beadsService,
     schedulerService,
     eventRouterService,
     pipelineCheckpointService,
@@ -373,7 +373,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/codex', createCodexRoutes());
   app.use('/api/ai', createAIRoutes());
   app.use('/api/notes', createNotesRoutes(events));
-  app.use('/api/todos', createTodoRoutes(todoService));
+  app.use('/api/beads', createBeadsRoutes(beadsService));
   app.use('/api/sitrep', createSitrepRoutes({ featureLoader, autoModeService, repoRoot }));
   app.use('/api/portfolio/sitrep', createPortfolioSitrepRoutes({ settingsService }));
   app.use(
