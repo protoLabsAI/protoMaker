@@ -12,10 +12,8 @@ import {
   getGitWorkflowSection,
   getAgentGuidelinesSection,
   getDocsCommandsSection,
-  getExtensionCommandsSection,
   getCodingRules,
   getDocsCI,
-  getExtensionCI,
 } from '../index.js';
 
 describe('projects', () => {
@@ -60,14 +58,8 @@ describe('features', () => {
     expect(docs.length).toBeGreaterThan(universal.length);
   });
 
-  it('returns universal + extension features for extension type', () => {
-    const universal = getUniversalFeatures();
-    const ext = getStarterFeatures('extension');
-    expect(ext.length).toBeGreaterThan(universal.length);
-  });
-
   it('all features have valid complexity values', () => {
-    for (const type of ['docs', 'extension', 'general'] as const) {
+    for (const type of ['docs', 'portfolio', 'general'] as const) {
       const features = getStarterFeatures(type);
       for (const f of features) {
         expect(['small', 'medium', 'large']).toContain(f.complexity);
@@ -122,12 +114,6 @@ describe('claude-md', () => {
     expect(section).toContain('npm run dev');
     expect(section).toContain('npm run build');
   });
-
-  it('getExtensionCommandsSection is non-empty', () => {
-    const section = getExtensionCommandsSection();
-    expect(section).toContain('pnpm dev');
-    expect(section).toContain('pnpm build');
-  });
 });
 
 describe('coding-rules', () => {
@@ -135,12 +121,6 @@ describe('coding-rules', () => {
     const rules = getCodingRules('docs');
     expect(rules).toContain('Diataxis');
     expect(rules).toContain('Prettier');
-  });
-
-  it('returns extension rules', () => {
-    const rules = getCodingRules('extension');
-    expect(rules).toContain('Browser Extension');
-    expect(rules).toContain('web-ext');
   });
 
   it('returns typescript rules', () => {
@@ -156,7 +136,7 @@ describe('coding-rules', () => {
   });
 
   it('all types return non-empty strings', () => {
-    for (const type of ['docs', 'extension', 'typescript', 'react'] as const) {
+    for (const type of ['docs', 'typescript', 'react', 'astro-react'] as const) {
       const rules = getCodingRules(type);
       expect(rules.length).toBeGreaterThan(100);
     }
@@ -169,13 +149,5 @@ describe('ci', () => {
     expect(ci).toContain('name: CI');
     expect(ci).toContain('npm run build');
     expect(ci).toContain('Cloudflare Pages');
-  });
-
-  it('returns extension CI YAML', () => {
-    const ci = getExtensionCI();
-    expect(ci).toContain('name: CI');
-    expect(ci).toContain('pnpm install');
-    expect(ci).toContain('pnpm lint');
-    expect(ci).toContain('pnpm test');
   });
 });

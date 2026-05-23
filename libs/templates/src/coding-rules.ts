@@ -13,8 +13,6 @@ export function getCodingRules(type: CodingRulesType): string {
   switch (type) {
     case 'docs':
       return getDocsCodingRules();
-    case 'extension':
-      return getExtensionCodingRules();
     case 'typescript':
       return getTypeScriptCodingRules();
     case 'react':
@@ -68,45 +66,6 @@ description: One-line description for SEO and link previews
 - Store images in \`public/\` for static assets or use relative paths for co-located images
 - Use descriptive alt text for accessibility
 - Prefer SVG for diagrams and icons
-`;
-}
-
-function getExtensionCodingRules(): string {
-  return `# Coding Rules
-
-Rules for AI agents working on this browser extension.
-
-## TypeScript
-
-- Strict mode enabled — no \`any\` types, handle all null cases
-- All new code must be TypeScript
-- Define message types in \`src/core/messaging.ts\` MessageMap interface
-
-## Formatting
-
-- Prettier is configured — run \`pnpm format\` before committing
-- Do NOT manually format code; let Prettier handle it
-
-## Linting
-
-- ESLint v9+ (flat config) — fix all lint warnings
-- \`web-ext lint\` validates Firefox AMO compliance
-- Run \`pnpm lint\` to check both
-
-## Testing
-
-- Write tests for all new core modules
-- Use Vitest for unit tests, mock \`browser\` global
-- Use Playwright for E2E (Chromium persistent context only)
-- Test directory: \`tests/unit/\` and \`tests/e2e/\`
-
-## Browser Extension Specifics
-
-- Never use \`eval()\`, \`new Function()\`, or inline script tags (CSP violation)
-- Never load remote JS in production bundles
-- Use \`browser.*\` API (not \`chrome.*\`) — WXT + webextension-polyfill handles the abstraction
-- All new entrypoints go in \`entrypoints/\` — WXT auto-detects them
-- Keep popup UI lightweight — it unmounts when closed
 `;
 }
 

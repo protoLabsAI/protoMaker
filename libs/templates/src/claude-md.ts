@@ -116,25 +116,3 @@ Add portfolio entries by creating files in \`src/content/\`:
 Schemas are defined in \`src/content.config.ts\`. Run \`npm run build\` after adding entries to validate frontmatter.
 `;
 }
-
-/**
- * Common commands section for extension-type projects.
- */
-export function getExtensionCommandsSection(): string {
-  return `## Common Commands
-
-\`\`\`bash
-pnpm install          # Install dependencies
-pnpm dev              # Chrome dev mode (auto-reload)
-pnpm dev:firefox      # Firefox dev mode
-pnpm build            # Chrome production build
-pnpm build:firefox    # Firefox production build
-pnpm zip:all          # Zip for both stores
-pnpm typecheck        # Type checking
-pnpm lint             # ESLint + web-ext lint
-pnpm format           # Prettier
-pnpm test             # Unit tests
-pnpm test:e2e         # E2E tests
-\`\`\`
-`;
-}
