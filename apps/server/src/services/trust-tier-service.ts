@@ -19,6 +19,32 @@ import path from 'path';
 const logger = createLogger('TrustTierService');
 
 /**
+ * In-memory per-file locks to serialize read-modify-write operations.
+ * Prevents lost updates when two concurrent calls read the same stale storage.
+ */
+const fileLocks = new Map<string, Promise<void>>();
+
+async function withFileLock<T>(filePath: string, operation: () => Promise<T>): Promise<T> {
+  const existingLock = fileLocks.get(filePath);
+  if (existingLock) {
+    await existingLock;
+  }
+
+  let releaseLock: () => void;
+  const lockPromise = new Promise<void>((resolve) => {
+    releaseLock = resolve;
+  });
+  fileLocks.set(filePath, lockPromise);
+
+  try {
+    return await operation();
+  } finally {
+    releaseLock!();
+    fileLocks.delete(filePath);
+  }
+}
+
+/**
  * Storage format for trust tiers
  * Maps GitHub username -> TrustTierRecord
  */
@@ -61,6 +87,17 @@ export class TrustTierService {
     grantedBy: string,
     reason?: string
   ): Promise<TrustTierRecord> {
+    return withFileLock(this.filePath, () =>
+      this.setTierLocked(githubUsername, tier, grantedBy, reason)
+    );
+  }
+
+  private async setTierLocked(
+    githubUsername: string,
+    tier: TrustTier,
+    grantedBy: string,
+    reason?: string
+  ): Promise<TrustTierRecord> {
     const record: TrustTierRecord = {
       githubUsername,
       tier,
@@ -81,6 +118,10 @@ export class TrustTierService {
    * Revoke a user's trust tier (removes entry from storage)
    */
   async revokeTier(githubUsername: string): Promise<void> {
+    return withFileLock(this.filePath, () => this.revokeTierLocked(githubUsername));
+  }
+
+  private async revokeTierLocked(githubUsername: string): Promise<void> {
     const storage = await this.loadStorage();
 
     if (!storage[githubUsername]) {
