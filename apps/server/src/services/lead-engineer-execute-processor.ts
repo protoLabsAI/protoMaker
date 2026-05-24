@@ -924,6 +924,39 @@ export class ExecuteProcessor implements StateProcessor {
       }
     }
 
+    // ── Guard: require a PR and commits before transitioning to REVIEW ────────
+    // Without this guard, an agent that hard-fails on turn 1 (e.g. 401 from the
+    // model gateway) can still reach REVIEW with no PR and no commits — leaving
+    // a human with "in review" but nothing to review.
+    const hasPr = ctx.prNumber != null || ctx.feature.prNumber != null;
+
+    // If no PR was created, check for commits as a secondary signal.
+    // If we have a PR, the commits check is advisory — a PR is strong enough evidence.
+    const hasCommits = hasPr || (await this.hasCommitsAheadOfBase(ctx));
+
+    if (!hasPr) {
+      const missingParts: string[] = [];
+      missingParts.push('no PR created');
+      if (!hasCommits) missingParts.push('no commits ahead of base');
+      const reason = `Agent exited without producing reviewable output — ${missingParts.join(', ')}. Check agent-output.md for model/auth errors.`;
+      logger.warn('[EXECUTE] Guard failed — blocking feature instead of transitioning to REVIEW', {
+        featureId: ctx.feature.id,
+        reason,
+        hasPr,
+        hasCommits,
+        prNumber: ctx.prNumber ?? ctx.feature.prNumber,
+      });
+      await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+        status: 'blocked',
+        statusChangeReason: reason,
+      });
+      return {
+        nextState: null,
+        shouldContinue: false,
+        reason,
+      };
+    }
+
     // Post-agent formatting: unconditionally run prettier on all changed files
     // before transitioning to REVIEW, regardless of how the agent committed.
     await this.runPostAgentFormatting(ctx);
@@ -1528,6 +1561,45 @@ export class ExecuteProcessor implements StateProcessor {
   /**
    * Resolve the worktree directory for the given branch, or null if not found.
    * Uses `git worktree list --porcelain` in the project root.
+   */
+  /**
+   * Check whether the worktree (or projectPath) has commits ahead of the base branch.
+   * Returns false if no worktree can be resolved or the check fails (conservative:
+   * treat errors as "no commits" to avoid false positives reaching REVIEW).
+   */
+  private async hasCommitsAheadOfBase(ctx: StateContext): Promise<boolean> {
+    const { feature, projectPath } = ctx;
+    const baseBranch = feature.gitWorkflow?.prBaseBranch || 'main';
+    const worktreeDir = await this.resolveWorktreeDir(projectPath, feature.branchName);
+    const workDir = worktreeDir ?? projectPath;
+
+    try {
+      // Fetch to ensure origin/<baseBranch> is up-to-date
+      await execAsync(`git fetch origin ${baseBranch}`, {
+        cwd: workDir,
+        timeout: 15_000,
+      }).catch(() => {
+        // Non-fatal: worktree may not have origin configured
+      });
+
+      const { stdout } = await execAsync(`git rev-list --count origin/${baseBranch}..HEAD`, {
+        cwd: workDir,
+        timeout: 10_000,
+      });
+      const count = parseInt(stdout.trim(), 10);
+      return !isNaN(count) && count > 0;
+    } catch {
+      // If we can't check, be conservative — assume no commits
+      logger.debug('[EXECUTE] Could not check commits ahead of base (non-fatal)', {
+        featureId: feature.id,
+        baseBranch,
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Resolve the worktree directory for a given branch.
    */
   private async resolveWorktreeDir(
     projectPath: string,
