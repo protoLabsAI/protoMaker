@@ -33,9 +33,9 @@ describe('model-resolver.ts', () => {
       expect(result).toBe(CLAUDE_MODEL_MAP.sonnet);
     });
 
-    it("should resolve 'opus' alias to full model string", () => {
+    it("should resolve 'opus' alias to the gateway reasoning tier", () => {
       const result = resolveModelString('opus');
-      expect(result).toBe('claude-opus-4-6');
+      expect(result).toBe('protolabs/reasoning');
     });
 
     it('should pass through unknown models unchanged (may be provider models)', () => {
@@ -110,7 +110,7 @@ describe('model-resolver.ts', () => {
   describe('getEffectiveModel', () => {
     it('should prioritize explicit model over session and default', () => {
       const result = getEffectiveModel('opus', 'haiku', 'gpt-5.2');
-      expect(result).toBe('claude-opus-4-6');
+      expect(result).toBe('protolabs/reasoning');
     });
 
     it('should use session model when explicit is not provided', () => {
@@ -142,10 +142,10 @@ describe('model-resolver.ts', () => {
       expect(CLAUDE_MODEL_MAP).toHaveProperty('opus');
     });
 
-    it('should have valid Claude model strings', () => {
-      expect(CLAUDE_MODEL_MAP.haiku).toContain('haiku');
-      expect(CLAUDE_MODEL_MAP.sonnet).toContain('sonnet');
-      expect(CLAUDE_MODEL_MAP.opus).toContain('opus');
+    it('maps short aliases to protolabs/* gateway tiers', () => {
+      expect(CLAUDE_MODEL_MAP.haiku).toBe('protolabs/fast');
+      expect(CLAUDE_MODEL_MAP.sonnet).toBe('protolabs/smart');
+      expect(CLAUDE_MODEL_MAP.opus).toBe('protolabs/reasoning');
     });
   });
 

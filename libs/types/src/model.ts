@@ -11,24 +11,47 @@ import type { OpencodeModelId } from './opencode-models.js';
 export type ClaudeCanonicalId = 'claude-haiku' | 'claude-sonnet' | 'claude-opus';
 
 /**
- * Canonical Claude model map - maps prefixed IDs to full model strings
- * Use these IDs for internal storage and routing.
+ * Canonical Claude model map - maps prefixed IDs to gateway tier IDs.
+ *
+ * All Claude routing goes through the protoLabs gateway — the gateway-issued
+ * API key is the only credential the product expects. The three "claude-*"
+ * aliases below are the public symbols app code uses; resolving them yields
+ * a `protolabs/*` tier name that the gateway accepts.
+ *
+ * If you need to call the Anthropic API directly (which the product no longer
+ * supports), wire that path through a dedicated provider, not this map.
  */
 export const CLAUDE_CANONICAL_MAP: Record<ClaudeCanonicalId, string> = {
-  'claude-haiku': 'claude-haiku-4-5-20251001',
-  'claude-sonnet': 'claude-sonnet-4-6',
-  'claude-opus': 'claude-opus-4-6',
+  'claude-haiku': 'protolabs/fast',
+  'claude-sonnet': 'protolabs/smart',
+  'claude-opus': 'protolabs/reasoning',
 } as const;
 
 /**
- * Legacy Claude model aliases (short names) for backward compatibility
- * These map to the same full model strings as the canonical map.
- * @deprecated Use CLAUDE_CANONICAL_MAP for new code
+ * Short-name Claude model aliases. Resolves to the same gateway tiers as
+ * CLAUDE_CANONICAL_MAP. Kept as a distinct map because settings storage and
+ * older config blobs use the bare short names.
  */
 export const CLAUDE_MODEL_MAP: Record<string, string> = {
-  haiku: 'claude-haiku-4-5-20251001',
-  sonnet: 'claude-sonnet-4-6',
-  opus: 'claude-opus-4-6',
+  haiku: 'protolabs/fast',
+  sonnet: 'protolabs/smart',
+  opus: 'protolabs/reasoning',
+} as const;
+
+/**
+ * Full versioned Claude model strings that may appear in persisted settings
+ * from before the gateway cutover. Migrated to gateway tiers via
+ * `migrateModelId`. Any new entry that arrives via a settings reload or an
+ * API call still routes through the gateway.
+ */
+export const LEGACY_CLAUDE_FULL_MODEL_MAP: Record<string, string> = {
+  'claude-haiku-4-5-20251001': 'protolabs/fast',
+  'claude-haiku-4-5': 'protolabs/fast',
+  'claude-sonnet-4-6': 'protolabs/smart',
+  'claude-sonnet-4-5-20250929': 'protolabs/smart',
+  'claude-sonnet-4-5': 'protolabs/smart',
+  'claude-opus-4-6': 'protolabs/reasoning',
+  'claude-opus-4-5': 'protolabs/reasoning',
 } as const;
 
 /**

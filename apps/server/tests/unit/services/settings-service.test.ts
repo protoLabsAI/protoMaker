@@ -647,11 +647,12 @@ describe('settings-service.ts', () => {
 
       const settings = await settingsService.getGlobalSettings();
 
-      // Verify all phase models are now PhaseModelEntry objects
-      // Legacy aliases are migrated to canonical IDs
-      expect(settings.phaseModels.enhancementModel).toEqual({ model: 'claude-sonnet' });
-      expect(settings.phaseModels.fileDescriptionModel).toEqual({ model: 'claude-haiku' });
-      expect(settings.phaseModels.specGenerationModel).toEqual({ model: 'claude-opus' });
+      // Verify all phase models are now PhaseModelEntry objects. Legacy short
+      // aliases (sonnet/haiku/opus) migrate straight to the gateway tiers —
+      // there is no direct-Anthropic path anymore.
+      expect(settings.phaseModels.enhancementModel).toEqual({ model: 'protolabs/smart' });
+      expect(settings.phaseModels.fileDescriptionModel).toEqual({ model: 'protolabs/fast' });
+      expect(settings.phaseModels.specGenerationModel).toEqual({ model: 'protolabs/reasoning' });
       expect(settings.version).toBe(SETTINGS_VERSION);
     });
 
@@ -676,18 +677,17 @@ describe('settings-service.ts', () => {
 
       const settings = await settingsService.getGlobalSettings();
 
-      // Verify PhaseModelEntry objects are preserved with thinkingLevel
-      // Legacy aliases are migrated to canonical IDs
+      // Short aliases migrate to gateway tiers; thinkingLevel is preserved.
       expect(settings.phaseModels.enhancementModel).toEqual({
-        model: 'claude-sonnet',
+        model: 'protolabs/smart',
         thinkingLevel: 'high',
       });
       expect(settings.phaseModels.specGenerationModel).toEqual({
-        model: 'claude-opus',
+        model: 'protolabs/reasoning',
         thinkingLevel: 'ultrathink',
       });
       expect(settings.phaseModels.backlogPlanningModel).toEqual({
-        model: 'claude-sonnet',
+        model: 'protolabs/smart',
         thinkingLevel: 'medium',
       });
     });
@@ -714,14 +714,14 @@ describe('settings-service.ts', () => {
       const settings = await settingsService.getGlobalSettings();
 
       // Strings should be converted to objects with canonical IDs
-      expect(settings.phaseModels.enhancementModel).toEqual({ model: 'claude-sonnet' });
-      expect(settings.phaseModels.imageDescriptionModel).toEqual({ model: 'claude-haiku' });
+      expect(settings.phaseModels.enhancementModel).toEqual({ model: 'protolabs/smart' });
+      expect(settings.phaseModels.imageDescriptionModel).toEqual({ model: 'protolabs/fast' });
       // Objects should be preserved with migrated IDs
       expect(settings.phaseModels.fileDescriptionModel).toEqual({
-        model: 'claude-haiku',
+        model: 'protolabs/fast',
         thinkingLevel: 'low',
       });
-      expect(settings.phaseModels.validationModel).toEqual({ model: 'claude-opus' });
+      expect(settings.phaseModels.validationModel).toEqual({ model: 'protolabs/reasoning' });
     });
 
     it('should migrate legacy enhancementModel/validationModel fields', async () => {
@@ -739,8 +739,8 @@ describe('settings-service.ts', () => {
       const settings = await settingsService.getGlobalSettings();
 
       // Legacy fields should be migrated to phaseModels with canonical IDs
-      expect(settings.phaseModels.enhancementModel).toEqual({ model: 'claude-haiku' });
-      expect(settings.phaseModels.validationModel).toEqual({ model: 'claude-opus' });
+      expect(settings.phaseModels.enhancementModel).toEqual({ model: 'protolabs/fast' });
+      expect(settings.phaseModels.validationModel).toEqual({ model: 'protolabs/reasoning' });
       // Other fields should use defaults (DEFAULT_PHASE_MODELS, gateway-routed)
       expect(settings.phaseModels.specGenerationModel).toEqual({ model: 'protolabs/reasoning' });
     });
@@ -779,13 +779,13 @@ describe('settings-service.ts', () => {
 
       const settings = await settingsService.getGlobalSettings();
 
-      // Both should be preserved (models migrated to canonical format)
+      // Both should be preserved (models migrated to gateway tiers)
       expect(settings.phaseModels.enhancementModel).toEqual({
-        model: 'claude-sonnet',
+        model: 'protolabs/smart',
         thinkingLevel: 'high',
       });
       expect(settings.phaseModels.specGenerationModel).toEqual({
-        model: 'claude-opus',
+        model: 'protolabs/reasoning',
         thinkingLevel: 'ultrathink',
       });
     });

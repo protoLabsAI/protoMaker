@@ -10,7 +10,12 @@ import { LEGACY_CURSOR_MODEL_MAP, CURSOR_MODEL_MAP } from './cursor-models.js';
 import type { OpencodeModelId, LegacyOpencodeModelId } from './opencode-models.js';
 import { LEGACY_OPENCODE_MODEL_MAP, OPENCODE_MODEL_CONFIG_MAP } from './opencode-models.js';
 import type { ClaudeCanonicalId } from './model.js';
-import { LEGACY_CLAUDE_ALIAS_MAP, CLAUDE_CANONICAL_MAP, CLAUDE_MODEL_MAP } from './model.js';
+import {
+  LEGACY_CLAUDE_ALIAS_MAP,
+  LEGACY_CLAUDE_FULL_MODEL_MAP,
+  CLAUDE_CANONICAL_MAP,
+  CLAUDE_MODEL_MAP,
+} from './model.js';
 import type { PhaseModelEntry } from './settings.js';
 
 /**
@@ -71,14 +76,25 @@ export function migrateModelId(legacyId: string | undefined | null): string {
     return LEGACY_OPENCODE_MODEL_MAP[legacyId];
   }
 
-  // Already has claude- prefix and is in canonical map
-  if (legacyId.startsWith('claude-') && legacyId in CLAUDE_CANONICAL_MAP) {
-    return legacyId;
+  // Full versioned Claude model strings from before the gateway cutover
+  // (e.g. 'claude-sonnet-4-6'). Rewrite to the gateway tier so the
+  // gateway-only API key accepts them.
+  if (legacyId in LEGACY_CLAUDE_FULL_MODEL_MAP) {
+    return LEGACY_CLAUDE_FULL_MODEL_MAP[legacyId];
   }
 
-  // Legacy Claude alias (short name)
+  // Already has claude- prefix and is in canonical map. CLAUDE_CANONICAL_MAP
+  // now points at gateway tiers — return the mapped tier, not the prefixed
+  // alias, so any callsite that stored a stale canonical ID gets the right
+  // resolution on the next load.
+  if (legacyId.startsWith('claude-') && legacyId in CLAUDE_CANONICAL_MAP) {
+    return CLAUDE_CANONICAL_MAP[legacyId as keyof typeof CLAUDE_CANONICAL_MAP];
+  }
+
+  // Legacy Claude alias (short name) — map directly to the gateway tier.
   if (isLegacyClaudeAlias(legacyId)) {
-    return LEGACY_CLAUDE_ALIAS_MAP[legacyId];
+    const canonical = LEGACY_CLAUDE_ALIAS_MAP[legacyId];
+    return CLAUDE_CANONICAL_MAP[canonical];
   }
 
   // Unknown or already canonical - pass through
