@@ -19,6 +19,47 @@ import path from 'path';
 const logger = createLogger('TrustTierService');
 
 /**
+ * In-memory per-file locks to serialize read-modify-write operations.
+ * Prevents lost updates when concurrent calls would otherwise read the same
+ * stale storage. Each caller chains its work onto the tail of any in-flight
+ * lock for the same path, so N concurrent callers execute strictly in arrival
+ * order — no thundering-herd, even with 3+ waiters.
+ */
+const fileLocks = new Map<string, Promise<void>>();
+
+async function withFileLock<T>(filePath: string, operation: () => Promise<T>): Promise<T> {
+  // Capture the current tail of the chain (or a resolved promise if no one's
+  // queued). We must do this BEFORE the await so the next caller chains on us,
+  // not on the same predecessor.
+  const previousTail = fileLocks.get(filePath) ?? Promise.resolve();
+
+  let releaseTurn!: () => void;
+  const myTurn = new Promise<void>((resolve) => {
+    releaseTurn = resolve;
+  });
+
+  // Install our work as the new tail. Subsequent callers will await
+  // `previousTail.then(() => myTurn)` — i.e. the previous queue plus our own
+  // operation. This is the strict-ordering bit the thundering-herd version
+  // missed.
+  const myTail = previousTail.then(() => myTurn);
+  fileLocks.set(filePath, myTail);
+
+  await previousTail;
+
+  try {
+    return await operation();
+  } finally {
+    releaseTurn();
+    // Only clear the map entry if no one queued behind us. If a later caller
+    // already replaced the tail, leave their chain intact.
+    if (fileLocks.get(filePath) === myTail) {
+      fileLocks.delete(filePath);
+    }
+  }
+}
+
+/**
  * Storage format for trust tiers
  * Maps GitHub username -> TrustTierRecord
  */
@@ -61,6 +102,17 @@ export class TrustTierService {
     grantedBy: string,
     reason?: string
   ): Promise<TrustTierRecord> {
+    return withFileLock(this.filePath, () =>
+      this.setTierLocked(githubUsername, tier, grantedBy, reason)
+    );
+  }
+
+  private async setTierLocked(
+    githubUsername: string,
+    tier: TrustTier,
+    grantedBy: string,
+    reason?: string
+  ): Promise<TrustTierRecord> {
     const record: TrustTierRecord = {
       githubUsername,
       tier,
@@ -81,6 +133,10 @@ export class TrustTierService {
    * Revoke a user's trust tier (removes entry from storage)
    */
   async revokeTier(githubUsername: string): Promise<void> {
+    return withFileLock(this.filePath, () => this.revokeTierLocked(githubUsername));
+  }
+
+  private async revokeTierLocked(githubUsername: string): Promise<void> {
     const storage = await this.loadStorage();
 
     if (!storage[githubUsername]) {
