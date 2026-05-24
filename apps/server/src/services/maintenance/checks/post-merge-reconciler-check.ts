@@ -33,10 +33,10 @@ type ExecFileAsync = (
   options: { encoding: string; timeout: number }
 ) => Promise<{ stdout: string; stderr: string }>;
 
-/** GitHub CLI `gh pr view --json state,merged` response */
+/** GitHub CLI `gh pr view --json state,mergedAt` response */
 interface PRViewResult {
   state: 'OPEN' | 'CLOSED' | 'MERGED' | string;
-  merged: boolean;
+  mergedAt: string | null;
 }
 
 /** GitHub CLI `gh pr list --head <branch> --state merged --json number,url,mergedAt` response item */
@@ -116,12 +116,18 @@ export class PostMergeReconcilerCheck {
         try {
           const { stdout } = await this.execFileAsync(
             'gh',
-            ['pr', 'view', String(feature.prNumber), '--repo', repo, '--json', 'state,merged'],
+            ['pr', 'view', String(feature.prNumber), '--repo', repo, '--json', 'state,mergedAt'],
             { encoding: 'utf-8', timeout: 10_000 }
           );
 
           const prData = JSON.parse(stdout) as PRViewResult;
-          const isMerged = prData.state === 'MERGED' || prData.merged === true;
+          // `state` is MERGED when the PR has been merged. `mergedAt` is a
+          // belt-and-suspenders check — gh has historically returned both.
+          // The previous code asked for a `merged` boolean field that does
+          // not exist on `gh pr view`, so the call exited non-zero and was
+          // swallowed by the catch handler at debug level — silently failing
+          // every tick. See protoMaker (post-#3613 / #3642 follow-up).
+          const isMerged = prData.state === 'MERGED' || prData.mergedAt != null;
 
           if (!isMerged) {
             logger.debug(
@@ -151,8 +157,12 @@ export class PostMergeReconcilerCheck {
 
           reconciled++;
         } catch (prCheckErr) {
-          // Non-fatal: log and continue to next feature
-          logger.debug(
+          // Non-fatal: continue to next feature. Log at warn level —
+          // previously this was debug, which hid an entire class of "the
+          // reconciler is broken" bugs (e.g. invalid --json field names).
+          // The reconciler firing 1000+ times with 0 reconciled while
+          // every call silently errored is exactly what we want to surface.
+          logger.warn(
             `[reconciler] Could not check PR #${feature.prNumber} for feature ${feature.id} on ${repo}: ${prCheckErr instanceof Error ? prCheckErr.message : String(prCheckErr)}`
           );
         }

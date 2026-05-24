@@ -100,7 +100,7 @@ describe('PostMergeReconcilerCheck', () => {
 
     const execFileAsync = makeExecFileAsync({
       'protoLabsAI/mythxengine#184': {
-        stdout: JSON.stringify({ state: 'MERGED', merged: true }),
+        stdout: JSON.stringify({ state: 'MERGED', mergedAt: '2026-05-22T12:00:00Z' }),
       },
     });
 
@@ -225,7 +225,7 @@ describe('PostMergeReconcilerCheck', () => {
 
     const execFileAsync = makeExecFileAsync({
       'protoLabsAI/mythxengine#184': {
-        stdout: JSON.stringify({ state: 'OPEN', merged: false }),
+        stdout: JSON.stringify({ state: 'OPEN', mergedAt: null }),
       },
     });
 
@@ -252,7 +252,7 @@ describe('PostMergeReconcilerCheck', () => {
     const execFileAsync = makeExecFileAsync({
       'protoLabsAI/mythxengine#184': new Error('gh: API rate limit exceeded'),
       'protoLabsAI/mythxengine#185': {
-        stdout: JSON.stringify({ state: 'MERGED', merged: true }),
+        stdout: JSON.stringify({ state: 'MERGED', mergedAt: '2026-05-22T12:00:00Z' }),
       },
     });
 
@@ -281,7 +281,7 @@ describe('PostMergeReconcilerCheck', () => {
 
     const execFileAsync = makeExecFileAsync({
       'protoLabsAI/mythxengine#184': {
-        stdout: JSON.stringify({ state: 'MERGED', merged: true }),
+        stdout: JSON.stringify({ state: 'MERGED', mergedAt: '2026-05-22T12:00:00Z' }),
       },
     });
 
@@ -307,7 +307,7 @@ describe('PostMergeReconcilerCheck', () => {
 
     const execFileAsync = makeExecFileAsync({
       'protoLabsAI/mythxengine#184': {
-        stdout: JSON.stringify({ state: 'MERGED', merged: true }),
+        stdout: JSON.stringify({ state: 'MERGED', mergedAt: '2026-05-22T12:00:00Z' }),
       },
     });
 
@@ -360,7 +360,7 @@ describe('PostMergeReconcilerCheck', () => {
       _opts: unknown
     ): Promise<{ stdout: string; stderr: string }> => {
       calls.push(args);
-      return { stdout: JSON.stringify({ state: 'OPEN', merged: false }), stderr: '' };
+      return { stdout: JSON.stringify({ state: 'OPEN', mergedAt: null }), stderr: '' };
     };
 
     const check = new PostMergeReconcilerCheck(makeLoader(), events as any, execFileAsync);
