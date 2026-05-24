@@ -528,16 +528,16 @@ export class AutoModeService {
       return { model: resolveModelString(feature.model, DEFAULT_MODELS.autoMode) };
     }
 
-    // 2. Escalate to opus after multiple failures (safety net)
+    // 2. Escalate to the strongest available model after multiple failures
     if (feature.failureCount && feature.failureCount >= 2) {
-      logger.info(`Escalating to opus after ${feature.failureCount} failures`);
-      return { model: DEFAULT_MODELS.claude }; // opus
+      logger.info(`Escalating to strongest model after ${feature.failureCount} failures`);
+      return { model: DEFAULT_MODELS.claude };
     }
 
-    // 3. Architectural complexity always gets opus
+    // 3. Architectural complexity always gets the strongest available model
     if (feature.complexity === 'architectural') {
-      logger.info('Using opus for architectural feature');
-      return { model: DEFAULT_MODELS.claude }; // opus
+      logger.info('Using strongest model for architectural feature');
+      return { model: DEFAULT_MODELS.claude };
     }
 
     // 4. AssignedRole model override (manifest takes precedence over settings)
@@ -594,11 +594,11 @@ export class AutoModeService {
 
     // 6. Fallback: complexity-based (only if no setting configured)
     if (feature.complexity === 'small') {
-      logger.info('Using haiku for small feature');
-      return { model: DEFAULT_MODELS.trivial }; // haiku
+      logger.info('Using fast model for small feature');
+      return { model: DEFAULT_MODELS.trivial };
     }
 
-    return { model: DEFAULT_MODELS.autoMode }; // sonnet
+    return { model: DEFAULT_MODELS.autoMode };
   }
 
   /**

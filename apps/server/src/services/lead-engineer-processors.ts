@@ -113,16 +113,16 @@ export class IntakeProcessor implements StateProcessor {
       return resolveModelString(feature.model, DEFAULT_MODELS.autoMode);
     }
 
-    // 2. Escalate to opus after multiple failures (safety net)
+    // 2. Escalate to the strongest available model after multiple failures
     if (feature.failureCount && feature.failureCount >= 2) {
-      logger.info(`[INTAKE] Escalating to opus after ${feature.failureCount} failures`);
-      return DEFAULT_MODELS.claude; // opus
+      logger.info(`[INTAKE] Escalating to strongest model after ${feature.failureCount} failures`);
+      return DEFAULT_MODELS.claude;
     }
 
-    // 3. Architectural complexity always gets opus
+    // 3. Architectural complexity always gets the strongest available model
     if (feature.complexity === 'architectural') {
-      logger.info('[INTAKE] Using opus for architectural feature');
-      return DEFAULT_MODELS.claude; // opus
+      logger.info('[INTAKE] Using strongest model for architectural feature');
+      return DEFAULT_MODELS.claude;
     }
 
     // 4. Read user's configured agent execution model from settings

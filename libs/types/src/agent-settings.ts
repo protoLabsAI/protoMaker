@@ -226,42 +226,53 @@ export interface PhaseModelConfig {
  */
 export type PhaseModelKey = Exclude<keyof PhaseModelConfig, 'flowModels'>;
 
-/** Default phase model configuration - sensible defaults for each task type
- * Uses canonical prefixed model IDs for consistent routing.
+/** Default phase model configuration — sensible defaults for each task type.
+ *
+ * Routes through the protoLabs LLM gateway by default. The gateway exposes
+ * three code-work tiers:
+ *   - `protolabs/fast`      — trivial / quick tasks (haiku-equivalent)
+ *   - `protolabs/smart`     — feature work + standard generation (sonnet-equivalent)
+ *   - `protolabs/reasoning` — architectural / spec / deep-thinking (opus-equivalent)
+ *
+ * Users who want a different provider override these per-phase via the
+ * Settings → AI Models surface. Don't hardcode raw Anthropic / OpenAI IDs
+ * here — the boxed default has to work with the gateway-issued API key out
+ * of the box (the only key shipped on a fresh install).
  */
 export const DEFAULT_PHASE_MODELS: PhaseModelConfig = {
-  // Quick tasks - use fast models for speed and cost
-  enhancementModel: { model: 'claude-sonnet' },
-  fileDescriptionModel: { model: 'claude-haiku' },
-  imageDescriptionModel: { model: 'claude-haiku' },
+  // Quick tasks — fast tier
+  enhancementModel: { model: 'protolabs/smart' },
+  fileDescriptionModel: { model: 'protolabs/fast' },
+  imageDescriptionModel: { model: 'protolabs/fast' },
 
-  // Validation - use smart models for accuracy
-  validationModel: { model: 'claude-sonnet' },
+  // Validation — smart tier (accuracy matters)
+  validationModel: { model: 'protolabs/smart' },
 
-  // Generation - use powerful models for quality
-  specGenerationModel: { model: 'claude-opus' },
-  featureGenerationModel: { model: 'claude-sonnet' },
-  backlogPlanningModel: { model: 'claude-sonnet' },
-  projectAnalysisModel: { model: 'claude-sonnet' },
-  suggestionsModel: { model: 'claude-sonnet' },
+  // Generation — reasoning tier for spec, smart for the rest
+  specGenerationModel: { model: 'protolabs/reasoning' },
+  featureGenerationModel: { model: 'protolabs/smart' },
+  backlogPlanningModel: { model: 'protolabs/smart' },
+  projectAnalysisModel: { model: 'protolabs/smart' },
+  suggestionsModel: { model: 'protolabs/smart' },
 
-  // Memory - use fast model for learning extraction (cost-effective)
-  memoryExtractionModel: { model: 'claude-haiku' },
+  // Memory extraction — fast tier (cost-effective)
+  memoryExtractionModel: { model: 'protolabs/fast' },
 
-  // Commit messages - use fast model for speed
-  commitMessageModel: { model: 'claude-haiku' },
+  // Commit messages — fast tier
+  commitMessageModel: { model: 'protolabs/fast' },
 
-  // Branch names - use fast model for speed
-  branchNameModel: { model: 'claude-haiku' },
+  // Branch names — fast tier
+  branchNameModel: { model: 'protolabs/fast' },
 
-  // Agent execution - default to sonnet for reliable feature implementation
-  agentExecutionModel: { model: 'claude-sonnet' },
+  // Agent execution — smart tier (reliable feature implementation)
+  agentExecutionModel: { model: 'protolabs/smart' },
 
-  // Complexity tiers - route features to the right model by complexity
-  complexitySmallModel: { model: 'claude-haiku' },
-  complexityMediumModel: { model: 'claude-sonnet' },
-  complexityLargeModel: { model: 'claude-sonnet' },
-  complexityArchitecturalModel: { model: 'claude-opus' },
+  // Complexity tiers — route features by complexity. Architectural uses the
+  // reasoning tier for system-design / deep-thinking work.
+  complexitySmallModel: { model: 'protolabs/fast' },
+  complexityMediumModel: { model: 'protolabs/smart' },
+  complexityLargeModel: { model: 'protolabs/smart' },
+  complexityArchitecturalModel: { model: 'protolabs/reasoning' },
 };
 
 /**
