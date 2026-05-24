@@ -70,6 +70,11 @@ function makeFeature(overrides: Partial<Feature> = {}): Feature {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     order: 0,
+    // Default to having a PR so the cost-cap / runtime-cap tests can reach
+    // REVIEW. The guard added in #3742 blocks EXECUTE -> REVIEW when there
+    // is no PR; tests that intentionally exercise "no PR" should override
+    // with prNumber: undefined.
+    prNumber: 999,
     ...overrides,
   };
 }

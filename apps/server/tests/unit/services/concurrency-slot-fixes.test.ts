@@ -47,6 +47,9 @@ function makeFeature(overrides: Partial<Feature> = {}): Feature {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     order: 0,
+    // Default to having a PR so REVIEW-transition tests pass the new guard
+    // added in #3742. Tests exercising "no PR" should override.
+    prNumber: 999,
     ...overrides,
   };
 }
