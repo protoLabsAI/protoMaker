@@ -67,3 +67,30 @@ export function buildGitAddCommand(workDir: string, _excludeFromStaging?: string
 
   return `git add -A -- ${pathspecArgs.join(' ')}`;
 }
+
+/**
+ * Argv-form of {@link buildGitAddCommand} — returns the args to pass after
+ * the `git` binary, so callers can use `safeGit(args, opts)` instead of
+ * interpolating a shell string. Same logic as the string form, minus the
+ * shell-quoting (argv doesn't need it).
+ *
+ * Use this in any new code path. The string-returning sibling is preserved
+ * for the existing 5 call sites pending their own migration.
+ */
+export function buildGitAddArgs(workDir: string): string[] {
+  const args: string[] = ['add', '-A'];
+  const pathspecs: string[] = [];
+
+  if (existsSync(join(workDir, '.automaker/memory'))) {
+    pathspecs.push('.automaker/memory/');
+  }
+  if (existsSync(join(workDir, '.automaker/skills'))) {
+    pathspecs.push('.automaker/skills/');
+  }
+
+  if (pathspecs.length === 0) {
+    return args;
+  }
+
+  return [...args, '--', ...pathspecs];
+}
