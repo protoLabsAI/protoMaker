@@ -234,7 +234,9 @@ describe('TrustTierService', () => {
       // where multiple waiters all unblock on the first release and then race.
       const usernames = ['u1', 'u2', 'u3', 'u4', 'u5', 'u6', 'u7', 'u8'];
       await Promise.all(
-        usernames.map((u, i) => trustTierService.setTier(u, ((i % 4) + 1) as 1 | 2 | 3 | 4, 'admin'))
+        usernames.map((u, i) =>
+          trustTierService.setTier(u, ((i % 4) + 1) as 1 | 2 | 3 | 4, 'admin')
+        )
       );
 
       const all = await trustTierService.getAll();
