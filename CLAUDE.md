@@ -2,6 +2,23 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Prime Directive: File Follow-Ups Immediately
+
+**If something is worth following, file it — in the same turn you noticed it. Don't leave it in the conversation.**
+
+Conversations get compacted at the context limit. Issues, board features, CLAUDE.md entries, and memory files survive. Anything that lives only in chat will eventually be lost.
+
+When you say "worth filing later," "we should track this," "follow-up needed," or notice a bug / missing feature / recurring pattern — open the tool call to file it right then. Acceptable durable surfaces, in priority order:
+
+1. **GitHub issue** — for bugs, missing features, follow-ups that need work later
+2. **Board feature** (via `/api/features/create` or `mcp__protolabs__create_feature`) — for things the crew can pick up now
+3. **CLAUDE.md update** — for durable rules, recovery procedures, project conventions
+4. **`.automaker/memory/ops-lessons.md`** — for recurring failure patterns and their fixes
+
+Default to GitHub issue if unsure. Include enough context that a fresh session can act without reading the original conversation: symptom, evidence (file paths, PR numbers, commit SHAs), recommended fix, acceptance. Stub issues are fine — one paragraph beats no record.
+
+This is a stronger form of the existing self-improvement rule under "Blocked Feature Recovery" (which is about recurring failures specifically). This rule is broader: **any** follow-up at all, not just recurring failures.
+
 ## Philosophy: Greenfield-First
 
 This is a greenfield codebase. We are building the future, not maintaining the past.
