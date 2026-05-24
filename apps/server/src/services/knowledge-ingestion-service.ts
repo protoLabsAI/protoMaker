@@ -565,14 +565,26 @@ Output the compressed memory file:`;
       timestamp: string;
     }
   ): void {
-    const existing = db.prepare('SELECT id FROM chunks WHERE id = ?').get(opts.chunkId);
+    const existing = db.prepare('SELECT id, content FROM chunks WHERE id = ?').get(opts.chunkId) as
+      | { id: string; content: string }
+      | undefined;
     if (existing) {
+      const contentChanged = existing.content !== opts.content;
       db.prepare('UPDATE chunks SET content = ?, tags = ?, updated_at = ? WHERE id = ?').run(
         opts.content,
         opts.tags,
         opts.timestamp,
         opts.chunkId
       );
+      // When content changes, invalidate semantic indexes so the embedding +
+      // HyPE workers regenerate vectors against the new text. Without this,
+      // hybrid retrieval keeps ranking the chunk by stale vectors (#3604).
+      if (contentChanged) {
+        db.prepare('DELETE FROM embeddings WHERE chunk_id = ?').run(opts.chunkId);
+        db.prepare(
+          'UPDATE chunks SET hype_queries = NULL, hype_embeddings = NULL WHERE id = ?'
+        ).run(opts.chunkId);
+      }
     } else {
       db.prepare(
         `INSERT INTO chunks (id, source_type, source_file, project_path, chunk_index, heading, content, tags, importance, created_at, updated_at)
