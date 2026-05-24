@@ -60,11 +60,20 @@ git config --global --get rebase.updateRefs
 
 ## Stack hygiene
 
-If you're the one stacking PRs, two habits make life easier.
+If you're the one stacking PRs, three habits make life easier.
 
 ### Don't enable auto-merge until the stack stops moving
 
 Auto-merge captures the head SHA at the moment you click it. If you then rebase the branch, auto-merge fires against the old SHA and skips your new commits. We hit this and lost two PRs' worth of content silently — a recovery PR was needed. Hold off on `--auto` until the whole stack is stable.
+
+### Don't squash-merge a parent PR while children are still open
+
+GitHub deletes the head branch on merge (`delete_branch_on_merge: true`). A child PR whose `base` was that branch will fail to open or render with `Base ref must be a branch` — the parent's branch no longer exists.
+
+Two ways out, both before merging the parent:
+
+1. **Preferred** — keep **Create a merge commit** for the parent (the policy default for stacked PRs anyway). The parent branch's commit SHAs stay reachable on `main`, the child's `base` ref still resolves, and you can land the child without rebasing.
+2. **If you've already squash-merged** — rebase the child onto `main` and re-target it: `git rebase --onto origin/main <old-parent-branch> <child-branch>` then `gh pr edit <child-pr> --base main` (or just open a fresh PR against `main`). One detail: when invoking `git rebase --onto X Y Z`, pass the branch _name_ as `Z`, not `HEAD` — `HEAD` puts you in detached state and your branch ref doesn't move.
 
 ### Rebase the bottom first, let `updateRefs` cascade
 
