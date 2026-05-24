@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   notify-acceptance:
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-protolabs-linux
     if: "github.event.label.name == 'status: accepted'"
     steps:
       - name: Post acceptance comment

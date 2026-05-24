@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   e2e:
-    runs-on: self-hosted
+    runs-on: namespace-profile-protolabs-linux
     if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
     timeout-minutes: 20
 

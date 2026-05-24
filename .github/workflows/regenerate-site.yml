@@ -5,7 +5,7 @@ on:
 
 jobs:
   regenerate:
-    runs-on: self-hosted
+    runs-on: namespace-profile-protolabs-linux
     permissions:
       contents: write
       pull-requests: write

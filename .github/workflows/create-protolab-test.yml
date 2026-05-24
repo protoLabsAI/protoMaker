@@ -18,7 +18,7 @@ on:
 jobs:
   test:
     name: Test with Node ${{ matrix.node }} and ${{ matrix.package-manager }}
-    runs-on: self-hosted
+    runs-on: namespace-profile-protolabs-linux
 
     strategy:
       fail-fast: false
@@ -194,7 +194,7 @@ jobs:
 
   summary:
     name: Test Summary
-    runs-on: self-hosted
+    runs-on: namespace-profile-protolabs-linux
     needs: test
     if: always()
     steps:

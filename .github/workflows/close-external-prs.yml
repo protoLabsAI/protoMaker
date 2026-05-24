@@ -7,7 +7,7 @@ on:
 jobs:
   close-external-pr:
     name: Close external code contributions
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-protolabs-linux
     # Only run for PRs from forks (external contributors)
     if: github.event.pull_request.head.repo.fork == true
     permissions:
