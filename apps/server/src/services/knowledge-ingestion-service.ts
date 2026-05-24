@@ -157,18 +157,29 @@ Output the compressed memory file:`;
         // Create chunk ID
         const chunkId = `reflection-${featureId}`;
 
-        // Check if chunk already exists
-        const existing = db.prepare('SELECT id FROM chunks WHERE id = ?').get(chunkId);
+        // Check if chunk already exists (also pull content for change detection)
+        const existing = db.prepare('SELECT id, content FROM chunks WHERE id = ?').get(chunkId) as
+          | { id: string; content: string }
+          | undefined;
+        const trimmedContent = content.trim();
 
         if (existing) {
-          // Update existing chunk
-          db.prepare(
+          // Update existing chunk + invalidate semantic indexes on content
+          // change. Single transaction so we never leave updated content
+          // paired with stale vectors (#3604).
+          const contentChanged = existing.content !== trimmedContent;
+          db.transaction(() => {
+            db.prepare(
+              `
+              UPDATE chunks
+              SET content = ?, updated_at = ?
+              WHERE id = ?
             `
-            UPDATE chunks
-            SET content = ?, updated_at = ?
-            WHERE id = ?
-          `
-          ).run(content.trim(), timestamp, chunkId);
+            ).run(trimmedContent, timestamp, chunkId);
+            if (contentChanged) {
+              this.invalidateSemanticIndexes(db, chunkId);
+            }
+          })();
         } else {
           // Insert new chunk
           db.prepare(
@@ -183,7 +194,7 @@ Output the compressed memory file:`;
             projectPath,
             0,
             `Reflection: ${featureId}`,
-            content.trim(),
+            trimmedContent,
             JSON.stringify(['reflection', 'engineering', featureId]),
             0.8, // Higher importance for reflections
             timestamp,
@@ -239,18 +250,28 @@ Output the compressed memory file:`;
         // Create chunk ID
         const chunkId = `agent-output-${featureId}`;
 
-        // Check if chunk already exists
-        const existing = db.prepare('SELECT id FROM chunks WHERE id = ?').get(chunkId);
+        // Check if chunk already exists (also pull content for change detection)
+        const existing = db.prepare('SELECT id, content FROM chunks WHERE id = ?').get(chunkId) as
+          | { id: string; content: string }
+          | undefined;
+        const trimmedContent = content.trim();
 
         if (existing) {
-          // Update existing chunk
-          db.prepare(
+          // Update existing chunk + invalidate semantic indexes on content
+          // change (#3604), all inside one transaction.
+          const contentChanged = existing.content !== trimmedContent;
+          db.transaction(() => {
+            db.prepare(
+              `
+              UPDATE chunks
+              SET content = ?, updated_at = ?
+              WHERE id = ?
             `
-            UPDATE chunks
-            SET content = ?, updated_at = ?
-            WHERE id = ?
-          `
-          ).run(content.trim(), timestamp, chunkId);
+            ).run(trimmedContent, timestamp, chunkId);
+            if (contentChanged) {
+              this.invalidateSemanticIndexes(db, chunkId);
+            }
+          })();
         } else {
           // Insert new chunk
           db.prepare(
@@ -265,7 +286,7 @@ Output the compressed memory file:`;
             projectPath,
             0,
             `Agent Output: ${featureId}`,
-            content.trim(),
+            trimmedContent,
             JSON.stringify(['agent_output', 'engineering', featureId]),
             0.6, // Medium importance for agent outputs
             timestamp,
@@ -546,6 +567,19 @@ Output the compressed memory file:`;
   }
 
   /**
+   * Drop the cached embedding + HyPE vectors for a chunk so the background
+   * workers pick it back up and regenerate them. Call from every code path
+   * that mutates `chunks.content` — see #3604. Must be called inside a
+   * transaction together with the UPDATE.
+   */
+  private invalidateSemanticIndexes(db: BetterSqlite3.Database, chunkId: string): void {
+    db.prepare('DELETE FROM embeddings WHERE chunk_id = ?').run(chunkId);
+    db.prepare('UPDATE chunks SET hype_queries = NULL, hype_embeddings = NULL WHERE id = ?').run(
+      chunkId
+    );
+  }
+
+  /**
    * Upsert a chunk into the database (insert if new, update if existing).
    *
    * @param db - Database instance
@@ -570,21 +604,20 @@ Output the compressed memory file:`;
       | undefined;
     if (existing) {
       const contentChanged = existing.content !== opts.content;
-      db.prepare('UPDATE chunks SET content = ?, tags = ?, updated_at = ? WHERE id = ?').run(
-        opts.content,
-        opts.tags,
-        opts.timestamp,
-        opts.chunkId
-      );
-      // When content changes, invalidate semantic indexes so the embedding +
-      // HyPE workers regenerate vectors against the new text. Without this,
-      // hybrid retrieval keeps ranking the chunk by stale vectors (#3604).
-      if (contentChanged) {
-        db.prepare('DELETE FROM embeddings WHERE chunk_id = ?').run(opts.chunkId);
-        db.prepare(
-          'UPDATE chunks SET hype_queries = NULL, hype_embeddings = NULL WHERE id = ?'
-        ).run(opts.chunkId);
-      }
+      // The UPDATE + semantic-index invalidation must land as a single unit —
+      // a crash in between would leave new content paired with stale vectors,
+      // which is the exact state #3604 is trying to prevent.
+      db.transaction(() => {
+        db.prepare('UPDATE chunks SET content = ?, tags = ?, updated_at = ? WHERE id = ?').run(
+          opts.content,
+          opts.tags,
+          opts.timestamp,
+          opts.chunkId
+        );
+        if (contentChanged) {
+          this.invalidateSemanticIndexes(db, opts.chunkId);
+        }
+      })();
     } else {
       db.prepare(
         `INSERT INTO chunks (id, source_type, source_file, project_path, chunk_index, heading, content, tags, importance, created_at, updated_at)

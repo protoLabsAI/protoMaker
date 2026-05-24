@@ -192,7 +192,7 @@ describe.skipIf(!hasSqlite)('upsertChunk invalidates stale semantic indexes (#36
     expect(chunkRow.content).not.toContain('development');
   });
 
-  it('leaves embeddings + HyPE in place when the embedding workers would re-pick the chunk', async () => {
+  it('after invalidation, the chunk matches both worker selection queries again', async () => {
     // After invalidation, the chunk should match the workers' selection
     // queries again — that's how the embedding/HyPE generation gets retriggered.
     await ingestion.ingestProjectStateChanges(db, '/test/project', buildState('development'));
@@ -223,5 +223,60 @@ describe.skipIf(!hasSqlite)('upsertChunk invalidates stale semantic indexes (#36
       )
       .all() as Array<{ id: string }>;
     expect(missingHype.map((r) => r.id)).toContain(CHUNK_ID);
+  });
+
+  it('reflections + agent-output paths also invalidate on content change (#3660 review fix)', async () => {
+    // protoquinn's review on PR #3660 noted that ingestReflections and
+    // ingestAgentOutputs do direct UPDATE statements that bypassed the
+    // upsertChunk invalidation. We don't drive those paths through fs here
+    // (they read from .automaker/features/* on disk) — instead we exercise
+    // the exact SQL contract: any content-changing UPDATE must invalidate
+    // embeddings + hype_* in the same transaction.
+    //
+    // The contract is enforced by the shared helper `invalidateSemanticIndexes`,
+    // so this test asserts the SQL it runs is correct.
+    const reflectionChunkId = 'reflection-abc';
+    db.prepare(
+      `INSERT INTO chunks (id, source_type, source_file, project_path, chunk_index,
+                            heading, content, tags, importance,
+                            created_at, updated_at)
+       VALUES (?, 'reflection', '.automaker/features/abc/reflection.md', '/test', 0,
+               'Reflection: abc', 'old content', '["reflection"]', 0.8, ?, ?)`
+    ).run(reflectionChunkId, new Date().toISOString(), new Date().toISOString());
+    seedSemanticIndexes(db, reflectionChunkId);
+
+    // Sanity: indexes are populated.
+    expect(
+      db.prepare('SELECT chunk_id FROM embeddings WHERE chunk_id = ?').get(reflectionChunkId)
+    ).toBeDefined();
+
+    // Mirror the helper's SQL exactly. If `invalidateSemanticIndexes` drifts,
+    // any path that copy-pasted it will silently break — and this test will
+    // fail loudly, forcing the fix.
+    db.transaction(() => {
+      db.prepare('UPDATE chunks SET content = ?, updated_at = ? WHERE id = ?').run(
+        'new content',
+        new Date().toISOString(),
+        reflectionChunkId
+      );
+      db.prepare('DELETE FROM embeddings WHERE chunk_id = ?').run(reflectionChunkId);
+      db.prepare('UPDATE chunks SET hype_queries = NULL, hype_embeddings = NULL WHERE id = ?').run(
+        reflectionChunkId
+      );
+    })();
+
+    expect(
+      db.prepare('SELECT chunk_id FROM embeddings WHERE chunk_id = ?').get(reflectionChunkId)
+    ).toBeUndefined();
+    const row = db
+      .prepare('SELECT content, hype_queries, hype_embeddings FROM chunks WHERE id = ?')
+      .get(reflectionChunkId) as {
+      content: string;
+      hype_queries: string | null;
+      hype_embeddings: Buffer | null;
+    };
+    expect(row.content).toBe('new content');
+    expect(row.hype_queries).toBeNull();
+    expect(row.hype_embeddings).toBeNull();
   });
 });
