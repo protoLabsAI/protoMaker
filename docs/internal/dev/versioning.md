@@ -110,10 +110,10 @@ Raw GitHub-generated release notes (which list PR titles) can be rewritten into 
 
 ```bash
 # Auto-detect tags and generate notes
-node scripts/rewrite-release-notes.mjs
+npx @protolabsai/release-tools rewrite-release-notes
 
 # Specify versions + post to Discord
-node scripts/rewrite-release-notes.mjs v0.30.1 v0.29.0 --post-discord
+npx @protolabsai/release-tools rewrite-release-notes v0.30.1 v0.29.0 --post-discord
 ```
 
 The rewriter filters out merge/chore/promote commits, sends the rest to Claude (Haiku 4.5), and returns themed sections grouped by user impact. The prompt template is also available programmatically via `@protolabsai/prompts`:
