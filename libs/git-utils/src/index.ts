@@ -26,3 +26,15 @@ export { rebaseWorktreeOnMain, ensureCleanMergeState, type RebaseResult } from '
 
 // Export exec environment utilities
 export { createGitExecEnv, extractTitleFromDescription } from './exec-env.js';
+
+// Safe (shell-free) process execution primitives — replacement for
+// `exec`/`execSync` whenever any argument is dynamic. See #3597.
+export {
+  safeExec,
+  safeGit,
+  assertSafeRef,
+  isSafeRef,
+  UnsafeRefError,
+  type SafeExecOptions,
+  type SafeExecResult,
+} from './safe-exec.js';
