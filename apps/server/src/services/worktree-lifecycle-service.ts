@@ -15,9 +15,10 @@
 
 import fs from 'node:fs';
 import path from 'path';
-import { exec, execFile, execSync } from 'child_process';
+import { exec, execFile } from 'child_process';
 import { createLogger } from '@protolabsai/utils';
 import { getFeatureDir, getAutomakerDir } from '@protolabsai/platform';
+import { safeGit, assertSafeRef } from '@protolabsai/git-utils';
 import * as secureFs from '../lib/secure-fs.js';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
@@ -237,9 +238,8 @@ export class WorktreeLifecycleService {
 
       // Check if worktree exists
       try {
-        execSync(`git worktree list --porcelain`, {
+        await safeGit(['worktree', 'list', '--porcelain'], {
           cwd: projectPath,
-          encoding: 'utf-8',
           timeout: 10_000,
         });
       } catch {
@@ -257,12 +257,24 @@ export class WorktreeLifecycleService {
         return; // Do NOT prune — work is at risk
       }
 
-      // Remove worktree
+      // Validate branchName before interpolating into any further git command.
+      // A slug that escapes the allowlist gets logged and skipped instead of
+      // silently shell-quoted (#3597).
       try {
-        execSync(`git worktree remove "${worktreePath}" --force`, {
+        assertSafeRef(branchName, 'branchName');
+      } catch (err) {
+        logger.error(
+          `[SAFETY] Refusing to clean up worktree ${worktreeName} — ${err instanceof Error ? err.message : String(err)}`
+        );
+        return;
+      }
+
+      // Remove worktree — worktreePath is constructed by this service from the
+      // sanitized branchName, so it's safe to pass as a single argv element.
+      try {
+        await safeGit(['worktree', 'remove', worktreePath, '--force'], {
           cwd: projectPath,
           timeout: 30_000,
-          encoding: 'utf-8',
         });
         logger.info(`Removed worktree: ${worktreeName}`);
       } catch (error) {
@@ -272,17 +284,15 @@ export class WorktreeLifecycleService {
 
       // Check if branch is merged and can be deleted
       try {
-        const merged = execSync(`git branch --merged main`, {
+        const { stdout: merged } = await safeGit(['branch', '--merged', 'main'], {
           cwd: projectPath,
-          encoding: 'utf-8',
           timeout: 10_000,
         });
 
         if (merged.includes(branchName)) {
-          execSync(`git branch -d "${branchName}"`, {
+          await safeGit(['branch', '-d', branchName], {
             cwd: projectPath,
             timeout: 10_000,
-            encoding: 'utf-8',
           });
           logger.info(`Deleted merged branch: ${branchName}`);
         }
@@ -349,12 +359,22 @@ export class WorktreeLifecycleService {
     const worktreeName = branchName.replace(/\//g, '-');
     const worktreePath = path.join(projectPath, '.worktrees', worktreeName);
 
+    // Validate before any git interpolation. Backlog-reset is destructive, so
+    // refusing fast is safer than shell-quoting an attacker-controlled slug.
+    try {
+      assertSafeRef(branchName, 'branchName');
+    } catch (err) {
+      logger.error(
+        `[BACKLOG-RESET] Refusing reset for ${worktreeName} — ${err instanceof Error ? err.message : String(err)}`
+      );
+      return;
+    }
+
     // 1. Remove worktree (force — we are intentionally discarding this work)
     try {
-      execSync(`git worktree remove "${worktreePath}" --force`, {
+      await safeGit(['worktree', 'remove', worktreePath, '--force'], {
         cwd: projectPath,
         timeout: 30_000,
-        encoding: 'utf-8',
       });
       logger.info(`[BACKLOG-RESET] Removed worktree: ${worktreeName}`);
     } catch (error) {
@@ -365,10 +385,9 @@ export class WorktreeLifecycleService {
 
     // 2. Force-delete the local branch so the next agent creates a fresh one
     try {
-      execSync(`git branch -D "${branchName}"`, {
+      await safeGit(['branch', '-D', branchName], {
         cwd: projectPath,
         timeout: 10_000,
-        encoding: 'utf-8',
       });
       logger.info(`[BACKLOG-RESET] Deleted local branch: ${branchName}`);
     } catch (error) {
@@ -377,11 +396,7 @@ export class WorktreeLifecycleService {
 
     // 3. Prune stale worktree metadata
     try {
-      execSync('git worktree prune', {
-        cwd: projectPath,
-        timeout: 10_000,
-        encoding: 'utf-8',
-      });
+      await safeGit(['worktree', 'prune'], { cwd: projectPath, timeout: 10_000 });
     } catch {
       // Non-critical
     }
@@ -493,9 +508,8 @@ export class WorktreeLifecycleService {
     try {
       // Check if git is available and this is a repo
       try {
-        execSync('git worktree list --porcelain', {
+        await safeGit(['worktree', 'list', '--porcelain'], {
           cwd: projectPath,
-          encoding: 'utf-8',
           timeout: 10_000,
         });
       } catch {
@@ -505,9 +519,8 @@ export class WorktreeLifecycleService {
 
       // Run git worktree prune (removes stale metadata)
       const startTime = Date.now();
-      execSync('git worktree prune --verbose', {
+      await safeGit(['worktree', 'prune', '--verbose'], {
         cwd: projectPath,
-        encoding: 'utf-8',
         timeout: 30_000,
       });
       const elapsed = Date.now() - startTime;

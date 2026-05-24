@@ -1,14 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import fs from 'node:fs';
-import { execSync } from 'child_process';
+import { execFile } from 'child_process';
 import { WorktreeLifecycleService } from '@/services/worktree-lifecycle-service.js';
 import type { FeatureLoader } from '@/services/feature-loader.js';
 import type { EventEmitter } from '@/lib/events.js';
 
+// After #3597 part 3: cleanupForBacklogReset + cleanupWorktree now route
+// every git invocation through safeGit (which uses execFile under the hood),
+// not execSync. Mock execFile and assert on argv arrays.
 vi.mock('child_process', () => ({
   exec: vi.fn(),
   execFile: vi.fn(),
   execSync: vi.fn(),
+}));
+vi.mock('util', () => ({
+  promisify: (fn: unknown) => fn,
 }));
 
 vi.mock('node:fs', () => ({
@@ -83,25 +89,28 @@ describe('WorktreeLifecycleService.cleanupForBacklogReset', () => {
       'handoff-PLAN.json',
       'feature.json',
     ] as unknown as fs.Dirent[]);
-    vi.mocked(execSync).mockReturnValue('');
+    vi.mocked(execFile).mockResolvedValue({ stdout: '', stderr: '' } as never);
 
     await service.cleanupForBacklogReset(projectPath, featureId);
 
-    // Should remove worktree
-    expect(execSync).toHaveBeenCalledWith(
-      `git worktree remove "${projectPath}/.worktrees/${worktreeName}" --force`,
+    // Should remove worktree (argv form — no shell string)
+    expect(execFile).toHaveBeenCalledWith(
+      'git',
+      ['worktree', 'remove', `${projectPath}/.worktrees/${worktreeName}`, '--force'],
       expect.objectContaining({ cwd: projectPath })
     );
 
-    // Should force-delete branch
-    expect(execSync).toHaveBeenCalledWith(
-      `git branch -D "${branchName}"`,
+    // Should force-delete branch (argv form)
+    expect(execFile).toHaveBeenCalledWith(
+      'git',
+      ['branch', '-D', branchName],
       expect.objectContaining({ cwd: projectPath })
     );
 
-    // Should prune worktree metadata
-    expect(execSync).toHaveBeenCalledWith(
-      'git worktree prune',
+    // Should prune worktree metadata (argv form)
+    expect(execFile).toHaveBeenCalledWith(
+      'git',
+      ['worktree', 'prune'],
       expect.objectContaining({ cwd: projectPath })
     );
 
@@ -148,39 +157,49 @@ describe('WorktreeLifecycleService.cleanupForBacklogReset', () => {
     await service.cleanupForBacklogReset(projectPath, featureId);
 
     // Should NOT call git commands
-    expect(execSync).not.toHaveBeenCalled();
+    expect(execFile).not.toHaveBeenCalled();
 
     // Should NOT emit cleanup event (no branch to report)
     expect(events.emit).not.toHaveBeenCalled();
   });
 
   it('does not throw when worktree removal fails', async () => {
-    vi.mocked(execSync).mockImplementation((cmd: string) => {
-      if (typeof cmd === 'string' && cmd.includes('worktree remove')) {
-        throw new Error('worktree not found');
-      }
-      return '';
-    });
+    vi.mocked(execFile).mockImplementation(
+      // safeGit passes ['worktree', 'remove', ...] as args[1]; throw on that
+      // path only so the subsequent branch-delete call still gets exercised.
+      ((cmd: unknown, args: unknown) => {
+        if (
+          cmd === 'git' &&
+          Array.isArray(args) &&
+          args[0] === 'worktree' &&
+          args[1] === 'remove'
+        ) {
+          return Promise.reject(new Error('worktree not found'));
+        }
+        return Promise.resolve({ stdout: '', stderr: '' });
+      }) as never
+    );
     vi.mocked(fs.promises.access).mockRejectedValue(new Error('ENOENT'));
     vi.mocked(fs.promises.readdir).mockRejectedValue(new Error('ENOENT'));
 
     // Should not throw
     await expect(service.cleanupForBacklogReset(projectPath, featureId)).resolves.toBeUndefined();
 
-    // Branch deletion should still be attempted
-    expect(execSync).toHaveBeenCalledWith(
-      `git branch -D "${branchName}"`,
+    // Branch deletion should still be attempted (argv form)
+    expect(execFile).toHaveBeenCalledWith(
+      'git',
+      ['branch', '-D', branchName],
       expect.objectContaining({ cwd: projectPath })
     );
   });
 
   it('does not throw when branch deletion fails', async () => {
-    vi.mocked(execSync).mockImplementation((cmd: string) => {
-      if (typeof cmd === 'string' && cmd.includes('branch -D')) {
-        throw new Error('branch not found');
+    vi.mocked(execFile).mockImplementation(((cmd: unknown, args: unknown) => {
+      if (cmd === 'git' && Array.isArray(args) && args[0] === 'branch' && args[1] === '-D') {
+        return Promise.reject(new Error('branch not found'));
       }
-      return '';
-    });
+      return Promise.resolve({ stdout: '', stderr: '' });
+    }) as never);
     vi.mocked(fs.promises.access).mockRejectedValue(new Error('ENOENT'));
     vi.mocked(fs.promises.readdir).mockRejectedValue(new Error('ENOENT'));
 
@@ -199,7 +218,7 @@ describe('WorktreeLifecycleService.cleanupForBacklogReset', () => {
   });
 
   it('handles missing agent-output.md gracefully', async () => {
-    vi.mocked(execSync).mockReturnValue('');
+    vi.mocked(execFile).mockResolvedValue({ stdout: '', stderr: '' } as never);
     vi.mocked(fs.promises.access).mockRejectedValue(new Error('ENOENT'));
     vi.mocked(fs.promises.readdir).mockResolvedValue([] as unknown as fs.Dirent[]);
 
