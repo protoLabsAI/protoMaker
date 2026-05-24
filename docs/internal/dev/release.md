@@ -2,10 +2,10 @@
 
 ## Overview
 
-protoLabs Studio uses an LLM-powered release notes rewriter to transform raw conventional commit messages into polished, user-facing release notes. The system has two components:
+protoLabs Studio uses an LLM-powered release notes rewriter to transform raw conventional commit messages into polished, user-facing release notes. Centralized in [`@protolabsai/release-tools`](https://github.com/protoLabsAI/release-tools):
 
-1. **Prompt template** (`libs/prompts/src/release-notes.ts`) — reusable from any TypeScript context
-2. **CLI script** (`scripts/rewrite-release-notes.mjs`) — standalone runner for CI or manual use
+1. **Composite GitHub Action** (`protoLabsAI/release-tools@v1`) — used by `.github/workflows/auto-release.yml`
+2. **npm CLI** (`npx @protolabsai/release-tools rewrite-release-notes`) — standalone runner for manual use
 
 ## How It Works
 
@@ -42,16 +42,16 @@ Raw commits like `feat(ui): wire file editor to upstream parity` become grouped,
 
 ```bash
 # Auto-detect latest two tags
-node scripts/rewrite-release-notes.mjs
+npx @protolabsai/release-tools rewrite-release-notes
 
 # Specify versions explicitly
-node scripts/rewrite-release-notes.mjs v0.30.1 v0.29.0
+npx @protolabsai/release-tools rewrite-release-notes v0.30.1 v0.29.0
 
 # Preview the prompt without calling Claude
-node scripts/rewrite-release-notes.mjs --dry-run
+npx @protolabsai/release-tools rewrite-release-notes --dry-run
 
 # Generate and post to Discord #dev
-node scripts/rewrite-release-notes.mjs --post-discord
+npx @protolabsai/release-tools rewrite-release-notes --post-discord
 ```
 
 ### Flags
@@ -124,7 +124,7 @@ The `auto-release.yml` workflow calls the rewriter script as the final step afte
   run: |
     VERSION="v${{ steps.version.outputs.version }}"
     PREV_TAG=$(git tag --sort=-v:refname | grep -v "^${VERSION}$" | head -1)
-    node scripts/rewrite-release-notes.mjs "$VERSION" "$PREV_TAG" --post-discord
+    npx @protolabsai/release-tools rewrite-release-notes "$VERSION" "$PREV_TAG" --post-discord
   env:
     ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
@@ -133,9 +133,9 @@ The `auto-release.yml` workflow calls the rewriter script as the final step afte
 
 - **Enabled by default**: Wired into `auto-release.yml` — runs on every push to `main`
 - **Requires**: `ANTHROPIC_API_KEY` (Claude API)
-- **Manual runs**: `node scripts/rewrite-release-notes.mjs` locally with `ANTHROPIC_API_KEY` set
+- **Manual runs**: `npx @protolabsai/release-tools rewrite-release-notes` locally with `ANTHROPIC_API_KEY` set
 - **Disable in CI**: Remove or comment out the "Rewrite and post release notes" step in `auto-release.yml`; the GitHub Release body still contains the raw auto-generated notes from `gh release create`
 
 ## Model Selection
 
-The CLI script uses `claude-haiku-4-5-20251001` (Haiku 4.5) for speed and cost efficiency. Release notes rewriting is a structured text task that does not require Sonnet or Opus capabilities. To change the model, edit the `model` field in the `callClaude()` function in `scripts/rewrite-release-notes.mjs`.
+Defaults to `protolabs/fast` via the protoLabs LLM gateway. Release notes rewriting is a structured text task that does not require a heavier model. To override, set the `model` input on the Action (e.g. `model: protolabs/smart`) or pass `--model <alias>` to the CLI. See [`@protolabsai/release-tools`](https://github.com/protoLabsAI/release-tools) for the full input/env reference.
