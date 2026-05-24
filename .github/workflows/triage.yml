@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   triage:
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-protolabs-linux
     steps:
       - name: Add needs-triage label
         run: |

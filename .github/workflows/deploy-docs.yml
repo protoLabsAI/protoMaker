@@ -27,7 +27,7 @@ permissions:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-protolabs-linux
     if: github.repository == 'protoLabsAI/protoMaker'
     timeout-minutes: 10
     concurrency:

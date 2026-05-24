@@ -21,7 +21,7 @@ permissions: read-all
 
 jobs:
   release:
-    runs-on: self-hosted
+    runs-on: namespace-profile-protolabs-linux
     if: github.repository == 'protoLabsAI/protoMaker'
     timeout-minutes: 10
     permissions:

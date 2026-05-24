@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   stale:
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-protolabs-linux
     steps:
       - name: Mark stale issues and close inactive ones
         uses: actions/stale@5bef64f19d7facfb25b37b414482c7164d639639 # v9
