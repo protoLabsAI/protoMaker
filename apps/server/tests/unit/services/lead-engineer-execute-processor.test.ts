@@ -476,3 +476,108 @@ describe('ExecuteProcessor — execution gate rejection tracking (Bug 3)', () =>
     expect(stateCtx.gateRejectionCount).toBe(1);
   });
 });
+
+describe('ExecuteProcessor — EXECUTE→REVIEW guard (no PR or no commits)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('blocks feature when agent exits with no PR and no commits', async () => {
+    // Simulate: agent hard-fails on turn 1 (e.g. 401 from model gateway).
+    // waitForCompletion resolves successfully (feature:completed event fires),
+    // but no PR was created and no commits exist.
+    const { ctx, featureLoader } = makeServiceContext({
+      maxCostUsdPerFeature: 100, // well above any cost
+    });
+
+    // featureLoader.get returns a feature without prNumber
+    const noPrFeature = makeFeature({ costUsd: 1, prNumber: undefined });
+    (featureLoader.get as ReturnType<typeof vi.fn>).mockResolvedValue(noPrFeature);
+
+    const processor = new ExecuteProcessor(ctx);
+    const stateCtx = makeCtx({ feature: noPrFeature, prNumber: undefined });
+    const result = await processor.process(stateCtx);
+
+    // Should NOT transition to REVIEW
+    expect(result.nextState).toBeNull();
+    expect(result.shouldContinue).toBe(false);
+    expect(result.reason).toMatch(/no PR created/i);
+    expect(result.reason).toMatch(/no commits ahead of base/i);
+
+    // Feature should be blocked with a descriptive reason
+    expect(featureLoader.update).toHaveBeenCalledWith(
+      '/test/project',
+      'feat-001',
+      expect.objectContaining({
+        status: 'blocked',
+        statusChangeReason: expect.stringMatching(
+          /Agent exited without producing reviewable output/i
+        ),
+      })
+    );
+  });
+
+  it('transitions to REVIEW when PR exists (commits check is advisory)', async () => {
+    // Having a PR is strong enough evidence — commits check is advisory
+    // and may fail in environments without git access.
+    const { ctx, featureLoader } = makeServiceContext({
+      maxCostUsdPerFeature: 100,
+    });
+
+    const prFeature = makeFeature({ costUsd: 1, prNumber: 42 });
+    (featureLoader.get as ReturnType<typeof vi.fn>).mockResolvedValue(prFeature);
+
+    const processor = new ExecuteProcessor(ctx);
+    const stateCtx = makeCtx({ feature: prFeature, prNumber: 42 });
+    const result = await processor.process(stateCtx);
+
+    expect(result.nextState).toBe('REVIEW');
+    expect(result.shouldContinue).toBe(true);
+    expect(result.reason).toMatch(/Execution completed, moving to review/i);
+  });
+
+  it('blocks feature when no PR and feature.prNumber is also missing', async () => {
+    // Both ctx.prNumber and feature.prNumber are missing.
+    const { ctx, featureLoader } = makeServiceContext({
+      maxCostUsdPerFeature: 100,
+    });
+
+    const noPrFeature = makeFeature({ costUsd: 1, prNumber: undefined });
+    (featureLoader.get as ReturnType<typeof vi.fn>).mockResolvedValue(noPrFeature);
+
+    const processor = new ExecuteProcessor(ctx);
+    const stateCtx = makeCtx({ feature: noPrFeature, prNumber: undefined });
+    const result = await processor.process(stateCtx);
+
+    expect(result.nextState).toBeNull();
+    expect(result.shouldContinue).toBe(false);
+    expect(result.reason).toMatch(/no PR created/i);
+
+    expect(featureLoader.update).toHaveBeenCalledWith(
+      '/test/project',
+      'feat-001',
+      expect.objectContaining({
+        status: 'blocked',
+        statusChangeReason: expect.stringMatching(/no PR created/i),
+      })
+    );
+  });
+
+  it('transitions to REVIEW when feature.prNumber is set (even without ctx.prNumber)', async () => {
+    // Happy path: feature has prNumber from reload.
+    const { ctx, featureLoader } = makeServiceContext({
+      maxCostUsdPerFeature: 100,
+    });
+
+    const happyFeature = makeFeature({ costUsd: 1, prNumber: 42 });
+    (featureLoader.get as ReturnType<typeof vi.fn>).mockResolvedValue(happyFeature);
+
+    const processor = new ExecuteProcessor(ctx);
+    const stateCtx = makeCtx({ feature: happyFeature });
+    const result = await processor.process(stateCtx);
+
+    expect(result.nextState).toBe('REVIEW');
+    expect(result.shouldContinue).toBe(true);
+    expect(result.reason).toMatch(/Execution completed, moving to review/i);
+  });
+});
