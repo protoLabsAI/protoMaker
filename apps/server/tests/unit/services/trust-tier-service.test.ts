@@ -226,5 +226,43 @@ describe('TrustTierService', () => {
       expect(all).toHaveLength(1);
       expect(all[0].githubUsername).toBe('alice');
     });
+
+    it('preserves all records when N=8 setTier calls fire concurrently (thundering-herd check)', async () => {
+      // The 2-caller test passes a naive mutex (`if (existing) await existing`)
+      // even when it has the thundering-herd bug — only 1 waiter exists, so it
+      // gets the lock cleanly. The bug surfaces with 3+ concurrent callers,
+      // where multiple waiters all unblock on the first release and then race.
+      const usernames = ['u1', 'u2', 'u3', 'u4', 'u5', 'u6', 'u7', 'u8'];
+      await Promise.all(
+        usernames.map((u, i) => trustTierService.setTier(u, ((i % 4) + 1) as 1 | 2 | 3 | 4, 'admin'))
+      );
+
+      const all = await trustTierService.getAll();
+      expect(all).toHaveLength(8);
+      const got = new Set(all.map((r) => r.githubUsername));
+      for (const u of usernames) {
+        expect(got.has(u)).toBe(true);
+      }
+    });
+
+    it('handles a setTier-then-revoke chain on the same user without losing the final state', async () => {
+      // Race two operations against the SAME user. With a broken mutex, the
+      // revoke could land before the set persists, leaving 'dave' with a tier
+      // that should have been revoked, or vice versa. With proper ordering,
+      // whichever call queued last wins.
+      await trustTierService.setTier('dave', 1, 'admin');
+
+      // Fire 4 concurrent ops in a deterministic Promise.all order
+      const ops = [
+        trustTierService.setTier('dave', 2, 'admin'),
+        trustTierService.setTier('dave', 3, 'admin'),
+        trustTierService.setTier('dave', 4, 'admin'),
+        trustTierService.revokeTier('dave'),
+      ];
+      await Promise.all(ops);
+
+      // Last queued op was the revoke — final state must reflect that.
+      expect(await trustTierService.getTierForUser('dave')).toBe(0);
+    });
   });
 });

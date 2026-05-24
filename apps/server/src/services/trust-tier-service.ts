@@ -20,27 +20,42 @@ const logger = createLogger('TrustTierService');
 
 /**
  * In-memory per-file locks to serialize read-modify-write operations.
- * Prevents lost updates when two concurrent calls read the same stale storage.
+ * Prevents lost updates when concurrent calls would otherwise read the same
+ * stale storage. Each caller chains its work onto the tail of any in-flight
+ * lock for the same path, so N concurrent callers execute strictly in arrival
+ * order — no thundering-herd, even with 3+ waiters.
  */
 const fileLocks = new Map<string, Promise<void>>();
 
 async function withFileLock<T>(filePath: string, operation: () => Promise<T>): Promise<T> {
-  const existingLock = fileLocks.get(filePath);
-  if (existingLock) {
-    await existingLock;
-  }
+  // Capture the current tail of the chain (or a resolved promise if no one's
+  // queued). We must do this BEFORE the await so the next caller chains on us,
+  // not on the same predecessor.
+  const previousTail = fileLocks.get(filePath) ?? Promise.resolve();
 
-  let releaseLock: () => void;
-  const lockPromise = new Promise<void>((resolve) => {
-    releaseLock = resolve;
+  let releaseTurn!: () => void;
+  const myTurn = new Promise<void>((resolve) => {
+    releaseTurn = resolve;
   });
-  fileLocks.set(filePath, lockPromise);
+
+  // Install our work as the new tail. Subsequent callers will await
+  // `previousTail.then(() => myTurn)` — i.e. the previous queue plus our own
+  // operation. This is the strict-ordering bit the thundering-herd version
+  // missed.
+  const myTail = previousTail.then(() => myTurn);
+  fileLocks.set(filePath, myTail);
+
+  await previousTail;
 
   try {
     return await operation();
   } finally {
-    releaseLock!();
-    fileLocks.delete(filePath);
+    releaseTurn();
+    // Only clear the map entry if no one queued behind us. If a later caller
+    // already replaced the tail, leave their chain intact.
+    if (fileLocks.get(filePath) === myTail) {
+      fileLocks.delete(filePath);
+    }
   }
 }
 
