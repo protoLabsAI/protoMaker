@@ -397,51 +397,110 @@ export async function recoverNestedWorktreeWork(
         logger.debug(`[WorktreeRecovery] Uncommitted changes:\n${statusOutput}`);
         result.worktreesWithChanges.push(nestedWorktreePath);
 
-        // Parse file paths from `git status --short` output.
+        // Parse git status lines with explicit status-code handling.
         // Format: "XY filename" or "XY old -> new" for renames.
-        // Status codes: M=modified, A=added, D=deleted, R=renamed, ??=untracked.
-        const changedFiles = statusOutput
-          .trim()
-          .split('\n')
-          .map((line) => {
-            const rest = line.slice(3).trim(); // strip 2-char status code + space
-            // Handle rename: "old-path -> new-path" — use the new path
-            if (rest.includes(' -> ')) {
-              return rest.split(' -> ').pop()!.trim();
-            }
-            return rest;
-          })
-          .filter(Boolean);
+        // X = index status, Y = worktree status.
+        // D = deleted, R = renamed, M = modified, A = added, ?? = untracked.
+        const statusLines = statusOutput.trim().split('\n').filter(Boolean);
 
-        for (const relPath of changedFiles) {
+        for (const line of statusLines) {
+          const statusCode = line.slice(0, 2).trim();
+          const rest = line.slice(3).trim(); // strip 2-char status code + space
+
+          // Determine operation type and path(s) from the status code
+          const isDeleted = statusCode.includes('D');
+          const isRenamed = statusCode.includes('R');
+
+          let relPath: string;
+          let oldRelPath: string | undefined;
+
+          if (isRenamed && rest.includes(' -> ')) {
+            const parts = rest.split(' -> ');
+            oldRelPath = parts[0].trim();
+            relPath = parts[parts.length - 1].trim();
+          } else {
+            relPath = rest;
+          }
+
           const srcPath = path.join(nestedWorktreePath, relPath);
           const destPath = path.join(mainWorktreePath, relPath);
 
           try {
-            // Skip files that no longer exist in the nested worktree (e.g. deletions)
-            let srcStat;
-            try {
-              srcStat = await fs.stat(srcPath);
-            } catch {
-              logger.debug(`[WorktreeRecovery] Skipping absent file (likely deleted): ${relPath}`);
-              continue;
-            }
+            if (isDeleted) {
+              // File was deleted in the nested worktree — remove from main worktree too
+              const deletedDestPath = path.join(mainWorktreePath, relPath);
+              try {
+                await fs.rm(deletedDestPath, { recursive: true, force: true });
+                result.copiedFiles.push(relPath);
+                logger.info(
+                  `[WorktreeRecovery] Deleted ${relPath} from main worktree (was deleted in nested)`
+                );
+              } catch (rmError) {
+                // File may not exist in main worktree — non-fatal
+                const msg = rmError instanceof Error ? rmError.message : String(rmError);
+                logger.debug(
+                  `[WorktreeRecovery] Could not delete ${relPath} from main worktree (may not exist): ${msg}`
+                );
+              }
+            } else if (isRenamed && oldRelPath) {
+              // Rename: remove old path from main worktree, copy new path
+              const oldDestPath = path.join(mainWorktreePath, oldRelPath);
+              try {
+                await fs.rm(oldDestPath, { recursive: true, force: true });
+                logger.info(
+                  `[WorktreeRecovery] Removed old path ${oldRelPath} from main worktree (renamed)`
+                );
+              } catch (rmError) {
+                const msg = rmError instanceof Error ? rmError.message : String(rmError);
+                logger.debug(`[WorktreeRecovery] Could not remove old path ${oldRelPath}: ${msg}`);
+              }
 
-            if (srcStat.isDirectory()) {
-              // git status shows untracked directories as "?? dir/" — copy recursively
-              await fs.cp(srcPath, destPath, { recursive: true });
+              // Copy the new path from nested to main
+              let srcStat;
+              try {
+                srcStat = await fs.stat(srcPath);
+              } catch {
+                const msg = `Renamed file not found at ${srcPath}`;
+                logger.error(`[WorktreeRecovery] ${msg}`);
+                result.errors.push(`copy ${relPath}: ${msg}`);
+                continue;
+              }
+
+              if (srcStat.isDirectory()) {
+                await fs.cp(srcPath, destPath, { recursive: true });
+              } else {
+                await fs.mkdir(path.dirname(destPath), { recursive: true });
+                await fs.copyFile(srcPath, destPath);
+              }
               result.copiedFiles.push(relPath);
-              logger.info(`[WorktreeRecovery] Copied directory ${relPath} -> main worktree`);
+              logger.info(
+                `[WorktreeRecovery] Copied rename ${oldRelPath} -> ${relPath} to main worktree`
+              );
             } else {
-              await fs.mkdir(path.dirname(destPath), { recursive: true });
-              await fs.copyFile(srcPath, destPath);
-              result.copiedFiles.push(relPath);
-              logger.info(`[WorktreeRecovery] Copied ${relPath} -> main worktree`);
+              // M / A / ?? — copy from nested to main
+              let srcStat;
+              try {
+                srcStat = await fs.stat(srcPath);
+              } catch {
+                logger.debug(`[WorktreeRecovery] Skipping absent file: ${relPath}`);
+                continue;
+              }
+
+              if (srcStat.isDirectory()) {
+                await fs.cp(srcPath, destPath, { recursive: true });
+                result.copiedFiles.push(relPath);
+                logger.info(`[WorktreeRecovery] Copied directory ${relPath} -> main worktree`);
+              } else {
+                await fs.mkdir(path.dirname(destPath), { recursive: true });
+                await fs.copyFile(srcPath, destPath);
+                result.copiedFiles.push(relPath);
+                logger.info(`[WorktreeRecovery] Copied ${relPath} -> main worktree`);
+              }
             }
           } catch (copyError) {
             const msg = copyError instanceof Error ? copyError.message : String(copyError);
-            logger.error(`[WorktreeRecovery] Failed to copy ${relPath}: ${msg}`);
-            result.errors.push(`copy ${relPath}: ${msg}`);
+            logger.error(`[WorktreeRecovery] Failed to process ${relPath}: ${msg}`);
+            result.errors.push(`process ${relPath}: ${msg}`);
           }
         }
 

@@ -1,4 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import fs from 'fs/promises';
+import os from 'os';
+import path from 'path';
 import type { Feature } from '@protolabsai/types';
 
 // Mock execFile before importing the service. After the shell-string →
@@ -13,7 +16,10 @@ vi.mock('util', () => ({
   promisify: (fn: unknown) => fn,
 }));
 
-import { checkAndRecoverUncommittedWork } from '@/services/worktree-recovery-service.js';
+import {
+  checkAndRecoverUncommittedWork,
+  recoverNestedWorktreeWork,
+} from '@/services/worktree-recovery-service.js';
 import { execFile } from 'child_process';
 
 const mockExecFile = execFile as unknown as ReturnType<typeof vi.fn>;
@@ -324,6 +330,85 @@ describe('worktree-recovery-service', () => {
       expect(result.detected).toBe(true);
       expect(result.recovered).toBe(true);
       expect(result.prNumber).toBe(77);
+    });
+  });
+
+  describe('recoverNestedWorktreeWork', () => {
+    let tempMainWorktree: string;
+    let tempNestedWorktree: string;
+
+    afterEach(async () => {
+      try {
+        await fs.rm(tempMainWorktree, { recursive: true, force: true });
+      } catch {
+        // Best-effort cleanup
+      }
+    });
+
+    it('applies deletes, renames, and modified files from nested worktree', async () => {
+      // Create main worktree with initial files
+      tempMainWorktree = await fs.mkdtemp(path.join(os.tmpdir(), 'main-wt-'));
+      tempNestedWorktree = path.join(tempMainWorktree, '.claude', 'worktrees', 'agent-test');
+      await fs.mkdir(tempNestedWorktree, { recursive: true });
+
+      // a.ts — will be deleted in nested (D status)
+      await fs.writeFile(path.join(tempMainWorktree, 'a.ts'), 'deleted content');
+      await fs.writeFile(path.join(tempNestedWorktree, 'a.ts'), 'deleted content');
+
+      // b.ts → c.ts — will be renamed in nested (R status)
+      await fs.writeFile(path.join(tempMainWorktree, 'b.ts'), 'old name');
+      await fs.writeFile(path.join(tempNestedWorktree, 'c.ts'), 'renamed content');
+
+      // d.ts — modified in nested (M status)
+      await fs.writeFile(path.join(tempMainWorktree, 'd.ts'), 'original');
+      await fs.writeFile(path.join(tempNestedWorktree, 'd.ts'), 'modified');
+
+      // Mock git status --short for the nested worktree
+      // D = deleted, R = renamed, M = modified
+      const statusOutput = 'D  a.ts\nR100 b.ts -> c.ts\nM  d.ts\n';
+
+      mockExecFile
+        // git status --short (nested worktree)
+        .mockResolvedValueOnce({ stdout: statusOutput, stderr: '' });
+
+      const result = await recoverNestedWorktreeWork(tempMainWorktree);
+
+      expect(result.found).toBe(true);
+      expect(result.worktreesWithChanges).toContain(tempNestedWorktree);
+
+      // a.ts should be removed from main worktree (was deleted in nested)
+      try {
+        await fs.access(path.join(tempMainWorktree, 'a.ts'));
+        expect(false).toBe(true); // Should not reach here
+      } catch {
+        // Expected — file was deleted
+      }
+
+      // b.ts should be removed from main worktree (was renamed in nested)
+      try {
+        await fs.access(path.join(tempMainWorktree, 'b.ts'));
+        expect(false).toBe(true); // Should not reach here
+      } catch {
+        // Expected — old path was removed
+      }
+
+      // c.ts should exist in main worktree (rename target)
+      const cContent = await fs.readFile(path.join(tempMainWorktree, 'c.ts'), 'utf-8');
+      expect(cContent).toBe('renamed content');
+
+      // d.ts should have modified content in main worktree
+      const dContent = await fs.readFile(path.join(tempMainWorktree, 'd.ts'), 'utf-8');
+      expect(dContent).toBe('modified');
+
+      // Nested worktree should be cleaned up
+      try {
+        await fs.access(tempNestedWorktree);
+        expect(false).toBe(true); // Should not reach here
+      } catch {
+        // Expected — nested worktree was removed
+      }
+
+      expect(result.errors).toHaveLength(0);
     });
   });
 });
