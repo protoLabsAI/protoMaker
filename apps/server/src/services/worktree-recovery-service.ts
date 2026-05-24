@@ -6,18 +6,17 @@
  * Returns structured results; callers are responsible for status updates and events.
  */
 
-import { exec, execFile } from 'child_process';
+import { execFile } from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';
 import { promisify } from 'util';
 import { createLogger } from '@protolabsai/utils';
 import type { Feature } from '@protolabsai/types';
 import { DEFAULT_GIT_WORKFLOW_SETTINGS } from '@protolabsai/types';
-import { buildGitAddCommand } from '../lib/git-staging-utils.js';
-import { createGitExecEnv } from '@protolabsai/git-utils';
+import { buildGitAddArgs } from '../lib/git-staging-utils.js';
+import { createGitExecEnv, safeGit, safeExec, assertSafeRef } from '@protolabsai/git-utils';
 import { createPrWithFallback } from '../lib/gh-pr-create.js';
 
-const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
 const logger = createLogger('WorktreeRecovery');
 
@@ -64,13 +63,14 @@ export async function checkAndRecoverUncommittedWork(
   skipGitHooks = true
 ): Promise<WorktreeRecoveryResult> {
   const rawBranch = prBaseBranch || DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch;
-  // Sanitize branch name to prevent shell injection — allow only valid git ref characters
+  // Sanitize branch name — strip everything outside the conservative git-ref
+  // allowlist. assertSafeRef below catches the empty-after-sanitization case.
   const baseBranch = rawBranch.replace(/[^a-zA-Z0-9_./-]/g, '');
   const result: WorktreeRecoveryResult = { detected: false, recovered: false };
 
   try {
     // Check for uncommitted changes
-    const { stdout: statusOutput } = await execAsync('git status --short', {
+    const { stdout: statusOutput } = await safeGit(['status', '--short'], {
       cwd: worktreePath,
       env: execEnv,
     });
@@ -88,6 +88,16 @@ export async function checkAndRecoverUncommittedWork(
       logger.warn(`[PostAgentHook] ${result.error}`);
       return result;
     }
+    // Refuse to proceed if the branch name has shell-unsafe characters. This
+    // catches the case where a feature title produced a slug containing chars
+    // like '+', '&', '#'. Hard-fail here is better than silently shell-quoting.
+    try {
+      assertSafeRef(branchName, 'feature.branchName');
+    } catch (err) {
+      result.error = err instanceof Error ? err.message : String(err);
+      logger.error(`[PostAgentHook] ${result.error}`);
+      return result;
+    }
 
     logger.warn(
       `[PostAgentHook] Uncommitted work detected in ${worktreePath} for feature ${feature.id} — attempting recovery`
@@ -95,16 +105,13 @@ export async function checkAndRecoverUncommittedWork(
     logger.debug(`[PostAgentHook] Uncommitted changes:\n${statusOutput}`);
 
     // Step 1: Stage changed files (exclude .automaker/ except memory/ and skills/ if they exist).
-    const addCommand = buildGitAddCommand(worktreePath);
-    logger.debug(`[PostAgentHook] Running: ${addCommand}`);
-    await execAsync(addCommand, {
-      cwd: worktreePath,
-      env: execEnv,
-    });
+    const addArgs = buildGitAddArgs(worktreePath);
+    logger.debug(`[PostAgentHook] Running: git ${addArgs.join(' ')}`);
+    await safeGit(addArgs, { cwd: worktreePath, env: execEnv });
 
     // Verify files were actually staged. If not, fall back to plain `git add .`
     // (worktrees are isolated, so staging everything is safe).
-    const { stdout: stagedCheck } = await execAsync('git diff --cached --name-only', {
+    const { stdout: stagedCheck } = await safeGit(['diff', '--cached', '--name-only'], {
       cwd: worktreePath,
       env: execEnv,
     });
@@ -112,10 +119,10 @@ export async function checkAndRecoverUncommittedWork(
       logger.warn(
         `[PostAgentHook] Pathspec-based git add staged nothing — falling back to 'git add .'`
       );
-      await execAsync('git add .', { cwd: worktreePath, env: execEnv });
+      await safeGit(['add', '.'], { cwd: worktreePath, env: execEnv });
 
       // Check again
-      const { stdout: retryCheck } = await execAsync('git diff --cached --name-only', {
+      const { stdout: retryCheck } = await safeGit(['diff', '--cached', '--name-only'], {
         cwd: worktreePath,
         env: execEnv,
       });
@@ -131,19 +138,32 @@ export async function checkAndRecoverUncommittedWork(
     // Run AFTER staging so new/untracked files are included via git diff --cached.
     // Using git diff --cached (not git diff HEAD) ensures newly-added files are covered.
     try {
-      const { stdout: stagedFiles } = await execAsync(
-        "git diff --cached --name-only --diff-filter=ACMR -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' '*.css' '*.md'",
+      const { stdout: stagedFiles } = await safeGit(
+        [
+          'diff',
+          '--cached',
+          '--name-only',
+          '--diff-filter=ACMR',
+          '--',
+          '*.ts',
+          '*.tsx',
+          '*.js',
+          '*.jsx',
+          '*.json',
+          '*.css',
+          '*.md',
+        ],
         { cwd: worktreePath, env: execEnv }
       );
       const files = stagedFiles.trim().split('\n').filter(Boolean);
       if (files.length > 0) {
         const prettierBin = path.join(projectPath, 'node_modules/.bin/prettier');
-        await execAsync(
-          `node "${prettierBin}" --ignore-path /dev/null --write ${files.map((f) => `"${f}"`).join(' ')}`,
-          { cwd: worktreePath, env: execEnv }
-        );
+        await safeExec('node', [prettierBin, '--ignore-path', '/dev/null', '--write', ...files], {
+          cwd: worktreePath,
+          env: execEnv,
+        });
         // Re-stage after formatting so prettier changes are included in the commit
-        await execAsync(addCommand, { cwd: worktreePath, env: execEnv });
+        await safeGit(addArgs, { cwd: worktreePath, env: execEnv });
         logger.debug(`[PostAgentHook] Auto-formatted ${files.length} staged files`);
       }
     } catch {
@@ -179,15 +199,18 @@ export async function checkAndRecoverUncommittedWork(
 
     logger.info(`[PostAgentHook] Committed uncommitted work for feature ${feature.id}`);
 
-    // Step 3.5: Rebase onto origin/dev before push to prevent CONFLICTING PRs
+    // Step 3.5: Rebase onto origin/dev before push to prevent CONFLICTING PRs.
+    // baseBranch is sanitized at function entry; assertSafeRef catches the
+    // post-sanitization empty case (e.g. caller passed only metacharacters).
+    assertSafeRef(baseBranch, 'baseBranch');
     let useForceWithLease = false;
     try {
-      await execAsync(`git fetch origin ${baseBranch}`, {
+      await safeGit(['fetch', 'origin', baseBranch], {
         cwd: worktreePath,
         env: execEnv,
         timeout: 30_000,
       });
-      await execAsync(`git rebase origin/${baseBranch}`, {
+      await safeGit(['rebase', `origin/${baseBranch}`], {
         cwd: worktreePath,
         env: execEnv,
         timeout: 60_000,
@@ -197,7 +220,7 @@ export async function checkAndRecoverUncommittedWork(
       const msg = rebaseError instanceof Error ? rebaseError.message : String(rebaseError);
       if (msg.includes('conflict') || msg.includes('CONFLICT')) {
         try {
-          await execAsync('git rebase --abort', { cwd: worktreePath, env: execEnv });
+          await safeGit(['rebase', '--abort'], { cwd: worktreePath, env: execEnv });
         } catch {
           // Best-effort abort
         }
@@ -205,7 +228,7 @@ export async function checkAndRecoverUncommittedWork(
       } else {
         logger.warn(`[PostAgentHook] Rebase failed for ${feature.id}: ${msg}`);
         try {
-          await execAsync('git rebase --abort', { cwd: worktreePath, env: execEnv });
+          await safeGit(['rebase', '--abort'], { cwd: worktreePath, env: execEnv });
         } catch {
           // Best-effort abort — may not be in rebase state
         }
@@ -215,11 +238,12 @@ export async function checkAndRecoverUncommittedWork(
     // Step 4: Push to remote with -u
     // --no-verify skips pre-push hooks (e.g. turbo build) that fail in worktrees
     // due to symlinked node_modules. CI is the verification layer for worktree pushes.
-    const forceFlag = useForceWithLease ? ' --force-with-lease' : '';
-    await execAsync(`git push --no-verify${forceFlag} -u origin "${branchName}"`, {
-      cwd: worktreePath,
-      env: execEnv,
-    });
+    // branchName was asserted safe earlier — passing as argv leaves no room for
+    // shell injection regardless of what's in the slug.
+    const pushArgs = ['push', '--no-verify'];
+    if (useForceWithLease) pushArgs.push('--force-with-lease');
+    pushArgs.push('-u', 'origin', branchName);
+    await safeGit(pushArgs, { cwd: worktreePath, env: execEnv });
 
     logger.info(`[PostAgentHook] Pushed branch ${branchName} for feature ${feature.id}`);
 
@@ -355,7 +379,7 @@ export async function recoverNestedWorktreeWork(
 
     for (const nestedWorktreePath of agentDirs) {
       try {
-        const { stdout: statusOutput } = await execAsync('git status --short', {
+        const { stdout: statusOutput } = await safeGit(['status', '--short'], {
           cwd: nestedWorktreePath,
           env: execEnv,
         });

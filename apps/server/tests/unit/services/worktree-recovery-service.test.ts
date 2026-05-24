@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Feature } from '@protolabsai/types';
 
-// Mock exec/execFile before importing the service
+// Mock execFile before importing the service. After the shell-string →
+// argv migration (#3597 part 2), every external command in this service
+// goes through execFile via safeGit/safeExec; the bare `exec` symbol is
+// no longer used by production code.
 vi.mock('child_process', () => ({
   exec: vi.fn(),
   execFile: vi.fn(),
@@ -11,9 +14,8 @@ vi.mock('util', () => ({
 }));
 
 import { checkAndRecoverUncommittedWork } from '@/services/worktree-recovery-service.js';
-import { exec, execFile } from 'child_process';
+import { execFile } from 'child_process';
 
-const mockExec = exec as unknown as ReturnType<typeof vi.fn>;
 const mockExecFile = execFile as unknown as ReturnType<typeof vi.fn>;
 
 const baseFeature: Feature = {
@@ -35,7 +37,7 @@ describe('worktree-recovery-service', () => {
   describe('checkAndRecoverUncommittedWork', () => {
     it('returns detected=false when worktree is clean', async () => {
       // git status --short returns empty
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
 
       const result = await checkAndRecoverUncommittedWork(
         baseFeature,
@@ -50,7 +52,7 @@ describe('worktree-recovery-service', () => {
 
     it('returns detected=true, error when feature has no branchName', async () => {
       // git status --short returns uncommitted changes
-      mockExec.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
 
       const featureNoBranch: Feature = { ...baseFeature, branchName: undefined };
       const result = await checkAndRecoverUncommittedWork(
@@ -66,25 +68,25 @@ describe('worktree-recovery-service', () => {
 
     it('successfully recovers uncommitted work (commit + push + PR)', async () => {
       // git status --short: uncommitted files
-      mockExec.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
       // git add (step 1: stage)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git diff --cached --name-only (staging verification)
-      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
       // git diff --cached --name-only --diff-filter=ACMR (step 1.5: prettier file list)
-      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
       // node prettier --write
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git add (re-stage after prettier)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git commit (execFile)
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git fetch origin dev (rebase step)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git rebase origin/dev (rebase step)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git push --force-with-lease
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // gh pr create (execFileAsync)
       mockExecFile.mockResolvedValueOnce({
         stdout: 'https://github.com/owner/repo/pull/42\n',
@@ -107,25 +109,25 @@ describe('worktree-recovery-service', () => {
 
     it('invokes project-local prettier with --ignore-path /dev/null on staged files', async () => {
       // git status --short: uncommitted files
-      mockExec.mockResolvedValueOnce({ stdout: 'A  src/new-file.ts\n', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: 'A  src/new-file.ts\n', stderr: '' });
       // git add (stage)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git diff --cached (verify staging)
-      mockExec.mockResolvedValueOnce({ stdout: 'src/new-file.ts\n', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: 'src/new-file.ts\n', stderr: '' });
       // git diff --cached --diff-filter=ACMR (prettier file list)
-      mockExec.mockResolvedValueOnce({ stdout: 'src/new-file.ts\n', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: 'src/new-file.ts\n', stderr: '' });
       // node prettier --write (captured for assertion)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git add (re-stage after prettier)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git commit
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git fetch
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git rebase
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git push
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // gh pr create
       mockExecFile.mockResolvedValueOnce({
         stdout: 'https://github.com/owner/repo/pull/10\n',
@@ -134,25 +136,36 @@ describe('worktree-recovery-service', () => {
 
       await checkAndRecoverUncommittedWork(baseFeature, '/mock/worktree', '/fake/project');
 
-      // Find the prettier invocation among all exec calls
-      const allCalls = mockExec.mock.calls.map((call: unknown[]) => String(call[0]));
-      const prettierCall = allCalls.find((cmd) => cmd.includes('prettier'));
+      // Find the prettier invocation among the execFile calls. After the
+      // shell-string → argv migration, prettier is invoked as
+      //   execFile('node', [prettierBin, '--ignore-path', '/dev/null', '--write', ...files])
+      // so we look at the argv array (call[1]) instead of a joined command string.
+      const prettierCall = mockExecFile.mock.calls.find(
+        (call: unknown[]) =>
+          call[0] === 'node' &&
+          Array.isArray(call[1]) &&
+          (call[1] as string[]).some((arg) => arg.includes('prettier'))
+      );
       expect(prettierCall).toBeDefined();
-      expect(prettierCall).toContain('--ignore-path /dev/null');
-      expect(prettierCall).toContain('--write');
+      const argv = prettierCall![1] as string[];
+      expect(argv).toContain('--ignore-path');
+      expect(argv).toContain('/dev/null');
+      expect(argv).toContain('--write');
       // Uses the project-local binary path (node_modules/.bin/prettier)
-      expect(prettierCall).toContain('/fake/project/node_modules/.bin/prettier');
+      expect(argv.some((arg) => arg.includes('/fake/project/node_modules/.bin/prettier'))).toBe(
+        true
+      );
     });
 
     it('returns error when commit step fails', async () => {
       // git status --short: uncommitted files
-      mockExec.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
       // git add (stage)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git diff --cached --name-only (staging verification)
-      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
       // git diff --cached --diff-filter=ACMR (prettier list — empty, skip prettier)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git commit (execFile) fails
       mockExecFile.mockRejectedValueOnce(new Error('nothing to commit, working tree clean'));
 
@@ -169,21 +182,21 @@ describe('worktree-recovery-service', () => {
 
     it('returns error when push step fails', async () => {
       // git status --short
-      mockExec.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
       // git add (stage)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git diff --cached --name-only (staging verification)
-      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
       // git diff --cached --diff-filter=ACMR (prettier list — empty, skip prettier)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git commit succeeds
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git fetch origin dev (rebase step)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git rebase origin/dev (rebase step)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git push fails
-      mockExec.mockRejectedValueOnce(new Error('remote: Permission denied'));
+      mockExecFile.mockRejectedValueOnce(new Error('remote: Permission denied'));
 
       const result = await checkAndRecoverUncommittedWork(
         baseFeature,
@@ -198,23 +211,23 @@ describe('worktree-recovery-service', () => {
 
     it('continues recovery even if prettier formatting fails', async () => {
       // git status --short
-      mockExec.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
       // git add (stage)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git diff --cached --name-only (staging verification)
-      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
       // git diff --cached --diff-filter=ACMR (prettier list)
-      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
       // node prettier fails (non-fatal)
-      mockExec.mockRejectedValueOnce(new Error('prettier not found'));
+      mockExecFile.mockRejectedValueOnce(new Error('prettier not found'));
       // git commit succeeds
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git fetch origin dev (rebase step)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git rebase origin/dev (rebase step)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git push --force-with-lease succeeds
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // gh pr create (execFileAsync)
       mockExecFile.mockResolvedValueOnce({
         stdout: 'https://github.com/owner/repo/pull/99\n',
@@ -235,29 +248,29 @@ describe('worktree-recovery-service', () => {
 
     it('recovers when rebase conflicts — pushes without force-with-lease', async () => {
       // git status --short
-      mockExec.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
       // git add (stage)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git diff --cached --name-only (staging verification)
-      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
       // git diff --cached --diff-filter=ACMR (prettier list)
-      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
       // node prettier --write
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git add (re-stage after prettier)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git commit (execFile)
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git fetch origin dev (rebase step)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git rebase origin/dev FAILS with CONFLICT
-      mockExec.mockRejectedValueOnce(
+      mockExecFile.mockRejectedValueOnce(
         new Error('CONFLICT (content): Merge conflict in src/index.ts')
       );
       // git rebase --abort (best-effort)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git push (NO --force-with-lease since rebase was aborted)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // gh pr create (execFileAsync)
       mockExecFile.mockResolvedValueOnce({
         stdout: 'https://github.com/owner/repo/pull/55\n',
@@ -277,25 +290,25 @@ describe('worktree-recovery-service', () => {
 
     it('recovers when rebase fails for non-conflict reason — aborts and pushes normally', async () => {
       // git status --short
-      mockExec.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
       // git add (stage)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git diff --cached --name-only (staging verification)
-      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
       // git diff --cached --diff-filter=ACMR (prettier list)
-      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
       // node prettier --write
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git add (re-stage after prettier)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git commit (execFile)
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git fetch origin dev — fails (network error)
-      mockExec.mockRejectedValueOnce(new Error('fatal: unable to access remote'));
+      mockExecFile.mockRejectedValueOnce(new Error('fatal: unable to access remote'));
       // git rebase --abort (best-effort after non-conflict failure)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git push (NO --force-with-lease)
-      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // gh pr create (execFileAsync)
       mockExecFile.mockResolvedValueOnce({
         stdout: 'https://github.com/owner/repo/pull/77\n',
