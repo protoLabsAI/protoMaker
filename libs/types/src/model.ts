@@ -99,18 +99,16 @@ export function getAllCodexModelIds(): CodexModelId[] {
  */
 export const DEFAULT_MODELS = {
   /**
-   * Default for agent orchestration / planning.
-   * Historically pointed at `claude-opus-4-6`; now routed through the protoLabs
-   * gateway via the proto SDK. Existing callers that key off
-   * `DEFAULT_MODELS.claude` continue to compile — only the resolved model id
-   * changes. The field name is intentionally NOT renamed in this PR to keep
-   * the diff focused; PR 3 (final SDK rip-out) will rename it to `proto`.
+   * Default for agent orchestration / planning + escalation-to-strongest path.
+   * Routed through the protoLabs gateway via the proto SDK. This is the tier
+   * used for architectural features, 2+ failure retries, and the reasoning
+   * path in the lead engineer.
    */
-  claude: 'protolabs/smart',
-  /** Default for auto-mode feature implementation - sonnet for ticket work */
-  autoMode: 'claude-sonnet-4-6',
-  /** Default for trivial/quick tasks - haiku */
-  trivial: 'claude-haiku-4-5-20251001',
+  claude: 'protolabs/reasoning',
+  /** Default for auto-mode feature implementation — smart tier for ticket work. */
+  autoMode: 'protolabs/smart',
+  /** Default for trivial / quick tasks — fast tier for speed and cost. */
+  trivial: 'protolabs/fast',
   cursor: 'cursor-auto', // Cursor's recommended default (with prefix)
   codex: CODEX_MODEL_MAP.gpt55, // GPT-5.5 is the current flagship Codex model
 } as const;

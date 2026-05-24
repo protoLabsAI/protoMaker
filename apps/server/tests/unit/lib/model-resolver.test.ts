@@ -155,10 +155,11 @@ describe('model-resolver.ts', () => {
     });
 
     it('should have valid default model', () => {
-      // DEFAULT_MODELS.claude resolves through the gateway via @protolabsai/sdk.
-      // The field name still says "claude" for callsite stability; PR 3 renames
-      // it to `proto` when ClaudeProvider is removed.
-      expect(DEFAULT_MODELS.claude).toBe('protolabs/smart');
+      // DEFAULT_MODELS.claude is the "strongest available" — used for
+      // architectural complexity and the 2+ failures escalation path. It
+      // resolves through the gateway via @protolabsai/sdk. Field name kept
+      // as `claude` for caller stability through the SDK cutover.
+      expect(DEFAULT_MODELS.claude).toBe('protolabs/reasoning');
     });
   });
 });

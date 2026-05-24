@@ -169,16 +169,16 @@ Once providers are configured, use the model routing settings to control which m
 
 Features are assigned a complexity level (`small`, `medium`, `large`, `architectural`). The complexity tier settings map each level to a model:
 
-| Tier              | Default | Typical Use                                                   |
-| ----------------- | ------- | ------------------------------------------------------------- |
-| **Small**         | Haiku   | Trivial tasks, quick fixes, one-file changes                  |
-| **Medium**        | Sonnet  | Standard feature work                                         |
-| **Large**         | Sonnet  | Complex multi-file changes, refactors                         |
-| **Architectural** | Opus    | System design, core infrastructure, performance-critical work |
+| Tier              | Default               | Typical Use                                            |
+| ----------------- | --------------------- | ------------------------------------------------------ |
+| **Small**         | `protolabs/fast`      | Trivial tasks, quick fixes, one-file changes           |
+| **Medium**        | `protolabs/smart`     | Standard feature work                                  |
+| **Large**         | `protolabs/smart`     | Complex multi-file changes, refactors                  |
+| **Architectural** | `protolabs/reasoning` | System design, core infrastructure, deep-thinking work |
 
 Configure in **Settings → AI Models → Model Defaults → Complexity Tiers**.
 
-Any provider model can be assigned to any tier — for example, route small features to a local Ollama model and architectural features to Opus.
+Any provider model can be assigned to any tier — for example, route small features to a local Ollama model or architectural features to Claude Opus via the Claude Compatible provider.
 
 ### Agent Execution (catch-all)
 
@@ -189,23 +189,23 @@ The **Agent Execution** model applies when a feature has no complexity set. This
 When auto-mode selects a model for a feature, it follows this priority order:
 
 1. Explicit `model` field set on the feature itself
-2. 2+ failures → Opus escalation
+2. 2+ failures → escalation to the reasoning tier (`DEFAULT_MODELS.claude` — `protolabs/reasoning`)
 3. Agent role manifest or `roleModelOverrides` settings
 4. **Complexity tier setting** (small/medium/large/architectural)
 5. **Agent Execution** catch-all setting
-6. Built-in default (Sonnet)
+6. Built-in default (`protolabs/smart`)
 
 ### Per-Phase Task Models
 
 Beyond agent execution, individual application tasks have their own model settings:
 
-| Task                | Default | Location         |
-| ------------------- | ------- | ---------------- |
-| Feature Enhancement | Sonnet  | Quick Tasks      |
-| Commit Messages     | Haiku   | Quick Tasks      |
-| App Specification   | Opus    | Generation Tasks |
-| Feature Generation  | Sonnet  | Generation Tasks |
-| Memory Extraction   | Haiku   | Memory Tasks     |
+| Task                | Default               | Location         |
+| ------------------- | --------------------- | ---------------- |
+| Feature Enhancement | `protolabs/smart`     | Quick Tasks      |
+| Commit Messages     | `protolabs/fast`      | Quick Tasks      |
+| App Specification   | `protolabs/reasoning` | Generation Tasks |
+| Feature Generation  | `protolabs/smart`     | Generation Tasks |
+| Memory Extraction   | `protolabs/fast`      | Memory Tasks     |
 
 All configurable in **Settings → AI Models → Model Defaults**.
 

@@ -575,15 +575,17 @@ backlog → in_progress → review → done
 
 ### Model Hierarchy for Auto-Mode
 
-Auto-mode uses a tiered model selection based on feature complexity:
+Auto-mode uses a tiered model selection based on feature complexity. Defaults route through the protoLabs gateway (`api.proto-labs.ai`) so the gateway-issued API key is the only credential needed out of the box. Override per-tier in **Settings → AI Models → Model Defaults**.
 
-| Model      | Use Case                                                 | Triggered By                                       |
-| ---------- | -------------------------------------------------------- | -------------------------------------------------- |
-| **Opus**   | Orchestration, architectural decisions, challenging work | `complexity: 'architectural'` or after 2+ failures |
-| **Sonnet** | Standard feature implementation (default)                | `complexity: 'medium'` or `'large'`                |
-| **Haiku**  | Trivial/quick tasks                                      | `complexity: 'small'`                              |
+| Tier          | Default               | Triggered By                                       |
+| ------------- | --------------------- | -------------------------------------------------- |
+| **Reasoning** | `protolabs/reasoning` | `complexity: 'architectural'` or after 2+ failures |
+| **Smart**     | `protolabs/smart`     | `complexity: 'medium'` or `'large'`                |
+| **Fast**      | `protolabs/fast`      | `complexity: 'small'`                              |
 
-**Auto-escalation:** Features that fail 2+ times automatically escalate to opus on retry.
+The reasoning tier is for system-design, spec generation, and deep-thinking work. Smart is the workhorse for ticket-level feature implementation. Fast is for trivial / quick tasks (commits, branch names, file descriptions).
+
+**Auto-escalation:** Features that fail 2+ times automatically escalate to `DEFAULT_MODELS.claude` (`protolabs/reasoning`) on retry.
 
 **Setting complexity via MCP:**
 
@@ -592,7 +594,7 @@ mcp__protolabs__create_feature({
   projectPath: '/path/to/project',
   title: 'Core Infrastructure Setup',
   description: '...',
-  complexity: 'architectural', // Uses opus
+  complexity: 'architectural', // Routes to protolabs/reasoning
 });
 ```
 
