@@ -27,7 +27,7 @@ export function createRebuildHandler(knowledgeStoreService: KnowledgeStoreServic
       logger.info('Rebuild index request', { projectPath });
 
       // Initialize for this project path (re-initializes if different)
-      knowledgeStoreService.initialize(projectPath);
+      await knowledgeStoreService.initialize(projectPath);
 
       knowledgeStoreService.rebuildIndex(projectPath);
       const stats = knowledgeStoreService.getStats();

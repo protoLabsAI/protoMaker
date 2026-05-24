@@ -25,7 +25,7 @@ export function createEvalStatsHandler(knowledgeStoreService: KnowledgeStoreServ
       logger.debug('Eval stats request', { projectPath });
 
       // Initialize for this project path
-      knowledgeStoreService.initialize(projectPath);
+      await knowledgeStoreService.initialize(projectPath);
 
       const stats = await knowledgeStoreService.getEvalStats(projectPath);
 
