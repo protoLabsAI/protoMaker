@@ -89,6 +89,12 @@ export class IssueCreationService {
    */
   private issuedFeatures = new Set<string>();
 
+  /**
+   * Per-feature in-flight guard to prevent the race window between the
+   * issuedFeatures check and the actual bug creation.  Keys are feature IDs.
+   */
+  private bugFilingInFlight = new Set<string>();
+
   constructor(
     events: EventEmitter,
     featureLoader: FeatureLoader,
@@ -149,33 +155,46 @@ export class IssueCreationService {
       return;
     }
 
-    const feature = await this.featureLoader.get(projectPath, featureId);
-    if (!feature) {
-      logger.warn(`Feature ${featureId} not found, cannot create bug`);
+    // Per-key in-flight guard: skip if another handler for this featureId is
+    // already running — prevents race window between the issuedFeatures check
+    // and the durable storage write.
+    if (this.bugFilingInFlight.has(featureId)) {
+      logger.info(`Bug filing already in flight for feature ${featureId}, skipping`);
       return;
     }
+    this.bugFilingInFlight.add(featureId);
 
-    const triageInput: TriageInput = {
-      featureId,
-      projectPath,
-      failureCategory: isFailureCategory(failureCategory) ? failureCategory : undefined,
-      retryCount,
-      error: lastError,
-    };
+    try {
+      const feature = await this.featureLoader.get(projectPath, featureId);
+      if (!feature) {
+        logger.warn(`Feature ${featureId} not found, cannot create bug`);
+        return;
+      }
 
-    const triage = this.triageService.triage(triageInput);
+      const triageInput: TriageInput = {
+        featureId,
+        projectPath,
+        failureCategory: isFailureCategory(failureCategory) ? failureCategory : undefined,
+        retryCount,
+        error: lastError,
+      };
 
-    const result = await this.createBugFeature(projectPath, feature, {
-      retryCount,
-      lastError,
-      failureCategory,
-      triage,
-      trigger: 'max-retries',
-    });
+      const triage = this.triageService.triage(triageInput);
 
-    if (result.success) {
-      this.issuedFeatures.add(featureId);
-      await this.postDiscordNotification(feature, result, triage, projectPath);
+      const result = await this.createBugFeature(projectPath, feature, {
+        retryCount,
+        lastError,
+        failureCategory,
+        triage,
+        trigger: 'max-retries',
+      });
+
+      if (result.success) {
+        this.issuedFeatures.add(featureId);
+        await this.postDiscordNotification(feature, result, triage, projectPath);
+      }
+    } finally {
+      this.bugFilingInFlight.delete(featureId);
     }
   }
 
@@ -194,26 +213,36 @@ export class IssueCreationService {
       return;
     }
 
-    const feature = await this.featureLoader.get(projectPath, featureId);
-    if (!feature) return;
+    if (this.bugFilingInFlight.has(featureId)) {
+      logger.info(`Bug filing already in flight for feature ${featureId}, skipping`);
+      return;
+    }
+    this.bugFilingInFlight.add(featureId);
 
-    const triageInput: TriageInput = {
-      featureId,
-      projectPath,
-      error: reason,
-    };
+    try {
+      const feature = await this.featureLoader.get(projectPath, featureId);
+      if (!feature) return;
 
-    const triage = this.triageService.triage(triageInput);
+      const triageInput: TriageInput = {
+        featureId,
+        projectPath,
+        error: reason,
+      };
 
-    const result = await this.createBugFeature(projectPath, feature, {
-      lastError: reason,
-      triage,
-      trigger: 'recovery-escalated',
-    });
+      const triage = this.triageService.triage(triageInput);
 
-    if (result.success) {
-      this.issuedFeatures.add(featureId);
-      await this.postDiscordNotification(feature, result, triage, projectPath);
+      const result = await this.createBugFeature(projectPath, feature, {
+        lastError: reason,
+        triage,
+        trigger: 'recovery-escalated',
+      });
+
+      if (result.success) {
+        this.issuedFeatures.add(featureId);
+        await this.postDiscordNotification(feature, result, triage, projectPath);
+      }
+    } finally {
+      this.bugFilingInFlight.delete(featureId);
     }
   }
 
@@ -229,28 +258,38 @@ export class IssueCreationService {
       return;
     }
 
-    const feature = await this.featureLoader.get(projectPath, featureId);
-    if (!feature) return;
+    if (this.bugFilingInFlight.has(featureId)) {
+      logger.info(`Bug filing already in flight for feature ${featureId}, skipping`);
+      return;
+    }
+    this.bugFilingInFlight.add(featureId);
 
-    const triageInput: TriageInput = {
-      featureId,
-      projectPath,
-      isCIFailure: true,
-      error: failedChecks?.map((c) => `${c.name}: ${c.conclusion}`).join(', '),
-    };
+    try {
+      const feature = await this.featureLoader.get(projectPath, featureId);
+      if (!feature) return;
 
-    const triage = this.triageService.triage(triageInput);
+      const triageInput: TriageInput = {
+        featureId,
+        projectPath,
+        isCIFailure: true,
+        error: failedChecks?.map((c) => `${c.name}: ${c.conclusion}`).join(', '),
+      };
 
-    const result = await this.createBugFeature(projectPath, feature, {
-      prNumber,
-      failedChecks,
-      triage,
-      trigger: 'ci-failure',
-    });
+      const triage = this.triageService.triage(triageInput);
 
-    if (result.success) {
-      this.issuedFeatures.add(featureId);
-      await this.postDiscordNotification(feature, result, triage, projectPath);
+      const result = await this.createBugFeature(projectPath, feature, {
+        prNumber,
+        failedChecks,
+        triage,
+        trigger: 'ci-failure',
+      });
+
+      if (result.success) {
+        this.issuedFeatures.add(featureId);
+        await this.postDiscordNotification(feature, result, triage, projectPath);
+      }
+    } finally {
+      this.bugFilingInFlight.delete(featureId);
     }
   }
 
