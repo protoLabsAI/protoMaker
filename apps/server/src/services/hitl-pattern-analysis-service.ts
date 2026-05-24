@@ -151,6 +151,12 @@ export class HitlPatternAnalysisService {
   /** Whether the store has been loaded from disk */
   private initialized = false;
 
+  /**
+   * Per-signature in-flight guard to prevent the race window between
+   * the dedup check and the storage write.  Keys are pattern signatures.
+   */
+  private filingInFlight = new Set<string>();
+
   constructor(deps: HitlPatternAnalysisDeps) {
     this.deps = deps;
   }
@@ -289,6 +295,27 @@ export class HitlPatternAnalysisService {
   }
 
   private async maybeFileFeature(
+    signature: string,
+    state: PatternState,
+    latestRecord: EscalationRecord
+  ): Promise<void> {
+    // Per-key in-flight guard: if another call for this signature is already
+    // running, skip — the durable findByTitle check below is the second line
+    // of defense, but this Set prevents the race window between check and create.
+    if (this.filingInFlight.has(signature)) {
+      logger.info(`Skipping auto-file for pattern="${signature}" — filing already in flight`);
+      return;
+    }
+    this.filingInFlight.add(signature);
+
+    try {
+      await this.doMaybeFileFeature(signature, state, latestRecord);
+    } finally {
+      this.filingInFlight.delete(signature);
+    }
+  }
+
+  private async doMaybeFileFeature(
     signature: string,
     state: PatternState,
     latestRecord: EscalationRecord
