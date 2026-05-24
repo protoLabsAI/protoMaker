@@ -1,0 +1,91 @@
+# Deploy the marketing site (site/) to the existing Cloudflare Pages project
+# `automaker` via the wrangler CLI.
+#
+# Replaces the broken CF-Pages-git-integration path. The git-integration kept
+# trying to run a non-existent build command at the repo root, which failed on
+# every push to main and froze the live site at protolabs.studio (#3563).
+# site/ is plain HTML — no build step needed; just upload the directory.
+#
+# Required secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
+# Both are already configured at the repo level.
+
+name: Deploy Site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - '.github/workflows/deploy-site.yml'
+  pull_request:
+    paths:
+      - 'site/**'
+      - '.github/workflows/deploy-site.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+  pull-requests: write
+
+jobs:
+  deploy:
+    runs-on: namespace-profile-protolabs-linux
+    if: github.repository == 'protoLabsAI/protoMaker'
+    timeout-minutes: 10
+    concurrency:
+      group: site-deploy-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Deploy to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          npx -y wrangler pages deploy site \
+            --project-name=automaker \
+            --branch="$BRANCH" \
+            --commit-hash="${GITHUB_SHA}" \
+            --commit-message="${{ github.event.head_commit.message || 'Deploy' }}"
+
+      - name: Comment PR preview URL
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = context.payload.pull_request.head.ref;
+            const slug = branch.replace(/[^a-z0-9-]/gi, '-').substring(0, 28);
+            const url = `https://${slug}.automaker.pages.dev`;
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `Site preview: ${url}`
+            });
+
+      - name: Notify Discord
+        if: always() && github.event_name == 'push'
+        run: |
+          STATUS="${{ job.status }}"
+          COMMIT="${GITHUB_SHA:0:8}"
+          BRANCH="${GITHUB_REF_NAME}"
+          if [ "$STATUS" = "success" ]; then
+            MSG="Site deployed (${BRANCH}): \`${COMMIT}\` — https://protolabs.studio"
+          else
+            MSG="Site deploy FAILED (${BRANCH}): \`${COMMIT}\` — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
+          if [ -n "${DISCORD_DEPLOY_WEBHOOK:-}" ]; then
+            curl -sf -H "Content-Type: application/json" \
+              -d "{\"content\": \"${MSG}\"}" \
+              "$DISCORD_DEPLOY_WEBHOOK" || true
+          fi
+        env:
+          DISCORD_DEPLOY_WEBHOOK: ${{ secrets.DISCORD_DEPLOY_WEBHOOK }}
