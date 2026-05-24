@@ -22,6 +22,7 @@ import { PostMergeReconcilerCheck } from './maintenance/checks/post-merge-reconc
 import { DoneWorktreeCleanupCheck } from './maintenance/checks/done-worktree-cleanup-check.js';
 import { EpicAdoptionSweepCheck } from './maintenance/checks/epic-adoption-sweep-check.js';
 import { BacklogTitleReconcilerCheck } from './maintenance/checks/backlog-title-reconciler-check.js';
+import { AutoDismissStaleBotReviewsCheck } from './maintenance/checks/auto-dismiss-stale-bot-reviews-check.js';
 
 const logger = createLogger('Server:Wiring');
 
@@ -193,6 +194,42 @@ export function register(container: ServiceContainer): void {
   // See protoLabsAI/protoMaker#3511.
   const backlogTitleReconcilerCheck = new BacklogTitleReconcilerCheck(featureLoader, events);
 
+  // Auto-dismiss stale bot CHANGES_REQUESTED reviews (full tier) — protoquinn /
+  // coderabbit re-review fix commits as COMMENTED rather than APPROVED, which
+  // leaves PRs permanently BLOCKED on the original CHANGES_REQUESTED. This
+  // check finds and dismisses those superseded reviews when the same bot has
+  // posted a later follow-up and CI is green.
+  // See protoLabsAI/protoMaker#3732.
+  const repoOwner = process.env.GITHUB_REPO_OWNER || 'protoLabsAI';
+  const repoName = process.env.GITHUB_REPO_NAME || 'protoMaker';
+  const autoDismissStaleBotReviewsInstance = new AutoDismissStaleBotReviewsCheck({
+    owner: repoOwner,
+    repo: repoName,
+  });
+  const autoDismissStaleBotReviewsCheck: MaintenanceCheck = {
+    id: 'auto-dismiss-stale-bot-reviews',
+    name: 'Auto-Dismiss Stale Bot Reviews',
+    tier: 'full',
+    async run(context: MaintenanceCheckContext): Promise<MaintenanceCheckResult> {
+      const t0 = Date.now();
+      let totalDismissed = 0;
+      for (const projectPath of context.projectPaths) {
+        const issues = await autoDismissStaleBotReviewsInstance.run(projectPath);
+        totalDismissed += issues.length;
+      }
+      return {
+        checkId: 'auto-dismiss-stale-bot-reviews',
+        passed: true,
+        summary:
+          totalDismissed > 0
+            ? `Auto-dismissed ${totalDismissed} stale CHANGES_REQUESTED bot review(s)`
+            : 'Auto-dismiss check: no stale bot reviews found',
+        details: { totalDismissed, projectCount: context.projectPaths.length },
+        durationMs: Date.now() - t0,
+      };
+    },
+  };
+
   maintenanceOrchestrator.register(boardHealthCheck);
   maintenanceOrchestrator.register(resourceUsageCheck);
   maintenanceOrchestrator.register(webhookHealthCheck);
@@ -200,6 +237,7 @@ export function register(container: ServiceContainer): void {
   maintenanceOrchestrator.register(doneWorktreeCleanupCheck);
   maintenanceOrchestrator.register(epicAdoptionSweepCheck);
   maintenanceOrchestrator.register(backlogTitleReconcilerCheck);
+  maintenanceOrchestrator.register(autoDismissStaleBotReviewsCheck);
 
   // Wire TopicBus for hierarchical event routing of sweep results
   if (container.topicBus) {
