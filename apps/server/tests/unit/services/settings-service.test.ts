@@ -741,8 +741,8 @@ describe('settings-service.ts', () => {
       // Legacy fields should be migrated to phaseModels with canonical IDs
       expect(settings.phaseModels.enhancementModel).toEqual({ model: 'claude-haiku' });
       expect(settings.phaseModels.validationModel).toEqual({ model: 'claude-opus' });
-      // Other fields should use defaults (canonical IDs)
-      expect(settings.phaseModels.specGenerationModel).toEqual({ model: 'claude-opus' });
+      // Other fields should use defaults (DEFAULT_PHASE_MODELS, gateway-routed)
+      expect(settings.phaseModels.specGenerationModel).toEqual({ model: 'protolabs/reasoning' });
     });
 
     it('should use default phase models when none are configured', async () => {
@@ -756,10 +756,10 @@ describe('settings-service.ts', () => {
 
       const settings = await settingsService.getGlobalSettings();
 
-      // Should use DEFAULT_PHASE_MODELS (with canonical IDs)
-      expect(settings.phaseModels.enhancementModel).toEqual({ model: 'claude-sonnet' });
-      expect(settings.phaseModels.fileDescriptionModel).toEqual({ model: 'claude-haiku' });
-      expect(settings.phaseModels.specGenerationModel).toEqual({ model: 'claude-opus' });
+      // Should use DEFAULT_PHASE_MODELS (gateway-routed)
+      expect(settings.phaseModels.enhancementModel).toEqual({ model: 'protolabs/smart' });
+      expect(settings.phaseModels.fileDescriptionModel).toEqual({ model: 'protolabs/fast' });
+      expect(settings.phaseModels.specGenerationModel).toEqual({ model: 'protolabs/reasoning' });
     });
 
     it('should deep merge phaseModels on update', async () => {

@@ -322,13 +322,13 @@ describe('model-resolver', () => {
     it('should use DEFAULT_MODELS.claude as fallback', () => {
       const result = resolveModelString(undefined);
 
-      // DEFAULT_MODELS.claude now points at the gateway-routed `protolabs/smart`
-      // model since the Anthropic SDK is being phased out in favor of
-      // @protolabsai/sdk. The field name still says "claude" through this PR
-      // to keep the diff focused; PR 3 of the cutover will rename it to `proto`.
+      // DEFAULT_MODELS.claude points at the gateway-routed reasoning tier — this
+      // is the "strongest available" used for orchestration, architectural
+      // complexity, and the 2+ failures escalation path. Field name kept as
+      // `claude` for caller compatibility through the SDK cutover.
       expect(result).toBe(DEFAULT_MODELS.claude);
       expect(DEFAULT_MODELS.claude).toBeDefined();
-      expect(DEFAULT_MODELS.claude).toBe('protolabs/smart');
+      expect(DEFAULT_MODELS.claude).toBe('protolabs/reasoning');
     });
   });
 
