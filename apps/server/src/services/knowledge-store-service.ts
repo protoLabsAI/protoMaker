@@ -379,13 +379,14 @@ export class KnowledgeStoreService {
       this.initialize(projectPath);
     }
 
+    // Stale = never retrieved AND the chunk has been sitting unused for over
+    // 90 days. COALESCE falls back to updated_at, then created_at, so a NULL
+    // last_retrieved_at no longer matches as instantly stale (#3595).
     const sql = `
       DELETE FROM chunks
       WHERE retrieval_count = 0
-        AND (
-          last_retrieved_at IS NULL
-          OR datetime(last_retrieved_at) < datetime('now', '-90 days')
-        )
+        AND datetime(COALESCE(last_retrieved_at, updated_at, created_at))
+            < datetime('now', '-90 days')
     `;
 
     const result = this.db!.prepare(sql).run();
