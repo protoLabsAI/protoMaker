@@ -334,6 +334,7 @@ git worktree remove .worktrees/my-branch
 
 ## Learn More
 
+- [Merge Policy & Stacked PRs](./merge-policy.md) - When to squash vs merge-commit, plus stack hygiene
 - [Monorepo Architecture](./monorepo-architecture.md) - Package structure and dependencies
 - [CONTRIBUTING.md](https://github.com/protoLabsAI/protoMaker/blob/main/CONTRIBUTING.md) - Complete contribution guide
 - [Conventional Commits](https://www.conventionalcommits.org/) - Commit message format
