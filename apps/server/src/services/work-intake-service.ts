@@ -78,6 +78,7 @@ export class WorkIntakeService {
   };
   private tickTimer: ReturnType<typeof setInterval> | null = null;
   private running = false;
+  private tickInProgress = false;
   private projectPath: string | null = null;
   private deps: WorkIntakeDependencies | null = null;
 
@@ -117,7 +118,12 @@ export class WorkIntakeService {
 
     // Run immediately, then on interval
     void this.tick();
-    this.tickTimer = setInterval(() => void this.tick(), this.config.tickIntervalMs);
+    this.tickTimer = setInterval(() => {
+      // Skip if a tick is already running — prevents overlapping ticks from
+      // computing the same available capacity and over-claiming.
+      if (this.tickInProgress) return;
+      void this.tick();
+    }, this.config.tickIntervalMs);
   }
 
   /**
@@ -177,7 +183,9 @@ export class WorkIntakeService {
 
   private async tick(): Promise<void> {
     if (!this.running || !this.deps || !this.projectPath) return;
+    if (this.tickInProgress) return;
 
+    this.tickInProgress = true;
     try {
       // How many slots are available?
       const running = this.deps.getRunningAgentCount();
@@ -216,13 +224,24 @@ export class WorkIntakeService {
           phasePriority(b.project, b.milestone, b.phase)
       );
 
-      // Claim up to `available` phases
+      // Claim up to `available` phases, re-checking capacity before each claim
+      // to guard against mid-tick capacity exhaustion.
       const toClaim = allClaimable.slice(0, available);
       for (const { project, milestone, phase } of toClaim) {
+        // Re-check capacity inside the loop — a previous claimAndMaterialize
+        // in this tick may have consumed the last slot.
+        const currentRunning = this.deps.getRunningAgentCount();
+        const currentMax = this.deps.getMaxConcurrency();
+        if (currentRunning >= currentMax) {
+          logger.info('Capacity exhausted mid-tick — stopping claims');
+          break;
+        }
         await this.claimAndMaterialize(project, milestone, phase);
       }
     } catch (err) {
       logger.error('Work intake tick failed:', err);
+    } finally {
+      this.tickInProgress = false;
     }
   }
 
