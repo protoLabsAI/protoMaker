@@ -393,11 +393,12 @@ Eight scheduled tasks run alongside the main loop.
 ```
 1. PR merged to main
 2. auto-release.yml fires:
-   - Read version from package.json
+   - Read version from libs/types/package.json
    - Create git tag + GitHub Release
-3. deploy-main.yml fires:
-   - Drain -> build Docker -> deploy -> e2e tests -> rollback on failure
 ```
+
+Production deploy is handled out-of-band — there is no `deploy-main`
+workflow chained off the release tag.
 
 ---
 
