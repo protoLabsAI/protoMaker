@@ -61,12 +61,14 @@ describe('sdk-options.ts', () => {
       expect(result).toBe('claude-sonnet-4-20250514');
     });
 
-    it('should use default model for spec when no override', async () => {
+    it('should use the gateway default model for spec when no override', async () => {
       delete process.env.AUTOMAKER_MODEL_SPEC;
       delete process.env.AUTOMAKER_MODEL_DEFAULT;
       const { getModelForUseCase } = await import('@/lib/sdk-options.js');
       const result = getModelForUseCase('spec');
-      expect(result).toContain('claude');
+      // Spec generation now resolves through the protoLabs gateway — direct
+      // Anthropic strings are not used.
+      expect(result.startsWith('protolabs/')).toBe(true);
     });
 
     it('should fall back to AUTOMAKER_MODEL_DEFAULT', async () => {

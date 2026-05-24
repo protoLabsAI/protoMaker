@@ -802,7 +802,7 @@ describe('ExecutionService - getModelForFeature assignedRole', () => {
       PROJECT_PATH
     );
 
-    expect(result.model).toContain('claude-opus-4-5');
+    expect(result.model).toBe('protolabs/reasoning');
     expect(mockGetAgent).toHaveBeenCalledWith(PROJECT_PATH, 'frontend-dev');
   });
 
@@ -822,7 +822,7 @@ describe('ExecutionService - getModelForFeature assignedRole', () => {
       PROJECT_PATH
     );
 
-    expect(result.model).toContain('claude-haiku-4-5');
+    expect(result.model).toBe('protolabs/fast');
     expect(result.providerId).toBe('anthropic');
   });
 
@@ -847,7 +847,7 @@ describe('ExecutionService - getModelForFeature assignedRole', () => {
     );
 
     // Manifest wins
-    expect(result.model).toContain('claude-opus-4-5');
+    expect(result.model).toBe('protolabs/reasoning');
     // Settings override should NOT have been consulted for model
     expect(mockGetWorkflowSettings).not.toHaveBeenCalled();
   });
@@ -866,7 +866,7 @@ describe('ExecutionService - getModelForFeature assignedRole', () => {
       PROJECT_PATH
     );
 
-    expect(result.model).toContain('claude-sonnet-4-6');
+    expect(result.model).toBe('protolabs/smart');
     expect(mockGetPhaseModelWithOverrides).toHaveBeenCalledWith(
       'agentExecutionModel',
       null,
@@ -883,7 +883,7 @@ describe('ExecutionService - getModelForFeature assignedRole', () => {
     const svc = makeTestService();
     const result = await (svc as any).getModelForFeature({ complexity: 'medium' }, PROJECT_PATH);
 
-    expect(result.model).toContain('claude-sonnet-4-6');
+    expect(result.model).toBe('protolabs/smart');
     expect(mockGetAgent).not.toHaveBeenCalled();
     expect(mockGetWorkflowSettings).not.toHaveBeenCalled();
   });
@@ -897,7 +897,7 @@ describe('ExecutionService - getModelForFeature assignedRole', () => {
       PROJECT_PATH
     );
 
-    expect(result.model).toContain('claude-haiku-4-5');
+    expect(result.model).toBe('protolabs/fast');
     expect(mockGetAgent).not.toHaveBeenCalled();
   });
 

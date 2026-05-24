@@ -35,11 +35,10 @@ describe('model-resolver', () => {
         expect(result).toBe(fullModel);
       });
 
-      it('should handle claude-opus model strings', () => {
-        const fullModel = 'claude-opus-4-6';
-        const result = resolveModelString(fullModel);
+      it('rewrites legacy versioned claude-opus strings to the gateway reasoning tier', () => {
+        const result = resolveModelString('claude-opus-4-6');
 
-        expect(result).toBe(fullModel);
+        expect(result).toBe('protolabs/reasoning');
       });
 
       it('should handle claude-haiku model strings', () => {
@@ -76,11 +75,11 @@ describe('model-resolver', () => {
         expect(result).toBe(CLAUDE_MODEL_MAP.haiku);
       });
 
-      it('should resolve all known aliases to valid Claude model strings', () => {
+      it('resolves all known short aliases to a protolabs/* gateway tier', () => {
         const aliases = ['sonnet', 'opus', 'haiku'];
         for (const alias of aliases) {
           const resolved = resolveModelString(alias);
-          expect(resolved).toContain('claude-');
+          expect(resolved.startsWith('protolabs/')).toBe(true);
           expect(resolved).toBe(CLAUDE_MODEL_MAP[alias]);
         }
       });
@@ -200,9 +199,11 @@ describe('model-resolver', () => {
   describe('getEffectiveModel', () => {
     describe('priority handling', () => {
       it('should prioritize explicit model over all others', () => {
-        const explicit = 'claude-opus-4-6';
-        const session = 'claude-sonnet-4-6';
-        const defaultModel = 'claude-haiku-4-5-20251001';
+        // Use gateway-native tiers; legacy claude-X-Y-Z strings get migrated
+        // by the resolver and would no longer compare equal to themselves.
+        const explicit = 'protolabs/reasoning';
+        const session = 'protolabs/smart';
+        const defaultModel = 'protolabs/fast';
 
         const result = getEffectiveModel(explicit, session, defaultModel);
 
@@ -210,8 +211,8 @@ describe('model-resolver', () => {
       });
 
       it('should use session model when explicit is undefined', () => {
-        const session = 'claude-sonnet-4-6';
-        const defaultModel = 'claude-haiku-4-5-20251001';
+        const session = 'protolabs/smart';
+        const defaultModel = 'protolabs/fast';
 
         const result = getEffectiveModel(undefined, session, defaultModel);
 
@@ -219,7 +220,7 @@ describe('model-resolver', () => {
       });
 
       it('should use default model when both explicit and session are undefined', () => {
-        const defaultModel = 'claude-opus-4-6';
+        const defaultModel = 'protolabs/reasoning';
 
         const result = getEffectiveModel(undefined, undefined, defaultModel);
 
@@ -247,7 +248,7 @@ describe('model-resolver', () => {
       });
 
       it('should prioritize explicit alias over session full string', () => {
-        const result = getEffectiveModel('sonnet', 'claude-opus-4-6');
+        const result = getEffectiveModel('sonnet', 'protolabs/reasoning');
 
         expect(result).toBe(CLAUDE_MODEL_MAP.sonnet);
       });
@@ -255,7 +256,7 @@ describe('model-resolver', () => {
 
     describe('with empty strings', () => {
       it('should treat empty explicit string as undefined', () => {
-        const session = 'claude-sonnet-4-6';
+        const session = 'protolabs/smart';
 
         const result = getEffectiveModel('', session);
 
@@ -263,7 +264,7 @@ describe('model-resolver', () => {
       });
 
       it('should treat empty session string as undefined', () => {
-        const defaultModel = 'claude-opus-4-6';
+        const defaultModel = 'protolabs/reasoning';
 
         const result = getEffectiveModel(undefined, '', defaultModel);
 
@@ -306,13 +307,13 @@ describe('model-resolver', () => {
   });
 
   describe('CLAUDE_MODEL_MAP integration', () => {
-    it('should have valid mappings for all known aliases', () => {
+    it('maps all known aliases to a protolabs/* gateway tier', () => {
       const aliases = ['sonnet', 'opus', 'haiku'];
 
       for (const alias of aliases) {
         const resolved = resolveModelString(alias);
         expect(resolved).toBeDefined();
-        expect(resolved).toContain('claude-');
+        expect(resolved.startsWith('protolabs/')).toBe(true);
         expect(resolved).toBe(CLAUDE_MODEL_MAP[alias]);
       }
     });
@@ -379,11 +380,10 @@ describe('model-resolver', () => {
         expect(result.thinkingLevel).toBeUndefined();
       });
 
-      it('should pass through full Claude model string', () => {
-        const fullModel = 'claude-sonnet-4-6';
-        const result = resolvePhaseModel(fullModel);
+      it('migrates legacy full claude-X-Y-Z strings to the gateway tier', () => {
+        const result = resolvePhaseModel('claude-sonnet-4-6');
 
-        expect(result.model).toBe(fullModel);
+        expect(result.model).toBe('protolabs/smart');
         expect(result.thinkingLevel).toBeUndefined();
       });
 
@@ -444,14 +444,14 @@ describe('model-resolver', () => {
         expect(result.thinkingLevel).toBe('ultrathink');
       });
 
-      it('should handle full Claude model string in entry', () => {
+      it('migrates legacy full claude-X-Y-Z entries to gateway tier and preserves thinkingLevel', () => {
         const entry: PhaseModelEntry = {
           model: 'claude-opus-4-6',
           thinkingLevel: 'high',
         };
         const result = resolvePhaseModel(entry);
 
-        expect(result.model).toBe('claude-opus-4-6');
+        expect(result.model).toBe('protolabs/reasoning');
         expect(result.thinkingLevel).toBe('high');
       });
     });

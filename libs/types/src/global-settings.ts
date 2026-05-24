@@ -44,7 +44,7 @@ export type { ModelAlias };
 // ============================================================================
 
 /** Current version of the global settings schema */
-export const SETTINGS_VERSION = 6;
+export const SETTINGS_VERSION = 7;
 /** Current version of the credentials schema */
 export const CREDENTIALS_VERSION = 1;
 
