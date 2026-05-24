@@ -44,18 +44,77 @@ export class KnowledgeStoreService {
     hybridRetrieval: true,
   };
 
+  /**
+   * In-flight operation guard for serialized project switching (#3603).
+   * Tracks async operations that hold a reference to the current database.
+   * When switching projects, we wait for all in-flight ops to complete
+   * before closing the old connection, preventing mid-await db closures.
+   */
+  private inFlightCount = 0;
+  private inFlightResolve: (() => void) | null = null;
+  private inFlightWaiters: Array<() => void> = [];
+
   constructor(embeddingOrchestrator?: KnowledgeEmbeddingOrchestrator) {
     this.embeddingOrchestrator = embeddingOrchestrator || new KnowledgeEmbeddingOrchestrator();
     this.ingestionService = new KnowledgeIngestionService(this.embeddingOrchestrator);
   }
 
   /**
+   * Track an in-flight async operation that uses the current database.
+   * Returns a cleanup function to call when the operation completes.
+   * @internal
+   */
+  trackInFlight(): () => void {
+    this.inFlightCount++;
+    // Clear any pending "all clear" signal since we now have in-flight work
+    if (this.inFlightCount === 1) {
+      this.inFlightResolve = null;
+    }
+    return () => {
+      this.inFlightCount--;
+      if (this.inFlightCount === 0) {
+        // All in-flight ops completed, resolve any waiters
+        const resolve = this.inFlightResolve;
+        if (resolve) {
+          this.inFlightResolve = null;
+          resolve();
+        }
+      }
+    };
+  }
+
+  /**
+   * Wait for all in-flight operations to complete.
+   * Returns immediately if no operations are in flight.
+   * @internal
+   */
+  async waitForInFlight(): Promise<void> {
+    if (this.inFlightCount === 0) {
+      return;
+    }
+    return new Promise<void>((resolve) => {
+      if (this.inFlightCount === 0) {
+        resolve();
+        return;
+      }
+      this.inFlightResolve = resolve;
+    });
+  }
+
+  /**
    * Initialize the knowledge store for a given project.
    * Creates the database file and schema if they don't exist.
    *
+   * Waits for any in-flight async operations (search, background embedding)
+   * to complete before closing the old connection, preventing mid-await db
+   * closures that cause search failures or skipped embeddings (#3603).
+   *
    * @param projectPath - Absolute path to the project directory
    */
-  initialize(projectPath: string): void {
+  async initialize(projectPath: string): Promise<void> {
+    // Serialize project switching: wait for in-flight ops to finish
+    await this.waitForInFlight();
+
     if (this.db) {
       logger.warn('KnowledgeStoreService already initialized, closing existing connection');
       this.close();
@@ -282,6 +341,9 @@ export class KnowledgeStoreService {
    * Search the knowledge store using triple-mode fusion (BM25 + direct cosine + HyPE cosine with RRF)
    * Falls back to hybrid (BM25 + direct cosine) or pure BM25 if embeddings/HyPE unavailable.
    *
+   * Tracks this operation as in-flight so that project switching waits for
+   * this search to complete before closing the database (#3603).
+   *
    * @param projectPath - Project path to search within
    * @param query - FTS5 query string (supports AND, OR, NOT, phrases)
    * @param opts - Search options (maxResults, maxTokens, sourceTypes filter)
@@ -300,11 +362,17 @@ export class KnowledgeStoreService {
       logger.warn(
         `Project path mismatch: initialized with ${this.projectPath}, searching ${projectPath}`
       );
-      // Re-initialize for the new project
-      this.initialize(projectPath);
+      // Re-initialize for the new project (waits for in-flight ops first)
+      await this.initialize(projectPath);
     }
 
-    return this.searchService.search(projectPath, query, opts);
+    // Track this async operation so project switching waits for it
+    const finish = this.trackInFlight();
+    try {
+      return await this.searchService.search(projectPath, query, opts);
+    } finally {
+      finish();
+    }
   }
 
   /**
@@ -328,6 +396,7 @@ export class KnowledgeStoreService {
     }
 
     if (this.projectPath !== projectPath) {
+      // Synchronous callers can't await initialize — open new db directly
       this.initialize(projectPath);
     }
 
@@ -376,6 +445,7 @@ export class KnowledgeStoreService {
     }
 
     if (this.projectPath !== projectPath) {
+      // Synchronous callers can't await initialize — open new db directly
       this.initialize(projectPath);
     }
 
@@ -417,6 +487,7 @@ export class KnowledgeStoreService {
     }
 
     if (this.projectPath !== projectPath) {
+      // Synchronous callers can't await initialize — open new db directly
       this.initialize(projectPath);
     }
 
@@ -441,6 +512,7 @@ export class KnowledgeStoreService {
     }
 
     if (this.projectPath !== projectPath) {
+      // Synchronous callers can't await initialize — open new db directly
       this.initialize(projectPath);
     }
 
@@ -484,7 +556,7 @@ export class KnowledgeStoreService {
     }
 
     if (this.projectPath !== projectPath) {
-      this.initialize(projectPath);
+      await this.initialize(projectPath);
     }
 
     return this.ingestionService.ingestReflections(this.db, projectPath);
@@ -503,7 +575,7 @@ export class KnowledgeStoreService {
     }
 
     if (this.projectPath !== projectPath) {
-      this.initialize(projectPath);
+      await this.initialize(projectPath);
     }
 
     return this.ingestionService.ingestAgentOutputs(this.db, projectPath);
@@ -525,6 +597,7 @@ export class KnowledgeStoreService {
     }
 
     if (this.projectPath !== projectPath) {
+      // Synchronous callers can't await initialize — open new db directly
       this.initialize(projectPath);
     }
 
@@ -597,6 +670,7 @@ export class KnowledgeStoreService {
     }
 
     if (this.projectPath !== projectPath) {
+      // Synchronous callers can't await initialize — open new db directly
       this.initialize(projectPath);
     }
 
@@ -654,10 +728,20 @@ export class KnowledgeStoreService {
     }
 
     if (this.projectPath !== projectPath) {
-      this.initialize(projectPath);
+      await this.initialize(projectPath);
     }
 
-    return this.searchService.searchReflections(projectPath, query, maxResults, 'engineering');
+    const finish = this.trackInFlight();
+    try {
+      return await this.searchService.searchReflections(
+        projectPath,
+        query,
+        maxResults,
+        'engineering'
+      );
+    } finally {
+      finish();
+    }
   }
 
   /**
@@ -675,7 +759,7 @@ export class KnowledgeStoreService {
     }
 
     if (this.projectPath !== projectPath) {
-      this.initialize(projectPath);
+      await this.initialize(projectPath);
     }
 
     return this.ingestionService.ingestFeatureCompletionLearnings(this.db, projectPath, featureId);

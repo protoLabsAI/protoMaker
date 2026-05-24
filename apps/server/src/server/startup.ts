@@ -134,7 +134,7 @@ export async function runStartup(
 
       for (const projectPath of uniquePaths) {
         try {
-          knowledgeStoreService.initialize(projectPath);
+          await knowledgeStoreService.initialize(projectPath);
           logger.info(`[KNOWLEDGE] Initialized knowledge store for ${projectPath}`);
 
           const stats = knowledgeStoreService.getStats();

@@ -44,7 +44,7 @@ export function createSearchHandler(knowledgeStoreService: KnowledgeStoreService
       });
 
       // Initialize for this project path (re-initializes if different)
-      knowledgeStoreService.initialize(projectPath);
+      await knowledgeStoreService.initialize(projectPath);
 
       const { results, retrieval_mode } = await knowledgeStoreService.search(projectPath, query, {
         maxResults,

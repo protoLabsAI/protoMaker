@@ -13,7 +13,7 @@ interface StatsRequest {
 }
 
 export function createStatsHandler(knowledgeStoreService: KnowledgeStoreService) {
-  return (req: Request, res: Response): void => {
+  return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath } = req.body as StatsRequest;
 
@@ -25,7 +25,7 @@ export function createStatsHandler(knowledgeStoreService: KnowledgeStoreService)
       logger.debug('Stats request', { projectPath });
 
       // Initialize for this project path (re-initializes if different)
-      knowledgeStoreService.initialize(projectPath);
+      await knowledgeStoreService.initialize(projectPath);
 
       const stats = knowledgeStoreService.getStats();
       const domainBreakdown = knowledgeStoreService.getStatsByDomain(projectPath);

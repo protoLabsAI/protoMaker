@@ -23,7 +23,7 @@ interface IngestChunkRequest {
  * POST /ingest - Ingest a raw text chunk with a required domain tag
  */
 export function createIngestChunkHandler(knowledgeStoreService: KnowledgeStoreService) {
-  return (req: Request, res: Response): void => {
+  return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath, content, domain, heading } = req.body as IngestChunkRequest;
 
@@ -45,7 +45,7 @@ export function createIngestChunkHandler(knowledgeStoreService: KnowledgeStoreSe
       logger.info('Ingest chunk request', { projectPath, domain });
 
       // Initialize for this project path
-      knowledgeStoreService.initialize(projectPath);
+      await knowledgeStoreService.initialize(projectPath);
 
       const chunkId = knowledgeStoreService.ingestChunk(projectPath, content, domain, heading);
 
@@ -76,7 +76,7 @@ export function createIngestReflectionsHandler(knowledgeStoreService: KnowledgeS
       logger.info('Ingest reflections request', { projectPath });
 
       // Initialize for this project path
-      knowledgeStoreService.initialize(projectPath);
+      await knowledgeStoreService.initialize(projectPath);
 
       const count = await knowledgeStoreService.ingestReflections(projectPath);
 
@@ -107,7 +107,7 @@ export function createIngestAgentOutputsHandler(knowledgeStoreService: Knowledge
       logger.info('Ingest agent outputs request', { projectPath });
 
       // Initialize for this project path
-      knowledgeStoreService.initialize(projectPath);
+      await knowledgeStoreService.initialize(projectPath);
 
       const count = await knowledgeStoreService.ingestAgentOutputs(projectPath);
 
