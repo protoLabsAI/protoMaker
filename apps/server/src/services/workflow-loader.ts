@@ -402,16 +402,19 @@ export class WorkflowLoader {
    *   1. feature.workflow (explicit assignment)
    *   2. feature.featureType mapping ('content' → content, 'signal' → signal workflow)
    *   3. feature.executionMode mapping ('read-only' → read-only workflow)
-   *   4. Default: 'standard'
+   *   4. Match-rule scoring pass (category + keyword scoring)
+   *   5. Default: 'standard'
    */
   async resolveForFeature(projectPath: string, feature: Feature): Promise<WorkflowDefinition> {
-    // Explicit workflow assignment
+    // Explicit workflow assignment — if specified but not found, fall back to standard
+    // without proceeding to scoring (explicit choice takes precedence over auto-matching)
     if (feature.workflow) {
       const workflow = await this.resolve(projectPath, feature.workflow);
       if (workflow) return workflow;
       logger.warn(
         `Workflow "${feature.workflow}" not found for feature ${feature.id}, falling back to standard`
       );
+      return STANDARD_WORKFLOW;
     }
 
     // featureType mapping
@@ -429,6 +432,66 @@ export class WorkflowLoader {
     if (feature.executionMode === 'read-only') {
       const workflow = await this.resolve(projectPath, 'read-only');
       if (workflow) return workflow;
+    }
+
+    // Match-rule scoring pass: iterate all workflows that declare match rules,
+    // score each against the feature's category and title/description keywords,
+    // return the highest-scoring workflow with score > 0.
+    const projectWorkflows = await this.loadProjectWorkflows(projectPath);
+    const allWorkflows = new Map<string, WorkflowDefinition>([
+      ...BUILT_IN_WORKFLOWS,
+      ...projectWorkflows,
+    ]);
+
+    let bestWorkflow: WorkflowDefinition | null = null;
+    let bestScore = 0;
+
+    for (const workflow of allWorkflows.values()) {
+      const match = workflow.match;
+      if (!match) continue;
+
+      let score = 0;
+      const category = (feature.category ?? '').toLowerCase();
+      const title = (feature.title ?? '').toLowerCase();
+      const description = (feature.description ?? '').toLowerCase();
+      const textToSearch = `${title} ${description}`;
+
+      // Category match — exact match on feature.category
+      if (match.categories) {
+        for (const cat of match.categories) {
+          if (category === cat.toLowerCase()) {
+            score += 10;
+            break;
+          }
+        }
+      }
+
+      // Keyword matches in title/description
+      if (match.keywords) {
+        for (const keyword of match.keywords) {
+          if (textToSearch.includes(keyword.toLowerCase())) {
+            score += 1;
+          }
+        }
+      }
+
+      // Legacy executionMode match
+      if (match.executionMode && feature.executionMode === match.executionMode) {
+        score += 10;
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestWorkflow = workflow;
+      }
+    }
+
+    if (bestWorkflow && bestScore > 0) {
+      logger.debug(
+        `Auto-matched feature ${feature.id} to workflow "${bestWorkflow.name}" ` +
+          `(score: ${bestScore}, category: ${feature.category})`
+      );
+      return bestWorkflow;
     }
 
     // Default
