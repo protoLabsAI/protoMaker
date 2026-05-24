@@ -126,9 +126,7 @@ function seedSemanticIndexes(db: BetterSqlite3.Database, chunkId: string): void 
      VALUES (?, ?, ?)`
   ).run(chunkId, Buffer.from(new Float32Array([0.1, 0.2, 0.3]).buffer), new Date().toISOString());
 
-  db.prepare(
-    `UPDATE chunks SET hype_queries = ?, hype_embeddings = ? WHERE id = ?`
-  ).run(
+  db.prepare(`UPDATE chunks SET hype_queries = ?, hype_embeddings = ? WHERE id = ?`).run(
     JSON.stringify(['what is the project?', 'what phase is it in?', 'how is it going?']),
     Buffer.from(new Float32Array([0.4, 0.5, 0.6]).buffer),
     chunkId
@@ -212,9 +210,11 @@ describe.skipIf(!hasSqlite)('upsertChunk invalidates stale semantic indexes (#36
     expect(missingEmbedding.map((r) => r.id)).toContain(CHUNK_ID);
 
     // HyPE worker selector after embedding is back — chunks with embedding and null hype_queries
-    db.prepare(
-      `INSERT INTO embeddings (chunk_id, embedding, created_at) VALUES (?, ?, ?)`
-    ).run(CHUNK_ID, Buffer.from(new Float32Array([0.0]).buffer), new Date().toISOString());
+    db.prepare(`INSERT INTO embeddings (chunk_id, embedding, created_at) VALUES (?, ?, ?)`).run(
+      CHUNK_ID,
+      Buffer.from(new Float32Array([0.0]).buffer),
+      new Date().toISOString()
+    );
     const missingHype = db
       .prepare(
         `SELECT c.id FROM chunks c
