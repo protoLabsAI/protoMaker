@@ -155,3 +155,9 @@ gource.mp4
 test/fixtures/**/.automaker/
 # Worktree directories (managed by protoLabs Studio)
 .claude/worktrees/
+
+# protoLabs workspace-config standard
+.beads/beads.db
+.automaker/features/
+.automaker/checkpoints/
+.automaker/trajectory/
