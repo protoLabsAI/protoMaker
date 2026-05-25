@@ -148,41 +148,44 @@ Write `.automaker/projects/{projectSlug}/settings.json`:
 
 Leave `integrations.discord.channels` empty — it will be populated in Step 7.
 
-## Step 4 — Ensure .automaker/ is in the Target Repo's .gitignore
+## Step 4 — Apply the workspace-config standard
 
-Check whether the target repo's `.gitignore` already includes `.automaker/`:
+Bring the repo to the protoLabs workspace-config standard (`.beads/` issue
+tracker + `.automaker/` board baseline + correct `.gitignore`). Use the
+release-tools scaffolder — it is the single source of truth for the standard,
+so onboarding never drifts from what `verify-workspace-config` checks in CI.
 
-```bash
-gh api repos/<owner>/<repo>/contents/.gitignore \
-  --jq '.content' | base64 -d | grep -q "^\.automaker/" && echo "present" || echo "missing"
-```
-
-If **missing**, append `.automaker/` to the file and commit it directly to the default branch:
+Run against the **cloned checkout** at `~/dev/labs/{repoName}` (from Step 0):
 
 ```bash
-# Get current file SHA (required for update)
-SHA=$(gh api repos/<owner>/<repo>/contents/.gitignore --jq '.sha')
-CURRENT=$(gh api repos/<owner>/<repo>/contents/.gitignore --jq '.content' | base64 -d)
-NEW_CONTENT=$(printf '%s\n.automaker/\n' "$CURRENT" | base64 -w 0)
-
-gh api repos/<owner>/<repo>/contents/.gitignore \
-  -X PUT \
-  -f message="chore: add .automaker/ to .gitignore" \
-  -f content="$NEW_CONTENT" \
-  -f sha="$SHA" \
-  -f branch="<repoMeta.defaultBranch>"
+cd ~/dev/labs/<repoName>
+npx -y @protolabsai/release-tools init-workspace-config
+git add .beads/issues.jsonl .automaker/settings.json .gitignore
+git commit -m "chore: scaffold workspace-config standard (.beads + .automaker)"
+git push origin <repoMeta.defaultBranch>
 ```
 
-If `.gitignore` does not exist in the repo yet, create it:
+> **Do NOT blanket-ignore `.automaker/`.** The standard requires
+> `.automaker/settings.json` (and `.automaker/context/`, `.automaker/projects/`)
+> to be **committed** — only the transient dirs (`features/`, `checkpoints/`,
+> `trajectory/`) plus `.worktrees/` and `.beads/beads.db` are ignored. The
+> scaffolder writes exactly those ignores. An older version of this skill
+> ignored all of `.automaker/`, which hid the committed baseline — superseded.
+
+The scaffolder is idempotent: re-onboarding a repo that already has the files
+is a no-op.
+
+## Step 4b — Apply branch protection
 
 ```bash
-CONTENT=$(printf '.automaker/\n' | base64 -w 0)
-gh api repos/<owner>/<repo>/contents/.gitignore \
-  -X PUT \
-  -f message="chore: add .gitignore with .automaker/" \
-  -f content="$CONTENT" \
-  -f branch="<repoMeta.defaultBranch>"
+npx -y @protolabsai/release-tools apply-branch-protection \
+  --repo <owner>/<repo> --branch <repoMeta.defaultBranch> --apply
 ```
+
+If it reports "No ruleset found", create a `Protect <branch>` ruleset in the
+repo's GitHub settings first (Settings → Rules), then re-run. Defaults: loose
+policy, correctness-only required checks (`build`, `test`, `checks`), bot
+reviewers excluded. See release-tools `docs/branch-protection-defaults.md`.
 
 ## Step 5 — Create Worktree Init Script in Target Repo
 
@@ -424,7 +427,25 @@ Append (or add to the `projects` list):
 Read the file first. If it already contains a `slug: <projectSlug>` entry, update it
 in-place instead of appending.
 
-## Step 11 — Kickoff Message
+## Step 11 — Verify conformance (gate)
+
+Confirm the repo now meets the workspace-config standard before declaring the
+onboard complete:
+
+```bash
+npx -y @protolabsai/release-tools verify-workspace-config --repo <owner>/<repo>
+```
+
+- Exit 0 → conformant. Proceed.
+- `workflows-use-owned-runners` error → one or more workflows still use a
+  GitHub-hosted runner (`ubuntu/windows/macos-*`). This is a per-workflow code
+  edit the scaffolder can't make automatically: change `runs-on:` to
+  `namespace-profile-protolabs-linux` in the listed files and open a PR. Note it
+  in the completion report.
+- Any other error → re-run Step 4 (`init-workspace-config`); the scaffolder is
+  idempotent and fills whatever is missing.
+
+## Step 12 — Kickoff Message
 
 The `provision_discord` subskill (Step 6) sends the kickoff message to the project's
 #dev channel as part of its own execution. No additional action needed here if Step 6
@@ -445,9 +466,13 @@ Repo: <repoOwner>/<repoName> (branch: <defaultBranch>)
 Files created:
   - .automaker/projects/<projectSlug>/project.json
   - .automaker/projects/<projectSlug>/settings.json
-Target repo:
-  - .gitignore updated (or already had .automaker/)
+Target repo (workspace-config standard):
+  - .beads/issues.jsonl committed, .beads/beads.db gitignored
+  - .automaker/settings.json committed
+  - .gitignore: .worktrees/ + transient .automaker dirs
   - .automaker/settings/worktree-init created
+Branch protection: applied (or "no ruleset — create one + re-run")
+Workspace-config: <conformant | runner violations needing manual PR>
 Discord: <provisioned channel names or "skipped">
 Plane: <project ID or "skipped — Plane not available">
 protoLabs Studio: registered (or "skipped — path not cloned")
