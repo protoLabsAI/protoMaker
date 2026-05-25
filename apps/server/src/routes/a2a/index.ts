@@ -33,7 +33,8 @@ import { ProviderFactory } from '../../providers/provider-factory.js';
 import { resolveModelString } from '@protolabsai/model-resolver';
 import type { PlanningService } from '../../services/planning-service.js';
 import type { SettingsService } from '../../services/settings-service.js';
-import { getWorkflowSettings } from '../../lib/settings-helpers.js';
+import { getWorkflowSettings, getMCPServersFromSettings } from '../../lib/settings-helpers.js';
+import type { McpServerConfig } from '@protolabsai/types';
 
 const logger = createLogger('A2ARoutes');
 
@@ -284,7 +285,16 @@ function extractText(parts: Array<{ kind?: string; type?: string; text?: string 
     .trim();
 }
 
-/** Collect SSE text-delta events from the chat endpoint into a single string */
+/**
+ * Collect SSE text-delta events from the chat endpoint into a single string.
+ *
+ * Throws if the stream emitted an `error` event and produced no text. A chat
+ * stream that errors (e.g. gateway 401) used to be swallowed here — the
+ * caller got an empty string and the A2A handler returned `state: completed`
+ * with an empty artifact, telling the fleet the skill succeeded when it
+ * didn't (#3771). Surfacing the error lets message/send return a JSON-RPC
+ * error so the caller can retry or route elsewhere.
+ */
 async function collectChatResponse(chatResponse: globalThis.Response): Promise<string> {
   const reader = chatResponse.body?.getReader();
   if (!reader) return '';
@@ -292,6 +302,7 @@ async function collectChatResponse(chatResponse: globalThis.Response): Promise<s
   const decoder = new TextDecoder();
   const chunks: string[] = [];
   const seenTypes = new Set<string>();
+  let streamErrorText: string | undefined;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -306,6 +317,10 @@ async function collectChatResponse(chatResponse: globalThis.Response): Promise<s
         if (payload.type) seenTypes.add(String(payload.type));
         if (payload.type === 'text-delta' && typeof payload.delta === 'string') {
           chunks.push(payload.delta);
+        } else if (payload.type === 'error' && typeof payload.errorText === 'string') {
+          // Keep the first concrete error; later "No output generated" is a
+          // downstream symptom of the same failure.
+          if (!streamErrorText) streamErrorText = payload.errorText;
         }
       } catch {
         // non-JSON data line — skip
@@ -315,6 +330,10 @@ async function collectChatResponse(chatResponse: globalThis.Response): Promise<s
 
   const result = chunks.join('');
   if (result.length === 0) {
+    if (streamErrorText) {
+      logger.error(`collectChatResponse: stream error with no output — ${streamErrorText}`);
+      throw new Error(`chat stream error: ${streamErrorText}`);
+    }
     logger.warn(`collectChatResponse: 0 chars — event types seen: [${[...seenTypes].join(', ')}]`);
   }
   return result;
@@ -359,11 +378,21 @@ const CLAUDE_CODE_NATIVE_TOOLS = new Set([
 interface SkillMeta {
   body: string;
   allowedTools: string[];
+  /** True only if EVERY tool is a Claude Code native tool. */
   isNativeTool: boolean;
+  /**
+   * True if the skill lists ANY Claude Code native tool (Bash, Read, etc.).
+   * Such skills must run via executeQuery — the /api/chat (Vercel AI SDK) path
+   * has the Ava board tools but NOT Bash/Read/Write, so a mixed native+MCP
+   * skill like board_health silently degrades there (the model narrates a
+   * shell command it can't run). See #3772.
+   */
+  needsNativeSession: boolean;
 }
 
-/** Load a skill file and parse its frontmatter. Returns null if not found. */
-async function loadSkill(projectPath: string, skillName: string): Promise<SkillMeta | null> {
+/** Load a skill file and parse its frontmatter. Returns null if not found.
+ *  Exported for testing the native-session classification (#3772). */
+export async function loadSkill(projectPath: string, skillName: string): Promise<SkillMeta | null> {
   const skillPath = join(projectPath, '.claude', 'skills', `${skillName}.md`);
   let raw: string;
   try {
@@ -374,7 +403,8 @@ async function loadSkill(projectPath: string, skillName: string): Promise<SkillM
 
   // Parse YAML frontmatter between --- delimiters
   const fmMatch = raw.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-  if (!fmMatch) return { body: raw, allowedTools: [], isNativeTool: false };
+  if (!fmMatch)
+    return { body: raw, allowedTools: [], isNativeTool: false, needsNativeSession: false };
 
   const [, frontmatter, body] = fmMatch;
 
@@ -398,19 +428,26 @@ async function loadSkill(projectPath: string, skillName: string): Promise<SkillM
 
   const isNativeTool =
     toolLines.length > 0 && toolLines.every((t) => CLAUDE_CODE_NATIVE_TOOLS.has(t));
+  const needsNativeSession = toolLines.some((t) => CLAUDE_CODE_NATIVE_TOOLS.has(t));
 
-  return { body: body.trim(), allowedTools: toolLines, isNativeTool };
+  return { body: body.trim(), allowedTools: toolLines, isNativeTool, needsNativeSession };
 }
 
 /**
- * Execute a skill using the Claude Code SDK (ProviderFactory.executeQuery).
- * Used when the skill's allowed-tools are all native Claude Code tools
- * (Bash, Read, Write, etc.) which are not available in Ava's Vercel AI SDK path.
+ * Execute a skill via the Claude Code SDK (ProviderFactory.executeQuery).
+ * Used for any skill that needs Claude Code native tools (Bash, Read, Write,
+ * etc.) — these are unavailable in Ava's Vercel AI SDK chat path.
+ *
+ * Mixed skills (native + MCP tools, e.g. board_health which needs Bash AND
+ * mcp__plugin_protolabs_studio__*) get their MCP servers wired here via
+ * `mcpServers` so the mcp__ tools in `allowedTools` actually resolve. Without
+ * this the MCP tools would be allow-listed but have no backing server (#3772).
  */
 async function executeNativeSkill(
   projectPath: string,
   skill: SkillMeta,
-  userText: string
+  userText: string,
+  mcpServers?: Record<string, McpServerConfig>
 ): Promise<string> {
   if (!projectPath) {
     throw new Error(
@@ -427,6 +464,7 @@ async function executeNativeSkill(
     cwd: projectPath,
     maxTurns: 30,
     allowedTools: skill.allowedTools,
+    ...(mcpServers && Object.keys(mcpServers).length > 0 ? { mcpServers } : {}),
   });
 
   let responseText = '';
@@ -1132,16 +1170,29 @@ export function createA2AHandlerRoutes(projectPath: string, deps?: A2AHandlerDep
     try {
       let responseText: string;
 
-      // When a skill is requested, check if it needs Claude Code native tools (Bash,
-      // Read, Write, etc.). If so, bypass /api/chat and run via ProviderFactory.executeQuery
-      // which has the full Claude Code SDK tool set. Otherwise use /api/chat as before.
+      // When a skill is requested, check if it needs Claude Code native tools
+      // (Bash, Read, Write, etc.). If it lists ANY native tool, bypass /api/chat
+      // and run via ProviderFactory.executeQuery — the chat path has Ava's board
+      // tools but no Bash/Read/Write, so a skill that needs them silently
+      // degrades there (the model narrates a shell command it can't run, #3772).
+      // Mixed skills (native + MCP, e.g. board_health) also get their MCP
+      // servers wired so the mcp__ tools resolve in the SDK session.
       if (skillOverride) {
         const skill = await loadSkill(effectiveProjectPath, skillOverride);
-        if (skill?.isNativeTool) {
+        if (skill?.needsNativeSession) {
           logger.info(
-            `A2A skill "${skillOverride}" uses native tools [${skill.allowedTools.join(', ')}] — routing via executeQuery`
+            `A2A skill "${skillOverride}" needs a native session [${skill.allowedTools.join(', ')}] — routing via executeQuery`
           );
-          responseText = await executeNativeSkill(effectiveProjectPath, skill, userText);
+          const mcpServers = await getMCPServersFromSettings(deps?.settingsService, '[A2A]', {
+            context: 'agents',
+            projectPath: effectiveProjectPath,
+          });
+          responseText = await executeNativeSkill(
+            effectiveProjectPath,
+            skill,
+            userText,
+            mcpServers
+          );
         } else {
           // Skill not found, has no tool restrictions, or uses Ava board tools → /api/chat
           responseText = await callChatEndpointWithRetry(
