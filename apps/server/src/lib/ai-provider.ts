@@ -94,18 +94,32 @@ async function getOrCreateProvider(): Promise<ReturnType<typeof createOpenAIComp
   if (!key) {
     logger.warn(
       'No gateway API key found. Chat requests will fail. ' +
-        'Set GATEWAY_API_KEY in the server environment or enter a key in Settings.'
+        'Set GATEWAY_API_KEY in the server environment or enter a key in Settings. ' +
+        'Not caching the provider — it will re-resolve on the next request.'
     );
-  } else {
-    logger.info(`Gateway provider initialized: baseURL=${baseURL} keySource=${source}`);
+    // Transient provider — intentionally NOT cached so a later key addition
+    // (env or Settings) recovers without a full restart (#3771). Caching an
+    // empty-key provider previously wedged the whole process until restart.
+    return createOpenAICompatible({ name: 'protolabs-gateway', baseURL, apiKey: key });
   }
 
+  logger.info(`Gateway provider initialized: baseURL=${baseURL} keySource=${source}`);
   cachedProvider = createOpenAICompatible({
     name: 'protolabs-gateway',
     baseURL,
     apiKey: key,
   });
   return cachedProvider;
+}
+
+/**
+ * Whether a gateway key currently resolves. Used by the startup health gate
+ * to surface a keyless server loudly instead of letting every model call
+ * silently 401. See #3771.
+ */
+export async function hasGatewayKey(): Promise<boolean> {
+  const { key } = await resolveApiKey();
+  return key.length > 0;
 }
 
 /**

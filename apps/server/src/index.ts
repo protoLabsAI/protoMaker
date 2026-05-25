@@ -32,6 +32,7 @@ import { createLogger, registerLogTransport } from '@protolabsai/utils';
 import { MAX_SYSTEM_CONCURRENCY } from '@protolabsai/types';
 import { createFileLogTransport } from './lib/server-log.js';
 import { isTerminalEnabled, isTerminalPasswordRequired } from './routes/terminal/index.js';
+import { hasGatewayKey } from './lib/ai-provider.js';
 
 import {
   setupMiddleware,
@@ -153,6 +154,30 @@ server.listen(PORT, HOST, () => {
 ║                                                                     ║
 ╚═════════════════════════════════════════════════════════════════════╝
 `);
+
+  // Gateway key gate (#3771): a server with no gateway credential serves
+  // happily but 401s every model call — chat, sitrep, A2A, auto-mode. That
+  // failure mode ran undetected for ~18h once. Surface it loudly at boot so
+  // an operator notices immediately instead of grepping request logs.
+  void hasGatewayKey()
+    .then((present) => {
+      if (!present) {
+        logger.error(
+          '\n' +
+            '╔═════════════════════════════════════════════════════════════════════╗\n' +
+            '║  ⚠️  NO GATEWAY API KEY — every model call will 401                  ║\n' +
+            '║                                                                     ║\n' +
+            '║  chat, sitrep, A2A delegation, and auto-mode execution will all     ║\n' +
+            '║  fail. Set GATEWAY_API_KEY (or OPENAI_API_KEY) in the server env,   ║\n' +
+            '║  or configure a key in Settings. The provider re-resolves per       ║\n' +
+            '║  request, so adding the key recovers without a restart.             ║\n' +
+            '╚═════════════════════════════════════════════════════════════════════╝'
+        );
+      }
+    })
+    .catch(() => {
+      /* resolution failure is itself a keyless signal — already logged by resolveApiKey */
+    });
 });
 
 server.on('error', (error: NodeJS.ErrnoException) => {
