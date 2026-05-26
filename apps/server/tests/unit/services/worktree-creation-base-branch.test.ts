@@ -261,10 +261,12 @@ describe('AutoModeService - createWorktreeForBranch base branch resolution', () 
     expect(worktreeAdd![1]).not.toContain('origin/dev');
   });
 
-  it('skips getEffectivePrBaseBranch when branch already exists (uses existing branch checkout)', async () => {
+  it('reuses an existing branch with `worktree add <path> <branch>` (no -B) and un-stales it against its base', async () => {
     mockGetEffectivePrBaseBranch.mockResolvedValue('main');
 
-    // git rev-parse --verify succeeds → branch exists → uses `git worktree add <path> <branch>` (no -B)
+    // git rev-parse --verify succeeds → branch exists → uses `git worktree add <path> <branch>` (no -B).
+    // rev-list --count returns a non-numeric value here (mock), so the un-stale
+    // reset is NOT triggered — we only assert the reuse + base-resolution path.
     mockExecFileAsync.mockResolvedValue({ stdout: 'abc123', stderr: '' });
 
     const svc = makeService();
@@ -278,8 +280,33 @@ describe('AutoModeService - createWorktreeForBranch base branch resolution', () 
     // The existing-branch form does not use -B or origin/
     expect(worktreeAdds[0][1]).not.toContain('-B');
     expect(worktreeAdds[0][1].join(' ')).not.toContain('origin/');
-    // getEffectivePrBaseBranch is only called in the new-branch path, so it should NOT be called here
-    expect(mockGetEffectivePrBaseBranch).not.toHaveBeenCalled();
+    // The reuse path now resolves the base (origin/<prBaseBranch>) to un-stale the
+    // branch when it has no commits of its own (see #3825).
+    expect(mockGetEffectivePrBaseBranch).toHaveBeenCalled();
+  });
+
+  it('resets a reused branch to its base when it has no commits of its own (#3825)', async () => {
+    mockGetEffectivePrBaseBranch.mockResolvedValue('main');
+    // Branch exists; rev-list --count returns 0 → no unique commits → reset to base.
+    mockExecFileAsync.mockImplementation((_bin: string, args: string[]) => {
+      if (args.includes('rev-list') && args.includes('--count')) {
+        return Promise.resolve({ stdout: '0\n', stderr: '' });
+      }
+      return Promise.resolve({ stdout: 'abc123', stderr: '' });
+    });
+
+    const svc = makeService();
+    await (svc as any).createWorktreeForBranch(PROJECT_PATH, BRANCH_NAME, makeFeature());
+
+    const calls = mockExecFileAsync.mock.calls as [string, string[]][];
+    const reset = calls.find(
+      ([bin, args]) =>
+        bin === 'git' &&
+        args.includes('reset') &&
+        args.includes('--hard') &&
+        args.includes('origin/main')
+    );
+    expect(reset).toBeDefined();
   });
 
   it('branches from origin/epic/<name> when feature belongs to an epic with a remote branch', async () => {
