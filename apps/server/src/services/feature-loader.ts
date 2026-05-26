@@ -41,6 +41,7 @@ import { debugLog } from '../lib/debug-log.js';
 import { normalizeTitle, jaccardSimilarity, extractIssueRefs } from '../lib/title-match.js';
 import type { DataIntegrityWatchdogService } from './data-integrity-watchdog-service.js';
 import type { ProjectSlugResolver } from './project-slug-resolver.js';
+import type { SmartBranchNameGenerator } from './branch-name-generator.js';
 import { featuresByStatus } from '../lib/prometheus.js';
 
 const execAsync = promisify(exec);
@@ -113,9 +114,19 @@ export class FeatureLoader implements FeatureStore {
   private events: EventEmitter | null = null;
   private topicBus: TopicBus | null = null;
   private projectSlugResolver: ProjectSlugResolver | null = null;
+  private smartBranchNameGenerator: SmartBranchNameGenerator | null = null;
 
   setIntegrityWatchdog(watchdog: DataIntegrityWatchdogService): void {
     this.integrityWatchdog = watchdog;
+  }
+
+  /**
+   * Set the optional smart branch-name generator (#3794). When set and enabled
+   * via the smartBranchNames workflow setting, create() uses it to name new
+   * branches via the fast model tier, falling back to the deterministic slug.
+   */
+  setSmartBranchNameGenerator(generator: SmartBranchNameGenerator): void {
+    this.smartBranchNameGenerator = generator;
   }
 
   setEventEmitter(events: EventEmitter): void {
@@ -923,14 +934,42 @@ export class FeatureLoader implements FeatureStore {
     // LLM artifact branch names (e.g. "fix/the-user-wants-me-to-generate-a-git-branch-name-...")
     // are also discarded — they pass syntactic validation but are the agent completing its own
     // reasoning prompt rather than emitting a real slug.
-    const branchName =
-      featureData.executionMode === 'read-only'
-        ? undefined
-        : ((featureData.branchName &&
-          isValidBranchName(featureData.branchName) &&
-          !this.isLlmArtifactBranchName(featureData.branchName)
-            ? featureData.branchName
-            : null) ?? this.generateBranchName(featureData.title, featureId, featureData.category));
+    let branchName: string | undefined;
+    if (featureData.executionMode === 'read-only') {
+      branchName = undefined;
+    } else {
+      const providedValid =
+        featureData.branchName &&
+        isValidBranchName(featureData.branchName) &&
+        !this.isLlmArtifactBranchName(featureData.branchName)
+          ? featureData.branchName
+          : null;
+      if (providedValid) {
+        branchName = providedValid;
+      } else {
+        // Smart branch name via the fast tier when enabled (#3794); the generator
+        // returns null when disabled, on failure, or for a degenerate slug, so we
+        // always fall back to the deterministic slug. isValidBranchName guards the
+        // model output before it's accepted.
+        let smart: string | null = null;
+        if (this.smartBranchNameGenerator) {
+          smart = await this.smartBranchNameGenerator(
+            {
+              title: featureData.title,
+              description: featureData.description,
+              category: featureData.category,
+              featureId,
+            },
+            projectPath
+          ).catch(() => null);
+          if (smart && (!isValidBranchName(smart) || this.isLlmArtifactBranchName(smart))) {
+            smart = null;
+          }
+        }
+        branchName =
+          smart ?? this.generateBranchName(featureData.title, featureId, featureData.category);
+      }
+    }
 
     // Auto-assign projectSlug if not already provided
     let resolvedProjectSlug = featureData.projectSlug;

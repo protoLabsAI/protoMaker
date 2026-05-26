@@ -9,6 +9,7 @@ import { TopicBus } from '../lib/topic-bus.js';
 
 import { AgentService } from '../services/agent-service.js';
 import { FeatureLoader } from '../services/feature-loader.js';
+import { createSmartBranchNameGenerator } from '../services/branch-name-generator.js';
 import { UserIdentityService } from '../services/user-identity-service.js';
 import { AutoModeService } from '../services/auto-mode-service.js';
 import { getTerminalService } from '../services/terminal-service.js';
@@ -335,6 +336,14 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   const featureLoader = new FeatureLoader();
   featureLoader.setEventEmitter(events);
   featureLoader.setTopicBus(topicBus);
+  // Smart branch names via the fast tier when enabled (#3794); falls back to the
+  // deterministic slug. Captures input→output training data (#3859).
+  featureLoader.setSmartBranchNameGenerator(
+    createSmartBranchNameGenerator(
+      settingsService,
+      featureLoader.branchPrefixForCategory.bind(featureLoader)
+    )
+  );
 
   // Wire featureLoader into gitWorkflowService so it can persist prNumber immediately
   // after PR creation, preventing duplicate PR attempts on retry.
