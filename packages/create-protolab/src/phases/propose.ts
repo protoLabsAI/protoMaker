@@ -33,7 +33,6 @@ const MILESTONE_DEFS: { title: string; gapIds: string[] }[] = [
       'ci-test-check',
       'ci-format-check',
       'ci-security-audit',
-      'ci-workflow-security',
       'branch-protection',
       'prettier',
       'eslint',
