@@ -24,6 +24,13 @@ import { createRequire } from 'node:module';
 import { Command } from 'commander';
 import { type GlobalFlags, usageError, exitError } from './output.js';
 import { listCommand, getCommand, createCommand, updateCommand, moveCommand } from './feature.js';
+import {
+  startCommand,
+  stopCommand,
+  listCommand as agentListCommand,
+  outputCommand,
+  messageCommand,
+} from './agent.js';
 
 const require = createRequire(import.meta.url);
 const { version } = require('../package.json') as { version: string };
@@ -65,8 +72,14 @@ agentCmd
   .description('Manage AI agents and workflows')
   .addHelpText(
     'afterAll',
-    `\nCommands:\n  list    List available agents\n  run     Run an agent workflow`
+    `\nCommands:\n  start   Dispatch an agent for a feature\n  stop    Stop a running agent\n  list    Show running agents\n  output  Print agent output for a feature\n  message Send a follow-up message to a running agent`
   );
+
+startCommand(agentCmd);
+stopCommand(agentCmd);
+agentListCommand(agentCmd);
+outputCommand(agentCmd);
+messageCommand(agentCmd);
 
 /**
  * Dev commands — development and debugging utilities.
