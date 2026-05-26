@@ -26,6 +26,7 @@ import { join } from 'node:path';
 import { atomicWriteJson, createLogger } from '@protolabsai/utils';
 import type { FeatureLoader } from './feature-loader.js';
 import type { EventEmitter } from '../lib/events.js';
+import { IssueDedupeService } from './issue-dedupe-service.js';
 
 const logger = createLogger('HitlPatternAnalysisService');
 
@@ -133,6 +134,8 @@ export interface HitlPatternAnalysisDeps {
   /** Project path where backlog features will be filed */
   projectPath: string;
   events: EventEmitter;
+  /** Optional: shared dedupe service for cross-service duplicate detection */
+  issueDedupe?: IssueDedupeService;
 }
 
 // ---------------------------------------------------------------------------
@@ -331,8 +334,40 @@ export class HitlPatternAnalysisService {
       }
     }
 
-    // Durable dedup: check feature store for an open feature with the same title
     const title = buildFeatureTitle(signature);
+
+    // Cross-service dedup: check against all open features (not just exact-title matches)
+    if (this.deps.issueDedupe) {
+      const dedupeResult = await this.deps.issueDedupe.check(
+        this.deps.projectPath,
+        title,
+        `hitl:${signature}`
+      );
+
+      if (dedupeResult.isDuplicate) {
+        this.patterns.set(signature, {
+          ...state,
+          filedFeatureId: dedupeResult.match.feature.id,
+          filedAt: new Date().toISOString(),
+        });
+        logger.info(
+          `Skipping auto-file for pattern="${signature}" — duplicate found: ` +
+            `${dedupeResult.match.feature.id} (reason=${dedupeResult.match.reason})`
+        );
+        return;
+      }
+
+      if (dedupeResult.noMatch?.cooldown) {
+        const closedId = dedupeResult.noMatch.closedFeature?.id ?? 'unknown';
+        logger.info(
+          `Skipping auto-file for pattern="${signature}" — cooldown active ` +
+            `(similar feature ${closedId} recently closed)`
+        );
+        return;
+      }
+    }
+
+    // Legacy durable dedup: check feature store for an open feature with the exact title
     try {
       const existing = await this.deps.featureLoader.findByTitle(this.deps.projectPath, title);
       if (existing && existing.status !== 'done' && existing.status !== 'interrupted') {
@@ -360,7 +395,10 @@ export class HitlPatternAnalysisService {
     });
 
     try {
-      const description = this.buildFeatureDescription(signature, latestRecord);
+      // Append a hidden fingerprint marker so IssueDedupeService can exact-match a
+      // re-file by fingerprint (mirrors the `hitl:${signature}` passed to check()).
+      const description =
+        this.buildFeatureDescription(signature, latestRecord) + `\n\n<!-- fp:hitl:${signature} -->`;
       const feature = await this.deps.featureLoader.create(this.deps.projectPath, {
         title,
         description,
