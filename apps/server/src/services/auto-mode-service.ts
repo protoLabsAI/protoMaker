@@ -1214,11 +1214,15 @@ export class AutoModeService {
             continue;
           }
 
-          // Start feature execution in background
+          // Start feature execution in background.
+          // useWorktrees: default to true so agents always run in an isolated
+          // worktree, never the main checkout. (Read-only features could skip
+          // worktrees, but isolation-by-default is the safe choice — a stray
+          // write/install in the main checkout corrupts the running server.)
           this.executeFeature(
             projectPath,
             nextFeature.id,
-            nextFeature.executionMode !== 'read-only', // useWorktrees
+            true, // useWorktrees — always isolate
             true
           ).catch((error) => {
             logger.error(`Feature ${nextFeature.id} error:`, error);
@@ -1316,7 +1320,7 @@ export class AutoModeService {
   async executeFeature(
     projectPath: string,
     featureId: string,
-    useWorktrees = false,
+    useWorktrees = true,
     isAutoMode = false,
     providedWorktreePath?: string,
     options?: ExecuteFeatureOptions
@@ -1699,7 +1703,7 @@ export class AutoModeService {
   /**
    * Resume a feature (continues from saved context)
    */
-  async resumeFeature(projectPath: string, featureId: string, useWorktrees = false): Promise<void> {
+  async resumeFeature(projectPath: string, featureId: string, useWorktrees = true): Promise<void> {
     if (this.runningFeatures.has(featureId)) {
       const existing = this.runningFeatures.get(featureId);
       const runtime = existing ? Math.floor((Date.now() - existing.startTime) / 1000) : 0;

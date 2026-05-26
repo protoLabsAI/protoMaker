@@ -78,7 +78,6 @@ The MCP server exposes ~159 tools organized by category:
 - **Scheduler** (2) -- status, maintenance tasks
 - **Observability** (8) -- Langfuse traces, costs, prompts, datasets
 - **Lead Engineer** (4) -- start, stop, status, handoffs
-- **Agent Templates** (7) -- template CRUD, execution
 - **Escalation** (3) -- status, logs, acknowledgment
 - **Reports** (2) -- generate, open
 - **SetupLab** (7) -- repo analysis, gap analysis, alignment
