@@ -23,6 +23,7 @@
 import { createRequire } from 'node:module';
 import { Command } from 'commander';
 import { type GlobalFlags, usageError, exitError } from './output.js';
+import { listCommand, getCommand, createCommand, updateCommand, moveCommand } from './feature.js';
 
 const require = createRequire(import.meta.url);
 const { version } = require('../package.json') as { version: string };
@@ -75,6 +76,17 @@ devCmd
   .description('Development and debugging utilities')
   .addHelpText('afterAll', `\nCommands:\n  info    Show environment and project info`);
 
+/**
+ * Feature commands — core board operations (list, get, create, update, move).
+ */
+const featureCmd = new Command('feature');
+featureCmd
+  .description('Core board commands — manage features')
+  .addHelpText(
+    'afterAll',
+    `\nCommands:\n  list      List features grouped by status\n  get       Show full feature details\n  create    Create a new feature\n  update    Update a feature\n  move      Transition feature status`
+  );
+
 // ---------------------------------------------------------------------------
 // Register command groups
 // ---------------------------------------------------------------------------
@@ -82,6 +94,7 @@ devCmd
 program.addCommand(projectCmd);
 program.addCommand(agentCmd);
 program.addCommand(devCmd);
+program.addCommand(featureCmd);
 
 // ---------------------------------------------------------------------------
 // Entry — exit-code discipline
