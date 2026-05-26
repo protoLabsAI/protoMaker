@@ -48,16 +48,33 @@ export function createGeneratePrdHandler(
         return;
       }
 
+      // A regeneration after "request changes" carries reviewer feedback and a
+      // prior PRD. Feed both to the model so it REVISES the existing PRD to
+      // address the feedback instead of starting from scratch (the whole point
+      // of the request-changes loop).
+      const reviewFeedback = project.reviewFeedback?.trim();
+      const priorPrd = project.prd;
+      const PRD_SECTIONS = ['situation', 'problem', 'approach', 'results', 'constraints'] as const;
+
       // Build context from project data
       const contextParts = [
         `**Project:** ${project.title}`,
         project.goal ? `**Goal:** ${project.goal}` : '',
         project.description ? `**Description:** ${project.description}` : '',
         project.researchSummary ? `**Research Summary:**\n${project.researchSummary}` : '',
+        priorPrd
+          ? `**Existing PRD (revise this — do not discard what still holds):**\n${PRD_SECTIONS.map(
+              (k) => `### ${k}\n${priorPrd[k] || ''}`
+            ).join('\n\n')}`
+          : '',
+        reviewFeedback ? `**Requested changes to address:**\n${reviewFeedback}` : '',
         additionalContext ? `**Additional Context:**\n${additionalContext}` : '',
       ].filter(Boolean);
 
-      const prompt = `Generate a SPARC PRD for this project. Respond with ONLY a JSON object.\n\n${contextParts.join('\n\n')}`;
+      const instruction = reviewFeedback
+        ? 'Revise the SPARC PRD below to address the requested changes, preserving sections that are still correct.'
+        : 'Generate a SPARC PRD for this project.';
+      const prompt = `${instruction} Respond with ONLY a JSON object.\n\n${contextParts.join('\n\n')}`;
 
       // Update status to drafting
       await projectService.updateProject(projectPath, projectSlug, { status: 'drafting' });
@@ -94,7 +111,8 @@ export function createGeneratePrdHandler(
         return;
       }
 
-      // Save PRD to project
+      // Save PRD to project. Clear reviewFeedback now that it's been folded into
+      // this revision, so it isn't re-applied to a future unrelated regeneration.
       await projectService.updateProject(projectPath, projectSlug, {
         prd: {
           situation: prd.situation || '',
@@ -105,6 +123,7 @@ export function createGeneratePrdHandler(
           generatedAt: new Date().toISOString(),
         },
         status: 'reviewing',
+        ...(reviewFeedback ? { reviewFeedback: '' } : {}),
       });
 
       res.json({ success: true, prd });
