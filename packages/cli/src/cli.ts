@@ -88,9 +88,11 @@ program.addCommand(devCmd);
 // ---------------------------------------------------------------------------
 
 try {
-  // Show help if no command provided (exit code 2 = usage error)
+  // Show help if no command provided (exit code 2 = usage error).
+  // outputHelp() prints without exiting; help() would call process.exit(0)
+  // internally, making the intended exit(2) below unreachable.
   if (!process.argv.slice(2).length) {
-    program.help();
+    program.outputHelp();
     process.exit(2);
   }
 
