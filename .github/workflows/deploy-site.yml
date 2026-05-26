@@ -48,13 +48,18 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Pass the commit message through the environment, never interpolate it
+          # directly into the shell — a message containing backticks / $() / ;
+          # would otherwise break the script or allow command injection in a job
+          # that holds CLOUDFLARE_API_TOKEN.
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message || 'Deploy' }}
         run: |
           BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
           npx -y wrangler pages deploy site \
             --project-name=automaker \
             --branch="$BRANCH" \
             --commit-hash="${GITHUB_SHA}" \
-            --commit-message="${{ github.event.head_commit.message || 'Deploy' }}"
+            --commit-message="${COMMIT_MESSAGE:-Deploy}"
 
       - name: Comment PR preview URL
         if: github.event_name == 'pull_request'
