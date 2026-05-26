@@ -188,11 +188,11 @@ export class IssueDedupeService {
   private findFingerprintMatch(features: Feature[], fingerprint: string): Feature | null {
     const fpTag = `fp:${fingerprint}`;
     for (const feature of features) {
-      // Check title for fingerprint marker
+      // The fingerprint marker `fp:{fingerprint}` is embedded in the filed
+      // feature's description (and may also appear in the title).
       if (feature.title?.includes(fpTag)) {
         return feature;
       }
-      // Check description for fingerprint marker
       if (feature.description?.includes(fpTag)) {
         return feature;
       }

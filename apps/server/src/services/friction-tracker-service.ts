@@ -307,7 +307,11 @@ export class FrictionTrackerService {
         `indicating a systemic issue that warrants investigation and remediation.\n\n` +
         `**Action required:** Investigate the root cause of recurring ${pattern} failures ` +
         `and implement a durable fix to prevent future occurrences.` +
-        contextSection;
+        contextSection +
+        // Fingerprint marker (hidden) so IssueDedupeService can exact-match a re-file
+        // by fingerprint, not just fuzzy title similarity. Mirrors the `friction:${pattern}`
+        // fingerprint passed to issueDedupe.check() above.
+        `\n\n<!-- fp:friction:${pattern} -->`;
 
       const feature = await this.deps.featureLoader.create(this.deps.projectPath, {
         title,

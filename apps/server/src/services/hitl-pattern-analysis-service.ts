@@ -395,7 +395,10 @@ export class HitlPatternAnalysisService {
     });
 
     try {
-      const description = this.buildFeatureDescription(signature, latestRecord);
+      // Append a hidden fingerprint marker so IssueDedupeService can exact-match a
+      // re-file by fingerprint (mirrors the `hitl:${signature}` passed to check()).
+      const description =
+        this.buildFeatureDescription(signature, latestRecord) + `\n\n<!-- fp:hitl:${signature} -->`;
       const feature = await this.deps.featureLoader.create(this.deps.projectPath, {
         title,
         description,

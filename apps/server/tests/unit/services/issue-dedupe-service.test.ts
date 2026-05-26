@@ -441,7 +441,8 @@ describe('IssueDedupeService', () => {
         makeFeature({
           id: 'feature-fp',
           title: 'Some title',
-          tags: ['system-improvement', 'fp:friction:test_failure'],
+          description: 'Auto-filed system improvement.\n\nfp:friction:test_failure',
+          tags: ['system-improvement'],
         }),
         makeFeature({
           id: 'feature-similar',
