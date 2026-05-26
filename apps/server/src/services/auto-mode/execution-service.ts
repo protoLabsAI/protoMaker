@@ -2410,10 +2410,12 @@ Complete the pipeline step instructions above. Review the previous work and appl
     try {
       // Stage everything (incl. new files) so the diff is complete. The git
       // workflow re-stages before committing, so staging here is harmless.
-      await execAsync('git add -A', { cwd: workDir, maxBuffer: MAX_BUF });
+      const GIT_TIMEOUT = 120_000;
+      await execAsync('git add -A', { cwd: workDir, maxBuffer: MAX_BUF, timeout: GIT_TIMEOUT });
       const { stdout: diff } = await execAsync('git diff --cached', {
         cwd: workDir,
         maxBuffer: MAX_BUF,
+        timeout: GIT_TIMEOUT,
       });
       if (!diff || diff.trim().length === 0) {
         logger.info(`[LocalReview] ${feature.id}: no diff to review`);
