@@ -24,17 +24,18 @@
 
 ## How-To Guides
 
-| Document                                         | Description                              |
-| ------------------------------------------------ | ---------------------------------------- |
-| [Agent Manifests](./guides/agent-manifests.md)   | Define agent roles and capabilities      |
-| [Agent Memory](./guides/agent-memory.md)         | Configure persistent agent memory        |
-| [Context Files](./guides/context-files.md)       | Add project-specific rules for AI agents |
-| [Writing Prompts](./guides/writing-prompts.md)   | Author effective agent prompts           |
-| [Authoring Skills](./guides/authoring-skills.md) | Create reusable agent skills             |
-| [Feature Flags](./guides/feature-flags.md)       | Feature flag system and conventions      |
-| [Flow Control](./guides/flow-control.md)         | Control agent execution flow             |
-| [Deployment Modes](./guides/deployment-modes.md) | Run in web, desktop, or headless mode    |
-| [Gotchas](./guides/gotchas.md)                   | Known pitfalls and workarounds           |
+| Document                                                    | Description                              |
+| ----------------------------------------------------------- | ---------------------------------------- |
+| [Drive the Board from the CLI](./how-to/drive-the-board.md) | Manage features and agents via CLI       |
+| [Agent Manifests](./guides/agent-manifests.md)              | Define agent roles and capabilities      |
+| [Agent Memory](./guides/agent-memory.md)                    | Configure persistent agent memory        |
+| [Context Files](./guides/context-files.md)                  | Add project-specific rules for AI agents |
+| [Writing Prompts](./guides/writing-prompts.md)              | Author effective agent prompts           |
+| [Authoring Skills](./guides/authoring-skills.md)            | Create reusable agent skills             |
+| [Feature Flags](./guides/feature-flags.md)                  | Feature flag system and conventions      |
+| [Flow Control](./guides/flow-control.md)                    | Control agent execution flow             |
+| [Deployment Modes](./guides/deployment-modes.md)            | Run in web, desktop, or headless mode    |
+| [Gotchas](./guides/gotchas.md)                              | Known pitfalls and workarounds           |
 
 ## Starter Kits
 
@@ -55,6 +56,7 @@
 | [Knowledge Hive](./reference/knowledge-hive.md)       | Multi-source knowledge aggregation           |
 | [MCP Tools](./reference/mcp-tools.md)                 | Full MCP tool catalog (120+ tools)           |
 | [API Key Profiles](./reference/api-key-profiles.md)   | Unified API key and provider profile system  |
+| [CLI Commands](./reference/cli-commands.md)           | Complete protomaker CLI command reference    |
 
 ## Integrations
 

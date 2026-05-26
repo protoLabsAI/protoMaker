@@ -37,7 +37,7 @@
     "dev:full": "npm run build:packages && concurrently \"npm run _dev:server\" \"npm run _dev:web\"",
     "build": "turbo run build",
     "build:libs": "turbo run build --filter=\"./libs/*\"",
-    "build:packages": "turbo run build --filter=\"./libs/*\" --filter=\"./packages/mcp-server\" --filter=\"./packages/setup-cli\"",
+    "build:packages": "turbo run build --filter=\"./libs/*\" --filter=\"./packages/mcp-server\" --filter=\"./packages/setup-cli\" --filter=\"./packages/cli\"",
     "build:server": "npm run build:packages && npm run build --workspace=apps/server",
     "lint": "turbo run lint",
     "lint:ui": "npm run lint --workspace=apps/ui",
