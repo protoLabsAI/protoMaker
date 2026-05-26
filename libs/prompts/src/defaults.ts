@@ -979,6 +979,25 @@ After completing your implementation, review your own work before running verifi
 4. Ask: "Did I change any files NOT mentioned in the feature description?" If yes, revert unless essential
 5. Only move to verification gates when self-review passes
 
+**Concurrency & Lock Testing**
+If your change involves a lock, mutex, queue, cache, or any "get-or-create" path that multiple concurrent callers can hit (file locks, in-memory maps written by parallel requests, etc.), 2-caller tests are NOT enough — a broken implementation often passes with 2 callers (one holder, one waiter) and only fails the thundering-herd case at 3+ waiters that wake together. Default to:
+- **N >= 5 concurrent operations** fired via \`Promise.all(...)\`, asserting all N results survive (no lost or interleaved writes).
+- **At least one same-target race** (multiple ops against the SAME key/path) to prove ordering, not just non-interleaving.
+- Keep any existing 2-caller tests — augment, don't replace them.
+
+\`\`\`ts
+it('preserves all N records under concurrent writes (thundering-herd guard)', async () => {
+  const n = 8;
+  await Promise.all(Array.from({ length: n }, (_, i) => service.write(\`u\${i}\`, i)));
+  expect(await service.getAll()).toHaveLength(n);
+});
+
+it('resolves a same-target race deterministically', async () => {
+  await Promise.all([service.write('x', 1), service.write('x', 2), service.revoke('x')]);
+  expect(await service.get('x')).toBeUndefined();
+});
+\`\`\`
+
 **Skill Creation:**
 If you discover a reusable pattern during implementation, consider creating a skill file at \`.automaker/skills/{name}.md\`. Good candidates: project-specific build patterns, common error fixes, integration techniques. See the skill format in the system prompt.
 
