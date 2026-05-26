@@ -62,6 +62,7 @@ import { gitWorkflowService } from '../services/git-workflow-service.js';
 import { TrustTierService } from '../services/trust-tier-service.js';
 import { LedgerService } from '../services/ledger-service.js';
 import { ArchivalService } from '../services/archival-service.js';
+import { FeatureLifecycleBusPublisher } from '../services/feature-lifecycle-bus-publisher.js';
 import { KnowledgeStoreService } from '../services/knowledge-store-service.js';
 import { DocsUpdateDetector } from '../services/docs-update-detector.js';
 import { AgentDiscordRouter } from '../services/agent-discord-router.js';
@@ -378,6 +379,12 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Metrics Ledger & Archival
   const ledgerService = new LedgerService(featureLoader, events);
   ledgerService.initialize();
+
+  // Forward terminal feature transitions to the protoWorkstacean bus so
+  // downstream consumers (e.g. the Linear bridge) can close the loop. Opt-in
+  // via WORKSTACEAN_URL. See protoLabsAI/protoMaker#3549.
+  const featureLifecycleBusPublisher = new FeatureLifecycleBusPublisher(events, featureLoader);
+  featureLifecycleBusPublisher.start();
   const archivalService = new ArchivalService(
     featureLoader,
     ledgerService,
