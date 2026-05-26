@@ -1638,7 +1638,10 @@ export class ExecuteProcessor implements StateProcessor {
         .split('\n')
         .map((f) => f.trim())
         .filter(Boolean);
-      if (files.length === 0) return false;
+      // Empty/undeterminable diff → permissive (don't block). We only want to
+      // catch the specific lockfile/generated-ONLY case (files present, all
+      // noise). An empty diff with a PR present is handled by the hasPr path.
+      if (files.length === 0) return true;
       return files.some((f) => !NOISE.some((p) => p.test(f)));
     } catch {
       // Can't determine — be permissive so we never false-block real work.

@@ -22,10 +22,20 @@ vi.mock('@protolabsai/platform', () => ({
   getFeatureDir: vi.fn(() => '/mock/.automaker/features/feat-001'),
 }));
 
-vi.mock('node:child_process', () => ({
-  exec: vi.fn(),
-  execFile: vi.fn(),
-}));
+// exec/execFile must invoke their callback — the EXECUTE→REVIEW guard runs
+// `execAsync('git diff ...')` (promisify(exec)) to check for meaningful source
+// changes (#3820); a bare vi.fn() never calls back, so the promise would hang
+// and waitForCompletion would time out. Return empty stdout (no diff → guard is
+// permissive and lets the REVIEW transition proceed).
+vi.mock('node:child_process', () => {
+  const invokeCb = (...args: unknown[]) => {
+    const cb = args.find((a) => typeof a === 'function') as
+      | ((err: unknown, res: { stdout: string; stderr: string }) => void)
+      | undefined;
+    if (cb) cb(null, { stdout: '', stderr: '' });
+  };
+  return { exec: vi.fn(invokeCb), execFile: vi.fn(invokeCb) };
+});
 
 import { ConcurrencyManager } from '../../../src/services/auto-mode/concurrency-manager.js';
 import { ExecuteProcessor } from '../../../src/services/lead-engineer-execute-processor.js';
