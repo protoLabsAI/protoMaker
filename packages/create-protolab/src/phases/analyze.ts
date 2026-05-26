@@ -210,16 +210,30 @@ export function analyzeGaps(
           'Add a security audit step to CI that runs package manager audit to detect vulnerable dependencies.',
       });
     }
+    if (!research.ci.hasWorkflowSecurity) {
+      addGap({
+        id: 'ci-workflow-security',
+        category: 'ci',
+        severity: 'recommended',
+        title: 'CI missing workflow security checks',
+        current: 'No GitHub Actions security linting',
+        target: 'zizmor + actionlint in CI',
+        effort: 'small',
+        featureDescription:
+          'Add zizmor (security linter) and actionlint (workflow syntax checker) to CI. These tools catch untrusted-expression script injection, GITHUB_TOKEN over-privilege, and other Actions misconfigurations in .github/workflows/.',
+      });
+    }
     if (
       research.ci.hasBuildCheck &&
       research.ci.hasTestCheck &&
       research.ci.hasFormatCheck &&
-      research.ci.hasSecurityAudit
+      research.ci.hasSecurityAudit &&
+      research.ci.hasWorkflowSecurity
     ) {
       addCompliant({
         category: 'ci',
         title: 'CI pipeline complete',
-        detail: 'Build, test, format, and audit checks present',
+        detail: 'Build, test, format, audit, and workflow security checks present',
       });
     }
   }
