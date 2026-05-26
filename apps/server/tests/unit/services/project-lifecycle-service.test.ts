@@ -16,6 +16,7 @@ import { exec } from 'node:child_process';
 import { ProjectLifecycleService } from '@/services/project-lifecycle-service.js';
 import { getEffectivePrBaseBranch } from '@/lib/settings-helpers.js';
 import { orchestrateProjectFeatures } from '@/services/project-orchestration-service.js';
+import { streamingQuery } from '@/providers/simple-query-service.js';
 import type { Project } from '@protolabsai/types';
 
 // ---------------------------------------------------------------------------
@@ -59,6 +60,11 @@ vi.mock('@/services/project-orchestration-service.js', () => ({
 // without touching git or settings on disk.
 vi.mock('@/lib/settings-helpers.js', () => ({
   getEffectivePrBaseBranch: vi.fn(),
+}));
+
+// Mock the research model call so runResearch tests don't hit the gateway.
+vi.mock('@/providers/simple-query-service.js', () => ({
+  streamingQuery: vi.fn(),
 }));
 
 // Override only `exec` (used for git fetch/push in approvePrd) while preserving the
@@ -570,5 +576,95 @@ describe('ProjectLifecycleService — approvePrd() epic branch base', () => {
       epicBranchesPushed: 1,
       epicBranchPushFailures: 0,
     });
+  });
+
+  it("leaves the project 'scaffolded' (not 'active') after approval", async () => {
+    vi.mocked(getEffectivePrBaseBranch).mockResolvedValue('main');
+    const { service, projectService } = makeService(makeProjectWithMilestone());
+
+    await service.approvePrd(PROJECT_PATH, PROJECT_SLUG);
+
+    const statusUpdates = projectService.updateProject.mock.calls
+      .map((c) => c[2]?.status)
+      .filter(Boolean);
+    expect(statusUpdates).toContain('scaffolded');
+    expect(statusUpdates).not.toContain('active');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Lifecycle status truth (#84) — launch() and runResearch() transitions
+// ---------------------------------------------------------------------------
+
+describe('ProjectLifecycleService — lifecycle status transitions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("launch() flips the project to 'active'", async () => {
+    const project = makeProject({
+      status: 'scaffolded',
+      milestones: [
+        {
+          number: 1,
+          slug: 'm1',
+          title: 'M1',
+          description: 'm1',
+          status: 'planned',
+          phases: [{ number: 1, name: 'p1', title: 'P1', description: 'p1' }],
+        },
+      ],
+    });
+    const { service, projectService } = makeService(project, {}, 2);
+
+    await service.launch(PROJECT_PATH, PROJECT_SLUG);
+
+    const statusUpdates = projectService.updateProject.mock.calls
+      .map((c) => c[2]?.status)
+      .filter(Boolean);
+    expect(statusUpdates).toContain('active');
+  });
+
+  it("runResearch() sets 'researching' then reverts on completion", async () => {
+    vi.mocked(streamingQuery).mockResolvedValue({
+      text: '## Summary\nFound relevant patterns.\n\n## Codebase Findings\n...',
+    } as Awaited<ReturnType<typeof streamingQuery>>);
+
+    const project = makeProject({ status: 'drafting' });
+    const { service, projectService } = makeService(project);
+
+    // runResearch is private and normally fire-and-forget via research();
+    // call it directly so we can await the full transition.
+    await (
+      service as unknown as {
+        runResearch: (p: string, s: string, proj: typeof project) => Promise<void>;
+      }
+    ).runResearch(PROJECT_PATH, PROJECT_SLUG, project);
+
+    const statusUpdates = projectService.updateProject.mock.calls
+      .map((c) => c[2]?.status)
+      .filter(Boolean);
+    // First sets 'researching', then reverts to 'drafting' on completion.
+    expect(statusUpdates).toContain('researching');
+    expect(statusUpdates[statusUpdates.length - 1]).toBe('drafting');
+  });
+
+  it('runResearch() reverts the lifecycle status even when research fails', async () => {
+    vi.mocked(streamingQuery).mockRejectedValue(new Error('gateway boom'));
+
+    const project = makeProject({ status: 'drafting' });
+    const { service, projectService } = makeService(project);
+
+    await (
+      service as unknown as {
+        runResearch: (p: string, s: string, proj: typeof project) => Promise<void>;
+      }
+    ).runResearch(PROJECT_PATH, PROJECT_SLUG, project);
+
+    const failCall = projectService.updateProject.mock.calls.find(
+      (c) => c[2]?.researchStatus === 'failed'
+    );
+    expect(failCall).toBeDefined();
+    expect(failCall![2]?.status).toBe('drafting');
   });
 });
