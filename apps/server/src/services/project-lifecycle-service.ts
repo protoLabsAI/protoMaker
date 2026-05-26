@@ -221,8 +221,11 @@ export class ProjectLifecycleService {
       }
     }
 
+    // Approval scaffolds features but does not launch — leave the project in
+    // 'scaffolded' until launch() flips it to 'active'. (orchestrateProjectFeatures
+    // also sets 'scaffolded'; this keeps the service cache + markdown in step.)
     await this.projectService.updateProject(projectPath, projectSlug, {
-      status: 'active',
+      status: 'scaffolded',
     });
 
     this.events.emit('project:lifecycle:prd-approved', {
@@ -297,6 +300,13 @@ export class ProjectLifecycleService {
       logger.warn('Failed to start auto-mode:', error);
     }
 
+    // Launch is the transition into execution: mark the project 'active'. This
+    // is the only place 'active' is set in the lifecycle — approval lands in
+    // 'scaffolded', so 'active' unambiguously means "auto-mode launched".
+    await this.projectService.updateProject(projectPath, projectSlug, {
+      status: 'active',
+    });
+
     this.events.emit('project:lifecycle:launched', {
       projectPath,
       projectSlug,
@@ -355,10 +365,23 @@ export class ProjectLifecycleService {
   ): Promise<void> {
     logger.info(`[ProjectLifecycle] Starting research for project: ${projectSlug}`);
 
-    // Step 1: Mark researchStatus as running
+    // Reflect research in the lifecycle status (not just the separate
+    // researchStatus field) so the flow is observable from `status` alone — but
+    // only when the project is still early. Never clobber a scaffolded/active/
+    // completed project if research is re-run against it.
+    const EARLY_STATUSES = ['ongoing', 'researching', 'drafting', 'reviewing'];
+    const previousStatus = project.status;
+    const trackLifecycleStatus = !previousStatus || EARLY_STATUSES.includes(previousStatus);
+    // After research, the natural next step is PRD drafting; revert there unless
+    // we came from a more advanced early state worth preserving.
+    const revertStatus =
+      previousStatus && previousStatus !== 'researching' ? previousStatus : 'drafting';
+
+    // Step 1: Mark researchStatus as running (and lifecycle status 'researching')
     try {
       await this.projectService.updateProject(projectPath, projectSlug, {
         researchStatus: 'running',
+        ...(trackLifecycleStatus && { status: 'researching' as const }),
       });
     } catch (err) {
       logger.warn(
@@ -440,6 +463,7 @@ Search the codebase for relevant patterns and integration points, then research 
       await this.projectService.updateProject(projectPath, projectSlug, {
         researchSummary,
         researchStatus: 'complete',
+        ...(trackLifecycleStatus && { status: revertStatus }),
       });
       logger.info(`[ProjectLifecycle] Updated researchSummary for ${projectSlug}`);
 
@@ -455,9 +479,12 @@ Search the codebase for relevant patterns and integration points, then research 
     } catch (error) {
       logger.error(`[ProjectLifecycle] Research failed for ${projectSlug}:`, error);
 
-      // Mark as failed
+      // Mark as failed and revert the lifecycle status we may have advanced.
       await this.projectService
-        .updateProject(projectPath, projectSlug, { researchStatus: 'failed' })
+        .updateProject(projectPath, projectSlug, {
+          researchStatus: 'failed',
+          ...(trackLifecycleStatus && { status: revertStatus }),
+        })
         .catch(() => {});
     }
   }

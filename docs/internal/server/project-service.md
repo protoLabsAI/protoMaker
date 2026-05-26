@@ -109,6 +109,21 @@ interface ProjectStats {
 
 Stats are written to `.automaker/projects/stats.json` and used by the dashboard.
 
+## Lifecycle status model
+
+`project.status` (`ProjectStatus`) reflects the stage of the design flow and is set at distinct transitions so the lifecycle is observable from `status` alone — no need to cross-reference other fields:
+
+| Status        | Set by                                                     | Means                                        |
+| ------------- | ---------------------------------------------------------- | -------------------------------------------- |
+| `drafting`    | project creation / after research                          | Idea captured, PRD not yet under review      |
+| `researching` | `ProjectLifecycleService.runResearch()` (early-stage only) | Deep research running; reverts to `drafting` |
+| `reviewing`   | `generate-prd`                                             | PRD drafted, awaiting approval               |
+| `scaffolded`  | `approvePrd()` / `orchestrateProjectFeatures()`            | Features created, **not** yet launched       |
+| `active`      | `ProjectLifecycleService.launch()`                         | Auto-mode launched — execution in progress   |
+| `completed`   | completion detection                                       | All work done                                |
+
+Key invariant: **approval lands in `scaffolded`, and only `launch()` sets `active`** — so `active` unambiguously means "running," distinct from "has features but idle." `researching` is only applied when the project is still early (`ongoing`/`drafting`/`reviewing`); re-running research against a `scaffolded`/`active` project does not clobber its status. `approved` remains reserved for a future explicit human-approval gate (approval and scaffolding are currently a single operation).
+
 ## Calendar Integration
 
 When `CalendarService` is wired in via `setCalendarService()`, project milestone dates can be synced to calendar events. This is optional; the service functions normally without it.

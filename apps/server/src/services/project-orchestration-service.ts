@@ -457,7 +457,11 @@ export async function orchestrateProjectFeatures(
   });
 
   try {
-    project.status = 'active';
+    // Scaffolding produces features but does NOT launch auto-mode — that's the
+    // explicit `launch()` step, which sets status to 'active'. Marking the
+    // project 'scaffolded' here keeps the lifecycle observable: a project that
+    // has features but isn't running is distinguishable from one in execution.
+    project.status = 'scaffolded';
     project.updatedAt = new Date().toISOString();
 
     // Link phases to features
