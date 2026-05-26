@@ -12,7 +12,10 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { exec } from 'node:child_process';
 import { ProjectLifecycleService } from '@/services/project-lifecycle-service.js';
+import { getEffectivePrBaseBranch } from '@/lib/settings-helpers.js';
+import { orchestrateProjectFeatures } from '@/services/project-orchestration-service.js';
 import type { Project } from '@protolabsai/types';
 
 // ---------------------------------------------------------------------------
@@ -51,6 +54,31 @@ vi.mock('@/services/project-orchestration-service.js', () => ({
     milestoneEpicMap: { 'milestone-1': 'epic-1' },
   }),
 }));
+
+// Mock the base-branch resolver so approvePrd tests control the resolved branch
+// without touching git or settings on disk.
+vi.mock('@/lib/settings-helpers.js', () => ({
+  getEffectivePrBaseBranch: vi.fn(),
+}));
+
+// Override only `exec` (used for git fetch/push in approvePrd) while preserving the
+// rest of node:child_process so transitively-imported modules keep working.
+vi.mock('node:child_process', async () => {
+  const actual = await vi.importActual<typeof import('node:child_process')>('node:child_process');
+  return {
+    ...actual,
+    exec: vi.fn(
+      (
+        _cmd: string,
+        opts: unknown,
+        cb?: (err: unknown, result: { stdout: string; stderr: string }) => void
+      ) => {
+        const callback = typeof opts === 'function' ? (opts as typeof cb) : cb;
+        callback?.(null, { stdout: '', stderr: '' });
+      }
+    ),
+  };
+});
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -116,6 +144,7 @@ function makeFeatureLoader(backlogCount = 1) {
   }));
   return {
     getAll: vi.fn().mockResolvedValue(features),
+    get: vi.fn().mockResolvedValue({ id: 'epic-1', branchName: 'epic/foundation', isEpic: true }),
     create: vi.fn(),
     update: vi.fn(),
   };
@@ -451,6 +480,95 @@ describe('ProjectLifecycleService — generateQaDoc()', () => {
       await service.launch(PROJECT_PATH, PROJECT_SLUG);
 
       expect(projectService.createDoc).toHaveBeenCalledOnce();
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// approvePrd() — epic branch base resolution (#3867)
+// ---------------------------------------------------------------------------
+
+describe('ProjectLifecycleService — approvePrd() epic branch base', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Re-establish the orchestration result (global mock reset clears the
+    // module-level mockResolvedValue between tests).
+    vi.mocked(orchestrateProjectFeatures).mockResolvedValue({
+      featuresCreated: 2,
+      milestoneEpicMap: { 'milestone-1': 'epic-1' },
+    } as Awaited<ReturnType<typeof orchestrateProjectFeatures>>);
+  });
+
+  function makeProjectWithMilestone(): Project {
+    return makeProject({
+      status: 'reviewing',
+      milestones: [
+        {
+          number: 1,
+          slug: 'milestone-1',
+          title: 'Foundation',
+          description: 'Foundation work',
+          status: 'planned',
+          phases: [
+            {
+              number: 1,
+              name: 'phase-one',
+              title: 'Phase One',
+              description: 'First phase',
+              acceptanceCriteria: ['Works'],
+            },
+          ],
+        },
+      ],
+    });
+  }
+
+  function gitCommands(): string[] {
+    return vi
+      .mocked(exec)
+      .mock.calls.map((c) => c[0] as string)
+      .filter((cmd) => cmd.startsWith('git '));
+  }
+
+  it('pushes epic branches from the resolved base branch, never a hardcoded origin/dev', async () => {
+    vi.mocked(getEffectivePrBaseBranch).mockResolvedValue('main');
+    const { service } = makeService(makeProjectWithMilestone());
+
+    await service.approvePrd(PROJECT_PATH, PROJECT_SLUG);
+
+    const pushCommands = gitCommands().filter((cmd) => cmd.includes('git push'));
+    expect(pushCommands.length).toBeGreaterThan(0);
+    for (const cmd of pushCommands) {
+      expect(cmd).toContain('origin/main:refs/heads/epic/foundation');
+      expect(cmd).not.toContain('origin/dev');
+    }
+  });
+
+  it('fetches the resolved base branch before pushing epic branches', async () => {
+    vi.mocked(getEffectivePrBaseBranch).mockResolvedValue('trunk');
+    const { service } = makeService(makeProjectWithMilestone());
+
+    await service.approvePrd(PROJECT_PATH, PROJECT_SLUG);
+
+    const commands = gitCommands();
+    expect(commands.some((cmd) => cmd === 'git fetch origin trunk')).toBe(true);
+    expect(commands.some((cmd) => cmd.includes('origin/trunk:refs/heads/'))).toBe(true);
+  });
+
+  it('emits prd-approved with baseBranch and push counts for observability', async () => {
+    vi.mocked(getEffectivePrBaseBranch).mockResolvedValue('main');
+    const { service, events } = makeService(makeProjectWithMilestone());
+
+    await service.approvePrd(PROJECT_PATH, PROJECT_SLUG);
+
+    const approvedCall = vi
+      .mocked(events.emit)
+      .mock.calls.find((c) => c[0] === 'project:lifecycle:prd-approved');
+    expect(approvedCall).toBeDefined();
+    expect(approvedCall![1]).toMatchObject({
+      baseBranch: 'main',
+      epicBranchesPushed: 1,
+      epicBranchPushFailures: 0,
     });
   });
 });
