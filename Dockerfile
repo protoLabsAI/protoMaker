@@ -8,7 +8,7 @@
 # =============================================================================
 # BASE STAGE - Common setup for all builds (DRY: defined once, used by all)
 # =============================================================================
-FROM node:22-slim AS base
+FROM node:22-trixie-slim AS base
 
 # Install build dependencies for native modules (node-pty)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -77,7 +77,7 @@ RUN cd apps/server && find src -name '*.md' -o -name '*.json' | while read f; do
 # =============================================================================
 # SERVER PRODUCTION STAGE
 # =============================================================================
-FROM node:22-slim AS server
+FROM node:22-trixie-slim AS server
 
 # Build argument for tracking which commit this image was built from
 ARG GIT_COMMIT_SHA=unknown
