@@ -36,6 +36,16 @@ import {
   statusCommand as prStatusCommand,
   mergeCommand as prMergeCommand,
 } from './pr.js';
+import {
+  addCommand as queueAddCommand,
+  listCommand as queueListCommand,
+  clearCommand as queueClearCommand,
+} from './queue.js';
+import {
+  startCommand as autoModeStartCommand,
+  stopCommand as autoModeStopCommand,
+  statusCommand as autoModeStatusCommand,
+} from './auto-mode.js';
 
 const require = createRequire(import.meta.url);
 const { version } = require('../package.json') as { version: string };
@@ -120,6 +130,36 @@ prCreateCommand(prCmd);
 prStatusCommand(prCmd);
 prMergeCommand(prCmd);
 
+/**
+ * Queue commands — manage the execution queue.
+ */
+const queueCmd = new Command('queue');
+queueCmd
+  .description('Manage the feature execution queue')
+  .addHelpText(
+    'afterAll',
+    `\nCommands:\n  add     Add a feature to the queue\n  list    List features in the queue\n  clear   Clear all features from the queue`
+  );
+
+queueAddCommand(queueCmd);
+queueListCommand(queueCmd);
+queueClearCommand(queueCmd);
+
+/**
+ * Auto-mode commands — control the auto-mode loop.
+ */
+const autoModeCmd = new Command('auto-mode');
+autoModeCmd
+  .description('Control the auto-mode loop')
+  .addHelpText(
+    'afterAll',
+    `\nCommands:\n  start   Start the auto-mode loop\n  stop    Stop the auto-mode loop\n  status  Show auto-mode status`
+  );
+
+autoModeStartCommand(autoModeCmd);
+autoModeStopCommand(autoModeCmd);
+autoModeStatusCommand(autoModeCmd);
+
 // ---------------------------------------------------------------------------
 // Register command groups
 // ---------------------------------------------------------------------------
@@ -129,6 +169,8 @@ program.addCommand(agentCmd);
 program.addCommand(devCmd);
 program.addCommand(featureCmd);
 program.addCommand(prCmd);
+program.addCommand(queueCmd);
+program.addCommand(autoModeCmd);
 
 // ---------------------------------------------------------------------------
 // Entry — exit-code discipline
