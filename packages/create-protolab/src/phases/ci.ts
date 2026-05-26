@@ -7,7 +7,7 @@
 
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { loadTemplate } from '../templates.js';
 
 export interface CIOptions {
   projectPath: string;
@@ -94,25 +94,6 @@ async function fileExists(filePath: string): Promise<boolean> {
     return true;
   } catch {
     return false;
-  }
-}
-
-/**
- * Load a template file from the templates directory.
- */
-async function loadTemplate(templatePath: string): Promise<string> {
-  // Resolve template directory using import.meta.url
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const templatesDir = path.join(__dirname, '..', 'templates');
-  const fullPath = path.join(templatesDir, templatePath);
-
-  try {
-    const content = await fs.readFile(fullPath, 'utf-8');
-    return content;
-  } catch (err) {
-    throw new Error(
-      `Failed to load template "${templatePath}" at ${fullPath}: ${err instanceof Error ? err.message : String(err)}`
-    );
   }
 }
 
