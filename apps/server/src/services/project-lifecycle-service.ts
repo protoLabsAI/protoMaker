@@ -28,6 +28,7 @@ import type { AutoModeService } from './auto-mode-service.js';
 import { orchestrateProjectFeatures } from './project-orchestration-service.js';
 import type { EventEmitter } from '../lib/events.js';
 import { streamingQuery } from '../providers/simple-query-service.js';
+import { getEffectivePrBaseBranch } from '../lib/settings-helpers.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('ProjectLifecycle');
@@ -165,22 +166,58 @@ export class ProjectLifecycleService {
     );
 
     // Push epic branches to remote so child features can branch from them.
-    // Each epic branch is created from origin/dev HEAD. If the branch already
-    // exists on the remote, the push is a no-op (error is swallowed).
+    // Each epic branch is created from the project's effective PR base branch
+    // (resolved from settings / remote HEAD — never a hardcoded branch) so this
+    // works for any repo's integration flow, not just our internal one.
     const epicBranchNames =
       Object.values(result.milestoneEpicMap).length > 0
         ? await this.getEpicBranchNames(projectPath, result.milestoneEpicMap)
         : [];
 
-    for (const epicBranch of epicBranchNames) {
+    let baseBranch: string | undefined;
+    let epicBranchesPushed = 0;
+    let epicBranchPushFailures = 0;
+
+    if (epicBranchNames.length > 0) {
+      baseBranch = await getEffectivePrBaseBranch(
+        projectPath,
+        this.settingsService,
+        '[ProjectLifecycle]'
+      );
+
+      // Ensure the base ref is present locally before forking epic branches from it.
+      // Without this, `git push origin origin/<base>:...` fails with "src refspec ...
+      // does not match any" on a fresh clone or when the base was never fetched.
       try {
-        await execAsync(`git push origin origin/dev:refs/heads/${epicBranch}`, {
-          cwd: projectPath,
-        });
-        logger.info(`Pushed epic branch to remote: ${epicBranch}`);
+        await execAsync(`git fetch origin ${baseBranch}`, { cwd: projectPath });
       } catch (err) {
-        // Branch may already exist on the remote — this is expected and safe to ignore
-        logger.debug(`Epic branch push skipped (may already exist): ${epicBranch}`, err);
+        logger.warn(
+          `[ProjectLifecycle] Failed to fetch base branch origin/${baseBranch} before epic push for ${projectSlug}`,
+          err
+        );
+      }
+
+      for (const epicBranch of epicBranchNames) {
+        try {
+          await execAsync(`git push origin origin/${baseBranch}:refs/heads/${epicBranch}`, {
+            cwd: projectPath,
+          });
+          epicBranchesPushed++;
+          logger.info(`Pushed epic branch ${epicBranch} from origin/${baseBranch}`);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          // A "rejected" / non-fast-forward / "already exists" outcome means the branch
+          // is already on the remote — expected and safe. Anything else (e.g. a missing
+          // base ref) is a real failure worth surfacing rather than silently swallowing.
+          if (/already exists|\[rejected\]|non-fast-forward|fetch first/i.test(message)) {
+            logger.debug(`Epic branch ${epicBranch} already exists on remote; skipping`);
+          } else {
+            epicBranchPushFailures++;
+            logger.error(
+              `Failed to push epic branch ${epicBranch} from origin/${baseBranch}: ${message}`
+            );
+          }
+        }
       }
     }
 
@@ -193,6 +230,9 @@ export class ProjectLifecycleService {
       slug: projectSlug,
       featuresCreated: result.featuresCreated,
       epicsCreated: Object.keys(result.milestoneEpicMap).length,
+      baseBranch,
+      epicBranchesPushed,
+      epicBranchPushFailures,
     });
 
     logger.info(`Approved PRD for ${projectSlug}: ${result.featuresCreated} features`);

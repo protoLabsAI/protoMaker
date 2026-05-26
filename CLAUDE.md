@@ -793,21 +793,28 @@ interface Feature {
 When features belong to an epic, the git workflow follows a hierarchical PR structure:
 
 ```
-main
+base branch (prBaseBranch, default: main)
   ↑
-epic/foundation ──────────── Epic PR (targets dev)
+epic/foundation ──────────── Epic PR (targets the base branch)
   ↑         ↑         ↑
 feat-a    feat-b    feat-c   Feature PRs (target epic branch)
 ```
 
+This repo uses a single integration branch (`feature/* → main`). The epic flow inserts an
+epic branch between feature branches and the base branch — it does **not** introduce a separate
+long-lived `dev` branch. Everywhere below, "base branch" means the project's configured
+`prBaseBranch` (`DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch`, default `main`), resolved via
+`getEffectivePrBaseBranch()`. Never hardcode a branch name in orchestration code.
+
 **Automatic Behavior:**
 
-- Feature PRs automatically target their epic's branch (not dev)
-- Epic PRs target dev (never main directly)
-- Features without an epic target dev directly
-- When the last child feature's PR merges to the epic branch, `CompletionDetectorService` automatically creates the epic-to-dev PR with `--merge` auto-merge enabled
-- When the epic-to-dev PR merges (detected by GitHub webhook), the epic is marked `done` and the epic branch is deleted
-- If the epic-to-dev PR has conflicts, the epic is marked `blocked` with a reason explaining manual intervention is needed
+- Epic branches are created from the resolved base branch HEAD (`origin/<base>`), not a literal.
+- Feature PRs automatically target their epic's branch (not the base branch directly).
+- Epic PRs target the base branch (never bypass it).
+- Features without an epic target the base branch directly.
+- When the last child feature's PR merges to the epic branch, `CompletionDetectorService` automatically creates the epic-to-base PR with `--merge` auto-merge enabled.
+- When the epic-to-base PR merges (detected by GitHub webhook), the epic is marked `done` and the epic branch is deleted.
+- If the epic-to-base PR has conflicts, the epic is marked `blocked` with a reason explaining manual intervention is needed.
 
 **Epic Lifecycle:**
 
@@ -818,9 +825,9 @@ children in_progress → children done → epic PR created (review) → epic PR 
 **Merge Order:**
 
 1. Merge all feature PRs into the epic branch (squash OK)
-2. Epic-to-dev PR is auto-created and auto-merged with `--merge` strategy (never squash)
+2. Epic-to-base PR is auto-created and auto-merged with `--merge` strategy (never squash)
 
-This keeps dev clean while allowing incremental feature development within epics.
+This keeps the base branch clean while allowing incremental feature development within epics.
 
 ### Creating a Project via MCP
 
