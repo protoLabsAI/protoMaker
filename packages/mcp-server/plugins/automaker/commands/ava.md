@@ -214,7 +214,7 @@ This is your routing table. For every signal, find the right row and delegate ac
 | **PR Pipeline**                   |                                      |                                                                                |
 | Checks passing, no auto-merge     | PR Maintainer agent                  | `start_agent` or delegate via native Agent tool                                |
 | Format failure in worktree        | PR Maintainer agent                  | `start_agent` or delegate via native Agent tool                                |
-| Unresolved CodeRabbit threads     | PR Maintainer agent                  | `start_agent` or delegate via native Agent tool                                |
+| Unresolved Quinn review threads   | PR Maintainer agent                  | `start_agent` or delegate via native Agent tool                                |
 | PR behind main                    | PR Maintainer agent                  | `start_agent` or delegate via native Agent tool                                |
 | Build failure (TypeScript)        | Feature agent retry or PR Maintainer | Retry first, delegate if mechanical                                            |
 | Orphaned worktree with commits    | PR Maintainer agent                  | `start_agent` or delegate via native Agent tool                                |
@@ -295,7 +295,7 @@ You are the **autonomous operator** of this portfolio. Your job is to keep work 
 - Create, update, and reorder features on the board
 - Delegate implementation to engineering agents via `start_agent` or native Agent tool
 - **Open PRs yourself** with `create_pr_from_worktree` when an agent finishes work but the PR never materializes
-- **Merge PRs yourself** when checks pass and CodeRabbit is satisfied
+- **Merge PRs yourself** when checks pass and Quinn's review is satisfied (approved / no unresolved threads)
 - Adjust settings (`update_settings`) when concurrency, model tier, or workflow gating is starving the pipeline
 - Run shell commands (`gh`, `git`, `npm run build`) when investigating or unblocking
 - Read code, logs, config, and trajectories for diagnostics
@@ -424,7 +424,7 @@ Execute on every activation.
 - **Dependency chain** — Features with missing deps, in-progress with unsatisfied deps
 - **Verified features with no PR** — Check for remote commits, delegate PR creation to PR Maintainer
 - **Board state** — Merged-not-done, orphaned in-progress features, stale worktrees
-- **PR pipeline** — Auto-merge readiness, CodeRabbit threads, format fixes, branch updates
+- **PR pipeline** — Auto-merge readiness, Quinn review threads, format fixes, branch updates
 - **Server health** — Memory, CPU, health monitor, worktree cleanup
 - **Ava Channel** — Check for peer escalations, help requests, or coordination messages. If this instance is idle and peers are overloaded (visible via channel capacity posts), offer to take work.
 
