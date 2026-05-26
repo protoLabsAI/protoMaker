@@ -16,7 +16,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { loadSkill } from '@/routes/a2a/index.js';
+import { loadSkill, shouldRouteToNativeSession } from '@/routes/a2a/index.js';
 
 // Repo root — .claude/skills/board_health.md lives here.
 const REPO_ROOT = join(__dirname, '..', '..', '..', '..', '..');
@@ -35,6 +35,20 @@ describe('A2A loadSkill native-session classification (#3772)', () => {
   it('returns null for an unknown skill (falls through to chat path)', async () => {
     const skill = await loadSkill(REPO_ROOT, 'does-not-exist-skill');
     expect(skill).toBeNull();
+  });
+
+  // #3773: pin the dispatch routing contract, not just the classification flag.
+  // The handler routes on shouldRouteToNativeSession(skill); board_health MUST
+  // resolve to the native path or it regresses to the chat path that narrated a
+  // shell command instead of returning board data (#3772).
+  it('routes board_health to the native session (not the chat path)', async () => {
+    const skill = await loadSkill(REPO_ROOT, 'board_health');
+    expect(shouldRouteToNativeSession(skill)).toBe(true);
+  });
+
+  it('routes an unknown skill to the chat path', async () => {
+    const skill = await loadSkill(REPO_ROOT, 'does-not-exist-skill');
+    expect(shouldRouteToNativeSession(skill)).toBe(false);
   });
 
   describe('with temp fixtures', () => {
@@ -87,12 +101,14 @@ Just talk.`
       const skill = await loadSkill(dir, 'pure-native');
       expect(skill!.needsNativeSession).toBe(true);
       expect(skill!.isNativeTool).toBe(true);
+      expect(shouldRouteToNativeSession(skill)).toBe(true);
     });
 
     it('pure-mcp → neither (routes to chat path, which has board tools)', async () => {
       const skill = await loadSkill(dir, 'pure-mcp');
       expect(skill!.needsNativeSession).toBe(false);
       expect(skill!.isNativeTool).toBe(false);
+      expect(shouldRouteToNativeSession(skill)).toBe(false);
     });
 
     it('no allowed-tools → neither', async () => {
