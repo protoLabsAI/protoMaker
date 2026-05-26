@@ -274,6 +274,10 @@ export class GitWorkflowService {
         featureOverride.skipGitHooks ??
         global.skipGitHooks ??
         DEFAULT_GIT_WORKFLOW_SETTINGS.skipGitHooks,
+      syncLockfileOnManifestChange:
+        featureOverride.syncLockfileOnManifestChange ??
+        global.syncLockfileOnManifestChange ??
+        DEFAULT_GIT_WORKFLOW_SETTINGS.syncLockfileOnManifestChange,
     };
   }
 
@@ -473,7 +477,8 @@ export class GitWorkflowService {
         feature,
         projectPath,
         gitSettings.excludeFromStaging,
-        skipHooks
+        skipHooks,
+        gitSettings.syncLockfileOnManifestChange
       );
 
       if (!commitHash) {
@@ -1128,7 +1133,8 @@ export class GitWorkflowService {
     feature: Feature,
     projectPath: string,
     excludeFromStaging?: string[],
-    skipGitHooks = true
+    skipGitHooks = true,
+    syncLockfileOnManifestChange = true
   ): Promise<string | null> {
     // Check for changes - include untracked files explicitly
     const { stdout: status } = await execAsync('git status --porcelain --untracked-files=all', {
@@ -1151,6 +1157,20 @@ export class GitWorkflowService {
       cwd: workDir,
       env: execEnv,
     });
+
+    // Sync lockfile if any package.json manifest changed in the staged diff.
+    if (syncLockfileOnManifestChange) {
+      try {
+        const manifestChanged = await this.hasManifestChange(workDir);
+        if (manifestChanged) {
+          await this.syncAndStageLockfile(workDir, projectPath);
+        }
+      } catch (lockfileError) {
+        logger.warn(
+          `Lockfile sync failed (non-fatal): ${lockfileError instanceof Error ? lockfileError.message : String(lockfileError)}`
+        );
+      }
+    }
 
     // Auto-format staged files before committing (matches CI prettier behavior)
     try {
@@ -1292,6 +1312,53 @@ export class GitWorkflowService {
     logger.info(
       `Auto-generated changeset ${id} for ${touchedPackages.size} package(s): ${[...touchedPackages].join(', ')}`
     );
+  }
+
+  /**
+   * Check if any package.json manifest is present in the currently staged files.
+   * Returns true if the staged diff contains at least one `package.json` file
+   * (root or workspace-level).
+   */
+  private async hasManifestChange(workDir: string): Promise<boolean> {
+    try {
+      const { stdout } = await execAsync(
+        "git diff --cached --name-only --diff-filter=ACMR -- 'package.json' '**/package.json'",
+        { cwd: workDir, env: execEnv }
+      );
+      return stdout.trim().length > 0;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Regenerate the lockfile from the repo root and stage the result.
+   * Runs `npm install --package-lock-only --ignore-scripts` from the project root
+   * (NOT from a temp directory — that corrupts workspace paths).
+   */
+  private async syncAndStageLockfile(workDir: string, projectPath: string): Promise<void> {
+    logger.info(`Regenerating lockfile from repo root (${projectPath})`);
+    await execAsync('npm install --package-lock-only --ignore-scripts', {
+      cwd: projectPath,
+      env: execEnv,
+      timeout: 120_000,
+    });
+
+    // Stage the updated lockfile(s) — run from workDir so git paths are relative to the worktree.
+    // package-lock.json lives at the repo root; workspace locks live at workspace roots.
+    await execAsync(`git add package-lock.json`, { cwd: workDir, env: execEnv }).catch(() => {
+      // package-lock.json may not exist (e.g. yarn/pnpm projects) — non-fatal
+    });
+
+    // Also stage any workspace-level lockfiles that changed
+    await execAsync("git add -- '*.lock' '*.lock.json' 'pnpm-lock.yaml' 'yarn.lock'", {
+      cwd: workDir,
+      env: execEnv,
+    }).catch(() => {
+      // No other lockfiles — non-fatal
+    });
+
+    logger.info(`Lockfile synced and staged`);
   }
 
   /**
