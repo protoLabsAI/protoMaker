@@ -82,6 +82,8 @@ This directory is NOT included in the public VitePress build. Content here is fo
 - [Worktree Recovery Service](./server/worktree-recovery-service.md)
 - [Merge Eligibility Service](./server/merge-eligibility-service.md)
 - [GitHub Merge Service](./server/github-merge-service.md)
+- [App Compliance Gate](./server/app-compliance.md)
+- [Issue Dedupe](./server/issue-dedupe.md)
 - [CodeRabbit Resolver](./server/coderabbit-resolver-service.md)
 - [Reactive Spawner](./server/reactive-spawner.md)
 - [Project Service](./server/project-service.md)
