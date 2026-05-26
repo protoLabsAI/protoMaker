@@ -16,6 +16,11 @@ import { existsSync, readFileSync } from 'node:fs';
 import { ProviderFactory } from '../../providers/provider-factory.js';
 import { TracedProvider } from '../../providers/traced-provider.js';
 import { simpleQuery } from '../../providers/simple-query-service.js';
+import {
+  buildFreshEyesReviewPrompt,
+  FRESH_EYES_REVIEW_SYSTEM_PROMPT,
+  parseFreshEyesVerdict,
+} from '@protolabsai/prompts';
 import { StreamObserver } from '../stream-observer-service.js';
 import { getWorkflowSettings, getEffectivePrBaseBranch } from '../../lib/settings-helpers.js';
 import { setFeatureContext } from '@protolabsai/error-tracking';
@@ -1391,6 +1396,20 @@ Output the branch name only.`,
         logger.warn('Failed to record learnings:', learningError);
       }
 
+      // Local antagonistic review of the worktree diff BEFORE the git workflow
+      // commits/pushes/opens the PR (#3799). Reviews the agent's first cut and,
+      // on a BLOCK/CONCERN verdict, runs one fix iteration in the worktree — so
+      // we open a reviewed, iterated PR instead of pushing the first cut
+      // unreviewed. Fail-open: never blocks shipping.
+      await this.reviewAndIterateWorktreeDiff(
+        workDir,
+        projectPath,
+        feature,
+        abortController,
+        modelResult.model,
+        modelResult.providerId
+      );
+
       // Run git workflow (commit, push, PR) if enabled
       // Read-only features skip the git workflow entirely — no commit, push, or PR.
       let gitWorkflowResult: Awaited<
@@ -2369,6 +2388,89 @@ ${step.instructions}
 Complete the pipeline step instructions above. Review the previous work and apply the required changes or actions.`;
 
     return prompt;
+  }
+
+  /**
+   * Local antagonistic review of the worktree diff, run AFTER the agent finishes
+   * but BEFORE the git workflow commits/pushes/opens the PR (#3799). Reviews the
+   * agent's diff with a fresh-eyes pass; on a BLOCK/CONCERN verdict, re-invokes
+   * the agent once to address the findings. Fail-open: any error here just logs
+   * and proceeds to the git workflow — the local review must never block shipping.
+   */
+  private async reviewAndIterateWorktreeDiff(
+    workDir: string,
+    projectPath: string,
+    feature: Feature,
+    abortController: AbortController,
+    model: string,
+    providerId: string | undefined
+  ): Promise<void> {
+    if (feature.executionMode === 'read-only') return;
+    const MAX_BUF = 64 * 1024 * 1024;
+    try {
+      // Stage everything (incl. new files) so the diff is complete. The git
+      // workflow re-stages before committing, so staging here is harmless.
+      const GIT_TIMEOUT = 120_000;
+      await execAsync('git add -A', { cwd: workDir, maxBuffer: MAX_BUF, timeout: GIT_TIMEOUT });
+      const { stdout: diff } = await execAsync('git diff --cached', {
+        cwd: workDir,
+        maxBuffer: MAX_BUF,
+        timeout: GIT_TIMEOUT,
+      });
+      if (!diff || diff.trim().length === 0) {
+        logger.info(`[LocalReview] ${feature.id}: no diff to review`);
+        return;
+      }
+
+      const reviewUserPrompt = buildFreshEyesReviewPrompt({
+        prDiff: diff,
+        featureTitle: feature.title ?? feature.id,
+        featureDescription: feature.description ?? '',
+      });
+      const reviewResult = await simpleQuery({
+        prompt: `${FRESH_EYES_REVIEW_SYSTEM_PROMPT}\n\n${reviewUserPrompt}`,
+        model,
+        cwd: workDir,
+        maxTurns: 1,
+        allowedTools: [],
+      });
+      const verdict = parseFreshEyesVerdict(reviewResult.text || '');
+      logger.info(
+        `[LocalReview] ${feature.id}: verdict ${verdict.verdict} — ${verdict.reasoning.slice(0, 200)}`
+      );
+
+      if (verdict.verdict === 'PASS') return;
+
+      // One fix iteration addressing the review findings.
+      const fixPrompt =
+        `A pre-PR code review of your changes returned ${verdict.verdict}. ` +
+        `Address the following findings by editing files in this worktree. ` +
+        `Make only the changes needed to resolve them — no unrelated changes.\n\n` +
+        `REVIEW FINDINGS:\n${verdict.reasoning}`;
+      logger.info(`[LocalReview] ${feature.id}: running one fix iteration (${verdict.verdict})`);
+      await this.runAgent(
+        workDir,
+        feature.id,
+        fixPrompt,
+        abortController,
+        projectPath,
+        undefined,
+        model,
+        {
+          projectPath,
+          maxTurns: 30,
+          providerId,
+          phase: 'REVIEW',
+          branchName: feature.branchName ?? null,
+        }
+      );
+      logger.info(`[LocalReview] ${feature.id}: fix iteration complete`);
+    } catch (err) {
+      logger.warn(
+        `[LocalReview] ${feature.id}: review/iterate failed, proceeding to git workflow:`,
+        err
+      );
+    }
   }
 
   /**

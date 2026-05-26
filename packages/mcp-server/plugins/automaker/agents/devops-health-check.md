@@ -149,8 +149,8 @@ gh run list --limit 5 --json workflowName,status,conclusion,createdAt \
 Check for known vulnerabilities:
 
 ```bash
-# npm audit (from project directory)
-cd /home/josh/dev/ava && npm audit --audit-level=moderate 2>/dev/null | tail -5 || echo "npm audit: N/A"
+# npm audit (run from the project root)
+npm audit --audit-level=moderate 2>/dev/null | tail -5 || echo "npm audit: N/A"
 ```
 
 ## Output Format
