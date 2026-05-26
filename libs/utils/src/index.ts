@@ -8,6 +8,7 @@ export {
   isAbortError,
   isCancellationError,
   isAuthenticationError,
+  isConfigCorruptedError,
   isRateLimitError,
   isQuotaExhaustedError,
   isFetchError,

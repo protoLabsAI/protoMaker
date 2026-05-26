@@ -3,6 +3,7 @@ import {
   isAbortError,
   isCancellationError,
   isAuthenticationError,
+  isConfigCorruptedError,
   isRateLimitError,
   isQuotaExhaustedError,
   extractRetryAfter,
@@ -456,6 +457,66 @@ describe('error-handler.ts', () => {
       const message = getUserFriendlyErrorMessage(error);
 
       expect(message).toBe('');
+    });
+  });
+
+  describe('isConfigCorruptedError', () => {
+    it('detects disk-full write failures', () => {
+      expect(isConfigCorruptedError('Error: ENOSPC: no space left on device, write')).toBe(true);
+      expect(isConfigCorruptedError('cat: write error: No space left on device')).toBe(true);
+    });
+
+    it('detects a corrupted/truncated Claude config file', () => {
+      expect(
+        isConfigCorruptedError(
+          'Claude configuration file at /home/automaker/.claude.json is corrupted: JSON Parse error: Unterminated string'
+        )
+      ).toBe(true);
+    });
+
+    it('does not match unrelated JSON or auth errors', () => {
+      expect(isConfigCorruptedError('Authentication failed: Invalid or expired API key')).toBe(
+        false
+      );
+      expect(isConfigCorruptedError('SyntaxError: Unexpected token in JSON at position 5')).toBe(
+        false
+      );
+      expect(isConfigCorruptedError('Something went wrong')).toBe(false);
+    });
+  });
+
+  describe('classifyError — config_corrupted', () => {
+    it('classifies a corrupted config file as config_corrupted', () => {
+      const info = classifyError(
+        new Error(
+          'Claude configuration file at /home/automaker/.claude.json is corrupted: JSON Parse error'
+        )
+      );
+      expect(info.type).toBe('config_corrupted');
+      expect(info.isConfigCorrupted).toBe(true);
+    });
+
+    it('prioritizes config_corrupted over authentication when both signatures are present', () => {
+      // The SDK surfaces a truncated credentials file as an auth failure too;
+      // the disk/config signal must win so operators do not chase the API key.
+      const info = classifyError(
+        new Error('Authentication failed: Invalid API key — .claude.json is corrupted')
+      );
+      expect(info.type).toBe('config_corrupted');
+    });
+
+    it('still classifies a plain auth error as authentication', () => {
+      const info = classifyError(new Error('Authentication failed: Invalid API key'));
+      expect(info.type).toBe('authentication');
+      expect(info.isConfigCorrupted).toBe(false);
+    });
+  });
+
+  describe('getUserFriendlyErrorMessage — config_corrupted', () => {
+    it('returns an actionable disk/config message, not an API-key message', () => {
+      const message = getUserFriendlyErrorMessage(new Error('No space left on device'));
+      expect(message).toContain('truncated');
+      expect(message).not.toContain('check your API key');
     });
   });
 });

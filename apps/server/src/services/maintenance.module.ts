@@ -23,6 +23,7 @@ import { DoneWorktreeCleanupCheck } from './maintenance/checks/done-worktree-cle
 import { EpicAdoptionSweepCheck } from './maintenance/checks/epic-adoption-sweep-check.js';
 import { BacklogTitleReconcilerCheck } from './maintenance/checks/backlog-title-reconciler-check.js';
 import { AutoDismissStaleBotReviewsCheck } from './maintenance/checks/auto-dismiss-stale-bot-reviews-check.js';
+import { DiskPressureCheck } from './maintenance/checks/disk-pressure-check.js';
 
 const logger = createLogger('Server:Wiring');
 
@@ -144,6 +145,41 @@ export function register(container: ServiceContainer): void {
     },
   };
 
+  // Disk pressure (full tier) — warns before the agent HOME volume fills and
+  // truncates .claude.json (protoMaker#3564). Instance-global: the volume is
+  // shared across projects, so we run it once per cycle rather than per project.
+  const diskPressureCheckInstance = new DiskPressureCheck();
+  const diskPressureCheck: MaintenanceCheck = {
+    id: 'disk-pressure',
+    name: 'Agent HOME Disk Pressure',
+    tier: 'full',
+    async run(_context: MaintenanceCheckContext): Promise<MaintenanceCheckResult> {
+      const t0 = Date.now();
+      let issues: Awaited<ReturnType<DiskPressureCheck['run']>> = [];
+      try {
+        issues = await diskPressureCheckInstance.run('');
+        for (const issue of issues) {
+          logger.warn(`[disk-pressure] ${issue.message}`);
+        }
+      } catch (err) {
+        logger.error('Disk pressure check failed:', err);
+      }
+      return {
+        checkId: 'disk-pressure',
+        passed: issues.length === 0,
+        summary:
+          issues.length === 0
+            ? 'Disk pressure: agent HOME volume has healthy free space'
+            : (issues[0]?.message ?? 'Disk pressure detected'),
+        details: {
+          issueCount: issues.length,
+          critical: issues.some((i) => i.severity === 'critical'),
+        },
+        durationMs: Date.now() - t0,
+      };
+    },
+  };
+
   // Post-merge reconciler (critical tier) — poll fallback for missed PR merge webhooks.
   // Runs every 5 minutes alongside resource-usage. Catches the case where a PR merges
   // on a repo that has no GitHub webhook configured, preventing the feature from staying
@@ -238,6 +274,7 @@ export function register(container: ServiceContainer): void {
   maintenanceOrchestrator.register(epicAdoptionSweepCheck);
   maintenanceOrchestrator.register(backlogTitleReconcilerCheck);
   maintenanceOrchestrator.register(autoDismissStaleBotReviewsCheck);
+  maintenanceOrchestrator.register(diskPressureCheck);
 
   // Wire TopicBus for hierarchical event routing of sweep results
   if (container.topicBus) {

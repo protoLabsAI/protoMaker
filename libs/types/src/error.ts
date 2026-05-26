@@ -3,6 +3,7 @@
  */
 export type ErrorType =
   | 'authentication'
+  | 'config_corrupted'
   | 'cancellation'
   | 'abort'
   | 'execution'
@@ -20,6 +21,7 @@ export interface ErrorInfo {
   message: string;
   isAbort: boolean;
   isAuth: boolean;
+  isConfigCorrupted: boolean; // Config/credentials file unreadable or truncated (often disk-full)
   isCancellation: boolean;
   isRateLimit: boolean;
   isQuotaExhausted: boolean; // Session/weekly usage limit reached
