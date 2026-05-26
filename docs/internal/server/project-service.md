@@ -113,16 +113,19 @@ Stats are written to `.automaker/projects/stats.json` and used by the dashboard.
 
 `project.status` (`ProjectStatus`) reflects the stage of the design flow and is set at distinct transitions so the lifecycle is observable from `status` alone — no need to cross-reference other fields:
 
-| Status        | Set by                                                     | Means                                        |
-| ------------- | ---------------------------------------------------------- | -------------------------------------------- |
-| `drafting`    | project creation / after research                          | Idea captured, PRD not yet under review      |
-| `researching` | `ProjectLifecycleService.runResearch()` (early-stage only) | Deep research running; reverts to `drafting` |
-| `reviewing`   | `generate-prd`                                             | PRD drafted, awaiting approval               |
-| `scaffolded`  | `approvePrd()` / `orchestrateProjectFeatures()`            | Features created, **not** yet launched       |
-| `active`      | `ProjectLifecycleService.launch()`                         | Auto-mode launched — execution in progress   |
-| `completed`   | completion detection                                       | All work done                                |
+| Status        | Set by                                                     | Means                                          |
+| ------------- | ---------------------------------------------------------- | ---------------------------------------------- |
+| `drafting`    | project creation / after research                          | Idea captured, PRD not yet under review        |
+| `researching` | `ProjectLifecycleService.runResearch()` (early-stage only) | Deep research running; reverts to `drafting`   |
+| `reviewing`   | `generate-prd`                                             | PRD drafted, awaiting review/approval          |
+| `approved`    | `review-prd` (agent review **passed**)                     | PRD passed the quality gate; ready to scaffold |
+| `scaffolded`  | `approvePrd()` / `orchestrateProjectFeatures()`            | Features created, **not** yet launched         |
+| `active`      | `ProjectLifecycleService.launch()`                         | Auto-mode launched — execution in progress     |
+| `completed`   | completion detection                                       | All work done                                  |
 
-Key invariant: **approval lands in `scaffolded`, and only `launch()` sets `active`** — so `active` unambiguously means "running," distinct from "has features but idle." `researching` is only applied when the project is still early (`ongoing`/`drafting`/`reviewing`); re-running research against a `scaffolded`/`active` project does not clobber its status. `approved` remains reserved for a future explicit human-approval gate (approval and scaffolding are currently a single operation).
+Key invariant: **approval lands in `scaffolded`, and only `launch()` sets `active`** — so `active` unambiguously means "running," distinct from "has features but idle." `researching` is only applied when the project is still early (`ongoing`/`drafting`/`reviewing`); re-running research against a `scaffolded`/`active` project does not clobber its status.
+
+`approved` is set by the agent review gate (`POST /lifecycle/review-prd`): a critic agent scores the PRD and, on a pass, advances to `approved` (a fail keeps `reviewing` and stores the actionable issues as `reviewFeedback`, which the next `generate-prd` revision folds in). The gate is available, not mandatory — `approvePrd()` does not require a prior pass, so operators/UI decide whether to require review before scaffolding.
 
 ## Calendar Integration
 
