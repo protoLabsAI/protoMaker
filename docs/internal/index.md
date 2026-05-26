@@ -71,6 +71,7 @@ This directory is NOT included in the public VitePress build. Content here is fo
 - [Overview](./server/index.md)
 - [Route Organization](./server/route-organization.md)
 - [Providers](./server/providers.md)
+- [Proto SDK Smoke Test](./server/proto-sdk-smoke-test.md)
 - [Utilities](./server/utilities.md)
 - [Quarantine Pipeline](./server/quarantine-pipeline.md)
 - [RAG Techniques](./server/rag-techniques.md)
