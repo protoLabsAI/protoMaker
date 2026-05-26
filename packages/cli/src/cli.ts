@@ -31,6 +31,11 @@ import {
   outputCommand,
   messageCommand,
 } from './agent.js';
+import {
+  createCommand as prCreateCommand,
+  statusCommand as prStatusCommand,
+  mergeCommand as prMergeCommand,
+} from './pr.js';
 
 const require = createRequire(import.meta.url);
 const { version } = require('../package.json') as { version: string };
@@ -100,6 +105,21 @@ featureCmd
     `\nCommands:\n  list      List features grouped by status\n  get       Show full feature details\n  create    Create a new feature\n  update    Update a feature\n  move      Transition feature status`
   );
 
+/**
+ * PR commands — pull request lifecycle (create, status, merge).
+ */
+const prCmd = new Command('pr');
+prCmd
+  .description('Pull request commands — create, check status, and merge PRs')
+  .addHelpText(
+    'afterAll',
+    `\nCommands:\n  create  Open a PR from a feature worktree\n  status  Show CI rollup for a PR\n  merge   Merge a PR with the configured strategy`
+  );
+
+prCreateCommand(prCmd);
+prStatusCommand(prCmd);
+prMergeCommand(prCmd);
+
 // ---------------------------------------------------------------------------
 // Register command groups
 // ---------------------------------------------------------------------------
@@ -108,6 +128,7 @@ program.addCommand(projectCmd);
 program.addCommand(agentCmd);
 program.addCommand(devCmd);
 program.addCommand(featureCmd);
+program.addCommand(prCmd);
 
 // ---------------------------------------------------------------------------
 // Entry — exit-code discipline
