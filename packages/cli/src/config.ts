@@ -53,9 +53,15 @@ function parseDotEnv(filePath: string): Record<string, string> {
 /**
  * Resolve API configuration.
  *
- * Checks process.env first, then falls back to .env in cwd.
+ * Checks process.env first, then falls back to .env in the project directory
+ * (defaults to cwd). The project path can be overridden via `--project` flag.
+ *
+ * @param projectPath - Project directory for .env lookup (defaults to cwd).
  */
-export function resolveApiConfig(): { apiUrl: string; apiKey?: string } {
+export function resolveApiConfig(projectPath: string = process.cwd()): {
+  apiUrl: string;
+  apiKey?: string;
+} {
   const envUrl = process.env.AUTOMAKER_API_URL;
   const envKey = process.env.AUTOMAKER_API_KEY;
 
@@ -64,8 +70,8 @@ export function resolveApiConfig(): { apiUrl: string; apiKey?: string } {
     return { apiUrl: envUrl, apiKey: envKey };
   }
 
-  // Try .env file
-  const dotenv = parseDotEnv(resolve(process.cwd(), '.env'));
+  // Try .env file in the project directory
+  const dotenv = parseDotEnv(resolve(projectPath, '.env'));
 
   const apiUrl = envUrl || dotenv.AUTOMAKER_API_URL || DEFAULT_API_URL;
   const apiKey = envKey || dotenv.AUTOMAKER_API_KEY;

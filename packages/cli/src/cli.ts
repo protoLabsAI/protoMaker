@@ -8,10 +8,21 @@
  * Usage:
  *   protomaker <command> [options]
  *   protomaker --help
+ *
+ * Global flags:
+ *   --json      Output results as JSON
+ *   --quiet     Suppress all non-error output
+ *   --project   Project path (defaults to cwd)
+ *
+ * Exit codes:
+ *   0 = success
+ *   1 = runtime error
+ *   2 = usage error
  */
 
 import { createRequire } from 'node:module';
 import { Command } from 'commander';
+import { type GlobalFlags, output, usageError, exitError } from './output.js';
 
 const require = createRequire(import.meta.url);
 const { version } = require('../package.json') as { version: string };
@@ -21,7 +32,14 @@ const program = new Command();
 program
   .name('protomaker')
   .description('CLI for protoLabs.studio — automate AI engineering workflows')
-  .version(version);
+  .version(version)
+  // -----------------------------------------------------------------------
+  // Global flags
+  // -----------------------------------------------------------------------
+  .option('--json', 'Output results as JSON', false)
+  .option('--quiet', 'Suppress all non-error output', false)
+  .option('--project <path>', 'Project path (defaults to cwd)', process.cwd())
+  .exitOverride(); // Prevent Commander from calling process.exit — we control exit codes
 
 // ---------------------------------------------------------------------------
 // Command groups
@@ -66,12 +84,48 @@ program.addCommand(agentCmd);
 program.addCommand(devCmd);
 
 // ---------------------------------------------------------------------------
-// Entry
+// Entry — exit-code discipline
 // ---------------------------------------------------------------------------
 
-program.parse(process.argv);
+try {
+  // Show help if no command provided (exit code 2 = usage error)
+  if (!process.argv.slice(2).length) {
+    program.help();
+    process.exit(2);
+  }
 
-// Show help if no command provided
-if (!process.argv.slice(2).length) {
-  program.help();
+  program.parse(process.argv);
+
+  // Extract global flags after parsing
+  const opts = program.opts();
+  const globalFlags: GlobalFlags = {
+    json: opts.json ?? false,
+    quiet: opts.quiet ?? false,
+    project: opts.project ?? process.cwd(),
+  };
+
+  // Success — exit code 0
+  process.exit(0);
+} catch (err: any) {
+  // Commander exitOverride throws CommanderError on failures
+  const commanderCode = err?.code;
+
+  // --help / --version are fine
+  if (commanderCode === 'COMMANDER_HELP' || commanderCode === 'COMMANDER_VERSION') {
+    process.exit(0);
+    return;
+  }
+
+  // Usage errors (unknown command, missing required arg, etc.) → exit 2
+  if (
+    commanderCode === 'COMMANDER_INCORRECTVALUE' ||
+    commanderCode === 'COMMANDER_ARGUMENT_MISSING' ||
+    commanderCode === 'COMMANDER_CREATE_OPTION_FAILED'
+  ) {
+    usageError(err.message || String(err));
+    return;
+  }
+
+  // Runtime error → exit 1
+  exitError(err.message || String(err));
 }
