@@ -20,6 +20,7 @@ import {
   type ClaudeCompatibleProvider,
   type Credentials,
 } from '@protolabsai/types';
+import { resolve as resolvePath } from 'node:path';
 import { BaseProvider } from './base-provider.js';
 import { classifyError, getUserFriendlyErrorMessage, createLogger } from '@protolabsai/utils';
 
@@ -82,6 +83,11 @@ const SYSTEM_ENV_VARS = [
   'USER',
   'LANG',
   'LC_ALL',
+  // npm cache location. Propagated so a deployment can point it off a small
+  // HOME tmpfs; defaulted below when unset. Without this on the allowlist the
+  // agent's npm falls back to $HOME/.npm, which on the staging container is a
+  // 64M tmpfs that fills and truncates .claude.json mid-write (protoMaker#3564).
+  'NPM_CONFIG_CACHE',
   // Self-service API access (skills that call back to the server via A2A)
   'AUTOMAKER_API_KEY',
   'PORT',
@@ -219,6 +225,18 @@ function buildEnv(
     if (process.env[key]) {
       env[key] = process.env[key];
     }
+  }
+
+  // Default the npm cache off the HOME tmpfs when a deployment hasn't set it.
+  // npm otherwise caches to $HOME/.npm; on the staging container $HOME is a
+  // 64M tmpfs that fills and then silently truncates sibling files like
+  // .claude.json mid-write, surfacing as bogus auth failures (protoMaker#3564).
+  // Point it at the server's persistent data dir instead — npm creates the
+  // directory on first use. An explicit NPM_CONFIG_CACHE (propagated above)
+  // always wins so infra can override.
+  if (!env['NPM_CONFIG_CACHE']) {
+    const dataDir = resolvePath(process.env.DATA_DIR ?? './data');
+    env['NPM_CONFIG_CACHE'] = `${dataDir}/npm-cache`;
   }
 
   // Pass OTel telemetry config to subprocess for per-turn trace visibility.

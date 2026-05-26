@@ -53,6 +53,31 @@ export function isAuthenticationError(errorMessage: string): boolean {
 }
 
 /**
+ * Check if an error indicates a corrupted/truncated config or credentials file,
+ * usually caused by the agent HOME volume running out of space (a small tmpfs
+ * filling silently truncates writes to .claude.json / .credentials.json). The
+ * CLI then reports the file as "corrupted", which otherwise masquerades as an
+ * auth failure and sends operators down the wrong path (protoMaker#3564).
+ *
+ * @param errorMessage - The error message to check
+ * @returns True if the error indicates a corrupted/truncated config file
+ */
+export function isConfigCorruptedError(errorMessage: string): boolean {
+  const lower = errorMessage.toLowerCase();
+  // Root cause: a write to the (full) HOME volume is rejected by the kernel.
+  if (lower.includes('no space left on device') || lower.includes('enospc')) {
+    return true;
+  }
+  // Symptom: the CLI reads the truncated config/credentials file and reports it
+  // as corrupted. Require config context so a generic JSON error elsewhere
+  // doesn't get misclassified.
+  return (
+    (lower.includes('configuration file') && lower.includes('corrupt')) ||
+    (lower.includes('.claude.json') && (lower.includes('corrupt') || lower.includes('parse error')))
+  );
+}
+
+/**
  * Check if an error is a rate limit error (429 Too Many Requests)
  *
  * @param error - The error to check
@@ -172,6 +197,7 @@ export function classifyError(error: unknown): ErrorInfo {
   const message = error instanceof Error ? error.message : String(error || 'Unknown error');
   const isAbort = isAbortError(error);
   const isAuth = isAuthenticationError(message);
+  const isConfigCorrupted = isConfigCorruptedError(message);
   const isCancellation = isCancellationError(message);
   const isRateLimit = isRateLimitError(error);
   const isQuotaExhausted = isQuotaExhaustedError(error);
@@ -184,6 +210,10 @@ export function classifyError(error: unknown): ErrorInfo {
   let type: ErrorType;
   if (isMaxTurns) {
     type = 'max_turns';
+  } else if (isConfigCorrupted) {
+    // Priority over authentication: a truncated credentials file surfaces as an
+    // auth error too, but the real failure is disk/config, not the key (#3564).
+    type = 'config_corrupted';
   } else if (isAuth) {
     type = 'authentication';
   } else if (isQuotaExhausted) {
@@ -209,6 +239,7 @@ export function classifyError(error: unknown): ErrorInfo {
     message,
     isAbort,
     isAuth,
+    isConfigCorrupted,
     isCancellation,
     isRateLimit,
     isQuotaExhausted,
@@ -235,6 +266,9 @@ export function getUserFriendlyErrorMessage(error: unknown): string {
 
     case 'authentication':
       return 'Authentication failed. Please check your API key.';
+
+    case 'config_corrupted':
+      return 'Agent config/credentials file is unreadable or truncated — usually the agent HOME volume is full. Check disk space (e.g. `df -h $HOME`) and the npm cache location (NPM_CONFIG_CACHE); this is NOT an invalid API key.';
 
     case 'quota_exhausted':
       return 'Usage limit reached. Auto Mode has been paused. Please wait for your quota to reset or upgrade your plan.';

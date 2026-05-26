@@ -622,7 +622,11 @@ export class AutoModeService {
     if (
       errorInfo.type === 'quota_exhausted' ||
       errorInfo.type === 'rate_limit' ||
-      errorInfo.type === 'network'
+      errorInfo.type === 'network' ||
+      // A corrupted/truncated config is environmental (disk full); respawning
+      // agents only writes more garbage to the shared .claude.json and makes it
+      // worse. Pause immediately so an operator can free space (protoMaker#3564).
+      errorInfo.type === 'config_corrupted'
     ) {
       return true;
     }
