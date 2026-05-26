@@ -478,7 +478,7 @@ export class GitWorkflowService {
 
       if (!commitHash) {
         // Agent may have already committed. Check for unpushed commits before bailing out.
-        const unpushedHash = await this.getUnpushedCommitHash(workDir, branchName);
+        const unpushedHash = await this.getUnpushedCommitHash(workDir, branchName, prBaseBranch);
         if (!unpushedHash) {
           // Agent may have committed AND pushed already. Check if the remote branch is ahead of base.
           const remoteAheadHash = await this.getRemoteAheadCommitHash(
@@ -1299,7 +1299,11 @@ export class GitWorkflowService {
    * Handles the case where the branch doesn't exist on remote yet.
    * @returns HEAD short hash if unpushed commits exist, null otherwise
    */
-  private async getUnpushedCommitHash(workDir: string, branchName: string): Promise<string | null> {
+  private async getUnpushedCommitHash(
+    workDir: string,
+    branchName: string,
+    prBaseBranch: string
+  ): Promise<string | null> {
     try {
       // Check if the branch exists on remote
       const { stdout: remoteRef } = await execAsync(`git ls-remote --heads origin ${branchName}`, {
@@ -1308,18 +1312,20 @@ export class GitWorkflowService {
       });
 
       if (!remoteRef.trim()) {
-        // Branch doesn't exist on remote — any local commits are unpushed
+        // Branch doesn't exist on remote — any local commits are unpushed.
         const { stdout: localHead } = await execAsync('git rev-parse --short HEAD', {
           cwd: workDir,
           env: execEnv,
         });
         const hash = localHead.trim();
-        // Verify there actually are commits on this branch (not just the base)
-        const { stdout: commitCount } = await execAsync(
-          `git rev-list --count origin/main..HEAD 2>/dev/null || echo "0"`,
-          { cwd: workDir, env: execEnv }
-        );
-        return parseInt(commitCount.trim(), 10) > 0 ? hash : null;
+        // Verify there actually are commits on this branch beyond its base.
+        // Compare against the feature's ACTUAL base (origin/<prBaseBranch>) — not
+        // hardcoded origin/main, which strands work on epic/dev-based branches.
+        const count = await this.countCommitsAheadOfBase(workDir, prBaseBranch);
+        // If we can't resolve the base at all, do NOT silently drop committed
+        // work — a fresh branch with a local commit and a clean tree means the
+        // agent did real work; prefer to surface it (push+PR) over stranding it.
+        return count === null || count > 0 ? hash : null;
       }
 
       // Branch exists on remote — check for unpushed commits
@@ -1338,24 +1344,57 @@ export class GitWorkflowService {
 
       return null;
     } catch {
-      // If anything fails (no remote, etc.), check for local commits vs main
-      try {
-        const { stdout: ahead } = await execAsync('git rev-list origin/main..HEAD --count', {
-          cwd: workDir,
-          env: execEnv,
-        });
-        if (parseInt(ahead.trim(), 10) > 0) {
+      // If anything fails (no remote, etc.), check for local commits vs the base.
+      const count = await this.countCommitsAheadOfBase(workDir, prBaseBranch);
+      if (count === null || count > 0) {
+        try {
           const { stdout: head } = await execAsync('git rev-parse --short HEAD', {
             cwd: workDir,
             env: execEnv,
           });
           return head.trim();
+        } catch {
+          // Truly nothing to do
         }
-      } catch {
-        // Truly nothing to do
       }
       return null;
     }
+  }
+
+  /**
+   * Count commits on HEAD that are ahead of the feature's base branch.
+   * Fetches origin/<base> if it isn't present in the worktree (a fresh worktree
+   * may not have it). Returns null if the base ref genuinely can't be resolved —
+   * callers MUST treat null as "unknown, don't strand work", not "zero".
+   */
+  private async countCommitsAheadOfBase(
+    workDir: string,
+    prBaseBranch: string
+  ): Promise<number | null> {
+    const ref = `origin/${prBaseBranch}`;
+    const tryCount = async (): Promise<number | null> => {
+      try {
+        const { stdout } = await execAsync(`git rev-list --count ${ref}..HEAD`, {
+          cwd: workDir,
+          env: execEnv,
+        });
+        const n = parseInt(stdout.trim(), 10);
+        return Number.isNaN(n) ? null : n;
+      } catch {
+        return null;
+      }
+    };
+    let count = await tryCount();
+    if (count === null) {
+      // Base ref not present — fetch it once, then retry.
+      try {
+        await execAsync(`git fetch origin ${prBaseBranch}`, { cwd: workDir, env: execEnv });
+      } catch {
+        // ignore — retry will just return null again
+      }
+      count = await tryCount();
+    }
+    return count;
   }
 
   /**
