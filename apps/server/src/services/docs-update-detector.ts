@@ -119,6 +119,12 @@ export class DocsUpdateDetector {
         status: 'backlog',
         category: 'Documentation',
         complexity: 'small',
+        // Run the full pipeline so the docs work is committed and opened as a
+        // PR. Without an explicit workflow the feature falls into a read-only
+        // default (executionMode: 'read-only') — the agent writes nothing,
+        // produces no PR, and the EXECUTE->REVIEW guard blocks it. 'standard'
+        // makes the per-epic docs flow actually deliver. See #3806.
+        workflow: 'standard',
       });
 
       this.events.emit('docs:update-needed', {
