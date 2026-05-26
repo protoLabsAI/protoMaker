@@ -12,6 +12,7 @@ import type { ProjectService } from '../../../services/project-service.js';
 import { createInitiateHandler } from './initiate.js';
 import { createApprovePrdHandler } from './approve-prd.js';
 import { createGeneratePrdHandler } from './generate-prd.js';
+import { createReviewPrdHandler } from './review-prd.js';
 import { createLaunchHandler } from './launch.js';
 import { createStatusHandler } from './status.js';
 import { createRequestChangesHandler } from './request-changes.js';
@@ -71,6 +72,13 @@ export function createLifecycleRoutes(
     validatePathParams('projectPath'),
     validateSlugs('projectSlug'),
     createGeneratePrdHandler(lifecycleService, projectService)
+  );
+
+  router.post(
+    '/review-prd',
+    validatePathParams('projectPath'),
+    validateSlugs('projectSlug'),
+    createReviewPrdHandler(projectService, events)
   );
 
   return router;

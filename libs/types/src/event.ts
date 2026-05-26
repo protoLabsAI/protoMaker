@@ -173,6 +173,7 @@ export type EventType =
   | 'project:completed'
   | 'project:reflection:complete'
   | 'project:prd:changes-requested'
+  | 'project:prd:reviewed'
   // CoS intake events
   | 'cos:prd-submitted'
   // PR lifecycle events (consumed by Lead Engineer state machine)
@@ -580,6 +581,13 @@ export interface EventPayloadMap {
     projectSlug: string;
     projectPath: string;
     feedback: string;
+  };
+  'project:prd:reviewed': {
+    projectPath: string;
+    projectSlug: string;
+    passed: boolean;
+    score: number;
+    issueCount: number;
   };
   // Lead Engineer events
   'lead-engineer:started': { projectPath: string; projectSlug: string };
