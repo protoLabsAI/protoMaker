@@ -223,4 +223,27 @@ export const gitTools: Tool[] = [
       required: ['projectPath', 'threadId'],
     },
   },
+  {
+    name: 'add_github_comment',
+    description:
+      'Post a comment to an existing GitHub issue. Returns the comment URL and confirmation.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        issueNumber: {
+          type: 'number',
+          description: 'GitHub issue number to comment on',
+        },
+        body: {
+          type: 'string',
+          description: 'Comment body (supports markdown)',
+        },
+      },
+      required: ['projectPath', 'issueNumber', 'body'],
+    },
+  },
 ];
