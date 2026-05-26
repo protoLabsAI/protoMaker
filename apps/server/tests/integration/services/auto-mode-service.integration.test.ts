@@ -147,9 +147,10 @@ describe('auto-mode-service.ts (integration)', () => {
       await service.executeFeature(testRepo.path, 'test-feature-error', false, false);
 
       // With AUTOMAKER_MOCK_AGENT=true, the mock agent runs successfully (provider error is never
-      // thrown). No PR evidence after the git workflow → feature lands in 'review'.
+      // thrown). No PR evidence after the git workflow → empty execution → auto-retry returns
+      // the feature to 'backlog' (failureCount incremented) rather than parking in review (#3860).
       const feature = await featureLoader.get(testRepo.path, 'test-feature-error');
-      expect(feature?.status).toBe('review');
+      expect(feature?.status).toBe('backlog');
     }, 30000);
 
     it('should work without worktrees', async () => {
@@ -526,7 +527,8 @@ describe('auto-mode-service.ts (integration)', () => {
       await service.executeFeature(testRepo.path, 'error-feature', false, false);
 
       // With AUTOMAKER_MOCK_AGENT=true, the mock agent runs successfully (provider error is never
-      // thrown). No PR evidence after the git workflow → feature lands in 'review'.
+      // thrown). No PR evidence after the git workflow → empty execution → auto-retry returns the
+      // feature to 'backlog' (failureCount incremented) rather than parking in review (#3860).
       // Poll until status exits 'in_progress'.
       let feature = await featureLoader.get(testRepo.path, 'error-feature');
       const deadline = Date.now() + 5000;
@@ -534,7 +536,7 @@ describe('auto-mode-service.ts (integration)', () => {
         await new Promise((r) => setTimeout(r, 250));
         feature = await featureLoader.get(testRepo.path, 'error-feature');
       }
-      expect(feature?.status).toBe('review');
+      expect(feature?.status).toBe('backlog');
     }, 30000);
 
     it('should continue auto loop after feature error', async () => {
