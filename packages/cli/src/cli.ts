@@ -46,6 +46,15 @@ import {
   stopCommand as autoModeStopCommand,
   statusCommand as autoModeStatusCommand,
 } from './auto-mode.js';
+import { boardCommand, queryCommand } from './board.js';
+import {
+  listCommand as contextListCommand,
+  getCommand as contextGetCommand,
+  createCommand as contextCreateCommand,
+  deleteCommand as contextDeleteCommand,
+} from './context.js';
+import { sitrepCommand } from './sitrep.js';
+import { healthCommand } from './health.js';
 
 const require = createRequire(import.meta.url);
 const { version } = require('../package.json') as { version: string };
@@ -160,6 +169,22 @@ autoModeStartCommand(autoModeCmd);
 autoModeStopCommand(autoModeCmd);
 autoModeStatusCommand(autoModeCmd);
 
+/**
+ * Context commands — manage project context files.
+ */
+const contextCmd = new Command('context');
+contextCmd
+  .description('Manage project context files')
+  .addHelpText(
+    'afterAll',
+    `\nCommands:\n  list      List all context files\n  get       Read a context file\n  create    Create a new context file\n  delete    Delete a context file`
+  );
+
+contextListCommand(contextCmd);
+contextGetCommand(contextCmd);
+contextCreateCommand(contextCmd);
+contextDeleteCommand(contextCmd);
+
 // ---------------------------------------------------------------------------
 // Register command groups
 // ---------------------------------------------------------------------------
@@ -171,6 +196,13 @@ program.addCommand(featureCmd);
 program.addCommand(prCmd);
 program.addCommand(queueCmd);
 program.addCommand(autoModeCmd);
+program.addCommand(contextCmd);
+
+// Top-level commands (registered directly on program).
+boardCommand(program);
+queryCommand(program);
+sitrepCommand(program);
+healthCommand(program);
 
 // ---------------------------------------------------------------------------
 // Entry — exit-code discipline

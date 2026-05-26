@@ -21,6 +21,7 @@ import { createGenerateTitleHandler } from './routes/generate-title.js';
 import { createHealthHandler } from './routes/health.js';
 import { createAssignAgentHandler } from './routes/assign-agent.js';
 import { createSummaryHandler } from './routes/summary.js';
+import { createQueryHandler } from './routes/query.js';
 import { createRollbackHandler, RollbackRequestSchema } from './routes/rollback.js';
 import { createHandoffHandler, HandoffRequestSchema } from './routes/handoff.js';
 import {
@@ -93,6 +94,7 @@ export function createFeaturesRoutes(
     validatePathParams('projectPath'),
     createSummaryHandler(featureLoader, settingsService)
   );
+  router.post('/query', validatePathParams('projectPath'), createQueryHandler(featureLoader));
   router.post('/agent-output', createAgentOutputHandler(featureLoader));
   router.post('/raw-output', createRawOutputHandler(featureLoader));
   router.post('/generate-title', createGenerateTitleHandler(settingsService));
