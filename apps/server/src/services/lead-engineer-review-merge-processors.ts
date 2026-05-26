@@ -883,31 +883,35 @@ export class ReviewProcessor implements StateProcessor {
   /**
    * Reconcile a PR into the expected managed state regardless of how it was created.
    *
-   * 1. Appends the ownership watermark to the PR body if it is missing.
-   * 2. Enables auto-merge if it is not already enabled.
+   * Appends the ownership watermark to the PR body if it is missing.
+   *
+   * Note: this intentionally does NOT enable GitHub auto-merge. The platform owns
+   * the merge decision — the REVIEW gate (getPRReviewState) requires an approving
+   * review AND every CI check green before MergeProcessor performs an explicit
+   * merge. Enabling GitHub auto-merge here would bypass that gate, since GitHub
+   * honors only *required* branch-protection checks and would merge past
+   * non-required pending or failing checks.
    *
    * This is idempotent — running it multiple times on the same PR is safe.
    */
   private async normalizePR(ctx: StateContext): Promise<void> {
     if (!ctx.prNumber) return;
 
-    // Fetch current PR body and auto-merge status in one call
+    // Fetch current PR body
     let body = '';
-    let autoMergeEnabled = false;
     try {
-      const { stdout } = await execAsync(
-        `gh pr view ${ctx.prNumber} --json body,autoMergeRequest --jq '{body: .body, autoMerge: (.autoMergeRequest != null)}'`,
-        { cwd: ctx.projectPath, timeout: 15000 }
-      );
-      const data = JSON.parse(stdout.trim()) as { body: string; autoMerge: boolean };
+      const { stdout } = await execAsync(`gh pr view ${ctx.prNumber} --json body`, {
+        cwd: ctx.projectPath,
+        timeout: 15000,
+      });
+      const data = JSON.parse(stdout.trim()) as { body?: string };
       body = data.body ?? '';
-      autoMergeEnabled = data.autoMerge ?? false;
     } catch (err) {
-      logger.warn('[REVIEW] normalizePR: failed to fetch PR body/auto-merge status:', err);
+      logger.warn('[REVIEW] normalizePR: failed to fetch PR body:', err);
       return;
     }
 
-    // 1. Patch ownership watermark if absent
+    // Patch ownership watermark if absent
     const ownership = parsePROwnershipWatermark(body);
     if (!ownership.instanceId) {
       try {
@@ -943,50 +947,6 @@ export class ReviewProcessor implements StateProcessor {
         logger.warn('[REVIEW] normalizePR: failed to patch PR ownership watermark:', err);
       }
     }
-
-    // 2. Enable auto-merge if not already enabled
-    if (!autoMergeEnabled) {
-      try {
-        const mergeFlag = await this.resolveNormalizeMergeFlag(ctx);
-        await execAsync(`gh pr merge ${ctx.prNumber} --auto ${mergeFlag}`, {
-          cwd: ctx.projectPath,
-          timeout: 30000,
-        });
-        logger.info(
-          `[REVIEW] normalizePR: enabled auto-merge on PR #${ctx.prNumber} (${mergeFlag})`
-        );
-      } catch (err) {
-        logger.warn('[REVIEW] normalizePR: failed to enable auto-merge:', err);
-      }
-    }
-  }
-
-  /**
-   * Resolve merge flag for normalization (same logic as MergeProcessor.resolveMergeFlag).
-   * Epic PRs always use --merge. Feature PRs use the configured prMergeStrategy.
-   */
-  private async resolveNormalizeMergeFlag(ctx: StateContext): Promise<string> {
-    if (ctx.prNumber) {
-      const baseBranchFlag = await resolveMergeStrategy(ctx.prNumber, ctx.projectPath);
-      if (baseBranchFlag === '--merge') return '--merge';
-    }
-
-    let strategy: PRMergeStrategy = 'squash';
-    if (this.serviceContext.settingsService) {
-      try {
-        const globalSettings = await this.serviceContext.settingsService.getGlobalSettings();
-        strategy = globalSettings.gitWorkflow?.prMergeStrategy ?? 'squash';
-      } catch (err) {
-        logger.warn('[REVIEW] normalizePR: failed to read merge strategy from settings:', err);
-      }
-    }
-
-    const flagMap: Record<PRMergeStrategy, string> = {
-      squash: '--squash',
-      merge: '--merge',
-      rebase: '--rebase',
-    };
-    return flagMap[strategy] ?? '--squash';
   }
 
   private async getPRReviewState(ctx: StateContext): Promise<string> {
