@@ -25,7 +25,7 @@ But the **chat interface lives on Path 1** (`streamText`). `streamText` expects 
 
 JSON-RPC 2.0 over stdio. The **client spawns the agent** as a subprocess and initiates everything.
 
-```
+```text
 client (protoMaker)                         agent (claude-code-acp, gemini --experimental-acp, ...)
   │                                           │
   ├── initialize ───────────────────────────►│   capability negotiation
