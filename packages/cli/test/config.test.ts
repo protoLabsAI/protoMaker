@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { resolveApiConfig } from '../src/config.js';
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs')>();
@@ -99,5 +100,27 @@ describe('resolveApiConfig', () => {
 
     expect(result.apiUrl).toBe('http://localhost:3008');
     expect(result.apiKey).toBeUndefined();
+  });
+
+  it('reads .env from an explicit projectPath override (--project)', () => {
+    vi.mocked(readFileSync).mockReturnValue(
+      'AUTOMAKER_API_URL=http://project.example.com:7000\nAUTOMAKER_API_KEY=project-key\n'
+    );
+
+    const result = resolveApiConfig('/some/other/project');
+
+    expect(result.apiUrl).toBe('http://project.example.com:7000');
+    expect(result.apiKey).toBe('project-key');
+    // The .env must be looked up under the supplied projectPath, not cwd.
+    expect(readFileSync).toHaveBeenCalledWith(resolve('/some/other/project', '.env'), 'utf-8');
+  });
+
+  it('defaults projectPath to cwd when not supplied', () => {
+    vi.mocked(readFileSync).mockReturnValue('AUTOMAKER_API_KEY=cwd-key\n');
+
+    const result = resolveApiConfig();
+
+    expect(result.apiKey).toBe('cwd-key');
+    expect(readFileSync).toHaveBeenCalledWith(resolve(process.cwd(), '.env'), 'utf-8');
   });
 });

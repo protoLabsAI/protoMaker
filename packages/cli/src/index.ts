@@ -6,6 +6,17 @@
 
 export { Command } from 'commander';
 
+// Output helper
+export {
+  output,
+  error,
+  usageError,
+  exitError,
+  getOutputMode,
+  type OutputMode,
+  type GlobalFlags,
+} from './output.js';
+
 // API client
 export {
   ApiClient,
