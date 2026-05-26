@@ -32,6 +32,11 @@ import {
   messageCommand,
 } from './agent.js';
 import {
+  createCommand as prCreateCommand,
+  statusCommand as prStatusCommand,
+  mergeCommand as prMergeCommand,
+} from './pr.js';
+import {
   addCommand as queueAddCommand,
   listCommand as queueListCommand,
   clearCommand as queueClearCommand,
@@ -41,6 +46,15 @@ import {
   stopCommand as autoModeStopCommand,
   statusCommand as autoModeStatusCommand,
 } from './auto-mode.js';
+import { boardCommand, queryCommand } from './board.js';
+import {
+  listCommand as contextListCommand,
+  getCommand as contextGetCommand,
+  createCommand as contextCreateCommand,
+  deleteCommand as contextDeleteCommand,
+} from './context.js';
+import { sitrepCommand } from './sitrep.js';
+import { healthCommand } from './health.js';
 
 const require = createRequire(import.meta.url);
 const { version } = require('../package.json') as { version: string };
@@ -111,6 +125,21 @@ featureCmd
   );
 
 /**
+ * PR commands — pull request lifecycle (create, status, merge).
+ */
+const prCmd = new Command('pr');
+prCmd
+  .description('Pull request commands — create, check status, and merge PRs')
+  .addHelpText(
+    'afterAll',
+    `\nCommands:\n  create  Open a PR from a feature worktree\n  status  Show CI rollup for a PR\n  merge   Merge a PR with the configured strategy`
+  );
+
+prCreateCommand(prCmd);
+prStatusCommand(prCmd);
+prMergeCommand(prCmd);
+
+/**
  * Queue commands — manage the execution queue.
  */
 const queueCmd = new Command('queue');
@@ -140,6 +169,22 @@ autoModeStartCommand(autoModeCmd);
 autoModeStopCommand(autoModeCmd);
 autoModeStatusCommand(autoModeCmd);
 
+/**
+ * Context commands — manage project context files.
+ */
+const contextCmd = new Command('context');
+contextCmd
+  .description('Manage project context files')
+  .addHelpText(
+    'afterAll',
+    `\nCommands:\n  list      List all context files\n  get       Read a context file\n  create    Create a new context file\n  delete    Delete a context file`
+  );
+
+contextListCommand(contextCmd);
+contextGetCommand(contextCmd);
+contextCreateCommand(contextCmd);
+contextDeleteCommand(contextCmd);
+
 // ---------------------------------------------------------------------------
 // Register command groups
 // ---------------------------------------------------------------------------
@@ -148,8 +193,16 @@ program.addCommand(projectCmd);
 program.addCommand(agentCmd);
 program.addCommand(devCmd);
 program.addCommand(featureCmd);
+program.addCommand(prCmd);
 program.addCommand(queueCmd);
 program.addCommand(autoModeCmd);
+program.addCommand(contextCmd);
+
+// Top-level commands (registered directly on program).
+boardCommand(program);
+queryCommand(program);
+sitrepCommand(program);
+healthCommand(program);
 
 // ---------------------------------------------------------------------------
 // Entry — exit-code discipline
