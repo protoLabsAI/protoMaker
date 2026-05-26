@@ -72,6 +72,14 @@ export interface GitWorkflowSettings {
    * Default: true
    */
   skipGitHooks?: boolean;
+  /**
+   * Automatically regenerate and stage lockfiles when a package.json manifest
+   * (root or workspace) changes. Runs `npm install --package-lock-only --ignore-scripts`
+   * from the repo root to produce a consistent lockfile, then stages the updated
+   * lockfile alongside the feature changes.
+   * Default: true
+   */
+  syncLockfileOnManifestChange?: boolean;
 }
 
 /**
@@ -90,6 +98,7 @@ export const DEFAULT_GIT_WORKFLOW_SETTINGS: Required<GitWorkflowSettings> = {
   excludeFromStaging: [],
   softChecks: [],
   skipGitHooks: true,
+  syncLockfileOnManifestChange: true,
 };
 
 /**
