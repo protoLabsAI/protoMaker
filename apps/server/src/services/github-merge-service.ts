@@ -191,41 +191,22 @@ export class GitHubMergeService {
       const checkStatus = await this.checkPRStatus(workDir, prNumber);
 
       if (checkStatus.pendingCount > 0) {
-        // CI is still running — enable auto-merge so GitHub merges once checks pass
+        // CI is still running. Do NOT enable GitHub auto-merge: that delegates the
+        // merge decision to GitHub, which only honors *required* branch-protection
+        // checks and will merge past non-required pending/failing checks (the leak
+        // that merged the broken #3878 linters). Report "pending, not merged"; the
+        // platform owns the merge — the REVIEW phase polls until every check is
+        // green and then merges explicitly via mergePR / MergeProcessor.
         logger.info(
-          `PR #${prNumber} has ${checkStatus.pendingCount} pending checks, enabling auto-merge`
+          `PR #${prNumber} has ${checkStatus.pendingCount} pending check(s) — not merging ` +
+            `(merge is gated on all checks completing green; no GitHub auto-merge)`
         );
-        try {
-          let autoMergeCmd = `gh pr merge ${prNumber}`;
-          switch (strategy) {
-            case 'merge':
-              autoMergeCmd += ' --merge';
-              break;
-            case 'squash':
-              autoMergeCmd += ' --squash';
-              break;
-            case 'rebase':
-              autoMergeCmd += ' --rebase';
-              break;
-          }
-          autoMergeCmd += ' --auto';
-          await execAsync(autoMergeCmd, { cwd: workDir, env: execEnv });
-          logger.info(`Auto-merge enabled for PR #${prNumber}, will merge when checks pass`);
-          return {
-            success: true,
-            autoMergeEnabled: true,
-            checksPending: true,
-          };
-        } catch (autoMergeError) {
-          const errMsg =
-            autoMergeError instanceof Error ? autoMergeError.message : String(autoMergeError);
-          logger.warn(`Failed to enable auto-merge for PR #${prNumber}: ${errMsg}`);
-          return {
-            success: false,
-            error: `${checkStatus.pendingCount} checks still pending, auto-merge failed: ${errMsg}`,
-            checksPending: true,
-          };
-        }
+        return {
+          success: false,
+          autoMergeEnabled: false,
+          checksPending: true,
+          error: `${checkStatus.pendingCount} check(s) still pending`,
+        };
       }
 
       if (checkStatus.failedCount > 0) {
@@ -260,10 +241,12 @@ export class GitHubMergeService {
           break;
       }
 
-      // Auto-confirm the merge
-      mergeCmd += ' --auto';
+      // Explicit immediate merge — all checks are green at this point (we only
+      // reach here when pendingCount === 0 && failedCount === 0). We intentionally
+      // do NOT pass --auto: the platform owns the merge decision rather than
+      // handing it to GitHub's required-checks-only auto-merge.
 
-      logger.info(`Merging PR #${prNumber} with strategy: ${strategy}`);
+      logger.info(`Merging PR #${prNumber} with strategy: ${strategy} (explicit, no auto-merge)`);
       const { stdout } = await execAsync(mergeCmd, {
         cwd: workDir,
         env: execEnv,
