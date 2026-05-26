@@ -17,6 +17,7 @@ import json
 import subprocess
 import sys
 from datetime import datetime, timezone
+from typing import Optional
 
 STALE_THRESHOLD_SECONDS = 7200  # 2 hours
 
@@ -39,7 +40,7 @@ def fetch_open_prs(repo: str) -> list:
     return json.loads(result.stdout)
 
 
-def compute_staleness(pr: dict, now: datetime) -> dict | None:
+def compute_staleness(pr: dict, now: datetime) -> Optional[dict]:
     """Return stale PR metadata dict, or None if the PR is not stale."""
     updated_at_str = pr.get("updatedAt", "")
     if not updated_at_str:

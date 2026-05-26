@@ -23,6 +23,19 @@
 import { createRequire } from 'node:module';
 import { Command } from 'commander';
 import { type GlobalFlags, usageError, exitError } from './output.js';
+import { listCommand, getCommand, createCommand, updateCommand, moveCommand } from './feature.js';
+import {
+  startCommand,
+  stopCommand,
+  listCommand as agentListCommand,
+  outputCommand,
+  messageCommand,
+} from './agent.js';
+import {
+  createCommand as prCreateCommand,
+  statusCommand as prStatusCommand,
+  mergeCommand as prMergeCommand,
+} from './pr.js';
 
 const require = createRequire(import.meta.url);
 const { version } = require('../package.json') as { version: string };
@@ -64,8 +77,14 @@ agentCmd
   .description('Manage AI agents and workflows')
   .addHelpText(
     'afterAll',
-    `\nCommands:\n  list    List available agents\n  run     Run an agent workflow`
+    `\nCommands:\n  start   Dispatch an agent for a feature\n  stop    Stop a running agent\n  list    Show running agents\n  output  Print agent output for a feature\n  message Send a follow-up message to a running agent`
   );
+
+startCommand(agentCmd);
+stopCommand(agentCmd);
+agentListCommand(agentCmd);
+outputCommand(agentCmd);
+messageCommand(agentCmd);
 
 /**
  * Dev commands — development and debugging utilities.
@@ -75,6 +94,32 @@ devCmd
   .description('Development and debugging utilities')
   .addHelpText('afterAll', `\nCommands:\n  info    Show environment and project info`);
 
+/**
+ * Feature commands — core board operations (list, get, create, update, move).
+ */
+const featureCmd = new Command('feature');
+featureCmd
+  .description('Core board commands — manage features')
+  .addHelpText(
+    'afterAll',
+    `\nCommands:\n  list      List features grouped by status\n  get       Show full feature details\n  create    Create a new feature\n  update    Update a feature\n  move      Transition feature status`
+  );
+
+/**
+ * PR commands — pull request lifecycle (create, status, merge).
+ */
+const prCmd = new Command('pr');
+prCmd
+  .description('Pull request commands — create, check status, and merge PRs')
+  .addHelpText(
+    'afterAll',
+    `\nCommands:\n  create  Open a PR from a feature worktree\n  status  Show CI rollup for a PR\n  merge   Merge a PR with the configured strategy`
+  );
+
+prCreateCommand(prCmd);
+prStatusCommand(prCmd);
+prMergeCommand(prCmd);
+
 // ---------------------------------------------------------------------------
 // Register command groups
 // ---------------------------------------------------------------------------
@@ -82,6 +127,8 @@ devCmd
 program.addCommand(projectCmd);
 program.addCommand(agentCmd);
 program.addCommand(devCmd);
+program.addCommand(featureCmd);
+program.addCommand(prCmd);
 
 // ---------------------------------------------------------------------------
 // Entry — exit-code discipline

@@ -205,14 +205,14 @@ interface AutoModeConfig {
 
 Settings read from `workflowSettings` in `.automaker/settings.json`:
 
-| Setting               | Description                                  |
-| --------------------- | -------------------------------------------- |
-| `agentExecutionModel` | Primary model for agent execution            |
-| `maxConcurrency`      | Max parallel agents (capped at system limit) |
-| `useWorktrees`        | Enable per-feature git worktrees             |
-| `autoLoadClaudeMd`    | Auto-inject CLAUDE.md into agent context     |
-| `mcpServers`          | MCP server config passed to Claude SDK       |
-| `planningMode`        | Enable plan approval gating                  |
+| Setting               | Description                                  | Default |
+| --------------------- | -------------------------------------------- | ------- |
+| `agentExecutionModel` | Primary model for agent execution            | —       |
+| `maxConcurrency`      | Max parallel agents (capped at system limit) | —       |
+| `useWorktrees`        | Enable per-feature git worktrees             | `true`  |
+| `autoLoadClaudeMd`    | Auto-inject CLAUDE.md into agent context     | —       |
+| `mcpServers`          | MCP server config passed to Claude SDK       | —       |
+| `planningMode`        | Enable plan approval gating                  | —       |
 
 ## Prometheus Metrics
 
