@@ -2102,22 +2102,16 @@ Output the branch name only.`,
         this.featureLoader
           .update(projectPath, featureId, {
             status: 'backlog',
-            statusChangeReason: 'Auto-mode stopped during max-turns retry; halted (will resume on restart)',
+            statusChangeReason:
+              'Auto-mode stopped during max-turns retry; halted (will resume on restart)',
           })
           .catch(() => {});
         return;
       }
-      this.executeFeature(
-        projectPath,
-        featureId,
-        useWorktrees,
-        wasAutoMode,
-        providedWorktreePath,
-        {
-          retryCount: currentRetryCount + 1,
-          previousErrors: [...currentPreviousErrors, errorInfo.message],
-        }
-      ).catch((retryError) => {
+      this.executeFeature(projectPath, featureId, useWorktrees, wasAutoMode, providedWorktreePath, {
+        retryCount: currentRetryCount + 1,
+        previousErrors: [...currentPreviousErrors, errorInfo.message],
+      }).catch((retryError) => {
         logger.error(`Max-turns retry failed for feature ${featureId}:`, retryError);
       });
     }, backoffMs);
