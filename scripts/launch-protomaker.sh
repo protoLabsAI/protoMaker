@@ -48,18 +48,30 @@ if [ -z "${GATEWAY_API_KEY:-}" ] && [ -z "${OPENAI_API_KEY:-}" ]; then
   echo "[launch-protomaker] WARNING: no GATEWAY_API_KEY/OPENAI_API_KEY in .env — model calls will 401"
 fi
 
-# Free our ports before starting. On a KeepAlive restart, concurrently doesn't
-# always reap its server/vite children, so a stale listener can orphan and hold
-# :3008/:3007 — the new instance then crash-loops on EADDRINUSE forever (seen
-# with a 1h-old orphaned server). Killing any prior listener here makes restarts
-# deterministic. Safe: only one protoMaker instance should ever own these ports.
-for port in 3008 3007; do
-  pids=$(lsof -ti:"$port" -sTCP:LISTEN 2>/dev/null || true)
-  if [ -n "$pids" ]; then
-    echo "[launch-protomaker] freeing port $port (killing stale listener: $pids)"
-    echo "$pids" | xargs kill -9 2>/dev/null || true
-  fi
-done
+# Reap stale instances before starting. On a KeepAlive restart, concurrently
+# doesn't always reap its server/vite children, so an orphaned process can hold
+# :3008/:3007 and the new instance crash-loops on EADDRINUSE forever (seen with
+# 1h+ orphaned servers, twice). Two-pronged reap, because a port sweep alone
+# misses a built-server process that has orphaned but isn't LISTENing yet:
+#   1) kill whatever holds our ports, and
+#   2) kill by process signature (the built server entrypoint + vite preview).
+# Safe: only one protoMaker instance should ever own these ports/processes.
+reap_stale_instances() {
+  for port in 3008 3007; do
+    pids=$(lsof -ti:"$port" -sTCP:LISTEN 2>/dev/null || true)
+    if [ -n "$pids" ]; then
+      echo "[launch-protomaker] freeing port $port (killing stale listener: $pids)"
+      echo "$pids" | xargs kill -9 2>/dev/null || true
+    fi
+  done
+  # Signature-based reap — catches orphans detached from a prior launch's
+  # process group that lsof's LISTEN filter misses (e.g. mid-restart).
+  # Exclude our own PID so we never kill the launcher.
+  pkill -9 -f "node .*dist/apps/server/src/index.js" 2>/dev/null || true
+  pkill -9 -f "vite preview .*--port 3007" 2>/dev/null || true
+}
+
+reap_stale_instances
 
 echo "[launch-protomaker] $(date '+%Y-%m-%d %H:%M:%S') PROD build (node $(node -v 2>/dev/null), NODE_ENV=$NODE_ENV, api_key=${AUTOMAKER_API_KEY:+set}, gateway=${GATEWAY_API_KEY:+set})"
 
@@ -72,6 +84,10 @@ if ! npm run build:packages \
 fi
 
 echo "[launch-protomaker] $(date '+%Y-%m-%d %H:%M:%S') build done — serving server :3008 + UI :3007"
+
+# Reap again right before binding — the build took 1-2 min, during which an
+# orphan from a racing restart cycle may have grabbed the ports.
+reap_stale_instances
 
 # Serve the built server + UI preview. exec so launchd tracks concurrently
 # directly; --kill-others-on-fail makes one process dying take down the other so
