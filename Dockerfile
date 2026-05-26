@@ -8,7 +8,7 @@
 # =============================================================================
 # BASE STAGE - Common setup for all builds (DRY: defined once, used by all)
 # =============================================================================
-FROM node:22-slim AS base
+FROM node:22-trixie-slim AS base
 
 # Install build dependencies for native modules (node-pty)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -77,7 +77,7 @@ RUN cd apps/server && find src -name '*.md' -o -name '*.json' | while read f; do
 # =============================================================================
 # SERVER PRODUCTION STAGE
 # =============================================================================
-FROM node:22-slim AS server
+FROM node:22-trixie-slim AS server
 
 # Build argument for tracking which commit this image was built from
 ARG GIT_COMMIT_SHA=unknown
@@ -110,6 +110,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && tar -xzf gh.tar.gz \
     && mv gh_${GH_VERSION}_linux_${GH_ARCH}/bin/gh /usr/local/bin/gh \
     && rm -rf gh.tar.gz gh_${GH_VERSION}_linux_${GH_ARCH} \
+    # beads_rust (`br`) — beads issue-tracker CLI. Single static-ish binary,
+    # glibc-linked, ~17 MB. Used by agents running inside this image to
+    # read/write the .beads/ store mounted from the host repo.
+    && BR_VERSION="0.2.11" \
+    && case "$ARCH" in \
+        x86_64) BR_ARCH="amd64"; BR_SHA="3907b968122c9982e39822c5f56964f786ccf2f3ecdfc3291e8653eca39de9cf" ;; \
+        aarch64|arm64) BR_ARCH="arm64"; BR_SHA="5e66be7a01295978eb5e73db024bd140f9fd914a08dad0682f3230bb4a145421" ;; \
+    esac \
+    && curl -fsSL "https://github.com/Dicklesworthstone/beads_rust/releases/download/v${BR_VERSION}/br-${BR_VERSION}-linux_${BR_ARCH}.tar.gz" -o br.tar.gz \
+    && echo "${BR_SHA}  br.tar.gz" | sha256sum -c - \
+    && tar -xzf br.tar.gz -C /usr/local/bin br \
+    && chmod +x /usr/local/bin/br \
+    && rm -f br.tar.gz \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Claude CLI globally (available to all users via npm global bin)
