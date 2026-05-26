@@ -45,19 +45,19 @@ setuplab onboards projects into the protoLabs Studio ecosystem. Each project get
 
 ### TypeScript / Node.js
 
-| Layer            | Standard                                                                   |
-| ---------------- | -------------------------------------------------------------------------- |
-| **Monorepo**     | pnpm + Turborepo, `apps/` + `packages/` (or `libs/`)                       |
-| **Frontend**     | React 19 + Next.js 15, app router                                          |
-| **UI**           | Tailwind CSS 4 + shadcn/ui + Radix primitives                              |
-| **Components**   | Storybook 10+ (nextjs-vite adapter)                                        |
-| **Testing**      | Vitest (unit/integration) + Playwright (E2E)                               |
-| **Linting**      | ESLint 9 flat config + typescript-eslint strict                            |
-| **Formatting**   | Prettier                                                                   |
-| **Type Safety**  | TypeScript 5.5+ strict, composite tsconfig per package                     |
+| Layer            | Standard                                                                        |
+| ---------------- | ------------------------------------------------------------------------------- |
+| **Monorepo**     | pnpm + Turborepo, `apps/` + `packages/` (or `libs/`)                            |
+| **Frontend**     | React 19 + Next.js 15, app router                                               |
+| **UI**           | Tailwind CSS 4 + shadcn/ui + Radix primitives                                   |
+| **Components**   | Storybook 10+ (nextjs-vite adapter)                                             |
+| **Testing**      | Vitest (unit/integration) + Playwright (E2E)                                    |
+| **Linting**      | ESLint 9 flat config + typescript-eslint strict                                 |
+| **Formatting**   | Prettier                                                                        |
+| **Type Safety**  | TypeScript 5.5+ strict, composite tsconfig per package                          |
 | **CI/CD**        | GitHub Actions (build, test, format, audit), Quinn PR review, branch protection |
-| **Automation**   | `.automaker/` + Discord project channels                                   |
-| **Git workflow** | Squash-only, branch protection, three-branch flow                          |
+| **Automation**   | `.automaker/` + Discord project channels                                        |
+| **Git workflow** | Squash-only, branch protection, three-branch flow                               |
 
 ### Python
 
