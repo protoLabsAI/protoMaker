@@ -352,6 +352,7 @@ export async function researchRepo(projectPath: string): Promise<RepoResearchRes
   let hasTestCheck = false;
   let hasFormatCheck = false;
   let hasSecurityAudit = false;
+  let hasWorkflowSecurity = false;
   for (const wf of workflows) {
     try {
       const content = await fs.readFile(path.join(ghWorkflowDir, wf), 'utf-8');
@@ -363,6 +364,7 @@ export async function researchRepo(projectPath: string): Promise<RepoResearchRes
       if (lower.includes('prettier') || lower.includes('format')) hasFormatCheck = true;
       if (lower.includes('audit') || lower.includes('security') || lower.includes('snyk'))
         hasSecurityAudit = true;
+      if (lower.includes('zizmor') || lower.includes('actionlint')) hasWorkflowSecurity = true;
     } catch {
       /* ignore */
     }
@@ -403,6 +405,7 @@ export async function researchRepo(projectPath: string): Promise<RepoResearchRes
     hasTestCheck,
     hasFormatCheck,
     hasSecurityAudit,
+    hasWorkflowSecurity,
     hasCodeRabbit,
     hasBranchProtection,
   };

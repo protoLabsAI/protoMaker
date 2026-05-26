@@ -87,6 +87,7 @@ export interface RepoResearchResult {
     hasTestCheck: boolean;
     hasFormatCheck: boolean;
     hasSecurityAudit: boolean;
+    hasWorkflowSecurity: boolean;
     hasCodeRabbit: boolean;
     hasBranchProtection: boolean;
   };
