@@ -226,6 +226,14 @@ export interface AgentConfig {
 export interface WorkflowSettings {
   /** Per-branch gate configuration for the unified pipeline phases */
   gates?: PipelineGateConfig;
+  /**
+   * Generate feature branch names with the fast model tier (protolabs/fast)
+   * instead of a plain deterministic slug. Runs lazily at execution time (not
+   * on the create hot path), captures input→output pairs as training data for a
+   * future distilled model (#3859), and falls back to the deterministic slug on
+   * any failure. (default: false)
+   */
+  smartBranchNames?: boolean;
   pipeline: {
     /** Enable goal gate validation on state transitions (default: true) */
     goalGatesEnabled: boolean;
@@ -553,6 +561,7 @@ export interface WorkflowSettings {
 
 /** Default workflow settings */
 export const DEFAULT_WORKFLOW_SETTINGS: WorkflowSettings = {
+  smartBranchNames: false,
   pipeline: {
     goalGatesEnabled: true,
     checkpointEnabled: true,
