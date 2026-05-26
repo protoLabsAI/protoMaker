@@ -390,6 +390,21 @@ interface SkillMeta {
   needsNativeSession: boolean;
 }
 
+/**
+ * The dispatch routing decision behind the #3772 fix: a skill that needs a
+ * Claude Code native session (lists Bash/Read/Write/etc.) MUST run via
+ * executeNativeSkill, never the /api/chat path — that path has Ava's board
+ * tools but no native tools, so a native-or-mixed skill like board_health
+ * silently degrades there (the model narrates a shell command it can't run).
+ *
+ * A null skill (unknown skill, or one with no tool restrictions) falls through
+ * to the chat path. Exported so the routing contract is pinned by tests
+ * independently of the dispatch handler that consumes it (#3773).
+ */
+export function shouldRouteToNativeSession(skill: SkillMeta | null): boolean {
+  return Boolean(skill?.needsNativeSession);
+}
+
 /** Load a skill file and parse its frontmatter. Returns null if not found.
  *  Exported for testing the native-session classification (#3772). */
 export async function loadSkill(projectPath: string, skillName: string): Promise<SkillMeta | null> {
@@ -1179,7 +1194,7 @@ export function createA2AHandlerRoutes(projectPath: string, deps?: A2AHandlerDep
       // servers wired so the mcp__ tools resolve in the SDK session.
       if (skillOverride) {
         const skill = await loadSkill(effectiveProjectPath, skillOverride);
-        if (skill?.needsNativeSession) {
+        if (skill && shouldRouteToNativeSession(skill)) {
           logger.info(
             `A2A skill "${skillOverride}" needs a native session [${skill.allowedTools.join(', ')}] — routing via executeQuery`
           );
