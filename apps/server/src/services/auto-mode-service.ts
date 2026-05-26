@@ -3060,6 +3060,48 @@ Format your response as a structured markdown document.`;
             cwd: projectPath,
             env: gitEnv,
           });
+
+          // Un-stale a reused branch. A re-run reuses the existing local branch
+          // as-is; if a prior empty/failed run left it BEHIND its base with no
+          // commits of its own, the pre-flight then has to merge a diverged base
+          // and conflicts on files siblings also edit (e.g. cli.ts). If the
+          // branch has zero unique commits, reset it to the fresh base. Branches
+          // WITH real work (commits ahead) are left untouched. See #3825.
+          try {
+            let unstaleBaseRef = await getEffectivePrBaseBranch(
+              projectPath,
+              this.settingsService,
+              '[createWorktreeForBranch]'
+            );
+            if (feature?.epicId && !feature.isEpic) {
+              const epic = await this.featureLoader.get(projectPath, feature.epicId);
+              if (epic?.branchName) unstaleBaseRef = epic.branchName;
+            }
+            const unstaleBase = `origin/${unstaleBaseRef}`;
+            await execFileAsync('git', ['fetch', 'origin', unstaleBaseRef], {
+              cwd: projectPath,
+              env: gitEnv,
+            }).catch(() => {});
+            const { stdout: aheadOut } = await execFileAsync(
+              'git',
+              ['rev-list', '--count', `${unstaleBase}..${branchName}`],
+              { cwd: worktreePath, env: gitEnv }
+            );
+            if (parseInt(aheadOut.trim(), 10) === 0) {
+              await execFileAsync('git', ['reset', '--hard', unstaleBase], {
+                cwd: worktreePath,
+                env: gitEnv,
+              });
+              logger.info(
+                `[createWorktreeForBranch] Reset stale reused branch ${branchName} to ${unstaleBase} (no unique commits)`
+              );
+            }
+          } catch (unstaleErr) {
+            logger.warn(
+              `[createWorktreeForBranch] Un-stale check failed for ${branchName} (continuing):`,
+              unstaleErr
+            );
+          }
         } else {
           // Determine base branch: use epic branch if feature belongs to an epic,
           // otherwise use the project's configured prBaseBranch as the canonical base
