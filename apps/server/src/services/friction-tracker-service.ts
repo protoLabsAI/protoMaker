@@ -18,6 +18,7 @@
 
 import { createLogger } from '@protolabsai/utils';
 import type { FeatureLoader } from './feature-loader.js';
+import { IssueDedupeService } from './issue-dedupe-service.js';
 
 const logger = createLogger('FrictionTrackerService');
 
@@ -86,6 +87,8 @@ export interface FrictionTrackerDependencies {
   featureLoader: FeatureLoader;
   /** Project path for filing System Improvement features */
   projectPath: string;
+  /** Optional: shared dedupe service for cross-service duplicate detection */
+  issueDedupe?: IssueDedupeService;
 }
 
 // ---------------------------------------------------------------------------
@@ -241,11 +244,39 @@ export class FrictionTrackerService {
       return;
     }
 
-    // Durable dedup: check the feature store for an existing open System Improvement
-    // feature with the same title. In-memory dedup resets on server restart (a known
+    const title = `System Improvement: recurring ${pattern} failures`;
+
+    // Cross-service dedup: check against all open features (not just exact-title matches)
+    if (this.deps.issueDedupe) {
+      const dedupeResult = await this.deps.issueDedupe.check(
+        this.deps.projectPath,
+        title,
+        `friction:${pattern}`
+      );
+
+      if (dedupeResult.isDuplicate) {
+        this.recentFilings.set(pattern, Date.now());
+        logger.info(
+          `Skipping System Improvement filing for pattern="${pattern}" — ` +
+            `duplicate found: ${dedupeResult.match.feature.id} (reason=${dedupeResult.match.reason})`
+        );
+        return;
+      }
+
+      if (dedupeResult.noMatch?.cooldown) {
+        const closedId = dedupeResult.noMatch.closedFeature?.id ?? 'unknown';
+        logger.info(
+          `Skipping System Improvement filing for pattern="${pattern}" — ` +
+            `cooldown active (similar feature ${closedId} recently closed)`
+        );
+        return;
+      }
+    }
+
+    // Legacy durable dedup: check the feature store for an existing open System Improvement
+    // feature with the exact same title. In-memory dedup resets on server restart (a known
     // P1 issue), which previously caused the same pattern to be re-filed after each
     // crash. Using the feature store as the source of truth makes dedup survive restarts.
-    const title = `System Improvement: recurring ${pattern} failures`;
     try {
       const existing = await this.deps.featureLoader.findByTitle(this.deps.projectPath, title);
       if (existing && existing.status !== 'done' && existing.status !== 'interrupted') {
