@@ -642,6 +642,8 @@ Use `list_workflows` MCP tool to discover available workflows for a project. Pro
 - `ALLOWED_ROOT_DIRECTORY` - Restrict file operations to specific directory
 - `AUTOMAKER_MOCK_AGENT=true` - Enable mock agent mode for CI testing
 - `AUTOMAKER_AUTO_LOGIN=true` - Skip login prompt in development (disabled when NODE_ENV=production)
+- `AUTOMAKER_MAX_CONCURRENCY` - Instance-wide hard cap on concurrent agents (clamped 1-20, default 2). The ceiling all per-project/global concurrency settings are capped by. See `docs/reference/auto-mode.md` → Concurrency resolution.
+- `AUTOMAKER_SKIP_COMPLIANCE_CHECK=1` - Bypass the app-compliance gate that otherwise refuses to run auto-mode on apps missing the fleet standard (branch protection, .gitignore). Escape hatch only.
 - `VITE_HOSTNAME` - Hostname for frontend API URLs (default: localhost)
 - `LANGFUSE_PUBLIC_KEY` - Langfuse public key (optional, enables observability)
 - `LANGFUSE_SECRET_KEY` - Langfuse secret key (optional, enables observability)

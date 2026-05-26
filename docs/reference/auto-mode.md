@@ -214,6 +214,22 @@ Settings read from `workflowSettings` in `.automaker/settings.json`:
 | `mcpServers`          | MCP server config passed to Claude SDK       | —       |
 | `planningMode`        | Enable plan approval gating                  | —       |
 
+### Concurrency resolution
+
+Effective concurrency for an auto-loop is fully config-driven. It is resolved by
+`FeatureScheduler.resolveMaxConcurrency()` highest-precedence first:
+
+1. **Caller override** — the `maxConcurrency` passed to `POST /api/auto-mode/start` (or `startAutoLoopForProject`).
+2. **`AUTOMAKER_MAX_CONCURRENCY`** (env) — the **instance-wide hard cap**. Read once at startup by `getMaxSystemConcurrency()`, clamped to `[1, 20]`, default `2`. Nothing below can exceed it. Set it in the repo-root `.env` (the prod LaunchAgent sources it); changing it requires a server restart.
+3. **`systemMaxConcurrency`** (global setting, `data/settings.json`) — admin UI cap for the whole instance; must be `≤ AUTOMAKER_MAX_CONCURRENCY`.
+4. **`autoModeByWorktree["{projectId}::{branchName}"].maxConcurrency`** — per-project / per-worktree limit (with optional `minConcurrency` fair-share reservation, default `1`). Here `projectId` is the **registered project id** (`settings.projects[].id`, resolved by `path === projectPath`), not the `projectPath` itself — and distinct from the auto-loop coordinator key `projectPath::branchName`. See `FeatureScheduler.resolveMaxConcurrency()` (`feature-scheduler.ts`).
+5. **`maxConcurrency`** (global setting) — default applied when no per-project value is set.
+6. **`DEFAULT_MAX_CONCURRENCY`** — code fallback (`1`).
+
+A **global fair-share gate** (`ConcurrencyManager`) then ensures the sum of running agents across all projects never exceeds the hard cap, distributing slots across competing projects (each guaranteed its `minConcurrency`).
+
+**Safety**: the hard cap exists because each agent allocates significant RAM (Sonnet ~4 GB, Opus ~6 GB). Heap-usage guards pause new agents at 80% and abort at 90%. Raise `AUTOMAKER_MAX_CONCURRENCY` only with headroom for the host.
+
 ## Prometheus Metrics
 
 | Metric                      | Type      | Description                             |
