@@ -1572,15 +1572,40 @@ Output the branch name only.`,
       } else if (!gitAlreadySetStatus) {
         if (feature.skipTests) {
           finalStatus = 'waiting_approval';
+          await this.callbacks.updateFeatureStatus(projectPath, featureId, finalStatus);
         } else if (hasPrEvidence) {
           finalStatus = 'verified';
+          await this.callbacks.updateFeatureStatus(projectPath, featureId, finalStatus);
         } else {
-          finalStatus = 'review';
-          logger.warn(
-            `[AutoVerify] No PR evidence for ${featureId} after git workflow — moving to review for manual inspection.`
-          );
+          // No PR evidence after the git workflow. With committed-work detection
+          // fixed (#3845), this now genuinely means the agent produced nothing —
+          // an "empty execution", typically the SDK terminating after the
+          // planning turn (protoCLI#307). It's intermittent and usually succeeds
+          // on retry, so auto-retry up to a cap before parking for a human (#3860)
+          // instead of silently dropping the feature into review.
+          const MAX_EMPTY_RETRIES = 3;
+          const fc = postGitFeature?.failureCount ?? 0;
+          if (fc < MAX_EMPTY_RETRIES) {
+            finalStatus = 'backlog';
+            await this.featureLoader.update(projectPath, featureId, {
+              status: 'backlog',
+              failureCount: fc + 1,
+              statusChangeReason: `Empty execution (no PR/commits) — auto-retry ${fc + 1}/${MAX_EMPTY_RETRIES} (agent terminated early; protoCLI#307)`,
+            });
+            logger.warn(
+              `[AutoVerify] No PR evidence for ${featureId} — auto-retrying (${fc + 1}/${MAX_EMPTY_RETRIES})`
+            );
+          } else {
+            finalStatus = 'blocked';
+            await this.featureLoader.update(projectPath, featureId, {
+              status: 'blocked',
+              statusChangeReason: `Empty execution after ${MAX_EMPTY_RETRIES} retries — agent produced no reviewable output (protoCLI#307). Needs intervention.`,
+            });
+            logger.warn(
+              `[AutoVerify] No PR evidence for ${featureId} after ${MAX_EMPTY_RETRIES} retries — blocking for manual inspection.`
+            );
+          }
         }
-        await this.callbacks.updateFeatureStatus(projectPath, featureId, finalStatus);
       }
 
       const gitInfo = gitWorkflowResult?.commitHash
