@@ -8,7 +8,12 @@ vi.mock('@protolabsai/utils', () => ({
   createLogger: () => ({ info() {}, debug() {}, warn() {}, error() {} }),
 }));
 vi.mock('node:fs', () => ({
-  default: { promises: { mkdir: vi.fn().mockResolvedValue(undefined), appendFile: vi.fn().mockResolvedValue(undefined) } },
+  default: {
+    promises: {
+      mkdir: vi.fn().mockResolvedValue(undefined),
+      appendFile: vi.fn().mockResolvedValue(undefined),
+    },
+  },
 }));
 const simpleQuery = vi.fn();
 vi.mock('../../../src/providers/simple-query-service.js', () => ({
