@@ -1,0 +1,69 @@
+name: Build & publish images
+
+# Publishes the protoMaker UI + server container images to GHCR on every main
+# commit (and on v* release tags), so the homelab-iac stacks/protomaker/ stack
+# can run `image: ghcr.io/protolabsai/protomaker-{ui,server}` with Watchtower
+# auto-roll instead of building from a local checkout. See protoMaker#3783.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build:
+    # workspace-config: allow-hosted-runner docker buildx build + registry push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: server
+            image: protomaker-server
+          - target: ui
+            image: protomaker-ui
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # metadata-action lowercases the owner, so protoLabsAI -> protolabsai.
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=sha-
+            type=semver,pattern=v{{version}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build & push ${{ matrix.image }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: ${{ matrix.target }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Scope the GHA cache per target so the ui/server builds don't evict
+          # each other's layers.
+          cache-from: type=gha,scope=${{ matrix.target }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.target }}
