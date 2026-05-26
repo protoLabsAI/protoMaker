@@ -13,6 +13,16 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 const { mockExecFile } = vi.hoisted(() => ({ mockExecFile: vi.fn() }));
 vi.mock('node:child_process', () => ({
   execFile: mockExecFile,
+  // github-merge-service (imported transitively) does promisify(exec) at module
+  // load. Provide a callback-style exec so the load + any incidental calls succeed.
+  exec: (
+    _cmd: string,
+    opts: unknown,
+    cb?: (err: unknown, res: { stdout: string; stderr: string }) => void
+  ) => {
+    const callback = typeof opts === 'function' ? (opts as typeof cb) : cb;
+    callback?.(null, { stdout: '', stderr: '' });
+  },
 }));
 
 import { CompletionDetectorService } from '@/services/completion-detector-service.js';

@@ -20,6 +20,7 @@ import type { ProjectService } from './project-service.js';
 import type { SettingsService } from './settings-service.js';
 import type { Feature, Milestone } from '@protolabsai/types';
 import { getEffectivePrBaseBranch } from '../lib/settings-helpers.js';
+import { githubMergeService } from './github-merge-service.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -451,17 +452,22 @@ export class CompletionDetectorService {
       }>;
 
       if (existing.length > 0) {
-        // PR already exists — ensure auto-merge is enabled and return it
+        // PR already exists. Do NOT enable GitHub auto-merge — merge it through the
+        // platform gate (all checks green or no merge). This detection runs on a
+        // schedule, so a checks-pending epic is re-attempted on the next cycle.
         const pr = existing[0];
-        await execFileAsync('gh', ['pr', 'merge', String(pr.number), '--merge', '--auto'], {
-          cwd: projectPath,
-          timeout: 15000,
-        }).catch(() => {
-          // auto-merge may already be enabled, ignore
-        });
-        logger.info(
-          `Epic "${epic.title}" — reusing existing PR #${pr.number} from ${epicBranch} to ${baseBranch}`
-        );
+        const mergeResult = await githubMergeService.mergePR(projectPath, pr.number, 'merge', true);
+        if (mergeResult.success) {
+          logger.info(`Epic "${epic.title}" — merged existing PR #${pr.number} into ${baseBranch}`);
+        } else if (mergeResult.checksPending) {
+          logger.info(
+            `Epic "${epic.title}" — PR #${pr.number} checks pending; will merge once green (next detection cycle)`
+          );
+        } else {
+          logger.warn(
+            `Epic "${epic.title}" — PR #${pr.number} not merged: ${mergeResult.error ?? 'gate not satisfied'}`
+          );
+        }
         return { prNumber: pr.number, prUrl: pr.url };
       }
 
@@ -501,15 +507,19 @@ export class CompletionDetectorService {
       }
       const prNumber = parseInt(prNumberMatch[1], 10);
 
-      // Enable auto-merge with --merge strategy (never squash on epic PRs)
-      await execFileAsync('gh', ['pr', 'merge', String(prNumber), '--merge', '--auto'], {
-        cwd: projectPath,
-        timeout: 15000,
-      }).catch((err) => {
-        logger.warn(`Failed to enable auto-merge on epic PR #${prNumber} (non-fatal):`, err);
-      });
-
-      logger.info(`Created epic PR #${prNumber}: ${epicBranch} → ${baseBranch} with auto-merge`);
+      // Attempt a gated merge (--merge strategy; never squash epic PRs). The PR was
+      // just created so checks are almost certainly pending — mergePR will decline
+      // and the next detection cycle re-attempts once all checks are green. No
+      // GitHub auto-merge: the platform owns the merge decision.
+      const mergeResult = await githubMergeService.mergePR(projectPath, prNumber, 'merge', true);
+      if (mergeResult.success) {
+        logger.info(`Created and merged epic PR #${prNumber}: ${epicBranch} → ${baseBranch}`);
+      } else {
+        logger.info(
+          `Created epic PR #${prNumber}: ${epicBranch} → ${baseBranch} ` +
+            `(${mergeResult.checksPending ? 'checks pending; will merge once green' : (mergeResult.error ?? 'merge gate not satisfied')})`
+        );
+      }
       return { prNumber, prUrl };
     } catch (err) {
       logger.error(`Failed to create epic PR for ${epicBranch}:`, err);
