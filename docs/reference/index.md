@@ -21,3 +21,4 @@ Technical reference for protoLabs Studio APIs, configuration, and services. Look
 ## Tools
 
 - **[MCP Tools](./mcp-tools)** — Complete MCP tool reference
+- **[CLI Commands](./cli-commands)** — Complete protomaker CLI reference
