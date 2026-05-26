@@ -2111,20 +2111,32 @@ Output the branch name only.`,
     // Capture values for closure before setTimeout
     const currentRetryCount = tempRunningFeature.retryCount;
     const currentPreviousErrors = tempRunningFeature.previousErrors;
+    const wasAutoMode = tempRunningFeature.isAutoMode;
     const backoffMs = Math.min(1000 * Math.pow(2, Math.min(currentRetryCount, 10)), 30_000);
     const retryTimer = setTimeout(() => {
       this.retryTimers.delete(featureId);
-      this.executeFeature(
-        projectPath,
-        featureId,
-        useWorktrees,
-        tempRunningFeature.isAutoMode,
-        providedWorktreePath,
-        {
-          retryCount: currentRetryCount + 1,
-          previousErrors: [...currentPreviousErrors, errorInfo.message],
-        }
-      ).catch((retryError) => {
+      // If auto-mode was stopped while this max-turns retry was pending, do NOT
+      // relaunch — a user stop must halt the feature, not escalate turns and
+      // re-launch it (the #3789 stop→escalating-retry loop). stopAutoMode clears
+      // retryTimers, but a timer scheduled in the race window around the stop
+      // would otherwise still fire. Reset to backlog so it resumes on next start.
+      if (wasAutoMode && !this.callbacks.getAutoLoopRunning()) {
+        logger.info(
+          `[MaxTurnsRetry] Auto-mode stopped — skipping relaunch of ${featureId}; resetting to backlog.`
+        );
+        this.featureLoader
+          .update(projectPath, featureId, {
+            status: 'backlog',
+            statusChangeReason:
+              'Auto-mode stopped during max-turns retry; halted (will resume on restart)',
+          })
+          .catch(() => {});
+        return;
+      }
+      this.executeFeature(projectPath, featureId, useWorktrees, wasAutoMode, providedWorktreePath, {
+        retryCount: currentRetryCount + 1,
+        previousErrors: [...currentPreviousErrors, errorInfo.message],
+      }).catch((retryError) => {
         logger.error(`Max-turns retry failed for feature ${featureId}:`, retryError);
       });
     }, backoffMs);
