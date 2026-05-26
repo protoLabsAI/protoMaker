@@ -34,13 +34,7 @@ export async function setupCI(options: CIOptions): Promise<CIResult> {
     filesCreated.push('.github/workflows/');
 
     // 2. Load workflow templates
-    const templateNames = [
-      'build.yml',
-      'test.yml',
-      'format-check.yml',
-      'security-audit.yml',
-      'workflow-security.yml',
-    ];
+    const templateNames = ['build.yml', 'test.yml', 'format-check.yml', 'security-audit.yml'];
 
     // 3. Get package manager specific variables
     const pmVars = getPackageManagerVars(packageManager);
