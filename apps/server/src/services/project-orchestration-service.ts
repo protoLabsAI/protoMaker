@@ -231,7 +231,12 @@ export async function orchestrateProjectFeatures(
             projectSlug,
             milestoneSlug: milestone.slug,
             phaseSlug: phase.name,
-            workflow: phase.workflow ?? options.defaultWorkflow,
+            // Project phases are code-implementation work — default to the full
+            // 'standard' pipeline (INTAKE→PLAN→EXECUTE→REVIEW→MERGE→DEPLOY).
+            // Without this, an unset workflow falls into the match-rule scoring,
+            // which mis-matched phases to read-only workflows like changelog-digest
+            // (no PR, no worktree → agents ran in main). See #3788/#3793.
+            workflow: phase.workflow ?? options.defaultWorkflow ?? 'standard',
           });
 
           result.phaseFeatureMap[phaseKey] = feature.id;

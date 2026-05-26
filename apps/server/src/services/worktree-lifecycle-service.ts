@@ -771,10 +771,16 @@ export class WorktreeLifecycleService {
  * and build tooling. These are symlinked from the main project into worktrees
  * after creation so that external projects' toolchains work correctly.
  *
- * Only top-level directories are symlinked. Nested node_modules (inside
- * workspace packages) are resolved transitively through the root symlink.
+ * Only top-level directories are symlinked.
+ *
+ * NOTE: node_modules is deliberately NOT symlinked. Sharing the host's
+ * node_modules meant an agent running `npm install` in a worktree (e.g. to add
+ * a workspace package) rewrote the host's deps and broke the running server.
+ * Worktrees now install their own node_modules via the worktree-init script
+ * (`npm ci`), keeping each worktree isolated. dist/build are still symlinked
+ * since agents read them and don't mutate them.
  */
-const BUILD_ARTIFACT_DIRS = ['node_modules', 'dist', 'build', '.next', '.nuxt', 'out'] as const;
+const BUILD_ARTIFACT_DIRS = ['dist', 'build', '.next', '.nuxt', 'out'] as const;
 
 /**
  * Symlink gitignored build artifacts from the main project into a worktree.
