@@ -22,7 +22,7 @@
 
 import { createRequire } from 'node:module';
 import { Command } from 'commander';
-import { type GlobalFlags, output, usageError, exitError } from './output.js';
+import { type GlobalFlags, usageError, exitError } from './output.js';
 
 const require = createRequire(import.meta.url);
 const { version } = require('../package.json') as { version: string };
@@ -113,7 +113,6 @@ try {
   // --help / --version are fine
   if (commanderCode === 'COMMANDER_HELP' || commanderCode === 'COMMANDER_VERSION') {
     process.exit(0);
-    return;
   }
 
   // Usage errors (unknown command, missing required arg, etc.) → exit 2
@@ -123,7 +122,6 @@ try {
     commanderCode === 'COMMANDER_CREATE_OPTION_FAILED'
   ) {
     usageError(err.message || String(err));
-    return;
   }
 
   // Runtime error → exit 1
