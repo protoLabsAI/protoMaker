@@ -5,16 +5,19 @@
  *
  * Subscribes to the existing `feature:status-changed` event (emitted by
  * FeatureLoader.update) and, when a feature transitions into a terminal state,
- * publishes `protomaker.feature.completed` to protoWorkstacean's /publish
- * endpoint. The payload echoes the originating signal metadata so a consumer
- * (e.g. the Linear ↔ protoMaker bridge) can reconstruct lineage and post a
- * "feature done" comment on the source issue. See protoLabsAI/protoMaker#3549
- * and the downstream consumer protoLabsAI/protoWorkstacean#482.
+ * publishes `protomaker.feature.completed` (status -> done) or
+ * `protomaker.feature.failed` (status -> blocked / escalated) to
+ * protoWorkstacean's /publish endpoint. The payload echoes the originating
+ * signal metadata so a consumer (e.g. the Linear ↔ protoMaker bridge) can
+ * reconstruct lineage and post a "feature done" comment on the source issue.
+ * See protoLabsAI/protoMaker#3549 and the downstream consumer
+ * protoLabsAI/protoWorkstacean#482.
  *
  * Opt-in: only active when WORKSTACEAN_URL is explicitly set, so installs
  * without protoWorkstacean don't attempt (and log) a publish on every feature
  * completion. The canonical board has a single terminal state (`done`); the
- * TERMINAL_STATUSES set is the extension point if more are added later.
+ * TERMINAL_STATUSES and FAILURE_STATUSES sets are the extension point if more
+ * are added later.
  */
 
 import { createLogger } from '@protolabsai/utils';
@@ -24,8 +27,11 @@ import { publish as workstaceanPublish } from '../client/workstacean-api.client.
 
 const logger = createLogger('FeatureLifecycleBusPublisher');
 
-/** Board statuses treated as terminal for lifecycle-event purposes. */
+/** Board statuses treated as terminal (success) for lifecycle-event purposes. */
 const TERMINAL_STATUSES: ReadonlySet<string> = new Set(['done']);
+
+/** Board statuses treated as terminal (failure) — emit `feature.failed`. */
+const FAILURE_STATUSES: ReadonlySet<string> = new Set(['blocked', 'escalated']);
 
 /** Subset of the `feature:status-changed` payload this publisher needs. */
 interface StatusChangedPayload {
@@ -33,6 +39,7 @@ interface StatusChangedPayload {
   oldStatus?: string;
   newStatus?: string;
   projectPath?: string;
+  reason?: string;
 }
 
 type PublishFn = (payload: {
@@ -66,12 +73,20 @@ export class FeatureLifecycleBusPublisher {
 
   /**
    * Publish `protomaker.feature.completed` when a feature reaches a terminal
-   * state. Loads the feature fresh to echo its source signal metadata. Never
-   * throws — a publish failure must not affect the board transition.
+   * success state (done), or `protomaker.feature.failed` when it reaches a
+   * terminal failure state (blocked / escalated). Loads the feature fresh to
+   * echo its source signal metadata and PR tracking fields. Never throws — a
+   * publish failure must not affect the board transition.
    */
   async handleStatusChange(payload: StatusChangedPayload): Promise<void> {
     const { featureId, newStatus, oldStatus, projectPath } = payload ?? {};
-    if (!featureId || !projectPath || !newStatus || !TERMINAL_STATUSES.has(newStatus)) {
+    if (!featureId || !projectPath || !newStatus) {
+      return;
+    }
+
+    const isTerminal = TERMINAL_STATUSES.has(newStatus);
+    const isFailure = FAILURE_STATUSES.has(newStatus);
+    if (!isTerminal && !isFailure) {
       return;
     }
 
@@ -82,13 +97,16 @@ export class FeatureLifecycleBusPublisher {
       logger.warn(`Could not load feature ${featureId} for lifecycle event:`, err);
     }
 
-    const event = 'protomaker.feature.completed';
+    const event = isTerminal ? 'protomaker.feature.completed' : 'protomaker.feature.failed';
     try {
       const result = await this.publishFn({
         event,
         data: {
           featureId,
           projectPath,
+          status: newStatus,
+          prNumber: feature?.prNumber,
+          reason: feature?.statusChangeReason ?? payload?.reason,
           projectSlug: feature?.projectSlug,
           title: feature?.title,
           completedAt: Date.now(),
