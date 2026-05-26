@@ -934,10 +934,19 @@ export class ExecuteProcessor implements StateProcessor {
     // If we have a PR, the commits check is advisory — a PR is strong enough evidence.
     const hasCommits = hasPr || (await this.hasCommitsAheadOfBase(ctx));
 
-    if (!hasPr) {
+    // Even with a PR, the changes must contain real source — not just lockfile /
+    // generated-file noise. A no-op agent run whose only diff is a regenerated
+    // package-lock.json (from the worktree's own npm install) would otherwise
+    // reach REVIEW and auto-merge as an empty PR (#3809). Require a meaningful
+    // source change before allowing REVIEW.
+    const hasMeaningfulChanges = await this.hasMeaningfulSourceChanges(ctx);
+
+    if (!hasPr || !hasMeaningfulChanges) {
       const missingParts: string[] = [];
-      missingParts.push('no PR created');
+      if (!hasPr) missingParts.push('no PR created');
       if (!hasCommits) missingParts.push('no commits ahead of base');
+      if (hasPr && !hasMeaningfulChanges)
+        missingParts.push('only lockfile/generated changes — no source diff');
       const reason = `Agent exited without producing reviewable output — ${missingParts.join(', ')}. Check agent-output.md for model/auth errors.`;
       logger.warn('[EXECUTE] Guard failed — blocking feature instead of transitioning to REVIEW', {
         featureId: ctx.feature.id,
@@ -1595,6 +1604,45 @@ export class ExecuteProcessor implements StateProcessor {
         baseBranch,
       });
       return false;
+    }
+  }
+
+  /**
+   * Whether the branch's diff vs base contains real source changes — not only
+   * lockfile / generated-file noise. Guards against a no-op agent run whose only
+   * change is a regenerated package-lock.json reaching REVIEW as an empty PR.
+   * Permissive on error (returns true) so a transient git failure never strands
+   * legitimate work.
+   */
+  private async hasMeaningfulSourceChanges(ctx: StateContext): Promise<boolean> {
+    const { feature, projectPath } = ctx;
+    const baseBranch = feature.gitWorkflow?.prBaseBranch || 'main';
+    const worktreeDir = await this.resolveWorktreeDir(projectPath, feature.branchName);
+    const workDir = worktreeDir ?? projectPath;
+    // Files that are NOT meaningful source changes on their own.
+    const NOISE = [
+      /(^|\/)package-lock\.json$/,
+      /(^|\/)pnpm-lock\.yaml$/,
+      /(^|\/)yarn\.lock$/,
+      /\.lock$/,
+      /(^|\/)dist\//,
+      /(^|\/)build\//,
+      /(^|\/)node_modules\//,
+    ];
+    try {
+      const { stdout } = await execAsync(`git diff --name-only origin/${baseBranch}...HEAD`, {
+        cwd: workDir,
+        timeout: 10_000,
+      });
+      const files = stdout
+        .split('\n')
+        .map((f) => f.trim())
+        .filter(Boolean);
+      if (files.length === 0) return false;
+      return files.some((f) => !NOISE.some((p) => p.test(f)));
+    } catch {
+      // Can't determine — be permissive so we never false-block real work.
+      return true;
     }
   }
 
