@@ -24,6 +24,7 @@ import { createRequire } from 'node:module';
 import { Command } from 'commander';
 import { type GlobalFlags, usageError, exitError } from './output.js';
 import { listCommand, getCommand, createCommand, updateCommand, moveCommand } from './feature.js';
+import { boardCommand, queryCommand } from './board.js';
 
 const require = createRequire(import.meta.url);
 const { version } = require('../package.json') as { version: string };
@@ -87,6 +88,11 @@ featureCmd
     `\nCommands:\n  list      List features grouped by status\n  get       Show full feature details\n  create    Create a new feature\n  update    Update a feature\n  move      Transition feature status`
   );
 
+// Register feature subcommands
+listCommand(featureCmd);
+getCommand(featureCmd);
+createCommand(featureCmd);
+
 // ---------------------------------------------------------------------------
 // Register command groups
 // ---------------------------------------------------------------------------
@@ -95,6 +101,10 @@ program.addCommand(projectCmd);
 program.addCommand(agentCmd);
 program.addCommand(devCmd);
 program.addCommand(featureCmd);
+
+// Top-level board and query commands
+boardCommand(program);
+queryCommand(program);
 
 // ---------------------------------------------------------------------------
 // Entry — exit-code discipline
