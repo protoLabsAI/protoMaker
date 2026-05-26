@@ -60,6 +60,18 @@ export async function setupCI(options: CIOptions): Promise<CIResult> {
       filesCreated.push(`.github/workflows/${templateName}`);
     }
 
+    // 5. Write the recommended .gitignore (fleet standard). Idempotent and
+    //    non-invasive: if the project already has a .gitignore, leave it alone —
+    //    we suggest the standard, we don't fight an existing setup.
+    const gitignorePath = path.join(projectPath, '.gitignore');
+    if (await fileExists(gitignorePath)) {
+      filesCreated.push('.gitignore (already exists)');
+    } else {
+      const gitignoreContent = await loadTemplate('gitignore');
+      await fs.writeFile(gitignorePath, gitignoreContent, 'utf-8');
+      filesCreated.push('.gitignore');
+    }
+
     return {
       success: true,
       filesCreated,
