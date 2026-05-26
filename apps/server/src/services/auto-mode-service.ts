@@ -139,6 +139,7 @@ import {
 } from './worktree-lifecycle-service.js';
 import { runInitScript } from './init-script-service.js';
 import { checkFeatureRestartOutcome } from './startup-recovery-service.js';
+import { checkAppCompliance, buildComplianceRefusalMessage } from './app-compliance-service.js';
 import type {
   RunningFeature,
   PendingApproval,
@@ -807,6 +808,17 @@ export class AutoModeService {
     _forceStart: boolean = false,
     maxConcurrencyOverride?: number
   ): Promise<number> {
+    // Fleet-standard compliance gate. Refuse to run non-compliant apps (hard-refuse
+    // by default; AUTOMAKER_SKIP_COMPLIANCE_CHECK bypasses). Done at the very top —
+    // before the synchronous slot claim below — so this await doesn't reopen the
+    // TOCTOU window, and a refusal leaves no loop state to clean up.
+    const compliance = await checkAppCompliance(projectPath);
+    if (!compliance.compliant && !compliance.skipped) {
+      const message = buildComplianceRefusalMessage(projectPath, compliance.violations);
+      logger.warn(`[compliance] ${message}`);
+      throw new Error(message);
+    }
+
     // Compute key early so we can synchronously claim it before any await.
     // This prevents the TOCTOU race where concurrent callers all pass the
     // isRunning check before coordinator.startLoop() sets isRunning = true.
