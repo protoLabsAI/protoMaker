@@ -86,6 +86,7 @@ export const DEFAULT_AVA_CONFIG: AvaConfig = {
     projects: true,
     scheduling: true,
     memory: true,
+    fileRead: true,
   },
   sitrepInjection: true,
   contextInjection: true,
