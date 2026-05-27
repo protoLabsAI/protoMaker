@@ -23,6 +23,7 @@ import {
   ensureNotesDir,
   getAutomakerDir,
   secureFs,
+  validatePath,
 } from '@protolabsai/platform';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
@@ -165,6 +166,8 @@ export interface AvaToolsConfig {
   scheduling?: boolean;
   /** Enable memory tools (remember, recall, forget) */
   memory?: boolean;
+  /** Enable filesystem read tools (read_file, list_directory) within the project */
+  fileRead?: boolean;
 }
 
 // Re-use the same status literals that the Feature type exposes
@@ -1298,6 +1301,84 @@ export function buildAvaTools(
         const filePath = path.join(contextDir, filename);
         await fs.writeFile(filePath, content, 'utf-8');
         return { success: true, filename, path: filePath };
+      },
+    });
+  }
+
+  // Filesystem read — lets Ava return verbatim file contents to the operator
+  // (#3791). Reads go through secureFs, which validates every path against
+  // ALLOWED_ROOT, so Ava can't escape the sandbox. Relative paths resolve
+  // against the current project.
+  if (config.fileRead) {
+    // Cap returned content so a giant file can't blow the context window.
+    const MAX_FILE_BYTES = 256 * 1024;
+
+    const resolveInProject = (p: string): string =>
+      path.isAbsolute(p) ? p : path.join(projectPath, p);
+
+    tools['read_file'] = makeTool({
+      description:
+        'Read a file and return its full contents as text. Use for inspecting source files, configs, or docs. Path may be absolute or relative to the project root. Files are read within the allowed sandbox only.',
+      inputSchema: z.object({
+        path: z
+          .string()
+          .min(1)
+          .describe(
+            'File path — absolute, or relative to the project root (e.g. "apps/server/src/index.ts")'
+          ),
+      }),
+      execute: async ({ path: filePath }) => {
+        const resolved = resolveInProject(filePath);
+        try {
+          const buf = (await secureFs.readFile(resolved)) as Buffer;
+          if (buf.length > MAX_FILE_BYTES) {
+            return {
+              path: resolved,
+              truncated: true,
+              bytes: buf.length,
+              content: buf.subarray(0, MAX_FILE_BYTES).toString('utf-8'),
+              note: `File is ${buf.length} bytes; returned the first ${MAX_FILE_BYTES}.`,
+            };
+          }
+          return { path: resolved, truncated: false, content: buf.toString('utf-8') };
+        } catch (err) {
+          return {
+            path: resolved,
+            error: err instanceof Error ? err.message : 'Failed to read file',
+          };
+        }
+      },
+    });
+
+    tools['list_directory'] = makeTool({
+      description:
+        'List the entries in a directory (names + whether each is a file or directory). Path may be absolute or relative to the project root.',
+      inputSchema: z.object({
+        path: z
+          .string()
+          .default('.')
+          .describe(
+            'Directory path — absolute or relative to the project root (default: project root)'
+          ),
+      }),
+      execute: async ({ path: dirPath }) => {
+        const resolved = resolveInProject(dirPath || '.');
+        try {
+          validatePath(resolved); // enforce sandbox before reading the dir
+          const entries = await fs.readdir(resolved, { withFileTypes: true });
+          return {
+            path: resolved,
+            entries: entries.map((e) => ({
+              name: e.name,
+              type: e.isDirectory() ? 'directory' : 'file',
+            })),
+          };
+        } catch (err) {
+          return {
+            path: resolved,
+            error: err instanceof Error ? err.message : 'Failed to list directory',
+          };
+        }
       },
     });
   }

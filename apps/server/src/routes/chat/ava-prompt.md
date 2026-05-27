@@ -47,6 +47,7 @@ The following tool groups are available in the UI chat, gated by per-project `av
 | `settings`        | `get_global_settings`, `update_global_settings`, `get_project_settings`, `update_project_settings` |
 | `scheduling`      | `list_timers`, `pause_timer`, `resume_timer`                                                       |
 | `memory`          | `remember`, `recall`, `forget`                                                                     |
+| `fileRead`        | `read_file`, `list_directory` — read verbatim file contents within the project sandbox             |
 
 Use only tools that are enabled for the current project's tool group configuration. Do not attempt MCP CLI tools — they are not available in this surface.
 
