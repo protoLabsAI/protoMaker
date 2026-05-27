@@ -78,10 +78,15 @@ RUN cd apps/server && find src -name '*.md' -o -name '*.json' | while read f; do
 # RABBIT-HOLE CLI BUILD STAGE
 # =============================================================================
 FROM node:22-trixie-slim AS rh-build
+# RABBIT_HOLE_REF pins the rabbit-hole.io ref the CLI is built from. Defaults to
+# `main` (latest) so the image tracks the published CLI out of the box; override
+# with a tag/commit (e.g. --build-arg RABBIT_HOLE_REF=v1.2.3) for a reproducible
+# build pinned to an immutable ref.
+ARG RABBIT_HOLE_REF=main
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
     && apt-get clean && corepack enable
 WORKDIR /src
-RUN git clone --depth=1 --branch main https://github.com/protoLabsAI/rabbit-hole.io .
+RUN git clone --depth=1 --branch "${RABBIT_HOLE_REF}" https://github.com/protoLabsAI/rabbit-hole.io .
 RUN pnpm install --frozen-lockfile --filter @protolabsai/rabbit-hole-cli...
 RUN pnpm --filter @protolabsai/rabbit-hole-cli build
 
