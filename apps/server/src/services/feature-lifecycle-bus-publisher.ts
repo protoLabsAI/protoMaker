@@ -5,9 +5,10 @@
  *
  * Subscribes to the existing `feature:status-changed` event (emitted by
  * FeatureLoader.update) and, when a feature transitions into a terminal state,
- * publishes `protomaker.feature.completed` (status -> done) or
- * `protomaker.feature.failed` (status -> blocked / escalated) to
- * protoWorkstacean's /publish endpoint. The payload echoes the originating
+ * publishes `feature.completed` (status -> done) or `feature.failed`
+ * (status -> blocked / escalated) to protoWorkstacean's /publish endpoint —
+ * the dotted, unprefixed topics workstacean's consumers subscribe to. The
+ * payload echoes the originating
  * signal metadata so a consumer (e.g. the Linear ↔ protoMaker bridge) can
  * reconstruct lineage and post a "feature done" comment on the source issue.
  * See protoLabsAI/protoMaker#3549 and the downstream consumer
@@ -72,8 +73,8 @@ export class FeatureLifecycleBusPublisher {
   }
 
   /**
-   * Publish `protomaker.feature.completed` when a feature reaches a terminal
-   * success state (done), or `protomaker.feature.failed` when it reaches a
+   * Publish `feature.completed` when a feature reaches a terminal
+   * success state (done), or `feature.failed` when it reaches a
    * terminal failure state (blocked / escalated). Loads the feature fresh to
    * echo its source signal metadata and PR tracking fields. Never throws — a
    * publish failure must not affect the board transition.
