@@ -125,7 +125,7 @@ export function boardCommand(parent: Command): void {
   cmd.description('Print a per-status summary of the feature board');
 
   cmd.action(async (opts) => {
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
 
     const result = await client.post<SummaryResponse>('/features/summary', {
@@ -173,7 +173,7 @@ export function queryCommand(parent: Command): void {
   cmd.option('--assignee <assignee>', 'Filter by assignee');
 
   cmd.action(async (opts) => {
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
 
     const body: Record<string, unknown> = {

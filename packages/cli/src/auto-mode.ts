@@ -117,7 +117,7 @@ export function startCommand(parent: Command): void {
   cmd.option('--max-concurrency <n>', 'Max concurrent features');
 
   cmd.action(async (opts) => {
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
 
     const body: Record<string, unknown> = { projectPath: flags.project };
@@ -169,7 +169,7 @@ export function stopCommand(parent: Command): void {
   cmd.option('--branch <name>', 'Branch name for worktree isolation');
 
   cmd.action(async (opts) => {
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
 
     const body: Record<string, unknown> = { projectPath: flags.project };
@@ -212,7 +212,7 @@ export function statusCommand(parent: Command): void {
   cmd.option('--branch <name>', 'Branch name for worktree isolation');
 
   cmd.action(async (opts) => {
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
 
     const body: Record<string, unknown> = { projectPath: flags.project };

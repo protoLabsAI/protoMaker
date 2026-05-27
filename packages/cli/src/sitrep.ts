@@ -257,7 +257,7 @@ export function sitrepCommand(parent: Command): void {
   cmd.option('--project-slug <slug>', 'Filter by project slug');
 
   cmd.action(async (opts) => {
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
 
     const body: Record<string, unknown> = { projectPath: flags.project };

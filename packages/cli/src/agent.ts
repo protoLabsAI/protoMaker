@@ -125,13 +125,13 @@ function renderAgentList(agents: Array<string | RunningAgent>): string {
  * Options: --force (skip dependency checks), --worktree
  */
 export function startCommand(parent: Command): void {
-  const cmd = new Command('start <featureId>');
+  const cmd = new Command('start').arguments('<featureId>');
   cmd.description('Dispatch an agent for a feature');
   cmd.option('--force', 'Skip dependency checks and start anyway');
   cmd.option('--worktree', 'Use git worktree isolation for this feature');
 
   cmd.action(async (featureId: string, opts) => {
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
 
     const result = await client.post<RunFeatureResponse>('/auto-mode/run-feature', {
@@ -165,7 +165,7 @@ export function startCommand(parent: Command): void {
  * Options: --target-status (set feature status after stopping)
  */
 export function stopCommand(parent: Command): void {
-  const cmd = new Command('stop <featureId>');
+  const cmd = new Command('stop').arguments('<featureId>');
   cmd.description('Stop a running agent for a feature');
   cmd.option(
     '--target-status <status>',
@@ -173,7 +173,7 @@ export function stopCommand(parent: Command): void {
   );
 
   cmd.action(async (featureId: string, opts) => {
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
 
     const body: Record<string, unknown> = { featureId };
@@ -210,7 +210,7 @@ export function listCommand(parent: Command): void {
   cmd.option('--branch <name>', 'Filter by branch name');
 
   cmd.action(async (opts) => {
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
 
     const body: Record<string, unknown> = { projectPath: flags.project };
@@ -253,11 +253,11 @@ export function listCommand(parent: Command): void {
  * Print the agent output (agent-output.md) for a feature.
  */
 export function outputCommand(parent: Command): void {
-  const cmd = new Command('output <featureId>');
+  const cmd = new Command('output').arguments('<featureId>');
   cmd.description('Print the agent output for a feature');
 
   cmd.action(async (featureId: string, opts) => {
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
 
     const result = await client.post<AgentOutputResponse>('/features/agent-output', {
@@ -300,12 +300,12 @@ export function outputCommand(parent: Command): void {
  * Options: --image <path> (attach image, repeatable)
  */
 export function messageCommand(parent: Command): void {
-  const cmd = new Command('message <featureId> <prompt>');
+  const cmd = new Command('message').arguments('<featureId> <prompt>');
   cmd.description('Send a follow-up message to a running agent');
   cmd.option('--image <path>', 'Attach an image file (repeatable)');
 
   cmd.action(async (featureId: string, prompt: string, opts) => {
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
 
     const body: Record<string, unknown> = {

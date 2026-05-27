@@ -119,11 +119,11 @@ function renderQueueList(features: QueueFeature[]): string {
  * Add a feature to the execution queue (transition to backlog status).
  */
 export function addCommand(parent: Command): void {
-  const cmd = new Command('add <featureId>');
+  const cmd = new Command('add').arguments('<featureId>');
   cmd.description('Add a feature to the execution queue');
 
   cmd.action(async (featureId: string, opts) => {
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
 
     const result = await client.post<QueueAddResponse>('/features/update', {
@@ -158,7 +158,7 @@ export function listCommand(parent: Command): void {
   cmd.description('List features in the execution queue');
 
   cmd.action(async (opts) => {
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
 
     const result = await client.post<QueueListResponse>('/features/list', {
@@ -195,7 +195,7 @@ export function clearCommand(parent: Command): void {
   cmd.option('--yes', 'Skip confirmation prompt');
 
   cmd.action(async (opts) => {
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
 
     if (!opts.yes) {
       // Read confirmation from stdin
