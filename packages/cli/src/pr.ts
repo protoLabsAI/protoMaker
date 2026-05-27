@@ -202,7 +202,7 @@ function renderMergeResult(data: PRMergeResponse): string {
  * Options: --commit-message, --pr-title, --pr-body, --base-branch, --draft
  */
 export function createCommand(parent: Command): void {
-  const cmd = new Command('create <featureId>');
+  const cmd = new Command('create').arguments('<featureId>');
   cmd.description('Open a PR from a feature worktree');
   cmd.option('--commit-message <text>', 'Commit message for unpushed changes');
   cmd.option('--pr-title <text>', 'Pull request title');
@@ -211,7 +211,7 @@ export function createCommand(parent: Command): void {
   cmd.option('--draft', 'Create as draft PR');
 
   cmd.action(async (featureId: string, opts) => {
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
 
     const body: Record<string, unknown> = {
@@ -279,11 +279,11 @@ export function createCommand(parent: Command): void {
  * Show CI rollup for a pull request (check statuses, ownership, staleness).
  */
 export function statusCommand(parent: Command): void {
-  const cmd = new Command('status <prNumber>');
+  const cmd = new Command('status').arguments('<prNumber>');
   cmd.description('Show CI rollup for a pull request');
 
   cmd.action(async (prNumberArg: string, opts) => {
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
 
     const prNumber = parseInt(prNumberArg, 10);
@@ -321,13 +321,13 @@ export function statusCommand(parent: Command): void {
  * Options: --strategy <merge|squash|rebase>, --no-wait-for-ci
  */
 export function mergeCommand(parent: Command): void {
-  const cmd = new Command('merge <prNumber>');
+  const cmd = new Command('merge').arguments('<prNumber>');
   cmd.description('Merge a pull request with the configured strategy');
   cmd.option('--strategy <strategy>', 'Merge strategy (merge, squash, rebase)', 'squash');
   cmd.option('--no-wait-for-ci', 'Do not wait for CI checks before merging');
 
   cmd.action(async (prNumberArg: string, opts) => {
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
 
     const prNumber = parseInt(prNumberArg, 10);

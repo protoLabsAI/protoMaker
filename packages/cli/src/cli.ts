@@ -124,6 +124,12 @@ featureCmd
     `\nCommands:\n  list      List features grouped by status\n  get       Show full feature details\n  create    Create a new feature\n  update    Update a feature\n  move      Transition feature status`
   );
 
+listCommand(featureCmd);
+getCommand(featureCmd);
+createCommand(featureCmd);
+updateCommand(featureCmd);
+moveCommand(featureCmd);
+
 /**
  * PR commands — pull request lifecycle (create, status, merge).
  */

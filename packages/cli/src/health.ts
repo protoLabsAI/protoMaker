@@ -75,7 +75,7 @@ export function healthCommand(parent: Command): void {
   cmd.description('Check server health status');
 
   cmd.action(async (opts) => {
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
 
     const result = await client.get<HealthResponse>('/health');

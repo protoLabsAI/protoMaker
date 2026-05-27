@@ -122,7 +122,7 @@ export function listCommand(parent: Command): void {
   cmd.description('List all context files in the project');
 
   cmd.action(async (opts) => {
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
 
     const result = await client.post<ListResponse>('/context/list', {
@@ -153,13 +153,13 @@ export function listCommand(parent: Command): void {
  * Read and display a context file.
  */
 export function getCommand(parent: Command): void {
-  const cmd = new Command('get <filename>');
+  const cmd = new Command('get').arguments('<filename>');
   cmd.description('Read a context file');
 
   cmd.action(async (filename: string, opts) => {
     validateFilename(filename);
 
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
 
     const result = await client.post<GetResponse>('/context/get', {
@@ -191,7 +191,7 @@ export function getCommand(parent: Command): void {
  * Create a new context file. Reads content from stdin or --content option.
  */
 export function createCommand(parent: Command): void {
-  const cmd = new Command('create <filename>');
+  const cmd = new Command('create').arguments('<filename>');
   cmd.description('Create a new context file');
   cmd.option('--content <text>', 'Content to write (omit to read from stdin)');
 
@@ -211,7 +211,7 @@ export function createCommand(parent: Command): void {
       usageError('Content is required. Provide --content or pipe via stdin.');
     }
 
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
 
     const result = await client.post<CreateResponse>('/context/create', {
@@ -242,14 +242,14 @@ export function createCommand(parent: Command): void {
  * Delete a context file.
  */
 export function deleteCommand(parent: Command): void {
-  const cmd = new Command('delete <filename>');
+  const cmd = new Command('delete').arguments('<filename>');
   cmd.description('Delete a context file');
   cmd.option('--yes', 'Skip confirmation prompt');
 
   cmd.action(async (filename: string, opts) => {
     validateFilename(filename);
 
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
 
     const result = await client.post<DeleteResponse>('/context/delete', {

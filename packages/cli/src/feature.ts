@@ -266,9 +266,9 @@ export function listCommand(parent: Command): void {
   cmd.option('--compact', 'Show compact one-line format (text mode)');
 
   cmd.action(async (opts) => {
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
-    const body: Record<string, unknown> = {};
+    const body: Record<string, unknown> = { projectPath: flags.project };
     if (opts.status) body.status = opts.status;
     if (opts.compact && getOutputMode(flags) !== 'json') body.compact = true;
 
@@ -306,11 +306,11 @@ export function listCommand(parent: Command): void {
  * With --json, output raw JSON.
  */
 export function getCommand(parent: Command): void {
-  const cmd = new Command('get <featureId>');
+  const cmd = new Command('get').arguments('<featureId>');
   cmd.description('Show full feature details');
 
   cmd.action(async (featureId: string, opts) => {
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
 
     const result = await client.post<GetResponse>('/features/get', {
@@ -361,7 +361,7 @@ export function createCommand(parent: Command): void {
   cmd.option('--is-epic', 'Mark as epic container');
 
   cmd.action(async (opts) => {
-    const flags = getGlobalFlags(opts);
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const client = createClient(flags);
 
     const feature: Record<string, unknown> = {
@@ -416,8 +416,8 @@ export function createCommand(parent: Command): void {
  *
  * Options: --title, --description, --category, --complexity, --priority
  */
-export function updateCommand(program: Command, flags: GlobalFlags): void {
-  const cmd = new Command('update <featureId>');
+export function updateCommand(parent: Command): void {
+  const cmd = new Command('update').arguments('<featureId>');
   cmd.description('Update a feature');
   cmd.option('--title <text>', 'New title');
   cmd.option('--description <text>', 'New description');
@@ -426,6 +426,7 @@ export function updateCommand(program: Command, flags: GlobalFlags): void {
   cmd.option('--priority <n>', 'New priority (1=urgent, 2=high, 3=normal, 4=low)');
 
   cmd.action(async (featureId: string, opts) => {
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const updates: Record<string, unknown> = {};
 
     if (opts.title !== undefined) updates.title = opts.title;
@@ -474,7 +475,7 @@ export function updateCommand(program: Command, flags: GlobalFlags): void {
     }
   });
 
-  program.addCommand(cmd);
+  parent.addCommand(cmd);
 }
 
 /**
@@ -484,12 +485,13 @@ export function updateCommand(program: Command, flags: GlobalFlags): void {
  *
  * Valid statuses: backlog, in_progress, review, blocked, done, interrupted
  */
-export function moveCommand(program: Command, flags: GlobalFlags): void {
-  const cmd = new Command('move <featureId> <status>');
+export function moveCommand(parent: Command): void {
+  const cmd = new Command('move').arguments('<featureId> <status>');
   cmd.description('Transition a feature to a new status');
   cmd.option('--reason <text>', 'Reason for status change (required when blocking)');
 
   cmd.action(async (featureId: string, statusArg: string, opts) => {
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
     const status = validateStatus(statusArg);
 
     const updates: Record<string, unknown> = { status };
@@ -523,5 +525,5 @@ export function moveCommand(program: Command, flags: GlobalFlags): void {
     }
   });
 
-  program.addCommand(cmd);
+  parent.addCommand(cmd);
 }
