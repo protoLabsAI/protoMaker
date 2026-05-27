@@ -28,19 +28,26 @@ Settings form a dependency chain: `autoCommit` > `autoPush` > `autoCreatePR` > `
 
 ### Pull Request
 
-| Setting             | Type   | Default    | Description                                              |
-| ------------------- | ------ | ---------- | -------------------------------------------------------- |
-| `prBaseBranch`      | string | `"dev"`    | Target branch for PR creation                            |
-| `prMergeStrategy`   | string | `"squash"` | How PRs are merged: `merge`, `squash`, or `rebase`       |
-| `maxPRLinesChanged` | number | `500`      | Flag PR as oversized above this line count. `0` disables |
-| `maxPRFilesTouched` | number | `20`       | Flag PR as oversized above this file count. `0` disables |
+| Setting             | Type   | Default                  | Description                                                                                                                                                  |
+| ------------------- | ------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `prBaseBranch`      | string | _auto-detected_ (`main`) | Target branch for PR creation. Set automatically at `/setup/project` time to the repo's detected default branch; falls back to `"main"` if setup didn't run. |
+| `prMergeStrategy`   | string | `"squash"`               | How PRs are merged: `merge`, `squash`, or `rebase`                                                                                                           |
+| `maxPRLinesChanged` | number | `500`                    | Flag PR as oversized above this line count. `0` disables                                                                                                     |
+| `maxPRFilesTouched` | number | `20`                     | Flag PR as oversized above this file count. `0` disables                                                                                                     |
+
+> **Repos without a `dev` branch (feature → main directly).** This is the default for fresh GitHub repos and the recommended single-integration-branch flow. `prBaseBranch` auto-detects to `main`, so no configuration is needed. Examples elsewhere that use `prBaseBranch: "dev"` apply only to repos running a `dev → main` staging flow.
+>
+> ```json
+> { "gitWorkflow": { "prBaseBranch": "main" } }
+> ```
 
 ### Staging
 
-| Setting              | Type     | Default | Description                                                        |
-| -------------------- | -------- | ------- | ------------------------------------------------------------------ |
-| `excludeFromStaging` | string[] | `[]`    | Directories to exclude from `git add`                              |
-| `softChecks`         | string[] | `[]`    | CI check names that don't block merge (case-insensitive substring) |
+| Setting                | Type     | Default | Description                                                                                                                                                                                                                                           |
+| ---------------------- | -------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `excludeFromStaging`   | string[] | `[]`    | Directories to exclude from `git add`                                                                                                                                                                                                                 |
+| `softChecks`           | string[] | `[]`    | CI check names that don't block merge (case-insensitive substring)                                                                                                                                                                                    |
+| `stagingDeltaBranches` | object   | _unset_ | `{ from, to }` branch pair for the sitrep "staging delta" signal (commits on `to` not yet on `from`). Only for multi-branch release flows; leave unset on feature → main (the delta is then reported as not-applicable rather than a misleading `0`). |
 
 ## skipGitHooks
 

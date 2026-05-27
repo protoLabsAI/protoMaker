@@ -441,6 +441,8 @@ export interface WorkflowSettings {
   gitWorkflow?: {
     /** Base branch for PR creation (overrides global gitWorkflow.prBaseBranch) */
     prBaseBranch?: string;
+    /** Staging-delta branch pair (overrides global gitWorkflow.stagingDeltaBranches) */
+    stagingDeltaBranches?: { from: string; to: string };
   };
   /**
    * Fresh-eyes review configuration.

@@ -310,6 +310,7 @@ export type {
   // Git workflow types
   PRMergeStrategy,
   GitWorkflowSettings,
+  ResolvedGitWorkflowSettings,
   GitWorkflowResult,
   // Discord integration types
   DiscordSettings,

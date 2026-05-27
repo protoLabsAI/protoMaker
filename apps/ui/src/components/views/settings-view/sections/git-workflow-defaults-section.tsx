@@ -12,7 +12,11 @@ import { Button } from '@protolabsai/ui/atoms';
 import { Loader2, Save } from 'lucide-react';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { toast } from 'sonner';
-import type { GitWorkflowSettings, PRMergeStrategy } from '@protolabsai/types';
+import type {
+  GitWorkflowSettings,
+  ResolvedGitWorkflowSettings,
+  PRMergeStrategy,
+} from '@protolabsai/types';
 import { DEFAULT_GIT_WORKFLOW_SETTINGS } from '@protolabsai/types';
 
 function ToggleRow({
@@ -188,7 +192,7 @@ function SectionHeader({ title }: { title: string }) {
 
 export function GitWorkflowDefaultsSection() {
   const queryClient = useQueryClient();
-  const [localSettings, setLocalSettings] = useState<Required<GitWorkflowSettings>>(
+  const [localSettings, setLocalSettings] = useState<ResolvedGitWorkflowSettings>(
     DEFAULT_GIT_WORKFLOW_SETTINGS
   );
   const [isDirty, setIsDirty] = useState(false);

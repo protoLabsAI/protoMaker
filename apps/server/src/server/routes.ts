@@ -374,7 +374,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/ai', createAIRoutes());
   app.use('/api/notes', createNotesRoutes(events));
   app.use('/api/beads', createBeadsRoutes(beadsService));
-  app.use('/api/sitrep', createSitrepRoutes({ featureLoader, autoModeService, repoRoot }));
+  app.use(
+    '/api/sitrep',
+    createSitrepRoutes({ featureLoader, autoModeService, repoRoot, settingsService })
+  );
   app.use('/api/portfolio/sitrep', createPortfolioSitrepRoutes({ settingsService }));
   app.use(
     '/api/portfolio/cross-repo-deps',
