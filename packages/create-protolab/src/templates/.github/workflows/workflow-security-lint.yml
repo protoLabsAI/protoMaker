@@ -1,0 +1,47 @@
+name: Workflow Security Lint
+
+# Lints .github/workflows/ for security issues (untrusted-expression script
+# injection, GITHUB_TOKEN over-privilege) and misconfigurations. Part of the
+# fleet security baseline — see protoLabsAI/protoMaker#3819 and #3812 (the
+# CWE-94 script-injection fix that motivated a fleet-wide guardrail).
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  workflow-security-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # zizmor — GitHub Actions security linter. Installed from PyPI so there is
+      # no third-party action reference to pin or get wrong. min-severity=medium
+      # fails the build on script injection (high) and token over-privilege
+      # (medium) while not breaking on low-severity style findings.
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install zizmor
+        run: pip install zizmor
+
+      - name: Run zizmor
+        run: zizmor --min-severity=medium .github/workflows/
+
+      # actionlint — workflow syntax, expression typing, and shellcheck linter.
+      # Installed via the project's official download script (no third-party
+      # action reference).
+      - name: Install actionlint
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash -o /tmp/download-actionlint.bash
+          bash /tmp/download-actionlint.bash
+
+      - name: Run actionlint
+        run: ./actionlint -color
