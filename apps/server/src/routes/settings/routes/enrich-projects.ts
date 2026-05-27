@@ -31,36 +31,50 @@ export async function resolveDefaultBranch(projectPath: string): Promise<string 
 }
 
 /**
- * Enrich a list of ProjectRef entries with github owner/repo and defaultBranch.
- * Each project is enriched independently — failures on one project don't affect others.
- * Within each project, github and defaultBranch are resolved in parallel.
+ * Backfill `github` owner/repo and `defaultBranch` onto ProjectRef entries that
+ * are missing them. This is a fallback/refresh path only — the source of truth is
+ * the values persisted at project setup (see setup/routes/project.ts). A project
+ * that already carries BOTH fields is returned untouched, so it incurs no `.git`
+ * inspection and its values survive even when the project repo is not on disk
+ * (the mount-drop goal in #3948).
+ *
+ * Each project is backfilled independently — failures on one don't affect others.
  */
 export async function enrichProjects(projects: ProjectRef[]): Promise<ProjectRef[]> {
   return Promise.all(
     projects.map(async (project) => {
-      const enriched = { ...project };
-
-      // Resolve github owner/repo (best-effort)
-      try {
-        const remoteStatus = await checkGitHubRemote(project.path);
-        if (remoteStatus.owner && remoteStatus.repo) {
-          enriched.github = {
-            owner: remoteStatus.owner,
-            repo: remoteStatus.repo,
-          };
-        }
-      } catch {
-        // Omit github on failure
+      // Already persisted — serve as-is, no git inspection.
+      if (project.github && project.defaultBranch) {
+        return project;
       }
 
-      // Resolve defaultBranch (best-effort)
-      try {
-        const defaultBranch = await resolveDefaultBranch(project.path);
-        if (defaultBranch) {
-          enriched.defaultBranch = defaultBranch;
+      const enriched = { ...project };
+
+      // Resolve github owner/repo (best-effort) only if missing.
+      if (!enriched.github) {
+        try {
+          const remoteStatus = await checkGitHubRemote(project.path);
+          if (remoteStatus.owner && remoteStatus.repo) {
+            enriched.github = {
+              owner: remoteStatus.owner,
+              repo: remoteStatus.repo,
+            };
+          }
+        } catch {
+          // Omit github on failure
         }
-      } catch {
-        // Omit defaultBranch on failure
+      }
+
+      // Resolve defaultBranch (best-effort) only if missing.
+      if (!enriched.defaultBranch) {
+        try {
+          const defaultBranch = await resolveDefaultBranch(project.path);
+          if (defaultBranch) {
+            enriched.defaultBranch = defaultBranch;
+          }
+        } catch {
+          // Omit defaultBranch on failure
+        }
       }
 
       return enriched;

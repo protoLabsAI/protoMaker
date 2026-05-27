@@ -23,9 +23,29 @@ export function createGetGlobalHandler(settingsService: SettingsService) {
     try {
       const settings = await settingsService.getGlobalSettings();
 
-      // Enrich projects[] with github owner/repo and defaultBranch (best-effort)
+      // Serve persisted github/defaultBranch directly. enrichProjects only backfills
+      // entries still missing them (projects added before they were persisted at
+      // setup). When it does backfill, persist the result once so future reads —
+      // and a dropped source mount (#3948) — serve the values without `.git`.
       if (settings.projects && settings.projects.length > 0) {
-        settings.projects = await enrichProjects(settings.projects);
+        const original = settings.projects;
+        const enriched = await enrichProjects(original);
+        settings.projects = enriched;
+
+        const backfilled = enriched.some((p, i) => {
+          const before = original[i];
+          return (
+            p.github?.owner !== before.github?.owner ||
+            p.github?.repo !== before.github?.repo ||
+            p.defaultBranch !== before.defaultBranch
+          );
+        });
+        if (backfilled) {
+          // One-time lazy migration. Best-effort: a write failure must not fail the read.
+          await settingsService
+            .updateGlobalSettings({ projects: enriched })
+            .catch((err) => logError(err, 'Failed to persist backfilled project github metadata'));
+        }
       }
 
       res.json({

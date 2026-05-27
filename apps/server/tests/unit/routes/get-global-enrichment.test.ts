@@ -147,6 +147,36 @@ describe('enrichProjects()', () => {
     expect(result).toEqual([]);
   });
 
+  it('serves a fully-persisted project untouched, with no git inspection (#3948)', async () => {
+    // No mock results are queued. If enrichProjects tried to inspect git/github,
+    // the call indices would advance — asserting they stay 0 proves the persisted
+    // values are served without touching `.git` (so the source mount can be dropped).
+    const persisted = makeProject({
+      github: { owner: 'protolabs', repo: 'protomaker' },
+      defaultBranch: 'main',
+    });
+
+    const result = await enrichProjects([persisted]);
+
+    expect(result[0]).toBe(persisted); // same reference — untouched
+    expect(result[0].github).toEqual({ owner: 'protolabs', repo: 'protomaker' });
+    expect(result[0].defaultBranch).toBe('main');
+    expect(h.checkGitHubRemoteIdx).toBe(0);
+    expect(h.execFileAsyncIdx).toBe(0);
+  });
+
+  it('backfills only the missing field, preserving the persisted one (#3948)', async () => {
+    // github is already persisted; only defaultBranch is missing → only git is hit.
+    h.execFileAsyncResults = [{ stdout: 'refs/remotes/origin/main\n' }];
+    const partial = makeProject({ github: { owner: 'acme', repo: 'widgets' } });
+
+    const result = await enrichProjects([partial]);
+
+    expect(result[0].github).toEqual({ owner: 'acme', repo: 'widgets' });
+    expect(result[0].defaultBranch).toBe('main');
+    expect(h.checkGitHubRemoteIdx).toBe(0); // persisted github was not re-derived
+  });
+
   it('enriches multiple projects independently', async () => {
     h.checkGitHubRemoteResults = [
       { hasGitHubRemote: true, owner: 'org1', repo: 'repo1' },

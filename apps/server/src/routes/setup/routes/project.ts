@@ -10,6 +10,7 @@ import { SettingsService } from '../../../services/settings-service.js';
 import type { RepoResearchResult, ProjectSettings } from '@protolabsai/types';
 import { DEFAULT_GIT_WORKFLOW_SETTINGS } from '@protolabsai/types';
 import { generateSpecMd, researchRepo } from '../../../services/repo-research-service.js';
+import { checkGitHubRemote } from '../../github/routes/check-github-remote.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -232,9 +233,9 @@ export function createSetupProjectHandler(
       // 4. Detect and persist the repo's default branch as prBaseBranch.
       //    Resolution: research.git.defaultBranch → git symbolic-ref → skip (auto-detect at runtime).
       //    This ensures feature PRs target the correct branch for this project, not the global default.
+      //    detectedBranch is hoisted so step 5 can persist it onto the ProjectRef (#3948).
+      let detectedBranch: string | undefined = research?.git?.defaultBranch;
       try {
-        let detectedBranch: string | undefined = research?.git?.defaultBranch;
-
         if (!detectedBranch) {
           try {
             const { stdout } = await execFileAsync(
@@ -274,10 +275,25 @@ export function createSetupProjectHandler(
         // Non-fatal — runtime auto-detect in getEffectivePrBaseBranch will still work
       }
 
-      // 5. Add project to Automaker settings if not already present
+      // 5. Add project to Automaker settings if not already present.
+      //    Persist github owner/repo + defaultBranch onto the ProjectRef now (#3948)
+      //    so GET /api/settings/global serves them without inspecting `.git` — and the
+      //    source mount can later be dropped without losing the fields. enrich-projects
+      //    is only a backfill for projects added before this was persisted.
       let projectAdded = false;
 
       try {
+        // Resolve github owner/repo (best-effort — omitted on failure).
+        let github: { owner: string; repo: string } | undefined;
+        try {
+          const remoteStatus = await checkGitHubRemote(realPath);
+          if (remoteStatus.owner && remoteStatus.repo) {
+            github = { owner: remoteStatus.owner, repo: remoteStatus.repo };
+          }
+        } catch {
+          // Omit github on failure
+        }
+
         // Check if project already exists
         const existingSettings = await settingsService.getGlobalSettings();
         const projectExists = existingSettings.projects?.some((p) => p.path === realPath);
@@ -292,11 +308,17 @@ export function createSetupProjectHandler(
                 path: realPath,
                 name: projectName,
                 lastOpened: new Date().toISOString(),
+                ...(github ? { github } : {}),
+                ...(detectedBranch ? { defaultBranch: detectedBranch } : {}),
               },
             ],
           });
           projectAdded = true;
-          logger.info('Added project to settings', { projectPath: realPath });
+          logger.info('Added project to settings', {
+            projectPath: realPath,
+            github,
+            defaultBranch: detectedBranch,
+          });
         } else {
           logger.info('Project already exists in settings', { projectPath: realPath });
         }
