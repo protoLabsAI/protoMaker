@@ -30,14 +30,6 @@ allowed-tools:
   - mcp__plugin_protolabs_studio__list_context_files
   - mcp__plugin_protolabs_studio__get_context_file
   - mcp__plugin_protolabs_studio__create_context_file
-  # Content pipeline
-  - mcp__plugin_protolabs_studio__create_content
-  - mcp__plugin_protolabs_studio__get_content_status
-  - mcp__plugin_protolabs_studio__list_content
-  - mcp__plugin_protolabs_studio__review_content
-  - mcp__plugin_protolabs_studio__export_content
-  # Antagonistic review (quality gate for content)
-  - mcp__plugin_protolabs_studio__execute_antagonistic_review
   # Project pipeline (understand what to write about)
   - mcp__plugin_protolabs_studio__list_projects
   - mcp__plugin_protolabs_studio__get_project
