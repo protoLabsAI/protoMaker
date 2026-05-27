@@ -466,6 +466,20 @@ export interface Feature {
    */
   reviewAuditDismissCount?: number;
   /**
+   * Objective verification evidence captured at EXECUTE exit (beads zg4): which
+   * command ran against the diff and whether it passed. Recorded whenever the
+   * verifier gate runs; when `requireVerificationEvidence` is enabled a failing
+   * result blocks the REVIEW transition.
+   */
+  verificationEvidence?: {
+    command: string;
+    passed: boolean;
+    ranAt: string;
+    durationMs?: number;
+    /** Tail of the command output on failure (truncated). */
+    output?: string;
+  };
+  /**
    * Number of CI failure remediation cycles.
    * Tracks how many times the agent has fixed CI failures.
    */

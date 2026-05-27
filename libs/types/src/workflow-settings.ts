@@ -471,6 +471,24 @@ export interface WorkflowSettings {
     model?: string;
   };
   /**
+   * Verifier evidence gate at EXECUTE exit (#3810→#3906 / beads zg4).
+   * When enabled, before transitioning EXECUTE→REVIEW the pipeline runs an
+   * objective verification command (typecheck/lint/test) in the worktree,
+   * records the result as `Feature.verificationEvidence`, and blocks the
+   * transition (escalates) if it fails — converting "agent says it works" into
+   * a measured pass/fail. Opt-in (default off) because the command adds latency
+   * and CI already covers it post-PR; turn on for hard pre-review verification.
+   * @default { enabled: false, command: 'npm run typecheck' }
+   */
+  requireVerificationEvidence?: {
+    /** Enable the EXECUTE-exit verification gate. @default false */
+    enabled: boolean;
+    /** Command run in the worktree as the objective check. @default 'npm run typecheck' */
+    command?: string;
+    /** Max milliseconds to wait for the command. @default 300000 */
+    timeoutMs?: number;
+  };
+  /**
    * Trajectory injection configuration.
    * When enabled, relevant past trajectories are injected into agent prompts
    * as a "Lessons from Similar Features" section. Omitting this field defaults
