@@ -11,6 +11,7 @@ import { createLogger } from '@protolabsai/utils';
 import type { Feature } from '@protolabsai/types';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
+import type { SettingsService } from '../../services/settings-service.js';
 import { getEscalationRouter } from '../../services/escalation-router.js';
 import { open } from 'node:fs/promises';
 import { getServerLogPath } from '../../lib/server-log.js';
@@ -22,12 +23,14 @@ interface SitrepOptions {
   featureLoader: FeatureLoader;
   autoModeService: AutoModeService;
   repoRoot: string;
+  settingsService?: SettingsService;
 }
 
 export function createSitrepRoutes({
   featureLoader,
   autoModeService,
   repoRoot,
+  settingsService,
 }: SitrepOptions): Router {
   const router = Router();
 
@@ -39,6 +42,7 @@ export function createSitrepRoutes({
     }
 
     try {
+      const stagingDeltaBranches = await resolveStagingDeltaBranches(projectPath, settingsService);
       // Gather everything in parallel for speed
       const [
         allFeatures,
@@ -55,7 +59,7 @@ export function createSitrepRoutes({
         getRunningAgents(autoModeService),
         getOpenPRs(repoRoot),
         getRecentCommits(repoRoot),
-        getStagingDelta(repoRoot),
+        getStagingDelta(repoRoot, stagingDeltaBranches),
         getServerHealth(),
         getRecentLogErrors(10),
       ]);
@@ -237,17 +241,69 @@ async function getRecentCommits(repoRoot: string) {
   }
 }
 
-async function getStagingDelta(repoRoot: string) {
+export interface StagingDelta {
+  /**
+   * Whether the staging delta is tracked for this project. False when no
+   * `stagingDeltaBranches` are configured (the single-integration-branch flow)
+   * or when either branch doesn't exist on the remote — so consumers don't
+   * mistake a swallowed-error `0` for "in sync".
+   */
+  applicable: boolean;
+  commitsAhead: number;
+  commits: string[];
+}
+
+const NOT_APPLICABLE: StagingDelta = { applicable: false, commitsAhead: 0, commits: [] };
+
+/**
+ * Resolve the configured staging-delta branch pair for a project.
+ * Per-project `.automaker/settings.json` wins over global; unset = not tracked.
+ */
+export async function resolveStagingDeltaBranches(
+  projectPath: string,
+  settingsService?: SettingsService | null
+): Promise<{ from: string; to: string } | undefined> {
+  if (!settingsService) return undefined;
   try {
+    const projectSettings = await settingsService.getProjectSettings(projectPath);
+    const projectPair = projectSettings.workflow?.gitWorkflow?.stagingDeltaBranches;
+    if (projectPair?.from && projectPair?.to) return projectPair;
+    const globalSettings = await settingsService.getGlobalSettings();
+    const globalPair = globalSettings.gitWorkflow?.stagingDeltaBranches;
+    if (globalPair?.from && globalPair?.to) return globalPair;
+  } catch (err) {
+    logger.warn('Failed to read stagingDeltaBranches settings:', err);
+  }
+  return undefined;
+}
+
+/**
+ * Count commits on `to` not yet on `from` (commits queued to promote).
+ * Returns `applicable: false` when the branch pair is unconfigured or either
+ * ref is missing, rather than leaking a misleading `commitsAhead: 0`.
+ */
+export async function getStagingDelta(
+  repoRoot: string,
+  branches?: { from: string; to: string }
+): Promise<StagingDelta> {
+  if (!branches) return NOT_APPLICABLE;
+  try {
+    // Both refs must resolve, else the range query silently yields 0.
+    for (const ref of [branches.from, branches.to]) {
+      await execFileAsync('git', ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], {
+        cwd: repoRoot,
+        timeout: 5000,
+      });
+    }
     const { stdout } = await execFileAsync(
       'git',
-      ['log', '--oneline', 'origin/staging..origin/dev', '--format=%h %s'],
+      ['log', '--oneline', `${branches.from}..${branches.to}`, '--format=%h %s'],
       { cwd: repoRoot, timeout: 5000 }
     );
     const commits = stdout.trim().split('\n').filter(Boolean);
-    return { commitsAhead: commits.length, commits: commits.slice(0, 5) };
+    return { applicable: true, commitsAhead: commits.length, commits: commits.slice(0, 5) };
   } catch {
-    return { commitsAhead: 0, commits: [] };
+    return NOT_APPLICABLE;
   }
 }
 

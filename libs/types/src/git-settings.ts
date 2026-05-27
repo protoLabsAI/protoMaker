@@ -38,6 +38,14 @@ export interface GitWorkflowSettings {
   /** Base branch for PR creation (default: 'main') */
   prBaseBranch?: string;
   /**
+   * Branch pair for the "staging delta" sitrep signal — commits on `to` not yet
+   * on `from` (i.e. queued to promote). Only meaningful for multi-branch release
+   * flows (e.g. `{ from: 'origin/staging', to: 'origin/dev' }`). Leave UNSET on
+   * the single-integration-branch flow (feature → main): the sitrep then reports
+   * the delta as not-applicable instead of a misleading `0`.
+   */
+  stagingDeltaBranches?: { from: string; to: string };
+  /**
    * Maximum total lines changed (insertions + deletions) before flagging PR as oversized.
    * Oversized PRs receive an 'oversized-pr' label and an actionable item for human review.
    * Set to 0 to disable the check. (default: 500)
@@ -83,9 +91,19 @@ export interface GitWorkflowSettings {
 }
 
 /**
- * Default git workflow settings - commit/push/PR/auto-merge enabled by default
+ * Fully-resolved git workflow settings: every field present EXCEPT
+ * `stagingDeltaBranches`, which stays optional (unset = single-integration-branch
+ * flow, no staging delta tracked).
  */
-export const DEFAULT_GIT_WORKFLOW_SETTINGS: Required<GitWorkflowSettings> = {
+export type ResolvedGitWorkflowSettings = Required<
+  Omit<GitWorkflowSettings, 'stagingDeltaBranches'>
+> &
+  Pick<GitWorkflowSettings, 'stagingDeltaBranches'>;
+
+/**
+ * Default git workflow settings - commit/push/PR/auto-merge enabled by default.
+ */
+export const DEFAULT_GIT_WORKFLOW_SETTINGS: ResolvedGitWorkflowSettings = {
   autoCommit: true,
   autoPush: true,
   autoCreatePR: true,

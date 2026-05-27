@@ -14,7 +14,11 @@ import { useAppStore } from '@/store/app-store';
 import { useGlobalSettings } from '@/hooks/queries';
 import { useUpdateGlobalSettings } from '@/hooks/mutations/use-settings-mutations';
 import { DEFAULT_GIT_WORKFLOW_SETTINGS } from '@protolabsai/types';
-import type { GitWorkflowSettings, PlanningMode } from '@protolabsai/types';
+import type {
+  GitWorkflowSettings,
+  ResolvedGitWorkflowSettings,
+  PlanningMode,
+} from '@protolabsai/types';
 
 interface BoardSettingsPanelProps {
   onClose: () => void;
@@ -41,7 +45,7 @@ export function BoardSettingsPanel({
   const { data: globalSettings } = useGlobalSettings();
   const updateGlobalSettings = useUpdateGlobalSettings({ showSuccessToast: false });
 
-  const gitWorkflow: Required<GitWorkflowSettings> = {
+  const gitWorkflow: ResolvedGitWorkflowSettings = {
     ...DEFAULT_GIT_WORKFLOW_SETTINGS,
     ...(globalSettings?.gitWorkflow ?? {}),
   };

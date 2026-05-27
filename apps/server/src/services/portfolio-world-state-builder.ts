@@ -48,6 +48,7 @@ interface ProjectSitrep {
     classification?: string;
   }>;
   stagingDelta: {
+    applicable: boolean;
     commitsAhead: number;
     commits: string[];
   };
@@ -162,7 +163,7 @@ export class PortfolioWorldStateBuilder {
         blockedCount: sitrep.board.blocked,
         errorBudgetStatus: this.calculateErrorBudgetStatus(sitrep),
         topReadyFeature: null,
-        stagingLagCommits: sitrep.stagingDelta.commitsAhead,
+        stagingLagCommits: sitrep.stagingDelta.applicable ? sitrep.stagingDelta.commitsAhead : 0,
         weeklyThroughput: sitrep.board.done,
       };
     });

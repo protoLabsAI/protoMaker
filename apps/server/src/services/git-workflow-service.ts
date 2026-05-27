@@ -14,6 +14,7 @@ import { buildGitAddCommand } from '../lib/git-staging-utils.js';
 import type {
   Feature,
   GitWorkflowSettings,
+  ResolvedGitWorkflowSettings,
   GitWorkflowResult,
   GlobalSettings,
 } from '@protolabsai/types';
@@ -228,7 +229,7 @@ export class GitWorkflowService {
     feature: Feature,
     globalSettings: GlobalSettings,
     projectPrBaseBranch?: string
-  ): Required<GitWorkflowSettings> {
+  ): ResolvedGitWorkflowSettings {
     const global = globalSettings.gitWorkflow ?? DEFAULT_GIT_WORKFLOW_SETTINGS;
     const featureOverride = feature.gitWorkflow ?? {};
 
@@ -278,6 +279,7 @@ export class GitWorkflowService {
         featureOverride.syncLockfileOnManifestChange ??
         global.syncLockfileOnManifestChange ??
         DEFAULT_GIT_WORKFLOW_SETTINGS.syncLockfileOnManifestChange,
+      stagingDeltaBranches: featureOverride.stagingDeltaBranches ?? global.stagingDeltaBranches,
     };
   }
 
