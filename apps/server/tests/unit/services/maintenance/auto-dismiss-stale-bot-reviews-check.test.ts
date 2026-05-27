@@ -390,3 +390,155 @@ describe('AutoDismissStaleBotReviewsCheck (#3732)', () => {
     expect(issues).toEqual([]);
   });
 });
+
+describe('AutoDismissStaleBotReviewsCheck — CI-pending timing artifact (#3886)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('dismisses an on-head CHANGES_REQUESTED that cites only pending CI once CI is green', async () => {
+    const head = 'cafe1234cafe1234cafe1234cafe1234cafe1234';
+    const responses = new Map<string, string>();
+    responses.set(
+      'pr list --state open',
+      JSON.stringify([
+        {
+          number: 3884,
+          headRefOid: head,
+          mergeStateStatus: 'BLOCKED',
+          reviewDecision: 'CHANGES_REQUESTED',
+          url: 'https://github.com/protoLabsAI/protoMaker/pull/3884',
+        },
+      ])
+    );
+    responses.set(
+      'pulls/3884/reviews',
+      JSON.stringify([
+        {
+          id: 9001,
+          user: { login: 'protoquinn[bot]' },
+          state: 'CHANGES_REQUESTED',
+          commit_id: head, // on head — not stale
+          submitted_at: '2026-05-26T08:00:00Z',
+          body: 'Diff looks good. VERDICT: FAIL — CI checks still queued; I cannot approve until all checks resolve. Once CI reports green, a re-run of this review will likely reach PASS.',
+        },
+      ])
+    );
+    responses.set(
+      'pr view 3884 --json statusCheckRollup',
+      JSON.stringify({
+        statusCheckRollup: [
+          { name: 'checks', status: 'COMPLETED', conclusion: 'SUCCESS' },
+          { name: 'build', status: 'COMPLETED', conclusion: 'SUCCESS' },
+          { name: 'test', status: 'COMPLETED', conclusion: 'SUCCESS' },
+        ],
+      })
+    );
+    responses.set('dismissals', JSON.stringify({ ok: true }));
+
+    const { exec, calls } = buildExec(responses);
+    const check = new AutoDismissStaleBotReviewsCheck(REPO_COORDS, exec);
+
+    const issues = await check.run(PROJECT_PATH);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({
+      checkId: 'auto-dismiss-stale-bot-reviews',
+      severity: 'info',
+      context: { prNumber: 3884, reviewId: 9001, headSha: head },
+    });
+    expect(calls.some((c) => c.args.join(' ').includes('dismissals'))).toBe(true);
+  });
+
+  it('does NOT dismiss an on-head CHANGES_REQUESTED that cites a real defect (no CI-pending phrasing)', async () => {
+    const head = 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef';
+    const responses = new Map<string, string>();
+    responses.set(
+      'pr list --state open',
+      JSON.stringify([
+        {
+          number: 700,
+          headRefOid: head,
+          mergeStateStatus: 'BLOCKED',
+          reviewDecision: 'CHANGES_REQUESTED',
+          url: 'u',
+        },
+      ])
+    );
+    responses.set(
+      'pulls/700/reviews',
+      JSON.stringify([
+        {
+          id: 1,
+          user: { login: 'protoquinn[bot]' },
+          state: 'CHANGES_REQUESTED',
+          commit_id: head,
+          submitted_at: '2026-05-26T08:00:00Z',
+          body: 'VERDICT: FAIL — CRITICAL: getUser endpoint returns 500 on missing id; add input validation.',
+        },
+      ])
+    );
+    // statusCheckRollup is green, but the body cites a real defect — must NOT dismiss.
+    responses.set(
+      'pr view 700 --json statusCheckRollup',
+      JSON.stringify({
+        statusCheckRollup: [{ name: 'checks', status: 'COMPLETED', conclusion: 'SUCCESS' }],
+      })
+    );
+
+    const { exec, calls } = buildExec(responses);
+    const check = new AutoDismissStaleBotReviewsCheck(REPO_COORDS, exec);
+
+    const issues = await check.run(PROJECT_PATH);
+
+    expect(issues).toEqual([]);
+    expect(calls.every((c) => !c.args.join(' ').includes('dismissals'))).toBe(true);
+  });
+
+  it('does NOT dismiss a CI-pending on-head review while CI is still IN_PROGRESS', async () => {
+    const head = 'feed0000feed0000feed0000feed0000feed0000';
+    const responses = new Map<string, string>();
+    responses.set(
+      'pr list --state open',
+      JSON.stringify([
+        {
+          number: 800,
+          headRefOid: head,
+          mergeStateStatus: 'BLOCKED',
+          reviewDecision: 'CHANGES_REQUESTED',
+          url: 'u',
+        },
+      ])
+    );
+    responses.set(
+      'pulls/800/reviews',
+      JSON.stringify([
+        {
+          id: 1,
+          user: { login: 'protoquinn[bot]' },
+          state: 'CHANGES_REQUESTED',
+          commit_id: head,
+          submitted_at: '2026-05-26T08:00:00Z',
+          body: 'CI checks still queued — I cannot approve until all checks resolve.',
+        },
+      ])
+    );
+    responses.set(
+      'pr view 800 --json statusCheckRollup',
+      JSON.stringify({
+        statusCheckRollup: [
+          { name: 'checks', status: 'COMPLETED', conclusion: 'SUCCESS' },
+          { name: 'test', status: 'IN_PROGRESS', conclusion: null },
+        ],
+      })
+    );
+
+    const { exec, calls } = buildExec(responses);
+    const check = new AutoDismissStaleBotReviewsCheck(REPO_COORDS, exec);
+
+    const issues = await check.run(PROJECT_PATH);
+
+    expect(issues).toEqual([]);
+    expect(calls.every((c) => !c.args.join(' ').includes('dismissals'))).toBe(true);
+  });
+});
