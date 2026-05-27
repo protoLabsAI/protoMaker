@@ -11,6 +11,7 @@ import { validatePathParams } from '../../middleware/validate-paths.js';
 import { validateBody } from '../../middleware/validate-body.js';
 import { createListHandler } from './routes/list.js';
 import { createGetHandler } from './routes/get.js';
+import { createRunTelemetryHandler } from './routes/run-telemetry.js';
 import { createCreateHandler, CreateRequestSchema } from './routes/create.js';
 import { createUpdateHandler, UpdateRequestSchema } from './routes/update.js';
 import { createBulkUpdateHandler, BulkUpdateRequestSchema } from './routes/bulk-update.js';
@@ -51,6 +52,11 @@ export function createFeaturesRoutes(
 
   router.post('/list', validatePathParams('projectPath'), createListHandler(featureLoader));
   router.post('/get', validatePathParams('projectPath'), createGetHandler(featureLoader));
+  router.post(
+    '/run-telemetry',
+    validatePathParams('projectPath'),
+    createRunTelemetryHandler(featureLoader)
+  );
   router.post(
     '/create',
     validatePathParams('projectPath'),
