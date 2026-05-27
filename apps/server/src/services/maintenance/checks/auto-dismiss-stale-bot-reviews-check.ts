@@ -10,8 +10,10 @@
  * `mergeStateStatus: BLOCKED` even after all flagged concerns are
  * resolved and CI is green — a maintainer has to manually dismiss.
  *
- * This check identifies the exact "stale" shape and dismisses the
- * blocking review automatically:
+ * This check identifies two "no longer reflects a real defect" shapes and
+ * dismisses the blocking review automatically.
+ *
+ * Path A — superseded stale review (#3732):
  *
  *   1. PR is OPEN
  *   2. Latest CHANGES_REQUESTED review is from a `[bot]` user
@@ -20,10 +22,25 @@
  *      on a more recent commit (proves it's seen and acked the fix)
  *   5. All required CI checks on the current head are SUCCESS
  *
- * When all 5 hold, the stale CHANGES_REQUESTED is dismissed with a
- * message citing the follow-up review and the head SHA.
+ * Path B — CI-pending timing artifact (#3886):
  *
- * See: protoLabsAI/protoMaker#3732
+ *   1. PR is OPEN
+ *   2. A CHANGES_REQUESTED review is from a `[bot]` user, ON the current
+ *      head (not stale — no new commit, no follow-up review)
+ *   3. The review body cites pending/queued CI as the *only* blocker
+ *      (e.g. "CI checks still queued — I cannot approve until all checks
+ *      resolve") rather than a real diff finding
+ *   4. All required CI checks on the current head are now SUCCESS
+ *
+ * Path B handles the case where a QA reviewer (protoquinn) reviewed before
+ * CI finished and hard-failed purely on "CI pending." Once CI settles green
+ * the verdict no longer reflects a defect, but Path A never fires (the review
+ * is on head, with no superseding follow-up), so the PR would sit blocked.
+ *
+ * When either shape holds, the blocking CHANGES_REQUESTED is dismissed with a
+ * message citing the reason and the head SHA.
+ *
+ * See: protoLabsAI/protoMaker#3732, protoLabsAI/protoMaker#3886
  */
 
 import { execFile } from 'child_process';
@@ -53,6 +70,7 @@ interface PRReview {
   state: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENTED' | 'DISMISSED' | 'PENDING';
   commit_id: string | null;
   submitted_at: string | null;
+  body?: string | null;
 }
 
 interface PRCheck {
@@ -69,6 +87,31 @@ interface RepoCoords {
 /** Identify a user that's a GitHub App / bot (login ends with `[bot]`). */
 function isBot(login: string): boolean {
   return login.endsWith('[bot]');
+}
+
+/**
+ * Phrasings a QA bot uses when its CHANGES_REQUESTED is blocked *solely* on
+ * CI not having finished yet — not on a real diff finding (#3886).
+ * Matching any one, combined with the caller's "CI is now green" guard, is a
+ * strong, conservative signal that the verdict was a timing artifact.
+ */
+const CI_PENDING_ONLY_PATTERNS: RegExp[] = [
+  /cannot\s+approve\s+until\b[^.]*\b(check|ci)/i,
+  /once\s+ci\b[^.]*\bgreen\b/i,
+  /waiting\s+(on|for)\s+ci\b/i,
+  /\bci\s+(checks?\s+)?(are\s+)?(still\s+)?(queued|pending|running|in[-\s]?progress)\b/i,
+  /\bchecks?\s+(are\s+)?(still\s+)?(queued|pending|running|in[-\s]?progress)\b/i,
+  /\bci\s+(has\s+not|hasn't|not\s+yet)\s+(completed|finished|resolved)\b/i,
+];
+
+/**
+ * True when the review body attributes the block to pending/queued CI only.
+ * Empty/missing bodies never match (we never dismiss without an explicit
+ * CI-pending statement).
+ */
+function isCiPendingOnlyReview(body: string | null | undefined): boolean {
+  if (!body || !body.trim()) return false;
+  return CI_PENDING_ONLY_PATTERNS.some((re) => re.test(body));
 }
 
 export class AutoDismissStaleBotReviewsCheck implements MaintenanceCheck {
@@ -168,6 +211,38 @@ export class AutoDismissStaleBotReviewsCheck implements MaintenanceCheck {
           dismissed.push(sr.id);
           logger.info(
             `Dismissed stale CHANGES_REQUESTED review ${sr.id} on PR #${pr.number} (bot=${sr.user?.login})`
+          );
+        }
+      }
+    }
+
+    // Path B (#3886): on-head CHANGES_REQUESTED whose body cites only pending
+    // CI as the blocker. Dismiss once CI has settled green — the verdict was a
+    // timing artifact, not a real defect.
+    for (const [_login, list] of byAuthor) {
+      const ciPendingOnHead = list.filter(
+        (r) =>
+          r.state === 'CHANGES_REQUESTED' &&
+          r.commit_id === pr.headRefOid &&
+          !dismissed.includes(r.id) &&
+          isCiPendingOnlyReview(r.body)
+      );
+      if (ciPendingOnHead.length === 0) continue;
+
+      const checksClean = await this.allChecksGreen(projectPath, pr.number);
+      if (!checksClean) continue;
+
+      for (const sr of ciPendingOnHead) {
+        const ok = await this.dismiss(
+          projectPath,
+          pr.number,
+          sr.id,
+          `Auto-dismissed: review blocked only on pending CI, which is now green on head ${pr.headRefOid.slice(0, 7)} (#3886).`
+        );
+        if (ok) {
+          dismissed.push(sr.id);
+          logger.info(
+            `Dismissed CI-pending CHANGES_REQUESTED review ${sr.id} on PR #${pr.number} (bot=${sr.user?.login})`
           );
         }
       }

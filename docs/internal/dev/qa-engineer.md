@@ -146,6 +146,12 @@ The verdict is one of:
 | CONDITIONAL PASS | Minor issues found. Safe to promote with follow-up fixes noted. |
 | FAIL             | Blocking issues found. Do not promote until resolved.           |
 
+### Pending CI is never a FAIL (#3886)
+
+A `FAIL` / `CHANGES_REQUESTED` must reflect a real defect, not a timing artifact. If Quinn reviews a PR before CI finishes, it must **not** hard-fail solely because checks are queued or in progress — that blocks the merge on a non-defect and loops (a fix push re-triggers both CI and the review). Instead Quinn waits for checks to be terminal, or returns a non-blocking WARN / `COMMENT` noting "diff looks good pending CI" and records the pending checks under Gaps.
+
+Defense in depth: even if a CI-pending `CHANGES_REQUESTED` slips through, the `auto-dismiss-stale-bot-reviews` maintenance check clears it once CI settles green (Path B). See [Merge Eligibility Service](../server/merge-eligibility-service.md) and the merge gate (the platform never merges on pending/failing checks regardless).
+
 ## agent-browser Setup
 
 ### Install

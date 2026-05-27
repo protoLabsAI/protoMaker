@@ -21,7 +21,7 @@
   "scripts": {
     "build": "tsc --project tsconfig.json && npm run postbuild",
     "typecheck": "tsc --project tsconfig.json --noEmit",
-    "postbuild": "cp -r templates dist/",
+    "postbuild": "cp -r templates dist/ && cp -R src/templates/. dist/templates/",
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",

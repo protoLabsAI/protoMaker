@@ -55,6 +55,14 @@ For complete control, manually configure workflows and branch protection using t
 - Runs npm/pnpm audit
 - Reports vulnerabilities
 
+**5. workflow-security-lint.yml** (Workflow Security)
+
+- Triggers: PRs and pushes to main and develop
+- Runs **zizmor** (GitHub Actions security linter) at `--min-severity=medium` and **actionlint**
+- Catches untrusted-expression script injection (CWE-94, e.g. `${{ github.event.head_commit.message }}` in a `run:` block), `GITHUB_TOKEN` over-privilege, and workflow misconfigurations
+- Both linters install without a third-party action reference and are version-pinned for reproducibility: zizmor from PyPI (`pip install zizmor==1.25.2`); actionlint via its official download script, fetched from an immutable commit SHA and pinned to an exact version — so there is no third-party action to vet and the tooling is deterministic
+- Part of the fleet security baseline (protoLabsAI/protoMaker#3819), motivated by the #3812 script-injection fix
+
 ### Branch Protection Rules
 
 **For main branch:**

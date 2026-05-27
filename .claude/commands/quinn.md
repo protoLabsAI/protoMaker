@@ -545,6 +545,14 @@ Gaps: [count]
 - **WARN** — All critical checks passed but gaps exist or medium/low issues found. Release is acceptable with noted caveats.
 - **FAIL** — One or more critical checks failed. Release has verified defects that need remediation.
 
+### Pending CI is never a FAIL (#3886)
+
+A blocking verdict must reflect a **real defect**, never a timing artifact. When you review a PR whose diff you have no objection to but CI has not finished:
+
+- Do **not** return `FAIL` / submit a `CHANGES_REQUESTED` review solely because CI is queued, pending, or in progress. A `CHANGES_REQUESTED` blocks the merge until manually dismissed, and pushing a fix re-triggers both CI and your review — creating a loop.
+- Either **wait** until all checks are terminal before forming a verdict, or return a non-blocking **WARN** (or a `COMMENT`-only review) noting the diff looks good pending CI. Record the pending checks under **Gaps**, not **Failed**.
+- Only escalate to `FAIL` once checks are terminal and one actually failed, or you find a genuine diff defect.
+
 **Severity definitions:**
 
 - **CRITICAL** — Service not wired, endpoint returns 500, types don't compile, data loss risk
