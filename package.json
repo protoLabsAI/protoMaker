@@ -48,6 +48,8 @@
     "test:packages": "vitest run --project='!server'",
     "test:server": "vitest run --project=server",
     "test:server:coverage": "vitest run --project=server --coverage",
+    "eval:harness": "vitest run --config apps/server/vitest.eval.config.ts",
+    "eval:gate": "node scripts/eval-gate.mjs",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:all": "vitest run",

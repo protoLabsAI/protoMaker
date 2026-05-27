@@ -1,0 +1,43 @@
+# Harness eval regression gate (#3904).
+# Runs the golden pipeline-scenario eval and fails the PR on a success-rate
+# regression. Path-filtered to changes that can affect pipeline behavior so it
+# only runs when relevant. Fork-PR hardened like the Checks workflow.
+name: Harness Eval
+
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/services/lead-engineer-**'
+      - 'apps/server/src/services/**processor**'
+      - 'apps/server/eval/**'
+      - 'libs/prompts/**'
+      - 'libs/types/src/workflow-settings.ts'
+      - 'scripts/eval-gate.mjs'
+  workflow_dispatch:
+
+permissions: read-all
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  harness-eval:
+    runs-on: namespace-profile-protolabs-linux
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup project
+        uses: ./.github/actions/setup-project
+        with:
+          check-lockfile: 'true'
+          skip-native-rebuild: 'true'
+
+      - name: Run harness eval
+        run: npm run eval:harness
+
+      - name: Regression gate
+        run: npm run eval:gate

@@ -83,6 +83,7 @@ This directory is NOT included in the public VitePress build. Content here is fo
 - [Merge Eligibility Service](./server/merge-eligibility-service.md)
 - [GitHub Merge Service](./server/github-merge-service.md)
 - [App Compliance Gate](./server/app-compliance.md)
+- [Harness Eval](./server/harness-eval.md)
 - [Issue Dedupe](./server/issue-dedupe.md)
 - [CodeRabbit Resolver](./server/coderabbit-resolver-service.md)
 - [Reactive Spawner](./server/reactive-spawner.md)
