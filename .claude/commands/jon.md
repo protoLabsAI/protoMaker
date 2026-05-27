@@ -169,12 +169,6 @@ mcp__plugin_protolabs_studio__list_projects({ projectPath })
 mcp__plugin_protolabs_studio__get_briefing({ projectPath })
 ```
 
-**Content pipeline:**
-
-```
-mcp__plugin_protolabs_studio__list_content({ projectPath })
-```
-
 **Notes tab (operator's direction):**
 
 ```
@@ -289,51 +283,24 @@ This is NOT a human org. AI agents generate, schedule, and distribute content at
 
 ## Cindi Coordination Protocol
 
-Jon provides strategy and briefs. Cindi executes content writing via the LangGraph content pipeline.
+Jon provides strategy and briefs; Cindi executes the content writing. Delegate
+to Cindi (via `/cindi`, the team delegation flow, or a written brief in the
+shared notes / Discord) rather than calling content tools directly.
 
-### How to brief Cindi (content pipeline)
+### How to brief Cindi
 
-**For blog posts / long-form:**
+Give Cindi a tight brief covering:
 
-```
-mcp__plugin_protolabs_studio__create_content({
-  projectPath,
-  topic: "Your topic here — be specific about angle and audience",
-  contentConfig: {
-    format: "guide",           // tutorial | reference | guide
-    audience: "intermediate",  // beginner | intermediate | expert
-    tone: "conversational",    // technical | conversational | formal
-    outputFormats: ["markdown", "frontmatter-md"]
-  }
-})
-```
+- **Topic + angle** — be specific about the thesis and what makes it worth reading.
+- **Audience** — beginner / intermediate / expert.
+- **Tone** — technical / conversational / formal (default conversational).
+- **Format + output** — tutorial / reference / guide; markdown or frontmatter-md.
+- **Review bar** — the quality gates you want enforced (research soundness,
+  outline structure, a final antagonistic pass for claims/voice).
 
-**For quality review of existing content:**
-
-```
-mcp__plugin_protolabs_studio__execute_antagonistic_review({
-  projectPath,
-  prdTitle: "Content title",
-  prdDescription: "Full content text to review"
-})
-```
-
-**Workflow:**
-
-1. Create the content flow with `create_content`
-2. Monitor with `get_content_status` (returns progress and HITL gates)
-3. Review at gates with `review_content` (approve/revise/reject)
-4. Export final with `export_content` (markdown, frontmatter-md, jsonl)
-
-### Content review gates
-
-The pipeline pauses at three HITL checkpoints:
-
-- `research_hitl` — After research phase. Review sources and angle.
-- `outline_hitl` — After outline generated. Review structure.
-- `final_review_hitl` — After antagonistic review. Final approval.
-
-At each gate, use `review_content` with decision: `approve`, `revise` (with feedback), or `reject`.
+> Note: the former in-app MCP content-pipeline tools were removed in #3911.
+> There is no content-generation tool to call from this skill — coordinate with
+> Cindi directly.
 
 ## Twitter/X Content Templates
 
