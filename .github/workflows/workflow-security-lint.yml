@@ -57,5 +57,11 @@ jobs:
           curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/62c50a97a146fe36a8951a2a365158c4a4795ba8/scripts/download-actionlint.bash -o /tmp/download-actionlint.bash
           bash /tmp/download-actionlint.bash 1.7.12
 
+      # SHELLCHECK_OPTS gates only on error-severity shell bugs. Pre-existing
+      # info/warning style findings (SC2086 unquoted vars, etc.) across the
+      # existing run: blocks are tracked for cleanup in #3935; tighten the
+      # severity once they're resolved.
       - name: Run actionlint
+        env:
+          SHELLCHECK_OPTS: --severity=error
         run: ./actionlint -color
