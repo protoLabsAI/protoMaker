@@ -231,7 +231,7 @@ export function register(container: ServiceContainer): void {
   // See protoLabsAI/protoMaker#3511.
   const backlogTitleReconcilerCheck = new BacklogTitleReconcilerCheck(featureLoader, events);
 
-  // Auto-dismiss stale bot CHANGES_REQUESTED reviews (full tier) — protoquinn /
+  // Auto-dismiss stale bot CHANGES_REQUESTED reviews (critical tier) — protoquinn /
   // coderabbit re-review fix commits as COMMENTED rather than APPROVED, which
   // leaves PRs permanently BLOCKED on the original CHANGES_REQUESTED. This
   // check finds and dismisses those superseded reviews when the same bot has
