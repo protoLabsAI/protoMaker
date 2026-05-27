@@ -343,6 +343,18 @@ const BUILT_IN_WORKFLOWS = new Map<string, WorkflowDefinition>([
   ['signal', SIGNAL_WORKFLOW],
 ]);
 
+// ─── Helpers ──────────────────────────────────────────────────────────────
+
+/**
+ * Whole-word (boundary-anchored) keyword match. Avoids substring false
+ * positives like "typecheck" matching the keyword "check" (#3946). Hyphens and
+ * spaces inside a keyword are treated literally; `\b` anchors the ends.
+ */
+function wordBoundaryMatch(haystack: string, keyword: string): boolean {
+  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`\\b${escaped}\\b`, 'i').test(haystack);
+}
+
 // ─── Service ──────────────────────────────────────────────────────────────
 
 export class WorkflowLoader {
@@ -433,10 +445,13 @@ export class WorkflowLoader {
         }
       }
 
-      // Keyword matches in title/description
+      // Keyword matches in title/description — WHOLE WORD only. Substring
+      // matching falsely routed code features to read-only workflows (e.g.
+      // "typecheck" matched the audit keyword "check" → no-worktree run → block,
+      // #3946). Word boundaries keep "research" matching while "typecheck" does not.
       if (match.keywords) {
         for (const keyword of match.keywords) {
-          if (textToSearch.includes(keyword.toLowerCase())) {
+          if (wordBoundaryMatch(textToSearch, keyword.toLowerCase())) {
             score += 1;
           }
         }

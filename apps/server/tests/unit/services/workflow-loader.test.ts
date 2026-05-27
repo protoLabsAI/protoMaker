@@ -74,6 +74,22 @@ describe('WorkflowLoader', () => {
       expect(result.execution.useWorktrees).toBe(false);
     });
 
+    it('does NOT route a code feature to a read-only workflow on a substring keyword false-positive (#3946)', async () => {
+      // "typecheck" must not match the audit keyword "check"; a normal code
+      // feature with no real audit/research signal must stay on standard
+      // (worktree + commit + PR), not get silently downgraded to read-only.
+      const feature = createFeature({
+        category: 'test',
+        title: 'Add unit test for the title route + fix stale comment',
+        description: 'Add a unit test and ensure npm run typecheck is clean.',
+      });
+
+      const result = await loader.resolveForFeature(testProjectPath, feature);
+
+      expect(result.name).toBe('standard');
+      expect(result.execution.useWorktrees).toBe(true);
+    });
+
     it('explicit feature.workflow "standard" should override keyword match', async () => {
       const feature = createFeature({
         category: 'audit',
