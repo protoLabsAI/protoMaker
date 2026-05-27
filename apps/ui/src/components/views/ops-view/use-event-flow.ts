@@ -17,7 +17,7 @@ export interface DeliveryRecord {
   eventType: string;
   status: DeliveryStatus;
   classification?: {
-    category: 'ops' | 'gtm';
+    category: 'ops';
     intent: string;
   };
   routedTo?: string;

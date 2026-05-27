@@ -698,10 +698,6 @@ export { DistillationDepth } from './review.js';
 export type { ReviewResult, ConsolidatedReview, ReviewRequest } from './antagonistic-review.js';
 export { extractPRDFromText } from './antagonistic-review.js';
 
-// Content generation types
-export { SectionSchema, OutlineSchema } from './content.js';
-export type { ContentType, ContentConfig, Section, Outline, ResearchSummary } from './content.js';
-
 // Metrics ledger types (persistent append-only analytics)
 export type {
   MetricsLedgerRecord,
@@ -793,7 +789,6 @@ export type {
 } from './pipeline-phase.js';
 export {
   PIPELINE_PHASES,
-  GTM_SKIP_PHASES,
   DEFAULT_PIPELINE_GATES,
   PIPELINE_TO_WORK_ITEM_STATE,
 } from './pipeline-phase.js';

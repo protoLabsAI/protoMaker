@@ -283,7 +283,7 @@ export interface WorkflowSettings {
   };
   signalIntake: {
     /** Default category for unclassified signals (default: 'ops') */
-    defaultCategory: 'ops' | 'gtm';
+    defaultCategory: 'ops';
     /** Whether to auto-trigger research on new signals (default: false) */
     autoResearch: boolean;
     /** Whether to auto-approve PRDs without user review (default: false) */

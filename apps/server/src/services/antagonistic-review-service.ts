@@ -19,9 +19,23 @@ import { getLangfuseInstance } from '../lib/langfuse-singleton.js';
 import type { SettingsService } from './settings-service.js';
 import { resolveModelString } from '@protolabsai/model-resolver';
 import { simpleQuery } from '../providers/simple-query-service.js';
-import { getAvaPrompt, getJonPrompt } from '@protolabsai/prompts';
+import { getAvaPrompt } from '@protolabsai/prompts';
 
 const logger = createLogger('AntagonisticReview');
+
+/**
+ * System prompt for the market/business PRD reviewer ("Jon" stage).
+ * Evaluates PRDs from a customer-impact, ROI, and market-positioning perspective.
+ */
+const MARKET_REVIEWER_SYSTEM_PROMPT = `You are a market and business reviewer. Your role is to evaluate PRDs from a customer impact, ROI, and business value perspective.
+
+Focus on:
+- Customer Impact: What problem does this solve? Who benefits? What's the value proposition?
+- ROI: Expected return on investment, cost vs. benefit, revenue implications.
+- Market Positioning: How does this position the product competitively?
+- Priority: Given current business goals, is this the right thing to build now?
+
+Be strategic, business-focused, and prioritize customer impact. Push back on work that lacks a compelling business case or distracts from higher-priority commitments.`;
 
 const REVIEW_TIMEOUT_MS = 180_000; // 3 minutes
 
@@ -320,7 +334,7 @@ export class AntagonisticReviewService {
 
     try {
       const prompt = this.buildJonPrompt(prd, avaReview);
-      const systemPrompt = getJonPrompt({});
+      const systemPrompt = MARKET_REVIEWER_SYSTEM_PROMPT;
 
       const result = await simpleQuery({
         prompt,

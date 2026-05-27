@@ -153,19 +153,6 @@ describe('WorkflowLoader', () => {
       expect(result.name).toBe('audit');
     });
 
-    it('should resolve featureType "content" to content workflow', async () => {
-      const feature = createFeature({
-        category: 'code',
-        featureType: 'content',
-        title: 'Write blog post',
-        description: 'Create content for the blog',
-      });
-
-      const result = await loader.resolveForFeature(testProjectPath, feature);
-
-      expect(result.name).toBe('content');
-    });
-
     it('should resolve featureType "signal" to signal workflow', async () => {
       const feature = createFeature({
         category: 'code',

@@ -1215,17 +1215,6 @@ export class AutoModeService {
           // Reset idle event flag since we're doing work again
           this.hasEmittedIdleEvent = false;
 
-          // Guard: content features (featureType === 'content') require leadEngineerService
-          // for the GTM execution path and must not run via the legacy code agent.
-          // Skip them here — they will be picked up by runAutoLoopForProject.
-          if (nextFeature.featureType === 'content') {
-            logger.warn(
-              `[AutoLoop] Skipping content feature ${nextFeature.id} in legacy loop — GTM execution requires per-project auto mode`
-            );
-            await this.sleep(2000);
-            continue;
-          }
-
           // Start feature execution in background.
           // useWorktrees: default to true so agents always run in an isolated
           // worktree, never the main checkout. (Read-only features could skip

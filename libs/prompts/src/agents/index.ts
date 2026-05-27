@@ -21,8 +21,6 @@ export { getGTMSpecialistPrompt } from './gtm-specialist-prompt.js';
 export { getAvaPrompt } from './ava.js';
 export { getMattPrompt } from './matt.js';
 export { getSamPrompt } from './sam.js';
-export { getCindiPrompt } from './cindi.js';
-export { getJonPrompt } from './jon.js';
 export { getPrMaintainerPrompt } from './pr-maintainer.js';
 export { getBoardJanitorPrompt } from './board-janitor.js';
 export { getFrankPrompt } from './frank.js';

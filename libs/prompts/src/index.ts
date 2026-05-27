@@ -157,8 +157,6 @@ export { getGTMSpecialistPrompt } from './agents/gtm-specialist-prompt.js';
 export { getAvaPrompt } from './agents/ava.js';
 export { getMattPrompt } from './agents/matt.js';
 export { getSamPrompt } from './agents/sam.js';
-export { getCindiPrompt } from './agents/cindi.js';
-export { getJonPrompt } from './agents/jon.js';
 export { getPrMaintainerPrompt } from './agents/pr-maintainer.js';
 export { getBoardJanitorPrompt } from './agents/board-janitor.js';
 export { getFrankPrompt } from './agents/frank.js';
@@ -171,10 +169,6 @@ export { getVerificationTierInstructions } from './verification-tier.js';
 // Prompt quality linter
 export { lintPrompt, lintAllPrompts } from './lint.js';
 export type { LintResult, LintWarning, LintError, LintSummary } from './lint.js';
-
-// Content generation prompts
-export { getOutlinePlannerPrompt } from './content/outline-planner.js';
-export type { OutlinePlannerConfig } from './content/outline-planner.js';
 
 // Fresh-eyes review prompt
 export {

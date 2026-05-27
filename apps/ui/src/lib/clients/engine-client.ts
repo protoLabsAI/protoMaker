@@ -40,35 +40,5 @@ export const withEngineClient = <TBase extends Constructor<BaseHttpClient>>(Base
         decision: 'approve' | 'reject'
       ): Promise<{ success: boolean; decision?: string; error?: string }> =>
         this.post('/api/engine/signal/approve-prd', { projectPath, featureId, decision }),
-      contentDrafts: (): Promise<{
-        success: boolean;
-        drafts: Array<{
-          contentId: string;
-          title: string;
-          draft: string;
-          strategy: Record<string, unknown>;
-          source: string;
-          projectPath: string;
-          status: string;
-          createdAt: string;
-          version: number;
-        }>;
-      }> => this.get('/api/engine/content/drafts'),
-      contentReview: (
-        projectPath: string,
-        contentId: string,
-        decision: 'approve' | 'reject' | 'request_changes',
-        editedContent?: string,
-        tabName?: string,
-        feedback?: string
-      ): Promise<{ success: boolean; tabId?: string; error?: string }> =>
-        this.post('/api/engine/content/review', {
-          projectPath,
-          contentId,
-          decision,
-          editedContent,
-          tabName,
-          feedback,
-        }),
     };
   };

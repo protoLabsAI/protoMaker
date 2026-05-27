@@ -21,8 +21,6 @@ import { getGTMSpecialistPrompt } from './agents/gtm-specialist-prompt.js';
 import { getAvaPrompt } from './agents/ava.js';
 import { getMattPrompt } from './agents/matt.js';
 import { getSamPrompt } from './agents/sam.js';
-import { getCindiPrompt } from './agents/cindi.js';
-import { getJonPrompt } from './agents/jon.js';
 import { getPrMaintainerPrompt } from './agents/pr-maintainer.js';
 import { getBoardJanitorPrompt } from './agents/board-janitor.js';
 import { getFrankPrompt } from './agents/frank.js';
@@ -160,8 +158,6 @@ registerPrompt('gtm-specialist', (config) =>
 registerPrompt('ava', (config) => getAvaPrompt({ userProfile: config.userProfile }));
 registerPrompt('matt', (config) => getMattPrompt({ userProfile: config.userProfile }));
 registerPrompt('sam', (config) => getSamPrompt({ userProfile: config.userProfile }));
-registerPrompt('cindi', (config) => getCindiPrompt({ userProfile: config.userProfile }));
-registerPrompt('jon', (config) => getJonPrompt({ userProfile: config.userProfile }));
 registerPrompt('pr-maintainer', (config) =>
   getPrMaintainerPrompt({ userProfile: config.userProfile })
 );

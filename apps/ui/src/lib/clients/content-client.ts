@@ -4,7 +4,6 @@
  * Extracted from the monolithic http-api-client.ts — contains:
  *   - notes              (workspace CRUD, tab management)
  *   - ai                 (streaming ghost-text, rewrite, generate — raw fetch)
- *   - contentPipeline    (route text to content agents)
  *   - authorityPipeline  (route ideas to PM agent)
  */
 import type {
@@ -102,16 +101,6 @@ export const withContentClient = <TBase extends Constructor<BaseHttpClient>>(Bas
           credentials: 'include',
           body: JSON.stringify({ command, context, selection }),
         }),
-    };
-
-    // Content Pipeline API — route text to Jon/Cindi for content creation
-    contentPipeline = {
-      create: (
-        projectPath: string,
-        topic: string,
-        contentConfig?: { format?: string; tone?: string; audience?: string }
-      ): Promise<{ success: boolean; runId?: string; error?: string }> =>
-        this.post('/api/content/create', { projectPath, topic, contentConfig }),
     };
 
     // Authority Pipeline API — route ideas to the PM agent

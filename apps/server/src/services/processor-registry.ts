@@ -15,8 +15,6 @@ import { ExecuteProcessor } from './lead-engineer-execute-processor.js';
 import { ReviewProcessor, MergeProcessor } from './lead-engineer-review-merge-processors.js';
 import { DeployProcessor } from './lead-engineer-deploy-processor.js';
 import { EscalateProcessor } from './lead-engineer-escalation.js';
-import { GtmExecuteProcessor } from './lead-engineer-gtm-execute-processor.js';
-import { GtmReviewProcessor } from './lead-engineer-gtm-review-processor.js';
 
 const logger = createLogger('ProcessorRegistry');
 
@@ -76,10 +74,6 @@ export function createDefaultProcessorRegistry(): ProcessorRegistry {
   registry.register('merge', (ctx) => new MergeProcessor(ctx));
   registry.register('deploy', (ctx) => new DeployProcessor(ctx));
   registry.register('escalate', (ctx) => new EscalateProcessor(ctx));
-
-  // GTM content processors
-  registry.register('content-execute', () => new GtmExecuteProcessor());
-  registry.register('content-review', (ctx) => new GtmReviewProcessor(ctx));
 
   logger.info(`ProcessorRegistry initialized with ${registry.list().length} built-in processors`);
   return registry;

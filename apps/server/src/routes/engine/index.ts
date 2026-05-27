@@ -14,16 +14,12 @@ import type { AutoModeService } from '../../services/auto-mode-service.js';
 import type { LeadEngineerService } from '../../services/lead-engineer-service.js';
 import type { ProjectService } from '../../services/project-service.js';
 import type { EventStreamBuffer } from '../../lib/event-stream-buffer.js';
-import type { ContentFlowService } from '../../services/content-flow-service.js';
 import type { SignalIntakeService } from '../../services/signal-intake-service.js';
 import type { GitWorkflowService } from '../../services/git-workflow-service.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { EventEmitter } from '../../lib/events.js';
-import type { GTMAuthorityAgent } from '../../services/authority-agents/gtm-agent.js';
 import type { CompletionDetectorService } from '../../services/completion-detector-service.js';
 import type { SettingsService } from '../../services/settings-service.js';
-import { getNotesWorkspacePath, ensureNotesDir, secureFs } from '@protolabsai/platform';
-import type { NotesWorkspace } from '@protolabsai/types';
 
 const logger = createLogger('EngineRoutes');
 
@@ -34,10 +30,8 @@ export function createEngineRoutes(
   gitWorkflowService: GitWorkflowService,
   eventStreamBuffer?: EventStreamBuffer,
   projectService?: ProjectService,
-  contentFlowService?: ContentFlowService,
   featureLoader?: FeatureLoader,
   events?: EventEmitter,
-  gtmAgent?: GTMAuthorityAgent,
   completionDetectorService?: CompletionDetectorService,
   settingsService?: SettingsService
 ): Router {
@@ -50,17 +44,6 @@ export function createEngineRoutes(
   router.post('/status', async (req: Request, res: Response) => {
     try {
       const { projectPath } = (req.body ?? {}) as { projectPath?: string };
-
-      // Resolve gtmEnabled setting for the response
-      let gtmEnabled = false;
-      if (settingsService) {
-        try {
-          const settings = await settingsService.getGlobalSettings();
-          gtmEnabled = settings.gtmEnabled ?? false;
-        } catch {
-          // Fall back to false if settings unavailable
-        }
-      }
 
       // Auto-mode status
       const autoModeStatus = autoModeService.getStatus();
@@ -141,17 +124,6 @@ export function createEngineRoutes(
           })),
         },
         projectLifecycle,
-        contentPipeline: contentFlowService
-          ? {
-              ...contentFlowService.getExecutionState(),
-              pendingDrafts: gtmAgent ? gtmAgent.getPendingDraftCount() : 0,
-            }
-          : {
-              activeFlows: [],
-              recentFlows: [],
-              totalActive: 0,
-              pendingDrafts: gtmAgent ? gtmAgent.getPendingDraftCount() : 0,
-            },
         reflection: {
           completions: completionDetectorService?.getStatus() ?? {
             completionCounts: { epics: 0, milestones: 0, projects: 0 },
@@ -159,7 +131,6 @@ export function createEngineRoutes(
             emittedProjects: 0,
           },
         },
-        gtmEnabled,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
@@ -471,156 +442,6 @@ export function createEngineRoutes(
         success: false,
         error: 'Failed to process PRD decision',
       });
-    }
-  });
-
-  /**
-   * GET /api/engine/content/drafts
-   * Returns all pending content drafts (survives page refresh).
-   */
-  router.get('/content/drafts', async (_req: Request, res: Response) => {
-    // Gate: return empty when GTM pipeline is disabled
-    if (settingsService) {
-      const settings = await settingsService.getGlobalSettings();
-      if (!settings.gtmEnabled) {
-        res.json({ success: true, drafts: [] });
-        return;
-      }
-    }
-    const drafts = gtmAgent ? gtmAgent.getPendingDrafts() : [];
-    res.json({ success: true, drafts });
-  });
-
-  /**
-   * POST /api/engine/content/review
-   * Approve, reject, or request changes on a GTM content draft.
-   * On approve: creates a notes tab with the draft content.
-   * On request_changes: re-processes with feedback.
-   */
-  router.post('/content/review', async (req: Request, res: Response) => {
-    // Gate: return 403 when GTM pipeline is disabled
-    if (settingsService) {
-      const settings = await settingsService.getGlobalSettings();
-      if (!settings.gtmEnabled) {
-        res.status(403).json({ success: false, error: 'GTM pipeline is disabled' });
-        return;
-      }
-    }
-
-    try {
-      const { projectPath, contentId, decision, editedContent, tabName, feedback } = (req.body ??
-        {}) as {
-        projectPath?: string;
-        contentId?: string;
-        decision?: 'approve' | 'reject' | 'request_changes';
-        editedContent?: string;
-        tabName?: string;
-        feedback?: string;
-      };
-
-      if (!projectPath || !contentId || !decision) {
-        res.status(400).json({
-          success: false,
-          error:
-            'projectPath, contentId, and decision (approve|reject|request_changes) are required',
-        });
-        return;
-      }
-
-      if (!events) {
-        res.status(503).json({ success: false, error: 'Event emitter not available' });
-        return;
-      }
-
-      if (decision === 'request_changes') {
-        events.emit('content:changes-requested', {
-          projectPath,
-          contentId,
-          feedback: feedback || '',
-          timestamp: new Date().toISOString(),
-        });
-        res.json({ success: true });
-        return;
-      }
-
-      if (decision === 'reject') {
-        events.emit('content:draft-rejected', {
-          projectPath,
-          contentId,
-          timestamp: new Date().toISOString(),
-        });
-        res.json({ success: true });
-        return;
-      }
-
-      // Approve: create a notes tab with the draft content
-      const draftContent = editedContent || '';
-      const name = tabName || 'Content Draft';
-
-      // Load existing workspace
-      const filePath = getNotesWorkspacePath(projectPath);
-      let workspace: NotesWorkspace;
-      try {
-        const raw = await secureFs.readFile(filePath, 'utf-8');
-        workspace = JSON.parse(raw as string) as NotesWorkspace;
-      } catch {
-        // Create default workspace if none exists
-        const defaultTabId = crypto.randomUUID();
-        const now = Date.now();
-        workspace = {
-          version: 1,
-          activeTabId: defaultTabId,
-          tabOrder: [defaultTabId],
-          tabs: {
-            [defaultTabId]: {
-              id: defaultTabId,
-              name: 'Notes',
-              content: '',
-              permissions: { agentRead: true, agentWrite: true },
-              metadata: { createdAt: now, updatedAt: now, wordCount: 0, characterCount: 0 },
-            },
-          },
-        };
-      }
-
-      // Create new tab with draft content wrapped in a div for TipTap
-      const tabId = crypto.randomUUID();
-      const now = Date.now();
-      const htmlContent = `<div>${draftContent.replace(/\n/g, '<br>')}</div>`;
-      const plainText = draftContent.replace(/<[^>]*>/g, '');
-
-      workspace.tabs[tabId] = {
-        id: tabId,
-        name,
-        content: htmlContent,
-        permissions: { agentRead: true, agentWrite: true },
-        metadata: {
-          createdAt: now,
-          updatedAt: now,
-          wordCount: plainText.trim() ? plainText.trim().split(/\s+/).length : 0,
-          characterCount: plainText.length,
-        },
-      };
-      workspace.tabOrder.push(tabId);
-      workspace.activeTabId = tabId;
-
-      // Save workspace
-      await ensureNotesDir(projectPath);
-      await secureFs.writeFile(filePath, JSON.stringify(workspace, null, 2), 'utf-8');
-
-      events.emit('content:draft-approved', {
-        projectPath,
-        contentId,
-        tabId,
-        timestamp: new Date().toISOString(),
-      });
-
-      logger.info(`Content draft approved and saved to notes tab: ${tabId}`);
-
-      res.json({ success: true, tabId });
-    } catch (error) {
-      logger.error('Failed to process content review:', error);
-      res.status(500).json({ success: false, error: 'Failed to process content review' });
     }
   });
 

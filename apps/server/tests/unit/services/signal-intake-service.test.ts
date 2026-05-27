@@ -2,8 +2,7 @@
  * Signal Intake Service Unit Tests
  *
  * Tests for signal classification and routing:
- * - Signal classification (ops vs gtm)
- * - GTM toggle enforcement (gtmEnabled=false forces ops)
+ * - Signal classification (all signals route to ops)
  * - Deduplication logic
  */
 
@@ -50,7 +49,7 @@ describe('SignalIntakeService', () => {
       }),
     }) as unknown as FeatureLoader;
     mockSettingsService = createMockSettingsService({
-      getGlobalSettings: vi.fn().mockResolvedValue({ gtmEnabled: true }),
+      getGlobalSettings: vi.fn().mockResolvedValue({}),
     }) as unknown as SettingsService;
 
     signalIntakeService = new SignalIntakeService(
@@ -63,7 +62,7 @@ describe('SignalIntakeService', () => {
     vi.clearAllMocks();
   });
 
-  describe('signal classification - ops vs gtm', () => {
+  describe('signal classification - all signals route to ops', () => {
     it('should classify GitHub signals as ops', async () => {
       const signal = createTestSignal({
         source: 'github',
@@ -87,46 +86,11 @@ describe('SignalIntakeService', () => {
         'signal:routed',
         expect.objectContaining({
           category: 'ops',
-          reason: expect.stringContaining('GitHub events'),
-        })
-      );
-
-      // Should NOT route to GTM
-      expect(mockEmitter.emit).not.toHaveBeenCalledWith(
-        'authority:gtm-signal-received',
-        expect.any(Object)
-      );
-    });
-
-    it('should classify Discord messages from GTM channels as gtm', async () => {
-      const signal = createTestSignal({
-        source: 'discord',
-        content: 'Social media post needed',
-        channelContext: {
-          channelName: 'marketing-ideas',
-        },
-      });
-
-      mockEmitter.emit('signal:received', signal);
-
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      // Verify GTM routing
-      expect(mockEmitter.emit).toHaveBeenCalledWith(
-        'authority:gtm-signal-received',
-        expect.any(Object)
-      );
-
-      expect(mockEmitter.emit).toHaveBeenCalledWith(
-        'signal:routed',
-        expect.objectContaining({
-          category: 'gtm',
-          reason: expect.stringContaining('Discord channel is GTM: marketing'),
         })
       );
     });
 
-    it('should classify Discord messages from ops channels as ops', async () => {
+    it('should classify Discord messages as ops', async () => {
       const signal = createTestSignal({
         source: 'discord',
         content: 'Infrastructure issue',
@@ -146,30 +110,6 @@ describe('SignalIntakeService', () => {
         'signal:routed',
         expect.objectContaining({
           category: 'ops',
-          reason: expect.stringContaining('Discord channel is Ops: engineering'),
-        })
-      );
-    });
-
-    it('should default Discord messages from unknown channels to ops', async () => {
-      const signal = createTestSignal({
-        source: 'discord',
-        content: 'General discussion',
-        channelContext: {
-          channelName: 'general',
-        },
-      });
-
-      mockEmitter.emit('signal:received', signal);
-
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      // Verify ops routing (default)
-      expect(mockEmitter.emit).toHaveBeenCalledWith(
-        'signal:routed',
-        expect.objectContaining({
-          category: 'ops',
-          reason: expect.stringContaining('defaults to Ops'),
         })
       );
     });
@@ -189,12 +129,11 @@ describe('SignalIntakeService', () => {
         'signal:routed',
         expect.objectContaining({
           category: 'ops',
-          reason: expect.stringContaining('MCP create_feature is engineering'),
         })
       );
     });
 
-    it('should classify UI content signals as gtm', async () => {
+    it('should classify UI signals as ops', async () => {
       const signal = createTestSignal({
         source: 'ui:content',
         content: 'Blog post idea',
@@ -204,164 +143,11 @@ describe('SignalIntakeService', () => {
 
       await new Promise((resolve) => setTimeout(resolve, 50));
 
-      // Verify GTM routing
-      expect(mockEmitter.emit).toHaveBeenCalledWith(
-        'authority:gtm-signal-received',
-        expect.any(Object)
-      );
-
-      expect(mockEmitter.emit).toHaveBeenCalledWith(
-        'signal:routed',
-        expect.objectContaining({
-          category: 'gtm',
-          reason: expect.stringContaining('Content creation signal from UI'),
-        })
-      );
-    });
-  });
-
-  describe('gtmEnabled toggle', () => {
-    it('should force all signals to ops when gtmEnabled=false', async () => {
-      // Mock GTM disabled
-      vi.mocked(mockSettingsService.getGlobalSettings).mockResolvedValue({
-        gtmEnabled: false,
-      });
-
-      // Create service with updated settings
-      signalIntakeService = new SignalIntakeService(
-        mockEmitter,
-        mockFeatureLoader,
-        '/test/path',
-        mockSettingsService
-      );
-
-      // Try a signal that would normally be GTM
-      const signal = createTestSignal({
-        source: 'ui:content',
-        content: 'Marketing campaign',
-      });
-
-      mockEmitter.emit('signal:received', signal);
-
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      // Verify forced ops routing
+      // Verify ops routing (no GTM path exists)
       expect(mockEmitter.emit).toHaveBeenCalledWith(
         'signal:routed',
         expect.objectContaining({
           category: 'ops',
-          reason: expect.stringContaining('GTM pipeline disabled'),
-        })
-      );
-
-      // Should NOT route to GTM
-      expect(mockEmitter.emit).not.toHaveBeenCalledWith(
-        'authority:gtm-signal-received',
-        expect.any(Object)
-      );
-    });
-
-    it('should force Discord GTM channels to ops when gtmEnabled=false', async () => {
-      vi.mocked(mockSettingsService.getGlobalSettings).mockResolvedValue({
-        gtmEnabled: false,
-      });
-
-      signalIntakeService = new SignalIntakeService(
-        mockEmitter,
-        mockFeatureLoader,
-        '/test/path',
-        mockSettingsService
-      );
-
-      const signal = createTestSignal({
-        source: 'discord',
-        content: 'Marketing idea',
-        channelContext: {
-          channelName: 'marketing-team',
-        },
-      });
-
-      mockEmitter.emit('signal:received', signal);
-
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      // Verify forced ops routing
-      expect(mockEmitter.emit).toHaveBeenCalledWith(
-        'signal:routed',
-        expect.objectContaining({
-          category: 'ops',
-          reason: expect.stringContaining('GTM pipeline disabled'),
-        })
-      );
-    });
-
-    it('should force UI content signals to ops when gtmEnabled=false', async () => {
-      vi.mocked(mockSettingsService.getGlobalSettings).mockResolvedValue({
-        gtmEnabled: false,
-      });
-
-      signalIntakeService = new SignalIntakeService(
-        mockEmitter,
-        mockFeatureLoader,
-        '/test/path',
-        mockSettingsService
-      );
-
-      const signal = createTestSignal({
-        source: 'ui:content',
-        content: 'Blog post needed',
-      });
-
-      mockEmitter.emit('signal:received', signal);
-
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      // Verify forced ops routing
-      expect(mockEmitter.emit).toHaveBeenCalledWith(
-        'signal:routed',
-        expect.objectContaining({
-          category: 'ops',
-          reason: expect.stringContaining('GTM pipeline disabled'),
-        })
-      );
-
-      expect(mockEmitter.emit).not.toHaveBeenCalledWith(
-        'authority:gtm-signal-received',
-        expect.any(Object)
-      );
-    });
-
-    it('should allow GTM routing when gtmEnabled=true', async () => {
-      vi.mocked(mockSettingsService.getGlobalSettings).mockResolvedValue({
-        gtmEnabled: true,
-      });
-
-      signalIntakeService = new SignalIntakeService(
-        mockEmitter,
-        mockFeatureLoader,
-        '/test/path',
-        mockSettingsService
-      );
-
-      const signal = createTestSignal({
-        source: 'ui:content',
-        content: 'Content idea',
-      });
-
-      mockEmitter.emit('signal:received', signal);
-
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      // Verify GTM routing allowed
-      expect(mockEmitter.emit).toHaveBeenCalledWith(
-        'authority:gtm-signal-received',
-        expect.any(Object)
-      );
-
-      expect(mockEmitter.emit).toHaveBeenCalledWith(
-        'signal:routed',
-        expect.objectContaining({
-          category: 'gtm',
         })
       );
     });
@@ -595,11 +381,11 @@ describe('SignalIntakeService', () => {
       mockEmitter.emit('signal:received', signal2);
       await new Promise((resolve) => setTimeout(resolve, 30));
 
-      // Both should be processed (different timestamps)
-      expect(mockEmitter.emit).toHaveBeenCalledWith(
-        'authority:gtm-signal-received',
-        expect.any(Object)
+      // Both should be processed (different timestamps, not deduplicated)
+      const routedCalls = (mockEmitter.emit as ReturnType<typeof vi.fn>).mock.calls.filter(
+        (call) => call[0] === 'signal:routed'
       );
+      expect(routedCalls.length).toBe(2);
     });
 
     it('should allow duplicate MCP signals with different timestamps', async () => {
@@ -700,11 +486,11 @@ describe('SignalIntakeService', () => {
     });
   });
 
-  describe('GTM signal → feature creation → pipeline initiation path', () => {
+  describe('signal → feature creation → pipeline initiation path', () => {
     it('should create a feature with workItemState idea and route through signal pipeline', async () => {
       const createdFeature = {
-        id: 'gtm-feature-456',
-        title: '[discord] Marketing campaign needed',
+        id: 'feature-456',
+        title: '[discord] Campaign idea needed',
         status: 'backlog',
         workItemState: 'idea',
       };
@@ -712,7 +498,7 @@ describe('SignalIntakeService', () => {
 
       const signal = createTestSignal({
         source: 'discord',
-        content: 'Marketing campaign needed',
+        content: 'Campaign idea needed',
         channelContext: {
           labels: ['marketing'],
         },
@@ -735,15 +521,15 @@ describe('SignalIntakeService', () => {
       expect(mockEmitter.emit).toHaveBeenCalledWith(
         'signal:routed',
         expect.objectContaining({
-          featureId: 'gtm-feature-456',
+          featureId: 'feature-456',
           projectPath: '/test/path',
         })
       );
     });
 
-    it('should include featureId in signal:routed event for GTM signals', async () => {
+    it('should include featureId in signal:routed event', async () => {
       const createdFeature = {
-        id: 'gtm-feature-789',
+        id: 'feature-789',
         title: '[ui:content] Blog post idea',
         status: 'backlog',
         workItemState: 'idea',
@@ -762,8 +548,8 @@ describe('SignalIntakeService', () => {
       expect(mockEmitter.emit).toHaveBeenCalledWith(
         'signal:routed',
         expect.objectContaining({
-          featureId: 'gtm-feature-789',
-          category: 'gtm',
+          featureId: 'feature-789',
+          category: 'ops',
         })
       );
     });
