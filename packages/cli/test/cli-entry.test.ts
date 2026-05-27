@@ -20,13 +20,16 @@ describe('isInvokedDirectly() — entry guard (symlinked bin)', () => {
   let dir: string;
   let realFile: string;
   let symlink: string;
+  let otherFile: string;
   let realHref: string;
 
   beforeAll(() => {
     dir = mkdtempSync(join(tmpdir(), 'pm-cli-entry-'));
     realFile = join(dir, 'cli.js');
     symlink = join(dir, 'protomaker'); // mimics …/bin/protomaker → ../dist/cli.js
+    otherFile = join(dir, 'runner.js'); // a real but different file (e.g. a test runner)
     writeFileSync(realFile, '// stub\n');
+    writeFileSync(otherFile, '// runner\n');
     symlinkSync(realFile, symlink);
     // Resolve through realpath: on macOS tmpdir() itself is a symlink
     // (/var → /private/var), and the guard realpath-resolves argv[1], so the
@@ -47,8 +50,10 @@ describe('isInvokedDirectly() — entry guard (symlinked bin)', () => {
     expect(isInvokedDirectly(realFile, realHref)).toBe(true);
   });
 
-  it('returns false for an unrelated argv[1] (e.g. a test runner — import safety)', () => {
-    expect(isInvokedDirectly(join(dir, 'vitest-runner.js'), realHref)).toBe(false);
+  it('returns false for a real but different argv[1] (e.g. a test runner — import safety)', () => {
+    // otherFile exists, so realpathSync succeeds — this exercises the genuine
+    // path-mismatch branch, not the realpathSync-throws branch below.
+    expect(isInvokedDirectly(otherFile, realHref)).toBe(false);
   });
 
   it('returns false when argv[1] is undefined', () => {
