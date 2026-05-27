@@ -25,6 +25,7 @@ import { createDeliveriesRoutes } from './routes/deliveries.js';
 import { createAuditRoutes } from './routes/audit.js';
 import { createConcurrencyRoutes } from './routes/concurrency.js';
 import { createEventsRoutes } from './routes/events.js';
+import { createFailureTaxonomyRoutes } from './routes/failure-taxonomy.js';
 import { createWorktreeCleanupRoutes } from './routes/worktree-cleanup.js';
 
 export function createOpsRoutes(
@@ -49,6 +50,7 @@ export function createOpsRoutes(
     '/worktree-cleanup',
     createWorktreeCleanupRoutes(worktreeLifecycleService, featureLoader, events, autoModeService)
   );
+  router.use('/failure-taxonomy', createFailureTaxonomyRoutes(featureLoader, autoModeService));
 
   return router;
 }
