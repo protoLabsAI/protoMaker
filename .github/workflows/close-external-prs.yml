@@ -1,7 +1,10 @@
 name: Close External PRs
 
 on:
-  pull_request_target:
+  # Safe pull_request_target use: this workflow never checks out or runs PR code
+  # — it only posts a comment and closes the PR via the GitHub API using context
+  # payload values (in JS, not shell). Required to act on fork PRs at all.
+  pull_request_target: # zizmor: ignore[dangerous-triggers]
     types: [opened, reopened]
 
 jobs:
@@ -14,7 +17,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Close PR and post explanation
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
             const prNumber = context.payload.pull_request.number;

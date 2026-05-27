@@ -33,9 +33,13 @@ jobs:
 
       - name: Detect code changes
         id: changes
+        # base.ref is passed via env (not interpolated into the shell) to avoid
+        # template/script injection (CWE-94) from a crafted branch name.
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            git fetch --depth=1 origin ${{ github.event.pull_request.base.ref }}
+            git fetch --depth=1 origin "$BASE_REF"
             CHANGED=$(git diff --name-only FETCH_HEAD HEAD)
             CODE=$(echo "$CHANGED" | grep -Ev '^(docs/|site/|\.automaker/)' | grep -Ev '\.md$' | head -1)
             if [ -z "$CODE" ]; then
