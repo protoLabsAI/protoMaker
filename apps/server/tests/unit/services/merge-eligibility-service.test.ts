@@ -40,6 +40,7 @@ describe('MergeEligibilityService', () => {
         'ci_passing',
         'reviews_approved',
         'no_requested_changes',
+        'conversations_resolved',
         'up_to_date',
       ]);
       expect(DEFAULT_AUTO_MERGE_SETTINGS.mergeMethod).toBe('squash');
@@ -121,7 +122,8 @@ describe('MergeEligibilityService', () => {
 
       expect(resolvedSettings.enabled).toBe(false);
       expect(resolvedSettings.minApprovals).toBe(1);
-      expect(resolvedSettings.requiredChecks).toHaveLength(4);
+      expect(resolvedSettings.requiredChecks).toHaveLength(5);
+      expect(resolvedSettings.requiredChecks).toContain('conversations_resolved');
       expect(resolvedSettings.mergeMethod).toBe('squash');
     });
 
