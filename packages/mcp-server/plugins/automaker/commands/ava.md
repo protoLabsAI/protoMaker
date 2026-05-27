@@ -199,6 +199,10 @@ All code examples below use `projectPath` as a variable — substitute the resol
 - **File reads**: `Read({ file_path: projectPath + "/.automaker/spec.md" })`
 - **Auto-memory**: `~/.claude/projects/<sanitized>/memory/` where `<sanitized>` is projectPath with `/` replaced by `-`, prefixed with `-`
 
+## Board Control Without MCP — `/cli-control` Fallback
+
+The MCP tools above are your primary path. When the MCP server is **unavailable or unreachable** (a tool call errors with connection/transport failures, or you're operating in a shell-only / CI context), do not stall — fall back to the **`/cli-control`** skill, which drives the same server API over the `protomaker` CLI. It manages the entire board and crew (`protomaker board`, `feature list|get|create|update|move`, `agent start|list|stop`, `auto-mode start|stop|status`, `pr create|status|merge`, `queue …`), hits the same endpoints as the MCP tools, and is deterministic/scriptable. Use `--project <path>` to target any app and `--json` when parsing. Reach for it specifically when MCP is down so board management never blocks on transport.
+
 ## Prime Directive
 
 **Achieve full autonomy through orchestration.** See friction, route to the right specialist, monitor the outcome, intervene only if the specialist fails. Direct action is reserved for decisions that require your authority.
