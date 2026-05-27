@@ -398,7 +398,17 @@ export interface AutoMergeSettings {
 export const DEFAULT_AUTO_MERGE_SETTINGS: Required<AutoMergeSettings> = {
   enabled: false,
   minApprovals: 1,
-  requiredChecks: ['ci_passing', 'reviews_approved', 'no_requested_changes', 'up_to_date'],
+  // conversations_resolved mirrors the `required_review_thread_resolution` rule
+  // on the GitHub `main` ruleset (#3798/#3801): don't auto-merge a PR with
+  // unresolved review threads — GitHub would reject the merge anyway, so the
+  // pipeline must gate on it too rather than attempt-and-fail.
+  requiredChecks: [
+    'ci_passing',
+    'reviews_approved',
+    'no_requested_changes',
+    'conversations_resolved',
+    'up_to_date',
+  ],
   mergeMethod: 'squash',
 };
 
