@@ -66,6 +66,9 @@ This directory is NOT included in the public VitePress build. Content here is fo
 - [Metrics](./dev/metrics.md)
 - [Flow Control](./dev/flow-control.md)
 - [Operator Tooling (plugin, CLI, beads)](./dev/operator-tooling.md)
+- [Recovery Runbooks](./dev/recovery-runbooks.md)
+- [Project Orchestration](./dev/project-orchestration.md)
+- [Documentation Design](./dev/documentation-design.md)
 
 ## Server
 
