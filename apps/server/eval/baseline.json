@@ -1,0 +1,6 @@
+{
+  "_comment": "Regression thresholds for the harness eval (#3904). The gate (npm run eval:gate) fails a PR whose scorecard.json drops below these. Tighten as the golden scenario set grows. successRate is the headline metric; escalationRate is capped so the pipeline doesn't 'pass' by escalating everything.",
+  "minSuccessRate": 1.0,
+  "maxEscalationRate": 0.5,
+  "minScenarios": 6
+}

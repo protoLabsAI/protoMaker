@@ -161,3 +161,6 @@ test/fixtures/**/.automaker/
 .automaker/features/
 .automaker/checkpoints/
 .automaker/trajectory/
+
+# Harness eval run artifact (baseline.json is committed; #3904)
+apps/server/eval/scorecard.json
