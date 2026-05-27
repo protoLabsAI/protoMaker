@@ -346,6 +346,19 @@ export class ProtoProvider extends BaseProvider {
         supportsTools: true,
         tier: 'basic' as const,
       },
+      {
+        id: 'protolabs/nano',
+        name: 'protoLabs Nano',
+        modelString: 'protolabs/nano',
+        provider: 'protolabs',
+        description:
+          'Gateway-routed nano tier for trivial one-shot micro-tasks (branch names, titles, descriptions).',
+        contextWindow: 32000,
+        maxOutputTokens: 4192,
+        supportsVision: false,
+        supportsTools: false,
+        tier: 'basic' as const,
+      },
     ] satisfies ModelDefinition[];
   }
 

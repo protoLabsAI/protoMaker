@@ -20,8 +20,10 @@ vi.mock('../../../src/providers/simple-query-service.js', () => ({
   simpleQuery: (...args: unknown[]) => simpleQuery(...args),
 }));
 const getWorkflowSettings = vi.fn();
+const getPhaseModelWithOverrides = vi.fn();
 vi.mock('../../../src/lib/settings-helpers.js', () => ({
   getWorkflowSettings: (...args: unknown[]) => getWorkflowSettings(...args),
+  getPhaseModelWithOverrides: (...args: unknown[]) => getPhaseModelWithOverrides(...args),
 }));
 
 import { createSmartBranchNameGenerator } from '../../../src/services/branch-name-generator.js';
@@ -36,7 +38,14 @@ const input = {
 };
 
 describe('createSmartBranchNameGenerator', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Branch-name model resolves from phaseModels.branchNameModel; default = nano.
+    getPhaseModelWithOverrides.mockResolvedValue({
+      phaseModel: { model: 'protolabs/nano' },
+      isProjectOverride: false,
+    });
+  });
 
   it('returns null when smartBranchNames is disabled (no model call)', async () => {
     getWorkflowSettings.mockResolvedValue({ smartBranchNames: false });
@@ -52,8 +61,8 @@ describe('createSmartBranchNameGenerator', () => {
     const gen = createSmartBranchNameGenerator(null, prefixFor);
     const result = await gen(input, '/proj');
     expect(result).toBe('feature/user-auth-flow-abc1234');
-    // routes through the fast tier
-    expect(simpleQuery).toHaveBeenCalledWith(expect.objectContaining({ model: 'protolabs/fast' }));
+    // routes through the nano tier (resolved from phaseModels.branchNameModel)
+    expect(simpleQuery).toHaveBeenCalledWith(expect.objectContaining({ model: 'protolabs/nano' }));
     // captured a training row
     expect(vi.mocked(fs.promises.appendFile)).toHaveBeenCalled();
   });

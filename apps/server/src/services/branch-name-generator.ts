@@ -12,17 +12,14 @@
  * deterministic slug. It never throws.
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
 import { createLogger } from '@protolabsai/utils';
+import { resolvePhaseModel } from '@protolabsai/model-resolver';
 import { simpleQuery } from '../providers/simple-query-service.js';
-import { getWorkflowSettings } from '../lib/settings-helpers.js';
+import { getWorkflowSettings, getPhaseModelWithOverrides } from '../lib/settings-helpers.js';
+import { captureTrainingRow } from './training-capture.js';
 import type { SettingsService } from './settings-service.js';
 
 const logger = createLogger('SmartBranchName');
-
-/** Fast tier alias — gateway-routed, NOT a hardcoded anthropic model id. */
-const FAST_MODEL = 'protolabs/fast';
 
 export interface SmartBranchInput {
   title?: string;
@@ -55,6 +52,16 @@ export function createSmartBranchNameGenerator(
       const prefix = branchPrefixForCategory(input.category);
       const shortId = (input.featureId ?? Date.now().toString(36)).slice(-7);
 
+      // Model comes from the phase-model settings (Settings → AI Models →
+      // branchNameModel), not a hardcoded id — defaults to the nano tier.
+      const { phaseModel } = await getPhaseModelWithOverrides(
+        'branchNameModel',
+        settingsService,
+        projectPath,
+        '[SmartBranchName]'
+      );
+      const { model } = resolvePhaseModel(phaseModel);
+
       let slug = '';
       let usedFallback = true;
       try {
@@ -63,7 +70,7 @@ export function createSmartBranchNameGenerator(
             `Generate a concise git branch slug for this work. ` +
             `Rules: 2-5 words, lowercase, hyphen-separated, no path prefix, no quotes, no trailing id. ` +
             `Return ONLY the slug.\n\nTitle: ${title}\nDescription: ${(input.description ?? '').slice(0, 300)}`,
-          model: FAST_MODEL,
+          model,
           cwd: projectPath,
           maxTurns: 1,
         });
@@ -85,7 +92,7 @@ export function createSmartBranchNameGenerator(
       // Capture the input→output pair as training data (non-blocking, fail-open).
       void captureTrainingRow(projectPath, {
         task: 'branch-name',
-        model: FAST_MODEL,
+        model,
         input: {
           title,
           description: (input.description ?? '').slice(0, 500),
@@ -101,25 +108,4 @@ export function createSmartBranchNameGenerator(
       return null;
     }
   };
-}
-
-/**
- * Append a training row to `.automaker/training/branch-names/captures.jsonl`.
- * Fail-open — capture must never break feature creation. See #3859.
- */
-async function captureTrainingRow(
-  projectPath: string,
-  row: Record<string, unknown>
-): Promise<void> {
-  try {
-    const dir = path.join(projectPath, '.automaker', 'training', 'branch-names');
-    await fs.promises.mkdir(dir, { recursive: true });
-    await fs.promises.appendFile(
-      path.join(dir, 'captures.jsonl'),
-      JSON.stringify({ ...row, timestamp: new Date().toISOString() }) + '\n',
-      'utf-8'
-    );
-  } catch {
-    // non-blocking
-  }
 }

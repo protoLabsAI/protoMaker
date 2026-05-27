@@ -66,6 +66,11 @@ const QUICK_TASKS: PhaseConfig[] = [
     label: 'Commit Messages',
     description: 'Generates git commit messages from diffs',
   },
+  {
+    key: 'titleGenerationModel',
+    label: 'Feature Titles',
+    description: 'Generates a concise feature title from a description',
+  },
 ];
 
 const VALIDATION_TASKS: PhaseConfig[] = [

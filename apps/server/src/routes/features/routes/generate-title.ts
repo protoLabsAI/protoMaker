@@ -7,10 +7,14 @@
 
 import type { Request, Response } from 'express';
 import { createLogger } from '@protolabsai/utils';
-import { CLAUDE_MODEL_MAP } from '@protolabsai/model-resolver';
+import { resolvePhaseModel } from '@protolabsai/model-resolver';
 import { simpleQuery } from '../../../providers/simple-query-service.js';
 import type { SettingsService } from '../../../services/settings-service.js';
-import { getPromptCustomization } from '../../../lib/settings-helpers.js';
+import {
+  getPromptCustomization,
+  getPhaseModelWithOverrides,
+} from '../../../lib/settings-helpers.js';
+import { captureTrainingRow } from '../../../services/training-capture.js';
 
 const logger = createLogger('GenerateTitle');
 
@@ -34,7 +38,7 @@ export function createGenerateTitleHandler(
 ): (req: Request, res: Response) => Promise<void> {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { description, projectPath: _projectPath } = req.body as GenerateTitleRequestBody;
+      const { description, projectPath } = req.body as GenerateTitleRequestBody;
 
       if (!description || typeof description !== 'string') {
         const response: GenerateTitleErrorResponse = {
@@ -66,10 +70,20 @@ export function createGenerateTitleHandler(
 
       const userPrompt = `Generate a concise title for this feature:\n\n${trimmedDescription}`;
 
-      // Use simpleQuery - provider abstraction handles all the streaming/extraction
+      // Model comes from the phase-model settings (Settings → AI Models →
+      // titleGenerationModel), not a hardcoded id — defaults to the nano tier.
+      const { phaseModel } = await getPhaseModelWithOverrides(
+        'titleGenerationModel',
+        settingsService,
+        projectPath,
+        '[GenerateTitle]'
+      );
+      const { model } = resolvePhaseModel(phaseModel);
+
+      // Use simpleQuery - provider abstraction handles all the streaming/extraction.
       const result = await simpleQuery({
         prompt: `${systemPrompt}\n\n${userPrompt}`,
-        model: CLAUDE_MODEL_MAP.haiku,
+        model,
         cwd: process.cwd(),
         maxTurns: 1,
         allowedTools: [],
@@ -77,6 +91,16 @@ export function createGenerateTitleHandler(
       });
 
       const title = result.text;
+
+      // Capture the input→output pair as training data (non-blocking; #3859).
+      if (projectPath && title && title.trim().length > 0) {
+        void captureTrainingRow(projectPath, {
+          task: 'feature-title',
+          model,
+          input: { description: trimmedDescription.slice(0, 500) },
+          output: title.trim(),
+        });
+      }
 
       if (!title || title.trim().length === 0) {
         logger.warn('Received empty response from AI');
