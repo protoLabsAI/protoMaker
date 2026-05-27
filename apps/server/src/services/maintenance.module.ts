@@ -8,6 +8,7 @@
  * - post-merge-reconciler (critical tier, 5min): Poll-based fallback for missed PR merge webhooks
  * - done-worktree-cleanup (full tier, 6h): Removes worktrees for done features and orphaned worktrees
  * - epic-adoption-sweep (full tier + 1h poll): Links orphaned features to parent epics via bracket-prefix matching
+ * - auto-dismiss-stale-bot-reviews (critical tier, 5min): Clears stale CHANGES_REQUESTED bot reviews that block merge
  */
 
 import { createLogger } from '@protolabsai/utils';
@@ -230,7 +231,7 @@ export function register(container: ServiceContainer): void {
   // See protoLabsAI/protoMaker#3511.
   const backlogTitleReconcilerCheck = new BacklogTitleReconcilerCheck(featureLoader, events);
 
-  // Auto-dismiss stale bot CHANGES_REQUESTED reviews (full tier) — protoquinn /
+  // Auto-dismiss stale bot CHANGES_REQUESTED reviews (critical tier) — protoquinn /
   // coderabbit re-review fix commits as COMMENTED rather than APPROVED, which
   // leaves PRs permanently BLOCKED on the original CHANGES_REQUESTED. This
   // check finds and dismisses those superseded reviews when the same bot has
@@ -245,7 +246,11 @@ export function register(container: ServiceContainer): void {
   const autoDismissStaleBotReviewsCheck: MaintenanceCheck = {
     id: 'auto-dismiss-stale-bot-reviews',
     name: 'Auto-Dismiss Stale Bot Reviews',
-    tier: 'full',
+    // critical tier (5min): a stale CHANGES_REQUESTED blocks merge and stalls the
+    // REVIEW loop, so it must clear fast — 6h was far too slow. The expensive
+    // per-PR gh calls only fire for PRs that are BLOCKED + CHANGES_REQUESTED
+    // (normally few), so the tighter cadence is cheap on the GitHub API. (#3901)
+    tier: 'critical',
     async run(context: MaintenanceCheckContext): Promise<MaintenanceCheckResult> {
       const t0 = Date.now();
       let totalDismissed = 0;
