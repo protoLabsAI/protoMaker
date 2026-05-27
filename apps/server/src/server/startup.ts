@@ -291,21 +291,73 @@ export async function runStartup(
     process.env.AUTO_MODE_STARTUP_DELAY_MS = crashDelayMs;
   }
 
-  // Auto-start auto-mode if enabled in settings
+  // Auto-start / auto-resume auto-mode. Two sources decide which loops run after boot:
+  //   1. Persisted execution state — any project whose loop was running at the last
+  //      shutdown (execution-state.json with autoLoopWasRunning) resumes at its SAVED
+  //      maxConcurrency. This delivers "set it and forget it": a deploy or crash
+  //      transparently resumes the crew at the configured concurrency (see #3949).
+  //   2. autoModeAlwaysOn config — projects explicitly configured to start on boot
+  //      even if they weren't running before (concurrency resolved from settings).
+  // Persisted-state entries win on overlap (they carry the configured concurrency).
   try {
     const settings = await settingsService.getGlobalSettings();
-    if (settings.autoModeAlwaysOn?.enabled && settings.autoModeAlwaysOn.projects.length > 0) {
-      logger.info(
-        `[AUTO-START] Auto-mode always-on enabled for ${settings.autoModeAlwaysOn.projects.length} project(s), starting auto-mode...`
-      );
 
-      // Start auto-mode for each configured project
+    // Candidate projects to inspect for persisted "was running" state: every
+    // registered app plus any always-on project.
+    const candidatePaths = [
+      ...(settings.projects?.map((p) => p.path) ?? []),
+      ...(settings.autoModeAlwaysOn?.projects?.map((p) => p.projectPath) ?? []),
+    ];
+    const resumable = await autoModeService.listResumableLoops(candidatePaths);
+
+    // Unified start list, keyed per worktree. maxConcurrency === undefined means
+    // "resolve from settings" (always-on projects that weren't running before).
+    const keyOf = (projectPath: string, branchName: string | null): string =>
+      `${projectPath}::${branchName ?? '__main__'}`;
+    const targets = new Map<
+      string,
+      {
+        projectPath: string;
+        branchName: string | null;
+        maxConcurrency?: number;
+        reason: 'resume' | 'always-on';
+      }
+    >();
+
+    for (const loop of resumable) {
+      targets.set(keyOf(loop.projectPath, loop.branchName), {
+        projectPath: loop.projectPath,
+        branchName: loop.branchName,
+        maxConcurrency: loop.maxConcurrency,
+        reason: 'resume',
+      });
+    }
+
+    if (settings.autoModeAlwaysOn?.enabled) {
       for (const projectConfig of settings.autoModeAlwaysOn.projects) {
-        try {
-          const { projectPath, branchName } = projectConfig;
-          const worktreeDesc = branchName ? `worktree ${branchName}` : 'main worktree';
+        const branchName = projectConfig.branchName ?? null;
+        const key = keyOf(projectConfig.projectPath, branchName);
+        if (!targets.has(key)) {
+          targets.set(key, {
+            projectPath: projectConfig.projectPath,
+            branchName,
+            reason: 'always-on',
+          });
+        }
+      }
+    }
 
-          // Guard: skip auto-mode start if the project has no ready backlog features.
+    if (targets.size === 0) {
+      logger.info(
+        '[AUTO-START] No loops were running before restart and auto-mode always-on is off — nothing to start'
+      );
+    } else {
+      logger.info(`[AUTO-START] Resolving ${targets.size} auto-mode loop(s) to start...`);
+      for (const target of targets.values()) {
+        const { projectPath, branchName, maxConcurrency, reason } = target;
+        const worktreeDesc = branchName ? `worktree ${branchName}` : 'main worktree';
+        try {
+          // Guard: skip start if the project has no ready backlog features.
           // Starting loops for idle projects wastes memory and contributes to OOM on
           // restart when multiple apps are configured. The loop can be started later
           // when new work arrives via the normal start-auto-mode API call.
@@ -317,11 +369,15 @@ export async function runStartup(
             continue;
           }
 
-          logger.info(`[AUTO-START] Starting auto-mode for ${worktreeDesc} in ${projectPath}...`);
+          logger.info(
+            `[AUTO-START] Starting auto-mode (${reason}) for ${worktreeDesc} in ${projectPath}...`
+          );
 
           const resolvedMaxConcurrency = await autoModeService.startAutoLoopForProject(
             projectPath,
-            branchName ?? null
+            branchName,
+            false,
+            maxConcurrency
           );
 
           logger.info(
@@ -331,25 +387,14 @@ export async function runStartup(
           // If auto-mode is already running, that's OK (might have been restored from state)
           const errorMsg = err instanceof Error ? err.message : String(err);
           if (errorMsg.includes('already running')) {
-            logger.info(
-              `[AUTO-START] Auto-mode already running for ${projectConfig.projectPath}, skipping auto-start`
-            );
+            logger.info(`[AUTO-START] Auto-mode already running for ${projectPath}, skipping`);
           } else {
-            logger.error(
-              `[AUTO-START] Failed to start auto-mode for ${projectConfig.projectPath}:`,
-              err
-            );
+            logger.error(`[AUTO-START] Failed to start auto-mode for ${projectPath}:`, err);
           }
         }
       }
-    } else if (settings.autoModeAlwaysOn?.enabled) {
-      logger.info(
-        '[AUTO-START] Auto-mode always-on enabled but no projects configured, skipping auto-start'
-      );
-    } else {
-      logger.info('[AUTO-START] Auto-mode always-on disabled, skipping auto-start');
     }
   } catch (err) {
-    logger.warn('[AUTO-START] Failed to check auto-mode always-on setting:', err);
+    logger.warn('[AUTO-START] Failed to resolve auto-mode startup state:', err);
   }
 }
