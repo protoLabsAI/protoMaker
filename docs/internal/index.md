@@ -68,6 +68,7 @@ This directory is NOT included in the public VitePress build. Content here is fo
 - [Recovery Runbooks](./dev/recovery-runbooks.md)
 - [Project Orchestration](./dev/project-orchestration.md)
 - [Documentation Design](./dev/documentation-design.md)
+- [Best-of-N Spike](./dev/best-of-n-spike.md)
 
 ## Server
 
