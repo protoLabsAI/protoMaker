@@ -22,6 +22,7 @@
 
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
+import { realpathSync } from 'node:fs';
 import { Command } from 'commander';
 import { type GlobalFlags, usageError, exitError } from './output.js';
 import { listCommand, getCommand, createCommand, updateCommand, moveCommand } from './feature.js';
@@ -244,11 +245,29 @@ async function main(): Promise<void> {
   process.exit(0);
 }
 
-// Only run the CLI when this module is invoked directly (e.g. `node dist/cli.js …`),
-// NOT when it's imported — tests import `buildProgram` and must not trigger a parse
-// of the test runner's argv (which would call process.exit during the test run).
-const invokedDirectly =
-  process.argv[1] != null && import.meta.url === pathToFileURL(process.argv[1]).href;
+/**
+ * Whether the CLI was invoked directly (so it should parse argv and run), versus
+ * imported (tests import `buildProgram` and must not trigger a parse of the test
+ * runner's argv, which would call process.exit mid-test).
+ *
+ * `argv1` MUST be resolved through realpath before comparing: when the CLI runs via
+ * an npm bin symlink (global install / `npm link`), argv1 is the symlink path
+ * (…/bin/protomaker) while `moduleHref` is the real dist/cli.js. Comparing the raw
+ * paths makes the guard fail and the CLI silently no-ops as a global command — the
+ * only way Ava and `/cli-control` invoke it. realpathSync collapses the symlink so
+ * the linked-bin and `node dist/cli.js` forms both match; a test runner's argv1
+ * resolves to the runner path and still won't match, preserving import-safety.
+ */
+export function isInvokedDirectly(argv1: string | undefined, moduleHref: string): boolean {
+  if (argv1 == null) return false;
+  try {
+    return moduleHref === pathToFileURL(realpathSync(argv1)).href;
+  } catch {
+    return false;
+  }
+}
+
+const invokedDirectly = isInvokedDirectly(process.argv[1], import.meta.url);
 
 if (invokedDirectly) {
   main().catch((err: any) => {
