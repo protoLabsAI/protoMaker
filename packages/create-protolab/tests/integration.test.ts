@@ -329,9 +329,7 @@ describe('CI Phase — workflow security lint (#3819)', () => {
       await setupCI({ projectPath: tempDir, packageManager: 'npm' });
       const second = await setupCI({ projectPath: tempDir, packageManager: 'npm' });
       expect(
-        second.filesCreated.some((f) =>
-          f.includes('workflow-security-lint.yml (already exists)')
-        )
+        second.filesCreated.some((f) => f.includes('workflow-security-lint.yml (already exists)'))
       ).toBe(true);
     } finally {
       await fsp.rm(tempDir, { recursive: true, force: true });
