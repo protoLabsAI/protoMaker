@@ -65,6 +65,10 @@ export interface ProjectRef {
   icon?: string;
   /** Custom icon image path for project switcher */
   customIconPath?: string;
+  /** GitHub owner and repo derived from the project's git remote origin (best-effort, omitted on failure) */
+  github?: { owner: string; repo: string };
+  /** Default branch derived from the remote HEAD (best-effort, omitted on failure) */
+  defaultBranch?: string;
 }
 
 /**
