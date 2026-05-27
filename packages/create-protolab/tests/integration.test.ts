@@ -8,6 +8,9 @@ import {
   checkEnvironment,
 } from '../src/lib/validators.js';
 import type { RepoResearchResult, GapAnalysisReport } from '../src/types.js';
+import { setupCI } from '../src/phases/ci.js';
+import { promises as fsp } from 'node:fs';
+import os from 'node:os';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -292,5 +295,47 @@ describe('Fixture Validation', () => {
         expect(fs.existsSync(filePath)).toBe(true);
       });
     });
+  });
+});
+
+describe('CI Phase — workflow security lint (#3819)', () => {
+  it('emits the workflow-security-lint workflow wiring zizmor + actionlint', async () => {
+    const tempDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'protolab-ci-'));
+    try {
+      const result = await setupCI({ projectPath: tempDir, packageManager: 'npm' });
+
+      expect(result.success).toBe(true);
+      expect(result.filesCreated).toContain('.github/workflows/workflow-security-lint.yml');
+
+      const content = await fsp.readFile(
+        path.join(tempDir, '.github', 'workflows', 'workflow-security-lint.yml'),
+        'utf-8'
+      );
+      // Both linters are wired and version-pinned for reproducible runs.
+      expect(content).toContain('pip install zizmor==1.25.2');
+      expect(content).toContain('zizmor --min-severity=medium .github/workflows/');
+      expect(content).toContain('download-actionlint.bash');
+      expect(content).toContain('./actionlint');
+      // actionlint installs without a third-party action — no `uses: ...actionlint`.
+      expect(content).not.toMatch(/uses:.*actionlint/i);
+      // Least-privilege token for the lint job.
+      expect(content).toContain('permissions:');
+      expect(content).toContain('contents: read');
+    } finally {
+      await fsp.rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('is idempotent — does not overwrite an existing security-lint workflow', async () => {
+    const tempDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'protolab-ci-'));
+    try {
+      await setupCI({ projectPath: tempDir, packageManager: 'npm' });
+      const second = await setupCI({ projectPath: tempDir, packageManager: 'npm' });
+      expect(
+        second.filesCreated.some((f) => f.includes('workflow-security-lint.yml (already exists)'))
+      ).toBe(true);
+    } finally {
+      await fsp.rm(tempDir, { recursive: true, force: true });
+    }
   });
 });
