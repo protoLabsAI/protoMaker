@@ -809,6 +809,13 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         waitForCI: args.waitForCI ?? true,
       });
 
+    case 'add_github_comment':
+      return apiCall('/github/comment', {
+        projectPath: args.projectPath,
+        issueNumber: args.issueNumber,
+        body: args.body,
+      });
+
     case 'check_pr_status':
       return apiCall('/github/check-pr-status', {
         projectPath: args.projectPath,
