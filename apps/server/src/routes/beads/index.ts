@@ -18,6 +18,40 @@ const logger = createLogger('BeadsRoutes');
 export function createBeadsRoutes(beadsService: BeadsService): Router {
   const router = Router();
 
+  router.post('/status', async (req: Request, res: Response) => {
+    try {
+      const { projectPath } = req.body as { projectPath: string };
+      if (!projectPath) {
+        res.status(400).json({ success: false, error: 'projectPath is required' });
+        return;
+      }
+      validatePath(projectPath);
+      const { initialized } = await beadsService.status(projectPath);
+      res.json({ success: true, initialized });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('status failed:', error);
+      res.status(500).json({ success: false, error: message });
+    }
+  });
+
+  router.post('/init', async (req: Request, res: Response) => {
+    try {
+      const { projectPath, prefix } = req.body as { projectPath: string; prefix?: string };
+      if (!projectPath) {
+        res.status(400).json({ success: false, error: 'projectPath is required' });
+        return;
+      }
+      validatePath(projectPath);
+      const result = await beadsService.init(projectPath, prefix);
+      res.json({ success: true, ...result });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('init failed:', error);
+      res.status(500).json({ success: false, error: message });
+    }
+  });
+
   router.post('/list', async (req: Request, res: Response) => {
     try {
       const { projectPath } = req.body as { projectPath: string };

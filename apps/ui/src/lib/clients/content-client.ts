@@ -126,6 +126,15 @@ export const withContentClient = <TBase extends Constructor<BaseHttpClient>>(Bas
 
     // Beads API — per-project issue tracker via the `br` CLI
     beads = {
+      status: (projectPath: string): Promise<{ success: boolean; initialized: boolean }> =>
+        this.post('/api/beads/status', { projectPath }),
+
+      init: (
+        projectPath: string,
+        prefix?: string
+      ): Promise<{ success: boolean; initialized: boolean; alreadyInitialized: boolean }> =>
+        this.post('/api/beads/init', { projectPath, prefix }),
+
       list: (projectPath: string): Promise<{ success: boolean; issues: BeadsIssue[] }> =>
         this.post('/api/beads/list', { projectPath }),
 

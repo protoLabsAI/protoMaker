@@ -140,7 +140,7 @@ Types: `feature | task | bug | chore | epic`. Priority: `0` (critical) → `4` (
 
 ### Server integration
 
-Server-side issue CRUD goes through `BeadsService` (`apps/server/src/services/beads-service.ts`), which subprocesses `br --json` with `cwd: projectPath`. Routes mounted at `/api/beads/*`. Do not bypass — never read `.beads/beads.db` directly from app code; always go through `br` so concurrency and JSONL auto-flush stay consistent.
+Server-side issue CRUD goes through `BeadsService` (`apps/server/src/services/beads-service.ts`), which subprocesses `br --json` with `cwd: projectPath`. Routes mounted at `/api/beads/*` (incl. `/status` and `/init` — the UI Beads view detects an uninitialized project via `/status` and offers an "Initialize beads" action that runs `br init` through `/init`). Do not bypass — never read `.beads/beads.db` directly from app code; always go through `br` so concurrency and JSONL auto-flush stay consistent.
 
 ## Important Guidelines
 

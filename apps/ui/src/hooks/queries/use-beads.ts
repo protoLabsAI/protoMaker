@@ -16,7 +16,28 @@ import type { BeadsIssue } from '@protolabsai/types';
 // at the view. This gives near-live updates without a server-side watcher.
 const BEADS_LIVE_POLL_MS = 2_000;
 
-export function useBeadsList(projectPath: string | undefined) {
+/**
+ * Whether the current project has an initialized `.beads/` store. Drives the
+ * "Initialize beads" affordance in the Beads view. Polled less aggressively
+ * than the issue list — init is a one-time, user-driven action.
+ */
+export function useBeadsStatus(projectPath: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.beads.status(projectPath ?? ''),
+    queryFn: async (): Promise<boolean> => {
+      if (!projectPath) throw new Error('No project path');
+      const client = getHttpApiClient();
+      const result = await client.beads.status(projectPath);
+      if (!result?.success) throw new Error('Failed to fetch beads status');
+      return result.initialized;
+    },
+    enabled: !!projectPath,
+    staleTime: 5_000,
+    refetchOnWindowFocus: true,
+  });
+}
+
+export function useBeadsList(projectPath: string | undefined, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.beads.list(projectPath ?? ''),
     queryFn: async (): Promise<BeadsIssue[]> => {
@@ -26,7 +47,7 @@ export function useBeadsList(projectPath: string | undefined) {
       if (!result?.success) throw new Error('Failed to fetch beads issues');
       return result.issues ?? [];
     },
-    enabled: !!projectPath,
+    enabled: !!projectPath && options?.enabled !== false,
     staleTime: 1_000,
     refetchInterval: BEADS_LIVE_POLL_MS,
     refetchIntervalInBackground: false,
