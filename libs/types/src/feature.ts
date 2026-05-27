@@ -446,6 +446,18 @@ export interface Feature {
    */
   reviewRemediationCount?: number;
   /**
+   * Head commit SHA at which the review feedback audit last auto-dismissed a
+   * bot CHANGES_REQUESTED review. Paired with reviewAuditDismissCount as a loop
+   * guard: if a bot re-requests changes on the same head we already cleared,
+   * the feature escalates instead of dismissing in a loop. (#3901)
+   */
+  reviewAuditDismissSha?: string;
+  /**
+   * Count of audit auto-dismissals performed on reviewAuditDismissSha. Reset
+   * when the head SHA changes. (#3901)
+   */
+  reviewAuditDismissCount?: number;
+  /**
    * Number of CI failure remediation cycles.
    * Tracks how many times the agent has fixed CI failures.
    */

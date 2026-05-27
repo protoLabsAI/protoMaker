@@ -188,6 +188,18 @@ export type {
   FreshEyesReviewResult,
 } from './fresh-eyes-review-prompt.js';
 
+// Review feedback audit (reasoning-tier validity check over the work trajectory)
+export {
+  FEEDBACK_AUDIT_SYSTEM_PROMPT,
+  buildFeedbackAuditPrompt,
+  parseFeedbackAuditVerdict,
+} from './feedback-audit-prompt.js';
+export type {
+  FeedbackAuditInput,
+  FeedbackAuditVerdict,
+  FeedbackAuditResult,
+} from './feedback-audit-prompt.js';
+
 // Release notes rewriter
 export { RELEASE_NOTES_SYSTEM_PROMPT, buildReleaseNotesPrompt } from './release-notes.js';
 export type { ReleaseNotesInput } from './release-notes.js';
