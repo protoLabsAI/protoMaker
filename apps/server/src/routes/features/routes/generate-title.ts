@@ -65,13 +65,13 @@ export function createGenerateTitleHandler(
       const prompts = await getPromptCustomization(settingsService, '[GenerateTitle]');
       const systemPrompt = prompts.titleGeneration.systemPrompt;
 
-      // Get credentials for API calls (uses hardcoded haiku model, no phase setting)
-      const credentials = await settingsService?.getCredentials();
-
       const userPrompt = `Generate a concise title for this feature:\n\n${trimmedDescription}`;
 
-      // Model comes from the phase-model settings (Settings → AI Models →
-      // titleGenerationModel), not a hardcoded id — defaults to the nano tier.
+      // Resolve model via phase-model settings (titleGenerationModel) —
+      // defaults to protolabs/nano. Credentials are fetched alongside for the
+      // provider abstraction.
+      const credentials = await settingsService?.getCredentials();
+
       const { phaseModel } = await getPhaseModelWithOverrides(
         'titleGenerationModel',
         settingsService,
