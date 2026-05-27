@@ -361,6 +361,8 @@ export const queryKeys = {
   // Beads (issue tracker)
   // ============================================
   beads: {
+    /** Whether the project has an initialized `.beads/` store */
+    status: (projectPath: string) => ['beads', 'status', projectPath] as const,
     /** All non-tombstoned issues for a project */
     list: (projectPath: string) => ['beads', 'list', projectPath] as const,
     /** Issues ready to work on (not blocked by deps) */

@@ -15,6 +15,32 @@ function invalidateBeads(queryClient: ReturnType<typeof useQueryClient>, project
   queryClient.invalidateQueries({ queryKey: queryKeys.beads.ready(projectPath) });
 }
 
+/**
+ * Initialize a `.beads/` store for the project (runs `br init` server-side).
+ * On success, refreshes the status + list queries so the view flips from the
+ * empty-state affordance to the live tracker.
+ */
+export function useInitBeads(projectPath: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (prefix?: string): Promise<void> => {
+      const client = getHttpApiClient();
+      const result = await client.beads.init(projectPath, prefix);
+      if (!result?.success) throw new Error('Failed to initialize beads');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.beads.status(projectPath) });
+      invalidateBeads(queryClient, projectPath);
+      toast.success('Beads initialized', {
+        description: 'A .beads/ tracker was created in this project.',
+      });
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to initialize beads', { description: error.message });
+    },
+  });
+}
+
 export function useCreateBeadsIssue(projectPath: string) {
   const queryClient = useQueryClient();
   return useMutation({

@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
-import { ListTodo, Plus, Check, X, Loader2 } from 'lucide-react';
+import { ListTodo, Plus, Check, X, Loader2, Database } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
 import { PanelHeader } from '@/components/shared/panel-header';
-import { useBeadsList } from '@/hooks/queries/use-beads';
+import { useBeadsList, useBeadsStatus } from '@/hooks/queries/use-beads';
 import {
   useCreateBeadsIssue,
   useUpdateBeadsIssue,
   useCloseBeadsIssue,
   useDeleteBeadsIssue,
+  useInitBeads,
 } from '@/hooks/mutations/use-beads-mutations';
 import type { BeadsIssue, BeadsIssueType, BeadsPriority } from '@protolabsai/types';
 
@@ -31,11 +32,18 @@ export function BeadsView() {
   const currentProject = useAppStore((s) => s.currentProject);
   const projectPath = currentProject?.path;
 
-  const { data: issues = [], isLoading, isError, error } = useBeadsList(projectPath);
+  const { data: initialized, isLoading: statusLoading } = useBeadsStatus(projectPath);
+  const {
+    data: issues = [],
+    isLoading,
+    isError,
+    error,
+  } = useBeadsList(projectPath, { enabled: initialized === true });
   const createIssue = useCreateBeadsIssue(projectPath ?? '');
   const updateIssue = useUpdateBeadsIssue(projectPath ?? '');
   const closeIssue = useCloseBeadsIssue(projectPath ?? '');
   const deleteIssue = useDeleteBeadsIssue(projectPath ?? '');
+  const initBeads = useInitBeads(projectPath ?? '');
 
   const [title, setTitle] = useState('');
   const [type, setType] = useState<BeadsIssueType>('task');
@@ -69,6 +77,51 @@ export function BeadsView() {
         <PanelHeader icon={ListTodo} title="Beads" />
         <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
           No project selected
+        </div>
+      </div>
+    );
+  }
+
+  // No `.beads/` store yet — offer to initialize one (equivalent to `br init`)
+  // rather than requiring the user to drop to the CLI.
+  if (statusLoading) {
+    return (
+      <div className="flex h-full flex-col">
+        <PanelHeader icon={ListTodo} title="Beads" />
+        <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Checking tracker…
+        </div>
+      </div>
+    );
+  }
+
+  if (initialized === false) {
+    return (
+      <div className="flex h-full flex-col">
+        <PanelHeader icon={ListTodo} title="Beads" />
+        <div className="flex flex-1 items-center justify-center p-6">
+          <div className="max-w-sm rounded-lg border border-dashed p-8 text-center">
+            <Database className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+            <h3 className="mb-1 text-sm font-medium">No issue tracker yet</h3>
+            <p className="mb-4 text-sm text-muted-foreground">
+              This project doesn&apos;t have a{' '}
+              <code className="rounded bg-muted px-1">.beads/</code> store. Initialize one to start
+              tracking issues here and from the <code className="rounded bg-muted px-1">br</code>{' '}
+              CLI.
+            </p>
+            <button
+              onClick={() => initBeads.mutate(undefined)}
+              disabled={initBeads.isPending}
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              {initBeads.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Database className="h-4 w-4" />
+              )}
+              Initialize beads
+            </button>
+          </div>
         </div>
       </div>
     );
