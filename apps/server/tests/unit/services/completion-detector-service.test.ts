@@ -1127,44 +1127,35 @@ describe('CompletionDetectorService', () => {
   });
 
   describe('git-backed epic regression', () => {
-    beforeEach(() => {
-      mockExecFile.mockReset();
-    });
+    type ExecFileCb = (err: null, result: { stdout: string; stderr: string }) => void;
 
-    it('should follow PR creation flow (not direct done) when epic branch exists on remote', async () => {
-      type ExecFileCb = (err: null, result: { stdout: string; stderr: string }) => void;
-
-      // git symbolic-ref (auto-detect default branch via getEffectivePrBaseBranch) → dev
-      mockExecFile.mockImplementationOnce(
-        (_cmd: string, _args: string[], _opts: object, cb: ExecFileCb) => {
-          cb(null, { stdout: 'refs/remotes/origin/dev', stderr: '' });
-        }
-      );
-      // git ls-remote → branch EXISTS on remote
-      mockExecFile.mockImplementationOnce(
-        (_cmd: string, _args: string[], _opts: object, cb: ExecFileCb) => {
-          cb(null, { stdout: 'abc123\trefs/heads/epic/m1-foundation', stderr: '' });
-        }
-      );
-      // gh pr list → no existing PR
-      mockExecFile.mockImplementationOnce(
-        (_cmd: string, _args: string[], _opts: object, cb: ExecFileCb) => {
-          cb(null, { stdout: '[]', stderr: '' });
-        }
-      );
-      // gh pr create → returns PR URL
-      mockExecFile.mockImplementationOnce(
-        (_cmd: string, _args: string[], _opts: object, cb: ExecFileCb) => {
-          cb(null, { stdout: 'https://github.com/org/repo/pull/99', stderr: '' });
-        }
-      );
-      // gh pr merge (auto-merge) → success
+    /**
+     * Command-aware git/gh mock (order-independent). `commitsAhead` controls the
+     * `git rev-list --count` response; `branchExists` controls `git ls-remote`.
+     */
+    function mockGitGh(opts: { commitsAhead: number; branchExists?: boolean }) {
       mockExecFile.mockImplementation(
-        (_cmd: string, _args: string[], _opts: object, cb: ExecFileCb) => {
-          cb(null, { stdout: '', stderr: '' });
+        (cmd: string, args: string[], _opts: object, cb: ExecFileCb) => {
+          const joined = args.join(' ');
+          let stdout = '';
+          if (cmd === 'git' && joined.includes('symbolic-ref')) {
+            stdout = 'refs/remotes/origin/main';
+          } else if (cmd === 'git' && joined.includes('ls-remote')) {
+            stdout = opts.branchExists === false ? '' : 'abc123\trefs/heads/epic/m1-foundation';
+          } else if (cmd === 'git' && joined.includes('rev-list')) {
+            stdout = String(opts.commitsAhead);
+          } else if (cmd === 'gh' && joined.includes('create')) {
+            stdout = 'https://github.com/org/repo/pull/99';
+          } else if (cmd === 'gh' && joined.includes('list')) {
+            stdout = '[]';
+          }
+          // git fetch, gh pr merge, etc. → ''
+          cb(null, { stdout, stderr: '' });
         }
       );
+    }
 
+    function makeEpicWithDoneChildren() {
       const epic = createTestFeature({
         id: 'epic-1',
         title: 'Git-Backed Epic',
@@ -1172,11 +1163,23 @@ describe('CompletionDetectorService', () => {
         isEpic: true,
         branchName: 'epic/m1-foundation',
       });
-      const child1 = createTestFeature({ id: 'child-1', epicId: 'epic-1', status: 'done' });
-      const child2 = createTestFeature({ id: 'child-2', epicId: 'epic-1', status: 'done' });
-      const child3 = createTestFeature({ id: 'child-3', epicId: 'epic-1', status: 'done' });
+      const children = [
+        createTestFeature({ id: 'child-1', epicId: 'epic-1', status: 'done' }),
+        createTestFeature({ id: 'child-2', epicId: 'epic-1', status: 'done' }),
+        createTestFeature({ id: 'child-3', epicId: 'epic-1', status: 'done' }),
+      ];
+      return { epic, children };
+    }
 
-      featureLoader = createMockFeatureLoader([epic, child1, child2, child3]);
+    beforeEach(() => {
+      mockExecFile.mockReset();
+    });
+
+    it('follows PR creation flow (not direct done) when the epic branch is ahead of base', async () => {
+      mockGitGh({ commitsAhead: 5, branchExists: true });
+
+      const { epic, children } = makeEpicWithDoneChildren();
+      featureLoader = createMockFeatureLoader([epic, ...children]);
       await service.initialize(events as any, featureLoader as any, projectService as any);
 
       events._fire('feature:status-changed', {
@@ -1194,11 +1197,7 @@ describe('CompletionDetectorService', () => {
         'epic-1',
         expect.objectContaining({ status: 'review', prNumber: 99 })
       );
-
-      // epic:auto-completed should NOT be emitted for git-backed epics
       expect(events.emit).not.toHaveBeenCalledWith('epic:auto-completed', expect.anything());
-
-      // epic:pr-created SHOULD be emitted
       expect(events.emit).toHaveBeenCalledWith(
         'epic:pr-created',
         expect.objectContaining({
@@ -1206,6 +1205,46 @@ describe('CompletionDetectorService', () => {
           epicBranchName: 'epic/m1-foundation',
           prNumber: 99,
         })
+      );
+    });
+
+    it('marks the epic done (no empty PR) when the branch exists but is 0 commits ahead of base (#3803)', async () => {
+      // Children PR'd to base directly → epic branch exists but is 0 ahead.
+      mockGitGh({ commitsAhead: 0, branchExists: true });
+
+      const { epic, children } = makeEpicWithDoneChildren();
+      featureLoader = createMockFeatureLoader([epic, ...children]);
+      await service.initialize(events as any, featureLoader as any, projectService as any);
+
+      events._fire('feature:status-changed', {
+        projectPath: '/test/path',
+        featureId: 'child-3',
+        previousStatus: 'review',
+        newStatus: 'done',
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Epic goes straight to 'done' — NOT 'review' and NOT 'blocked'.
+      expect(featureLoader.update).toHaveBeenCalledWith(
+        '/test/path',
+        'epic-1',
+        expect.objectContaining({ status: 'done' })
+      );
+      expect(featureLoader.update).not.toHaveBeenCalledWith(
+        '/test/path',
+        'epic-1',
+        expect.objectContaining({ status: 'blocked' })
+      );
+      // No empty epic PR is attempted.
+      const prCreateCall = mockExecFile.mock.calls.find(
+        (c) => c[0] === 'gh' && Array.isArray(c[1]) && c[1].includes('create')
+      );
+      expect(prCreateCall).toBeUndefined();
+      // Direct-completion events fire.
+      expect(events.emit).toHaveBeenCalledWith(
+        'epic:auto-completed',
+        expect.objectContaining({ epicId: 'epic-1' })
       );
     });
   });
