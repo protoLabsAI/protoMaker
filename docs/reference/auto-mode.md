@@ -179,6 +179,14 @@ interface ExecutionState {
 
 Call `resumeInterruptedFeatures(projectPath)` on startup to re-queue any `in-progress` features that survived a crash.
 
+### Loop resume on restart
+
+`execution-state.json` is written when a loop starts and deleted only on a clean auto-mode **stop** (`stopAutoLoopForProject`). A graceful server shutdown does **not** delete it, so the file's presence with `autoLoopWasRunning: true` is the "was running at shutdown" signal.
+
+On boot, `listResumableLoops(candidateProjectPaths)` inspects every registered app (plus any `autoModeAlwaysOn` project) and resumes each loop that was running — at its **saved `maxConcurrency`**, not the default. This makes a deploy or crash transparent: the crew resumes at the configured concurrency without manual re-start. `autoModeAlwaysOn` still force-starts its configured projects even if they weren't running before; the idle-project guard (`hasReadyBacklogFeatures`) applies to both paths.
+
+The post-execution snapshot refresh preserves the loop's configured `maxConcurrency` / `branchName` from disk — it only updates the volatile running-feature list, so the configured concurrency is never reset to the default mid-run.
+
 ## Multi-Project Support
 
 Auto-loops are keyed by `projectPath::branchName`. Multiple projects can run loops simultaneously. The key function:

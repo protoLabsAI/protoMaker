@@ -3703,19 +3703,36 @@ You can use the Read tool to view these images at any time during implementation
   // ============================================================================
 
   /**
-   * Save execution state to disk for recovery after server restart
+   * Refresh the persisted execution-state snapshot for a project after a feature
+   * finishes. This is a volatile-snapshot update only: it refreshes the running
+   * feature list and timestamp but MUST preserve the loop's configured
+   * `maxConcurrency`, `branchName`, and `autoLoopWasRunning` flag that
+   * {@link saveExecutionStateForProject} persisted at start. Previously this
+   * hardcoded `maxConcurrency` to the default (1) and `branchName` to null,
+   * which clobbered the real values on every completion — so restart resumed at
+   * the wrong concurrency (see #3949).
    */
   private async saveExecutionState(projectPath: string): Promise<void> {
     try {
       await ensureAutomakerDir(projectPath);
       const statePath = getExecutionStatePath(projectPath);
+      const runningFeatureIds = Array.from(this.runningFeatures.entries())
+        .filter(([, f]) => f.projectPath === projectPath)
+        .map(([id]) => id);
+
+      // Preserve the configured loop fields from the existing on-disk state.
+      // loadExecutionState() returns DEFAULT_EXECUTION_STATE (savedAt === '')
+      // when no file exists, which is our "no prior state" sentinel.
+      const existing = await this.loadExecutionState(projectPath);
+      const hasExisting = existing.savedAt !== '';
+
       const state: ExecutionState = {
         version: 1,
-        autoLoopWasRunning: this.autoLoopRunning,
-        maxConcurrency: DEFAULT_MAX_CONCURRENCY,
+        autoLoopWasRunning: hasExisting ? existing.autoLoopWasRunning : this.autoLoopRunning,
+        maxConcurrency: hasExisting ? existing.maxConcurrency : DEFAULT_MAX_CONCURRENCY,
         projectPath,
-        branchName: null, // Legacy global auto mode uses main worktree
-        runningFeatureIds: Array.from(this.runningFeatures.keys()),
+        branchName: hasExisting ? existing.branchName : null,
+        runningFeatureIds,
         savedAt: new Date().toISOString(),
       };
       await secureFs.writeFile(statePath, JSON.stringify(state, null, 2), 'utf-8');
@@ -3740,6 +3757,46 @@ You can use the Read tool to view these images at any time during implementation
       }
       return DEFAULT_EXECUTION_STATE;
     }
+  }
+
+  /**
+   * Inspect persisted execution state for the given candidate projects and
+   * return the auto-loops that were running at the last shutdown and should be
+   * resumed on boot.
+   *
+   * The "was running" signal is the presence of `execution-state.json` with
+   * `autoLoopWasRunning === true`. The file is written when a loop starts and
+   * deleted only on a clean auto-mode stop ({@link clearExecutionState}) — a
+   * graceful server shutdown does NOT delete it (see `shutdown()`), so any
+   * project running auto-mode at shutdown is correctly resumed across restarts.
+   *
+   * @param candidateProjectPaths - Project paths to inspect (deduped internally)
+   * @returns Loops to resume, each carrying its persisted `maxConcurrency` so
+   *   the configured concurrency is restored rather than reset to the default.
+   */
+  async listResumableLoops(
+    candidateProjectPaths: string[]
+  ): Promise<Array<{ projectPath: string; branchName: string | null; maxConcurrency: number }>> {
+    const resumable: Array<{
+      projectPath: string;
+      branchName: string | null;
+      maxConcurrency: number;
+    }> = [];
+    const seen = new Set<string>();
+    for (const projectPath of candidateProjectPaths) {
+      if (seen.has(projectPath)) continue;
+      seen.add(projectPath);
+      const state = await this.loadExecutionState(projectPath);
+      // savedAt === '' is the DEFAULT_EXECUTION_STATE sentinel for "no file".
+      if (state.savedAt !== '' && state.autoLoopWasRunning) {
+        resumable.push({
+          projectPath,
+          branchName: state.branchName,
+          maxConcurrency: state.maxConcurrency,
+        });
+      }
+    }
+    return resumable;
   }
 
   /**
