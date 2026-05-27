@@ -65,12 +65,14 @@ describe('HITLGateService', () => {
       expect(url).toBe('http://workstacean-test:8082/publish');
       expect(init.method).toBe('POST');
 
+      // Wire shape is { topic, payload } — workstacean's /publish republishes
+      // `payload` onto its bus under `topic`.
       const body = JSON.parse(init.body as string);
-      expect(body.event).toBe('hitl.request.gate-hold');
-      expect(body.data.featureId).toBe('feature-123');
-      expect(body.data.channelId).toBe('1469195643590541353');
-      expect(body.data.phase).toBe('REVIEW');
-      expect(body.data.source).toBe('protomaker');
+      expect(body.topic).toBe('hitl.request.gate-hold');
+      expect(body.payload.featureId).toBe('feature-123');
+      expect(body.payload.channelId).toBe('1469195643590541353');
+      expect(body.payload.phase).toBe('REVIEW');
+      expect(body.payload.source).toBe('protomaker');
     });
 
     it('tracks pending gate after successful publish', async () => {
@@ -134,8 +136,8 @@ describe('HITLGateService', () => {
       const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls;
       expect(calls).toHaveLength(2);
       const cancelBody = JSON.parse((calls[1] as [string, RequestInit])[1].body as string);
-      expect(cancelBody.event).toBe('hitl.request.cancel');
-      expect(cancelBody.data.featureId).toBe('feature-cancel-test');
+      expect(cancelBody.topic).toBe('hitl.request.cancel');
+      expect(cancelBody.payload.featureId).toBe('feature-cancel-test');
     });
 
     it('no-ops gracefully when gate does not exist', async () => {

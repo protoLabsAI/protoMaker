@@ -652,6 +652,9 @@ Use `list_workflows` MCP tool to discover available workflows for a project. Pro
 - `GITHUB_TOKEN` - GitHub personal access token for repository operations
 - `GITHUB_REPO_OWNER` - GitHub repository owner/organization name
 - `GITHUB_REPO_NAME` - GitHub repository name
+- `WORKSTACEAN_URL` - protoWorkstacean base URL for the outbound lifecycle bus (`POST {url}/publish`). When set, `FeatureLifecycleBusPublisher` publishes `feature.completed`/`feature.failed` on terminal transitions (#3810). Unset = disabled (no-op).
+- `WORKSTACEAN_API_KEY` - `X-API-Key` for workstacean's `/publish` (401 without it). Symmetric counterpart to `AUTOMAKER_API_KEY` in the other direction.
+- `WORKSTACEAN_PROJECT_SLUG` - Fallback `projectSlug` on lifecycle events when a feature has none (default `protomaker`); workstacean's feature-notifier requires it to resolve the dev channel.
 - `DISCORD_TOKEN` - Discord bot token for event routing and notifications
 - `DISCORD_GUILD_ID` - Discord server (guild) ID
 - `DISCORD_CHANNEL_SUGGESTIONS` - Channel ID for #suggestions

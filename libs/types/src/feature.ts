@@ -213,6 +213,14 @@ export interface Feature {
   isEpic?: boolean; // True if this feature is an epic (container for child features)
   epicId?: string; // ID of parent epic (if this feature belongs to an epic)
   epicColor?: string; // Color for epic badge display (hex color)
+  /**
+   * Opaque metadata echoed from the originating creation request (e.g. the
+   * `meta` on a `manage_feature` / create_feature call). Carried through to the
+   * feature lifecycle bus events (#3810) so external consumers — e.g. the
+   * workstacean Linear bridge — can correlate back to their own source record
+   * (sourceMeta.sourceLinearIssueId) without persisted state on either side.
+   */
+  sourceMeta?: Record<string, unknown>;
   // Project/milestone tracking for milestone-gated execution
   projectSlug?: string; // Project this feature belongs to
   milestoneSlug?: string; // Milestone this feature belongs to
