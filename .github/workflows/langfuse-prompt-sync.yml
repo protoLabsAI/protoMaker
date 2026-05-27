@@ -31,11 +31,11 @@ jobs:
 
       - name: Notify Discord on success
         if: success() && env.DISCORD_DEV_WEBHOOK != ''
+        # client_payload comes from an untrusted repository_dispatch sender, so
+        # those values are passed via env and never interpolated into the shell,
+        # avoiding template/script injection (CWE-94).
         run: |
-          PROMPT_NAME="${{ github.event.client_payload.name }}"
-          PROMPT_VERSION="${{ github.event.client_payload.version }}"
-          PROMPT_ACTION="${{ github.event.client_payload.action }}"
-          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          RUN_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
           curl -sf -H "Content-Type: application/json" \
             -d "{
@@ -49,3 +49,6 @@ jobs:
             "$DISCORD_DEV_WEBHOOK" || true
         env:
           DISCORD_DEV_WEBHOOK: ${{ secrets.DISCORD_DEV_WEBHOOK }}
+          PROMPT_NAME: ${{ github.event.client_payload.name }}
+          PROMPT_VERSION: ${{ github.event.client_payload.version }}
+          PROMPT_ACTION: ${{ github.event.client_payload.action }}
