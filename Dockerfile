@@ -75,6 +75,17 @@ RUN cd apps/server && find src -name '*.md' -o -name '*.json' | while read f; do
     done
 
 # =============================================================================
+# RABBIT-HOLE CLI BUILD STAGE
+# =============================================================================
+FROM node:22-trixie-slim AS rh-build
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
+    && apt-get clean && corepack enable
+WORKDIR /src
+RUN git clone --depth=1 --branch main https://github.com/protoLabsAI/rabbit-hole.io .
+RUN pnpm install --frozen-lockfile --filter @protolabsai/rabbit-hole-cli...
+RUN pnpm --filter @protolabsai/rabbit-hole-cli build
+
+# =============================================================================
 # SERVER PRODUCTION STAGE
 # =============================================================================
 FROM node:22-trixie-slim AS server
@@ -124,6 +135,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && chmod +x /usr/local/bin/br \
     && rm -f br.tar.gz \
     && rm -rf /var/lib/apt/lists/*
+
+# rabbit-hole CLI (`rh`) — Node.js CLI for search / deep-research / media ingest.
+# Built in the rh-build stage from the rabbit-hole.io monorepo (packages/cli).
+COPY --from=rh-build /src/packages/cli/dist /opt/rh/dist
+COPY --from=rh-build /src/packages/cli/node_modules /opt/rh/node_modules
+RUN ln -s /opt/rh/dist/index.js /usr/local/bin/rh && chmod +x /opt/rh/dist/index.js
 
 # Install Claude CLI globally (available to all users via npm global bin)
 RUN npm install -g @anthropic-ai/claude-code
