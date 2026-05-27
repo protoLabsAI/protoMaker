@@ -46,7 +46,7 @@ interface AutoModeStatusResponse {
   success: boolean;
   isRunning?: boolean;
   isAutoLoopRunning?: boolean;
-  runningFeatures?: RunningAgent[];
+  runningFeatures?: Array<string | RunningAgent>;
   runningCount?: number;
   maxConcurrency?: number;
   error?: string;
@@ -86,10 +86,12 @@ function renderStatus(status: AutoModeStatusResponse): string {
   if (status.runningFeatures && status.runningFeatures.length > 0) {
     lines.push('');
     lines.push('Active features:');
-    for (const f of status.runningFeatures) {
-      const title = f.title || f.featureId;
+    for (const rf of status.runningFeatures) {
+      // runningFeatures comes back as bare featureId strings; tolerate objects too.
+      const f: RunningAgent = typeof rf === 'string' ? { featureId: rf } : rf;
+      const titlePart = f.title ? ` — ${f.title}` : '';
       const branch = f.branchName ? ` (branch: ${f.branchName})` : '';
-      lines.push(`  • ${f.featureId} — ${title}${branch}`);
+      lines.push(`  • ${f.featureId}${titlePart}${branch}`);
     }
   }
 

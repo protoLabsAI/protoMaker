@@ -208,7 +208,7 @@ healthCommand(program);
 // Entry — exit-code discipline
 // ---------------------------------------------------------------------------
 
-try {
+async function main(): Promise<void> {
   // Show help if no command provided (exit code 2 = usage error).
   // outputHelp() prints without exiting; help() would call process.exit(0)
   // internally, making the intended exit(2) below unreachable.
@@ -217,19 +217,17 @@ try {
     process.exit(2);
   }
 
-  program.parse(process.argv);
-
-  // Extract global flags after parsing
-  const opts = program.opts();
-  const globalFlags: GlobalFlags = {
-    json: opts.json ?? false,
-    quiet: opts.quiet ?? false,
-    project: opts.project ?? process.cwd(),
-  };
+  // parseAsync (not parse) so async action handlers — which await the API call
+  // before printing — complete before we exit. With the synchronous parse() the
+  // process exited (process.exit(0) below) before any handler's fetch resolved,
+  // so every command produced no output.
+  await program.parseAsync(process.argv);
 
   // Success — exit code 0
   process.exit(0);
-} catch (err: any) {
+}
+
+main().catch((err: any) => {
   // Commander exitOverride throws CommanderError on failures
   const commanderCode = err?.code;
 
@@ -249,4 +247,4 @@ try {
 
   // Runtime error → exit 1
   exitError(err.message || String(err));
-}
+});
