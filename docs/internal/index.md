@@ -70,6 +70,7 @@ This directory is NOT included in the public VitePress build. Content here is fo
 - [Project Orchestration](./dev/project-orchestration.md)
 - [Documentation Design](./dev/documentation-design.md)
 - [Best-of-N Spike](./dev/best-of-n-spike.md)
+- [Backlog Scoping (2026-05)](./dev/backlog-scoping-2026-05.md)
 
 ## Server
 
