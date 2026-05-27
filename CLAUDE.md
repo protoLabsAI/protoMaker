@@ -712,7 +712,7 @@ The MCP server exposes ~159 tools organized by category:
 
 **Agent Templates:** Removed — agent spawning is handled by Claude Code's native Agent tool.
 
-**GitHub Operations:** `merge_pr`, `check_pr_status`, `resolve_pr_threads`
+**GitHub Operations:** `merge_pr`, `check_pr_status`, `resolve_pr_threads`, `add_github_comment` (post a comment to an existing issue)
 
 **Observability:** `langfuse_list_traces`, `langfuse_get_trace`, `langfuse_get_costs`, `langfuse_score_trace`, `langfuse_list_datasets`, `langfuse_add_to_dataset`
 

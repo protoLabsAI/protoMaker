@@ -1,22 +1,29 @@
 # GitHub Merge Service
 
-Merges pull requests via the `gh` CLI with CI status awareness, auto-merge support, and CodeRabbit failure tolerance.
+Merges pull requests via the `gh` CLI with CI status awareness and CodeRabbit failure tolerance. **The platform owns the merge decision** — it never enables GitHub-native auto-merge.
 
 ## Overview
 
 `GitHubMergeService` is the low-level PR merge executor used by `GitWorkflowService`. It:
 
-- **Checks CI status** before attempting merge
-- **Enables auto-merge** when checks are still pending (lets GitHub merge once CI passes)
+- **Checks CI status** before attempting merge (`checkPRStatus` over the full status-check rollup; `allChecksPassed = 0 failed && 0 pending`)
+- **Never enables GitHub auto-merge.** `gh pr merge --auto` was removed (see "Why no auto-merge"). On pending checks it reports `checksPending` and does **not** merge; the caller (e.g. the REVIEW phase) re-checks later.
+- **Merges explicitly only when every check is green** — `gh pr merge --<strategy>` with no `--auto`.
 - **Treats CodeRabbit FAILURE as transient** — counts it as pending, not a hard failure
-- **Verifies PR state** after the merge command to confirm success vs auto-merge-pending
+- **Verifies PR state** after the merge command to confirm it actually merged
+
+## Why no auto-merge
+
+GitHub-native auto-merge (`gh pr merge --auto`) honors only the repo's **required** branch-protection checks. A check that isn't in the required set (e.g. a newly-added linter) can be **failing** while auto-merge still merges the moment the required ones go green — exactly how a broken PR once landed (#3878 / #3881). Delegating the merge to GitHub also bypasses this service's own stricter gate.
+
+So the platform owns the merge end to end: it merges **only** via an explicit `gh pr merge` after confirming **all** non-soft checks are complete and green. This holds for every managed app regardless of how complete that repo's required-checks list is. (The same applies to epic→base PRs in `completion-detector-service`, which route through `mergePR` rather than `--auto`.)
 
 ## Architecture
 
 ```text
 GitHubMergeService
-  ├── checkPRStatus()    — gh pr view → CI check breakdown
-  ├── mergePR()          — CI gate + gh pr merge --auto
+  ├── checkPRStatus()    — gh pr view → CI check breakdown (allChecksPassed = 0 failed && 0 pending)
+  ├── mergePR()          — CI gate + explicit gh pr merge (NO --auto)
   └── canMergePR()       — lightweight eligibility check
 ```
 
@@ -29,15 +36,16 @@ mergePR(workDir, prNumber, strategy, waitForCI)
       → Classify each check: passed / failed / pending
       → CodeRabbit FAILURE → reclassified as pending (transient)
   → If pendingCount > 0:
-      → gh pr merge --auto  (GitHub merges when checks pass)
-      → return { success: true, autoMergeEnabled: true, checksPending: true }
+      → DO NOT merge, DO NOT enable auto-merge
+      → return { success: false, checksPending: true, autoMergeEnabled: false }
+        (the REVIEW phase polls and retries once checks are green)
   → If failedCount > 0:
       → return { success: false, checksFailed: true, failedChecks: [...] }
   → If all checks pass:
-      → gh pr merge --<strategy> --auto
+      → gh pr merge --<strategy>     ← explicit, immediate, no --auto
       → Verify PR state via gh pr view --json state
       → MERGED  → { success: true, mergeCommitSha }
-      → OPEN    → { success: false, autoMergeEnabled: true }  ← waiting for checks
+      → OPEN    → { success: false }  ← branch protection still blocking; retry later
       → Other   → { success: false, error: "unexpected state" }
 ```
 
