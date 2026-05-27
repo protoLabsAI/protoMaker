@@ -25,8 +25,10 @@ export function createAddCommentHandler() {
     try {
       const { projectPath, issueNumber, body } = req.body as AddCommentRequest;
 
-      if (!projectPath) {
-        res.status(400).json({ success: false, error: 'projectPath is required' });
+      if (typeof projectPath !== 'string' || !projectPath.trim()) {
+        res
+          .status(400)
+          .json({ success: false, error: 'projectPath is required (non-empty string)' });
         return;
       }
       if (

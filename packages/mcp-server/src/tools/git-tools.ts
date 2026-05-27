@@ -235,11 +235,13 @@ export const gitTools: Tool[] = [
           description: 'Absolute path to the project directory',
         },
         issueNumber: {
-          type: 'number',
+          type: 'integer',
+          minimum: 1,
           description: 'GitHub issue number to comment on',
         },
         body: {
           type: 'string',
+          minLength: 1,
           description: 'Comment body (supports markdown)',
         },
       },
