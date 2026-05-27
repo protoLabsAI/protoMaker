@@ -355,7 +355,7 @@ export function createCommand(parent: Command): void {
   cmd.requiredOption('--description <text>', 'Feature description');
   cmd.option('--title <text>', 'Feature title');
   cmd.option('--category <text>', 'Feature category', 'feature');
-  cmd.option('--complexity <level>', 'Complexity level', 'small|medium|large|architectural');
+  cmd.option('--complexity <level>', 'Complexity level (small|medium|large|architectural)');
   cmd.option('--priority <n>', 'Priority (1=urgent, 2=high, 3=normal, 4=low)');
   cmd.option('--epic-id <id>', 'Parent epic ID');
   cmd.option('--is-epic', 'Mark as epic container');
@@ -422,7 +422,7 @@ export function updateCommand(parent: Command): void {
   cmd.option('--title <text>', 'New title');
   cmd.option('--description <text>', 'New description');
   cmd.option('--category <text>', 'New category');
-  cmd.option('--complexity <level>', 'New complexity level', 'small|medium|large|architectural');
+  cmd.option('--complexity <level>', 'New complexity level (small|medium|large|architectural)');
   cmd.option('--priority <n>', 'New priority (1=urgent, 2=high, 3=normal, 4=low)');
 
   cmd.action(async (featureId: string, opts) => {
