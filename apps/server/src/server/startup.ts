@@ -305,7 +305,7 @@ export async function runStartup(
     // Candidate projects to inspect for persisted "was running" state: every
     // registered app plus any always-on project.
     const candidatePaths = [
-      ...settings.projects.map((p) => p.path),
+      ...(settings.projects?.map((p) => p.path) ?? []),
       ...(settings.autoModeAlwaysOn?.projects?.map((p) => p.projectPath) ?? []),
     ];
     const resumable = await autoModeService.listResumableLoops(candidatePaths);
