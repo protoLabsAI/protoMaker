@@ -144,7 +144,7 @@ function PipelineGatesGrid({
   gates: PipelineGateConfig;
   onChange: (gates: PipelineGateConfig) => void;
 }) {
-  const updateGate = (branch: 'ops' | 'gtm', phase: PipelinePhase, mode: GateMode) => {
+  const updateGate = (branch: 'ops', phase: PipelinePhase, mode: GateMode) => {
     onChange({
       ...gates,
       [branch]: {
@@ -156,19 +156,15 @@ function PipelineGatesGrid({
 
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-[1fr_80px_80px] gap-1 text-[10px] text-muted-foreground font-medium">
+      <div className="grid grid-cols-[1fr_80px] gap-1 text-[10px] text-muted-foreground font-medium">
         <span>Phase</span>
         <span className="text-center">Ops</span>
-        <span className="text-center">GTM</span>
       </div>
       {PIPELINE_PHASES.map((phase) => (
-        <div key={phase} className="grid grid-cols-[1fr_80px_80px] gap-1 items-center">
+        <div key={phase} className="grid grid-cols-[1fr_80px] gap-1 items-center">
           <span className="text-xs">{PHASE_LABELS[phase]}</span>
           <div className="flex justify-center">
             <GateSelect value={gates.ops[phase]} onChange={(v) => updateGate('ops', phase, v)} />
-          </div>
-          <div className="flex justify-center">
-            <GateSelect value={gates.gtm[phase]} onChange={(v) => updateGate('gtm', phase, v)} />
           </div>
         </div>
       ))}

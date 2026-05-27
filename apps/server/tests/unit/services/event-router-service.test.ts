@@ -3,7 +3,6 @@
  *
  * Tests for:
  * - classifyAndRoute with ops signals
- * - classifyAndRoute with gtm signals
  * - Delivery event emission lifecycle
  * - Error handling and failed delivery recording
  * - Delivery query and filtering
@@ -60,7 +59,7 @@ describe('EventRouterService', () => {
       expect(result.routedTo).toBe('pm-pipeline');
     });
 
-    it('should classify and route a Discord GTM signal', async () => {
+    it('should classify Discord signals from any channel as ops', async () => {
       const result = await service.classifyAndRoute({
         source: 'discord',
         eventType: 'message.created',
@@ -71,8 +70,8 @@ describe('EventRouterService', () => {
       });
 
       expect(result.deliveryId).toBeTruthy();
-      expect(result.classification.category).toBe('gtm');
-      expect(result.routedTo).toBe('gtm-agent');
+      expect(result.classification.category).toBe('ops');
+      expect(result.routedTo).toBe('pm-pipeline');
     });
 
     it('should route interrupt signals to HITL form', async () => {
@@ -117,15 +116,15 @@ describe('EventRouterService', () => {
       );
     });
 
-    it('should classify ui:content signals as gtm', async () => {
+    it('should classify ui:content signals as ops', async () => {
       const result = await service.classifyAndRoute({
         source: 'ui:content',
         eventType: 'content.created',
         payload: { content: 'Write a blog post about AI agents' },
       });
 
-      expect(result.classification.category).toBe('gtm');
-      expect(result.routedTo).toBe('gtm-agent');
+      expect(result.classification.category).toBe('ops');
+      expect(result.routedTo).toBe('pm-pipeline');
     });
   });
 

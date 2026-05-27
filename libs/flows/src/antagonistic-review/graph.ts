@@ -26,7 +26,13 @@ import { MemorySaver } from '@langchain/langgraph';
 import { GraphBuilder } from '../graphs/builder.js';
 import { AntagonisticReviewStateAnnotation, type AntagonisticReviewState } from './state.js';
 import { DistillationDepth, type ReviewerPerspective, type SPARCPrd } from '@protolabsai/types';
-import { getAvaPrompt, getJonPrompt } from '@protolabsai/prompts';
+import { getAvaPrompt } from '@protolabsai/prompts';
+
+/**
+ * System prompt for the market/business PRD reviewer ("Jon" stage).
+ * The full review framing is supplied in the user prompt; this establishes the persona.
+ */
+const MARKET_REVIEWER_SYSTEM_PROMPT = `You are a market and business reviewer evaluating PRDs from a customer-impact, ROI, and market-positioning perspective. Be strategic and business-focused: assess customer value, return on investment, competitive positioning, and whether this is the right priority now. Push back on work that lacks a compelling business case or distracts from higher-priority commitments.`;
 
 // Import real LLM-powered nodes
 import { classifyTopicNode } from './nodes/classify-topic.js';
@@ -364,9 +370,9 @@ async function jonReviewAdapter(
 
   const prdString = serializePrd(state.prd);
 
-  // Agent loop path: full GTM persona + tools + board + Ava's context
+  // Agent loop path: market reviewer persona + tools + board + Ava's context
   if (state.agentQueryFn && state.projectPath) {
-    const systemPrompt = getJonPrompt({});
+    const systemPrompt = MARKET_REVIEWER_SYSTEM_PROMPT;
     const boardSection = state.boardContext
       ? `\n\n## Current Board State\n${state.boardContext}`
       : '';

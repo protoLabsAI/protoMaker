@@ -3,7 +3,7 @@
  *
  * Resolution order:
  *   1. `.automaker/workflows/{name}.yml` — project-specific overrides
- *   2. Built-in defaults — standard, read-only, content, audit
+ *   2. Built-in defaults — standard, read-only, audit
  *
  * Also provides workflow auto-matching: given a feature's metadata,
  * resolves the best workflow based on match rules.
@@ -58,33 +58,6 @@ const READ_ONLY_WORKFLOW: WorkflowDefinition = {
   },
   match: {
     executionMode: 'read-only',
-  },
-};
-
-const CONTENT_WORKFLOW: WorkflowDefinition = {
-  name: 'content',
-  description: 'GTM content creation — strategy brief, write, review, distribute',
-  phases: [
-    { state: 'INTAKE', enabled: true },
-    { state: 'PLAN', enabled: true, processor: 'content-execute' },
-    { state: 'EXECUTE', enabled: true, processor: 'content-execute' },
-    { state: 'REVIEW', enabled: true, processor: 'content-review' },
-    { state: 'MERGE', enabled: false },
-    { state: 'DEPLOY', enabled: false },
-  ],
-  agent: {
-    role: 'gtm-specialist',
-    model: 'sonnet',
-  },
-  execution: {
-    useWorktrees: false,
-    gitWorkflow: {
-      autoCommit: false,
-    },
-    terminalStatus: 'done',
-  },
-  match: {
-    categories: ['content', 'marketing', 'blog', 'social'],
   },
 };
 
@@ -354,7 +327,6 @@ const BUILT_IN_WORKFLOWS = new Map<string, WorkflowDefinition>([
   // Core pipelines
   ['standard', STANDARD_WORKFLOW],
   ['read-only', READ_ONLY_WORKFLOW],
-  ['content', CONTENT_WORKFLOW],
   ['audit', AUDIT_WORKFLOW],
   // Operational
   ['research', RESEARCH_WORKFLOW],
@@ -400,7 +372,7 @@ export class WorkflowLoader {
    *
    * Priority:
    *   1. feature.workflow (explicit assignment)
-   *   2. feature.featureType mapping ('content' → content, 'signal' → signal workflow)
+   *   2. feature.featureType mapping ('signal' → signal workflow)
    *   3. feature.executionMode mapping ('read-only' → read-only workflow)
    *   4. Match-rule scoring pass (category + keyword scoring)
    *   5. Default: 'standard'
@@ -418,11 +390,6 @@ export class WorkflowLoader {
     }
 
     // featureType mapping
-    if (feature.featureType === 'content') {
-      const workflow = await this.resolve(projectPath, 'content');
-      if (workflow) return workflow;
-    }
-
     if (feature.featureType === 'signal') {
       const workflow = await this.resolve(projectPath, 'signal');
       if (workflow) return workflow;

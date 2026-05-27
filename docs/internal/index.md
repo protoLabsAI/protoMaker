@@ -115,7 +115,6 @@ This directory is NOT included in the public VitePress build. Content here is fo
 - [Setup Pipeline](./protolabs/setup-pipeline.md)
 - [CI/CD Setup](./protolabs/ci-cd-setup.md)
 - [Flow Development Pattern](./protolabs/flow-development-pattern.md)
-- [Content Pipeline](./protolabs/content-pipeline.md)
 - [Antagonistic Review](./protolabs/antagonistic-review.md)
 - [Brand](./protolabs/brand.md)
 - [Landing Pages](./protolabs/landing-pages.md)

@@ -15,9 +15,6 @@ import {
   Expand,
   Loader2,
   SendHorizonal,
-  FileText,
-  Megaphone,
-  BookOpen,
   Lightbulb,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -46,12 +43,7 @@ const PRESET_ACTIONS = [
   { id: 'expand', label: 'Expand', icon: Expand, instruction: 'Expand with more detail' },
 ] as const;
 
-const PIPELINE_ACTIONS = [
-  { id: 'blog', label: 'Blog Post', icon: FileText, format: 'guide', tone: 'conversational' },
-  { id: 'social', label: 'Social', icon: Megaphone, format: 'guide', tone: 'conversational' },
-  { id: 'docs', label: 'Docs', icon: BookOpen, format: 'reference', tone: 'technical' },
-  { id: 'idea', label: 'Idea', icon: Lightbulb },
-] as const;
+const PIPELINE_ACTIONS = [{ id: 'idea', label: 'Idea', icon: Lightbulb }] as const;
 
 export function AIBubbleMenu({ editor }: AIBubbleMenuProps) {
   const [isLoading, setIsLoading] = useState(false);
@@ -147,21 +139,12 @@ export function AIBubbleMenu({ editor }: AIBubbleMenuProps) {
       setIsLoading(true);
       try {
         const client = getHttpApiClient();
-        if (action.id === 'idea') {
-          await client.authorityPipeline.injectIdea(
-            projectPath,
-            selectedText.slice(0, 100),
-            selectedText
-          );
-        } else {
-          await client.contentPipeline.create(projectPath, selectedText, {
-            format: 'format' in action ? action.format : undefined,
-            tone: 'tone' in action ? action.tone : undefined,
-            audience: 'intermediate',
-          });
-        }
-        const label = action.id === 'idea' ? 'Idea pipeline' : `${action.label} pipeline`;
-        toast.success(`Sent to ${label}`);
+        await client.authorityPipeline.injectIdea(
+          projectPath,
+          selectedText.slice(0, 100),
+          selectedText
+        );
+        toast.success(`Sent to ${action.label} pipeline`);
         editor.commands.setTextSelection(to);
       } catch {
         toast.error('Failed to send to pipeline');

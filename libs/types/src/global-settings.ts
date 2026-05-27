@@ -613,12 +613,6 @@ export interface GlobalSettings {
   useGraphFlows?: boolean;
 
   /**
-   * Enable the GTM (Go-To-Market) content creation pipeline.
-   * @default false
-   */
-  gtmEnabled?: boolean;
-
-  /**
    * Enable portfolio gate evaluation before feature creation in signal intake.
    * When enabled, evaluates ideas against capacity (backlog size < 50),
    * duplication (Jaccard similarity > 0.6), and error budget (blocks architectural

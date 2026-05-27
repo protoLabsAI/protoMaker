@@ -377,7 +377,7 @@ The Lead Engineer service (`lead-engineer-service.ts`) is the production-phase n
 
 ```
 Signal (Discord event, GitHub event, MCP tool)
-  --> SignalIntakeService.classifySignal() — ops vs gtm routing
+  --> SignalIntakeService.classifySignal() — ops routing
   --> LeadEngineerService.process(feature)
     --> FeatureStateMachine: INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DEPLOY → DONE
     --> Fast-path rules: pure functions, no LLM, event-driven

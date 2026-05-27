@@ -15,7 +15,7 @@
  *   agent-client.ts     — runningAgents, github, workspace, agent, templates
  *   git-client.ts       — worktree, git
  *   settings-client.ts  — settings, sessions, claude, codex, context
- *   content-client.ts   — notes, ai, contentPipeline, authorityPipeline
+ *   content-client.ts   — notes, ai, authorityPipeline
  *   system-client.ts    — mcp, pipeline, metrics, integrations, system, analytics, lifecycle
  *   engine-client.ts    — engine
  *   hitl-client.ts      — notifications, hitlForms, actionableItems, eventHistory

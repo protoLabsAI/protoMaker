@@ -1,11 +1,8 @@
 /**
  * Unified Idea-to-Production Pipeline Phase Types
  *
- * Consolidates WorkItemState, FeatureState, GTM content flow, and ContentFlowService
- * into a single 9-phase model with branch-aware gate configuration.
- *
- * Phases are universal; processors differ by branch (ops vs gtm).
- * GTM branch skips DESIGN and PLAN (jumps SPEC_REVIEW → EXECUTE).
+ * Consolidates WorkItemState and FeatureState into a single 9-phase model
+ * with gate configuration.
  */
 
 /**
@@ -35,7 +32,7 @@ export type PipelinePhase =
   | 'PUBLISH';
 
 /** Branch determines which processors handle each phase */
-export type PipelineBranch = 'ops' | 'gtm';
+export type PipelineBranch = 'ops';
 
 /**
  * Gate mode controlling phase transitions.
@@ -96,7 +93,6 @@ export interface PipelineState {
 /** Per-branch gate configuration for all phases */
 export interface PipelineGateConfig {
   ops: Record<PipelinePhase, GateMode>;
-  gtm: Record<PipelinePhase, GateMode>;
 }
 
 /** Ordered list of all pipeline phases */
@@ -112,9 +108,6 @@ export const PIPELINE_PHASES: PipelinePhase[] = [
   'PUBLISH',
 ];
 
-/** Phases that the GTM branch skips (jumps SPEC_REVIEW → EXECUTE) */
-export const GTM_SKIP_PHASES: PipelinePhase[] = ['DESIGN', 'PLAN'];
-
 /** Default gate configuration per branch */
 export const DEFAULT_PIPELINE_GATES: PipelineGateConfig = {
   ops: {
@@ -127,17 +120,6 @@ export const DEFAULT_PIPELINE_GATES: PipelineGateConfig = {
     EXECUTE: 'auto',
     VERIFY: 'review',
     PUBLISH: 'auto',
-  },
-  gtm: {
-    TRIAGE: 'auto',
-    RESEARCH: 'auto',
-    SPEC: 'auto',
-    SPEC_REVIEW: 'manual',
-    DESIGN: 'auto',
-    PLAN: 'auto',
-    EXECUTE: 'auto',
-    VERIFY: 'review',
-    PUBLISH: 'manual',
   },
 };
 

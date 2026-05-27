@@ -23,7 +23,7 @@ export type DeliveryStatus = 'received' | 'completed' | 'failed';
 export interface RouteResult {
   deliveryId: string;
   classification: {
-    category: 'ops' | 'gtm';
+    category: 'ops';
     intent: string;
   };
   routedTo: string;
@@ -36,7 +36,7 @@ export interface DeliveryRecord {
   eventType: string;
   status: DeliveryStatus;
   classification?: {
-    category: 'ops' | 'gtm';
+    category: 'ops';
     intent: string;
   };
   routedTo?: string;
@@ -259,33 +259,21 @@ export class EventRouterService {
   // ---------------------------------------------------------------------------
 
   /**
-   * Derive ops/gtm category from source string and channel context.
+   * Derive the signal category. All signals are engineering (Ops) work.
    *
-   * This mirrors the heuristic in SignalIntakeService.classifySignal() without
-   * accessing that private method. The canonical classification still happens
-   * inside the intake pipeline -- this is for the RouteResult metadata only.
+   * Mirrors SignalIntakeService.classifySignal(); the canonical classification
+   * still happens inside the intake pipeline -- this is for RouteResult metadata only.
    */
-  private deriveCategory(source: string, channelContext: Record<string, unknown>): 'ops' | 'gtm' {
-    if (source === 'github') return 'ops';
-    if (source === 'mcp:create_feature') return 'ops';
-    if (source === 'ui:content') return 'gtm';
-
-    if (source === 'discord') {
-      const channelName = ((channelContext['channelName'] as string) ?? '').toLowerCase();
-      const gtmChannels = ['marketing', 'social', 'content', 'gtm', 'campaign'];
-      if (gtmChannels.some((ch) => channelName.includes(ch))) return 'gtm';
-    }
-
+  private deriveCategory(_source: string, _channelContext: Record<string, unknown>): 'ops' {
     return 'ops';
   }
 
   /**
    * Map a classification to its routing target label.
    */
-  private resolveRoutingTarget(category: 'ops' | 'gtm', intent: string): string {
+  private resolveRoutingTarget(_category: 'ops', intent: string): string {
     if (intent === 'interrupt') return 'hitl-form';
     if (intent === 'conversational') return 'dismissed';
-    if (category === 'gtm') return 'gtm-agent';
     return 'pm-pipeline';
   }
 

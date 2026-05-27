@@ -72,7 +72,7 @@ interface SignalPayload {
   timestamp: string;
 }
 
-type SignalCategory = 'ops' | 'gtm';
+type SignalCategory = 'ops';
 
 interface ClassificationResult {
   category: SignalCategory;
@@ -212,58 +212,10 @@ export class SignalIntakeService {
   }
 
   /**
-   * Classify signal as Ops (engineering) or GTM (marketing).
-   * When gtmEnabled is false in settings, all signals are forced to ops.
+   * Classify signal category. All signals are engineering (Ops) work.
    */
-  private async classifySignal(signal: SignalPayload): Promise<ClassificationResult> {
-    // Gate: if GTM pipeline is disabled, force all signals to ops
-    if (this.settingsService) {
-      const settings = await this.settingsService.getGlobalSettings();
-      if (!settings.gtmEnabled) {
-        return { category: 'ops', reason: 'GTM pipeline disabled in settings' };
-      }
-    }
-
-    const source = signal.source;
-    const channelContext = signal.channelContext || {};
-
-    // GitHub events → always Ops
-    if (source === 'github') {
-      return { category: 'ops', reason: 'GitHub events are engineering work' };
-    }
-
-    // MCP create_feature → always Ops (fast path)
-    if (source === 'mcp:create_feature') {
-      return { category: 'ops', reason: 'MCP create_feature is engineering work' };
-    }
-
-    // Discord messages classified by channel
-    if (source === 'discord') {
-      const channelName = (channelContext.channelName as string | undefined)?.toLowerCase() || '';
-
-      // GTM channels
-      const gtmChannels = ['marketing', 'social', 'content', 'gtm', 'campaign'];
-      if (gtmChannels.some((ch) => channelName.includes(ch))) {
-        return { category: 'gtm', reason: `Discord channel is GTM: ${channelName}` };
-      }
-
-      // Ops channels
-      const opsChannels = ['dev', 'infra', 'engineering', 'ops', 'tech'];
-      if (opsChannels.some((ch) => channelName.includes(ch))) {
-        return { category: 'ops', reason: `Discord channel is Ops: ${channelName}` };
-      }
-
-      // Default to Ops for Discord (engineering is primary use case)
-      return { category: 'ops', reason: 'Discord message defaults to Ops (no GTM channel found)' };
-    }
-
-    // UI content creation toggle → always GTM
-    if (signal.source === 'ui:content') {
-      return { category: 'gtm', reason: 'Content creation signal from UI' };
-    }
-
-    // Default: all other signals → Ops
-    return { category: 'ops', reason: 'Default classification: Ops' };
+  private async classifySignal(_signal: SignalPayload): Promise<ClassificationResult> {
+    return { category: 'ops', reason: 'All signals route to Ops (engineering)' };
   }
 
   /**
@@ -331,11 +283,6 @@ export class SignalIntakeService {
       }
       // Default Discord messages in dev/ops channels are work orders
       return 'work_order';
-    }
-
-    // UI content creation → idea by default (goes through PM for refinement)
-    if (source === 'ui:content') {
-      return 'idea';
     }
 
     // Default: treat as a work order
@@ -615,45 +562,6 @@ export class SignalIntakeService {
             return;
           }
         }
-      }
-
-      // GTM signals: route to GTM Authority Agent for content creation
-      if (classification.category === 'gtm') {
-        logger.info(`GTM signal routed: "${title}" (source: ${signal.source}, intent: ${intent})`);
-
-        // Create feature with idea state before emitting to ensure featureId is available
-        this.updateRingBufferEntry(bufferEntry.id, 'creating');
-        const gtmFeature = await this.featureLoader.create(projectPath, {
-          title: `[${signal.source}] ${title}`,
-          description,
-          status: 'backlog',
-          category: 'Signal Intake',
-          complexity: 'medium',
-          workItemState: 'idea',
-          sourceChannel: sourceToChannel(signal.source),
-        });
-        this.updateRingBufferEntry(bufferEntry.id, 'created', gtmFeature.id);
-
-        this.events.emit('authority:gtm-signal-received', {
-          projectPath,
-          featureId: gtmFeature.id,
-          title,
-          description,
-          source: signal.source,
-          timestamp: signal.timestamp,
-        });
-        this.events.emit('signal:routed', {
-          projectPath,
-          featureId: gtmFeature.id,
-          title,
-          description,
-          category: 'gtm',
-          reason: classification.reason,
-          source: signal.source,
-          timestamp: signal.timestamp,
-          intent,
-        });
-        return;
       }
 
       // Persistent idempotency guard: verify no existing feature already tracks this

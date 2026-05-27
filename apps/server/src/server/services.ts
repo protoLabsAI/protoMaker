@@ -15,7 +15,6 @@ import { AutoModeService } from '../services/auto-mode-service.js';
 import { getTerminalService } from '../services/terminal-service.js';
 import { SettingsService } from '../services/settings-service.js';
 import { ClaudeUsageService } from '../services/claude-usage-service.js';
-import { contentFlowService } from '../services/content-flow-service.js';
 import { MCPTestService } from '../services/mcp-test-service.js';
 import { getEscalationRouter } from '../services/escalation-router.js';
 import { MetricsService } from '../services/metrics-service.js';
@@ -35,7 +34,6 @@ import { EventRouterService } from '../services/event-router-service.js';
 import { AuthorityService } from '../services/authority-service.js';
 import { CompletionDetectorService } from '../services/completion-detector-service.js';
 import { PMAuthorityAgent } from '../services/authority-agents/pm-agent.js';
-import { GTMAuthorityAgent } from '../services/authority-agents/gtm-agent.js';
 import { ProjMAuthorityAgent } from '../services/authority-agents/projm-agent.js';
 import { EMAuthorityAgent } from '../services/authority-agents/em-agent.js';
 import { AuditService } from '../services/audit-service.js';
@@ -211,7 +209,6 @@ export interface ServiceContainer {
   authorityService: AuthorityService;
   auditService: AuditService;
   pmAgent: PMAuthorityAgent;
-  gtmAgent: GTMAuthorityAgent;
   emAgent: EMAuthorityAgent;
   projmAgent: ProjMAuthorityAgent;
 
@@ -246,9 +243,6 @@ export interface ServiceContainer {
 
   // Git workflow (singleton)
   gitWorkflowService: typeof gitWorkflowService;
-
-  // Content flow (singleton)
-  contentFlowService: typeof contentFlowService;
 
   // Beads issue tracker (per-project; wraps the `br` CLI)
   beadsService: BeadsService;
@@ -329,8 +323,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
 
   // Settings & identity (created first — injected into most other services)
   const settingsService = new SettingsService(dataDir);
-  // Wire settingsService into the contentFlowService singleton for model resolution
-  contentFlowService.setSettingsService(settingsService);
   const userIdentityService = new UserIdentityService(settingsService);
   // Features are local to each instance — no CRDT sync.
   const featureLoader = new FeatureLoader();
@@ -526,17 +518,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     featureLoader,
     auditService,
     settingsService,
-    hitlFormService
-  );
-
-  // GTM Authority Agent (content creation pipeline)
-  const gtmAgent = new GTMAuthorityAgent(
-    events,
-    authorityService,
-    featureLoader,
-    auditService,
-    settingsService,
-    contentFlowService,
     hitlFormService
   );
 
@@ -841,7 +822,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     authorityService,
     auditService,
     pmAgent,
-    gtmAgent,
     emAgent,
     projmAgent,
     projectService,
@@ -861,7 +841,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     issueCreationService,
     agentDiscordRouter,
     gitWorkflowService,
-    contentFlowService,
     projectPmService,
     beadsService,
     doraMetricsService,

@@ -42,7 +42,6 @@ import { createSpecRegenerationRoutes } from '../routes/app-spec/index.js';
 import { createClaudeRoutes } from '../routes/claude/index.js';
 import { createGitHubRoutes } from '../routes/github/index.js';
 import { createContextRoutes } from '../routes/context/index.js';
-import { createContentRoutes } from '../routes/content/index.js';
 import { createFlowsRoutes } from '../routes/flows/index.js';
 import { createBacklogPlanRoutes } from '../routes/backlog-plan/index.js';
 import { createMCPRoutes } from '../routes/mcp/index.js';
@@ -132,10 +131,8 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     signalIntakeService,
     gitWorkflowService,
     eventStreamBuffer,
-    gtmAgent,
     completionDetectorService,
     antagonisticReviewService,
-    contentFlowService,
     repoRoot,
     sensorRegistryService,
     projectPmService,
@@ -282,7 +279,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/claude', createClaudeRoutes(claudeUsageService));
   app.use('/api/github', createGitHubRoutes(events, settingsService));
   app.use('/api/context', createContextRoutes(settingsService));
-  app.use('/api/content', createContentRoutes(settingsService));
   app.use('/api/backlog-plan', createBacklogPlanRoutes(events, settingsService));
   app.use('/api/mcp', createMCPRoutes(mcpTestService));
   app.use(
@@ -360,10 +356,8 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
       gitWorkflowService,
       eventStreamBuffer,
       projectService,
-      contentFlowService,
       featureLoader,
       events,
-      gtmAgent,
       completionDetectorService,
       settingsService
     )

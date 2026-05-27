@@ -1,4 +1,4 @@
-import type { PipelinePhase } from './pipeline-phase.js';
+import type { PipelinePhase, PipelineBranch } from './pipeline-phase.js';
 import type { HITLFormCallerType, HITLFormRequestSummary } from './hitl-form.js';
 
 /**
@@ -223,14 +223,6 @@ export type EventType =
   // Signal routing events (signal intake and routing)
   | 'signal:received'
   | 'signal:routed'
-  // GTM content pipeline events (content creation flow)
-  | 'authority:gtm-signal-received'
-  | 'authority:gtm-research-started'
-  | 'authority:gtm-draft-started'
-  | 'content:draft-ready'
-  | 'content:draft-approved'
-  | 'content:draft-rejected'
-  | 'content:changes-requested'
   // Metrics ledger events (persistent analytics)
   | 'ledger:record-written'
   | 'ledger:backfill-completed'
@@ -673,14 +665,14 @@ export interface EventPayloadMap {
     featureId: string;
     projectPath: string;
     phase: PipelinePhase;
-    branch: 'ops' | 'gtm';
+    branch: PipelineBranch;
     timestamp: string;
   };
   'pipeline:phase-completed': {
     featureId: string;
     projectPath: string;
     phase: PipelinePhase;
-    branch: 'ops' | 'gtm';
+    branch: PipelineBranch;
     durationMs?: number;
     timestamp: string;
   };
@@ -688,7 +680,7 @@ export interface EventPayloadMap {
     featureId: string;
     projectPath: string;
     phase: PipelinePhase;
-    branch: 'ops' | 'gtm';
+    branch: PipelineBranch;
     gateMode: 'auto' | 'manual' | 'review';
     artifacts?: Record<string, unknown>;
     timestamp: string;
@@ -697,7 +689,7 @@ export interface EventPayloadMap {
     featureId: string;
     projectPath: string;
     phase: PipelinePhase;
-    branch: 'ops' | 'gtm';
+    branch: PipelineBranch;
     resolvedBy: 'auto' | 'user' | 'system';
     action: 'advance' | 'reject';
     timestamp: string;
@@ -706,7 +698,7 @@ export interface EventPayloadMap {
     featureId: string;
     projectPath: string;
     phase: PipelinePhase;
-    branch: 'ops' | 'gtm';
+    branch: PipelineBranch;
     reason: string;
     timestamp: string;
   };
