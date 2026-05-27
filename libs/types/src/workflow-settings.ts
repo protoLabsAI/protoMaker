@@ -455,6 +455,22 @@ export interface WorkflowSettings {
     model?: string;
   };
   /**
+   * Review feedback audit configuration (#3901).
+   * When enabled, a bot-authored CHANGES_REQUESTED review is audited by a
+   * reasoning-tier model against the feature's work trajectory and the PR diff
+   * before the pipeline spends a remediation cycle. A finding judged INVALID
+   * (wrong/stale/already-addressed) auto-dismisses the bot review; UNCERTAIN
+   * escalates to a human; VALID proceeds to remediation. Human reviews are
+   * never auto-dismissed.
+   * @default { enabled: true, model: 'reasoning' }
+   */
+  reviewFeedbackAudit?: {
+    /** Enable the review feedback audit step. @default true */
+    enabled: boolean;
+    /** Model alias to use for the audit call. @default 'reasoning' */
+    model?: string;
+  };
+  /**
    * Trajectory injection configuration.
    * When enabled, relevant past trajectories are injected into agent prompts
    * as a "Lessons from Similar Features" section. Omitting this field defaults

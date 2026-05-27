@@ -117,6 +117,33 @@ On `LoopDetectedError`, execution retries once with recovery guidance injected i
 - On CI failure → back to EXECUTE with failure context
 - Max 4 total remediation cycles before escalation to ESCALATE
 
+### Bot review feedback audit (#3901)
+
+Before spending a remediation cycle on a **bot-authored** `CHANGES_REQUESTED`
+review (e.g. protoquinn), `gateBotReviewFeedback` audits the feedback so a
+stale or confidently-wrong finding can't loop the agent and exhaust the budget:
+
+1. **Human reviews are never audited or auto-dismissed** — a human
+   `CHANGES_REQUESTED` falls straight through to remediation. Only bot reviews
+   are gated. Unresolved CodeRabbit _threads_ (not reviews) also fall through.
+2. **Reasoning-tier audit** (`runReviewFeedbackAudit`, default `protolabs/reasoning`)
+   judges the bot feedback against the feature's recorded **trajectory**
+   (`TrajectoryStoreService.loadTrajectories`), the PR diff, and terminal CI status:
+   - **VALID** → fall through and remediate the real finding.
+   - **INVALID** (wrong / stale / already-addressed) → dismiss the bot review with
+     the audit rationale, post a PR comment for traceability, persist loop-guard
+     state, wait one poll interval, and re-check.
+   - **UNCERTAIN** → escalate to a human (the audit must never guess INVALID;
+     dismissing a real defect would risk merging broken code).
+3. **Loop guard** — `reviewAuditDismissSha` / `reviewAuditDismissCount` on the
+   feature. If a bot re-requests changes on a head already dismissed twice, the
+   feature escalates instead of dismissing in a loop.
+
+Configurable via `WorkflowSettings.reviewFeedbackAudit` (`{ enabled, model }`,
+default `enabled: true`, `model: 'reasoning'`). The mechanically-stale shapes
+(superseded commit, CI-pending) are also cleared out-of-band by the
+`auto-dismiss-stale-bot-reviews` maintenance check (critical tier, 5min).
+
 ## MERGE Phase
 
 `MergeProcessor` verifies CI is green and merges the PR using the strategy configured in `workflowSettings` (squash, merge, or rebase). Emits `feature:pr-merged`. Board status transitions to `done`.

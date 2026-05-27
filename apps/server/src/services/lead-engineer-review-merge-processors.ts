@@ -14,6 +14,10 @@ import {
   buildFreshEyesReviewPrompt,
   parseFreshEyesVerdict,
   FRESH_EYES_REVIEW_SYSTEM_PROMPT,
+  buildFeedbackAuditPrompt,
+  parseFeedbackAuditVerdict,
+  FEEDBACK_AUDIT_SYSTEM_PROMPT,
+  type FeedbackAuditResult,
 } from '@protolabsai/prompts';
 import { resolveModelString } from '@protolabsai/model-resolver';
 import { resolveMergeStrategy } from '../lib/merge-strategy.js';
@@ -339,6 +343,14 @@ export class ReviewProcessor implements StateProcessor {
     }
 
     if (reviewState === 'changes_requested') {
+      // #3901: audit bot-authored CHANGES_REQUESTED before spending a remediation
+      // cycle. A confidently-wrong or stale bot review (e.g. protoquinn) otherwise
+      // sends the feature back to EXECUTE and burns the budget on a phantom finding.
+      // Returns a short-circuit transition (dismiss+re-check, or escalate) or null
+      // to fall through to remediation (VALID finding, human review, or audit off).
+      const auditGate = await this.gateBotReviewFeedback(ctx);
+      if (auditGate) return auditGate;
+
       // Check remediation budget using split budget enforcer
       const reviewWorkflowSettings = await getWorkflowSettings(
         ctx.projectPath,
@@ -575,6 +587,279 @@ export class ReviewProcessor implements StateProcessor {
     logger.info('[REVIEW] Review phase completed');
     // Clean up review start timestamp when leaving REVIEW state
     this.reviewStartedAt.delete(ctx.feature.id);
+  }
+
+  /**
+   * #3901 — gate bot-authored CHANGES_REQUESTED reviews through a reasoning-tier
+   * audit before remediating. Returns a short-circuit StateTransitionResult when
+   * the gate handles the review (dismiss + re-check, or escalate), or null to
+   * fall through to the normal remediation path.
+   *
+   * Decision flow:
+   *  - No CHANGES_REQUESTED *reviews* (e.g. only CodeRabbit threads) → null.
+   *  - Any human CHANGES_REQUESTED → null (human feedback is authoritative; never
+   *    auto-dismissed — it remediates or, via the normal path, escalates).
+   *  - Bot CHANGES_REQUESTED → reasoning audit over trajectory + diff:
+   *      VALID     → null (remediate against the real finding).
+   *      INVALID   → dismiss the bot review(s), record loop-guard state, re-check.
+   *      UNCERTAIN → escalate to a human.
+   *  - Loop guard: if a bot re-requests changes on a head we already audited and
+   *    dismissed twice, escalate instead of dismissing again.
+   */
+  private async gateBotReviewFeedback(ctx: StateContext): Promise<StateTransitionResult | null> {
+    if (!ctx.prNumber) return null;
+    if (!this.serviceContext.trajectoryStoreService) return null;
+
+    const workflowSettings = await getWorkflowSettings(
+      ctx.projectPath,
+      this.serviceContext.settingsService,
+      '[ReviewProcessor]'
+    );
+    // Default ON: a stale/wrong bot review otherwise burns the remediation budget.
+    if (workflowSettings.reviewFeedbackAudit?.enabled === false) return null;
+
+    // Resolve repo slug + head SHA + CHANGES_REQUESTED reviews (with REST ids,
+    // needed for the dismissals endpoint).
+    let slug = '';
+    let headSha = '';
+    let crReviews: Array<{ id: number; login: string; body: string }> = [];
+    try {
+      const { stdout: slugOut } = await execAsync(
+        'gh repo view --json nameWithOwner -q .nameWithOwner',
+        {
+          cwd: ctx.projectPath,
+          timeout: 10000,
+        }
+      );
+      slug = slugOut.trim();
+      if (!slug) return null;
+
+      const { stdout: headOut } = await execAsync(
+        `gh pr view ${ctx.prNumber} --json headRefOid -q .headRefOid`,
+        { cwd: ctx.projectPath, timeout: 10000 }
+      );
+      headSha = headOut.trim();
+
+      const { stdout: reviewsOut } = await execAsync(
+        `gh api repos/${slug}/pulls/${ctx.prNumber}/reviews`,
+        { cwd: ctx.projectPath, timeout: 15000 }
+      );
+      const all = JSON.parse(reviewsOut) as Array<{
+        id: number;
+        user: { login: string } | null;
+        state: string;
+        body: string | null;
+      }>;
+      crReviews = all
+        .filter((r) => r.state === 'CHANGES_REQUESTED' && r.user)
+        .map((r) => ({ id: r.id, login: r.user!.login, body: r.body ?? '' }));
+    } catch (err) {
+      logger.warn('[REVIEW] Feedback audit: failed to resolve reviews, skipping gate', err);
+      return null;
+    }
+
+    if (crReviews.length === 0) return null; // CodeRabbit-thread case → normal path
+
+    const isBot = (login: string) => login.endsWith('[bot]');
+    const botCRs = crReviews.filter((r) => isBot(r.login));
+    const humanCRs = crReviews.filter((r) => !isBot(r.login));
+
+    // Human reviews are authoritative — never auto-dismissed. Fall through.
+    if (humanCRs.length > 0 || botCRs.length === 0) return null;
+
+    // Loop guard: a bot re-requesting changes on a head we already audited and
+    // dismissed (twice) is contested or unsatisfiable — escalate to a human.
+    const prevSha = ctx.feature.reviewAuditDismissSha;
+    const prevCount = ctx.feature.reviewAuditDismissCount ?? 0;
+    if (prevSha && prevSha === headSha && prevCount >= 2) {
+      ctx.escalationReason =
+        `Bot reviewer keeps requesting changes on head ${headSha.slice(0, 7)} after the ` +
+        `feedback audit dismissed it ${prevCount}x as invalid — needs human review (#3901).`;
+      return { nextState: 'ESCALATE', shouldContinue: true, reason: ctx.escalationReason };
+    }
+
+    const reviewers = [...new Set(botCRs.map((r) => r.login))];
+    const botFeedback = botCRs.map((r) => `[${r.login}]\n${r.body}`).join('\n\n---\n\n');
+    const audit = await this.runReviewFeedbackAudit(ctx, botFeedback, reviewers);
+
+    logger.info('[REVIEW] Feedback audit verdict', {
+      featureId: ctx.feature.id,
+      prNumber: ctx.prNumber,
+      verdict: audit.verdict,
+      reviewers,
+      rationale: audit.rationale.slice(0, 200),
+    });
+
+    if (audit.verdict === 'VALID') {
+      // Real, current defect — remediate against it via the normal path.
+      return null;
+    }
+
+    if (audit.verdict === 'UNCERTAIN') {
+      ctx.escalationReason =
+        `Review feedback audit could not confidently adjudicate bot feedback on PR #${ctx.prNumber}: ` +
+        `${audit.rationale}`;
+      return { nextState: 'ESCALATE', shouldContinue: true, reason: ctx.escalationReason };
+    }
+
+    // INVALID — dismiss the bot review(s) with the audit rationale and re-check.
+    const dismissMessage =
+      `Auto-dismissed by reasoning feedback audit (#3901): ${audit.rationale}`.slice(0, 250);
+    let dismissed = 0;
+    for (const r of botCRs) {
+      try {
+        await execAsync(
+          `gh api repos/${slug}/pulls/${ctx.prNumber}/reviews/${r.id}/dismissals -X PUT -f message=${JSON.stringify(dismissMessage)}`,
+          { cwd: ctx.projectPath, timeout: 15000 }
+        );
+        dismissed++;
+      } catch (err) {
+        logger.warn(`[REVIEW] Failed to dismiss bot review ${r.id} on PR #${ctx.prNumber}`, err);
+      }
+    }
+
+    if (dismissed === 0) {
+      // Could not dismiss — don't loop; let the normal path handle it.
+      return null;
+    }
+
+    // Post the audit rationale as a PR comment for traceability + the flywheel.
+    try {
+      const comment =
+        `**Review feedback audit (#3901) — INVALID**\n\n` +
+        `The ${reviewers.join(', ')} CHANGES_REQUESTED review was audited against this feature's ` +
+        `work trajectory and the PR diff, and dismissed as not a real, current defect:\n\n> ${audit.rationale}`;
+      await execAsync(`gh pr comment ${ctx.prNumber} --body ${JSON.stringify(comment)}`, {
+        cwd: ctx.projectPath,
+        timeout: 15000,
+      });
+    } catch (err) {
+      logger.debug('[REVIEW] Failed to post audit comment (non-fatal)', err);
+    }
+
+    await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+      reviewAuditDismissSha: headSha,
+      reviewAuditDismissCount: prevSha === headSha ? prevCount + 1 : 1,
+    });
+
+    // Wait one poll interval so GitHub recomputes reviewDecision before re-checking.
+    await new Promise((r) => setTimeout(r, REVIEW_POLL_DELAY_MS));
+    return {
+      nextState: 'REVIEW',
+      shouldContinue: true,
+      reason: `Bot review audited INVALID and dismissed (${dismissed}), re-checking`,
+    };
+  }
+
+  /**
+   * Run the reasoning-tier feedback audit: judge bot review feedback against the
+   * feature's work trajectory + PR diff + CI status. (#3901)
+   */
+  private async runReviewFeedbackAudit(
+    ctx: StateContext,
+    botFeedback: string,
+    reviewers: string[]
+  ): Promise<FeedbackAuditResult> {
+    // PR diff
+    let prDiff = '';
+    try {
+      const { stdout } = await execAsync(`gh pr diff ${ctx.prNumber}`, {
+        cwd: ctx.projectPath,
+        timeout: 30000,
+      });
+      prDiff = stdout;
+    } catch (err) {
+      logger.warn('[REVIEW] Feedback audit: failed to fetch PR diff', err);
+    }
+
+    // CI status summary
+    let ciStatus = 'Unknown.';
+    try {
+      const { stdout } = await execAsync(
+        `gh pr view ${ctx.prNumber} --json statusCheckRollup --jq '[(.statusCheckRollup // [])[] | {name: (.name // .context), conclusion}]'`,
+        { cwd: ctx.projectPath, timeout: 15000 }
+      );
+      const checks = JSON.parse(stdout) as Array<{ name: string; conclusion: string | null }>;
+      const failed = checks.filter((c) => c.conclusion === 'FAILURE').map((c) => c.name);
+      ciStatus =
+        failed.length > 0
+          ? `Failing checks: ${failed.join(', ')}`
+          : `All ${checks.length} checks non-failing.`;
+    } catch {
+      // leave default
+    }
+
+    // Trajectory summaries
+    const trajectorySummaries: string[] = [];
+    try {
+      const trajectories = await this.serviceContext.trajectoryStoreService!.loadTrajectories(
+        ctx.projectPath,
+        ctx.feature.id
+      );
+      for (const t of trajectories) {
+        const parts = [`Plan: ${t.planSummary}`, `Execution: ${t.executionSummary}`];
+        if (t.escalationReason) parts.push(`Escalation: ${t.escalationReason}`);
+        trajectorySummaries.push(parts.join('\n'));
+      }
+    } catch (err) {
+      logger.debug('[REVIEW] Feedback audit: failed to load trajectory (non-fatal)', err);
+    }
+
+    const featureAny = ctx.feature as unknown as Record<string, unknown>;
+    const acceptanceCriteria: string[] = [];
+    const rawCriteria = featureAny['acceptanceCriteria'];
+    if (Array.isArray(rawCriteria)) {
+      for (const c of rawCriteria) {
+        if (typeof c === 'string') acceptanceCriteria.push(c);
+        else if (typeof c === 'object' && c !== null && 'description' in c) {
+          acceptanceCriteria.push((c as { description: string }).description);
+        }
+      }
+    }
+
+    const workflowSettings = await getWorkflowSettings(
+      ctx.projectPath,
+      this.serviceContext.settingsService,
+      '[ReviewProcessor]'
+    );
+    const model = resolveModelString(workflowSettings.reviewFeedbackAudit?.model ?? 'reasoning');
+    const prompt = buildFeedbackAuditPrompt({
+      reviewFeedback: botFeedback,
+      reviewers,
+      featureTitle: ctx.feature.title || 'Untitled',
+      featureDescription: ctx.feature.description || 'No description provided.',
+      acceptanceCriteria,
+      trajectorySummaries,
+      prDiff,
+      ciStatus,
+    });
+
+    try {
+      const result = await simpleQuery({
+        prompt,
+        model,
+        cwd: ctx.projectPath,
+        systemPrompt: FEEDBACK_AUDIT_SYSTEM_PROMPT,
+        maxTurns: 1,
+        allowedTools: [],
+        traceContext: {
+          featureId: ctx.feature.id,
+          featureName: ctx.feature.title,
+          agentRole: 'review-feedback-audit',
+          phase: 'REVIEW',
+        },
+      });
+      return parseFeedbackAuditVerdict(result.text);
+    } catch (err) {
+      // On audit failure, return UNCERTAIN so the feature escalates rather than
+      // either looping or silently dismissing.
+      logger.warn('[REVIEW] Feedback audit call failed, defaulting to UNCERTAIN', err);
+      return {
+        verdict: 'UNCERTAIN',
+        rationale: `Audit call failed: ${err instanceof Error ? err.message : String(err)}`,
+        raw: '',
+      };
+    }
   }
 
   /**
