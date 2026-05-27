@@ -21,27 +21,30 @@ jobs:
       - uses: actions/checkout@v4
 
       # zizmor — GitHub Actions security linter. Installed from PyPI so there is
-      # no third-party action reference to pin or get wrong. min-severity=medium
-      # fails the build on script injection (high) and token over-privilege
-      # (medium) while not breaking on low-severity style findings.
+      # no third-party action reference to pin or get wrong. Pinned to an exact
+      # version for reproducible lint runs. min-severity=medium fails the build
+      # on script injection (high) and token over-privilege (medium) while not
+      # breaking on low-severity style findings.
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
       - name: Install zizmor
-        run: pip install zizmor
+        run: pip install zizmor==1.25.2
 
       - name: Run zizmor
         run: zizmor --min-severity=medium .github/workflows/
 
       # actionlint — workflow syntax, expression typing, and shellcheck linter.
       # Installed via the project's official download script (no third-party
-      # action reference).
+      # action reference). The script is fetched from an immutable commit SHA
+      # (not a mutable branch) and pinned to an exact actionlint version, so the
+      # tooling is deterministic and the fetched code cannot change underneath us.
       - name: Install actionlint
         run: |
-          curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash -o /tmp/download-actionlint.bash
-          bash /tmp/download-actionlint.bash
+          curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/62c50a97a146fe36a8951a2a365158c4a4795ba8/scripts/download-actionlint.bash -o /tmp/download-actionlint.bash
+          bash /tmp/download-actionlint.bash 1.7.12
 
       - name: Run actionlint
         run: ./actionlint -color

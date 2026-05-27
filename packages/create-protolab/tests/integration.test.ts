@@ -311,13 +311,16 @@ describe('CI Phase — workflow security lint (#3819)', () => {
         path.join(tempDir, '.github', 'workflows', 'workflow-security-lint.yml'),
         'utf-8'
       );
-      // Both linters are wired, installed without a third-party action ref.
-      expect(content).toContain('pip install zizmor');
+      // Both linters are wired and version-pinned for reproducible runs.
+      expect(content).toContain('pip install zizmor==1.25.2');
       expect(content).toContain('zizmor --min-severity=medium .github/workflows/');
       expect(content).toContain('download-actionlint.bash');
       expect(content).toContain('./actionlint');
+      // actionlint installs without a third-party action — no `uses: ...actionlint`.
+      expect(content).not.toMatch(/uses:.*actionlint/i);
       // Least-privilege token for the lint job.
       expect(content).toContain('permissions:');
+      expect(content).toContain('contents: read');
     } finally {
       await fsp.rm(tempDir, { recursive: true, force: true });
     }
