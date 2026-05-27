@@ -359,6 +359,8 @@ export function createCommand(parent: Command): void {
   cmd.option('--priority <n>', 'Priority (1=urgent, 2=high, 3=normal, 4=low)');
   cmd.option('--epic-id <id>', 'Parent epic ID');
   cmd.option('--is-epic', 'Mark as epic container');
+  cmd.option('--execution-mode <mode>', 'Execution mode (standard|read-only)');
+  cmd.option('--workflow <name>', 'Workflow name (e.g. standard, audit, research, postmortem)');
 
   cmd.action(async (opts) => {
     const flags = getGlobalFlags(cmd.optsWithGlobals());
@@ -380,6 +382,13 @@ export function createCommand(parent: Command): void {
     }
     if (opts.epicId) feature.epicId = opts.epicId;
     if (opts.isEpic) feature.isEpic = true;
+    if (opts.executionMode) {
+      if (!['standard', 'read-only'].includes(opts.executionMode)) {
+        usageError("Execution mode must be 'standard' or 'read-only'");
+      }
+      feature.executionMode = opts.executionMode;
+    }
+    if (opts.workflow) feature.workflow = opts.workflow;
 
     const result = await client.post<CreateResponse>('/features/create', {
       projectPath: flags.project,

@@ -924,6 +924,29 @@ export class ExecuteProcessor implements StateProcessor {
       }
     }
 
+    // ── Read-only / audit short-circuit ──────────────────────────────────────
+    // Read-only features (audit, research, postmortem, …) run against the main
+    // tree with no worktree and no git ops, so by design they produce no commits
+    // and no PR. The PR/commits guard below would wrongly block them with
+    // "no commits ahead of base"; instead they terminate at `done` (#3946).
+    // Returning DONE lets the state machine stop cleanly (REVIEW/MERGE are
+    // disabled for these workflows anyway — see resolveNextState skipping).
+    if (ctx.feature.executionMode === 'read-only') {
+      logger.info('[EXECUTE] Read-only feature completed — no PR expected, moving to done', {
+        featureId: ctx.feature.id,
+      });
+      await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+        status: 'done',
+        completedAt: new Date().toISOString(),
+        statusChangeReason: 'Read-only execution completed — no PR expected for read-only mode',
+      });
+      return {
+        nextState: 'DONE',
+        shouldContinue: false,
+        reason: 'Read-only execution completed',
+      };
+    }
+
     // ── Guard: require a PR and commits before transitioning to REVIEW ────────
     // Without this guard, an agent that hard-fails on turn 1 (e.g. 401 from the
     // model gateway) can still reach REVIEW with no PR and no commits — leaving

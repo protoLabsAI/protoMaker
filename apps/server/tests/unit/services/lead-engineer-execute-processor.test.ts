@@ -585,4 +585,42 @@ describe('ExecuteProcessor — EXECUTE→REVIEW guard (no PR or no commits)', ()
     expect(result.shouldContinue).toBe(true);
     expect(result.reason).toMatch(/Execution completed, moving to review/i);
   });
+
+  it('completes a read-only feature at done instead of blocking on no-PR (#3946)', async () => {
+    // Read-only / audit features run against the main tree with no git ops, so
+    // they produce no PR and no commits by design. The no-PR guard must NOT
+    // block them — they terminate at `done`.
+    const { ctx, featureLoader } = makeServiceContext({
+      maxCostUsdPerFeature: 100,
+    });
+
+    const readOnlyFeature = makeFeature({
+      costUsd: 1,
+      prNumber: undefined,
+      executionMode: 'read-only',
+    });
+    (featureLoader.get as ReturnType<typeof vi.fn>).mockResolvedValue(readOnlyFeature);
+
+    const processor = new ExecuteProcessor(ctx);
+    const stateCtx = makeCtx({ feature: readOnlyFeature, prNumber: undefined });
+    const result = await processor.process(stateCtx);
+
+    expect(result.nextState).toBe('DONE');
+    expect(result.shouldContinue).toBe(false);
+
+    // Marked done — never blocked.
+    expect(featureLoader.update).toHaveBeenCalledWith(
+      '/test/project',
+      'feat-001',
+      expect.objectContaining({
+        status: 'done',
+        statusChangeReason: expect.stringMatching(/read-only execution completed/i),
+      })
+    );
+    expect(featureLoader.update).not.toHaveBeenCalledWith(
+      '/test/project',
+      'feat-001',
+      expect.objectContaining({ status: 'blocked' })
+    );
+  });
 });
