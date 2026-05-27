@@ -1,5 +1,5 @@
 /**
- * Setup Pipeline and Ceremonies Tools
+ * Setup Tools (Research, Gap Analysis, Alignment)
  */
 
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
@@ -8,13 +8,14 @@ export const setupTools: Tool[] = [
   {
     name: 'research_repo',
     description:
-      'Scan a repository to detect its current tech stack, structure, and configuration. Returns detailed research results including monorepo setup, frontend/backend frameworks, testing, CI/CD, and more. Pure heuristics, no AI calls.',
+      'Research a repository by reading key files (package.json, README, tsconfig, etc.) and generating a RepoResearchResult. Use this before setup_lab to generate tech-stack-aware configuration.',
     inputSchema: {
       type: 'object',
       properties: {
         projectPath: {
           type: 'string',
-          description: 'Absolute path to the repository to scan',
+          minLength: 1,
+          description: 'Absolute path to the project directory to research',
         },
       },
       required: ['projectPath'],
@@ -23,117 +24,98 @@ export const setupTools: Tool[] = [
   {
     name: 'analyze_gaps',
     description:
-      'Compare repository research results against the ProtoLabs gold standard. Returns a structured gap analysis report with alignment score, gaps by severity (critical/recommended/optional), and compliant items.',
+      'Analyze gaps between current repository state and desired Automaker configuration. Returns a list of missing or misconfigured items.',
     inputSchema: {
       type: 'object',
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
-        research: {
-          type: 'object',
-          description: 'RepoResearchResult from research_repo tool',
-        },
-        skipChecks: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Array of gap IDs to skip (e.g., ["storybook", "payload"])',
-        },
       },
-      required: ['projectPath', 'research'],
+      required: ['projectPath'],
     },
   },
   {
     name: 'propose_alignment',
     description:
-      'Convert gap analysis into alignment features organized into milestones. Optionally creates features on the Automaker board. Returns milestone breakdown with estimated effort.',
+      'Generate a proposed alignment plan to fix gaps identified by analyze_gaps. Returns actionable steps.',
     inputSchema: {
       type: 'object',
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
-        gapAnalysis: {
-          type: 'object',
-          description: 'GapAnalysisReport from analyze_gaps tool',
-        },
-        autoCreate: {
-          type: 'boolean',
-          description:
-            'If true, creates features on the board immediately. Default: false (returns proposal for review).',
+        gaps: {
+          type: 'array',
+          items: { type: 'string', minLength: 1 },
+          description: 'Array of gap descriptions from analyze_gaps',
         },
       },
-      required: ['projectPath', 'gapAnalysis'],
+      required: ['projectPath', 'gaps'],
     },
   },
   {
     name: 'provision_discord',
     description:
-      'Create Discord category and channels for a project. Creates a category named after the project with #general, #updates, and #dev channels.',
+      'Provision a Discord integration for the project. Creates a webhook and stores credentials securely.',
     inputSchema: {
       type: 'object',
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
-        projectName: {
+        webhookUrl: {
           type: 'string',
-          description: 'Project name for the Discord category',
+          minLength: 1,
+          description: 'Discord webhook URL',
         },
-        guildId: {
+        channel: {
           type: 'string',
-          description: 'Discord server (guild) ID',
+          minLength: 1,
+          description: 'Discord channel name or ID',
         },
       },
-      required: ['projectPath', 'projectName', 'guildId'],
+      required: ['projectPath', 'webhookUrl'],
     },
   },
   {
     name: 'generate_report',
     description:
-      'Generate a self-contained HTML report from gap analysis and research results. Saves to {projectPath}/protoLabs.report.html and automatically opens in browser.',
+      'Generate a comprehensive project report including board status, metrics, and recommendations.',
     inputSchema: {
       type: 'object',
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
-        research: {
-          type: 'object',
-          description: 'RepoResearchResult object from repo research phase',
-        },
-        report: {
-          type: 'object',
-          description: 'GapAnalysisReport object from gap analysis phase',
+        format: {
+          type: 'string',
+          enum: ['markdown', 'json'],
+          description: 'Report format (default: markdown)',
         },
       },
-      required: ['projectPath', 'research', 'report'],
+      required: ['projectPath'],
     },
   },
   {
     name: 'run_full_setup',
     description:
-      'Run the complete setup pipeline: clone (if git URL), research repo, analyze gaps, generate HTML report, initialize .automaker, generate proto.config.yaml, and generate proposal. This is a convenience wrapper that chains clone_repo (if URL) → research_repo → analyze_gaps → generate_report → setup_lab → propose_alignment. setup_lab writes proto.config.yaml at the project root, populated from research results (name, techStack, commands, git).',
+      'Run the complete setup pipeline: research → analyze → propose → execute alignment. Automates the entire onboarding process.',
     inputSchema: {
       type: 'object',
       properties: {
         projectPath: {
           type: 'string',
-          description:
-            'Git repository URL (https://, git@, or ending with .git) or absolute path to local project directory. If a URL is provided, the repo will be cloned to ./labs/{repo-name}/ first.',
-        },
-        skipChecks: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Array of gap IDs to skip',
-        },
-        autoCreate: {
-          type: 'boolean',
-          description: 'If true, creates alignment features on the board. Default: false.',
+          minLength: 1,
+          description: 'Absolute path to the project directory',
         },
       },
       required: ['projectPath'],

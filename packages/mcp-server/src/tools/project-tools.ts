@@ -14,6 +14,7 @@ export const projectTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
       },
@@ -29,10 +30,12 @@ export const projectTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         content: {
           type: 'string',
+          minLength: 1,
           description: 'New content for spec.md',
         },
       },
@@ -49,6 +52,7 @@ export const projectTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
       },
@@ -64,10 +68,12 @@ export const projectTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         projectSlug: {
           type: 'string',
+          minLength: 1,
           description: 'The project slug (from list_projects)',
         },
       },
@@ -83,47 +89,52 @@ export const projectTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         title: {
           type: 'string',
+          minLength: 1,
           description: 'Project title',
         },
         goal: {
           type: 'string',
+          minLength: 1,
           description: 'Project goal/objective',
         },
         prd: {
           type: 'object',
           description: 'SPARC PRD with situation, problem, approach, results, constraints',
           properties: {
-            situation: { type: 'string' },
-            problem: { type: 'string' },
-            approach: { type: 'string' },
-            results: { type: 'string' },
-            constraints: { type: 'array', items: { type: 'string' } },
+            situation: { type: 'string', minLength: 1 },
+            problem: { type: 'string', minLength: 1 },
+            approach: { type: 'string', minLength: 1 },
+            results: { type: 'string', minLength: 1 },
+            constraints: { type: 'array', items: { type: 'string', minLength: 1 } },
           },
         },
         milestones: {
           type: 'array',
+          minItems: 1,
           description: 'Array of milestones, each with title, description, and phases',
           items: {
             type: 'object',
             properties: {
-              title: { type: 'string' },
-              description: { type: 'string' },
+              title: { type: 'string', minLength: 1 },
+              description: { type: 'string', minLength: 1 },
               phases: {
                 type: 'array',
                 items: {
                   type: 'object',
                   properties: {
-                    title: { type: 'string' },
-                    description: { type: 'string' },
-                    filesToModify: { type: 'array', items: { type: 'string' } },
-                    acceptanceCriteria: { type: 'array', items: { type: 'string' } },
+                    title: { type: 'string', minLength: 1 },
+                    description: { type: 'string', minLength: 1 },
+                    filesToModify: { type: 'array', items: { type: 'string', minLength: 1 } },
+                    acceptanceCriteria: { type: 'array', items: { type: 'string', minLength: 1 } },
                     complexity: { type: 'string', enum: ['small', 'medium', 'large'] },
                     workflow: {
                       type: 'string',
+                      minLength: 1,
                       description:
                         'Workflow for this phase when it becomes a feature (e.g. standard, audit, research)',
                     },
@@ -145,18 +156,22 @@ export const projectTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         projectSlug: {
           type: 'string',
+          minLength: 1,
           description: 'The project slug to update',
         },
         title: {
           type: 'string',
+          minLength: 1,
           description: 'New title (optional)',
         },
         goal: {
           type: 'string',
+          minLength: 1,
           description: 'New goal (optional)',
         },
         status: {
@@ -185,10 +200,12 @@ export const projectTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         projectSlug: {
           type: 'string',
+          minLength: 1,
           description: 'The project slug to delete',
         },
       },
@@ -204,10 +221,12 @@ export const projectTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         projectSlug: {
           type: 'string',
+          minLength: 1,
           description: 'The project slug to archive',
         },
       },
@@ -223,10 +242,12 @@ export const projectTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         projectSlug: {
           type: 'string',
+          minLength: 1,
           description: 'The project slug to create features from',
         },
         createEpics: {
@@ -247,6 +268,7 @@ export const projectTools: Tool[] = [
         },
         defaultWorkflow: {
           type: 'string',
+          minLength: 1,
           description:
             'Default workflow for all features. Per-phase workflow (set in create_project) takes precedence.',
         },
@@ -264,14 +286,17 @@ export const projectTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         title: {
           type: 'string',
+          minLength: 1,
           description: 'Project title',
         },
         ideaDescription: {
           type: 'string',
+          minLength: 1,
           description: 'Idea description (markdown).',
         },
       },
@@ -287,14 +312,17 @@ export const projectTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         projectSlug: {
           type: 'string',
+          minLength: 1,
           description: 'Project slug',
         },
         additionalContext: {
           type: 'string',
+          minLength: 1,
           description: 'Additional context for PRD generation (optional)',
         },
       },
@@ -312,31 +340,38 @@ export const projectTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         projectSlug: {
           type: 'string',
+          minLength: 1,
           description: 'Project slug',
         },
         milestones: {
           type: 'array',
+          minItems: 1,
           description: 'Structured milestone and phase data parsed from PM agent PRD output',
           items: {
             type: 'object',
             properties: {
-              number: { type: 'number', description: 'Milestone number (1-based)' },
-              slug: { type: 'string', description: 'Milestone slug' },
-              title: { type: 'string', description: 'Milestone title' },
-              description: { type: 'string', description: 'Milestone description' },
+              number: { type: 'integer', minimum: 1, description: 'Milestone number (1-based)' },
+              slug: { type: 'string', minLength: 1, description: 'Milestone slug' },
+              title: { type: 'string', minLength: 1, description: 'Milestone title' },
+              description: { type: 'string', minLength: 1, description: 'Milestone description' },
               status: {
                 type: 'string',
                 enum: ['stub', 'planning', 'planned', 'pending', 'in-progress', 'completed'],
                 description: 'Milestone status (default: planned)',
               },
-              targetDate: { type: 'string', description: 'Target date (YYYY-MM-DD)' },
+              targetDate: {
+                type: 'string',
+                pattern: '^\\d{4}-\\d{2}-\\d{2}$',
+                description: 'Target date (YYYY-MM-DD)',
+              },
               dependencies: {
                 type: 'array',
-                items: { type: 'string' },
+                items: { type: 'string', minLength: 1 },
                 description: 'Dependent milestone slugs',
               },
               phases: {
@@ -344,18 +379,18 @@ export const projectTools: Tool[] = [
                 items: {
                   type: 'object',
                   properties: {
-                    number: { type: 'number', description: 'Phase number (1-based)' },
-                    name: { type: 'string', description: 'Phase slug/name' },
-                    title: { type: 'string', description: 'Phase title' },
-                    description: { type: 'string', description: 'Phase description' },
+                    number: { type: 'integer', minimum: 1, description: 'Phase number (1-based)' },
+                    name: { type: 'string', minLength: 1, description: 'Phase slug/name' },
+                    title: { type: 'string', minLength: 1, description: 'Phase title' },
+                    description: { type: 'string', minLength: 1, description: 'Phase description' },
                     complexity: {
                       type: 'string',
                       enum: ['small', 'medium', 'large'],
                       description: 'Complexity estimate',
                     },
-                    filesToModify: { type: 'array', items: { type: 'string' } },
-                    acceptanceCriteria: { type: 'array', items: { type: 'string' } },
-                    dependencies: { type: 'array', items: { type: 'string' } },
+                    filesToModify: { type: 'array', items: { type: 'string', minLength: 1 } },
+                    acceptanceCriteria: { type: 'array', items: { type: 'string', minLength: 1 } },
+                    dependencies: { type: 'array', items: { type: 'string', minLength: 1 } },
                   },
                   required: ['number', 'name', 'title', 'description'],
                 },
@@ -377,10 +412,12 @@ export const projectTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         projectSlug: {
           type: 'string',
+          minLength: 1,
           description: 'Project slug',
         },
         createEpics: {
@@ -404,14 +441,17 @@ export const projectTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         projectSlug: {
           type: 'string',
+          minLength: 1,
           description: 'Project slug',
         },
         maxConcurrency: {
-          type: 'number',
+          type: 'integer',
+          minimum: 1,
           description: 'Max concurrent agents (optional, uses system default)',
         },
       },
@@ -427,10 +467,12 @@ export const projectTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         projectSlug: {
           type: 'string',
+          minLength: 1,
           description: 'Project slug',
         },
       },
@@ -448,18 +490,22 @@ export const projectTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         projectSlug: {
           type: 'string',
+          minLength: 1,
           description: 'The project slug to assign',
         },
         assignedTo: {
           type: 'string',
+          minLength: 1,
           description: 'Instance ID to assign the project to',
         },
         assignedBy: {
           type: 'string',
+          minLength: 1,
           description: 'Instance ID or user performing the assignment',
         },
       },
@@ -474,10 +520,12 @@ export const projectTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         projectSlug: {
           type: 'string',
+          minLength: 1,
           description: 'The project slug to unassign',
         },
       },

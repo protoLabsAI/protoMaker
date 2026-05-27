@@ -133,7 +133,6 @@ All tools are defined as static schemas in separate module files under `packages
 | Worktree Git       | `worktree-git-tools.ts`  | Cherry-pick, stash, abort/continue             |
 | File Operations    | `file-ops-tools.ts`      | Copy, move, browse files                       |
 | Project Lifecycle  | `project-tools.ts`       | Projects, PRD, milestones, phases              |
-| Content            | `content-tools.ts`       | Content pipeline (blog, docs)                  |
 | Integrations       | `integration-tools.ts`   | Discord, HITL forms                            |
 | Lead Engineer      | `lead-engineer-tools.ts` | Lead engineer state machine control            |
 | Observability      | `observability-tools.ts` | Langfuse traces, costs, scoring, datasets      |

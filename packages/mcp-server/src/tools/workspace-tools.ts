@@ -14,6 +14,7 @@ export const workspaceTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         status: {
@@ -34,6 +35,7 @@ export const workspaceTools: Tool[] = [
         },
         epicId: {
           type: 'string',
+          minLength: 1,
           description: 'Filter by parent epic ID',
         },
         complexity: {
@@ -55,18 +57,23 @@ export const workspaceTools: Tool[] = [
         },
         search: {
           type: 'string',
+          minLength: 1,
           description: 'Text search in title and description',
         },
         dueBefore: {
           type: 'string',
+          pattern: '^\\d{4}-\\d{2}-\\d{2}$',
           description: 'Filter features with dueDate before this date (YYYY-MM-DD format)',
         },
         dueAfter: {
           type: 'string',
+          pattern: '^\\d{4}-\\d{2}-\\d{2}$',
           description: 'Filter features with dueDate after this date (YYYY-MM-DD format)',
         },
         limit: {
-          type: 'number',
+          type: 'integer',
+          minimum: 1,
+          maximum: 200,
           description: 'Maximum results to return (default: 50)',
         },
       },
@@ -83,6 +90,7 @@ export const workspaceTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         includeRestricted: {
@@ -102,10 +110,12 @@ export const workspaceTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         tabId: {
           type: 'string',
+          minLength: 1,
           description: 'The tab ID (UUID). Use list_note_tabs to discover tab IDs.',
         },
       },
@@ -121,14 +131,17 @@ export const workspaceTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         tabId: {
           type: 'string',
+          minLength: 1,
           description: 'The tab ID (UUID). Use list_note_tabs to discover tab IDs.',
         },
         content: {
           type: 'string',
+          minLength: 1,
           description: 'HTML content to write. For rich text, use TipTap-compatible HTML tags.',
         },
         mode: {
@@ -138,6 +151,7 @@ export const workspaceTools: Tool[] = [
         },
         name: {
           type: 'string',
+          minLength: 1,
           description: 'Optional new name for the tab',
         },
         permissions: {
@@ -161,10 +175,12 @@ export const workspaceTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         name: {
           type: 'string',
+          minLength: 1,
           description: 'Tab name (defaults to "Tab N")',
         },
         content: {
@@ -191,10 +207,12 @@ export const workspaceTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         tabId: {
           type: 'string',
+          minLength: 1,
           description: 'The tab ID (UUID) to delete',
         },
       },

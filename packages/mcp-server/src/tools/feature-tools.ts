@@ -23,6 +23,7 @@ export const featureTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         status: {
@@ -32,6 +33,7 @@ export const featureTools: Tool[] = [
         },
         projectSlug: {
           type: 'string',
+          minLength: 1,
           description:
             'Filter features by project slug (optional). Only returns features whose projectSlug matches.',
         },
@@ -48,10 +50,13 @@ export const featureTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         featureId: {
           type: 'string',
+          minLength: 1,
+          pattern: '^[0-9a-fA-F-]{1,}$',
           description: 'The feature ID (UUID)',
         },
         includeHistory: {
@@ -72,14 +77,17 @@ export const featureTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         title: {
           type: 'string',
+          minLength: 1,
           description: 'Short title for the feature',
         },
         description: {
           type: 'string',
+          minLength: 1,
           description:
             'Detailed description with requirements and acceptance criteria. Be specific about file locations, components, and expected behavior.',
         },
@@ -91,12 +99,13 @@ export const featureTools: Tool[] = [
         },
         branchName: {
           type: 'string',
+          minLength: 1,
           description:
             'Optional git branch name for this feature. If not provided, auto-generated from title.',
         },
         dependencies: {
           type: 'array',
-          items: { type: 'string' },
+          items: { type: 'string', minLength: 1 },
           description: 'Array of feature IDs that this feature depends on.',
         },
         isEpic: {
@@ -106,6 +115,7 @@ export const featureTools: Tool[] = [
         },
         epicId: {
           type: 'string',
+          minLength: 1,
           description: 'ID of parent epic if this feature belongs to an epic.',
         },
         complexity: {
@@ -116,11 +126,12 @@ export const featureTools: Tool[] = [
         },
         dueDate: {
           type: 'string',
+          pattern: '^\\d{4}-\\d{2}-\\d{2}$',
           description:
             'Due date for this feature in ISO 8601 format (YYYY-MM-DD). Example: "2026-02-10".',
         },
         priority: {
-          type: 'number',
+          type: 'integer',
           enum: [0, 1, 2, 3, 4],
           description:
             'Priority level: 0 = No priority, 1 = Urgent, 2 = High, 3 = Normal, 4 = Low. Auto-mode picks higher priority first.',
@@ -132,11 +143,13 @@ export const featureTools: Tool[] = [
         },
         category: {
           type: 'string',
+          minLength: 1,
           description:
             'Category for organizing this feature on the board (optional, defaults to "Uncategorized"). Examples: "infrastructure", "frontend", "api", "bug-fix".',
         },
         projectSlug: {
           type: 'string',
+          minLength: 1,
           description:
             'Optional project slug to scope this feature to a specific project. Features with a projectSlug appear in project-filtered views (e.g., get_sitrep with projectSlug). Leave unset for standalone features.',
         },
@@ -148,6 +161,7 @@ export const featureTools: Tool[] = [
         },
         workflow: {
           type: 'string',
+          minLength: 1,
           description:
             'Workflow name from .automaker/workflows/ or built-in (standard, read-only, content, audit). Determines which pipeline phases run, which processors handle each phase, and execution settings. Overrides executionMode when set.',
         },
@@ -164,18 +178,22 @@ export const featureTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         featureId: {
           type: 'string',
+          minLength: 1,
           description: 'The feature ID (UUID)',
         },
         title: {
           type: 'string',
+          minLength: 1,
           description: 'New title (optional)',
         },
         description: {
           type: 'string',
+          minLength: 1,
           description: 'New description (optional)',
         },
         status: {
@@ -191,11 +209,12 @@ export const featureTools: Tool[] = [
         },
         dueDate: {
           type: ['string', 'null'],
+          pattern: '^(\\d{4}-\\d{2}-\\d{2})?$',
           description:
             'Due date for this feature in ISO 8601 format (YYYY-MM-DD). Pass null to clear.',
         },
         priority: {
-          type: ['number', 'null'],
+          type: ['integer', 'null'],
           enum: [0, 1, 2, 3, 4, null],
           description:
             'Priority level: 0 = No priority, 1 = Urgent, 2 = High, 3 = Normal, 4 = Low. Pass null to clear.',
@@ -212,11 +231,13 @@ export const featureTools: Tool[] = [
         },
         statusChangeReason: {
           type: 'string',
+          minLength: 1,
           description:
             "Required when setting status to 'blocked'. Explain why the feature is blocked (e.g., 'Waiting on PR #123 to merge', 'Blocked by API rate limits').",
         },
         category: {
           type: 'string',
+          minLength: 1,
           description:
             'Category for organizing this feature on the board (optional). Examples: "infrastructure", "frontend", "api", "bug-fix".',
         },
@@ -228,6 +249,7 @@ export const featureTools: Tool[] = [
         },
         workflow: {
           type: 'string',
+          minLength: 1,
           description:
             'Workflow name (standard, read-only, content, audit, or custom). Determines pipeline phases and processors.',
         },
@@ -243,10 +265,12 @@ export const featureTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         featureId: {
           type: 'string',
+          minLength: 1,
           description: 'The feature ID (UUID)',
         },
       },
@@ -262,10 +286,12 @@ export const featureTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         featureId: {
           type: 'string',
+          minLength: 1,
           description: 'The feature ID (UUID)',
         },
         autoCommit: {
@@ -295,6 +321,7 @@ export const featureTools: Tool[] = [
         },
         prBaseBranch: {
           type: 'string',
+          minLength: 1,
           description: 'Base branch for PR creation (optional, default: main)',
         },
       },
@@ -310,10 +337,12 @@ export const featureTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory (git repo root)',
         },
         featureId: {
           type: 'string',
+          minLength: 1,
           description: 'The feature ID (UUID) to roll back',
         },
       },
@@ -329,6 +358,7 @@ export const featureTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
       },
@@ -344,14 +374,17 @@ export const featureTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         featureId: {
           type: 'string',
+          minLength: 1,
           description: 'The feature ID to reconcile',
         },
         prNumber: {
-          type: 'number',
+          type: 'integer',
+          minimum: 1,
           description: 'The GitHub PR number that contains the merged work for this feature',
         },
       },

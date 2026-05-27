@@ -46,7 +46,7 @@ interface AgentListResponse {
   success: boolean;
   isRunning?: boolean;
   isAutoLoopRunning?: boolean;
-  runningFeatures?: RunningAgent[];
+  runningFeatures?: Array<string | RunningAgent>;
   runningCount?: number;
   maxConcurrency?: number;
   error?: string;
@@ -89,7 +89,7 @@ function createClient(flags: GlobalFlags): ApiClient {
 /**
  * Format agent list as a human-readable table.
  */
-function renderAgentList(agents: RunningAgent[]): string {
+function renderAgentList(agents: Array<string | RunningAgent>): string {
   if (agents.length === 0) {
     return 'No agents currently running.';
   }
@@ -99,11 +99,14 @@ function renderAgentList(agents: RunningAgent[]): string {
   lines.push(`Running agents (${agents.length}):`);
   lines.push('');
 
-  for (const agent of agents) {
-    const title = agent.title || agent.featureId;
+  for (const a of agents) {
+    // The API returns runningFeatures as bare featureId strings; tolerate both
+    // a string and a richer object so we never render "undefined — undefined".
+    const agent: RunningAgent = typeof a === 'string' ? { featureId: a } : a;
+    const titlePart = agent.title ? ` — ${agent.title}` : '';
     const branch = agent.branchName ? ` (branch: ${agent.branchName})` : '';
     const started = agent.startTime ? ` [started: ${agent.startTime}]` : '';
-    lines.push(`  • ${agent.featureId} — ${title}${branch}${started}`);
+    lines.push(`  • ${agent.featureId}${titlePart}${branch}${started}`);
   }
 
   lines.push('');
