@@ -267,6 +267,74 @@ export class CompletionDetectorService {
   }
 
   /**
+   * Count commits on the epic branch not yet on the base branch
+   * (`origin/base..origin/epicBranch`). Fetches both refs first so the count
+   * reflects the remote, not a stale local mirror.
+   *
+   * Returns `null` when the count can't be determined (git/network error), so
+   * callers fall back to the normal PR path rather than guessing.
+   */
+  private async epicBranchCommitsAhead(
+    projectPath: string,
+    baseBranch: string,
+    epicBranch: string
+  ): Promise<number | null> {
+    try {
+      await execFileAsync('git', ['fetch', 'origin', baseBranch, epicBranch], {
+        cwd: projectPath,
+        timeout: 30000,
+      });
+      const { stdout } = await execFileAsync(
+        'git',
+        ['rev-list', '--count', `origin/${baseBranch}..origin/${epicBranch}`],
+        { cwd: projectPath, timeout: 15000 }
+      );
+      const count = parseInt(stdout.trim(), 10);
+      return Number.isNaN(count) ? null : count;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Mark an epic `done` without creating an epic→base PR — used when the work
+   * already landed on the base branch (epic branch absent on the remote, or
+   * present but 0 commits ahead of base). Claims dedup, updates ledger/counts,
+   * and emits the same completion events as the PR-merge path.
+   */
+  private async completeEpicDirectly(
+    projectPath: string,
+    epicId: string,
+    epic: Feature,
+    children: Feature[],
+    dedupeKey: string,
+    logMessage: string
+  ): Promise<void> {
+    this.emittedEpics.add(dedupeKey);
+    this.appendLedgerEntry('epic', dedupeKey);
+    this.completionCounts.epics++;
+    await this.featureLoader!.update(projectPath, epicId, { status: 'done' });
+    logger.info(logMessage);
+    this.emitter!.emit('feature:completed', {
+      projectPath,
+      featureId: epicId,
+      featureTitle: epic.title,
+      projectSlug: epic.projectSlug,
+      isEpic: true,
+    });
+    this.emitter!.emit('epic:auto-completed', {
+      projectPath,
+      epicId,
+      epicTitle: epic.title,
+      childrenIds: children.map((c) => c.id),
+      completedAt: new Date().toISOString(),
+    });
+    if (epic.projectSlug && epic.milestoneSlug) {
+      await this.checkMilestoneCompletion(projectPath, epic.projectSlug, epic.milestoneSlug);
+    }
+  }
+
+  /**
    * Check if all children of an epic are done. If the epic has a branch,
    * create a PR from the epic branch to the configured base branch and move
    * the epic to "review". The epic only reaches "done" when the GitHub
@@ -312,36 +380,48 @@ export class CompletionDetectorService {
       if (!branchExists) {
         // Children merged directly to the base branch — no epic branch to PR from.
         // Skip the PR step and mark the epic done immediately.
-        this.emittedEpics.add(dedupeKey);
-        this.appendLedgerEntry('epic', dedupeKey);
-        this.completionCounts.epics++;
-        await this.featureLoader!.update(projectPath, epicId, { status: 'done' });
-        logger.info(
-          `Epic "${epic.title}" completed — children merged directly to base, skipping epic PR (branch ${epic.branchName} not found on remote)`
-        );
-        this.emitter!.emit('feature:completed', {
-          projectPath,
-          featureId: epicId,
-          featureTitle: epic.title,
-          projectSlug: epic.projectSlug,
-          isEpic: true,
-        });
-        this.emitter!.emit('epic:auto-completed', {
+        await this.completeEpicDirectly(
           projectPath,
           epicId,
-          epicTitle: epic.title,
-          childrenIds: children.map((c) => c.id),
-          completedAt: new Date().toISOString(),
-        });
-        if (epic.projectSlug && epic.milestoneSlug) {
-          await this.checkMilestoneCompletion(projectPath, epic.projectSlug, epic.milestoneSlug);
-        }
+          epic,
+          children,
+          dedupeKey,
+          `Epic "${epic.title}" completed — children merged directly to base, skipping epic PR (branch ${epic.branchName} not found on remote)`
+        );
         return;
       }
 
-      // Branch exists on remote — create the epic-to-base PR as normal.
-      // Dedup is claimed only after a successful PR creation so that failures are retryable.
-      const result = await this.createEpicToBasePR(projectPath, epicId, epic);
+      // The epic branch exists but may be 0 commits ahead of base — this happens
+      // when child PRs targeted the base branch directly instead of the epic
+      // branch. A PR from a 0-ahead branch is empty, GitHub rejects it, and the
+      // epic is wrongly blocked even though all the work already landed. Detect
+      // that and complete the epic directly instead. (#3803)
+      const baseBranch = await getEffectivePrBaseBranch(
+        projectPath,
+        this.settingsService,
+        '[CompletionDetector]'
+      );
+      const commitsAhead = await this.epicBranchCommitsAhead(
+        projectPath,
+        baseBranch,
+        epic.branchName
+      );
+      if (commitsAhead === 0) {
+        await this.completeEpicDirectly(
+          projectPath,
+          epicId,
+          epic,
+          children,
+          dedupeKey,
+          `Epic "${epic.title}" completed — branch ${epic.branchName} is 0 commits ahead of ${baseBranch} (children merged directly to base); skipping empty epic PR`
+        );
+        return;
+      }
+
+      // Branch has commits ahead (or the count is indeterminate) — create the
+      // epic-to-base PR as normal. Dedup is claimed only after a successful PR
+      // creation so that failures are retryable.
+      const result = await this.createEpicToBasePR(projectPath, epicId, epic, baseBranch);
       if (result) {
         // PR created successfully — claim dedup and move epic to review
         this.emittedEpics.add(dedupeKey);
@@ -415,16 +495,10 @@ export class CompletionDetectorService {
   private async createEpicToBasePR(
     projectPath: string,
     epicId: string,
-    epic: Feature
+    epic: Feature,
+    baseBranch: string
   ): Promise<{ prNumber: number; prUrl: string } | null> {
     const epicBranch = epic.branchName!;
-
-    // Resolve the base branch: project settings > global settings > auto-detect > default
-    const baseBranch = await getEffectivePrBaseBranch(
-      projectPath,
-      this.settingsService,
-      '[CompletionDetector]'
-    );
 
     try {
       // Check if an open PR from this epic branch already exists
