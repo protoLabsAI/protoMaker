@@ -33,6 +33,7 @@ beforeEach(() => {
         JSON.stringify({
           success: true,
           features: [],
+          feature: { id: 'feat-created' },
           issues: [],
           files: [],
           runningFeatures: [],
@@ -103,5 +104,30 @@ describe('global flag propagation (--project / --json) reaches the request body'
     ]);
     expect(lastBody, `${_label} made no request`).toBeDefined();
     expect(lastBody!.projectPath).toBe('/custom/project');
+  });
+});
+
+describe('feature create maps --execution-mode / --workflow into the payload (#3946)', () => {
+  it('sends executionMode and workflow on the created feature', async () => {
+    await buildProgram().parseAsync([
+      'node',
+      'protomaker',
+      '--project',
+      '/custom/project',
+      '--json',
+      'feature',
+      'create',
+      '--description',
+      'Audit the auth module',
+      '--execution-mode',
+      'read-only',
+      '--workflow',
+      'audit',
+    ]);
+    expect(lastUrl).toMatch(/\/features\/create$/);
+    expect(lastBody!.projectPath).toBe('/custom/project');
+    const feature = lastBody!.feature as Record<string, unknown>;
+    expect(feature.executionMode).toBe('read-only');
+    expect(feature.workflow).toBe('audit');
   });
 });
