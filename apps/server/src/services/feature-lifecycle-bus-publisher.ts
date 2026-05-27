@@ -97,33 +97,42 @@ export class FeatureLifecycleBusPublisher {
       logger.warn(`Could not load feature ${featureId} for lifecycle event:`, err);
     }
 
-    const event = isTerminal ? 'protomaker.feature.completed' : 'protomaker.feature.failed';
+    // Dotted, unprefixed topics — exactly what workstacean's consumers
+    // subscribe to (`feature.completed` / `feature.failed`). The earlier
+    // `protomaker.`-prefixed names never matched, so #482 stayed silent.
+    const topic = isTerminal ? 'feature.completed' : 'feature.failed';
+    const owner = process.env.GITHUB_REPO_OWNER;
+    const name = process.env.GITHUB_REPO_NAME;
+    const repo = owner && name ? `${owner}/${name}` : undefined;
+    // Lineage so consumers correlate to their source record without persisted
+    // state. Prefer the echoed manage_feature meta; fall back to intake signal.
+    const sourceMeta =
+      feature?.sourceMeta && typeof feature.sourceMeta === 'object'
+        ? feature.sourceMeta
+        : { sourceChannel: feature?.sourceChannel, signalMetadata: feature?.signalMetadata };
+    const data: Record<string, unknown> = {
+      // projectSlug is REQUIRED by workstacean's feature-notifier (resolves the
+      // dev channel); fall back so the event is never dropped for lacking it.
+      projectSlug: feature?.projectSlug ?? process.env.WORKSTACEAN_PROJECT_SLUG ?? 'protomaker',
+      featureId,
+      featureTitle: feature?.title,
+      prNumber: feature?.prNumber,
+      branchName: feature?.branchName,
+      repo,
+      previousStatus: oldStatus,
+      sourceMeta,
+      [isTerminal ? 'completedAt' : 'failedAt']: new Date().toISOString(),
+    };
+    if (!isTerminal) {
+      data.error = (feature?.statusChangeReason ?? payload?.reason ?? 'failed').slice(0, 400);
+    }
     try {
-      const result = await this.publishFn({
-        event,
-        data: {
-          featureId,
-          projectPath,
-          status: newStatus,
-          prNumber: feature?.prNumber,
-          reason: feature?.statusChangeReason ?? payload?.reason,
-          projectSlug: feature?.projectSlug,
-          title: feature?.title,
-          completedAt: Date.now(),
-          previousStatus: oldStatus,
-          // Echo the originating signal so consumers reconstruct lineage (e.g.
-          // sourceLinearIssueId lives in signalMetadata) without a second query.
-          sourceMeta: {
-            sourceChannel: feature?.sourceChannel,
-            signalMetadata: feature?.signalMetadata,
-          },
-        },
-      });
+      const result = await this.publishFn({ event: topic, data });
       if (!result.ok) {
-        logger.warn(`Failed to publish ${event} for ${featureId}: ${result.error}`);
+        logger.warn(`Failed to publish ${topic} for ${featureId}: ${result.error}`);
       }
     } catch (err) {
-      logger.warn(`Error publishing ${event} for ${featureId}:`, err);
+      logger.warn(`Error publishing ${topic} for ${featureId}:`, err);
     }
   }
 }

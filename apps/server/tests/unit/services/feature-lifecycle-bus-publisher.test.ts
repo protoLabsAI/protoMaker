@@ -15,11 +15,12 @@ function makePublisher(opts?: { feature?: unknown; publishFn?: ReturnType<typeof
 }
 
 describe('FeatureLifecycleBusPublisher', () => {
-  it('publishes protomaker.feature.completed on transition to done', async () => {
+  it('publishes feature.completed (dotted, unprefixed) on transition to done', async () => {
     const feature = {
       id: 'f1',
       title: 'Ship it',
       projectSlug: 'proj',
+      branchName: 'feature/ship-it',
       sourceChannel: 'github',
       signalMetadata: { sourceLinearIssueId: 'LIN-1' },
     };
@@ -34,13 +35,37 @@ describe('FeatureLifecycleBusPublisher', () => {
 
     expect(publishFn).toHaveBeenCalledTimes(1);
     const arg = publishFn.mock.calls[0][0];
-    expect(arg.event).toBe('protomaker.feature.completed');
+    // The topic must match what workstacean's consumers subscribe to.
+    expect(arg.event).toBe('feature.completed');
     expect(arg.data.featureId).toBe('f1');
-    expect(arg.data.title).toBe('Ship it');
+    expect(arg.data.featureTitle).toBe('Ship it');
     expect(arg.data.projectSlug).toBe('proj');
+    expect(arg.data.branchName).toBe('feature/ship-it');
     expect(arg.data.previousStatus).toBe('review');
+    expect(arg.data.completedAt).toBeDefined();
     expect(arg.data.sourceMeta.signalMetadata).toEqual({ sourceLinearIssueId: 'LIN-1' });
     expect(arg.data.sourceMeta.sourceChannel).toBe('github');
+  });
+
+  it('echoes feature.sourceMeta when present (manage_feature meta)', async () => {
+    const feature = {
+      id: 'f1',
+      title: 'X',
+      projectSlug: 'proj',
+      sourceMeta: { sourceLinearIssueId: 'LIN-9', custom: true },
+    };
+    const { pub, publishFn } = makePublisher({ feature });
+    await pub.handleStatusChange({ featureId: 'f1', projectPath: '/p', newStatus: 'done' });
+    expect(publishFn.mock.calls[0][0].data.sourceMeta).toEqual({
+      sourceLinearIssueId: 'LIN-9',
+      custom: true,
+    });
+  });
+
+  it('defaults projectSlug so the event is never dropped for lacking it', async () => {
+    const { pub, publishFn } = makePublisher({ feature: { id: 'f1', title: 'X' } });
+    await pub.handleStatusChange({ featureId: 'f1', projectPath: '/p', newStatus: 'done' });
+    expect(publishFn.mock.calls[0][0].data.projectSlug).toBe('protomaker');
   });
 
   it('ignores non-terminal transitions', async () => {
@@ -61,7 +86,7 @@ describe('FeatureLifecycleBusPublisher', () => {
     expect(publishFn).not.toHaveBeenCalled();
   });
 
-  it('still publishes (with empty sourceMeta) when the feature cannot be loaded', async () => {
+  it('still publishes when the feature cannot be loaded', async () => {
     const featureLoader = { get: vi.fn().mockRejectedValue(new Error('gone')) };
     const publishFn = vi.fn().mockResolvedValue({ ok: true });
     const pub = new FeatureLifecycleBusPublisher(
@@ -74,7 +99,7 @@ describe('FeatureLifecycleBusPublisher', () => {
     await pub.handleStatusChange({ featureId: 'f1', projectPath: '/p', newStatus: 'done' });
 
     expect(publishFn).toHaveBeenCalledTimes(1);
-    expect(publishFn.mock.calls[0][0].data.title).toBeUndefined();
+    expect(publishFn.mock.calls[0][0].data.featureTitle).toBeUndefined();
     expect(publishFn.mock.calls[0][0].data.featureId).toBe('f1');
   });
 
@@ -98,7 +123,7 @@ describe('FeatureLifecycleBusPublisher', () => {
     expect(onSpy).not.toHaveBeenCalled();
   });
 
-  it('publishes protomaker.feature.failed on transition to blocked', async () => {
+  it('publishes feature.failed with error on transition to blocked', async () => {
     const feature = {
       id: 'f2',
       title: 'Blocked feature',
@@ -118,20 +143,16 @@ describe('FeatureLifecycleBusPublisher', () => {
 
     expect(publishFn).toHaveBeenCalledTimes(1);
     const arg = publishFn.mock.calls[0][0];
-    expect(arg.event).toBe('protomaker.feature.failed');
+    expect(arg.event).toBe('feature.failed');
     expect(arg.data.featureId).toBe('f2');
-    expect(arg.data.status).toBe('blocked');
     expect(arg.data.prNumber).toBe(42);
-    expect(arg.data.reason).toBe('CI checks failed after 3 retries');
+    expect(arg.data.error).toBe('CI checks failed after 3 retries');
+    expect(arg.data.failedAt).toBeDefined();
     expect(arg.data.previousStatus).toBe('in_progress');
   });
 
-  it('publishes protomaker.feature.failed on transition to escalated', async () => {
-    const feature = {
-      id: 'f3',
-      title: 'Escalated feature',
-      projectSlug: 'proj',
-    };
+  it('publishes feature.failed on transition to escalated', async () => {
+    const feature = { id: 'f3', title: 'Escalated feature', projectSlug: 'proj' };
     const { pub, publishFn } = makePublisher({ feature });
 
     await pub.handleStatusChange({
@@ -142,20 +163,12 @@ describe('FeatureLifecycleBusPublisher', () => {
     });
 
     expect(publishFn).toHaveBeenCalledTimes(1);
-    const arg = publishFn.mock.calls[0][0];
-    expect(arg.event).toBe('protomaker.feature.failed');
-    expect(arg.data.featureId).toBe('f3');
-    expect(arg.data.status).toBe('escalated');
+    expect(publishFn.mock.calls[0][0].event).toBe('feature.failed');
+    expect(publishFn.mock.calls[0][0].data.featureId).toBe('f3');
   });
 
-  it('includes prNumber and reason in completed event payload', async () => {
-    const feature = {
-      id: 'f4',
-      title: 'Completed with PR',
-      projectSlug: 'proj',
-      prNumber: 99,
-      statusChangeReason: 'Workflow completed',
-    };
+  it('includes prNumber in completed payload (no status/reason fields)', async () => {
+    const feature = { id: 'f4', title: 'Completed with PR', projectSlug: 'proj', prNumber: 99 };
     const { pub, publishFn } = makePublisher({ feature });
 
     await pub.handleStatusChange({
@@ -165,20 +178,15 @@ describe('FeatureLifecycleBusPublisher', () => {
       newStatus: 'done',
     });
 
-    expect(publishFn).toHaveBeenCalledTimes(1);
     const arg = publishFn.mock.calls[0][0];
-    expect(arg.event).toBe('protomaker.feature.completed');
+    expect(arg.event).toBe('feature.completed');
     expect(arg.data.prNumber).toBe(99);
-    expect(arg.data.reason).toBe('Workflow completed');
-    expect(arg.data.status).toBe('done');
+    // completed carries no `error` field
+    expect(arg.data.error).toBeUndefined();
   });
 
-  it('falls back to payload reason when feature has no statusChangeReason', async () => {
-    const feature = {
-      id: 'f5',
-      title: 'No reason on feature',
-      projectSlug: 'proj',
-    };
+  it('falls back to payload reason for the error when feature has none', async () => {
+    const feature = { id: 'f5', title: 'No reason on feature', projectSlug: 'proj' };
     const { pub, publishFn } = makePublisher({ feature });
 
     await pub.handleStatusChange({
@@ -189,34 +197,6 @@ describe('FeatureLifecycleBusPublisher', () => {
       reason: 'from payload',
     });
 
-    expect(publishFn).toHaveBeenCalledTimes(1);
-    const arg = publishFn.mock.calls[0][0];
-    expect(arg.data.reason).toBe('from payload');
-  });
-
-  it('still publishes feature.failed when the feature cannot be loaded', async () => {
-    const featureLoader = { get: vi.fn().mockRejectedValue(new Error('gone')) };
-    const publishFn = vi.fn().mockResolvedValue({ ok: true });
-    const pub = new FeatureLifecycleBusPublisher(
-      { on: vi.fn() } as never,
-      featureLoader as never,
-      publishFn,
-      true
-    );
-
-    await pub.handleStatusChange({
-      featureId: 'f6',
-      projectPath: '/p',
-      oldStatus: 'in_progress',
-      newStatus: 'blocked',
-      reason: 'max retries exceeded',
-    });
-
-    expect(publishFn).toHaveBeenCalledTimes(1);
-    const arg = publishFn.mock.calls[0][0];
-    expect(arg.event).toBe('protomaker.feature.failed');
-    expect(arg.data.featureId).toBe('f6');
-    expect(arg.data.reason).toBe('max retries exceeded');
-    expect(arg.data.prNumber).toBeUndefined();
+    expect(publishFn.mock.calls[0][0].data.error).toBe('from payload');
   });
 });

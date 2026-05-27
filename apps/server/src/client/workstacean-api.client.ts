@@ -40,11 +40,19 @@ export async function publish(
 ): Promise<WorkstaceanPublishResponse> {
   const url = `${getBaseUrl()}/publish`;
 
+  // Workstacean's /publish reads `{ topic, payload }` and republishes
+  // `payload` onto its in-memory bus under `topic`. Map our `{ event, data }`
+  // interface onto that wire shape (callers are unchanged). It also requires an
+  // X-API-Key, matching the reverse-direction AUTOMAKER_API_KEY.
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const apiKey = process.env.WORKSTACEAN_API_KEY;
+  if (apiKey) headers['X-API-Key'] = apiKey;
+
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      headers,
+      body: JSON.stringify({ topic: payload.event, payload: payload.data }),
       signal: AbortSignal.timeout(10_000),
     });
 
