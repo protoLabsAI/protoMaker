@@ -15,6 +15,7 @@ import type { AutoModeService } from '../../../services/auto-mode-service.js';
 import { createFailureClassifierService } from '../../../services/failure-classifier-service.js';
 import { buildFailureTaxonomy } from '../../../services/failure-taxonomy-service.js';
 import { proposeHarnessImprovement } from '../../../services/harness-evolver-service.js';
+import { HarnessAutoImprovementService } from '../../../services/harness-auto-improvement-service.js';
 
 const logger = createLogger('Routes:FailureTaxonomy');
 
@@ -67,6 +68,30 @@ export function createFailureTaxonomyRoutes(
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       logger.error('Harness proposal request failed:', err);
+      res.status(500).json({ success: false, error: message });
+    }
+  });
+
+  // Auto-improve: file a deduped improvement feature for the top failure mode
+  // (beads 39l). The filed feature flows through the eval-gated pipeline + review.
+  const autoImprove = new HarnessAutoImprovementService(featureLoader, classifier);
+  router.post('/auto-improve', async (req, res) => {
+    try {
+      const projectPath =
+        typeof req.body?.projectPath === 'string' && req.body.projectPath.trim()
+          ? req.body.projectPath
+          : undefined;
+      const projectPaths = projectPath
+        ? [projectPath]
+        : Array.from(new Set(autoModeService.getActiveAutoLoopProjects()));
+      const results = [];
+      for (const p of projectPaths) {
+        results.push({ projectPath: p, ...(await autoImprove.runOnce(p)) });
+      }
+      res.json({ success: true, results });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error('Harness auto-improve request failed:', err);
       res.status(500).json({ success: false, error: message });
     }
   });
