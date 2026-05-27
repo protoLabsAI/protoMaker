@@ -40,14 +40,13 @@ jobs:
 
       # zizmor — GitHub Actions security linter. Installed from PyPI (no
       # third-party action to pin) at an exact version for reproducibility.
-      # --min-severity=high fails the build on script injection and unpinned
-      # actions; medium-severity hardening (artipacked, excessive-permissions)
-      # is tracked separately before tightening the gate.
+      # --min-severity=medium fails the build on script injection, unpinned
+      # actions, artipacked (persist-credentials), and token over-privilege.
       - name: Install zizmor
         run: pip install zizmor==1.25.2
 
       - name: Run zizmor
-        run: zizmor --min-severity=high .github/workflows/
+        run: zizmor --min-severity=medium .github/workflows/
 
       # actionlint — workflow syntax, expression typing, and shellcheck. Fetched
       # via the official download script pinned to an immutable commit SHA + an
