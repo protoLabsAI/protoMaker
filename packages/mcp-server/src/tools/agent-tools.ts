@@ -14,10 +14,12 @@ export const agentTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         featureId: {
           type: 'string',
+          minLength: 1,
           description: 'The feature ID to work on',
         },
         useWorktrees: {
@@ -38,6 +40,7 @@ export const agentTools: Tool[] = [
       properties: {
         featureId: {
           type: 'string',
+          minLength: 1,
           description: 'The feature ID of the running agent',
         },
         targetStatus: {
@@ -67,14 +70,17 @@ export const agentTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         featureId: {
           type: 'string',
+          minLength: 1,
           description: 'The feature ID',
         },
         maxLines: {
-          type: 'number',
+          type: 'integer',
+          minimum: -1,
           description:
             'Maximum lines to return (default: 200). Use -1 for unlimited. Returns the last N lines.',
         },
@@ -91,14 +97,17 @@ export const agentTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         featureId: {
           type: 'string',
+          minLength: 1,
           description: 'The feature ID of the running agent',
         },
         message: {
           type: 'string',
+          minLength: 1,
           description: 'Message to send to the agent',
         },
       },

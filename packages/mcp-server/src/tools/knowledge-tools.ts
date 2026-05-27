@@ -1,11 +1,5 @@
 /**
- * Knowledge Store Tools
- *
- * Tools for interacting with the Automaker knowledge store:
- * - knowledge_search: Hybrid retrieval with optional domain filter
- * - knowledge_ingest: Add text chunks with required domain tag
- * - knowledge_rebuild: Reindex the knowledge store
- * - knowledge_stats: Get chunk counts by domain
+ * Knowledge Base Tools (Search, Ingest, Rebuild, Stats)
  */
 
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
@@ -14,29 +8,30 @@ export const knowledgeTools: Tool[] = [
   {
     name: 'knowledge_search',
     description:
-      'Search the knowledge store using hybrid retrieval (BM25 + vector). Returns relevant chunks for the given query, optionally filtered by domain.',
+      'Search the project knowledge base for relevant documents, code snippets, and documentation. Returns ranked results with relevance scores.',
     inputSchema: {
       type: 'object',
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         query: {
           type: 'string',
-          description: 'Search query string',
+          minLength: 1,
+          description: 'Search query text',
         },
-        domain: {
+        limit: {
+          type: 'integer',
+          minimum: 1,
+          maximum: 50,
+          description: 'Maximum results to return (default: 10)',
+        },
+        filter: {
           type: 'string',
-          description: 'Optional domain tag to filter results (e.g. "architecture", "decisions")',
-        },
-        maxResults: {
-          type: 'number',
-          description: 'Maximum number of results to return (default: 20)',
-        },
-        maxTokens: {
-          type: 'number',
-          description: 'Maximum total tokens to return (default: 8000)',
+          minLength: 1,
+          description: 'Filter by document type (e.g., "code", "docs", "config")',
         },
       },
       required: ['projectPath', 'query'],
@@ -45,41 +40,49 @@ export const knowledgeTools: Tool[] = [
   {
     name: 'knowledge_ingest',
     description:
-      'Add a text chunk to the knowledge store with a required domain tag for categorization.',
+      'Ingest documents into the knowledge base. Supports markdown, text, and code files. Automatically extracts and indexes content.',
     inputSchema: {
       type: 'object',
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
-        content: {
-          type: 'string',
-          description: 'Text content to ingest into the knowledge store',
+        filePaths: {
+          type: 'array',
+          items: { type: 'string', minLength: 1 },
+          description: 'Array of file paths to ingest',
         },
-        domain: {
+        directoryPath: {
           type: 'string',
-          description:
-            'Domain tag to categorize this chunk (e.g. "architecture", "decisions", "bugs")',
+          minLength: 1,
+          description: 'Directory path to ingest all files from (recursive)',
         },
-        heading: {
+        documentType: {
           type: 'string',
-          description: 'Optional heading or title for the chunk',
+          enum: ['code', 'docs', 'config', 'notes'],
+          description: 'Document type classification (optional, auto-detected if not provided)',
         },
       },
-      required: ['projectPath', 'content', 'domain'],
+      required: ['projectPath'],
     },
   },
   {
     name: 'knowledge_rebuild',
     description:
-      'Rebuild the knowledge store FTS5 index. Use after bulk changes to ensure search reflects the latest content.',
+      'Rebuild the entire knowledge base index. Use this after major project changes or if search results seem stale.',
     inputSchema: {
       type: 'object',
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
+        },
+        force: {
+          type: 'boolean',
+          description: 'Force rebuild even if index appears current (default: false)',
         },
       },
       required: ['projectPath'],
@@ -88,12 +91,13 @@ export const knowledgeTools: Tool[] = [
   {
     name: 'knowledge_stats',
     description:
-      'Get statistics about the knowledge store, including total chunk counts grouped by domain.',
+      'Get statistics about the knowledge base: document count, index size, last update time, and search performance metrics.',
     inputSchema: {
       type: 'object',
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
       },

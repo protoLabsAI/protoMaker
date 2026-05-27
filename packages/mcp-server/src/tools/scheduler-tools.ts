@@ -1,5 +1,5 @@
 /**
- * Scheduler Management Tools
+ * Scheduler Tools (Maintenance Tasks)
  */
 
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
@@ -8,35 +8,51 @@ export const schedulerTools: Tool[] = [
   {
     name: 'get_scheduler_status',
     description:
-      'Get the status of all scheduled timers (cron tasks and managed intervals) including their schedules, enable/disable state, execution counts, and next run times.',
+      'Get the status of the maintenance task scheduler. Returns scheduled tasks, next run times, and last execution results.',
     inputSchema: {
       type: 'object',
-      properties: {},
+      properties: {
+        projectPath: {
+          type: 'string',
+          minLength: 1,
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['projectPath'],
     },
   },
   {
     name: 'update_maintenance_task',
     description:
-      'Update a maintenance task — enable/disable it or change its cron schedule. Changes persist across server restarts via GlobalSettings.',
+      'Update a maintenance task configuration. Can change schedule, enable/disable, or update parameters.',
     inputSchema: {
       type: 'object',
       properties: {
+        projectPath: {
+          type: 'string',
+          minLength: 1,
+          description: 'Absolute path to the project directory',
+        },
         taskId: {
           type: 'string',
-          description:
-            'The task ID (e.g., "maintenance:data-integrity", "maintenance:stale-features")',
+          minLength: 1,
+          description: 'The maintenance task ID to update',
         },
         enabled: {
           type: 'boolean',
-          description: 'Whether to enable or disable the task',
+          description: 'Whether the task is enabled (optional)',
         },
-        cronExpression: {
+        schedule: {
           type: 'string',
-          description:
-            'New cron expression for the task schedule (5-field format: "minute hour dayOfMonth month dayOfWeek")',
+          minLength: 1,
+          description: 'Cron expression for the task schedule (optional)',
+        },
+        parameters: {
+          type: 'object',
+          description: 'Task-specific parameters (optional)',
         },
       },
-      required: ['taskId'],
+      required: ['projectPath', 'taskId'],
     },
   },
 ];

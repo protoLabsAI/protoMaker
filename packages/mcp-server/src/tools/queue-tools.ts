@@ -14,10 +14,12 @@ export const queueTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         featureId: {
           type: 'string',
+          minLength: 1,
           description: 'The feature ID to queue',
         },
       },
@@ -40,6 +42,7 @@ export const queueTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Optional project path',
         },
       },

@@ -13,6 +13,7 @@ export const gitEnhancedStatusTool: Tool = {
     properties: {
       projectPath: {
         type: 'string',
+        minLength: 1,
         description: 'Absolute path to the git repository',
       },
     },
@@ -29,10 +30,12 @@ export const gitFileDetailsTool: Tool = {
     properties: {
       projectPath: {
         type: 'string',
+        minLength: 1,
         description: 'Absolute path to the git repository',
       },
       filePath: {
         type: 'string',
+        minLength: 1,
         description: 'Path to the file (relative to projectPath or absolute)',
       },
     },

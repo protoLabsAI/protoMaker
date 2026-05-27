@@ -14,6 +14,7 @@ export const utilityTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory to initialize',
         },
         research: {
@@ -48,12 +49,14 @@ export const utilityTools: Tool[] = [
       type: 'object',
       properties: {
         maxLines: {
-          type: 'number',
+          type: 'integer',
+          minimum: -1,
           description:
             'Maximum number of lines to return (default: 200). Use -1 for unlimited. Returns the last N lines.',
         },
         filter: {
           type: 'string',
+          minLength: 1,
           description:
             'Optional text filter — only return lines containing this string (case-insensitive). Example: "ERROR", "OOM", "agent", "crash".',
         },
@@ -74,10 +77,12 @@ export const utilityTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         projectSlug: {
           type: 'string',
+          minLength: 1,
           description:
             'Filter to a specific project slug. When provided, board counts, blocked features, review features, and escalations only include features belonging to this project.',
         },
@@ -94,6 +99,7 @@ export const utilityTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         timeRange: {
@@ -125,14 +131,17 @@ export const utilityTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         title: {
           type: 'string',
+          minLength: 1,
           description: 'PRD title',
         },
         description: {
           type: 'string',
+          minLength: 1,
           description:
             'PRD description with situation, problem, approach, results, and constraints',
         },
@@ -153,8 +162,8 @@ export const utilityTools: Tool[] = [
           items: {
             type: 'object',
             properties: {
-              title: { type: 'string' },
-              description: { type: 'string' },
+              title: { type: 'string', minLength: 1 },
+              description: { type: 'string', minLength: 1 },
             },
           },
           description: 'Optional array of milestones with title and description',
