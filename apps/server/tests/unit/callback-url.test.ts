@@ -269,9 +269,35 @@ describe('resolveCallbackUrl', () => {
     expect(url).toBe('http://ava.ts.net');
   });
 
-  it('uses https protocol when specified', () => {
+  it('keeps a Tailscale URL on http even when protocol:"https" is requested (#3956)', () => {
+    // Tailscale secures transport via WireGuard and the app terminates no TLS on
+    // its port, so forcing https would advertise an unreachable endpoint. The
+    // protocol override must be ignored for Tailscale-derived URLs.
     setHostname('ava.ts.net');
-    const url = resolveCallbackUrl({ port: 443, protocol: 'https' });
-    expect(url).toBe('https://ava.ts.net:443');
+    const url = resolveCallbackUrl({ port: 3008, protocol: 'https' });
+    expect(url).toBe('http://ava.ts.net:3008');
+  });
+
+  it('keeps a force-on Tailscale URL on http even when protocol:"https" is requested (#3956)', () => {
+    setHostname('some-host');
+    const url = resolveCallbackUrl({
+      port: 3008,
+      protocol: 'https',
+      tailscaleDetection: 'force-on',
+    });
+    expect(url).toBe('http://some-host:3008');
+  });
+
+  it('applies protocol:"https" to an explicit non-Tailscale HOSTNAME', () => {
+    // A real public hostname (with a TLS ingress) legitimately uses https.
+    setHostname('localhost');
+    setNetworkInterfaces({});
+    process.env['HOSTNAME'] = 'ava.proto-labs.ai';
+    const url = resolveCallbackUrl({
+      port: 443,
+      protocol: 'https',
+      tailscaleDetection: 'force-off',
+    });
+    expect(url).toBe('https://ava.proto-labs.ai:443');
   });
 });

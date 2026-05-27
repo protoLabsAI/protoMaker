@@ -188,17 +188,21 @@ export function resolveCallbackUrl(options: ResolveCallbackUrlOptions = {}): str
   }
 
   // ── 2. Tailscale detection ────────────────────────────────────────────────
+  // Tailscale endpoints are ALWAYS http: WireGuard secures the transport at the
+  // network layer and the app does not terminate TLS on its port. Forcing https
+  // here (e.g. under NODE_ENV=production) advertises a URL with no TLS listener —
+  // the handshake fails and peers can't reach the agent (#3956). The `protocol`
+  // option therefore applies only to an explicit public HOSTNAME (step 3); a real
+  // TLS ingress must be supplied via PUBLIC_CALLBACK_URL, which wins in step 1.
   if (tailscaleDetection !== 'force-off') {
     if (tailscaleDetection === 'force-on') {
       const host = hostname ?? os.hostname();
-      return `${protocol}://${host}${portSuffix}`;
+      return `http://${host}${portSuffix}`;
     }
 
     const detection = detectTailscale(hostname);
     if (detection.isTailscale && detection.tailscaleUrl) {
-      const base = detection.tailscaleUrl
-        .replace(/\/$/, '')
-        .replace(/^http:\/\//, `${protocol}://`);
+      const base = detection.tailscaleUrl.replace(/\/$/, '');
       return port != null ? `${base}${portSuffix}` : base;
     }
   }
