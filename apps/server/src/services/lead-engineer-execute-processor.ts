@@ -970,11 +970,86 @@ export class ExecuteProcessor implements StateProcessor {
     // before transitioning to REVIEW, regardless of how the agent committed.
     await this.runPostAgentFormatting(ctx);
 
+    // Verifier-evidence gate (beads zg4): opt-in objective check on the diff
+    // before REVIEW. Records Feature.verificationEvidence; blocks (escalates to
+    // a human) on failure when the gate is enabled. No-op when disabled.
+    const verification = await this.runVerificationGate(ctx);
+    if (verification === 'fail') {
+      const reason =
+        'Verification gate failed at EXECUTE exit — the configured check did not pass on the diff. ' +
+        'See feature.verificationEvidence. Blocked before REVIEW.';
+      logger.warn('[EXECUTE][verify] gate failed — blocking before REVIEW', {
+        featureId: ctx.feature.id,
+      });
+      await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+        status: 'blocked',
+        statusChangeReason: reason,
+      });
+      return { nextState: null, shouldContinue: false, reason };
+    }
+
     return {
       nextState: 'REVIEW',
       shouldContinue: true,
       reason: 'Execution completed, moving to review',
     };
+  }
+
+  /**
+   * Verifier-evidence gate (beads zg4 / #3906). When
+   * `WorkflowSettings.requireVerificationEvidence.enabled`, run the configured
+   * objective command (default `npm run typecheck`) in the feature's worktree,
+   * record the result as `Feature.verificationEvidence`, and return 'fail' so
+   * the caller blocks REVIEW. Disabled or unresolvable → 'skipped' (no-op, no
+   * added latency for installs that don't opt in). Never throws.
+   */
+  private async runVerificationGate(ctx: StateContext): Promise<'pass' | 'fail' | 'skipped'> {
+    try {
+      const { getWorkflowSettings } = await import('../lib/settings-helpers.js');
+      const ws = await getWorkflowSettings(
+        ctx.projectPath,
+        this.serviceContext.settingsService,
+        '[EXECUTE][verify]'
+      );
+      const cfg = ws.requireVerificationEvidence;
+      if (!cfg?.enabled) return 'skipped';
+
+      const branchName = ctx.feature.branchName;
+      if (!branchName) return 'skipped';
+      const worktreeDir = await this.resolveWorktreeDir(ctx.projectPath, branchName);
+      if (!worktreeDir) return 'skipped';
+
+      const command = cfg.command ?? 'npm run typecheck';
+      const timeout = cfg.timeoutMs ?? 300_000;
+      const started = Date.now();
+      let passed = false;
+      let output = '';
+      try {
+        await execAsync(command, { cwd: worktreeDir, timeout });
+        passed = true;
+      } catch (err) {
+        const e = err as { stdout?: string; stderr?: string; message?: string };
+        output = `${e.stdout ?? ''}\n${e.stderr ?? e.message ?? ''}`.trim();
+      }
+
+      await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+        verificationEvidence: {
+          command,
+          passed,
+          ranAt: new Date().toISOString(),
+          durationMs: Date.now() - started,
+          ...(passed ? {} : { output: output.slice(-1500) }),
+        },
+      });
+      logger.info(`[EXECUTE][verify] ${command} → ${passed ? 'pass' : 'fail'}`, {
+        featureId: ctx.feature.id,
+      });
+      return passed ? 'pass' : 'fail';
+    } catch (err) {
+      // A gate that errors must not silently block; log and skip.
+      logger.warn('[EXECUTE][verify] gate errored (skipping):', err);
+      return 'skipped';
+    }
   }
 
   async exit(ctx: StateContext): Promise<void> {

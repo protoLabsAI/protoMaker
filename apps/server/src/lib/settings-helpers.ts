@@ -832,6 +832,21 @@ export async function getWorkflowSettings(
         },
         ciClassification: projectSettings.workflow.ciClassification,
         a2aSkillExecution: projectSettings.workflow.a2aSkillExecution,
+        // Newer review/verification/eval fields — these were dropped by this
+        // explicit reconstruction, so a project that set any workflow settings
+        // silently lost them (freshEyesReview / reviewFeedbackAudit / etc. fell
+        // back to defaults regardless of config). Propagate them. (beads zg4)
+        freshEyesReview:
+          projectSettings.workflow.freshEyesReview ?? DEFAULT_WORKFLOW_SETTINGS.freshEyesReview,
+        reviewFeedbackAudit:
+          projectSettings.workflow.reviewFeedbackAudit ??
+          DEFAULT_WORKFLOW_SETTINGS.reviewFeedbackAudit,
+        requireVerificationEvidence:
+          projectSettings.workflow.requireVerificationEvidence ??
+          DEFAULT_WORKFLOW_SETTINGS.requireVerificationEvidence,
+        trajectoryInjection:
+          projectSettings.workflow.trajectoryInjection ??
+          DEFAULT_WORKFLOW_SETTINGS.trajectoryInjection,
       };
     }
     return DEFAULT_WORKFLOW_SETTINGS;

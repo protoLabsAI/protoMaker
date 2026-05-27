@@ -28,6 +28,7 @@ const { mockSimpleQuery } = vi.hoisted(() => ({ mockSimpleQuery: vi.fn() }));
 vi.mock('../src/providers/simple-query-service.js', () => ({ simpleQuery: mockSimpleQuery }));
 
 import { ReviewProcessor } from '../src/services/lead-engineer-review-merge-processors.js';
+import { ExecuteProcessor } from '../src/services/lead-engineer-execute-processor.js';
 import type { ProcessorServiceContext, StateContext } from '../src/services/lead-engineer-types.js';
 
 const DOMAIN: EvalDomain = 'review';
@@ -191,12 +192,106 @@ describe('eval: REVIEW bot-feedback audit gate', () => {
       expect(actual).toBe(s.expected);
     });
   }
+});
 
-  afterAll(() => {
-    const card = writeScorecard(new URL('./scorecard.json', import.meta.url).pathname);
-    // Visible in the run log for quick inspection.
-    console.log(
-      `[eval] scorecard: ${card.passed}/${card.total} passed (successRate ${card.successRate})`
-    );
-  });
+// ── EXECUTE domain: verifier-evidence gate (beads zg4) ───────────────────────
+// Drives the real ExecuteProcessor.runVerificationGate with the gate setting
+// supplied via the mocked settingsService (no module mock — keeps the REVIEW
+// scenarios' real getWorkflowSettings intact) and a stubbed worktree resolver.
+
+function execSvc(requireVerificationEvidence: unknown): ProcessorServiceContext {
+  return {
+    featureLoader: { update: vi.fn().mockResolvedValue(undefined), get: vi.fn() } as any,
+    events: { emit: vi.fn() } as any,
+    autoModeService: {} as any,
+    settingsService: {
+      getGlobalSettings: vi.fn().mockResolvedValue({}),
+      getProjectSettings: vi.fn().mockResolvedValue({ workflow: { requireVerificationEvidence } }),
+    } as any,
+  } as ProcessorServiceContext;
+}
+
+function execCtx(): StateContext {
+  return {
+    feature: { id: 'eval-exec', title: 'Eval execute', branchName: 'feature/x' },
+    projectPath: '/eval/project',
+  } as unknown as StateContext;
+}
+
+const cmdPass = (
+  _c: string,
+  _o: unknown,
+  cb: (e: null, r: { stdout: string; stderr: string }) => void
+) => cb(null, { stdout: '', stderr: '' });
+const cmdFail = (_c: string, _o: unknown, cb: (e: Error) => void) => cb(new Error('tsc failed'));
+
+interface ExecScenario {
+  id: string;
+  description: string;
+  expected: string;
+  setup: () => { proc: ExecuteProcessor; context: StateContext };
+}
+
+const execScenarios: ExecScenario[] = [
+  {
+    id: 'execute-verify-pass-proceeds',
+    description: 'Verifier gate enabled + check passes → pass (proceed to REVIEW)',
+    expected: 'pass',
+    setup: () => {
+      mockExec.mockImplementation(cmdPass);
+      const proc = new ExecuteProcessor(execSvc({ enabled: true, command: 'npm run typecheck' }));
+      (proc as any).resolveWorktreeDir = vi.fn().mockResolvedValue('/wt');
+      return { proc, context: execCtx() };
+    },
+  },
+  {
+    id: 'execute-verify-fail-blocks',
+    description: 'Verifier gate enabled + check fails → fail (blocks before REVIEW)',
+    expected: 'fail',
+    setup: () => {
+      mockExec.mockImplementation(cmdFail);
+      const proc = new ExecuteProcessor(execSvc({ enabled: true }));
+      (proc as any).resolveWorktreeDir = vi.fn().mockResolvedValue('/wt');
+      return { proc, context: execCtx() };
+    },
+  },
+  {
+    id: 'execute-verify-disabled-skips',
+    description: 'Verifier gate disabled → skipped (no run, no gate)',
+    expected: 'skipped',
+    setup: () => {
+      const proc = new ExecuteProcessor(execSvc({ enabled: false }));
+      (proc as any).resolveWorktreeDir = vi.fn().mockResolvedValue('/wt');
+      return { proc, context: execCtx() };
+    },
+  },
+];
+
+describe('eval: EXECUTE verifier-evidence gate', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  for (const s of execScenarios) {
+    it(s.id, async () => {
+      const { proc, context } = s.setup();
+      const actual = await (proc as any).runVerificationGate(context);
+      const passed = actual === s.expected;
+      record({
+        id: s.id,
+        domain: 'execute',
+        description: s.description,
+        expected: s.expected,
+        actual: String(actual),
+        passed,
+      });
+      expect(actual).toBe(s.expected);
+    });
+  }
+});
+
+// Top-level: write the aggregate scorecard after every domain's scenarios run.
+afterAll(() => {
+  const card = writeScorecard(new URL('./scorecard.json', import.meta.url).pathname);
+  console.log(
+    `[eval] scorecard: ${card.passed}/${card.total} passed (successRate ${card.successRate})`
+  );
 });
