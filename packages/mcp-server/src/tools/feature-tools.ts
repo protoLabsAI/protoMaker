@@ -69,6 +69,23 @@ export const featureTools: Tool[] = [
     },
   },
   {
+    name: 'get_run_telemetry',
+    description:
+      "Self-diagnose a feature's run: returns a structured digest of its execution history (attempts, failures, repeated error, cost, turns, remediation cycles) plus a signal (ok | looping | escalating) and a plain-language hint. Use before declaring work done to detect when you're repeating the same failing approach.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          minLength: 1,
+          description: 'Absolute path to the project directory',
+        },
+        featureId: { type: 'string', minLength: 1, description: 'The feature ID' },
+      },
+      required: ['projectPath', 'featureId'],
+    },
+  },
+  {
     name: 'create_feature',
     description:
       'Create a new feature on the Kanban board. Features start in the backlog by default.',

@@ -220,6 +220,12 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         compact: true, // Use compact mode to reduce response size
       });
 
+    case 'get_run_telemetry':
+      return apiCall('/features/run-telemetry', {
+        projectPath: args.projectPath,
+        featureId: args.featureId,
+      });
+
     case 'get_feature': {
       const featureResult = (await apiCall('/features/get', {
         projectPath: args.projectPath,
