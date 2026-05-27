@@ -65,6 +65,7 @@ This directory is NOT included in the public VitePress build. Content here is fo
 - [tmux](./dev/tmux.md)
 - [Metrics](./dev/metrics.md)
 - [Flow Control](./dev/flow-control.md)
+- [Operator Tooling (plugin, CLI, beads)](./dev/operator-tooling.md)
 
 ## Server
 
