@@ -37,6 +37,7 @@ export const observabilityTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
       },
@@ -52,10 +53,12 @@ export const observabilityTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         maxConcurrency: {
-          type: 'number',
+          type: 'integer',
+          minimum: 1,
           description: 'Maximum concurrent features for utilization calculation (default: 3)',
         },
       },
@@ -71,6 +74,7 @@ export const observabilityTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         complexity: {

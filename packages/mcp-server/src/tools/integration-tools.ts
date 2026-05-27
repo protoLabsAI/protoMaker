@@ -16,10 +16,12 @@ export const integrationTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         title: {
           type: 'string',
+          minLength: 1,
           description: 'Form dialog title shown to the user',
         },
         description: {
@@ -55,10 +57,12 @@ export const integrationTools: Tool[] = [
         },
         featureId: {
           type: 'string',
+          minLength: 1,
           description: 'Optional feature ID to associate with the form',
         },
         ttlSeconds: {
-          type: 'number',
+          type: 'integer',
+          minimum: 1,
           description: 'Time-to-live in seconds before auto-expiry (default: 3600)',
         },
       },
@@ -75,6 +79,7 @@ export const integrationTools: Tool[] = [
       properties: {
         formId: {
           type: 'string',
+          minLength: 1,
           description: 'The form ID returned by request_user_input',
         },
       },
@@ -92,6 +97,7 @@ export const integrationTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
       },
@@ -109,6 +115,7 @@ export const integrationTools: Tool[] = [
       properties: {
         formId: {
           type: 'string',
+          minLength: 1,
           description: 'The form ID to submit a response for',
         },
         response: {

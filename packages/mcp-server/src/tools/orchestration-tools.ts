@@ -14,15 +14,17 @@ export const orchestrationTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         featureId: {
           type: 'string',
+          minLength: 1,
           description: 'The feature ID to set dependencies for',
         },
         dependencies: {
           type: 'array',
-          items: { type: 'string' },
+          items: { type: 'string', minLength: 1 },
           description: 'Array of feature IDs that this feature depends on',
         },
       },
@@ -38,10 +40,12 @@ export const orchestrationTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         featureId: {
           type: 'string',
+          minLength: 1,
           description:
             'Optional feature ID. When provided, returns detailed dependency info for that feature instead of the full graph.',
         },
@@ -58,15 +62,18 @@ export const orchestrationTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         maxConcurrency: {
-          type: 'number',
+          type: 'integer',
+          minimum: 1,
           description: 'Maximum number of features to process concurrently (default: 1)',
           default: 1,
         },
         branchName: {
           type: 'string',
+          minLength: 1,
           description: 'Optional branch/worktree name to run auto-mode on',
         },
       },
@@ -81,10 +88,12 @@ export const orchestrationTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         branchName: {
           type: 'string',
+          minLength: 1,
           description: 'Optional branch/worktree name',
         },
       },
@@ -99,6 +108,7 @@ export const orchestrationTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
       },
@@ -114,6 +124,7 @@ export const orchestrationTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         status: {

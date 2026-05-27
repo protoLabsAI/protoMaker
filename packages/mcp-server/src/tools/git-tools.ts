@@ -14,10 +14,12 @@ export const gitTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         prNumber: {
-          type: 'number',
+          type: 'integer',
+          minimum: 1,
           description: 'PR number to merge',
         },
         strategy: {
@@ -44,10 +46,12 @@ export const gitTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         prNumber: {
-          type: 'number',
+          type: 'integer',
+          minimum: 1,
           description: 'PR number to check status for',
         },
       },
@@ -63,10 +67,12 @@ export const gitTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         prNumber: {
-          type: 'number',
+          type: 'integer',
+          minimum: 1,
           description: 'PR number to fetch CodeRabbit feedback for',
         },
         includeInlineThreads: {
@@ -86,10 +92,12 @@ export const gitTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         prNumber: {
-          type: 'number',
+          type: 'integer',
+          minimum: 1,
           description: 'PR number to resolve threads for',
         },
         minSeverity: {
@@ -112,6 +120,7 @@ export const gitTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         includeDetails: {
@@ -131,10 +140,12 @@ export const gitTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         featureId: {
           type: 'string',
+          minLength: 1,
           description: 'The feature ID to get worktree status for',
         },
       },
@@ -150,18 +161,22 @@ export const gitTools: Tool[] = [
       properties: {
         worktreePath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the worktree directory',
         },
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the main project directory (optional)',
         },
         commitMessage: {
           type: 'string',
+          minLength: 1,
           description: 'Commit message (optional, auto-generated if not provided)',
         },
         prTitle: {
           type: 'string',
+          minLength: 1,
           description: 'PR title (optional, auto-generated if not provided)',
         },
         prBody: {
@@ -170,6 +185,7 @@ export const gitTools: Tool[] = [
         },
         baseBranch: {
           type: 'string',
+          minLength: 1,
           description:
             'Base branch for the PR (optional, defaults to prBaseBranch from project settings or the repo default branch)',
         },
@@ -190,10 +206,12 @@ export const gitTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         prNumber: {
-          type: 'number',
+          type: 'integer',
+          minimum: 1,
           description: 'PR number to fetch review comments for',
         },
         includeResolved: {
@@ -213,10 +231,12 @@ export const gitTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         threadId: {
           type: 'string',
+          minLength: 1,
           description: 'GitHub review thread node ID (from get_pr_review_comments)',
         },
       },
@@ -232,6 +252,7 @@ export const gitTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         issueNumber: {

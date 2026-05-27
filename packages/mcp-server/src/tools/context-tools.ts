@@ -14,6 +14,7 @@ export const contextTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
       },
@@ -28,10 +29,12 @@ export const contextTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         filename: {
           type: 'string',
+          minLength: 1,
           description: "Name of the context file (e.g., 'coding-rules.md')",
         },
       },
@@ -47,14 +50,17 @@ export const contextTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         filename: {
           type: 'string',
+          minLength: 1,
           description: "Name for the context file (should end in .md, e.g., 'coding-rules.md')",
         },
         content: {
           type: 'string',
+          minLength: 1,
           description: 'Markdown content for the context file. This will be shown to agents.',
         },
       },
@@ -69,10 +75,12 @@ export const contextTools: Tool[] = [
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         filename: {
           type: 'string',
+          minLength: 1,
           description: 'Name of the context file to delete',
         },
       },

@@ -1,11 +1,5 @@
 /**
- * Lead Engineer Tools
- *
- * MCP tools for managing the Lead Engineer and accessing phase handoff documents.
- * - start_lead_engineer: Start LE for a project
- * - stop_lead_engineer: Stop LE for a project
- * - get_lead_engineer_status: Get LE status, world state, metrics
- * - get_feature_handoff: Retrieve the latest handoff document for a feature
+ * Lead Engineer Tools (Feature Handoff and Orchestration)
  */
 
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
@@ -14,34 +8,34 @@ export const leadEngineerTools: Tool[] = [
   {
     name: 'start_lead_engineer',
     description:
-      'Start the Lead Engineer to manage a project through the production phase. Orchestrates auto-mode, reacts to events with fast-path rules, and wraps up with retro + improvement tickets.',
+      'Start the lead engineer agent to coordinate feature development. The lead engineer reviews PRs, manages dependencies, and orchestrates multiple feature agents.',
     inputSchema: {
       type: 'object',
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
-        projectSlug: {
+        mode: {
           type: 'string',
-          description: 'Project slug',
-        },
-        maxConcurrency: {
-          type: 'number',
-          description: 'Maximum number of features to process concurrently (default: 1)',
+          enum: ['review', 'orchestrate', 'both'],
+          description:
+            'Lead engineer mode: review (PR reviews only), orchestrate (dependency management), or both (default: both)',
         },
       },
-      required: ['projectPath', 'projectSlug'],
+      required: ['projectPath'],
     },
   },
   {
     name: 'stop_lead_engineer',
-    description: 'Stop the Lead Engineer from managing a project.',
+    description: 'Stop the lead engineer agent.',
     inputSchema: {
       type: 'object',
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
       },
@@ -50,13 +44,13 @@ export const leadEngineerTools: Tool[] = [
   },
   {
     name: 'get_lead_engineer_status',
-    description:
-      'Get Lead Engineer status including world state, flow state, rule execution log, and metrics.',
+    description: 'Get the current status of the lead engineer agent.',
     inputSchema: {
       type: 'object',
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
       },
@@ -66,20 +60,19 @@ export const leadEngineerTools: Tool[] = [
   {
     name: 'get_feature_handoff',
     description:
-      'Get the latest Lead Engineer phase handoff document for a feature. ' +
-      'Handoff documents summarise what was done in each lifecycle phase (INTAKE, PLAN, EXECUTE, ' +
-      'REVIEW, MERGE, DEPLOY) including discoveries, modified files, outstanding questions, ' +
-      'scope limits, test coverage, and a verdict (APPROVE | WARN | BLOCK).',
+      'Get the handoff state for a feature. Returns what the lead engineer has reviewed, approved, or flagged for changes.',
     inputSchema: {
       type: 'object',
       properties: {
         projectPath: {
           type: 'string',
+          minLength: 1,
           description: 'Absolute path to the project directory',
         },
         featureId: {
           type: 'string',
-          description: 'The feature ID to retrieve the handoff for',
+          minLength: 1,
+          description: 'The feature ID to get handoff status for',
         },
       },
       required: ['projectPath', 'featureId'],
