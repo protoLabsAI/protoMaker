@@ -758,7 +758,9 @@ describe('settings-service.ts', () => {
 
       // Should use DEFAULT_PHASE_MODELS (gateway-routed)
       expect(settings.phaseModels.enhancementModel).toEqual({ model: 'protolabs/smart' });
-      expect(settings.phaseModels.fileDescriptionModel).toEqual({ model: 'protolabs/fast' });
+      expect(settings.phaseModels.fileDescriptionModel).toEqual({ model: 'protolabs/nano' });
+      expect(settings.phaseModels.titleGenerationModel).toEqual({ model: 'protolabs/nano' });
+      expect(settings.phaseModels.branchNameModel).toEqual({ model: 'protolabs/nano' });
       expect(settings.phaseModels.specGenerationModel).toEqual({ model: 'protolabs/reasoning' });
     });
 

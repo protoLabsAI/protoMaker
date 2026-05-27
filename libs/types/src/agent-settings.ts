@@ -193,6 +193,10 @@ export interface PhaseModelConfig {
   /** Model for generating git commit messages from diffs */
   commitMessageModel: PhaseModelEntry;
 
+  // Quick tasks - feature title generation
+  /** Model for generating a concise feature title from a description */
+  titleGenerationModel: PhaseModelEntry;
+
   // Quick tasks - branch name generation
   /** Model for generating git branch names from feature titles/descriptions */
   branchNameModel: PhaseModelEntry;
@@ -240,10 +244,10 @@ export type PhaseModelKey = Exclude<keyof PhaseModelConfig, 'flowModels'>;
  * of the box (the only key shipped on a fresh install).
  */
 export const DEFAULT_PHASE_MODELS: PhaseModelConfig = {
-  // Quick tasks — fast tier
+  // Quick tasks — nano tier (trivial one-shot micro-tasks)
   enhancementModel: { model: 'protolabs/smart' },
-  fileDescriptionModel: { model: 'protolabs/fast' },
-  imageDescriptionModel: { model: 'protolabs/fast' },
+  fileDescriptionModel: { model: 'protolabs/nano' },
+  imageDescriptionModel: { model: 'protolabs/nano' },
 
   // Validation — smart tier (accuracy matters)
   validationModel: { model: 'protolabs/smart' },
@@ -258,11 +262,14 @@ export const DEFAULT_PHASE_MODELS: PhaseModelConfig = {
   // Memory extraction — fast tier (cost-effective)
   memoryExtractionModel: { model: 'protolabs/fast' },
 
-  // Commit messages — fast tier
-  commitMessageModel: { model: 'protolabs/fast' },
+  // Commit messages — nano tier
+  commitMessageModel: { model: 'protolabs/nano' },
 
-  // Branch names — fast tier
-  branchNameModel: { model: 'protolabs/fast' },
+  // Feature titles — nano tier
+  titleGenerationModel: { model: 'protolabs/nano' },
+
+  // Branch names — nano tier
+  branchNameModel: { model: 'protolabs/nano' },
 
   // Agent execution — smart tier (reliable feature implementation)
   agentExecutionModel: { model: 'protolabs/smart' },
