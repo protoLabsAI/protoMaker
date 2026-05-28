@@ -61,7 +61,7 @@ export function createFeaturesRoutes(
     '/create',
     validatePathParams('projectPath'),
     validateBody(CreateRequestSchema),
-    createCreateHandler(featureLoader, trustTierService, events)
+    createCreateHandler(featureLoader, trustTierService, events, settingsService)
   );
   router.post(
     '/update',

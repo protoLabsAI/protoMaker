@@ -77,7 +77,7 @@ describe('createGenerateTitleHandler', () => {
       'titleGenerationModel',
       mockSettingsService,
       undefined,
-      '[GenerateTitle]'
+      '[TitleGenerator]'
     );
     expect(simpleQuery).toHaveBeenCalledWith(
       expect.objectContaining({
