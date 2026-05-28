@@ -90,12 +90,16 @@ async function handleIssueEvent(
     deliveryService.trackDelivery('github', 'issues', undefined, { deduplicationKey });
   }
 
-  // Emit event for logging and potential auto-creation
+  // Emit event for logging and potential auto-creation.
+  // Field shape is shared with the global webhook route (routes/webhooks/routes/github.ts)
+  // and consumed by IntegrationService.handleGitHubIssue — keep them in sync.
   events.emit('webhook:github:issue', {
     action,
     issueNumber: issue.number,
-    issueTitle: issue.title,
-    issueBody: issue.body,
+    title: issue.title,
+    body: issue.body || '',
+    author: issue.user.login,
+    createdAt: issue.created_at,
     issueUrl: issue.html_url,
     repository: repository.full_name,
     projectPath,

@@ -102,6 +102,15 @@ Inbound Event
 
 Classification determines whether an event affects operational infrastructure (ops) or go-to-market content (gtm). Each signal type has a dedicated channel handler registered in `channel-handlers/`.
 
+### GitHub-issue intake
+
+Inbound GitHub issues become board signals through two paths that share one payload shape and resolution logic:
+
+- **Direct webhook** (`/api/github/webhook`, `/webhooks/github`) → `IntegrationService.handleGitHubIssue`. Gated by the `githubIssueIntake` global setting (default `{ enabled: true, requiredLabel: 'board-intake' }`): only opened issues carrying the required label are ingested. The required-label filter is the double-handling boundary — when another receiver (e.g. protoWorkstacean) also processes the org's issues, this instance only picks up issues explicitly tagged for the board. Set `requiredLabel: ''` to ingest every opened issue.
+- **Forwarded signal** (`POST /api/engine/signal/submit`) → `SignalIntakeService.submitSignal`. Used by protoWorkstacean's board-ingestion forwarder, which POSTs the issue here with `channelContext` (a trusted path — not subject to the label gate).
+
+**Project routing.** `SignalIntakeService.resolveProjectPath()` picks the target board by: (1) an explicit `channelContext.projectPath`; (2) the project whose registry `github` remote matches `channelContext.repository`; (3) `defaultProjectPath`. This routes each repo's issues to the correct project instead of dumping every repo onto the default board.
+
 ### Delivery Tracking
 
 The `EventHistoryService` stores every event with metadata including severity, trigger type, and processing result. This provides:

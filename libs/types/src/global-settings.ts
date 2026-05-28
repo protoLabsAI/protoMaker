@@ -623,6 +623,25 @@ export interface GlobalSettings {
   portfolioGate?: boolean;
 
   /**
+   * GitHub-issue intake configuration (#3991).
+   *
+   * Controls which inbound GitHub issues this instance ingests as board signals.
+   * The required-label filter is the double-handling boundary: when another
+   * receiver (e.g. protoWorkstacean) also processes the org's issues, protoMaker
+   * only picks up issues explicitly tagged for board intake instead of grabbing
+   * every opened issue.
+   */
+  githubIssueIntake?: {
+    /** Whether to ingest GitHub issues as board signals at all. @default true */
+    enabled: boolean;
+    /**
+     * Only ingest issues carrying this label. An empty string disables the
+     * filter (ingest every opened issue). @default 'board-intake'
+     */
+    requiredLabel: string;
+  };
+
+  /**
    * Stable identifier for this Automaker installation. Used to watermark PR
    * ownership so other tooling can attribute PRs back to this install.
    * Auto-generated UUID on first call and persisted for subsequent calls.
@@ -758,4 +777,10 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   featureFlags: DEFAULT_FEATURE_FLAGS,
   // Scheduler settings — no task overrides by default
   schedulerSettings: DEFAULT_SCHEDULER_SETTINGS,
+  // GitHub-issue intake — require the `board-intake` label by default so this
+  // instance only ingests issues explicitly tagged for the board (#3991).
+  githubIssueIntake: {
+    enabled: true,
+    requiredLabel: 'board-intake',
+  },
 };
