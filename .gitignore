@@ -164,3 +164,4 @@ test/fixtures/**/.automaker/
 
 # Harness eval run artifact (baseline.json is committed; #3904)
 apps/server/eval/scorecard.json
+.proto/

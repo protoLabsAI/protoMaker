@@ -98,7 +98,6 @@ import { checkAndRecoverUncommittedWork } from '../worktree-recovery-service.js'
 import { gitWorkflowService } from '../git-workflow-service.js';
 import type { KnowledgeStoreService } from '../knowledge-store-service.js';
 import { writeLock } from '../../lib/worktree-lock.js';
-import { getReactiveSpawnerService } from '../reactive-spawner-service.js';
 import { getAgentManifestService } from '../agent-manifest-service.js';
 
 import { TypedEventBus } from './typed-event-bus.js';
@@ -1820,32 +1819,9 @@ Output the branch name only.`,
           }
           logger.info(`Feature ${featureId} failure count: ${newFailureCount}`);
 
-          // Trigger self-healing when a feature has failed twice
-          if (newFailureCount === 2) {
-            try {
-              const spawner = getReactiveSpawnerService();
-              spawner
-                .spawnForError({
-                  errorType: 'feature_failure',
-                  message: `Feature "${feature.title || featureId}" has failed ${newFailureCount} times. Last error: ${errorInfo.message}`,
-                  featureId,
-                  severity: 'medium',
-                  metadata: {
-                    worktreePath: tempRunningFeature.worktreePath ?? undefined,
-                    failureCount: newFailureCount,
-                    errorType: errorInfo.type,
-                  },
-                })
-                .catch((err) =>
-                  logger.error(
-                    `ReactiveSpawner: spawnForError (feature_failure ${featureId}) failed:`,
-                    err
-                  )
-                );
-            } catch {
-              // ReactiveSpawnerService may not be initialized — silently skip
-            }
-          }
+          // Pure-executor: protoMaker does not self-spawn remediation agents.
+          // The terminal `feature.failed` lifecycle event is published for
+          // protoWorkstacean to decide on remediation. See CLAUDE.md.
         }
 
         // Detect git commit / pre-commit hook failures. These are deterministic — retrying
