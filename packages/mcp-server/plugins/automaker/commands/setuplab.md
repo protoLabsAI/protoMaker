@@ -226,7 +226,7 @@ Create features on the board:
 1. Review the board: `/board`
 2. Start agents: `/auto-mode start`
 3. Plan new work: `/plan-project`
-4. Manage the project: `/ava`
+4. Manage the board: `/roxy`
 ```
 
 ## Important Notes

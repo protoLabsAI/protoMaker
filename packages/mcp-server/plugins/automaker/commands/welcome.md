@@ -198,17 +198,18 @@ Always runs. Print a compact command reference with doc links.
 ```markdown
 ## Quick Reference
 
-| Command         | What it does                              |
-| --------------- | ----------------------------------------- |
-| `/board`        | View and manage your Kanban board         |
-| `/auto-mode`    | Start/stop autonomous feature processing  |
-| `/setuplab`     | Set up a new project                      |
-| `/context`      | Manage AI agent context files             |
-| `/orchestrate`  | Set feature dependencies                  |
-| `/ship`         | Stage, commit, push, create PR            |
-| `/headsdown`    | Deep work mode                            |
-| `/plan-project` | Full project lifecycle                    |
-| `/ava`          | Autonomous operator — delegates and ships |
+| Command         | What it does                               |
+| --------------- | ------------------------------------------ |
+| `/board`        | View and manage your Kanban board          |
+| `/auto-mode`    | Start/stop autonomous feature processing   |
+| `/setuplab`     | Set up a new project                       |
+| `/context`      | Manage AI agent context files              |
+| `/orchestrate`  | Set feature dependencies                   |
+| `/ship`         | Stage, commit, push, create PR             |
+| `/headsdown`    | Deep work mode                             |
+| `/plan-project` | Full project lifecycle                     |
+| `/roxy`         | Board manager — crew delegation & shipping |
+| `/ava`          | Portfolio operator — strategic escalation  |
 
 ### Key Concepts
 
