@@ -107,6 +107,40 @@ describe('global flag propagation (--project / --json) reaches the request body'
   });
 });
 
+describe('feature update maps dependency flags into updates.dependencies (#3962)', () => {
+  it('--depends-on sends a trimmed dependency array', async () => {
+    await buildProgram().parseAsync([
+      'node',
+      'protomaker',
+      '--project',
+      '/custom/project',
+      '--json',
+      'feature',
+      'update',
+      'feat-target',
+      '--depends-on',
+      'feat-a, feat-b ,feat-c',
+    ]);
+    expect(lastUrl).toMatch(/\/features\/update$/);
+    const updates = lastBody!.updates as Record<string, unknown>;
+    expect(updates.dependencies).toEqual(['feat-a', 'feat-b', 'feat-c']);
+  });
+
+  it('--clear-deps sends an empty dependency array', async () => {
+    await buildProgram().parseAsync([
+      'node',
+      'protomaker',
+      '--json',
+      'feature',
+      'update',
+      'feat-target',
+      '--clear-deps',
+    ]);
+    const updates = lastBody!.updates as Record<string, unknown>;
+    expect(updates.dependencies).toEqual([]);
+  });
+});
+
 describe('feature create maps --execution-mode / --workflow into the payload (#3946)', () => {
   it('sends executionMode and workflow on the created feature', async () => {
     await buildProgram().parseAsync([
