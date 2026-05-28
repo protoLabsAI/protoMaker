@@ -433,6 +433,11 @@ export function updateCommand(parent: Command): void {
   cmd.option('--category <text>', 'New category');
   cmd.option('--complexity <level>', 'New complexity level (small|medium|large|architectural)');
   cmd.option('--priority <n>', 'New priority (1=urgent, 2=high, 3=normal, 4=low)');
+  cmd.option(
+    '--depends-on <ids>',
+    'Comma-separated feature IDs this feature depends on (replaces the existing dependency list)'
+  );
+  cmd.option('--clear-deps', 'Clear all dependencies on this feature');
 
   cmd.action(async (featureId: string, opts) => {
     const flags = getGlobalFlags(cmd.optsWithGlobals());
@@ -450,9 +455,25 @@ export function updateCommand(parent: Command): void {
       updates.priority = p;
     }
 
+    if (opts.dependsOn !== undefined && opts.clearDeps) {
+      usageError('Use either --depends-on or --clear-deps, not both');
+    }
+    if (opts.clearDeps) {
+      updates.dependencies = [];
+    } else if (opts.dependsOn !== undefined) {
+      const deps = String(opts.dependsOn)
+        .split(',')
+        .map((id) => id.trim())
+        .filter((id) => id.length > 0);
+      if (deps.includes(featureId)) {
+        usageError('A feature cannot depend on itself');
+      }
+      updates.dependencies = deps;
+    }
+
     if (Object.keys(updates).length === 0) {
       usageError(
-        'At least one update option is required (--title, --description, --category, --complexity, --priority)'
+        'At least one update option is required (--title, --description, --category, --complexity, --priority, --depends-on, --clear-deps)'
       );
     }
 

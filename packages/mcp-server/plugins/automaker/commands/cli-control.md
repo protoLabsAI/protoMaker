@@ -33,8 +33,12 @@ protomaker feature list --status review --compact  # list grouped by status
 protomaker feature get <featureId> --json          # full detail for one feature
 protomaker feature create --title "Add X" --category fix --complexity small --priority 2
 protomaker feature update <featureId> --priority 1 --title "…"
+protomaker feature update <featureId> --depends-on <id1,id2>  # set the dependency list (replaces existing)
+protomaker feature update <featureId> --clear-deps            # remove all dependencies
 protomaker feature move <featureId> <status> --reason "…"   # --reason required when moving to blocked
 ```
+
+Dependencies gate execution: a feature is only eligible for auto-mode once all `--depends-on` features reach `done`. Use this to sequence epic children (e.g. `--depends-on <epicChildId>`).
 
 Statuses: `backlog | in_progress | review | blocked | done`. Complexity: `small | medium | large | architectural`. Priority: `1=urgent … 4=low`.
 
