@@ -7,15 +7,11 @@
  * Uses inline mocks for PM and LE services — no disk I/O, no LLM calls.
  *
  * Scenarios covered:
- *   1. Happy path: both PM and LE return data → distilled summary contains both layers
- *   2. PM unavailable: PM throws → answer uses fallback text, LE still surfaces
- *   3. LE unavailable: LE throws → answer uses fallback text, PM still surfaces
- *   4. AvaWorldStateBuilder.getFullBriefing() aggregates PM + LE layers
- *   5. buildLayeredBriefing() wraps AvaWorldStateBuilder result
+ *   1. AvaWorldStateBuilder.getFullBriefing() aggregates PM + LE layers
+ *   2. buildLayeredBriefing() wraps AvaWorldStateBuilder result
  */
 
 import { describe, it, expect } from 'vitest';
-import { PMProjectQueryService } from '@/services/ava-tools.js';
 import { AvaWorldStateBuilder } from '@/services/ava-world-state-builder.js';
 import { buildLayeredBriefing } from '../../../../packages/mcp-server/plugins/automaker/tools/briefing.js';
 import type { PMWorldStateBuilder } from '@/services/pm-world-state-builder.js';
@@ -77,70 +73,7 @@ function makeLEProvider(
   };
 }
 
-// ─── 1. PMProjectQueryService ─────────────────────────────────────────────────
-
-describe('PMProjectQueryService (Ava → PM → LE chain)', () => {
-  it('happy path: returns distilled summary with PM and LE layers', async () => {
-    const pm = makePMBuilder();
-    const le = makeLEProvider();
-    const svc = new PMProjectQueryService(pm, le);
-
-    const result = await svc.queryProjectStatus();
-
-    expect(result.pmSummary).toBe(PM_SUMMARY);
-    expect(result.leSummary).toBe(LE_SUMMARY);
-    expect(result.summary).toContain('## Project Status');
-    expect(result.summary).toContain('### PM Layer');
-    expect(result.summary).toContain('### LE Layer');
-    expect(result.summary).toContain(PM_SUMMARY);
-    expect(result.summary).toContain(LE_SUMMARY);
-    expect(result.generatedAt).toBeTruthy();
-  });
-
-  it('PM unavailable: returns fallback text for PM, still surfaces LE', async () => {
-    const pm = makePMBuilder({
-      getDistilledSummary: () => {
-        throw new Error('PM service down');
-      },
-    });
-    const le = makeLEProvider();
-    const svc = new PMProjectQueryService(pm, le);
-
-    const result = await svc.queryProjectStatus();
-
-    expect(result.pmSummary).toContain('unavailable');
-    expect(result.leSummary).toBe(LE_SUMMARY);
-    expect(result.summary).toContain('### LE Layer');
-    expect(result.summary).toContain(LE_SUMMARY);
-  });
-
-  it('LE unavailable: returns fallback text for LE, still surfaces PM', async () => {
-    const pm = makePMBuilder();
-    const le = makeLEProvider({
-      getWorldStateSummary: () => {
-        throw new Error('LE service down');
-      },
-    });
-    const svc = new PMProjectQueryService(pm, le);
-
-    const result = await svc.queryProjectStatus();
-
-    expect(result.pmSummary).toBe(PM_SUMMARY);
-    expect(result.leSummary).toContain('unavailable');
-    expect(result.summary).toContain('### PM Layer');
-    expect(result.summary).toContain(PM_SUMMARY);
-  });
-
-  it('generates a generatedAt ISO timestamp', async () => {
-    const svc = new PMProjectQueryService(makePMBuilder(), makeLEProvider());
-    const result = await svc.queryProjectStatus();
-
-    expect(() => new Date(result.generatedAt)).not.toThrow();
-    expect(new Date(result.generatedAt).toISOString()).toBe(result.generatedAt);
-  });
-});
-
-// ─── 2. AvaWorldStateBuilder ──────────────────────────────────────────────────
+// ─── 1. AvaWorldStateBuilder ──────────────────────────────────────────────────
 
 describe('AvaWorldStateBuilder.getFullBriefing() (three-layer aggregation)', () => {
   it('aggregates PM and LE summaries into a full briefing', async () => {
@@ -189,7 +122,7 @@ describe('AvaWorldStateBuilder.getFullBriefing() (three-layer aggregation)', () 
   });
 });
 
-// ─── 3. buildLayeredBriefing (MCP briefing tool integration) ─────────────────
+// ─── 2. buildLayeredBriefing (MCP briefing tool integration) ─────────────────
 
 describe('buildLayeredBriefing() (/briefing returns layered world state)', () => {
   it('returns layered briefing markdown from world state provider', async () => {
@@ -225,29 +158,21 @@ describe('buildLayeredBriefing() (/briefing returns layered world state)', () =>
   });
 });
 
-// ─── 4. Full end-to-end chain ─────────────────────────────────────────────────
+// ─── 3. Full end-to-end chain ─────────────────────────────────────────────────
 
-describe('Full chain: Ava → PM query → LE status → distilled briefing', () => {
+describe('Full chain: PM + LE status → distilled briefing', () => {
   it('verifies complete data flow from LE service call through to briefing output', async () => {
     // Step 1: Set up PM and LE service stubs
     const pm = makePMBuilder();
     const le = makeLEProvider();
 
-    // Step 2: Ava uses PMProjectQueryService (PM subagent role)
-    const pmQueryService = new PMProjectQueryService(pm, le);
-
-    // Step 3: PM queries LE via service call (not subagent — SDK single-level limit)
-    const projectStatus = await pmQueryService.queryProjectStatus();
-    expect(projectStatus.pmSummary).toBe(PM_SUMMARY);
-    expect(projectStatus.leSummary).toBe(LE_SUMMARY);
-
-    // Step 4: Answer distills back through AvaWorldStateBuilder
+    // Step 2: Answer distills back through AvaWorldStateBuilder
     const avaBuilder = new AvaWorldStateBuilder(pm, le);
     const fullBriefing = await avaBuilder.getFullBriefing();
     expect(fullBriefing).toContain(PM_SUMMARY);
     expect(fullBriefing).toContain(LE_SUMMARY);
 
-    // Step 5: /briefing MCP tool returns layered world state
+    // Step 3: /briefing MCP tool returns layered world state
     const provider: BriefingWorldStateProvider = {
       getFullBriefing: () => avaBuilder.getFullBriefing(),
     };

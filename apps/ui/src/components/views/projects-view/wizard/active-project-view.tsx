@@ -48,7 +48,6 @@ import { ResourcesTab } from '../tabs/resources-tab';
 import { ProjectTimeline } from '@/components/views/projects/project-timeline';
 import { ProjectArtifactViewer } from '@/components/views/projects/project-artifact-viewer';
 import { useAppStore } from '@/store/app-store';
-import { useAvaChannelStore } from '@/store/ava-channel-store';
 import { useChatStore } from '@/store/chat-store';
 import { DeleteConfirmDialog } from '@/components/shared/delete-confirm-dialog';
 import { InlineEditor } from '@/components/shared/inline-editor';
@@ -88,8 +87,7 @@ export function ActiveProjectView({ project, projectSlug, onBack }: ActiveProjec
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const projectPath = useAppStore((s) => s.currentProject?.path) ?? '';
-  const setPendingProjectSlug = useAvaChannelStore((s) => s.setPendingProjectSlug);
-  const setLastActiveTab = useAvaChannelStore((s) => s.setLastActiveTab);
+  const setPendingProjectSlug = useChatStore((s) => s.setPendingProjectSlug);
   const setChatModalOpen = useChatStore((s) => s.setChatModalOpen);
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -119,7 +117,6 @@ export function ActiveProjectView({ project, projectSlug, onBack }: ActiveProjec
 
   const handleOpenPmChat = () => {
     setPendingProjectSlug(projectSlug);
-    setLastActiveTab('projects');
     setChatModalOpen(true);
   };
 

@@ -51,7 +51,6 @@ import { ReconciliationService } from '../services/reconciliation-service.js';
 import { GitHubStateChecker } from '../services/github-state-checker.js';
 import { ProjectService } from '../services/project-service.js';
 import { FeatureHealthService } from '../services/feature-health-service.js';
-import { getAvaGatewayService } from '../services/ava-gateway-service.js';
 import { TriageService } from '../services/triage-service.js';
 import { IssueCreationService } from '../services/issue-creation-service.js';
 import { EventStreamBuffer } from '../lib/event-stream-buffer.js';
@@ -174,9 +173,6 @@ export interface ServiceContainer {
 
   // Escalation
   escalationRouter: ReturnType<typeof getEscalationRouter>;
-
-  // Ava Gateway
-  avaGatewayService: ReturnType<typeof getAvaGatewayService>;
 
   // Integration registry
   integrationRegistryService: IntegrationRegistryService;
@@ -431,11 +427,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Maintenance Orchestrator — started in maintenance.module.ts
   const maintenanceOrchestrator = getMaintenanceOrchestrator();
 
-  const avaGatewayService = getAvaGatewayService(
-    featureLoader,
-    settingsService,
-    healthMonitorService
-  );
   // Sensor Registry (external sensor data ingestion)
   const sensorRegistryService = new SensorRegistryService(events);
 
@@ -803,7 +794,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     discordBotService,
     knowledgeStoreService,
     escalationRouter,
-    avaGatewayService,
     integrationRegistryService,
     antagonisticReviewService,
     devServerService,

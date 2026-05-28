@@ -47,6 +47,8 @@ interface ChatStoreState {
   chatModalOpen: boolean;
   /** Session ID that is currently streaming — used for the background streaming indicator */
   activeStreamingSessionId: string | null;
+  /** Pre-select a project slug when switching to the Projects tab */
+  pendingProjectSlug: string | null;
   /** Runtime-only: IDs of sessions with live useChat hooks (not persisted). */
   activeSessions: string[];
   /** Runtime-only: per-session streaming state map (not persisted). */
@@ -70,6 +72,7 @@ interface ChatActions {
   setQueuePaused: (paused: boolean) => void;
   toggleQueuePaused: () => void;
   setChatModalOpen: (open: boolean) => void;
+  setPendingProjectSlug: (slug: string | null) => void;
   setActiveStreamingSession: (sessionId: string | null) => void;
   getCurrentSession: () => ChatSession | null;
   getSessionsForProject: (projectId: string) => ChatSession[];
@@ -121,6 +124,7 @@ export const useChatStore = create<ChatStoreState & ChatActions>()(
       queueOpen: false,
       queuePaused: false,
       chatModalOpen: false,
+      pendingProjectSlug: null,
       activeStreamingSessionId: null,
       activeSessions: [],
       sessionStreamingMap: {},
@@ -205,6 +209,7 @@ export const useChatStore = create<ChatStoreState & ChatActions>()(
       setQueuePaused: (paused) => set({ queuePaused: paused }),
       toggleQueuePaused: () => set({ queuePaused: !get().queuePaused }),
       setChatModalOpen: (open) => set({ chatModalOpen: open }),
+      setPendingProjectSlug: (slug) => set({ pendingProjectSlug: slug }),
       setActiveStreamingSession: (sessionId) => set({ activeStreamingSessionId: sessionId }),
 
       getCurrentSession: () => {

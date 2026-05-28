@@ -1,12 +1,10 @@
 /**
- * Ava Gateway routes - HTTP API for Ava Gateway status and per-project config
+ * Ava routes - Per-project chat configuration
  */
 
 import { Router, type Request, type Response } from 'express';
 import { createLogger } from '@protolabsai/utils';
 
-import type { ServiceContainer } from '../../server/services.js';
-import { createStatusHandler } from './routes/status.js';
 import { loadAvaConfig, saveAvaConfig } from '../chat/ava-config.js';
 import type { AvaConfig } from '../chat/ava-config.js';
 
@@ -14,11 +12,8 @@ export type { AvaConfig };
 
 const logger = createLogger('AvaRoutes');
 
-export function createAvaRoutes(services: ServiceContainer): Router {
+export function createAvaRoutes(): Router {
   const router = Router();
-
-  // Existing gateway status endpoint
-  router.get('/status', createStatusHandler(services.avaGatewayService));
 
   /**
    * POST /api/ava/config/get

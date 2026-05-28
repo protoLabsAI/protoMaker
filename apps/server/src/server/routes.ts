@@ -120,7 +120,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     projectService,
     projectLifecycleService,
     automationService,
-    avaGatewayService,
     discordBotService,
     escalationRouter,
     authorityService,
@@ -340,7 +339,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     createProjectsRoutes(featureLoader, events, projectService, projectLifecycleService)
   );
   app.use('/api/automations', createAutomationsRoutes(automationService));
-  app.use('/api/ava', createAvaRoutes(services));
+  app.use('/api/ava', createAvaRoutes());
   app.use('/api/deploy', createDeployRoutes(autoModeService, services.deploymentTrackerService));
   app.use('/api/docs', createDocsRoutes(settingsService));
   app.use('/api/analytics', createAnalyticsRoutes());
