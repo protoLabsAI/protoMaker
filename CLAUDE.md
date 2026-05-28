@@ -502,7 +502,6 @@ Guild ID: `1070606339363049492`
 
 | Channel        | ID                    | Purpose                                           |
 | -------------- | --------------------- | ------------------------------------------------- |
-| `#ava`         | `1469195643590541353` | Primary Ava communication                         |
 | `#infra`       | `1469109809939742814` | Infrastructure alerts and changes                 |
 | `#dev`         | `1469080556720623699` | Code and feature updates                          |
 | `#bug-reports` | `1477837770704814162` | Bug triage channel (channel workflow: bug_triage) |
@@ -566,3 +565,5 @@ See `docs/claude-plugin.md` for the complete guide.
 ## Project Orchestration System
 
 Hierarchical project planning (Deep Research -> SPARC PRD -> Review -> Approval -> Scaffold -> Features), the epic git workflow, project types/status lifecycle, and the project API + MCP surface -> **[docs/internal/dev/project-orchestration.md](docs/internal/dev/project-orchestration.md)**.
+
+For portfolio-level orchestration (cross-project coordination, lifecycle bus, feature-notifier), use **protoWorkstacean** (`WORKSTACEAN_URL` / `WORKSTACEAN_API_KEY`).
