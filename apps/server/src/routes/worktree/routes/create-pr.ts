@@ -178,6 +178,14 @@ export function createCreatePRHandler(settingsService?: SettingsService) {
       // If baseBranch is not supplied by the caller, resolve it from project settings
       // (workflow.gitWorkflow.prBaseBranch) so agent-created PRs target the configured
       // integration branch (e.g. 'dev') rather than defaulting to 'main'.
+      //
+      // NOTE on epic-base enforcement (issue #3970, Failure 1): this route is
+      // epic-unaware — it has no feature/epicId to inspect, only a worktreePath.
+      // The epic-base invariant ("when feature.epicId is set, PR base MUST be the
+      // epic branch") is enforced in `git-workflow-service.ts:runPostCompletionWorkflow`,
+      // which is the primary, agent-driven PR-creation path. Direct callers of this
+      // endpoint must supply the correct `baseBranch` themselves; the service-layer
+      // guard catches any post-completion call that bypasses it.
       const base =
         baseBranch ||
         (await getEffectivePrBaseBranch(effectiveProjectPath, settingsService, '[CreatePR]'));

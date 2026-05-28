@@ -1,7 +1,7 @@
 /**
  * feature-scheduler-done-lock.test.ts
  *
- * Unit tests for the two pre-flight guards in loadPendingFeatures that prevent
+ * Unit tests for the pre-flight guards in loadPendingFeatures that prevent
  * auto-mode from re-spawning an agent on work that has already shipped:
  *
  * 1. explicit-done-with-PR-reason guard (24h lock):
@@ -9,11 +9,13 @@
  *    containing a PR number (e.g. "Shipped via PR #123") within the last 24h,
  *    auto-mode must NOT re-spawn even if the feature was subsequently reset.
  *
- * 2. title-match on recent merged PRs (re-cut branch detection):
- *    If a recently merged PR's title matches the feature's title, the feature
- *    is treated as done without requiring the branch name to match.
+ * 2. PR-to-feature wiring integrity (#3970):
+ *    A feature's prNumber may only be reconciled against a merged PR when the
+ *    PR's headRefName exactly matches the feature's branchName. Fuzzy title
+ *    matching cross-wires features to unrelated PRs and is forbidden.
  *
- * Covers issue #3432: auto-mode burns 3-retry budget on already-shipped work.
+ * Covers issue #3432 (already-shipped retry budget) and issue #3970 (cross-wired
+ * PR reconciliation).
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -345,18 +347,27 @@ describe('FeatureScheduler — explicit-done-with-PR-reason guard (24h lock)', (
   });
 });
 
-describe('FeatureScheduler — title-match on recent merged PRs (re-cut branch detection)', () => {
+describe('FeatureScheduler — PR-to-feature wiring integrity (issue #3970, Failure 3)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetFeaturesDir.mockReturnValue('/fake/project/.automaker/features');
   });
 
-  it('reconciles to done when a merged PR title exactly matches the feature title', async () => {
+  // The fuzzy title-match reconciliation pass was deleted because it cross-wired
+  // unrelated features to PRs whose `headRefName` did not match the feature's
+  // `branchName` (e.g. epic child E3 bound to PR #3967 of a sibling, in the
+  // incident described by issue #3970). The exact-branch and prNumber passes
+  // above this point are sufficient for any feature with a `branchName` and
+  // never violate the invariant that `prNumber` may only be set to a PR with
+  // `headRefName === feature.branchName`.
+
+  it('does NOT reconcile a feature when a merged PR title fuzzy-matches but the branch does not', async () => {
     const { scheduler, mockFeatureLoader } = makeScheduler();
 
     const feature = makeFeature({
-      id: 'feat-recut-001',
+      id: 'feat-no-fuzzy',
       title: 'Implement user authentication flow',
+      branchName: 'feature/auth-original',
       status: 'backlog',
     });
 
@@ -365,9 +376,9 @@ describe('FeatureScheduler — title-match on recent merged PRs (re-cut branch d
       [
         {
           number: 42,
-          headRefName: 'fix/auth-recut-branch', // different branch name
+          headRefName: 'fix/auth-recut-branch', // different from feature's branchName
           mergedAt: new Date().toISOString(),
-          title: 'Implement user authentication flow', // same title
+          title: 'Implement user authentication flow', // identical title
         },
       ]
     );
@@ -375,26 +386,27 @@ describe('FeatureScheduler — title-match on recent merged PRs (re-cut branch d
 
     const result = await scheduler.loadPendingFeatures('/fake/project');
 
-    // Feature must not be dispatched
+    // Feature must stay eligible — fuzzy title match alone must NOT bind it to a
+    // PR whose headRefName mismatches its branchName.
     const ids = result.map((f) => f.id);
-    expect(ids).not.toContain('feat-recut-001');
+    expect(ids).toContain('feat-no-fuzzy');
 
-    // Must be reconciled to done with the PR number
-    expect(mockFeatureLoader.update).toHaveBeenCalledWith(
-      '/fake/project',
-      'feat-recut-001',
-      expect.objectContaining({ status: 'done', prNumber: 42 })
+    // No done-reconciliation should have occurred via fuzzy title matching.
+    const doneUpdates = (mockFeatureLoader.update as ReturnType<typeof vi.fn>).mock.calls.filter(
+      (call) => call[1] === 'feat-no-fuzzy' && call[2]?.status === 'done'
     );
+    expect(doneUpdates).toHaveLength(0);
   });
 
-  it('reconciles to done when the PR title contains the feature title as a substring', async () => {
+  it('DOES reconcile to done when the feature branchName exactly matches a merged PR headRefName', async () => {
+    // Sanity check: the safe exact-branch pass (line ~864) still works.
     const { scheduler, mockFeatureLoader } = makeScheduler();
 
     const feature = makeFeature({
-      id: 'feat-recut-002',
+      id: 'feat-exact-branch',
       title: 'Add OAuth2 login support',
-      status: 'blocked',
-      failureCount: 2,
+      branchName: 'feature/oauth-login',
+      status: 'review',
     });
 
     setupExecMocks(
@@ -402,87 +414,20 @@ describe('FeatureScheduler — title-match on recent merged PRs (re-cut branch d
       [
         {
           number: 99,
-          headRefName: 'fix/oauth-recut',
+          headRefName: 'feature/oauth-login', // exact match
           mergedAt: new Date().toISOString(),
-          title: 'Add OAuth2 login support (re-cut from blocked branch)', // PR title contains feature title
+          title: 'Completely different PR title — branch is what counts',
         },
       ]
     );
     setupFeaturesOnDisk([feature]);
 
-    const result = await scheduler.loadPendingFeatures('/fake/project');
-
-    const ids = result.map((f) => f.id);
-    expect(ids).not.toContain('feat-recut-002');
+    await scheduler.loadPendingFeatures('/fake/project');
 
     expect(mockFeatureLoader.update).toHaveBeenCalledWith(
       '/fake/project',
-      'feat-recut-002',
+      'feat-exact-branch',
       expect.objectContaining({ status: 'done', prNumber: 99 })
     );
-  });
-
-  it('does NOT reconcile when the PR title is unrelated to the feature title', async () => {
-    const { scheduler, mockFeatureLoader } = makeScheduler();
-
-    const feature = makeFeature({
-      id: 'feat-no-match',
-      title: 'Add dark mode toggle to settings panel',
-      status: 'backlog',
-    });
-
-    setupExecMocks(
-      [],
-      [
-        {
-          number: 7,
-          headRefName: 'fix/unrelated',
-          mergedAt: new Date().toISOString(),
-          title: 'Fix payment gateway timeout bug', // completely different title
-        },
-      ]
-    );
-    setupFeaturesOnDisk([feature]);
-
-    const result = await scheduler.loadPendingFeatures('/fake/project');
-
-    // Feature should be included in the pending list — no title match
-    const ids = result.map((f) => f.id);
-    expect(ids).toContain('feat-no-match');
-
-    // No done reconciliation should have occurred for this feature
-    const doneUpdates = (mockFeatureLoader.update as ReturnType<typeof vi.fn>).mock.calls.filter(
-      (call) => call[1] === 'feat-no-match' && call[2]?.status === 'done'
-    );
-    expect(doneUpdates).toHaveLength(0);
-  });
-
-  it('does NOT reconcile a feature with a title shorter than the minimum match length', async () => {
-    const { scheduler } = makeScheduler();
-
-    const feature = makeFeature({
-      id: 'feat-short-title',
-      title: 'Fix bug', // 7 chars normalized — under 10-char threshold
-      status: 'backlog',
-    });
-
-    setupExecMocks(
-      [],
-      [
-        {
-          number: 5,
-          headRefName: 'fix/misc',
-          mergedAt: new Date().toISOString(),
-          title: 'Fix bug', // exact match but title too short
-        },
-      ]
-    );
-    setupFeaturesOnDisk([feature]);
-
-    const result = await scheduler.loadPendingFeatures('/fake/project');
-
-    // Feature remains eligible — short titles are excluded from fuzzy matching
-    const ids = result.map((f) => f.id);
-    expect(ids).toContain('feat-short-title');
   });
 });
