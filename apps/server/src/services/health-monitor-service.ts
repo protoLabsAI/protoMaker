@@ -24,7 +24,6 @@ import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import v8 from 'v8';
-import { getReactiveSpawnerService } from './reactive-spawner-service.js';
 import { HEALTH_CHECK_INTERVAL_MS, STUCK_FEATURE_THRESHOLD_MS } from '../config/timeouts.js';
 import type { SchedulerService } from './scheduler-service.js';
 
@@ -36,9 +35,6 @@ const DEFAULT_CHECK_INTERVAL_MS = HEALTH_CHECK_INTERVAL_MS;
 
 /** Maximum memory usage before warning (80% of heap) */
 const MEMORY_WARNING_THRESHOLD = 0.8;
-
-/** Memory usage threshold that triggers a self-healing spawn (90% of heap) */
-const MEMORY_SPAWN_THRESHOLD = 0.9;
 
 /** Maximum number of auto-retry attempts for retryable errors */
 const MAX_AUTO_RETRY_ATTEMPTS = 3;
@@ -270,41 +266,9 @@ export class HealthMonitorService {
       }
     }
 
-    // Trigger self-healing via ReactiveSpawnerService for:
-    // (1) memory usage > 90%, and (2) any critical health check issue
-    try {
-      const spawner = getReactiveSpawnerService();
-      const memPct = result.metrics.memoryUsagePercent;
-
-      if (memPct > MEMORY_SPAWN_THRESHOLD) {
-        spawner
-          .spawnForError({
-            errorType: 'high_memory_usage',
-            message: `Server memory usage is critically high: ${Math.round(memPct * 100)}% of heap used (${result.metrics.heapUsedMB}MB / ${result.metrics.heapTotalMB}MB limit)`,
-            severity: 'critical',
-          })
-          .catch((err) =>
-            logger.error('ReactiveSpawner: spawnForError (high_memory) failed:', err)
-          );
-      }
-
-      for (const issue of issues) {
-        if (issue.severity === 'critical') {
-          spawner
-            .spawnForError({
-              errorType: issue.type,
-              message: issue.message,
-              severity: 'critical',
-              featureId: issue.context.featureId as string | undefined,
-            })
-            .catch((err) =>
-              logger.error(`ReactiveSpawner: spawnForError (${issue.type}) failed:`, err)
-            );
-        }
-      }
-    } catch {
-      // ReactiveSpawnerService may not be initialized (e.g. during tests) — silently skip
-    }
+    // Pure-executor: protoMaker does not self-spawn remediation agents on
+    // health-critical conditions. Health issues are emitted via the
+    // `health:issue-detected` event above for external handling/alerting.
 
     // Auto-remediate if enabled
     if (this.config.autoRemediate) {

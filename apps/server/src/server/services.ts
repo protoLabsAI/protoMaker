@@ -82,10 +82,6 @@ import {
 import { HitlPatternAnalysisService } from '../services/hitl-pattern-analysis-service.js';
 import { FailureClassifierService } from '../services/failure-classifier-service.js';
 import {
-  getReactiveSpawnerService,
-  ReactiveSpawnerService,
-} from '../services/reactive-spawner-service.js';
-import {
   MaintenanceOrchestrator,
   getMaintenanceOrchestrator,
 } from '../services/maintenance-orchestrator.js';
@@ -263,9 +259,6 @@ export interface ServiceContainer {
 
   // HITL pattern analysis (recurring stuck-PR pattern detection → auto-file)
   hitlPatternAnalysisService: HitlPatternAnalysisService;
-
-  // Reactive spawner (trigger-based agent spawning with rate limiting and circuit breaking)
-  reactiveSpawnerService: ReactiveSpawnerService;
 
   // Command registry (slash command discovery from filesystem sources)
   commandRegistryService: CommandRegistryService;
@@ -711,9 +704,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     }
   });
 
-  // Reactive Spawner Service — trigger-based agent spawning with rate limiting and circuit breaking
-  const reactiveSpawnerService = getReactiveSpawnerService(repoRoot);
-
   // Command Registry Service — slash command discovery from filesystem sources
   const commandRegistryService = new CommandRegistryService(repoRoot);
   commandRegistryService.initialize();
@@ -840,7 +830,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     errorBudgetService,
     frictionTrackerService,
     hitlPatternAnalysisService,
-    reactiveSpawnerService,
     commandRegistryService,
     checkpointService,
     projectSlugResolver,
