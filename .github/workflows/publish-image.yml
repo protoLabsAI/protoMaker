@@ -65,7 +65,11 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # Scope the GHA cache per target so the ui/server builds don't evict
-          # each other's layers.
-          cache-from: type=gha,scope=${{ matrix.target }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.target }}
+          # Registry cache (not type=gha): the GHA cache backend hands out a
+          # ~10-min SAS token, but the server image build runs longer than that,
+          # so the cached-layer fetch 403'd mid-build and blocked every deploy
+          # (protoMaker#3993). Registry cache is stored in GHCR alongside the
+          # image (packages:write is already granted) — no expiring token.
+          # Per-target ref so ui/server don't evict each other's layers.
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/protolabsai/${{ matrix.image }}:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/protolabsai/${{ matrix.image }}:buildcache,mode=max
