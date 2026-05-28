@@ -21,6 +21,11 @@ interface VerifyTriageEvidenceRequest {
 export function createVerifyTriageEvidenceHandler() {
   return async (req: Request, res: Response): Promise<void> => {
     try {
+      if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+        res.status(400).json({ success: false, error: 'Request body must be a JSON object' });
+        return;
+      }
+
       const { projectPath, classification, citedPaths, ref } =
         req.body as VerifyTriageEvidenceRequest;
 
