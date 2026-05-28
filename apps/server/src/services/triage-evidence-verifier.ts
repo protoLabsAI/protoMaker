@@ -62,6 +62,11 @@ export interface VerifyTriageEvidenceResult {
    * the agent must NOT apply the classification.
    */
   classificationAllowed: boolean;
+  /**
+   * Whether the requested git ref could be resolved. When false, paths could
+   * not be checked, so no closure-equivalent classification is permitted.
+   */
+  refResolved: boolean;
   /** Human-readable guidance for the agent. */
   recommendation: string;
 }
@@ -79,6 +84,24 @@ export function isClosureEquivalent(classification?: string): boolean {
   return (CLOSURE_EQUIVALENT_CLASSIFICATIONS as readonly string[]).includes(
     normalizeClassification(classification)
   );
+}
+
+/**
+ * Confirm a git ref resolves to a commit in the repo. Distinguishes "the ref is
+ * bad" from "the path is missing" so an invalid ref can't masquerade as missing
+ * evidence (which would otherwise produce misleading per-path results).
+ */
+async function refResolves(projectPath: string, ref: string): Promise<boolean> {
+  try {
+    await execFileAsync('git', ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], {
+      cwd: projectPath,
+      env: createGitExecEnv(),
+      timeout: 10_000,
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -108,6 +131,31 @@ export async function verifyTriageEvidence(
 ): Promise<VerifyTriageEvidenceResult> {
   const ref = input.ref?.trim() || 'HEAD';
   const citedPaths = [...new Set((input.citedPaths ?? []).map((p) => p.trim()).filter(Boolean))];
+
+  // An unresolvable ref means we cannot verify any evidence. Fail safe: never
+  // permit a closure-equivalent classification we couldn't check.
+  if (!(await refResolves(input.projectPath, ref))) {
+    const closure = isClosureEquivalent(input.classification);
+    if (closure) {
+      logger.warn(
+        `Triage evidence verification could not resolve ref "${ref}" — refusing closure verdict "${input.classification}"`
+      );
+    }
+    return {
+      ref,
+      existingPaths: [],
+      missingPaths: citedPaths,
+      isClosureEquivalent: closure,
+      classificationAllowed: !closure,
+      refResolved: false,
+      recommendation:
+        `Could not resolve git ref "${ref}" in this repository, so cited evidence cannot be verified. ` +
+        (closure
+          ? `Do not apply the closure-equivalent classification "${input.classification}". `
+          : '') +
+        `Re-run against a valid ref (e.g. HEAD or a commit SHA).`,
+    };
+  }
 
   const existingPaths: string[] = [];
   const missingPaths: string[] = [];
@@ -158,6 +206,7 @@ export async function verifyTriageEvidence(
     missingPaths,
     isClosureEquivalent: closure,
     classificationAllowed,
+    refResolved: true,
     recommendation,
   };
 }

@@ -125,5 +125,32 @@ describe('triage-evidence-verifier (#3972)', () => {
       citedPaths: [REAL_PATH],
     });
     expect(result.ref).toBe('HEAD');
+    expect(result.refResolved).toBe(true);
+  });
+
+  it('refuses a closure verdict when the ref cannot be resolved (no false-missing)', async () => {
+    const result = await verifyTriageEvidence({
+      projectPath: repoRoot,
+      classification: 'already_fixed',
+      citedPaths: [REAL_PATH],
+      ref: 'this-ref-does-not-exist-deadbeef',
+    });
+
+    expect(result.refResolved).toBe(false);
+    expect(result.classificationAllowed).toBe(false);
+    expect(result.recommendation).toMatch(/Could not resolve git ref/);
+  });
+
+  it('reports a non-closure check against an unresolvable ref without throwing', async () => {
+    const result = await verifyTriageEvidence({
+      projectPath: repoRoot,
+      classification: 'needs_investigation',
+      citedPaths: [REAL_PATH],
+      ref: 'nope-not-a-real-ref',
+    });
+
+    expect(result.refResolved).toBe(false);
+    // Non-closure classifications are not blocked, but the unresolved ref is surfaced.
+    expect(result.classificationAllowed).toBe(true);
   });
 });
