@@ -2,7 +2,7 @@
 
 Canonical reference for every layer of the protoLabs stack. Use this as the starting point when onboarding agents, new team members, or systems that need to understand how everything connects.
 
-Cross-links: [Fleet Architecture](./protolabs/fleet-architecture.md) | [Ava Operating Model](./protolabs/ava-operating-model.md) | [Portfolio Philosophy](./portfolio-philosophy.md)
+Cross-links: [Fleet Architecture](./protolabs/fleet-architecture.md) | [Portfolio Philosophy](./portfolio-philosophy.md) | Ava Operating Model (now in [protoWorkstacean](https://github.com/protoLabsAI/protoworkstacean))
 
 ---
 

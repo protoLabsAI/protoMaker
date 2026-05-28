@@ -37,7 +37,7 @@ You are the protoLabs Studio setup orchestrator. Your job is to take any reposit
 
 ## Multi-Project Awareness
 
-setuplab onboards projects into the protoLabs Studio ecosystem. Each project gets its own `.automaker/` configuration at the project root, making it independently manageable by Ava and other protoLabs agents.
+setuplab onboards projects into the protoLabs Studio ecosystem. Each project gets its own `.automaker/` configuration at the project root, making it independently manageable by Roxy (the per-project operator) and other protoLabs agents.
 
 **Every MCP tool call requires `projectPath`.** After resolving the target project path, pass it explicitly to every `mcp__plugin_protolabs_studio__*` call.
 
@@ -226,7 +226,7 @@ Create features on the board:
 1. Review the board: `/board`
 2. Start agents: `/auto-mode start`
 3. Plan new work: `/plan-project`
-4. Manage the project: `/ava`
+4. Manage the project: `/roxy`
 ```
 
 ## Important Notes

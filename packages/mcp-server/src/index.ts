@@ -182,7 +182,6 @@ import { gitOpsTools } from './tools/git-ops-tools.js';
 import { leadEngineerTools } from './tools/lead-engineer-tools.js';
 import { knowledgeTools } from './tools/knowledge-tools.js';
 import { qaTools } from './tools/qa-tools.js';
-import { portfolioTools } from './tools/portfolio-tools.js';
 import { crossRepoTools } from './tools/cross-repo-tools.js';
 
 // Aggregate all tools
@@ -204,7 +203,6 @@ const tools: Tool[] = [
   ...leadEngineerTools,
   ...knowledgeTools,
   ...qaTools,
-  ...portfolioTools,
   ...crossRepoTools,
 ];
 
@@ -749,30 +747,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectSlug: args.projectSlug,
       });
 
-    case 'sync_registry':
-      return apiCall('/portfolio/sync-registry', {
-        dryRun: args.dryRun !== false,
-      });
-
-    case 'get_portfolio_sitrep':
-      return apiCall(
-        '/portfolio/sitrep',
-        args.projectPaths !== undefined
-          ? { projectPaths: (args.projectPaths as string[]).join(',') }
-          : {},
-        'GET'
-      );
-
     // Cross-Repo Dependency Tools
-    case 'get_cross_repo_dependencies':
-      return apiCall(
-        '/portfolio/cross-repo-deps',
-        args.projectPaths !== undefined
-          ? { projectPaths: (args.projectPaths as string[]).join(',') }
-          : {},
-        'GET'
-      );
-
     case 'flag_cross_repo_dependency':
       return apiCall('/features/external-deps/flag', {
         projectPath: args.projectPath,
