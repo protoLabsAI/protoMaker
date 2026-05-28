@@ -12,6 +12,8 @@ import { TrustTierService } from '../../../services/trust-tier-service.js';
 import { QuarantineService } from '../../../services/quarantine-service.js';
 import type { QuarantineStage, SanitizationViolation } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
+import type { SettingsService } from '../../../services/settings-service.js';
+import { generateFeatureTitle } from '../../../services/title-generator.js';
 
 const logger = createLogger('CreateFeature');
 
@@ -51,7 +53,8 @@ function determineSource(req: Request): Feature['source'] {
 export function createCreateHandler(
   featureLoader: FeatureLoader,
   trustTierService: TrustTierService,
-  events?: EventEmitter
+  events?: EventEmitter,
+  settingsService?: SettingsService
 ) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
@@ -123,9 +126,35 @@ export function createCreateHandler(
 
       // Use sanitized title and description from quarantine outcome
       // Preserve original empty title so the UI can auto-generate it client-side
+      let resolvedTitle = feature.title?.trim() ? outcome.sanitizedTitle : (feature.title ?? '');
+
+      // Auto-generate title when empty and a description is available.
+      // If generation fails or returns empty, fall back to empty title (no 500).
+      if (!resolvedTitle && feature.description) {
+        const generated = await generateFeatureTitle(
+          feature.description,
+          settingsService,
+          projectPath
+        );
+        if (generated) {
+          // Run the generated title through the same sanitization path.
+          // Re-run quarantine with the generated title to get a sanitized version.
+          const titleQuarantine = await quarantineService.process({
+            title: generated,
+            description: feature.description,
+            source,
+            trustTier,
+          });
+          if (titleQuarantine.approved) {
+            resolvedTitle = titleQuarantine.sanitizedTitle;
+            logger.info(`Auto-generated feature title: ${resolvedTitle}`);
+          }
+        }
+      }
+
       const sanitizedFeature: Partial<Feature> = {
         ...feature,
-        title: feature.title?.trim() ? outcome.sanitizedTitle : (feature.title ?? ''),
+        title: resolvedTitle,
         description: outcome.sanitizedDescription,
         source,
         trustTier,
