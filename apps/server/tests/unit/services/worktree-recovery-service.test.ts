@@ -24,6 +24,18 @@ import { execFile } from 'child_process';
 
 const mockExecFile = execFile as unknown as ReturnType<typeof vi.fn>;
 
+/**
+ * Pure-executor invariant (#3979): the recovery net must never run
+ * `gh pr create` or `gh pr merge`. Asserts no such command was issued.
+ */
+function noPrWasCreated(mock: ReturnType<typeof vi.fn>): boolean {
+  return !mock.mock.calls.some((call) => {
+    const cmd = call[0];
+    const args = Array.isArray(call[1]) ? (call[1] as string[]) : [];
+    return cmd === 'gh' && args[0] === 'pr' && (args[1] === 'create' || args[1] === 'merge');
+  });
+}
+
 const baseFeature: Feature = {
   id: 'feature-test-001',
   title: 'Test feature',
@@ -72,7 +84,7 @@ describe('worktree-recovery-service', () => {
       expect(result.error).toContain('no branchName set on feature');
     });
 
-    it('successfully recovers uncommitted work (commit + push + PR)', async () => {
+    it('preserves uncommitted work (commit + push) and does NOT create a PR', async () => {
       // git status --short: uncommitted files
       mockExecFile.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
       // git add (step 1: stage)
@@ -93,11 +105,7 @@ describe('worktree-recovery-service', () => {
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git push --force-with-lease
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
-      // gh pr create (execFileAsync)
-      mockExecFile.mockResolvedValueOnce({
-        stdout: 'https://github.com/owner/repo/pull/42\n',
-        stderr: '',
-      });
+      // NOTE: no `gh pr create` mock — recovery no longer creates PRs.
 
       const result = await checkAndRecoverUncommittedWork(
         baseFeature,
@@ -107,10 +115,10 @@ describe('worktree-recovery-service', () => {
 
       expect(result.detected).toBe(true);
       expect(result.recovered).toBe(true);
-      expect(result.prUrl).toBe('https://github.com/owner/repo/pull/42');
-      expect(result.prNumber).toBe(42);
-      expect(result.prCreatedAt).toBeDefined();
       expect(result.error).toBeUndefined();
+      // Pure-executor invariant (#3979): recovery preserves work but creates NO
+      // PR — PR creation is the single guarded chokepoint's job.
+      expect(noPrWasCreated(mockExecFile)).toBe(true);
     });
 
     it('invokes project-local prettier with --ignore-path /dev/null on staged files', async () => {
@@ -234,11 +242,6 @@ describe('worktree-recovery-service', () => {
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git push --force-with-lease succeeds
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
-      // gh pr create (execFileAsync)
-      mockExecFile.mockResolvedValueOnce({
-        stdout: 'https://github.com/owner/repo/pull/99\n',
-        stderr: '',
-      });
 
       const result = await checkAndRecoverUncommittedWork(
         baseFeature,
@@ -249,7 +252,7 @@ describe('worktree-recovery-service', () => {
       // Recovery should succeed even though formatting failed
       expect(result.detected).toBe(true);
       expect(result.recovered).toBe(true);
-      expect(result.prNumber).toBe(99);
+      expect(noPrWasCreated(mockExecFile)).toBe(true);
     });
 
     it('recovers when rebase conflicts — pushes without force-with-lease', async () => {
@@ -277,11 +280,6 @@ describe('worktree-recovery-service', () => {
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git push (NO --force-with-lease since rebase was aborted)
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
-      // gh pr create (execFileAsync)
-      mockExecFile.mockResolvedValueOnce({
-        stdout: 'https://github.com/owner/repo/pull/55\n',
-        stderr: '',
-      });
 
       const result = await checkAndRecoverUncommittedWork(
         baseFeature,
@@ -291,7 +289,7 @@ describe('worktree-recovery-service', () => {
 
       expect(result.detected).toBe(true);
       expect(result.recovered).toBe(true);
-      expect(result.prNumber).toBe(55);
+      expect(noPrWasCreated(mockExecFile)).toBe(true);
     });
 
     it('recovers when rebase fails for non-conflict reason — aborts and pushes normally', async () => {
@@ -315,11 +313,6 @@ describe('worktree-recovery-service', () => {
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git push (NO --force-with-lease)
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
-      // gh pr create (execFileAsync)
-      mockExecFile.mockResolvedValueOnce({
-        stdout: 'https://github.com/owner/repo/pull/77\n',
-        stderr: '',
-      });
 
       const result = await checkAndRecoverUncommittedWork(
         baseFeature,
@@ -329,7 +322,7 @@ describe('worktree-recovery-service', () => {
 
       expect(result.detected).toBe(true);
       expect(result.recovered).toBe(true);
-      expect(result.prNumber).toBe(77);
+      expect(noPrWasCreated(mockExecFile)).toBe(true);
     });
   });
 

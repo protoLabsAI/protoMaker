@@ -1241,35 +1241,14 @@ Output the branch name only.`,
         );
         if (recoveryResult.detected) {
           if (recoveryResult.recovered) {
-            // Recovery committed, pushed, and created a PR.
-            // Update feature status to 'review' and emit completion so
-            // lead-engineer-service waitForCompletion resolves.
+            // Recovery preserved the agent's work (commit + push). It does NOT
+            // create a PR — that is owned by the single guarded chokepoint
+            // (runPostCompletionWorkflow, below), which enforces the epic-base
+            // invariant. Fall through (no early return) so the work flows into
+            // it. See CLAUDE.md "Philosophy: protoMaker Is a Pure Executor".
             logger.info(
-              `[PostAgentHook] Recovered uncommitted work for ${featureId}: PR at ${recoveryResult.prUrl}`
+              `[PostAgentHook] Preserved uncommitted work for ${featureId} on ${feature.branchName ?? 'branch'} — proceeding to the guarded git workflow for PR creation`
             );
-            await this.featureLoader.update(projectPath, featureId, {
-              status: 'review',
-              prUrl: recoveryResult.prUrl,
-              ...(recoveryResult.prNumber !== undefined && {
-                prNumber: recoveryResult.prNumber,
-              }),
-              ...(recoveryResult.prCreatedAt && { prCreatedAt: recoveryResult.prCreatedAt }),
-            });
-            this.typedEventBus.emitAutoModeEvent('auto_mode_git_workflow', {
-              featureId,
-              pushed: true,
-              prUrl: recoveryResult.prUrl,
-              prNumber: recoveryResult.prNumber,
-              projectPath,
-            });
-            this.events.emit('feature:completed', {
-              projectPath,
-              featureId,
-              featureTitle: feature.title,
-              projectSlug: feature.projectSlug,
-              status: 'review',
-            });
-            return;
           } else {
             // Recovery failed — mark as blocked and surface error to waitForCompletion
             const reason = `git workflow failed — uncommitted work in worktree at ${workDir}: ${recoveryResult.error ?? 'unknown'}`;

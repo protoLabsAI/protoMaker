@@ -2,7 +2,10 @@
  * Worktree Recovery Service - Post-agent uncommitted work detection and recovery
  *
  * After every agent exits, scans the worktree for uncommitted changes and
- * attempts auto-recovery: format → stage → commit → push → PR creation.
+ * preserves them: format → stage → commit → push. It does NOT create a PR —
+ * PR creation is owned by the single guarded chokepoint
+ * (git-workflow-service.runPostCompletionWorkflow). See CLAUDE.md
+ * "Philosophy: protoMaker Is a Pure Executor".
  * Returns structured results; callers are responsible for status updates and events.
  */
 
@@ -15,7 +18,6 @@ import type { Feature } from '@protolabsai/types';
 import { DEFAULT_GIT_WORKFLOW_SETTINGS } from '@protolabsai/types';
 import { buildGitAddArgs } from '../lib/git-staging-utils.js';
 import { createGitExecEnv, safeGit, safeExec, assertSafeRef } from '@protolabsai/git-utils';
-import { createPrWithFallback } from '../lib/gh-pr-create.js';
 
 const execFileAsync = promisify(execFile);
 const logger = createLogger('WorktreeRecovery');
@@ -25,14 +27,8 @@ const execEnv = createGitExecEnv();
 export interface WorktreeRecoveryResult {
   /** Whether any uncommitted changes were detected */
   detected: boolean;
-  /** Whether recovery succeeded (commit + push + PR) */
+  /** Whether recovery succeeded (work preserved: commit + push). PR creation is NOT done here. */
   recovered: boolean;
-  /** PR URL if one was created */
-  prUrl?: string;
-  /** PR number if one was created */
-  prNumber?: number;
-  /** PR creation timestamp */
-  prCreatedAt?: string;
   /** Error message if recovery failed */
   error?: string;
 }
@@ -247,55 +243,16 @@ export async function checkAndRecoverUncommittedWork(
 
     logger.info(`[PostAgentHook] Pushed branch ${branchName} for feature ${feature.id}`);
 
-    // Step 5: Create PR via gh CLI targeting main
-    const prTitle = (feature.title || commitTitle).replace(/"/g, "'");
-    const summary = feature.description.substring(0, 500);
-    const ellipsis = feature.description.length > 500 ? '...' : '';
-    const prBody =
-      `## Summary\n\n${summary}${ellipsis}\n\n---\n*Recovered automatically by Automaker post-agent hook*`.replace(
-        /"/g,
-        "'"
-      );
-
-    const prResult = await createPrWithFallback({
-      cwd: worktreePath,
-      env: execEnv,
-      base: baseBranch,
-      head: branchName,
-      title: prTitle,
-      body: prBody,
-    });
-
-    const prUrl = prResult.url;
-    const prNumber = prResult.number;
-    logger.info(`[PostAgentHook] PR created via ${prResult.via}: ${prUrl}`);
-
-    result.prUrl = prUrl;
-    result.prNumber = prNumber;
-    result.prCreatedAt = new Date().toISOString();
+    // Work is now preserved (committed + pushed). PR creation is intentionally
+    // NOT done here — see CLAUDE.md "Philosophy: protoMaker Is a Pure Executor".
+    // There is exactly one guarded PR-creation chokepoint
+    // (git-workflow-service.runPostCompletionWorkflow), which enforces the
+    // epic-base invariant. This safety net only ensures the agent's work isn't
+    // lost; the caller funnels through the chokepoint to create the PR.
     result.recovered = true;
 
-    // Enable auto-merge so PRs don't sit BLOCKED waiting for manual intervention
-    // Use --merge for epic PRs to preserve DAG integrity
-    if (prNumber) {
-      const mergeFlag =
-        baseBranch === 'main' || baseBranch.startsWith('epic/') ? '--merge' : '--squash';
-      try {
-        await execFileAsync('gh', ['pr', 'merge', String(prNumber), '--auto', mergeFlag], {
-          cwd: worktreePath,
-          env: execEnv,
-        });
-        logger.info(`[PostAgentHook] Auto-merge enabled on PR #${prNumber} (${mergeFlag})`);
-      } catch (autoMergeError) {
-        logger.warn(
-          `[PostAgentHook] Failed to enable auto-merge on PR #${prNumber}:`,
-          autoMergeError
-        );
-      }
-    }
-
     logger.info(
-      `[PostAgentHook] Recovery successful for feature ${feature.id}: PR created at ${prUrl}`
+      `[PostAgentHook] Recovery preserved work for feature ${feature.id} on branch ${branchName} (commit + push); PR creation deferred to the guarded git workflow`
     );
 
     return result;

@@ -125,13 +125,10 @@ describe('PostExecutionMiddleware', () => {
       expect(emitEvent).not.toHaveBeenCalled();
     });
 
-    it('updates feature status to review and emits event on successful recovery', async () => {
+    it('preserves work but does NOT change status or emit a PR event on successful recovery', async () => {
       mockCheckAndRecoverUncommittedWork.mockResolvedValueOnce({
         detected: true,
         recovered: true,
-        prUrl: 'https://github.com/owner/repo/pull/42',
-        prNumber: 42,
-        prCreatedAt: '2024-01-01T00:00:00Z',
       });
 
       const updateFeatureStatus = vi.fn(async () => {});
@@ -140,19 +137,14 @@ describe('PostExecutionMiddleware', () => {
 
       await middleware.run(ctx);
 
-      expect(updateFeatureStatus).toHaveBeenCalledWith(
-        '/mock/project',
-        'feature-test-001',
-        'review'
+      // Pure-executor invariant (#3979): the safety net preserves work
+      // (commit + push) but never creates a PR, forces a status change, or
+      // emits a PR-created event — PR creation is the guarded chokepoint's job.
+      expect(updateFeatureStatus).not.toHaveBeenCalled();
+      expect(emitEvent).not.toHaveBeenCalledWith(
+        'auto_mode_recovery_pr_created',
+        expect.anything()
       );
-
-      expect(emitEvent).toHaveBeenCalledWith('auto_mode_recovery_pr_created', {
-        featureId: 'feature-test-001',
-        projectPath: '/mock/project',
-        prUrl: 'https://github.com/owner/repo/pull/42',
-        prNumber: 42,
-        prCreatedAt: '2024-01-01T00:00:00Z',
-      });
     });
 
     it('emits recovery_failed event when detection succeeds but recovery fails', async () => {
@@ -176,30 +168,6 @@ describe('PostExecutionMiddleware', () => {
         projectPath: '/mock/project',
         error: 'git push failed: remote rejected',
       });
-    });
-
-    it('does not throw when updateFeatureStatus rejects', async () => {
-      mockCheckAndRecoverUncommittedWork.mockResolvedValueOnce({
-        detected: true,
-        recovered: true,
-        prUrl: 'https://github.com/owner/repo/pull/7',
-        prNumber: 7,
-        prCreatedAt: '2024-01-01T00:00:00Z',
-      });
-
-      const updateFeatureStatus = vi.fn(async () => {
-        throw new Error('database write failed');
-      });
-      const emitEvent = vi.fn();
-      const ctx = makeContext({ updateFeatureStatus, emitEvent });
-
-      // Must not throw — middleware swallows all errors
-      await expect(middleware.run(ctx)).resolves.toBeUndefined();
-
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        expect.stringContaining("failed to update feature status to 'review'"),
-        expect.any(Error)
-      );
     });
 
     it('skips safety net and status update when feature is null', async () => {
