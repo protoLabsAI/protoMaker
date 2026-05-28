@@ -343,8 +343,16 @@ export function createEngineRoutes(
    */
   router.post('/signal/submit', async (req: Request, res: Response) => {
     try {
-      const { projectPath, content, source, images, files, autoApprove, webResearch } = (req.body ??
-        {}) as {
+      const {
+        projectPath,
+        content,
+        source,
+        images,
+        files,
+        autoApprove,
+        webResearch,
+        channelContext,
+      } = (req.body ?? {}) as {
         projectPath?: string;
         content?: string;
         source?: string;
@@ -352,6 +360,11 @@ export function createEngineRoutes(
         files?: string[];
         autoApprove?: boolean;
         webResearch?: boolean;
+        // Source-specific metadata (e.g. GitHub issueNumber + repository for
+        // idempotent intake) passed through to SignalIntakeService. Used by the
+        // protoWorkstacean switchboard's board-ingestion forwarder: it resolves
+        // the project (repo->projectPath) and POSTs the issue here.
+        channelContext?: Record<string, unknown>;
       };
 
       if (!content) {
@@ -371,6 +384,7 @@ export function createEngineRoutes(
         files,
         autoApprove,
         webResearch,
+        channelContext,
       });
 
       res.json({
