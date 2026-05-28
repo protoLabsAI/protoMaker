@@ -39,6 +39,15 @@ protoLabs Studio is a **platform for building apps**, not just our internal tool
 - **Validate at boundaries, trust internally.** Check user-provided config at load time, then pass validated values through the system. Don't scatter defensive checks for "what if this setting is missing" deep in business logic.
 - **New features must work for any project.** Before implementing, verify the solution doesn't assume our repo structure, our GitHub org, our CI checks, or our Discord server. If it does, parameterize it.
 
+## Philosophy: protoMaker Is a Pure Executor — Orchestration Lives in protoWorkstacean
+
+protoMaker executes **one project's work** when asked. It does not run the show. Autonomous loops, cron/scheduled jobs, cross-project orchestration, and self-directed side-effects belong to **protoWorkstacean** (the portfolio brain), not here. We are steering toward this; new code must not add to the pile, and existing violations get migrated out.
+
+- **No self-directed PR side-effects.** A code path must never create a PR, enable auto-merge, or merge on its own initiative as a "recovery" or "convenience." There is exactly **one** guarded PR-creation chokepoint (`runPostCompletionWorkflow`, which enforces the epic-base invariant); every other path (recovery hooks, maintenance checks, routes) must funnel through it — never call `gh pr create` / `gh pr merge` directly. The worktree-recovery net preserves work (commit + push) and stops there.
+- **No autonomous loops or cron in this repo.** Recurring sweeps, ceremonies, health cadences, and scheduled triggers are protoWorkstacean's domain (its ceremonies/cron + A2A into protoMaker). protoMaker exposes capabilities (A2A skills, API, the board) and reacts to events/requests; it does not schedule itself. Do not add new `SchedulerService` cron tasks for orchestration — if you need a recurring behavior, it belongs in protoWorkstacean driving protoMaker, or as an event-reaction here.
+- **No "weird jobs."** Background work that mutates the board, repos, or PRs without a clear external trigger (a request, an event, an explicit user/agent action) is a side-effect we don't want. When in doubt, make it a reaction to an event or an explicit API call, not a self-firing job.
+- **Why:** self-firing jobs + per-path side-effects are how invariants get bypassed (see the epic-base guard that a recovery hook's own `gh pr create` sailed past) and how behavior becomes non-deterministic and hard to reason about. One chokepoint, one owner of orchestration. Keep protoMaker pure.
+
 ## Planning & Approach
 
 - When creating plans, start with the minimal viable scope. Prefer single-phase plans unless explicitly asked for more. Default to the smallest, lowest-risk approach first.
@@ -343,6 +352,8 @@ schedulerService.registerInterval('my-interval', 'Interval Name', 30_000, handle
 ```
 
 Categories: `maintenance`, `health`, `monitor`, `sync`, `system`. All timers appear in the Ops Dashboard (`/ops` → Timers tab) and via `GET /api/ops/timers`.
+
+> **Direction (see "Philosophy: protoMaker Is a Pure Executor"):** orchestration loops/cron are migrating to protoWorkstacean. Do **not** add new `SchedulerService` cron tasks for orchestration or anything with self-directed side-effects. Prefer event-reactions, or let protoWorkstacean's ceremonies/cron drive protoMaker via A2A. Existing timers are being audited for migration.
 
 **Timer vs. Maintenance Check**: Use a timer for simple recurring operations (polling, syncing). Use a `MaintenanceCheck` module for board health inspections that detect issues and apply auto-fixes. See `docs/internal/server/timer-registry.md` and `docs/internal/server/maintenance-checks.md`.
 
