@@ -1,6 +1,6 @@
 # protoLabs Fleet Architecture
 
-Cross-links: [Org Architecture](../org-architecture.md) | [Ava Operating Model](./ava-operating-model.md) | [Agency Overview](./agency-overview.md)
+Cross-links: [Org Architecture](../org-architecture.md) | [Agency Overview](./agency-overview.md) | Ava Operating Model (now in [protoWorkstacean](https://github.com/protoLabsAI/protoworkstacean))
 
 ## Agent Fleet
 
@@ -44,7 +44,7 @@ The Discord plugin is one of many plugins connected to the bus. Workstacean is i
 Key surfaces:
 
 - `GET /api/metrics/{projectPath}` — `ProjectMetrics` + `CapacityMetrics` for a single app
-- `PortfolioWorldStateBuilder` now includes metrics in every world state snapshot
+- `MetricsService.getPortfolioMetrics()` aggregates per-app metrics for portfolio-level rollups consumed by protoWorkstacean
 - Ava's `SKILL.md` updated to use `costByModel` and `utilizationPercent` as capacity signals
 
 Metrics data feeds the portfolio brief produced during fleet-first activation. No manual instrumentation required — all metrics derive from `feature.json` timestamps and cost fields.

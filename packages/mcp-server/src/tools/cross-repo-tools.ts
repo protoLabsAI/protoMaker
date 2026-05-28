@@ -6,22 +6,6 @@ import { Tool } from '@modelcontextprotocol/sdk/types.js';
 
 export const crossRepoTools: Tool[] = [
   {
-    name: 'get_cross_repo_dependencies',
-    description:
-      'Get all cross-repository dependencies for a project. Returns dependencies on other repos and dependents from other repos.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectPath: {
-          type: 'string',
-          minLength: 1,
-          description: 'Absolute path to the project directory',
-        },
-      },
-      required: ['projectPath'],
-    },
-  },
-  {
     name: 'flag_cross_repo_dependency',
     description:
       'Flag a cross-repository dependency. Creates a dependency record with status "pending".',

@@ -16,7 +16,6 @@ import { schedulerTools } from '../src/tools/scheduler-tools.js';
 import { leadEngineerTools } from '../src/tools/lead-engineer-tools.js';
 import { knowledgeTools } from '../src/tools/knowledge-tools.js';
 import { qaTools } from '../src/tools/qa-tools.js';
-import { portfolioTools } from '../src/tools/portfolio-tools.js';
 import { crossRepoTools } from '../src/tools/cross-repo-tools.js';
 
 describe('MCP Server', () => {
@@ -51,12 +50,11 @@ describe('MCP Server', () => {
       ...leadEngineerTools,
       ...knowledgeTools,
       ...qaTools,
-      ...portfolioTools,
       ...crossRepoTools,
     ];
 
-    it('should define all tools (99 total)', () => {
-      expect(allTools.length).toBe(99);
+    it('should define all tools (97 total)', () => {
+      expect(allTools.length).toBe(97);
     });
 
     it('should have unique tool names', () => {

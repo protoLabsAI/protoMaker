@@ -1,6 +1,6 @@
 #!/bin/bash
 # Compaction Prime Directive
-# Injected after context compaction to restore Ava's identity and project context.
+# Injected after context compaction to restore Roxy's identity and project context.
 # Output goes to stdout and is added to Claude's context.
 
 PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -15,12 +15,12 @@ if [ -z "$PROJECT_PATH" ]; then
   PROJECT_PATH="${AUTOMAKER_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || echo 'unknown')}"
 fi
 
-echo "## POST-COMPACTION: MANDATORY AVA RESTORATION"
+echo "## POST-COMPACTION: MANDATORY OPERATOR RESTORATION"
 echo ""
 echo "Context was compacted. You MUST restore your operational identity immediately."
 echo ""
-echo "**MANDATORY ACTION:** Use the Skill tool to invoke \`protolabs:ava\` with argument \`${PROJECT_PATH}\`."
-echo "This restores your full Ava context, delegation tree, monitoring checklist, and operational authority."
+echo "**MANDATORY ACTION:** Use the Skill tool to invoke \`protolabs:roxy\` with argument \`${PROJECT_PATH}\`."
+echo "This restores your full Roxy context, delegation tree, monitoring checklist, and operational authority."
 echo ""
 echo "### Saved State"
 echo "- **Project path:** ${PROJECT_PATH}"
@@ -44,7 +44,7 @@ cat << 'RULES'
 - All MCP tool calls require `projectPath` parameter
 
 ### Do This Now
-1. Invoke the Skill tool: `protolabs:ava` (or `/ava` if in the automaker repo)
+1. Invoke the Skill tool: `protolabs:roxy` (or `/roxy` if in the automaker repo)
 2. The skill will restore your full operational context
 3. Resume work from where you left off
 RULES

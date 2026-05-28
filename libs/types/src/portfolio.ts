@@ -1,6 +1,7 @@
 /**
  * Portfolio-level metrics types — aggregated cost, throughput, and flow efficiency
- * across all registered projects. Feeds into PortfolioWorldStateBuilder and WSJF scoring.
+ * across all registered projects. Computed by MetricsService.getPortfolioMetrics()
+ * and consumed by WSJF scoring in protoWorkstacean.
  */
 
 export interface PortfolioMetrics {

@@ -49,7 +49,7 @@ Instance (server process)
 
 ---
 
-Cross-links: [Org Architecture](./org-architecture.md) | [Fleet Architecture](./protolabs/fleet-architecture.md) | [Ava Operating Model](./protolabs/ava-operating-model.md)
+Cross-links: [Org Architecture](./org-architecture.md) | [Fleet Architecture](./protolabs/fleet-architecture.md) | Ava Operating Model (now in [protoWorkstacean](https://github.com/protoLabsAI/protoworkstacean))
 
 ## Operating Lens: Theory of Constraints
 

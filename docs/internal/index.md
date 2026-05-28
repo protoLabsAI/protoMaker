@@ -111,7 +111,6 @@ This directory is NOT included in the public VitePress build. Content here is fo
 - [Agency Overview](./protolabs/agency-overview.md)
 - [Agency Architecture](./protolabs/agency-architecture.md)
 - [Fleet Architecture](./protolabs/fleet-architecture.md)
-- [Ava Operating Model](./protolabs/ava-operating-model.md)
 - [Setup Pipeline](./protolabs/setup-pipeline.md)
 - [CI/CD Setup](./protolabs/ci-cd-setup.md)
 - [Flow Development Pattern](./protolabs/flow-development-pattern.md)

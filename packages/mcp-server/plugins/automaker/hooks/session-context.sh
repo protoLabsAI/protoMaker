@@ -1,6 +1,6 @@
 #!/bin/bash
 # session-context.sh — SessionStart hook for fresh sessions.
-# Injects board summary so Ava/Claude starts with awareness of current state.
+# Injects board summary so Roxy/Claude starts with awareness of current state.
 # Output goes to stdout and is added to Claude's context.
 
 # Resolve project path: session cwd (from stdin JSON) > git toplevel > AUTOMAKER_ROOT
