@@ -23,7 +23,7 @@ import {
 import { Button } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
-import { useAvaChannelStore } from '@/store/ava-channel-store';
+import { useChatStore } from '@/store/chat-store';
 import { useQuery } from '@tanstack/react-query';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { usePmChatSession } from '@/hooks/use-pm-chat-session';
@@ -219,8 +219,8 @@ export function ProjectsTab() {
   );
 
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
-  const pendingProjectSlug = useAvaChannelStore((s) => s.pendingProjectSlug);
-  const setPendingProjectSlug = useAvaChannelStore((s) => s.setPendingProjectSlug);
+  const pendingProjectSlug = useChatStore((s) => s.pendingProjectSlug);
+  const setPendingProjectSlug = useChatStore((s) => s.setPendingProjectSlug);
 
   // Consume pending project slug from external navigation (e.g. project header PM button)
   useEffect(() => {

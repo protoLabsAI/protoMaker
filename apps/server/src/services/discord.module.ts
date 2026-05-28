@@ -8,7 +8,7 @@ import { hasWebhooksConfigured } from './discord-webhook.service.js';
 const logger = createLogger('Server:Wiring');
 
 /**
- * Wires Discord webhook-based outbound notifications, Ava Gateway, event hook service,
+ * Wires Discord webhook-based outbound notifications, event hook service,
  * and DiscordDM escalation channel.
  *
  * protoBot now runs exclusively in Workstacean's bot pool (Phase 1 of migration).
@@ -24,7 +24,6 @@ export async function register(container: ServiceContainer): Promise<void> {
     settingsService,
     featureLoader,
     discordBotService,
-    avaGatewayService,
     escalationRouter,
     eventHistoryService,
     integrationRegistryService,
@@ -60,9 +59,7 @@ export async function register(container: ServiceContainer): Promise<void> {
     );
   }
 
-  // Wire Discord bot service (now a webhook stub) to Ava Gateway
-  avaGatewayService.setDiscordBot(discordBotService);
-
+  // Wire Discord bot service (now a webhook stub)
   // Bridge integration:discord events to the webhook-based Discord bot service
   events.subscribe(async (type, payload) => {
     if (type !== 'integration:discord') return;
