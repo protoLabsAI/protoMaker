@@ -24,6 +24,7 @@ The server is an Express 5 application with WebSocket streaming, organized into 
 - **[Maintenance Checks](./maintenance-checks)** — How to create composable maintenance check modules
 - **[Ops Dashboard](./ops-dashboard)** — Reference for the Ops Dashboard tabs, API endpoints, and WebSocket events
 - **[Proto SDK Smoke Test](./proto-sdk-smoke-test)** — One-command smoke test for the SDK agentic loop — run after SDK bumps or when agent runs come back empty
+- **[Feature Naming](./feature-naming)** — Title and branch-name generators: model settings, fallbacks, training capture, and parity tests
 
 ## Key Technologies
 
