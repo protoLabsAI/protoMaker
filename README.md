@@ -82,7 +82,6 @@ For larger work: describe an idea, get a SPARC PRD, break it into milestones wit
 /auto-mode          Start/stop autonomous feature processing
 /orchestrate        Manage feature dependencies
 /plan-project       Full project lifecycle pipeline
-/ava                Autonomous operator mode
 ```
 
 ## How It Works
