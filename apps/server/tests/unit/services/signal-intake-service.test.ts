@@ -1030,4 +1030,101 @@ describe('SignalIntakeService', () => {
       );
     });
   });
+
+  describe('GitHub signal project routing (#3975)', () => {
+    const projectsSettings = {
+      projects: [
+        {
+          id: 'p1',
+          name: 'protoMaker',
+          path: '/repos/protomaker',
+          github: { owner: 'protoLabsAI', repo: 'protoMaker' },
+        },
+        {
+          id: 'p2',
+          name: 'protoContent',
+          path: '/repos/protocontent',
+          github: { owner: 'protoLabsAI', repo: 'protoContent' },
+        },
+      ],
+    };
+
+    const lastCreateProjectPath = (): string | undefined => {
+      const calls = (mockFeatureLoader.create as any).mock.calls;
+      return calls.length ? calls[calls.length - 1][0] : undefined;
+    };
+
+    it('routes a GitHub issue to the project whose remote matches the repository', async () => {
+      (mockSettingsService.getGlobalSettings as any).mockResolvedValue(projectsSettings);
+
+      mockEmitter.emit(
+        'signal:received',
+        createTestSignal({
+          source: 'github',
+          content: 'Bug fix needed in content pipeline',
+          channelContext: { issueNumber: 12, repository: 'protoLabsAI/protoContent' },
+        })
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockFeatureLoader.create).toHaveBeenCalled();
+      expect(lastCreateProjectPath()).toBe('/repos/protocontent');
+    });
+
+    it('matches repository case-insensitively', async () => {
+      (mockSettingsService.getGlobalSettings as any).mockResolvedValue(projectsSettings);
+
+      mockEmitter.emit(
+        'signal:received',
+        createTestSignal({
+          source: 'github',
+          content: 'Lowercase repo signal',
+          channelContext: { issueNumber: 34, repository: 'protolabsai/protocontent' },
+        })
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(lastCreateProjectPath()).toBe('/repos/protocontent');
+    });
+
+    it('prefers an explicit channelContext.projectPath over repository matching', async () => {
+      (mockSettingsService.getGlobalSettings as any).mockResolvedValue(projectsSettings);
+
+      mockEmitter.emit(
+        'signal:received',
+        createTestSignal({
+          source: 'github',
+          content: 'Explicit path wins',
+          channelContext: {
+            issueNumber: 56,
+            repository: 'protoLabsAI/protoContent',
+            projectPath: '/repos/explicit-override',
+          },
+        })
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(lastCreateProjectPath()).toBe('/repos/explicit-override');
+    });
+
+    it('falls back to the default project when no registered repo matches', async () => {
+      (mockSettingsService.getGlobalSettings as any).mockResolvedValue(projectsSettings);
+
+      mockEmitter.emit(
+        'signal:received',
+        createTestSignal({
+          source: 'github',
+          content: 'Unknown repo signal',
+          channelContext: { issueNumber: 78, repository: 'someoneElse/unknownRepo' },
+        })
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(lastCreateProjectPath()).toBe('/test/path');
+    });
+  });
 });

@@ -180,7 +180,7 @@ export function registerMaintenanceFlows(
   });
 
   registry.register('built-in:stale-worktrees', async () => {
-    const projectPaths = getKnownProjectPaths(autoModeService);
+    const projectPaths = await getKnownProjectPaths(autoModeService, deps.settingsService);
     await detectStaleWorktrees(events, projectPaths, deps.settingsService);
     // Also clean up merged branches (consolidated from built-in:branch-cleanup)
     await checkMergedBranches(events, projectPaths, deps.settingsService);
@@ -190,7 +190,7 @@ export function registerMaintenanceFlows(
   if (deps.integrityWatchdogService) {
     const watchdog = deps.integrityWatchdogService;
     registry.register('built-in:data-integrity', async () => {
-      await checkDataIntegrity(watchdog, events, autoModeService);
+      await checkDataIntegrity(watchdog, events, autoModeService, deps.settingsService);
     });
   }
 
@@ -198,7 +198,7 @@ export function registerMaintenanceFlows(
 
   if (process.env.GITHUB_TOKEN && process.env.GITHUB_REPO_OWNER && process.env.GITHUB_REPO_NAME) {
     registry.register('built-in:runner-health', async () => {
-      const projectPaths = getKnownProjectPaths(autoModeService);
+      const projectPaths = await getKnownProjectPaths(autoModeService, deps.settingsService);
       await checkRunnerHealth(events, projectPaths);
     });
   }
@@ -207,13 +207,36 @@ export function registerMaintenanceFlows(
 }
 
 /**
- * Get known project paths from auto-mode service running agents.
- * Falls back to empty array if no projects are known.
+ * Get known project paths for maintenance sweeps.
+ *
+ * The persisted project registry (`settings.projects`) is the source of truth for
+ * which projects this instance manages — a project is "known" whether or not
+ * auto-mode is currently looping on it. We union the registry with active
+ * auto-loops so that maintenance, runner-health, and data-integrity checks run
+ * against every registered project even when auto-mode is idle. Relying on
+ * active auto-loops alone meant an idle instance reported "No known project
+ * paths" and silently skipped all per-project upkeep (protoLabsAI/protoMaker#3991).
  */
-function getKnownProjectPaths(autoModeService: AutoModeService): string[] {
+async function getKnownProjectPaths(
+  autoModeService: AutoModeService,
+  settingsService?: SettingsService
+): Promise<string[]> {
   const paths = new Set<string>();
 
-  // Add projects with active auto-loops
+  // Source of truth: the persisted project registry.
+  if (settingsService) {
+    try {
+      const settings = await settingsService.getGlobalSettings();
+      for (const project of settings.projects ?? []) {
+        if (project.path) paths.add(project.path);
+      }
+    } catch (error) {
+      logger.warn('Failed to load project registry for maintenance paths:', error);
+    }
+  }
+
+  // Also include any projects with active auto-loops (covers transient projects
+  // not yet persisted to the registry).
   for (const p of autoModeService.getActiveAutoLoopProjects()) {
     paths.add(p);
   }
@@ -682,12 +705,13 @@ async function checkMergedBranches(
 async function checkDataIntegrity(
   integrityWatchdogService: DataIntegrityWatchdogService,
   events: EventEmitter,
-  autoModeService: AutoModeService
+  autoModeService: AutoModeService,
+  settingsService?: SettingsService
 ): Promise<void> {
   logger.info('Running data integrity check...');
 
   try {
-    const projectPaths = getKnownProjectPaths(autoModeService);
+    const projectPaths = await getKnownProjectPaths(autoModeService, settingsService);
 
     if (projectPaths.length === 0) {
       logger.info('No known project paths, skipping data integrity check');

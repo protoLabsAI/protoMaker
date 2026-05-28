@@ -812,6 +812,11 @@ export class IntegrationService {
     author: string;
     createdAt: string;
     repository: string;
+    // Present on the per-project webhook route; absent on the global route, where
+    // signal intake resolves the project from `repository` (#3975).
+    projectPath?: string;
+    labels?: string[];
+    issueUrl?: string;
   }): Promise<void> {
     // Only handle newly opened issues
     if (payload.action !== 'opened') {
@@ -836,6 +841,9 @@ export class IntegrationService {
       channelContext: {
         issueNumber: payload.issueNumber,
         repository: payload.repository,
+        ...(payload.projectPath ? { projectPath: payload.projectPath } : {}),
+        ...(payload.labels ? { labels: payload.labels } : {}),
+        ...(payload.issueUrl ? { issueUrl: payload.issueUrl } : {}),
       },
       timestamp: payload.createdAt,
     });

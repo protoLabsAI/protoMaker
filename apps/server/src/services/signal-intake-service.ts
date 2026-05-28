@@ -387,6 +387,44 @@ export class SignalIntakeService {
     });
   }
 
+  /**
+   * Resolve the target project path for a signal.
+   *
+   * Resolution order (#3975):
+   *   1. An explicit `channelContext.projectPath` (per-project webhook route already knows it).
+   *   2. The project whose registry `github` remote matches `channelContext.repository`
+   *      (full_name "owner/repo"). This routes GitHub-issue signals from the global webhook
+   *      route to the correct board instead of dumping every repo onto the default project.
+   *   3. `defaultProjectPath` fallback.
+   */
+  private async resolveProjectPath(signal: SignalPayload): Promise<string> {
+    const explicit = signal.channelContext?.projectPath;
+    if (explicit) return explicit;
+
+    const repository = signal.channelContext?.repository as string | undefined;
+    if (repository && this.settingsService) {
+      try {
+        const settings = await this.settingsService.getGlobalSettings();
+        const target = repository.toLowerCase();
+        const match = (settings.projects ?? []).find((p) => {
+          if (!p.github) return false;
+          return `${p.github.owner}/${p.github.repo}`.toLowerCase() === target;
+        });
+        if (match?.path) {
+          logger.info(`Routed GitHub signal from ${repository} to project ${match.path}`);
+          return match.path;
+        }
+        logger.warn(
+          `No project registered for repository ${repository}; falling back to default project ${this.defaultProjectPath}`
+        );
+      } catch (error) {
+        logger.warn('Failed to resolve project path from repository:', error);
+      }
+    }
+
+    return this.defaultProjectPath;
+  }
+
   private async handleSignal(signal: SignalPayload): Promise<void> {
     // Deduplicate by source + unique identifier.
     // For GitHub issues, key on repo+issueNumber (canonical issue identity, not author).
@@ -442,7 +480,7 @@ export class SignalIntakeService {
         `Processing signal from ${signal.source}: "${title}" (${classification.category} - ${classification.reason}, intent: ${intent})`
       );
 
-      const projectPath = signal.channelContext?.projectPath || this.defaultProjectPath;
+      const projectPath = await this.resolveProjectPath(signal);
 
       // Push to ring buffer (status: pending)
       const bufferEntry = this.pushToRingBuffer(signal, intent);

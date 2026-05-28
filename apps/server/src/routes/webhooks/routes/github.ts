@@ -53,9 +53,11 @@ interface GitHubIssuePayload {
     body: string | null;
     state: string;
     created_at: string;
+    html_url: string;
     user: {
       login: string;
     };
+    labels?: Array<{ name: string }>;
   };
   repository: {
     full_name: string;
@@ -369,7 +371,10 @@ export function createGitHubWebhookHandler(
             `GitHub issue #${issuePayload.issue.number} created: ${issuePayload.issue.title}`
           );
 
-          // Emit issue detected event for signal intake
+          // Emit issue detected event for signal intake.
+          // Field shape is shared with the per-project webhook route
+          // (routes/github/routes/webhook.ts). This global route has no projectPath —
+          // signal intake resolves the target project from `repository` (see #3975).
           events.emit('webhook:github:issue', {
             action: 'opened',
             issueNumber: issuePayload.issue.number,
@@ -377,7 +382,9 @@ export function createGitHubWebhookHandler(
             body: issuePayload.issue.body || '',
             author: issuePayload.issue.user.login,
             createdAt: issuePayload.issue.created_at,
+            issueUrl: issuePayload.issue.html_url,
             repository: issuePayload.repository.full_name,
+            labels: issuePayload.issue.labels?.map((l) => l.name) || [],
           });
         }
 
