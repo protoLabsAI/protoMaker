@@ -6,7 +6,15 @@
 
 set -euo pipefail
 
-PROJECT_ROOT="${AUTOMAKER_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null)}"
+# Resolve project path: session cwd (from stdin JSON) > git toplevel > AUTOMAKER_ROOT
+if [ -t 0 ]; then
+  INPUT=""
+else
+  INPUT="$(cat 2>/dev/null || true)"
+fi
+HOOK_CWD="$(printf '%s' "$INPUT" | jq -r '.cwd // empty' 2>/dev/null)"
+PROJECT_ROOT="${HOOK_CWD:-$(git -C "${HOOK_CWD:-.}" rev-parse --show-toplevel 2>/dev/null)}"
+PROJECT_ROOT="${PROJECT_ROOT:-${AUTOMAKER_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null)}}"
 FEATURES_DIR="$PROJECT_ROOT/.automaker/features"
 PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DATA_DIR="${PLUGIN_DIR}/data"
