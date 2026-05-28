@@ -269,4 +269,34 @@ export const gitTools: Tool[] = [
       required: ['projectPath', 'issueNumber', 'body'],
     },
   },
+  {
+    name: 'verify_triage_evidence',
+    description:
+      'Deterministically verify that the file paths you cite as triage evidence actually exist at a git ref, BEFORE applying a classification. You MUST call this before applying any closure-equivalent label (already_fixed, duplicate, not_a_bug, wontfix, resolved, not_reproducible, invalid, works_as_intended). If `classificationAllowed` is false, do NOT apply that classification — re-investigate against the real source or escalate as needs-investigation. Prevents the silent failure mode where an issue is wrongly marked already-fixed against a non-existent codebase (#3972).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          minLength: 1,
+          description: 'Absolute path to the repository being triaged',
+        },
+        classification: {
+          type: 'string',
+          description:
+            'The classification you intend to apply (e.g. already_fixed, duplicate, needs_investigation)',
+        },
+        citedPaths: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'The file paths you cite as evidence for your classification',
+        },
+        ref: {
+          type: 'string',
+          description: 'Git ref to check the paths against (default: HEAD)',
+        },
+      },
+      required: ['projectPath', 'citedPaths'],
+    },
+  },
 ];

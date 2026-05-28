@@ -58,6 +58,16 @@ This command accepts a GitHub issue number as input (e.g., `123`).
      - Run tests to ensure nothing broke
      - If possible, manually verify the fix addresses the issue
 
+### Classification verification (MANDATORY — #3972)
+
+Before asserting ANY closure-equivalent classification — `already_fixed`, `duplicate`, `not_a_bug`, `wontfix`, `resolved`, `not_reproducible`, `invalid`, `works_as_intended` — you MUST verify that every file path you cite as evidence actually exists at the relevant ref:
+
+- For each cited path, confirm existence **at the same ref you are asserting against** with a ref-scoped check: `git cat-file -e <ref>:<path>` (exit 0 = exists) or `git show <ref>:<path>`. Do NOT use a plain working-tree `Read` — it can validate a file that does not exist at the target ref, reintroducing the false-closure failure mode. Do NOT trust path names from memory, branch names, or the issue text.
+- Equivalently, call the `verify_triage_evidence` MCP tool with `{ projectPath, classification, citedPaths, ref }`. If it returns `classificationAllowed: false`, you are forbidden from applying that classification.
+- A closure-equivalent classification with NO verified file:line or commit evidence is invalid. Never mark an issue `already_fixed` against files that do not exist — this silently neutralizes real bugs (the #3970/#3972 incident).
+- If your cited evidence cannot be verified: do NOT classify. Either re-investigate against the real source and cite verified evidence, or escalate/label as needs-investigation.
+- Every closure-equivalent comment you post MUST include the verification evidence inline (commit SHA + a path confirmed to exist at that ref).
+
 6. **Report summary**
    - Issue number and title
    - Issue state (open/closed)
