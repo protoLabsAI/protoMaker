@@ -823,10 +823,34 @@ export class IntegrationService {
       return;
     }
 
-    // All new GitHub issues are treated as signals
+    // Intake gate (#3991): respect the configured GitHub-issue intake policy so
+    // this instance does not grab every opened issue when another receiver
+    // (e.g. protoWorkstacean) also processes the org's issues.
+    const intake = (await this.settingsService?.getGlobalSettings())?.githubIssueIntake;
+    const intakeEnabled = intake?.enabled ?? true;
+    const requiredLabel = intake?.requiredLabel ?? 'board-intake';
+
+    if (!intakeEnabled) {
+      logger.debug(
+        `GitHub-issue intake disabled — skipping issue #${payload.issueNumber} from ${payload.repository}`
+      );
+      return;
+    }
+
+    if (requiredLabel) {
+      const labels = (payload.labels ?? []).map((l) => l.toLowerCase());
+      if (!labels.includes(requiredLabel.toLowerCase())) {
+        logger.debug(
+          `GitHub issue #${payload.issueNumber} from ${payload.repository} lacks the "${requiredLabel}" intake label — skipping`
+        );
+        return;
+      }
+    }
+
     logger.info(`Signal detected from GitHub issue #${payload.issueNumber}: ${payload.title}`, {
       repository: payload.repository,
       author: payload.author,
+      labels: payload.labels,
     });
 
     if (!this.emitter) return;
