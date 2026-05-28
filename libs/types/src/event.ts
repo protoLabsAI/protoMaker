@@ -182,6 +182,7 @@ export type EventType =
   | 'pr:ci-failure'
   | 'feature:worktree-cleaned'
   | 'pr:merge-blocked-critical-threads' // Fired when merge is blocked due to critical review threads
+  | 'pr:merge-blocked-deps' // Fired when merge is blocked due to unsatisfied feature dependencies (issue #3970)
   // Worktree recovery events
   | 'worktree:drift-detected'
   | 'worktree:phantom-pruned'

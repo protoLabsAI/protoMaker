@@ -423,9 +423,14 @@ export class GitWorkflowService {
     let rawBaseBranch =
       epicBranchName && !feature.isEpic ? epicBranchName : gitSettings.prBaseBranch;
 
-    // If targeting an epic branch, verify it exists on remote. The first feature
-    // in an epic may run before the epic branch is created — fall back to the
-    // default base branch (usually dev) to avoid silent PR creation failure.
+    // Epic-orchestration invariant (issue #3970, Failure 1):
+    // When a feature belongs to an epic (`feature.epicId` is set), its PR MUST base on the
+    // epic branch — NEVER on the default branch. Falling back to `main` (or any non-epic base)
+    // causes child PRs to merge directly into main, bypassing the epic and producing the
+    // exact race observed in the incident (early children land on main, later ones on the
+    // epic branch). If the epic branch is missing on remote, auto-create it from
+    // origin/<prBaseBranch> (mirroring auto-mode-service.createWorktreeForBranch). If that
+    // also fails, surface the error rather than silently falling back to a wrong base.
     if (epicBranchName && !feature.isEpic && rawBaseBranch === epicBranchName) {
       try {
         await execAsync(`git ls-remote --exit-code origin refs/heads/${epicBranchName}`, {
@@ -434,10 +439,45 @@ export class GitWorkflowService {
           timeout: 15_000,
         });
       } catch {
+        // Epic branch is missing on remote. Auto-create it so child PRs can target it.
         logger.warn(
-          `Epic branch "${epicBranchName}" does not exist on remote — falling back to "${gitSettings.prBaseBranch}" as PR base for feature ${featureId}`
+          `Epic branch "${epicBranchName}" missing on remote for feature ${featureId} — attempting auto-create from origin/${gitSettings.prBaseBranch}`
         );
-        rawBaseBranch = gitSettings.prBaseBranch;
+        try {
+          // Ensure we have up-to-date refs for the base branch.
+          await execFileAsync('git', ['fetch', 'origin', gitSettings.prBaseBranch], {
+            cwd: workDir,
+            env: execEnv,
+            timeout: 30_000,
+          });
+          // Push origin/<base> to refs/heads/<epicBranch> on the remote — creates the
+          // branch on the remote without needing a local checkout.
+          await execFileAsync(
+            'git',
+            ['push', 'origin', `origin/${gitSettings.prBaseBranch}:refs/heads/${epicBranchName}`],
+            { cwd: workDir, env: execEnv, timeout: 30_000 }
+          );
+          // Re-fetch so subsequent operations see the new ref.
+          await execFileAsync('git', ['fetch', 'origin', epicBranchName], {
+            cwd: workDir,
+            env: execEnv,
+            timeout: 30_000,
+          }).catch(() => {
+            // Non-fatal: cached refs may suffice
+          });
+          logger.info(
+            `Auto-created epic branch "${epicBranchName}" on remote from origin/${gitSettings.prBaseBranch} for feature ${featureId}`
+          );
+        } catch (autoCreateErr) {
+          const msg =
+            autoCreateErr instanceof Error ? autoCreateErr.message : String(autoCreateErr);
+          // Hard fail: never silently fall back to main for an epic child. The downstream
+          // PR-creation guard will also refuse to create a PR with a non-epic base when
+          // epicId is set; surface the failure here with the auto-create cause.
+          throw new Error(
+            `Epic branch "${epicBranchName}" missing on remote and auto-create failed for feature ${featureId} (epicId=${feature.epicId}): ${msg}`
+          );
+        }
       }
     }
 
@@ -612,6 +652,24 @@ export class GitWorkflowService {
 
         // Step 3: Create PR (if push succeeded and PR creation enabled)
         if (result.pushed && gitSettings.autoCreatePR) {
+          // Epic-orchestration invariant (issue #3970, Failure 1 defense-in-depth):
+          // If this feature belongs to an epic, its PR base MUST be the epic branch.
+          // The resolution logic above is the primary enforcement; this guard is a
+          // belt-and-suspenders check that refuses to create a PR against any non-epic
+          // base (e.g. the default branch) when the feature has an epicId. A violation
+          // here indicates a logic bug above — surface it loudly rather than letting
+          // the PR land on the wrong base.
+          if (feature.epicId && !feature.isEpic) {
+            const expectedEpicBase = epicBranchName;
+            if (!expectedEpicBase || prBaseBranch !== expectedEpicBase) {
+              const violation = `Epic-base invariant violated for feature ${featureId}: epicId=${feature.epicId}, expected base="${expectedEpicBase ?? '<missing>'}", got="${prBaseBranch}". Refusing to create PR on wrong base.`;
+              logger.error(violation);
+              this.trackOperation('pr_create', featureId, false, violation);
+              result.error = result.error ? `${result.error}; ${violation}` : violation;
+              this.activeWorkflows--;
+              return result;
+            }
+          }
           try {
             const prResult = await this.createPullRequest(
               workDir,
@@ -722,6 +780,61 @@ export class GitWorkflowService {
                   resolveError instanceof Error ? resolveError.message : String(resolveError);
                 logger.warn(`Error checking/resolving review threads: ${resolveErrorMsg}`);
                 // Continue with merge attempt even if thread check/resolution fails
+              }
+            }
+
+            // Dependency-gate invariant (issue #3970, Failure 2):
+            // A feature may merge only when EVERY one of its declared dependencies has
+            // status === 'done'. The shared `areDependenciesSatisfied` resolver treats
+            // 'review' as satisfied for non-foundation deps; that is too loose for the
+            // merge gate (it's what let the incident through). We do a strict local check
+            // here without changing the shared resolver's semantics so other flows are
+            // unaffected.
+            if (feature.dependencies && feature.dependencies.length > 0 && this.featureStore) {
+              try {
+                const allFeatures = await this.featureStore.getAll(projectPath);
+                const blocking = feature.dependencies.filter((depId) => {
+                  const dep = allFeatures.find((f) => f.id === depId);
+                  return !dep || dep.status !== 'done';
+                });
+                if (blocking.length > 0) {
+                  const blockingDesc = blocking
+                    .map((depId) => {
+                      const dep = allFeatures.find((f) => f.id === depId);
+                      return dep ? `"${dep.title}" (${dep.status})` : `${depId} (missing)`;
+                    })
+                    .join(', ');
+                  const blockMsg = `Merge blocked: ${blocking.length} unsatisfied dependency(ies) — ${blockingDesc}`;
+                  logger.warn(
+                    `[merge-gate] Refusing to merge PR #${result.prNumber} for feature ${featureId}: ${blockMsg}`
+                  );
+                  result.merged = false;
+                  this.trackOperation('merge', featureId, false, blockMsg);
+                  result.error = result.error ? `${result.error}; ${blockMsg}` : blockMsg;
+                  if (events) {
+                    events.emit('pr:merge-blocked-deps', {
+                      featureId,
+                      projectPath,
+                      prNumber: result.prNumber,
+                      prUrl: result.prUrl,
+                      blockingDependencies: blocking,
+                    });
+                  }
+                  this.activeWorkflows--;
+                  return result;
+                }
+              } catch (depCheckErr) {
+                // If we can't verify deps, fail closed — refuse merge rather than
+                // silently letting a dependency-violating merge through.
+                const msg =
+                  depCheckErr instanceof Error ? depCheckErr.message : String(depCheckErr);
+                const failClosed = `Merge blocked: failed to verify dependencies for feature ${featureId}: ${msg}`;
+                logger.error(`[merge-gate] ${failClosed}`);
+                result.merged = false;
+                this.trackOperation('merge', featureId, false, failClosed);
+                result.error = result.error ? `${result.error}; ${failClosed}` : failClosed;
+                this.activeWorkflows--;
+                return result;
               }
             }
 

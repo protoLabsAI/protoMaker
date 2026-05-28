@@ -804,21 +804,19 @@ export class FeatureScheduler {
     const openPrNumbers = new Set<number>(openPrBranches.values());
 
     // Fetch recently merged PRs to reconcile blocked/review features whose PRs already landed.
+    // Keyed by exact headRefName — this is the only safe identity link between a feature
+    // and a merged PR (issue #3970, Failure 3: fuzzy title-match cross-wires features).
     const mergedPrBranches = new Map<string, { number: number; mergedAt?: string }>();
-    let mergedPrList: { number: number; headRefName: string; mergedAt?: string; title?: string }[] =
-      [];
     try {
       const { stdout: mergedPrJson } = await execAsync(
-        'gh pr list --state merged --json number,headRefName,mergedAt,title --limit 100',
+        'gh pr list --state merged --json number,headRefName,mergedAt --limit 100',
         { cwd: projectPath, timeout: 15000 }
       );
       const mergedPrs: {
         number: number;
         headRefName: string;
         mergedAt?: string;
-        title?: string;
       }[] = JSON.parse(mergedPrJson || '[]');
-      mergedPrList = mergedPrs;
       for (const pr of mergedPrs)
         mergedPrBranches.set(pr.headRefName, { number: pr.number, mergedAt: pr.mergedAt });
       logger.debug(
@@ -1034,60 +1032,16 @@ export class FeatureScheduler {
         }
       }
 
-      // ── Title-match on recent merged PRs (re-cut branch detection) ──
-      // When a feature ships via a re-cut branch (different branch name, same work),
-      // none of the branch-name-based or prNumber-based passes above will detect it.
-      // This pass compares the feature's normalized title against recently merged PR
-      // titles on origin/<prBaseBranch>. A match means the work already landed and
-      // auto-mode should not re-spawn the agent.
-      const normalizePrTitle = (s: string): string =>
-        s
-          .toLowerCase()
-          .replace(/[^a-z0-9\s]/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
-
-      const titleMatchCandidates = allFeatures.filter(
-        (f) =>
-          (f.status === 'backlog' || f.status === 'blocked') &&
-          !alreadyReconciled.has(f.id) &&
-          f.title
-      );
-
-      for (const feature of titleMatchCandidates) {
-        const featureTitle = normalizePrTitle(feature.title ?? '');
-        // Skip titles that are too short to be a reliable match signal
-        if (featureTitle.length < 10) continue;
-
-        const matchedPr = mergedPrList.find((pr) => {
-          if (!pr.title) return false;
-          const prTitle = normalizePrTitle(pr.title);
-          return prTitle.includes(featureTitle) || featureTitle.includes(prTitle);
-        });
-
-        if (matchedPr) {
-          logger.info(
-            `[loadPendingFeatures] Feature ${feature.id} ("${feature.title}") title matched merged PR #${matchedPr.number} ("${matchedPr.title}") — reconciling to done (re-cut branch detected)`
-          );
-          const prevStatus = feature.status;
-          try {
-            await this.featureLoader.update(projectPath, feature.id, {
-              status: 'done',
-              prNumber: matchedPr.number,
-              prMergedAt: matchedPr.mergedAt ?? new Date().toISOString(),
-              statusChangeReason: `Re-cut branch detected: title matched merged PR #${matchedPr.number} — "${matchedPr.title}"`,
-            });
-            feature.status = 'done';
-            alreadyReconciled.add(feature.id);
-          } catch (error) {
-            feature.status = prevStatus;
-            logger.error(
-              `[loadPendingFeatures] Failed to reconcile feature ${feature.id} to done via title match:`,
-              error
-            );
-          }
-        }
-      }
+      // Note (issue #3970, Failure 3): a prior title-match pass on recent merged PRs
+      // was removed here. It did fuzzy bidirectional substring matching between feature
+      // titles and merged PR titles with NO branch verification, which cross-wired
+      // unrelated features to PRs whose `headRefName` did not match the feature's
+      // `branchName` (e.g. epic E3 bound to PR #3967 of a sibling). The exact branch
+      // pass (~line 864) and prNumber pass (~line 923) above are exact, safe, and
+      // sufficient for any feature with a `branchName`. We deliberately do NOT
+      // reintroduce fuzzy title matching — features that ship via a re-cut branch
+      // should be reconciled by updating their `branchName` or `prNumber`, not by
+      // guessing from titles.
 
       // ── Merge-conflict stale block recovery ──
       // Features blocked for pre-flight merge conflicts may resolve automatically
@@ -1306,6 +1260,34 @@ export class FeatureScheduler {
         );
 
         if (isEligibleStatus) {
+          // Dependency-gate invariant (issue #3970, Failure 2):
+          // A feature is eligible to dispatch only when EVERY declared dependency has
+          // status === 'done'. The shared `areDependenciesSatisfied` resolver treats
+          // 'review' as satisfied for non-foundation deps; that is too loose for the
+          // dispatch gate. We do a strict local check here (all deps must be 'done')
+          // without changing the shared resolver's semantics so other flows still work.
+          // Note: this complements the dep-recheck-on-unblock pass at ~line 1188 which
+          // only handles features already in 'blocked' status. This gate covers the
+          // common path where a backlog feature is filtered before being dispatched.
+          if (feature.dependencies && feature.dependencies.length > 0) {
+            const blocking = feature.dependencies.filter((depId) => {
+              const dep = allFeatures.find((f) => f.id === depId);
+              return !dep || dep.status !== 'done';
+            });
+            if (blocking.length > 0) {
+              logger.info(
+                `[loadPendingFeatures] Skipping feature ${feature.id} ("${feature.title}") — ` +
+                  `${blocking.length} unsatisfied dep(s): ${blocking
+                    .map((id) => {
+                      const dep = allFeatures.find((f) => f.id === id);
+                      return dep ? `${id} (${dep.status})` : `${id} (missing)`;
+                    })
+                    .join(', ')}`
+              );
+              continue;
+            }
+          }
+
           if (feature.isEpic) {
             if (feature.epicId) {
               // Contradictory state: a feature cannot be both an epic container and a child of

@@ -507,7 +507,13 @@ describe('FeatureScheduler - loadPendingFeatures', () => {
     expect(ids).toContain('feat-after-foundation');
   });
 
-  it('non-foundation dep: "review" status DOES satisfy a regular dependency', async () => {
+  it('non-foundation dep: "review" status does NOT satisfy the dispatch gate (issue #3970)', async () => {
+    // The shared `areDependenciesSatisfied` resolver still treats 'review' as
+    // satisfied for non-foundation deps (other flows depend on that loose
+    // semantics), but the strict dispatch gate in `loadPendingFeatures` now
+    // requires every dep to be 'done'. This is what prevents the #3970
+    // incident — downstream features (e.g. epic child E5) MUST NOT dispatch
+    // while upstream deps are still under review.
     const regularDep = makeFeature({
       id: 'dep-regular',
       status: 'review',
@@ -525,8 +531,29 @@ describe('FeatureScheduler - loadPendingFeatures', () => {
     const result = await callLoadPendingFeatures('/fake/project');
 
     const ids = result.map((f) => f.id);
-    // Non-foundation dep in 'review' unblocks the downstream feature
-    expect(ids).toContain('feat-after-regular');
+    // Strict dispatch gate: dep must be 'done', not just 'review'.
+    expect(ids).not.toContain('feat-after-regular');
+  });
+
+  it('non-foundation dep: "done" status DOES satisfy the dispatch gate', async () => {
+    const regularDep = makeFeature({
+      id: 'dep-regular-done',
+      status: 'done',
+      isFoundation: false,
+    });
+    const feature = makeFeature({
+      id: 'feat-after-regular-done',
+      status: 'backlog',
+      dependencies: ['dep-regular-done'],
+    });
+
+    setupDefaultExecMocks();
+    setupFeaturesOnDisk([regularDep, feature]);
+
+    const result = await callLoadPendingFeatures('/fake/project');
+
+    const ids = result.map((f) => f.id);
+    expect(ids).toContain('feat-after-regular-done');
   });
 
   it('git-workflow block guard: feature with open PR branch is synced to review and excluded', async () => {
