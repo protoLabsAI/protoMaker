@@ -797,6 +797,14 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         body: args.body,
       });
 
+    case 'verify_triage_evidence':
+      return apiCall('/github/verify-triage-evidence', {
+        projectPath: args.projectPath,
+        classification: args.classification,
+        citedPaths: args.citedPaths,
+        ref: args.ref,
+      });
+
     case 'check_pr_status':
       return apiCall('/github/check-pr-status', {
         projectPath: args.projectPath,

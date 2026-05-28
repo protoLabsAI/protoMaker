@@ -27,6 +27,7 @@ import { createRotateSecretHandler } from './routes/rotate-secret.js';
 const webhookRateLimiter = createRateLimiter();
 import { createMergePRHandler } from './routes/merge-pr.js';
 import { createAddCommentHandler } from './routes/add-comment.js';
+import { createVerifyTriageEvidenceHandler } from './routes/verify-triage-evidence.js';
 import { createCheckPRStatusHandler } from './routes/check-pr-status.js';
 import { createPRReviewCommentsHandler } from './routes/pr-review-comments.js';
 import { createResolvePRCommentHandler } from './routes/resolve-pr-comment.js';
@@ -94,6 +95,11 @@ export function createGitHubRoutes(
   // PR merge operations
   router.post('/merge-pr', validatePathParams('projectPath'), createMergePRHandler());
   router.post('/comment', validatePathParams('projectPath'), createAddCommentHandler());
+  router.post(
+    '/verify-triage-evidence',
+    validatePathParams('projectPath'),
+    createVerifyTriageEvidenceHandler()
+  );
   router.post(
     '/check-pr-status',
     validatePathParams('projectPath'),
