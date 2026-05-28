@@ -131,33 +131,15 @@ export class PostExecutionMiddleware {
 
         if (result.detected) {
           if (result.recovered) {
+            // Recovery preserved the agent's work (commit + push) — it does NOT
+            // create a PR or force a status change (pure-executor: PR creation
+            // is the guarded chokepoint's job; this is a finally-net). On the
+            // success path the inline workflow already created the PR (so this
+            // is a no-op); on error/abort paths the work is now safely on the
+            // branch for retry/human follow-up. See CLAUDE.md "Pure Executor".
             logger.info(
-              `[PostExecution] ${featureId}: recovery succeeded — PR created at ${result.prUrl}`
+              `[PostExecution] ${featureId}: preserved uncommitted work on the feature branch (commit + push) — no PR created here`
             );
-
-            // Move feature to 'review' status now that a recovery PR exists.
-            if (ctx.updateFeatureStatus) {
-              try {
-                await ctx.updateFeatureStatus(projectPath, featureId, 'review');
-                logger.info(`[PostExecution] ${featureId}: feature status updated to 'review'`);
-              } catch (statusError) {
-                logger.error(
-                  `[PostExecution] ${featureId}: failed to update feature status to 'review':`,
-                  statusError
-                );
-              }
-            }
-
-            // Emit a recovery event so listeners can react (e.g. UI, Discord).
-            if (ctx.emitEvent) {
-              ctx.emitEvent('auto_mode_recovery_pr_created', {
-                featureId,
-                projectPath,
-                prUrl: result.prUrl,
-                prNumber: result.prNumber,
-                prCreatedAt: result.prCreatedAt,
-              });
-            }
           } else {
             logger.warn(
               `[PostExecution] ${featureId}: uncommitted work detected but recovery failed: ${result.error}`
@@ -235,34 +217,12 @@ export class PostExecutionMiddleware {
             );
 
             if (nestedRecovery.detected && nestedRecovery.recovered) {
+              // Preserved nested work onto the feature branch (commit + push).
+              // No PR / no forced status change — the guarded chokepoint owns
+              // PR creation. See CLAUDE.md "Pure Executor".
               logger.info(
-                `[PostExecution] ${featureId}: nested worktree recovery succeeded — PR at ${nestedRecovery.prUrl}`
+                `[PostExecution] ${featureId}: preserved nested worktree work on the feature branch (commit + push) — no PR created here`
               );
-
-              if (ctx.updateFeatureStatus) {
-                try {
-                  await ctx.updateFeatureStatus(projectPath, featureId, 'review');
-                  logger.info(
-                    `[PostExecution] ${featureId}: feature status updated to 'review' (nested recovery)`
-                  );
-                } catch (statusError) {
-                  logger.error(
-                    `[PostExecution] ${featureId}: failed to update feature status after nested recovery:`,
-                    statusError
-                  );
-                }
-              }
-
-              if (ctx.emitEvent) {
-                ctx.emitEvent('auto_mode_recovery_pr_created', {
-                  featureId,
-                  projectPath,
-                  prUrl: nestedRecovery.prUrl,
-                  prNumber: nestedRecovery.prNumber,
-                  prCreatedAt: nestedRecovery.prCreatedAt,
-                  source: 'nested_worktree',
-                });
-              }
             } else if (nestedRecovery.detected && !nestedRecovery.recovered) {
               logger.warn(
                 `[PostExecution] ${featureId}: nested worktree recovery failed: ${nestedRecovery.error}`
