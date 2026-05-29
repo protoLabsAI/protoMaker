@@ -25,7 +25,14 @@ import { pathToFileURL } from 'node:url';
 import { realpathSync } from 'node:fs';
 import { Command } from 'commander';
 import { type GlobalFlags, usageError, exitError } from './output.js';
-import { listCommand, getCommand, createCommand, updateCommand, moveCommand } from './feature.js';
+import {
+  listCommand,
+  getCommand,
+  createCommand,
+  updateCommand,
+  moveCommand,
+  deleteCommand,
+} from './feature.js';
 import {
   startCommand,
   stopCommand,
@@ -137,6 +144,7 @@ export function buildProgram(): Command {
   createCommand(featureCmd);
   updateCommand(featureCmd);
   moveCommand(featureCmd);
+  deleteCommand(featureCmd);
 
   /**
    * PR commands — pull request lifecycle (create, status, merge).
@@ -271,20 +279,22 @@ const invokedDirectly = isInvokedDirectly(process.argv[1], import.meta.url);
 
 if (invokedDirectly) {
   main().catch((err: any) => {
-    // Commander exitOverride throws CommanderError on failures
-    const commanderCode = err?.code;
+    // Commander (with exitOverride) throws a CommanderError whose `.code` is a
+    // dotted string like `commander.version` and whose `.exitCode` is the exit
+    // code it would have used. See https://github.com/tj/commander.js.
+    const commanderCode: string | undefined = typeof err?.code === 'string' ? err.code : undefined;
+    const isCommander = commanderCode?.startsWith('commander.') ?? false;
 
-    // --help / --version are fine
-    if (commanderCode === 'COMMANDER_HELP' || commanderCode === 'COMMANDER_VERSION') {
+    // Clean display exits — --help and --version print their output and Commander
+    // throws with exitCode 0. These are not errors; exit 0 with no "Error:" noise.
+    if (isCommander && err?.exitCode === 0) {
       process.exit(0);
     }
 
-    // Usage errors (unknown command, missing required arg, etc.) → exit 2
-    if (
-      commanderCode === 'COMMANDER_INCORRECTVALUE' ||
-      commanderCode === 'COMMANDER_ARGUMENT_MISSING' ||
-      commanderCode === 'COMMANDER_CREATE_OPTION_FAILED'
-    ) {
+    // Usage errors (unknown command/option, missing/excess args, bad value) → exit 2.
+    // Any other commander.* code is a usage problem; Commander already printed the
+    // specifics to stderr, so surface its message at exit code 2.
+    if (isCommander) {
       usageError(err.message || String(err));
     }
 

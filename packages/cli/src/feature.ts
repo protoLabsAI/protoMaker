@@ -557,3 +557,56 @@ export function moveCommand(parent: Command): void {
 
   parent.addCommand(cmd);
 }
+
+/**
+ * protomaker feature delete <featureId>
+ *
+ * Permanently delete a feature from the board (removes its
+ * {projectPath}/.automaker/features/{featureId}/ directory). Prompts for
+ * confirmation unless --yes is passed.
+ */
+export function deleteCommand(parent: Command): void {
+  const cmd = new Command('delete').arguments('<featureId>');
+  cmd.description('Permanently delete a feature from the board');
+  cmd.option('--yes', 'Skip confirmation prompt');
+
+  cmd.action(async (featureId: string, opts) => {
+    const flags = getGlobalFlags(cmd.optsWithGlobals());
+
+    if (!opts.yes && getOutputMode(flags) !== 'json') {
+      const readline = await import('node:readline');
+      const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+      const answer = await new Promise<string>((resolve) => {
+        rl.question(`Permanently delete feature "${featureId}"? (y/N) `, (a) => {
+          rl.close();
+          resolve(a.trim().toLowerCase());
+        });
+      });
+      if (answer !== 'y' && answer !== 'yes') {
+        output('Cancelled.', flags);
+        return;
+      }
+    }
+
+    const client = createClient(flags);
+
+    const result = await client.post<{ success: boolean; error?: string }>('/features/delete', {
+      projectPath: flags.project,
+      featureId,
+    });
+
+    if (!result.ok) {
+      error(result.error || `Failed to delete feature "${featureId}"`);
+      process.exit(1);
+      return;
+    }
+
+    if (getOutputMode(flags) === 'json') {
+      output({ success: true, featureId }, flags);
+    } else {
+      output(`Deleted feature: ${featureId}`, flags);
+    }
+  });
+
+  parent.addCommand(cmd);
+}

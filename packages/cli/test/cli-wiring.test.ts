@@ -62,7 +62,7 @@ function subcommandsOf(group: string): string[] {
 
 describe('command group registration', () => {
   it.each([
-    ['feature', ['create', 'get', 'list', 'move', 'update']],
+    ['feature', ['create', 'delete', 'get', 'list', 'move', 'update']],
     ['agent', ['list', 'message', 'output', 'start', 'stop']],
     ['pr', ['create', 'merge', 'status']],
     ['queue', ['add', 'clear', 'list']],
@@ -138,6 +138,25 @@ describe('feature update maps dependency flags into updates.dependencies (#3962)
     ]);
     const updates = lastBody!.updates as Record<string, unknown>;
     expect(updates.dependencies).toEqual([]);
+  });
+});
+
+describe('feature delete hits /features/delete with the featureId', () => {
+  it('sends projectPath + featureId to the delete endpoint', async () => {
+    await buildProgram().parseAsync([
+      'node',
+      'protomaker',
+      '--project',
+      '/custom/project',
+      '--json',
+      'feature',
+      'delete',
+      'feat-target',
+      '--yes',
+    ]);
+    expect(lastUrl).toMatch(/\/features\/delete$/);
+    expect(lastBody!.projectPath).toBe('/custom/project');
+    expect(lastBody!.featureId).toBe('feat-target');
   });
 });
 
