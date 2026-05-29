@@ -198,6 +198,11 @@ export function clearCommand(parent: Command): void {
     const flags = getGlobalFlags(cmd.optsWithGlobals());
 
     if (!opts.yes) {
+      if (!process.stdin.isTTY) {
+        usageError(
+          'Refusing interactive confirmation without a TTY. Re-run with --yes to clear the queue non-interactively.'
+        );
+      }
       // Read confirmation from stdin
       const readline = await import('node:readline');
       const rl = readline.createInterface({
@@ -206,10 +211,13 @@ export function clearCommand(parent: Command): void {
       });
 
       const answer = await new Promise<string>((resolve) => {
-        rl.question('This will delete all backlog features. Are you sure? (y/N) ', (a) => {
-          rl.close();
-          resolve(a.trim().toLowerCase());
-        });
+        rl.question(
+          'Clearing the queue permanently deletes every backlog (queued) feature. This cannot be undone. Continue? (y/N) ',
+          (a) => {
+            rl.close();
+            resolve(a.trim().toLowerCase());
+          }
+        );
       });
 
       if (answer !== 'y' && answer !== 'yes') {
