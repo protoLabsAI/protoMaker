@@ -198,6 +198,11 @@ export function clearCommand(parent: Command): void {
     const flags = getGlobalFlags(cmd.optsWithGlobals());
 
     if (!opts.yes) {
+      if (!process.stdin.isTTY) {
+        usageError(
+          'Refusing interactive confirmation without a TTY. Re-run with --yes to clear the queue non-interactively.'
+        );
+      }
       // Read confirmation from stdin
       const readline = await import('node:readline');
       const rl = readline.createInterface({

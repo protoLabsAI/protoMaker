@@ -574,6 +574,11 @@ export function deleteCommand(parent: Command): void {
     const flags = getGlobalFlags(cmd.optsWithGlobals());
 
     if (!opts.yes && getOutputMode(flags) !== 'json') {
+      if (!process.stdin.isTTY) {
+        usageError(
+          'Refusing interactive confirmation without a TTY. Re-run with --yes (or --json).'
+        );
+      }
       const readline = await import('node:readline');
       const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
       const answer = await new Promise<string>((resolve) => {
