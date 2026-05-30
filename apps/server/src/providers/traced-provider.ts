@@ -20,6 +20,13 @@ export interface TracedProviderContext {
   agentRole?: string;
   projectSlug?: string;
   phase?: string;
+  /**
+   * Originating trace correlationId from an upstream caller (e.g. protoWorkstacean).
+   * Emitted as `caller_trace_id` in trace metadata + a `caller_trace:<id>` tag so the
+   * full cross-system flow is searchable by the caller's traceId. Mirrors Quinn's
+   * `a2a.trace` -> `caller_trace_id` convention on the A2A path.
+   */
+  callerTraceId?: string;
 }
 
 /**
@@ -52,7 +59,16 @@ export class TracedProvider extends BaseProvider {
     this.tracingConfig.defaultMetadata = {
       ...this.tracingConfig.defaultMetadata,
       ...ctx,
+      // Surface the upstream correlationId under the canonical key so Langfuse
+      // searches by the caller's traceId resolve this feature's spans too.
+      ...(ctx.callerTraceId ? { caller_trace_id: ctx.callerTraceId } : {}),
     };
+    if (ctx.callerTraceId) {
+      this.tracingConfig.defaultTags = [
+        ...(this.tracingConfig.defaultTags ?? []),
+        `caller_trace:${ctx.callerTraceId}`,
+      ];
+    }
     // Also add feature-specific tags
     if (ctx.featureId) {
       this.tracingConfig.defaultTags = [

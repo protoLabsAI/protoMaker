@@ -352,6 +352,7 @@ export function createEngineRoutes(
         autoApprove,
         webResearch,
         channelContext,
+        trace,
       } = (req.body ?? {}) as {
         projectPath?: string;
         content?: string;
@@ -365,6 +366,11 @@ export function createEngineRoutes(
         // protoWorkstacean switchboard's board-ingestion forwarder: it resolves
         // the project (repo->projectPath) and POSTs the issue here.
         channelContext?: Record<string, unknown>;
+        // Distributed-trace context from an upstream caller (protoWorkstacean
+        // propagates the originating correlationId here). `trace.traceId` is
+        // recorded on the resulting feature and emitted as `caller_trace_id` on
+        // its Langfuse spans so the GitHub issue -> board -> PRD flow is one trace.
+        trace?: { traceId?: string; caller?: string; source?: string };
       };
 
       if (!content) {
@@ -375,7 +381,13 @@ export function createEngineRoutes(
         return;
       }
 
-      // Emit signal:received event for SignalIntakeService to pick up
+      // Emit signal:received event for SignalIntakeService to pick up.
+      // Fold an upstream trace correlationId into channelContext so it flows
+      // through intake onto the created feature (persisted as callerTraceId).
+      const enrichedChannelContext =
+        trace?.traceId !== undefined
+          ? { ...(channelContext ?? {}), callerTraceId: trace.traceId }
+          : channelContext;
       signalIntakeService.submitSignal({
         source: source || 'ui:flow-graph',
         content,
@@ -384,7 +396,7 @@ export function createEngineRoutes(
         files,
         autoApprove,
         webResearch,
-        channelContext,
+        channelContext: enrichedChannelContext,
       });
 
       res.json({
