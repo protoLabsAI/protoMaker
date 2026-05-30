@@ -10,10 +10,10 @@
 
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import Anthropic from '@anthropic-ai/sdk';
+import { generateText } from 'ai';
 import { createLogger, atomicWriteJson } from '@protolabsai/utils';
-import { resolveModelString } from '@protolabsai/model-resolver';
 import type { TrajectoryFact } from '@protolabsai/types';
+import { getAnthropicModel } from '../lib/ai-provider.js';
 
 const logger = createLogger('FactStoreService');
 
@@ -45,12 +45,6 @@ Agent output to analyze:`;
  * Fact Store Service — extracts and persists structured facts from agent output.
  */
 export class FactStoreService {
-  private anthropic: Anthropic;
-
-  constructor() {
-    this.anthropic = new Anthropic();
-  }
-
   /**
    * Fire-and-forget: extract facts from agentOutput and write to facts.json.
    * Never throws — all errors are caught and logged.
@@ -71,23 +65,18 @@ export class FactStoreService {
       return;
     }
 
-    const model = resolveModelString('haiku');
     const prompt = `${EXTRACTION_PROMPT}\n\n${agentOutput}`;
 
     let responseText: string;
     try {
-      const response = await this.anthropic.messages.create({
-        model,
-        max_tokens: 2048,
-        messages: [{ role: 'user', content: prompt }],
+      // Routed through the protoLabs gateway (gateway-first migration). The
+      // gateway terminates auth — no direct Anthropic SDK / ANTHROPIC_API_KEY.
+      const result = await generateText({
+        model: await getAnthropicModel('protolabs/fast'),
+        maxOutputTokens: 2048,
+        prompt,
       });
-
-      const content = response.content[0];
-      if (content.type !== 'text') {
-        logger.warn('[FactStore] Unexpected response type from model, skipping');
-        return;
-      }
-      responseText = content.text;
+      responseText = result.text;
     } catch (err) {
       logger.error('[FactStore] LLM call failed:', err);
       return;

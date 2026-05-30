@@ -20,7 +20,6 @@ import { exec } from 'node:child_process';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { createLogger } from '@protolabsai/utils';
-import Anthropic from '@anthropic-ai/sdk';
 import {
   PRConflictClassifier,
   type ConflictClassification,
@@ -59,7 +58,6 @@ export interface PRRemediationInput {
   prNumber: number;
   /** Current retry attempt number (1-based). Classification triggers on attempt >= 2. */
   retryAttempt: number;
-  anthropic: Anthropic;
   /** Maximum total remediation attempts before budget exhaustion (default: 3). */
   maxRetries?: number;
 }
@@ -118,7 +116,7 @@ function sanitizePrNumber(prNumber: unknown): number {
  * observability.
  */
 export async function classifyAndRemediate(input: PRRemediationInput): Promise<RemediationResult> {
-  const { projectPath, anthropic, maxRetries = 3 } = input;
+  const { projectPath, maxRetries = 3 } = input;
   const prNumber = sanitizePrNumber(input.prNumber);
   const retryAttempt = input.retryAttempt;
 
@@ -160,7 +158,7 @@ export async function classifyAndRemediate(input: PRRemediationInput): Promise<R
   // Classify the conflict
   let classification: ConflictClassification;
   try {
-    const classifier = new PRConflictClassifier({ projectPath, prNumber, anthropic });
+    const classifier = new PRConflictClassifier({ projectPath, prNumber });
     classification = await classifier.classify();
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

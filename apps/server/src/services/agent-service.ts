@@ -229,12 +229,11 @@ export class AgentService {
 
       if (contextEngineEnabled) {
         const dataDir = path.dirname(this.stateDir);
-        let anthropicApiKey: string | undefined;
-        if (this.settingsService) {
-          const credentials = await this.settingsService.getCredentials();
-          anthropicApiKey = credentials?.apiKeys?.anthropic || undefined;
-        }
-        this.contextSessionManager = new AgentSessionManager(dataDir, anthropicApiKey);
+        // LLM-assisted compaction routes through the protoLabs gateway
+        // (gateway-first migration); the session manager resolves the gateway
+        // credential internally and falls back to deterministic compaction if
+        // no key resolves.
+        this.contextSessionManager = new AgentSessionManager(dataDir);
         this.logger.info('AgentSessionManager initialised (contextEngine enabled)');
       } else {
         this.logger.info('Context engine disabled — skipping AgentSessionManager initialisation');
