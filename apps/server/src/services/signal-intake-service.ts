@@ -653,6 +653,12 @@ export class SignalIntakeService {
         ...(signal.channelContext?.issueNumber
           ? { githubIssueNumber: signal.channelContext.issueNumber as number }
           : {}),
+        // Persist an upstream trace correlationId (e.g. protoWorkstacean's
+        // forwarder plumbs `trace.traceId` -> channelContext.callerTraceId) so
+        // execution emits it as `caller_trace_id` on this feature's Langfuse spans.
+        ...(signal.channelContext?.callerTraceId
+          ? { callerTraceId: signal.channelContext.callerTraceId as string }
+          : {}),
       });
       this.updateRingBufferEntry(bufferEntry.id, 'created', feature.id);
 

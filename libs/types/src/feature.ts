@@ -424,6 +424,13 @@ export interface Feature {
    */
   githubIssueUrl?: string;
   /**
+   * Originating trace correlationId from an upstream caller (e.g. protoWorkstacean's
+   * board-ingestion forwarder passes `trace.traceId` on /api/engine/signal/submit).
+   * Emitted as `caller_trace_id` on this feature's Langfuse spans so the whole
+   * GitHub issue -> board -> PMAgent PRD flow resolves as one searchable trace.
+   */
+  callerTraceId?: string;
+  /**
    * Per-thread review feedback tracking with agent decisions.
    * Each thread can be accepted, denied, or pending with reasoning.
    */

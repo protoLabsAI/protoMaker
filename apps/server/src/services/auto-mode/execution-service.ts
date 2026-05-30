@@ -2637,6 +2637,7 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
         agentRole: 'engineer',
         projectSlug: featureForTrace?.projectSlug,
         phase: 'execute',
+        callerTraceId: featureForTrace?.callerTraceId,
       });
     }
 

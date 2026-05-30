@@ -342,6 +342,48 @@ describe('SignalIntakeService', () => {
       expect(createCall).toMatchObject({ githubIssueNumber: 7777 });
     });
 
+    it('should persist callerTraceId when an upstream trace correlationId is forwarded', async () => {
+      // protoWorkstacean's board-ingestion forwarder plumbs the originating
+      // correlationId via channelContext.callerTraceId so execution can emit it
+      // as caller_trace_id on Langfuse spans (GitHub issue -> board -> PRD = one trace).
+      vi.mocked(mockFeatureLoader.getAll).mockResolvedValue([]);
+
+      const signal = createTestSignal({
+        source: 'github',
+        content: 'Board-ingested issue carrying a trace id',
+        channelContext: {
+          issueNumber: 1234,
+          repository: 'protoLabsAI/protoContent',
+          callerTraceId: 'corr-abc-123',
+        },
+      });
+
+      mockEmitter.emit('signal:received', signal);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockFeatureLoader.create).toHaveBeenCalledTimes(1);
+      const createCall = vi.mocked(mockFeatureLoader.create).mock.calls[0]?.[1];
+      expect(createCall).toMatchObject({ callerTraceId: 'corr-abc-123' });
+    });
+
+    it('should not set callerTraceId when no trace is forwarded', async () => {
+      vi.mocked(mockFeatureLoader.getAll).mockResolvedValue([]);
+
+      const signal = createTestSignal({
+        source: 'github',
+        content: 'Issue with no upstream trace',
+        channelContext: { issueNumber: 5678, repository: 'protoLabsAI/protoMaker' },
+      });
+
+      mockEmitter.emit('signal:received', signal);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const createCall = vi.mocked(mockFeatureLoader.create).mock.calls[0]?.[1] as
+        | Record<string, unknown>
+        | undefined;
+      expect(createCall?.callerTraceId).toBeUndefined();
+    });
+
     it('should prevent duplicate Discord signals by author ID', async () => {
       const signal = createTestSignal({
         source: 'discord',
