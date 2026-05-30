@@ -44,7 +44,6 @@ import { getEventHistoryService } from '../../services/event-history-service.js'
 import { getBriefingCursorService } from '../../services/briefing-cursor-service.js';
 import { queryPm } from '../project-pm/pm-agent.js';
 import { simpleQuery } from '../../providers/simple-query-service.js';
-import Anthropic from '@anthropic-ai/sdk';
 import {
   classifyAndRemediate,
   logRemediationOutcome,
@@ -1226,12 +1225,10 @@ export function buildAvaTools(
       }),
       execute: async ({ prNumber, retryAttempt, maxRetries }) => {
         try {
-          const anthropic = new Anthropic();
           const result = await classifyAndRemediate({
             projectPath,
             prNumber,
             retryAttempt: retryAttempt ?? 2,
-            anthropic,
             maxRetries: maxRetries ?? 3,
           });
           logRemediationOutcome(result);

@@ -9,8 +9,8 @@
 
 import type { RiskLevel } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
-import { resolveModelString } from '@protolabsai/model-resolver';
-import Anthropic from '@anthropic-ai/sdk';
+import { generateText } from 'ai';
+import { getAnthropicModel } from '../lib/ai-provider.js';
 
 const logger = createLogger('RiskClassifier');
 
@@ -64,8 +64,6 @@ export interface WorkItemForClassification {
 export interface RiskClassifierConfig {
   /** Threshold below which items are auto-approved (inclusive) */
   autoApproveThreshold: RiskLevel;
-  /** Anthropic API client */
-  anthropic: Anthropic;
 }
 
 /**
@@ -168,27 +166,22 @@ export class RiskClassifier {
     logger.info(`Classifying work item: ${item.title}`);
 
     const prompt = buildClassificationPrompt(item);
-    const model = resolveModelString('haiku');
 
     try {
-      const response = await this.config.anthropic.messages.create({
-        model,
-        max_tokens: 1024,
-        messages: [
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
+      // Routed through the protoLabs gateway (gateway-first migration) — no
+      // direct Anthropic SDK / ANTHROPIC_API_KEY.
+      const { text } = await generateText({
+        model: await getAnthropicModel('protolabs/fast'),
+        maxOutputTokens: 1024,
+        prompt,
       });
 
-      const content = response.content[0];
-      if (content.type !== 'text') {
+      if (!text) {
         throw new Error('Expected text response from classifier');
       }
 
       // Parse JSON response
-      const result = JSON.parse(content.text);
+      const result = JSON.parse(text);
 
       const dimensions: RiskDimensions = {
         scope: result.scope as RiskLevel,
@@ -281,11 +274,9 @@ export class RiskClassifier {
  * Create a risk classifier with default configuration
  */
 export function createRiskClassifier(
-  anthropic: Anthropic,
   autoApproveThreshold: RiskLevel = DEFAULT_AUTO_APPROVE_THRESHOLD
 ): RiskClassifier {
   return new RiskClassifier({
-    anthropic,
     autoApproveThreshold,
   });
 }

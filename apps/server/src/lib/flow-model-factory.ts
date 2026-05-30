@@ -31,6 +31,43 @@ function isGroqModel(model: string): boolean {
   );
 }
 
+/** Default gateway base URL — mirrors lib/ai-provider.ts. */
+const GATEWAY_DEFAULT_BASE_URL = 'https://api.proto-labs.ai/v1';
+/** Gateway tier legacy Claude aliases fall back to — mirrors lib/ai-provider.ts. */
+const GATEWAY_FALLBACK_MODEL = 'protolabs/smart';
+
+/**
+ * Resolve the protoLabs gateway base URL + key. Same resolution order as
+ * lib/ai-provider.ts so the flows layer and the chat layer authenticate
+ * identically against the gateway.
+ */
+function resolveGatewayConfig(credentials: Credentials | undefined): {
+  baseURL: string;
+  apiKey: string;
+} {
+  const baseURL =
+    process.env.GATEWAY_BASE_URL || process.env.OPENAI_BASE_URL || GATEWAY_DEFAULT_BASE_URL;
+  const apiKey =
+    credentials?.apiKeys?.protolabsGateway ||
+    process.env.GATEWAY_API_KEY ||
+    process.env.OPENAI_API_KEY ||
+    '';
+  return { baseURL, apiKey };
+}
+
+/**
+ * Map a legacy Claude alias / id to a gateway tier. Gateway-native ids
+ * (`protolabs/*`) and any other non-Claude id pass through unchanged.
+ * Mirrors mapLegacyClaudeModel in lib/ai-provider.ts.
+ */
+function mapToGatewayModel(model: string): string {
+  const lower = model.toLowerCase();
+  if (lower === 'sonnet' || lower === 'opus' || lower === 'haiku' || lower.startsWith('claude')) {
+    return GATEWAY_FALLBACK_MODEL;
+  }
+  return model;
+}
+
 /**
  * Resolve the API key for a ClaudeCompatibleProvider based on its apiKeySource strategy.
  */
@@ -58,11 +95,13 @@ function resolveProviderApiKey(
  * 2. Global phase model setting
  * 3. Default phase model (from DEFAULT_PHASE_MODELS)
  *
- * Model routing:
- * - claude-* models → ChatAnthropic (with optional provider baseURL/apiKey)
+ * Model routing (gateway-first — no direct api.anthropic.com):
+ * - Explicit provider with a baseUrl → honored as-is (ChatAnthropic for claude-*,
+ *   else ChatOpenAI) so a team can wire a custom/direct endpoint deliberately.
  * - llama-*, mixtral-*, gemma-*, groq/* → ChatGroq
- * - All other models with a provider → ChatOpenAI (OpenAI-compatible)
- * - Unknown/no-provider fallback → ChatAnthropic with claude-sonnet
+ * - Everything else (incl. the default protolabs/* tiers and legacy claude-*) →
+ *   ChatOpenAI pointed at the protoLabs gateway; legacy Claude aliases remap to
+ *   a gateway tier. This is also the unknown-model fallback.
  *
  * @param phase - The phase key (e.g., 'specGenerationModel', 'fileDescriptionModel')
  * @param projectPath - Optional project path for project-level overrides
@@ -86,35 +125,40 @@ export async function createFlowModel(
     `createFlowModel: phase=${phase}, resolvedModel=${resolvedModel}, provider=${provider?.name ?? 'none'}`
   );
 
-  // Claude models (claude-* prefix) — use ChatAnthropic
-  if (resolvedModel.startsWith('claude-') || resolvedModel.startsWith('claude')) {
-    const config: {
-      model: string;
-      apiKey?: string;
-      anthropicApiUrl?: string;
-    } = { model: resolvedModel };
-
-    if (provider) {
-      const apiKey = resolveProviderApiKey(provider, credentials);
-      if (apiKey) {
-        config.apiKey = apiKey;
-      }
-      if (provider.baseUrl) {
-        config.anthropicApiUrl = provider.baseUrl;
-      }
+  // Explicitly-configured provider with a custom base URL: honor it as-is.
+  // This is the only path that still talks to a non-gateway endpoint — a team
+  // can deliberately wire a direct-Anthropic or custom OpenAI-compatible server.
+  if (provider?.baseUrl) {
+    const apiKey = resolveProviderApiKey(provider, credentials);
+    if (resolvedModel.startsWith('claude')) {
+      const config: { model: string; apiKey?: string; anthropicApiUrl: string } = {
+        model: resolvedModel,
+        anthropicApiUrl: provider.baseUrl,
+      };
+      if (apiKey) config.apiKey = apiKey;
+      logger.debug(
+        `createFlowModel: using ChatAnthropic for model=${resolvedModel} via provider ${provider.name}`
+      );
+      // LangChain's ChatAnthropic defaults topP and topK to -1 as sentinels.
+      // For newer models (opus-4-1, sonnet-4-5, haiku-4-5) the constructor handles
+      // null → undefined, but for older models (opus-4-6 etc.) the `??` branch
+      // falls back to -1 even when undefined is passed. Mutate after construction
+      // to guarantee the sentinel is cleared for all model versions.
+      const anthropicModel = new ChatAnthropic(config);
+      (anthropicModel as unknown as Record<string, unknown>).topP = undefined;
+      (anthropicModel as unknown as Record<string, unknown>).topK = undefined;
+      return { model: anthropicModel as unknown as BaseChatModel, modelName: resolvedModel };
     }
-
-    logger.debug(`createFlowModel: using ChatAnthropic for model=${resolvedModel}`);
-    // LangChain's ChatAnthropic defaults topP and topK to -1 as sentinels.
-    // For newer models (opus-4-1, sonnet-4-5, haiku-4-5) the constructor handles
-    // null → undefined, but for older models (opus-4-6 etc.) the `??` branch
-    // falls back to -1 even when undefined is passed. Mutate after construction
-    // to guarantee the sentinel is cleared for all model versions.
-    const anthropicModel = new ChatAnthropic(config);
-    (anthropicModel as unknown as Record<string, unknown>).topP = undefined;
-    (anthropicModel as unknown as Record<string, unknown>).topK = undefined;
+    const { ChatOpenAI } = await import('@langchain/openai');
+    logger.debug(
+      `createFlowModel: using ChatOpenAI for model=${resolvedModel} via provider ${provider.name}, baseURL=${provider.baseUrl}`
+    );
     return {
-      model: anthropicModel as unknown as BaseChatModel,
+      model: new ChatOpenAI({
+        model: resolvedModel,
+        openAIApiKey: apiKey,
+        configuration: { baseURL: provider.baseUrl, apiKey },
+      }) as unknown as BaseChatModel,
       modelName: resolvedModel,
     };
   }
@@ -131,44 +175,32 @@ export async function createFlowModel(
       };
     } catch {
       logger.warn(
-        `createFlowModel: @langchain/groq not available, falling back to ChatAnthropic for model=${resolvedModel}`
+        `createFlowModel: @langchain/groq not available, routing ${resolvedModel} through the gateway`
       );
     }
   }
 
-  // OpenAI-compatible models (non-claude, non-groq) — use ChatOpenAI when provider is set
-  if (provider) {
-    try {
-      const { ChatOpenAI } = await import('@langchain/openai');
-      const apiKey = resolveProviderApiKey(provider, credentials);
-      logger.debug(
-        `createFlowModel: using ChatOpenAI for model=${resolvedModel}, baseURL=${provider.baseUrl}`
-      );
-      return {
-        model: new ChatOpenAI({
-          model: resolvedModel,
-          openAIApiKey: apiKey,
-          configuration: {
-            baseURL: provider.baseUrl,
-            apiKey: apiKey,
-          },
-        }) as unknown as BaseChatModel,
-        modelName: resolvedModel,
-      };
-    } catch {
-      logger.warn(
-        `createFlowModel: @langchain/openai not available, falling back to ChatAnthropic for model=${resolvedModel}`
-      );
-    }
+  // Default: route through the protoLabs gateway (OpenAI-compatible endpoint).
+  // Gateway-first migration — no direct api.anthropic.com. This covers the
+  // default protolabs/* phase models and any unknown/legacy id; legacy Claude
+  // aliases remap to a gateway tier (mirrors lib/ai-provider.ts).
+  const { baseURL, apiKey: gatewayKey } = resolveGatewayConfig(credentials);
+  const gatewayModel = mapToGatewayModel(resolvedModel);
+  if (!gatewayKey) {
+    logger.warn(
+      `createFlowModel: no gateway key resolved for ${phase}; the gateway will reject calls until GATEWAY_API_KEY is set`
+    );
   }
-
-  // Fallback: use Claude Sonnet via ChatAnthropic
-  const fallbackModel = 'claude-sonnet-4-5-20250929';
-  logger.warn(
-    `createFlowModel: unknown model "${resolvedModel}" for phase "${phase}", falling back to ${fallbackModel}`
+  const { ChatOpenAI } = await import('@langchain/openai');
+  logger.debug(
+    `createFlowModel: routing model=${resolvedModel} -> gateway model=${gatewayModel} via ChatOpenAI (baseURL=${baseURL})`
   );
   return {
-    model: new ChatAnthropic({ model: fallbackModel }) as unknown as BaseChatModel,
-    modelName: fallbackModel,
+    model: new ChatOpenAI({
+      model: gatewayModel,
+      openAIApiKey: gatewayKey,
+      configuration: { baseURL, apiKey: gatewayKey },
+    }) as unknown as BaseChatModel,
+    modelName: gatewayModel,
   };
 }

@@ -12,8 +12,8 @@
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createLogger } from '@protolabsai/utils';
-import { resolveModelString } from '@protolabsai/model-resolver';
-import Anthropic from '@anthropic-ai/sdk';
+import { generateText } from 'ai';
+import { getAnthropicModel } from '../lib/ai-provider.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('PRConflictClassifier');
@@ -60,7 +60,6 @@ export interface ConflictClassification {
 export interface PRConflictClassifierInput {
   projectPath: string;
   prNumber: number;
-  anthropic: Anthropic;
 }
 
 // ---------------------------------------------------------------------------
@@ -143,13 +142,13 @@ export class PRConflictClassifier {
    */
   async classify(): Promise<ConflictClassification> {
     const prNumber = sanitizePrNumber(this.input.prNumber);
-    const { projectPath, anthropic } = this.input;
+    const { projectPath } = this.input;
 
     logger.info(`[PRConflictClassifier] Classifying PR #${prNumber}`, { projectPath });
 
     try {
       const evidence = await this.gatherEvidence(prNumber, projectPath);
-      const classification = await this.llmClassify(evidence, anthropic);
+      const classification = await this.llmClassify(evidence);
       logger.info('[PRConflictClassifier] Classification complete', {
         prNumber,
         verdict: classification.verdict,
@@ -377,26 +376,23 @@ export class PRConflictClassifier {
   // LLM classification
   // -------------------------------------------------------------------------
 
-  private async llmClassify(
-    evidence: ConflictEvidence,
-    anthropic: Anthropic
-  ): Promise<ConflictClassification> {
+  private async llmClassify(evidence: ConflictEvidence): Promise<ConflictClassification> {
     const prompt = buildClassifierPrompt(evidence);
-    const model = resolveModelString('haiku');
 
-    const response = await anthropic.messages.create({
-      model,
-      max_tokens: 1024,
-      messages: [{ role: 'user', content: prompt }],
+    // Routed through the protoLabs gateway (gateway-first migration) — no direct
+    // Anthropic SDK / ANTHROPIC_API_KEY.
+    const { text } = await generateText({
+      model: await getAnthropicModel('protolabs/fast'),
+      maxOutputTokens: 1024,
+      prompt,
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
+    if (!text) {
       throw new Error('Expected text response from classifier LLM');
     }
 
     // Strip markdown code fences if present
-    const raw = content.text
+    const raw = text
       .trim()
       .replace(/^```(?:json)?\n?/, '')
       .replace(/\n?```$/, '');

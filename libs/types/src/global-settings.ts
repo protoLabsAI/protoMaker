@@ -129,6 +129,12 @@ export interface Credentials {
     openai: string;
     /** Groq API key for fast LLM inference */
     groq?: string;
+    /**
+     * protoLabs LiteLLM gateway key. Primary credential post gateway-first
+     * migration — terminates auth for all model calls (chat + flows). Resolved
+     * by lib/ai-provider.ts and lib/flow-model-factory.ts.
+     */
+    protolabsGateway?: string;
   };
   /** Webhook secrets for external integrations */
   webhookSecrets?: {

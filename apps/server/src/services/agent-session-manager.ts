@@ -17,7 +17,7 @@
  *   a concern.
  *
  * ## Usage
- *   const manager = new AgentSessionManager(dataDir, anthropicApiKey);
+ *   const manager = new AgentSessionManager(dataDir);
  *   const convId = manager.getOrCreateConversation(featureId);
  *   const history = manager.assembleHistory(convId);   // before sending
  *   manager.ingestMessage(convId, 'user', userText);
@@ -28,7 +28,8 @@
 
 import path from 'path';
 import * as fs from 'node:fs';
-import Anthropic from '@anthropic-ai/sdk';
+import { generateText } from 'ai';
+import { getAnthropicModel, hasGatewayKey } from '../lib/ai-provider.js';
 import { ConversationStore, type MessageRole, type MessageRow } from '@protolabsai/context-engine';
 import {
   ContextAssembler,
@@ -73,10 +74,10 @@ const FRESH_TAIL_SIZE = 6;
 const COMPACTION_MIN_FANOUT = 8;
 
 /**
- * Model used for LLM-assisted compaction summaries.
+ * Gateway model tier used for LLM-assisted compaction summaries.
  * Falls through to deterministic extraction if the call fails.
  */
-const COMPACTION_MODEL = 'claude-haiku-4-5';
+const COMPACTION_MODEL = 'protolabs/fast';
 
 // ---------------------------------------------------------------------------
 // AgentSessionManager
@@ -105,12 +106,13 @@ export class AgentSessionManager {
   // ---------------------------------------------------------------------------
 
   /**
-   * @param dataDir      Top-level data directory for the server.
-   *                     The SQLite DB is opened at `<dataDir>/context-engine/conversations.db`.
-   * @param anthropicApiKey  Optional Anthropic API key for LLM-assisted compaction.
-   *                         When absent the compactor falls back to deterministic extraction.
+   * @param dataDir  Top-level data directory for the server.
+   *                 The SQLite DB is opened at `<dataDir>/context-engine/conversations.db`.
+   *                 LLM-assisted compaction routes through the protoLabs gateway; if no
+   *                 gateway credential resolves the call throws and the compactor falls
+   *                 back to deterministic extraction.
    */
-  constructor(dataDir: string, anthropicApiKey?: string) {
+  constructor(dataDir: string) {
     // Ensure the context-engine directory exists
     const dbDir = path.join(dataDir, 'context-engine');
     if (!fs.existsSync(dbDir)) {
@@ -127,14 +129,9 @@ export class AgentSessionManager {
       recallGuidanceRole: 'user', // ensure recall guidance fits in conversation history (user|assistant only)
     });
 
-    // Build the LLM caller for compaction (or fall back to deterministic)
-    const llmCaller: LLMCaller = anthropicApiKey
-      ? this.buildAnthropicLlmCaller(anthropicApiKey)
-      : async () => {
-          throw new Error('No Anthropic API key configured; using deterministic compaction');
-        };
-
-    this.compactor = new LeafCompactor(llmCaller);
+    // LLM caller for compaction routes through the gateway. If no gateway key
+    // resolves, the call throws and LeafCompactor falls back to deterministic.
+    this.compactor = new LeafCompactor(this.buildGatewayLlmCaller());
 
     this.logger.info('AgentSessionManager initialised');
   }
@@ -336,25 +333,28 @@ export class AgentSessionManager {
   // ---------------------------------------------------------------------------
 
   /**
-   * Builds an LLM caller backed by the Anthropic SDK (claude-haiku).
-   * Falls through to deterministic compaction if the call throws.
+   * Builds an LLM caller routed through the protoLabs gateway (gateway-first
+   * migration — no direct Anthropic SDK / ANTHROPIC_API_KEY). Falls through to
+   * deterministic compaction if the call throws (e.g. no gateway key).
    */
-  private buildAnthropicLlmCaller(apiKey: string): LLMCaller {
-    const client = new Anthropic({ apiKey });
-
+  private buildGatewayLlmCaller(): LLMCaller {
     return async (system: string, user: string): Promise<string> => {
-      const response = await client.messages.create({
-        model: COMPACTION_MODEL,
-        max_tokens: 2048,
-        system,
-        messages: [{ role: 'user', content: user }],
-      });
-
-      const block = response.content[0];
-      if (!block || block.type !== 'text') {
-        throw new Error('Unexpected compaction response: no text block');
+      // Short-circuit when no gateway credential resolves: throw before any
+      // network call so LeafCompactor falls back to deterministic compaction
+      // immediately (keyless servers + unit tests don't hit the gateway).
+      if (!(await hasGatewayKey())) {
+        throw new Error('No gateway key configured; using deterministic compaction');
       }
-      return block.text;
+      const { text } = await generateText({
+        model: await getAnthropicModel(COMPACTION_MODEL),
+        maxOutputTokens: 2048,
+        system,
+        prompt: user,
+      });
+      if (!text) {
+        throw new Error('Unexpected compaction response: empty text');
+      }
+      return text;
     };
   }
 

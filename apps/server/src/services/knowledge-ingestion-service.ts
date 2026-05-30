@@ -10,8 +10,9 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs';
 import * as BetterSqlite3 from 'better-sqlite3';
-import Anthropic from '@anthropic-ai/sdk';
+import { generateText } from 'ai';
 import { createLogger } from '@protolabsai/utils';
+import { getAnthropicModel } from '../lib/ai-provider.js';
 import type { PMWorldState } from '@protolabsai/types';
 import { KnowledgeEmbeddingOrchestrator } from './knowledge-embedding-orchestrator.js';
 
@@ -91,10 +92,6 @@ export class KnowledgeIngestionService {
       `Category ${categoryFile} exceeds threshold (${estimatedTokens} > ${compactionThreshold}), compacting...`
     );
 
-    const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
-
     const prompt = `You are summarizing a category memory file that has grown too large. Your task is to compress the content while preserving the most important patterns, decisions, and lessons.
 
 # Original Content:
@@ -109,14 +106,15 @@ ${content}
 
 Output the compressed memory file:`;
 
-    const message = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4096,
-      messages: [{ role: 'user', content: prompt }],
+    // Routed through the protoLabs gateway (gateway-first migration) — no direct
+    // Anthropic SDK / ANTHROPIC_API_KEY. Falls back to the original content if empty.
+    const result = await generateText({
+      model: await getAnthropicModel('protolabs/fast'),
+      maxOutputTokens: 4096,
+      prompt,
     });
 
-    const summarizedContent =
-      message.content[0].type === 'text' ? message.content[0].text : content;
+    const summarizedContent = result.text || content;
 
     fs.writeFileSync(categoryPath, summarizedContent, 'utf-8');
     logger.info(`Category ${categoryFile} compacted successfully`);

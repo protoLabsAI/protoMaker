@@ -9,8 +9,9 @@
  */
 
 import * as BetterSqlite3 from 'better-sqlite3';
-import Anthropic from '@anthropic-ai/sdk';
+import { generateText } from 'ai';
 import { createLogger } from '@protolabsai/utils';
+import { getAnthropicModel } from '../lib/ai-provider.js';
 import { EmbeddingService } from './embedding-service.js';
 
 const logger = createLogger('KnowledgeEmbeddingOrchestrator');
@@ -122,10 +123,6 @@ export class KnowledgeEmbeddingOrchestrator {
 
       logger.info(`Starting background HyPE processing for ${chunksToProcess.length} chunks`);
 
-      const anthropic = new Anthropic({
-        apiKey: process.env.ANTHROPIC_API_KEY,
-      });
-
       // Rate limiting: 10 calls per minute = 6 seconds between calls
       const RATE_LIMIT_DELAY_MS = 6000;
       let processed = 0;
@@ -140,15 +137,16 @@ export class KnowledgeEmbeddingOrchestrator {
           // Call Haiku to generate 3 short questions
           const prompt = `Generate 3 short, specific questions that this text answers. Return only a JSON array of strings, no explanation. Text: ${text}`;
 
-          const message = await anthropic.messages.create({
-            model: 'claude-haiku-4-5-20251001',
-            max_tokens: 512,
-            messages: [{ role: 'user', content: prompt }],
+          // Routed through the protoLabs gateway (gateway-first migration) —
+          // no direct Anthropic SDK / ANTHROPIC_API_KEY.
+          const message = await generateText({
+            model: await getAnthropicModel('protolabs/fast'),
+            maxOutputTokens: 512,
+            prompt,
           });
 
           // Parse the JSON response
-          const responseText =
-            message.content[0].type === 'text' ? message.content[0].text.trim() : '[]';
+          const responseText = (message.text || '[]').trim();
 
           // Extract JSON array from response (handle potential markdown code blocks)
           const jsonMatch = responseText.match(/\[[\s\S]*\]/);
