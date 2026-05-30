@@ -150,6 +150,12 @@ RUN ln -s /opt/rh/dist/index.js /usr/local/bin/rh && chmod +x /opt/rh/dist/index
 # Install Claude CLI globally (available to all users via npm global bin)
 RUN npm install -g @anthropic-ai/claude-code
 
+# Install the protoLabs agent CLI — the executor the `proto` provider spawns for
+# the default protolabs/* model tiers. Without it, feature execution dies with
+# "CLI process exited with code 1" (#4039). Public on npmjs.org; pinned for
+# reproducibility — keep in step with the gateway.
+RUN npm install -g @protolabsai/proto@0.55.3
+
 # Install agent-browser CLI globally (binary available to all users via npm global bin)
 # Chrome download is deferred to the automaker user step below so it lands in the correct cache
 RUN npm install -g agent-browser@0.24.1

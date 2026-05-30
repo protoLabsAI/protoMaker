@@ -17,7 +17,7 @@
 
 set -uo pipefail
 
-REPO="$HOME/dev/protomaker"
+REPO="$HOME/dev/protoMaker"
 cd "$REPO" || {
   echo "[launch-protomaker] FATAL: $REPO not found"
   exit 1
