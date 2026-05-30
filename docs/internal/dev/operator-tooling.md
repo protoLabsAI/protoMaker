@@ -25,6 +25,21 @@ Verify after restart: the `studio` MCP tools enumerate, and `/cli-control` is av
 
 `@protolabsai/cli` (bin: `protomaker`) talks to the server's HTTP API directly — no MCP needed. Build with `npm run build:packages`; run with `node packages/cli/dist/cli.js <cmd>` (or the linked `protomaker` bin).
 
+### Put `protomaker` on your PATH (one-time)
+
+On a fresh checkout `protomaker` is a **workspace** bin (`node_modules/.bin/protomaker`), which is only on PATH inside npm scripts / `npx` — not in a normal shell. The skills (`/cli-control`, Ava) call bare `protomaker`, so link it globally once:
+
+```bash
+npm run build:packages                 # ensure packages/cli/dist exists first
+npm link --workspace=@protolabsai/cli  # global symlink → `protomaker` resolves anywhere
+protomaker health                      # verify
+```
+
+`npm link` is reversible (`npm rm -g @protolabsai/cli`) and the CLI is self-contained (only `commander` at runtime). Alternatives if you don't want a global link:
+
+- `npx --workspace=@protolabsai/cli protomaker <cmd>` — resolves the workspace bin without linking.
+- `node packages/cli/dist/cli.js <cmd>` — direct path (what the skills fall back to).
+
 Config: `AUTOMAKER_API_URL` (default `http://localhost:3008`) + `AUTOMAKER_API_KEY` (env or `.env`); `x-api-key` is sent on every request.
 
 ```bash

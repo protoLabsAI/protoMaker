@@ -14,7 +14,7 @@ Drive the entire board + crew over the `protomaker` CLI — no MCP server requir
 
 ## Invocation & global flags
 
-The binary is `protomaker` (from `@protolabsai/cli`). In this monorepo without a global install, run `node packages/cli/dist/cli.js …` (build first with `npm run build --workspace=@protolabsai/cli`).
+The binary is `protomaker` (from `@protolabsai/cli`). If a bare `protomaker` isn't found, it's just not on PATH yet — link it once: `npm run build:packages && npm link --workspace=@protolabsai/cli`. Without linking, fall back to `npx --workspace=@protolabsai/cli protomaker …` or `node packages/cli/dist/cli.js …` (build first with `npm run build --workspace=@protolabsai/cli`). See `docs/internal/dev/operator-tooling.md` → "Put `protomaker` on your PATH".
 
 Global flags (apply to every command):
 
