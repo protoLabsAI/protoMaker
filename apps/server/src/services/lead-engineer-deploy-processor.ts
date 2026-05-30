@@ -285,6 +285,7 @@ Return ONLY the JSON array, no other text.`;
           agentRole: 'goal-verification',
           projectSlug: ctx.feature.projectSlug,
           phase: 'deploy',
+          callerTraceId: ctx.feature.callerTraceId,
         },
       });
 

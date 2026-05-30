@@ -15,7 +15,7 @@
  */
 
 import { ProviderFactory } from './provider-factory.js';
-import { TracedProvider } from './traced-provider.js';
+import { TracedProvider, type TracedProviderContext } from './traced-provider.js';
 import type {
   ThinkingLevel,
   ReasoningEffort,
@@ -84,14 +84,11 @@ export interface SimpleQueryOptions {
    * Tools that are explicitly disallowed for this execution.
    */
   disallowedTools?: string[];
-  /** Trace context for Langfuse enrichment (feature ID, role, project, phase) */
-  traceContext?: {
-    featureId?: string;
-    featureName?: string;
-    agentRole?: string;
-    projectSlug?: string;
-    phase?: string;
-  };
+  /**
+   * Trace context for Langfuse enrichment (feature ID, role, project, phase,
+   * caller_trace_id). Single source of truth — see TracedProviderContext.
+   */
+  traceContext?: TracedProviderContext;
 }
 
 /**

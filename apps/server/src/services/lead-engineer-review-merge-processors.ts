@@ -847,6 +847,7 @@ export class ReviewProcessor implements StateProcessor {
           featureName: ctx.feature.title,
           agentRole: 'review-feedback-audit',
           phase: 'REVIEW',
+          callerTraceId: ctx.feature.callerTraceId,
         },
       });
       return parseFeedbackAuditVerdict(result.text);
