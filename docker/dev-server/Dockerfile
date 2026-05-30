@@ -79,6 +79,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Claude CLI globally (needed for agent execution)
 RUN npm install -g @anthropic-ai/claude-code
 
+# Install the protoLabs agent CLI — executor for the `proto` provider (default
+# protolabs/* tiers). Missing it = feature execution exits 1 (#4039).
+RUN npm install -g @protolabsai/proto@0.55.3
+
 # Create non-root user with stable UID/GID
 RUN groupadd -g 1001 automaker && \
     useradd -u 1001 -g automaker -m -d /home/automaker -s /bin/bash automaker && \
