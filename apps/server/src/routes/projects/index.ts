@@ -22,6 +22,8 @@ import { createUpdateHandler } from './routes/update.js';
 import { createDeleteHandler } from './routes/delete.js';
 import { createCreateFeaturesHandler } from './routes/create-features.js';
 import { createArchiveHandler } from './routes/archive.js';
+import { createArchivesListHandler, createArchivesDetailHandler } from './routes/archives.js';
+import { ArchiveQueryService } from '../../services/archive-query-service.js';
 import { createTimelineHandler } from './routes/timeline.js';
 import {
   createPostCeremonyTimelineHandler,
@@ -42,8 +44,23 @@ export function createProjectsRoutes(
 ): Router {
   const router = Router();
 
+  // Read side of the archival lifecycle (#4025) — was previously write-only.
+  const archiveQuery = new ArchiveQueryService();
+
   // List doesn't need slug validation (no slug param)
   router.post('/list', validatePathParams('projectPath'), createListHandler());
+
+  // Archived-feature reads
+  router.post(
+    '/archives/list',
+    validatePathParams('projectPath'),
+    createArchivesListHandler(archiveQuery)
+  );
+  router.post(
+    '/archives/detail',
+    validatePathParams('projectPath'),
+    createArchivesDetailHandler(archiveQuery)
+  );
 
   // All other routes use projectSlug - validate to prevent path traversal
   router.post(
