@@ -29,6 +29,15 @@ EOF
         chmod 600 "$CURSOR_CONFIG_DIR/auth.json"
     fi
 
+    # Seed proto agent CLI auth-type (#4042). proto requires an explicit auth-type
+    # for non-interactive runs; the OpenAI-compatible client routes to OUR gateway
+    # via the OPENAI_API_KEY/OPENAI_BASE_URL the server injects (not OpenAI the
+    # vendor). Idempotent — never clobbers an existing settings file.
+    if [ ! -f "/home/automaker/.proto/settings.json" ]; then
+        mkdir -p /home/automaker/.proto 2>/dev/null || true
+        printf '%s\n' '{"security":{"auth":{"selectedType":"openai"}},"selectedAuthType":"openai"}' > /home/automaker/.proto/settings.json 2>/dev/null || true
+    fi
+
     exec "$@"
 fi
 
@@ -102,6 +111,16 @@ EOF
     chmod 600 "$CURSOR_CONFIG_DIR/auth.json"
     chown -R automaker:automaker /home/automaker/.config
 fi
+
+# Seed proto agent CLI auth-type (#4042). proto requires an explicit auth-type
+# for non-interactive runs; the OpenAI-compatible client routes to OUR gateway via
+# the OPENAI_API_KEY/OPENAI_BASE_URL the server injects (not OpenAI the vendor).
+# Idempotent — never clobbers an existing settings file.
+if [ ! -f "/home/automaker/.proto/settings.json" ]; then
+    mkdir -p /home/automaker/.proto
+    printf '%s\n' '{"security":{"auth":{"selectedType":"openai"}},"selectedAuthType":"openai"}' > /home/automaker/.proto/settings.json
+fi
+chown -R automaker:automaker /home/automaker/.proto
 
 # Switch to automaker user and execute the command
 exec gosu automaker "$@"

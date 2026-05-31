@@ -25,7 +25,10 @@ const execFileAsync = promisify(execFile);
 const DISCONNECTED_MARKER_FILE = '.proto-disconnected';
 
 const INSTALL_COMMAND = 'npm install -g @protolabsai/proto';
-const LOGIN_COMMAND = '# proto reads GATEWAY_API_KEY / OPENAI_API_KEY from env';
+const LOGIN_COMMAND =
+  '# proto reads GATEWAY_API_KEY / OPENAI_API_KEY from env; the OpenAI-compatible ' +
+  'auth-type (→ gateway) is seeded in ~/.proto/settings.json at container start (#4042). ' +
+  'Standalone: `proto qwen setup` or set security.auth.selectedType=openai in ~/.proto/settings.json.';
 const DEFAULT_GATEWAY_BASE_URL = 'https://api.proto-labs.ai/v1';
 /**
  * Cap the `proto --version` probe so a misbehaving install can't hang the

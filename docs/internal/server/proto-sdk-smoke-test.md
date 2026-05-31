@@ -38,12 +38,14 @@ Exit code is `0` only if every iteration passed (`1` on any failure, `2` if misc
 
 ## Interpreting a FAIL
 
-| Symptom                                 | Likely cause                                                                      |
-| --------------------------------------- | --------------------------------------------------------------------------------- |
-| `toolUses=0`, `file=false`, low `turns` | Loop stopped after planning — the protoCLI#307 regression. Check the SDK version. |
-| `error=...` mentioning 401 / auth       | Gateway key not reaching the SDK. Confirm `GATEWAY_API_KEY` in `.env`.            |
-| `error=...` 529 / overloaded            | Transient gateway load — re-run; intermittent, not an SDK regression.             |
-| `result=error_*` with tools fired       | Task-level failure, not a loop failure — inspect the run.                         |
+| Symptom                                                                    | Likely cause                                                                                                                                                                                                                                                                                                     |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `toolUses=0`, `file=false`, low `turns`                                    | Loop stopped after planning — the protoCLI#307 regression. Check the SDK version.                                                                                                                                                                                                                                |
+| `CLI process exited with code 1` on every run / `No auth type is selected` | proto has no auth-type configured. Seed `~/.proto/settings.json` with `{"security":{"auth":{"selectedType":"openai"}}}` — done automatically by `docker-entrypoint.sh` (#4042); standalone, run `proto qwen setup`. proto **0.55.3+** requires this even with the gateway env set (0.37.x inferred it from env). |
+| `400 Invalid model name model=qwen3.5-plus`                                | proto's default model isn't on the gateway. Pass a gateway model (`-m protolabs/fast`); protoMaker supplies the `protolabs/*` tier per-run, so this only bites bare `proto -p` calls.                                                                                                                            |
+| `error=...` mentioning 401 / auth                                          | Gateway key not reaching the SDK. Confirm `GATEWAY_API_KEY` in `.env`.                                                                                                                                                                                                                                           |
+| `error=...` 529 / overloaded                                               | Transient gateway load — re-run; intermittent, not an SDK regression.                                                                                                                                                                                                                                            |
+| `result=error_*` with tools fired                                          | Task-level failure, not a loop failure — inspect the run.                                                                                                                                                                                                                                                        |
 
 ## How this maps to protoMaker
 
