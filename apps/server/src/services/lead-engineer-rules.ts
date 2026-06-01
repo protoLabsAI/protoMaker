@@ -16,7 +16,6 @@ import type {
 
 const ORPHANED_IN_PROGRESS_MS = 4 * 60 * 60 * 1000; // 4 hours (backstop)
 const STUCK_AGENT_MS = 2 * 60 * 60 * 1000; // 2 hours
-const STALE_REVIEW_MS = 30 * 60 * 1000; // 30 minutes
 // Escalation thresholds for stale in_progress detection (faster than the 4h backstop)
 const FAILURE_STALE_MS = 30 * 60 * 1000; // 30 min: trigger when failureCount > 0 + no agent
 const UNPUSHED_BRANCH_STALE_MS = 45 * 60 * 1000; // 45 min: trigger when worktree created but branch never pushed
@@ -246,47 +245,6 @@ export const autoModeHealth: LeadFastPathRule = {
 };
 
 /**
- * staleReview — In review >30min with no auto-merge → enable auto-merge.
- * Absorbed from: pr-maintainer
- */
-export const staleReview: LeadFastPathRule = {
-  name: 'staleReview',
-  description: 'In review >30min + no auto-merge → enable auto-merge',
-  triggers: ['feature:status-changed', 'lead-engineer:rule-evaluated'],
-  ruleType: 'mechanical',
-
-  evaluate(worldState, _eventType, payload): LeadRuleAction[] {
-    const actions: LeadRuleAction[] = [];
-    const now = Date.now();
-
-    const feature = featureFromPayload(worldState, payload);
-    const candidates = feature ? [feature] : Object.values(worldState.features);
-
-    for (const f of candidates) {
-      if (f.status !== 'review') continue;
-      if (!f.prNumber) continue;
-
-      // Check if PR already has auto-merge
-      const pr = worldState.openPRs.find((p) => p.featureId === f.id);
-      if (pr?.autoMergeEnabled) continue;
-
-      // Check age
-      const reviewStart = f.prCreatedAt;
-      if (!reviewStart) continue;
-      const age = now - new Date(reviewStart).getTime();
-      if (age > STALE_REVIEW_MS) {
-        actions.push({
-          type: 'enable_auto_merge',
-          featureId: f.id,
-          prNumber: f.prNumber,
-        });
-      }
-    }
-    return actions;
-  },
-};
-
-/**
  * stuckAgent — Agent running >2h → send "wrap up" message.
  * Absorbed from: ava-check
  */
@@ -370,11 +328,17 @@ export const projectCompleting: LeadFastPathRule = {
 };
 
 /**
- * prApproved — PR approved → enable auto-merge + resolve threads directly.
+ * prApproved — PR approved → resolve any unresolved threads directly.
+ *
+ * Does NOT enable GitHub auto-merge: the platform owns the merge decision via the
+ * REVIEW → MERGE flow (getPRReviewState requires an approving review + green CI,
+ * then MergeProcessor merges explicitly). Handing the merge to GitHub auto-merge
+ * would bypass that gate, since GitHub honors only *required* branch-protection
+ * checks.
  */
 export const prApproved: LeadFastPathRule = {
   name: 'prApproved',
-  description: 'PR approved → enable auto-merge + resolve unresolved threads',
+  description: 'PR approved → resolve unresolved threads',
   triggers: ['pr:approved', 'github:pr:approved'],
   ruleType: 'mechanical',
 
@@ -385,15 +349,6 @@ export const prApproved: LeadFastPathRule = {
     if (!feature.prNumber) return [];
 
     const pr = worldState.openPRs.find((p) => p.featureId === feature.id);
-
-    // Enable auto-merge if not already enabled
-    if (!pr?.autoMergeEnabled) {
-      actions.push({
-        type: 'enable_auto_merge',
-        featureId: feature.id,
-        prNumber: feature.prNumber,
-      });
-    }
 
     // Resolve threads directly if any are unresolved
     if (pr && (pr.unresolvedThreads ?? 0) > 0) {
@@ -708,7 +663,6 @@ export const DEFAULT_RULES: LeadFastPathRule[] = [
   orphanedInProgress,
   staleDeps,
   autoModeHealth,
-  staleReview,
   stuckAgent,
   capacityRestart,
   projectCompleting,

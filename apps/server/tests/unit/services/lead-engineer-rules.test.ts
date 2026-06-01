@@ -5,7 +5,6 @@ import {
   orphanedInProgress,
   staleDeps,
   autoModeHealth,
-  staleReview,
   stuckAgent,
   capacityRestart,
   projectCompleting,
@@ -372,65 +371,6 @@ describe('autoModeHealth', () => {
   });
 });
 
-// ────────────────────────── staleReview ──────────────────────────
-
-describe('staleReview', () => {
-  it('enables auto-merge for review feature >30min without auto-merge', () => {
-    const fortyMinAgo = new Date(Date.now() - 40 * 60 * 1000).toISOString();
-    const feature = createFeature({
-      id: 'f1',
-      status: 'review',
-      prNumber: 42,
-      prCreatedAt: fortyMinAgo,
-    });
-    const ws = createMockWorldState({ features: { f1: feature } });
-    const actions = staleReview.evaluate(ws, 'feature:status-changed', { featureId: 'f1' });
-    expect(actions).toHaveLength(1);
-    expect(actions[0]).toEqual({ type: 'enable_auto_merge', featureId: 'f1', prNumber: 42 });
-  });
-
-  it('no-ops when auto-merge is already enabled', () => {
-    const fortyMinAgo = new Date(Date.now() - 40 * 60 * 1000).toISOString();
-    const feature = createFeature({
-      id: 'f1',
-      status: 'review',
-      prNumber: 42,
-      prCreatedAt: fortyMinAgo,
-    });
-    const ws = createMockWorldState({
-      features: { f1: feature },
-      openPRs: [{ featureId: 'f1', prNumber: 42, autoMergeEnabled: true }],
-    });
-    const actions = staleReview.evaluate(ws, 'feature:status-changed', { featureId: 'f1' });
-    expect(actions).toHaveLength(0);
-  });
-
-  it('no-ops when review is < 30min', () => {
-    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-    const feature = createFeature({
-      id: 'f1',
-      status: 'review',
-      prNumber: 42,
-      prCreatedAt: tenMinAgo,
-    });
-    const ws = createMockWorldState({ features: { f1: feature } });
-    const actions = staleReview.evaluate(ws, 'feature:status-changed', { featureId: 'f1' });
-    expect(actions).toHaveLength(0);
-  });
-
-  it('no-ops when feature has no PR number', () => {
-    const fortyMinAgo = new Date(Date.now() - 40 * 60 * 1000).toISOString();
-    const feature = createFeature({
-      id: 'f1',
-      status: 'review',
-      prCreatedAt: fortyMinAgo,
-    });
-    const ws = createMockWorldState({ features: { f1: feature } });
-    const actions = staleReview.evaluate(ws, 'feature:status-changed', { featureId: 'f1' });
-    expect(actions).toHaveLength(0);
-  });
-});
-
 // ────────────────────────── stuckAgent ──────────────────────────
 
 describe('stuckAgent', () => {
@@ -557,7 +497,7 @@ describe('projectCompleting', () => {
 // ────────────────────────── prApproved ──────────────────────────
 
 describe('prApproved', () => {
-  it('enables auto-merge when PR is approved and auto-merge not enabled', () => {
+  it('never hands the merge to GitHub auto-merge (platform owns merge)', () => {
     const feature = createFeature({
       id: 'f1',
       status: 'review',
@@ -565,10 +505,11 @@ describe('prApproved', () => {
     });
     const ws = createMockWorldState({
       features: { f1: feature },
-      openPRs: [{ featureId: 'f1', prNumber: 50, autoMergeEnabled: false }],
+      openPRs: [{ featureId: 'f1', prNumber: 50, unresolvedThreads: 3 }],
     });
     const actions = prApproved.evaluate(ws, 'pr:approved', { featureId: 'f1' });
-    expect(actions.some((a) => a.type === 'enable_auto_merge')).toBe(true);
+    // No 'enable_auto_merge' action exists anymore — the REVIEW → MERGE flow merges.
+    expect(actions.some((a) => (a as { type: string }).type === 'enable_auto_merge')).toBe(false);
   });
 
   it('resolves threads when PR is approved and has unresolved threads', () => {
@@ -585,7 +526,7 @@ describe('prApproved', () => {
     expect(actions.some((a) => a.type === 'resolve_threads_direct')).toBe(true);
   });
 
-  it('skips auto-merge when already enabled', () => {
+  it('emits no actions when approved with no unresolved threads', () => {
     const feature = createFeature({
       id: 'f1',
       status: 'review',
@@ -593,7 +534,7 @@ describe('prApproved', () => {
     });
     const ws = createMockWorldState({
       features: { f1: feature },
-      openPRs: [{ featureId: 'f1', prNumber: 50, autoMergeEnabled: true, unresolvedThreads: 0 }],
+      openPRs: [{ featureId: 'f1', prNumber: 50, unresolvedThreads: 0 }],
     });
     const actions = prApproved.evaluate(ws, 'pr:approved', { featureId: 'f1' });
     expect(actions).toHaveLength(0);
@@ -1123,8 +1064,8 @@ describe('LeadFastPathRule.ruleType', () => {
     expect(MECHANICAL_RULES.length).toBeGreaterThan(REASONING_RULES.length);
   });
 
-  it('MECHANICAL_RULES count is at least 13', () => {
-    expect(MECHANICAL_RULES.length).toBeGreaterThanOrEqual(13);
+  it('MECHANICAL_RULES count is at least 12', () => {
+    expect(MECHANICAL_RULES.length).toBeGreaterThanOrEqual(12);
   });
 
   it('REASONING_RULES count is exactly 1 (classifiedRecovery)', () => {

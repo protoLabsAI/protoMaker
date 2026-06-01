@@ -18,7 +18,6 @@ import type {
   ActionProposal,
 } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
-import { resolveMergeStrategy } from '../lib/merge-strategy.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { CodeRabbitResolverService } from './coderabbit-resolver-service.js';
@@ -153,22 +152,6 @@ export class ActionExecutor {
           logger.info(`Unblocked feature ${action.featureId}`);
         } catch (err) {
           logger.error(`Failed to unblock feature ${action.featureId}:`, err);
-        }
-        break;
-      }
-
-      case 'enable_auto_merge': {
-        try {
-          const mergeFlag = await resolveMergeStrategy(action.prNumber, session.projectPath);
-          await execAsync(`gh pr merge ${action.prNumber} --auto ${mergeFlag}`, {
-            cwd: session.projectPath,
-            timeout: 30000,
-          });
-          const pr = session.worldState.openPRs.find((p) => p.featureId === action.featureId);
-          if (pr) pr.autoMergeEnabled = true;
-          logger.info(`Enabled auto-merge on PR #${action.prNumber} (${mergeFlag})`);
-        } catch (err) {
-          logger.warn(`Failed to enable auto-merge on PR #${action.prNumber}:`, err);
         }
         break;
       }
@@ -493,15 +476,6 @@ function buildProposalForAction(
         justification: 'Lead engineer rule: unblock feature',
         risk: 'low',
         statusTransition: { from: 'blocked', to: 'backlog' },
-      };
-
-    case 'enable_auto_merge':
-      return {
-        who,
-        what: 'merge_pr',
-        target: `PR #${action.prNumber}`,
-        justification: 'Lead engineer rule: enable auto-merge on approved PR',
-        risk: 'medium',
       };
 
     case 'stop_agent':

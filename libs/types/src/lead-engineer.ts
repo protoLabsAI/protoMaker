@@ -218,7 +218,6 @@ export type LeadRuleAction =
   | { type: 'move_feature'; featureId: string; toStatus: FeatureStatus }
   | { type: 'reset_feature'; featureId: string; reason: string }
   | { type: 'unblock_feature'; featureId: string }
-  | { type: 'enable_auto_merge'; featureId: string; prNumber: number }
   | { type: 'resolve_threads'; featureId: string; prNumber: number }
   | { type: 'resolve_threads_direct'; featureId: string; prNumber: number }
   | { type: 'restart_auto_mode'; projectPath: string; maxConcurrency?: number }
