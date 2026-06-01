@@ -57,6 +57,15 @@ Global flags: `--json`, `--quiet`, `--project <path>` (defaults to cwd).
 
 > Note: command handlers are async — the CLI uses `parseAsync` so output is produced before exit (a prior sync `parse()` + `process.exit(0)` made every command silently produce nothing; fixed in #3909).
 
+### Dispatch a feature
+
+```bash
+protomaker feature create --title "…" --description "…" --complexity small
+protomaker agent start <feature-id>
+protomaker agent list                          # running agents
+protomaker agent output <agent-run-id>         # live agent logs
+```
+
 ## `br` (beads) — the task-list surface
 
 `br` is the canonical local issue tracker (see the `## Local Issue Tracker` section in `CLAUDE.md`). It's what both operators and agents use for cross-session work; the in-app TODO view is a thin wrapper over the same `.beads/` store. Dogfood it for planning:
