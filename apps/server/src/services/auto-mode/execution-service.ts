@@ -3603,6 +3603,31 @@ After generating the revised spec, output:
         );
       }
 
+      // Empty-stream detection (gateway timeout).
+      // The gateway / proto SDK transport can kill the stream at a fixed idle/total timeout
+      // (~5 min) with no meaningful content. Unlike the degenerate-success guard above,
+      // this catches long-running streams that produced an empty or near-empty response —
+      // a transient gateway-level timeout that should be retried, not hard-blocked.
+      const EMPTY_STREAM_MIN_RUNTIME_MS = 3 * 60 * 1000; // 3 min — below this is normal init
+      const EMPTY_STREAM_MAX_CHARS = 500;
+      const EMPTY_STREAM_MIN_COST_USD = 0.001; // must have spent money (real API call)
+      if (
+        !process.env.AUTOMAKER_MOCK_AGENT &&
+        elapsedRuntimeMs > EMPTY_STREAM_MIN_RUNTIME_MS &&
+        responseText.trim().length < EMPTY_STREAM_MAX_CHARS &&
+        runCostUsd >= EMPTY_STREAM_MIN_COST_USD
+      ) {
+        logger.warn(
+          `[EmptyStream] Feature ${featureId}: stream ran for ${Math.round(elapsedRuntimeMs / 1000)}s ` +
+            `but produced only ${responseText.trim().length} chars (cost: $${runCostUsd.toFixed(4)}). ` +
+            `Likely gateway timeout. Throwing retryable error.`
+        );
+        throw new Error(
+          `error_empty_stream: Model stream ended with minimal response after ${Math.round(elapsedRuntimeMs / 1000)}s. ` +
+            `This is likely a gateway timeout — retryable.`
+        );
+      }
+
       // Flush remaining raw output (only if enabled, on success path)
       if (enableRawOutput && rawOutputLines.length > 0) {
         try {

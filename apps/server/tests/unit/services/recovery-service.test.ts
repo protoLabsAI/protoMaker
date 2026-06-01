@@ -59,6 +59,7 @@ describe('recovery-service.ts', () => {
     isCancellation: false,
     isRateLimit: false,
     isQuotaExhausted: false,
+    isEmptyStream: false,
     originalError: new Error('Test error'),
     ...overrides,
   });
@@ -100,6 +101,22 @@ describe('recovery-service.ts', () => {
     it('should analyze transient errors and recommend retry', async () => {
       const error = new Error('connection timeout');
       const errorInfo = makeErrorInfo({ message: 'connection timeout' });
+      const context = makeContext();
+
+      const analysis = await service.analyzeFailure(error, errorInfo, context);
+
+      expect(analysis.category).toBe('transient');
+      expect(analysis.recoveryStrategy.type).toBe('retry');
+      expect(analysis.isRetryable).toBe(true);
+    });
+
+    it('should treat empty-stream (gateway timeout) errors as transient and retry', async () => {
+      const error = new Error('error_empty_stream: Model stream ended with minimal response');
+      const errorInfo = makeErrorInfo({
+        message: 'error_empty_stream: Model stream ended with minimal response',
+        type: 'empty_stream',
+        isEmptyStream: true,
+      });
       const context = makeContext();
 
       const analysis = await service.analyzeFailure(error, errorInfo, context);

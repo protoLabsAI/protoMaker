@@ -307,6 +307,25 @@ describe('error-handler.ts', () => {
       expect(result.isAuth).toBe(false);
       expect(result.isAbort).toBe(false);
       expect(result.isCancellation).toBe(false);
+      expect(result.isEmptyStream).toBe(false);
+    });
+
+    it("should classify empty-stream errors from the 'error_empty_stream:' prefix", () => {
+      const error = new Error(
+        'error_empty_stream: Model stream ended with minimal response after 312s. This is likely a gateway timeout — retryable.'
+      );
+      const result = classifyError(error);
+
+      expect(result.type).toBe('empty_stream');
+      expect(result.isEmptyStream).toBe(true);
+    });
+
+    it("should classify empty-stream errors from the 'Model stream ended with empty' message", () => {
+      const error = new Error('Model stream ended with empty response text');
+      const result = classifyError(error);
+
+      expect(result.type).toBe('empty_stream');
+      expect(result.isEmptyStream).toBe(true);
     });
 
     it('should classify unknown errors (non-Error)', () => {
