@@ -1,17 +1,29 @@
 #!/usr/bin/env bash
 # start-mcp.sh — startup wrapper for the Automaker MCP server.
-# Validates required env vars before launching node.
+#
+# Self-locating: the repo root is derived from this script's own path, so the
+# plugin needs NO globally-exported AUTOMAKER_ROOT. (Exporting it globally leaked
+# the project's identity into every shell + Claude Code session via the plugin
+# hooks — see git history.) Secrets/overrides come from the local .env beside the
+# plugin, not the ambient environment.
 
 set -euo pipefail
 
-if [[ -z "${AUTOMAKER_ROOT:-}" ]]; then
-  echo "[automaker] AUTOMAKER_ROOT is not set." >&2
-  echo "[automaker] To fix this, create the plugin .env file:" >&2
-  echo "[automaker]   cp \"${BASH_SOURCE[0]%/hooks/*}/.env.example\" \"${BASH_SOURCE[0]%/hooks/*}/.env\"" >&2
-  echo "[automaker] Then set AUTOMAKER_ROOT to the absolute path of your protomaker clone." >&2
-  echo "[automaker] See docs/integrations/claude-plugin.md for full setup instructions." >&2
-  exit 1
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGIN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)" # packages/mcp-server/plugins/automaker
+
+# Load local secrets/overrides if present (AUTOMAKER_API_KEY, GH_TOKEN, tokens…).
+if [[ -f "$PLUGIN_DIR/.env" ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "$PLUGIN_DIR/.env"
+  set +a
 fi
+
+# Repo root is authoritative from this script's location — not ambient env, not a
+# hardcoded path in .env. Layout: <root>/packages/mcp-server/plugins/automaker/hooks
+AUTOMAKER_ROOT="$(cd "$SCRIPT_DIR/../../../../.." && pwd)"
+export AUTOMAKER_ROOT
 
 DIST="${AUTOMAKER_ROOT}/packages/mcp-server/dist/index.js"
 
