@@ -38,6 +38,13 @@ EOF
         printf '%s\n' '{"security":{"auth":{"selectedType":"openai"}},"selectedAuthType":"openai"}' > /home/automaker/.proto/settings.json 2>/dev/null || true
     fi
 
+    # Wire git to authenticate pushes via the gh credential helper, using
+    # GH_TOKEN (homelab-iac#126). git-workflow-service does bare `git push origin`,
+    # which otherwise has no creds for github.com → 403. gh reads GH_TOKEN.
+    if [ -n "$GH_TOKEN" ] || [ -n "$GITHUB_TOKEN" ]; then
+        gh auth setup-git 2>/dev/null || true
+    fi
+
     exec "$@"
 fi
 
@@ -121,6 +128,14 @@ if [ ! -f "/home/automaker/.proto/settings.json" ]; then
     printf '%s\n' '{"security":{"auth":{"selectedType":"openai"}},"selectedAuthType":"openai"}' > /home/automaker/.proto/settings.json
 fi
 chown -R automaker:automaker /home/automaker/.proto
+
+# Wire git to authenticate pushes via the gh credential helper, using GH_TOKEN
+# (homelab-iac#126). Run as automaker so it lands in /home/automaker/.gitconfig.
+# git-workflow-service does bare `git push origin`, which otherwise has no creds
+# for github.com → 403. gh reads GH_TOKEN.
+if [ -n "$GH_TOKEN" ] || [ -n "$GITHUB_TOKEN" ]; then
+    gosu automaker gh auth setup-git 2>/dev/null || true
+fi
 
 # Switch to automaker user and execute the command
 exec gosu automaker "$@"
