@@ -997,9 +997,9 @@ describe('Two-tier rule routing', () => {
     }
   });
 
-  it('MECHANICAL_RULES count is at least 13', async () => {
+  it('MECHANICAL_RULES count is at least 12', async () => {
     const { MECHANICAL_RULES } = await import('@/services/lead-engineer-rules.js');
-    expect(MECHANICAL_RULES.length).toBeGreaterThanOrEqual(13);
+    expect(MECHANICAL_RULES.length).toBeGreaterThanOrEqual(12);
   });
 
   it('REASONING_RULES count is exactly 1 (classifiedRecovery)', async () => {

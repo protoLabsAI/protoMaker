@@ -2014,19 +2014,11 @@ export class GitWorkflowService {
           }
         }
 
-        // Enable auto-merge so PRs don't sit BLOCKED waiting for manual intervention
-        // Use --merge for epic PRs to preserve DAG integrity
-        const mergeFlag =
-          baseBranch === 'main' || baseBranch.startsWith('epic/') ? '--merge' : '--squash';
-        try {
-          await execFileAsync('gh', ['pr', 'merge', String(prNumber), '--auto', mergeFlag], {
-            cwd: workDir,
-            env: execEnv,
-          });
-          logger.info(`Auto-merge enabled on PR #${prNumber} (${mergeFlag})`);
-        } catch (autoMergeError) {
-          logger.warn(`Failed to enable auto-merge on PR #${prNumber}:`, autoMergeError);
-        }
+        // Intentionally do NOT enable GitHub auto-merge here. The platform owns the
+        // merge decision: the REVIEW gate (getPRReviewState) requires an approving
+        // review AND green CI before MergeProcessor merges explicitly. GitHub
+        // auto-merge honors only *required* branch-protection checks and would merge
+        // past that gate the moment required checks pass.
       }
 
       return { prUrl, prNumber, prAlreadyExisted: false, prCreatedAt };
