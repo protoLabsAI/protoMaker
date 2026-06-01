@@ -11,6 +11,7 @@ export type ErrorType =
   | 'quota_exhausted'
   | 'max_turns'
   | 'network'
+  | 'empty_stream'
   | 'unknown';
 
 /**
@@ -26,6 +27,7 @@ export interface ErrorInfo {
   isRateLimit: boolean;
   isQuotaExhausted: boolean; // Session/weekly usage limit reached
   isMaxTurns: boolean; // Agent exceeded max turn limit
+  isEmptyStream: boolean; // Model stream ended with empty/minimal response (gateway timeout)
   retryAfter?: number; // Seconds to wait before retrying (for rate limit errors)
   originalError: unknown;
 }

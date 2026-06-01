@@ -206,10 +206,17 @@ export function classifyError(error: unknown): ErrorInfo {
 
   // Check for SDK-specific error subtypes
   const isMaxTurns = message.startsWith('error_max_turns:');
+  const isEmptyStream =
+    message.startsWith('error_empty_stream:') ||
+    message.includes('Model stream ended with empty') ||
+    message.includes('stream ended with empty response');
 
   let type: ErrorType;
   if (isMaxTurns) {
     type = 'max_turns';
+  } else if (isEmptyStream) {
+    // Gateway timeout: stream ended empty after a long run — transient, retryable
+    type = 'empty_stream';
   } else if (isConfigCorrupted) {
     // Priority over authentication: a truncated credentials file surfaces as an
     // auth error too, but the real failure is disk/config, not the key (#3564).
@@ -244,6 +251,7 @@ export function classifyError(error: unknown): ErrorInfo {
     isRateLimit,
     isQuotaExhausted,
     isMaxTurns,
+    isEmptyStream,
     retryAfter,
     originalError: error,
   };

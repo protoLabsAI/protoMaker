@@ -400,6 +400,11 @@ ${this.generateCategoryGuidance(category, successRate, strategies)}
       return 'rate_limit';
     }
 
+    // Empty stream (gateway timeout) — transient, retryable
+    if (errorInfo.isEmptyStream || errorInfo.type === 'empty_stream') {
+      return 'transient';
+    }
+
     // Check for test failures
     if (
       message.includes('test failed') ||
