@@ -3,7 +3,11 @@
 # Injects board summary so Roxy/Claude starts with awareness of current state.
 # Output goes to stdout and is added to Claude's context.
 
-# Resolve project path: session cwd (from stdin JSON) > git toplevel > AUTOMAKER_ROOT
+# Resolve project path from THIS session's cwd (stdin JSON) > git toplevel.
+# Deliberately NO AUTOMAKER_ROOT fallback: that var is exported globally
+# (~/.zshenv, launchctl) and pinned to one project for the MCP server, so using
+# it here injects that project's board into every unrelated session. If we can't
+# determine the session dir, no-op (FEATURES_DIR check below) rather than leak.
 if [ -t 0 ]; then
   INPUT=""
 else
@@ -11,7 +15,7 @@ else
 fi
 HOOK_CWD="$(printf '%s' "$INPUT" | jq -r '.cwd // empty' 2>/dev/null)"
 PROJECT_ROOT="${HOOK_CWD:-$(git -C "${HOOK_CWD:-.}" rev-parse --show-toplevel 2>/dev/null)}"
-PROJECT_ROOT="${PROJECT_ROOT:-${AUTOMAKER_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null)}}"
+PROJECT_ROOT="${PROJECT_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null)}"
 FEATURES_DIR="$PROJECT_ROOT/.automaker/features"
 
 # Get the plugin directory to access saved state

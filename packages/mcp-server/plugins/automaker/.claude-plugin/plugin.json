@@ -10,7 +10,7 @@
     "studio": {
       "command": "bash",
       "args": [
-        "${AUTOMAKER_ROOT}/packages/mcp-server/plugins/automaker/hooks/start-mcp.sh"
+        "${CLAUDE_PLUGIN_ROOT}/hooks/start-mcp.sh"
       ],
       "env": {
         "AUTOMAKER_API_URL": "http://localhost:3008",
