@@ -31,8 +31,29 @@ import type {
   DeployEnvironment,
   Project,
   ProjectHealth,
+  Feature,
 } from '@protolabsai/types';
 import { BaseHttpClient, type Constructor } from './base-http-client';
+
+/** A single archived feature as returned by POST /api/projects/archives/list (#4025/#4035). */
+export interface ArchivedFeatureSummary {
+  featureId: string;
+  title: string;
+  status: string;
+  archivedAt: string;
+  projectPath: string;
+  projectSlug?: string;
+  epicId?: string;
+  isEpic?: boolean;
+}
+
+/** Full archived-feature record from POST /api/projects/archives/detail. */
+export interface ArchivedFeatureDetail {
+  featureId: string;
+  feature: Feature;
+  agentOutput: string | null;
+  meta: { archivedAt: string; projectPath: string; projectSlug?: string };
+}
 
 export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base: TBase) =>
   class extends Base {
@@ -315,6 +336,20 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
     analytics = {
       getAgentPerformance: (projectPath: string) =>
         this.post('/api/analytics/agent-performance', { projectPath }),
+    };
+
+    // Archived-feature read API (#4035) — read-back over the archive write side.
+    archives = {
+      list: (
+        projectPath: string,
+        opts?: { projectSlug?: string; dateFrom?: string; dateTo?: string }
+      ): Promise<{ success: boolean; archives?: ArchivedFeatureSummary[]; error?: string }> =>
+        this.post('/api/projects/archives/list', { projectPath, ...opts }),
+      detail: (
+        projectPath: string,
+        featureId: string
+      ): Promise<{ success: boolean; archive?: ArchivedFeatureDetail; error?: string }> =>
+        this.post('/api/projects/archives/detail', { projectPath, featureId }),
     };
 
     // Project Lifecycle API

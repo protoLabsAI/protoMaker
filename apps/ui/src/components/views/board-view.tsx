@@ -50,6 +50,7 @@ import {
   AgentOutputModal,
   BacklogPlanDialog,
   CompletedFeaturesModal,
+  ArchivedFeaturesModal,
   ArchiveAllVerifiedDialog,
   DeleteCompletedFeatureDialog,
   DependencyLinkDialog,
@@ -165,6 +166,7 @@ export function BoardView() {
   const [showArchiveAllVerifiedDialog, setShowArchiveAllVerifiedDialog] = useState(false);
   const [showBoardBackgroundModal, setShowBoardBackgroundModal] = useState(false);
   const [showCompletedModal, setShowCompletedModal] = useState(false);
+  const [showArchivedModal, setShowArchivedModal] = useState(false);
   const [deleteCompletedFeature, setDeleteCompletedFeature] = useState<Feature | null>(null);
   // PRD Review Modal state
   const [prdModalOpen, setPrdModalOpen] = useState(false);
@@ -1533,6 +1535,7 @@ export function BoardView() {
               onArchiveAllVerified={() => setShowArchiveAllVerifiedDialog(true)}
               onAddFeature={() => setShowAddDialog(true)}
               onShowCompletedModal={() => setShowCompletedModal(true)}
+              onShowArchivedModal={() => setShowArchivedModal(true)}
               completedCount={completedFeatures.length}
               isSelectionMode={isSelectionMode}
               selectionTarget={selectionTarget}
@@ -1631,6 +1634,13 @@ export function BoardView() {
         completedFeatures={completedFeatures}
         onUnarchive={handleUnarchiveFeature}
         onDelete={(feature) => setDeleteCompletedFeature(feature)}
+      />
+
+      {/* Archived Features Modal (#4035) — read-only over the archive API */}
+      <ArchivedFeaturesModal
+        open={showArchivedModal}
+        onOpenChange={setShowArchivedModal}
+        projectPath={currentProject?.path}
       />
 
       {/* Delete Completed Feature Confirmation Dialog */}
