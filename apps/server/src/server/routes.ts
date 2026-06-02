@@ -42,7 +42,6 @@ import { createSpecRegenerationRoutes } from '../routes/app-spec/index.js';
 import { createClaudeRoutes } from '../routes/claude/index.js';
 import { createGitHubRoutes } from '../routes/github/index.js';
 import { createContextRoutes } from '../routes/context/index.js';
-import { createFlowsRoutes } from '../routes/flows/index.js';
 import { createBacklogPlanRoutes } from '../routes/backlog-plan/index.js';
 import { createMCPRoutes } from '../routes/mcp/index.js';
 import { createMetricsRoutes } from '../routes/metrics/index.js';
@@ -127,7 +126,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     gitWorkflowService,
     eventStreamBuffer,
     completionDetectorService,
-    antagonisticReviewService,
     repoRoot,
     sensorRegistryService,
     projectPmService,
@@ -348,7 +346,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
       settingsService
     )
   );
-  app.use('/api/flows', createFlowsRoutes(antagonisticReviewService));
   app.use('/api/chat', createChatRoutes(services));
   app.use('/api/codex', createCodexRoutes());
   app.use('/api/ai', createAIRoutes());

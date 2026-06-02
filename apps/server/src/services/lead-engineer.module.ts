@@ -13,7 +13,7 @@ export function register(container: ServiceContainer): void {
     factStoreService,
     trajectoryStoreService,
     leadHandoffService,
-    antagonisticReviewService,
+    planReviewService,
     deviationRuleService,
   } = container;
 
@@ -23,7 +23,7 @@ export function register(container: ServiceContainer): void {
   leadEngineerService.setFactStoreService(factStoreService);
   leadEngineerService.setTrajectoryStoreService(trajectoryStoreService);
   leadEngineerService.setHandoffService(leadHandoffService);
-  leadEngineerService.setAntagonisticReviewService(antagonisticReviewService);
+  leadEngineerService.setPlanReviewService(planReviewService);
   leadEngineerService.setDeviationRuleService(deviationRuleService);
 
   // EM Agent: yield lifecycle control to Lead Engineer when active

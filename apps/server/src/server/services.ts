@@ -54,7 +54,7 @@ import { FeatureHealthService } from '../services/feature-health-service.js';
 import { TriageService } from '../services/triage-service.js';
 import { IssueCreationService } from '../services/issue-creation-service.js';
 import { EventStreamBuffer } from '../lib/event-stream-buffer.js';
-import { AntagonisticReviewService } from '../services/antagonistic-review-service.js';
+import { PlanReviewService } from '../services/plan-review-service.js';
 import { AgentScoringService } from '../services/agent-scoring-service.js';
 import { gitWorkflowService } from '../services/git-workflow-service.js';
 import { TrustTierService } from '../services/trust-tier-service.js';
@@ -174,7 +174,7 @@ export interface ServiceContainer {
   integrationRegistryService: IntegrationRegistryService;
 
   // Review & scoring
-  antagonisticReviewService: AntagonisticReviewService;
+  planReviewService: PlanReviewService;
 
   // Dev server & notifications
   devServerService: ReturnType<typeof getDevServerService>;
@@ -435,8 +435,8 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     logger.error('Failed to register built-in integrations:', error);
   }
 
-  // Antagonistic Review Service for Ava + Jon PRD reviews
-  const antagonisticReviewService = AntagonisticReviewService.getInstance(events, settingsService);
+  // Plan review service — gates feature implementation plans before EXECUTE
+  const planReviewService = PlanReviewService.getInstance();
 
   // Agent Scoring Service (auto-scores agent traces based on feature lifecycle)
   // Created for side effects only (event subscriptions in constructor)
@@ -785,7 +785,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     knowledgeStoreService,
     escalationRouter,
     integrationRegistryService,
-    antagonisticReviewService,
+    planReviewService,
     devServerService,
     notificationService,
     notificationRouter,
