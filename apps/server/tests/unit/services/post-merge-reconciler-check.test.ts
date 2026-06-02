@@ -219,6 +219,86 @@ describe('PostMergeReconcilerCheck', () => {
     expect(result.reconciled).toBe(1);
   });
 
+  // ── #4041: branch-fallback evidence guard (stale branch-name collision) ──
+
+  it('Phase 2 does NOT reconcile when the merged PR predates the feature (stale collision, #4041)', async () => {
+    // A new feature reuses a branch name (e.g. feature/board-archived-*) whose OLDER
+    // merged PR belongs to a prior attempt. Matching it would mark a feature `done`
+    // that never produced work. The PR was created before the feature existed.
+    const feature = makeFeature({
+      prNumber: undefined,
+      prUrl: undefined,
+      status: 'backlog',
+      branchName: 'feature/board-archived-view',
+      createdAt: '2026-05-30T10:00:00Z',
+    });
+    mockFeatureLoaderGetAll.mockResolvedValue([feature]);
+
+    const execFileAsync = vi.fn(async (_file: string, args: string[]) => {
+      if (args[0] === 'pr' && args[1] === 'list') {
+        return {
+          stdout: JSON.stringify([
+            {
+              number: 99,
+              url: 'https://github.com/protoLabsAI/protoMaker/pull/99',
+              mergedAt: '2026-05-20T12:00:00Z',
+              createdAt: '2026-05-20T09:00:00Z', // 10 days BEFORE the feature was created
+            },
+          ]),
+          stderr: '',
+        };
+      }
+      throw new Error(`Unexpected gh invocation: ${args.join(' ')}`);
+    });
+    const check = new PostMergeReconcilerCheck(makeLoader(), events as any, execFileAsync as any);
+    const emitted: unknown[] = [];
+    events.on('feature:pr-merged', (e) => emitted.push(e));
+
+    const result = await check.run('/project');
+
+    expect(result.reconciled).toBe(0);
+    expect(mockFeatureLoaderUpdate).not.toHaveBeenCalled();
+    expect(emitted).toHaveLength(0);
+  });
+
+  it('Phase 2 DOES reconcile when the merged PR post-dates the feature (#4041)', async () => {
+    const feature = makeFeature({
+      prNumber: undefined,
+      prUrl: undefined,
+      status: 'backlog',
+      branchName: 'feature/board-archived-view',
+      createdAt: '2026-05-20T08:00:00Z',
+    });
+    mockFeatureLoaderGetAll.mockResolvedValue([feature]);
+
+    const execFileAsync = vi.fn(async (_file: string, args: string[]) => {
+      if (args[0] === 'pr' && args[1] === 'list') {
+        return {
+          stdout: JSON.stringify([
+            {
+              number: 200,
+              url: 'https://github.com/protoLabsAI/protoMaker/pull/200',
+              mergedAt: '2026-05-22T12:00:00Z',
+              createdAt: '2026-05-22T09:00:00Z', // created AFTER the feature → legitimate
+            },
+          ]),
+          stderr: '',
+        };
+      }
+      throw new Error(`Unexpected gh invocation: ${args.join(' ')}`);
+    });
+    const check = new PostMergeReconcilerCheck(makeLoader(), events as any, execFileAsync as any);
+
+    const result = await check.run('/project');
+
+    expect(result.reconciled).toBe(1);
+    expect(mockFeatureLoaderUpdate).toHaveBeenCalledWith(
+      '/project',
+      'feature-001',
+      expect.objectContaining({ status: 'done', prNumber: 200 })
+    );
+  });
+
   it('does not transition a feature whose PR is still open', async () => {
     const feature = makeFeature();
     mockFeatureLoaderGetAll.mockResolvedValue([feature]);

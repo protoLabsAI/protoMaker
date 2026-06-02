@@ -147,4 +147,11 @@ export interface GitWorkflowResult {
   rebaseConflicts?: boolean;
   /** Files that had rebase conflicts (populated when rebaseConflicts is true) */
   conflictingFiles?: string[];
+  /**
+   * True when the worktree's HEAD was on the base branch (not the feature branch)
+   * at workflow time — an isolation failure. Committing/pushing here would strand
+   * work on a local base branch with no PR (#4052). The caller must block the
+   * feature (work is preserved, not committed to base) rather than mark it done.
+   */
+  strandedOnBase?: boolean;
 }
