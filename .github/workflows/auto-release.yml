@@ -2,9 +2,10 @@
 name: Auto Release
 
 # Fires on any direct push to main (PR merges go through here too).
-# Reads the version from libs/types/package.json, tags it, and creates a
-# GitHub Release. If the version is already tagged, the workflow no-ops —
-# bump the version in a PR before merging if you want a new release.
+# Reads the version from libs/types/package.json, tags it, and publishes
+# gateway-themed release notes to Discord via @protolabsai/release-tools.
+# No GitHub Release is created. If the version is already tagged, the workflow
+# no-ops — bump the version in a PR before merging if you want a new release.
 
 on:
   push:
@@ -25,10 +26,9 @@ jobs:
     if: github.repository == 'protoLabsAI/protoMaker'
     timeout-minutes: 10
     permissions:
-      contents: write
-      pull-requests: write
+      contents: write # tag push
     env:
-      DISCORD_DEV_WEBHOOK: ${{ secrets.DISCORD_DEV_WEBHOOK }}
+      DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
       DISCORD_ALERTS_WEBHOOK: ${{ secrets.DISCORD_ALERTS_WEBHOOK }}
 
     steps:
@@ -69,53 +69,29 @@ jobs:
           git tag -a "$VERSION" -m "$VERSION"
           git push origin "$VERSION"
 
-      - name: Create GitHub Release
-        if: steps.version.outputs.already_tagged != 'true'
-        run: |
-          VERSION="v${{ steps.version.outputs.version }}"
-
-          RAW_NOTES=$(gh api "repos/${{ github.repository }}/releases/generate-notes" \
-            -f tag_name="$VERSION" --jq '.body')
-
-          ALL_LINES=$(echo "$RAW_NOTES" | grep '^\* ' || true)
-          NON_CHORE=$(echo "$ALL_LINES" | grep -vi '^\* chore' || true)
-
-          if [ -n "$NON_CHORE" ]; then
-            FILTERED_NOTES=$(echo "$RAW_NOTES" | grep -vi '^\* chore')
-          else
-            FILTERED_NOTES="$RAW_NOTES"
-          fi
-
-          gh release create "$VERSION" \
-            --title "$VERSION Alpha" \
-            --notes "$FILTERED_NOTES"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Resolve previous tag
         id: prev
-        if: steps.version.outputs.already_tagged != 'true' && env.DISCORD_DEV_WEBHOOK != ''
+        if: steps.version.outputs.already_tagged != 'true' && env.DISCORD_RELEASE_WEBHOOK != ''
         run: |
           VERSION="v${{ steps.version.outputs.version }}"
           PREV_TAG=$(git tag --sort=-v:refname | grep -v "^${VERSION}$" | head -1)
           echo "tag=$PREV_TAG" >> $GITHUB_OUTPUT
 
       - name: Rewrite and post release notes to Discord
-        if: steps.version.outputs.already_tagged != 'true' && env.DISCORD_DEV_WEBHOOK != ''
-        continue-on-error: true
+        if: steps.version.outputs.already_tagged != 'true' && env.DISCORD_RELEASE_WEBHOOK != ''
         uses: protoLabsAI/release-tools@fac24459b61aa7ab44c423b103a524d5c9f9e6ee # v1
         with:
           version: v${{ steps.version.outputs.version }}
           previous-version: ${{ steps.prev.outputs.tag }}
         env:
           GATEWAY_API_KEY: ${{ secrets.GATEWAY_API_KEY }}
-          DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_DEV_WEBHOOK }}
+          DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
 
       - name: Alert on release failure
         if: failure() && steps.version.outputs.already_tagged != 'true'
         run: |
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          MSG="ALERT: Auto-release FAILED. Tag or GitHub Release may be incomplete. ${RUN_URL}"
+          MSG="ALERT: Auto-release FAILED. Tag or release-notes post may be incomplete. ${RUN_URL}"
           if [ -n "${DISCORD_ALERTS_WEBHOOK:-}" ]; then
             curl -sf -H "Content-Type: application/json" \
               -d "{\"content\": \"${MSG}\"}" \
