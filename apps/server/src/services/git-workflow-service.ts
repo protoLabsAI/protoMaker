@@ -510,6 +510,34 @@ export class GitWorkflowService {
       return null;
     }
 
+    // Isolation guard (#4052): the worktree must be on the feature branch. If HEAD is
+    // on the base branch, the agent worked/committed on base (e.g. ran `git checkout
+    // main`, or executed in the main checkout because no worktree materialized).
+    // Committing/pushing now would either strand work on a local base branch with no
+    // PR or push straight to base — both are completion theater. Refuse: leave the work
+    // in place (uncommitted, recoverable) and signal the caller to BLOCK, never `done`.
+    try {
+      const { stdout: headBranch } = await execAsync('git rev-parse --abbrev-ref HEAD', {
+        cwd: workDir,
+        env: execEnv,
+      });
+      if (headBranch.trim() === prBaseBranch) {
+        logger.error(
+          `[GitWorkflow] Feature ${featureId}: worktree HEAD is on base branch "${prBaseBranch}", ` +
+            `not feature branch "${branchName}" — refusing to commit/push to base. Work is preserved ` +
+            `in the worktree for rescue; blocking feature (isolation failure, #4052).`
+        );
+        result.strandedOnBase = true;
+        result.error = `Worktree was on base branch "${prBaseBranch}" instead of feature branch "${branchName}" — work not committed to base (isolation failure).`;
+        this.activeWorkflows--;
+        return result;
+      }
+    } catch (headErr) {
+      logger.warn(
+        `[GitWorkflow] Could not resolve HEAD branch for ${featureId} (continuing): ${headErr instanceof Error ? headErr.message : String(headErr)}`
+      );
+    }
+
     try {
       // Step 1: Commit changes
       let commitHash: string | null;

@@ -44,6 +44,24 @@ export class DeployProcessor implements StateProcessor {
     if (fresh) ctx.feature = fresh;
 
     if (fresh && fresh.status !== 'done') {
+      // `done` means "PR merged". Never infer it from merely reaching DEPLOY — require
+      // real merge evidence (#4052). DEPLOY is normally entered only after MergeProcessor
+      // confirms the merge (which sets prMergedAt), so this guard is a no-op on the happy
+      // path; it only fires on an anomalous arrival with no merged PR, where silently
+      // marking done would be completion theater. Escalate instead.
+      const hasMergeEvidence = !!(fresh.prMergedAt && (fresh.prNumber ?? ctx.prNumber));
+      if (!hasMergeEvidence) {
+        ctx.escalationReason =
+          `Reached DEPLOY for feature ${ctx.feature.id} without merge evidence ` +
+          `(prMergedAt=${fresh.prMergedAt ?? 'none'}, prNumber=${fresh.prNumber ?? ctx.prNumber ?? 'none'}) — ` +
+          `refusing to mark done (#4052).`;
+        logger.error(`[DEPLOY] ${ctx.escalationReason}`);
+        return {
+          nextState: 'ESCALATE',
+          shouldContinue: true,
+          reason: ctx.escalationReason,
+        };
+      }
       await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
         status: 'done',
       });

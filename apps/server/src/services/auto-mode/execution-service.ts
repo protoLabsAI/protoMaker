@@ -1425,6 +1425,24 @@ Output the branch name only.`,
             projectPrBaseBranch
           );
           if (gitWorkflowResult) {
+            // #4052: the worktree was on the base branch — the agent's work was NOT
+            // committed to a feature branch, nothing was pushed, and there is no PR.
+            // This must never reach 'done'. Block so it's surfaced (friction tracker
+            // records it) and the work is preserved in the worktree for manual rescue.
+            if (gitWorkflowResult.strandedOnBase) {
+              const reason =
+                gitWorkflowResult.error ??
+                'Agent worked on the base branch; no feature-branch commit or PR was produced.';
+              logger.error(
+                `[AutoMode] Feature ${featureId} stranded on base branch — blocking (no PR; work preserved for rescue). ${reason}`
+              );
+              await this.featureLoader.update(projectPath, featureId, {
+                status: 'blocked',
+                statusChangeReason: `Work landed on the base branch instead of an isolated feature branch — nothing was pushed or opened as a PR (#4052). Changes are preserved in the worktree for rescue. ${reason}`,
+              });
+              return;
+            }
+
             // Check if git workflow encountered conflicts
             if (gitWorkflowResult.error && gitWorkflowResult.error.includes('conflict')) {
               this.typedEventBus.emitAutoModeEvent('auto_mode_progress', {
@@ -1555,23 +1573,54 @@ Output the branch name only.`,
           finalStatus = 'verified';
           await this.callbacks.updateFeatureStatus(projectPath, featureId, finalStatus);
         } else {
-          // No PR evidence after the git workflow. With committed-work detection
-          // fixed (#3845), this now genuinely means the agent produced nothing —
-          // an "empty execution", typically the SDK terminating after the
-          // planning turn (protoCLI#307). It's intermittent and usually succeeds
-          // on retry, so auto-retry up to a cap before parking for a human (#3860)
-          // instead of silently dropping the feature into review.
+          // No PR evidence after the git workflow — two very different causes that must
+          // NOT be conflated (#4051):
+          //   (a) the agent ran to completion but produced NO diff vs base — the work is
+          //       already present (merged via another branch, or a duplicate feature).
+          //       Re-dispatching is DETERMINISTIC: the agent re-finds the same already-done
+          //       state and loops, burning retries. Surface it instead — but never auto-mark
+          //       `done` without merge evidence (that's the #4041/#4052 anti-pattern).
+          //   (b) the agent terminated early (SDK planning-turn termination, protoCLI#307) —
+          //       intermittent, usually succeeds on retry.
+          // Discriminate by whether the agent produced substantial output this run.
+          let agentOutputLen = 0;
+          try {
+            const outputPath = path.join(getFeatureDir(projectPath, featureId), 'agent-output.md');
+            const content = await secureFs.readFile(outputPath, 'utf-8');
+            agentOutputLen = (typeof content === 'string' ? content : content.toString()).trim()
+              .length;
+          } catch {
+            // No output file → treat as no output (early-termination case).
+          }
+          const NO_DIFF_OUTPUT_THRESHOLD = 500; // chars; below this looks like early termination
           const MAX_EMPTY_RETRIES = 3;
           const fc = postGitFeature?.failureCount ?? 0;
-          if (fc < MAX_EMPTY_RETRIES) {
+
+          if (agentOutputLen >= NO_DIFF_OUTPUT_THRESHOLD) {
+            // (a) Ran to completion, no diff vs base — deterministic. Don't loop; surface.
+            finalStatus = 'blocked';
+            await this.featureLoader.update(projectPath, featureId, {
+              status: 'blocked',
+              statusChangeReason:
+                `Agent ran to completion but produced no diff vs base and no PR (#4051). The work is ` +
+                `likely already merged via another branch, or this duplicates completed work. ` +
+                `Re-dispatching would be a deterministic no-op, so it is NOT retried — verify and close ` +
+                `if already done, or re-scope the feature.`,
+            });
+            logger.warn(
+              `[AutoVerify] Feature ${featureId}: substantial output (${agentOutputLen} chars) but no diff/PR — ` +
+                `blocking as likely already-merged/duplicate (no retry loop, #4051).`
+            );
+          } else if (fc < MAX_EMPTY_RETRIES) {
+            // (b) Early termination — intermittent, retry.
             finalStatus = 'backlog';
             await this.featureLoader.update(projectPath, featureId, {
               status: 'backlog',
               failureCount: fc + 1,
-              statusChangeReason: `Empty execution (no PR/commits) — auto-retry ${fc + 1}/${MAX_EMPTY_RETRIES} (agent terminated early; protoCLI#307)`,
+              statusChangeReason: `Empty execution (no output/PR/commits) — auto-retry ${fc + 1}/${MAX_EMPTY_RETRIES} (agent terminated early; protoCLI#307)`,
             });
             logger.warn(
-              `[AutoVerify] No PR evidence for ${featureId} — auto-retrying (${fc + 1}/${MAX_EMPTY_RETRIES})`
+              `[AutoVerify] No output/PR evidence for ${featureId} — auto-retrying (${fc + 1}/${MAX_EMPTY_RETRIES})`
             );
           } else {
             finalStatus = 'blocked';

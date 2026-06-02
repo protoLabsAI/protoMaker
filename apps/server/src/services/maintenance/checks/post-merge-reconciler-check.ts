@@ -44,6 +44,7 @@ interface PRListItem {
   number: number;
   url: string;
   mergedAt: string | null;
+  createdAt: string | null;
 }
 
 /** Statuses that indicate the feature is already done — skip reconciliation. */
@@ -198,7 +199,7 @@ export class PostMergeReconcilerCheck {
               '--state',
               'merged',
               '--json',
-              'number,url,mergedAt',
+              'number,url,mergedAt,createdAt',
               '--limit',
               '1',
             ],
@@ -214,6 +215,29 @@ export class PostMergeReconcilerCheck {
           }
 
           const merged = matches[0];
+
+          // Evidence guard (#4041): a branch name is not a unique key — a *new* feature
+          // can reuse/collide with the branch name of an *older* already-merged PR (e.g.
+          // two "feature/board-archived-*" attempts). Matching the stale PR would mark a
+          // feature `done` that never ran. Only reconcile when the merged PR is at least
+          // as new as the feature itself; a PR created before the feature existed cannot
+          // be that feature's output. When either timestamp is missing we cannot prove
+          // staleness, so we preserve the original recovery behaviour and proceed.
+          const prCreatedMs = merged.createdAt ? Date.parse(merged.createdAt) : NaN;
+          const featureCreatedMs = feature.createdAt ? Date.parse(feature.createdAt) : NaN;
+          if (
+            Number.isFinite(prCreatedMs) &&
+            Number.isFinite(featureCreatedMs) &&
+            prCreatedMs < featureCreatedMs
+          ) {
+            logger.warn(
+              `[reconciler] Skipping branch-fallback for feature ${feature.id} ("${feature.title}"): ` +
+                `merged PR #${merged.number} was created ${merged.createdAt} — before the feature was created ` +
+                `(${feature.createdAt}). Stale branch-name collision; not a real completion. Leaving status ${feature.status}.`
+            );
+            continue;
+          }
+
           logger.info(
             `[reconciler] Merged PR #${merged.number} (${merged.url}) found for branch "${feature.branchName}" — transitioning feature "${feature.title}" (${feature.id}) from ${feature.status} → done (branch-fallback path)`
           );
