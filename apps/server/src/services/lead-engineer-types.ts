@@ -56,7 +56,7 @@ export const MAX_INFRA_RETRIES = 3;
 // ────────────────────────── Service Context ──────────────────────────
 
 /**
- * Minimal interface for plan review — avoids circular imports with AntagonisticReviewService.
+ * Minimal interface for plan review — avoids circular imports with PlanReviewService.
  */
 export interface IPlanReviewService {
   verifyPlan(params: {
@@ -88,7 +88,7 @@ export interface ProcessorServiceContext {
   settingsService?: SettingsService;
   factStoreService?: FactStoreService;
   leadHandoffService?: LeadHandoffService;
-  antagonisticReviewService?: IPlanReviewService;
+  planReviewService?: IPlanReviewService;
   hitlFormService?: HITLFormService;
   trajectoryStoreService?: TrajectoryStoreService;
   deviationRuleService?: DeviationRuleService;

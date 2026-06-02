@@ -120,7 +120,7 @@ export class LeadEngineerService {
   private factStoreService?: FactStoreService;
   private trajectoryStoreService?: TrajectoryStoreService;
   private deviationRuleService?: DeviationRuleService;
-  private antagonisticReviewService?: IPlanReviewService;
+  private planReviewService?: IPlanReviewService;
   private hitlFormService?: HITLFormService;
   private authorityService?: AuthorityService;
   private processorRegistry?: ProcessorRegistry;
@@ -183,8 +183,8 @@ export class LeadEngineerService {
   setDeviationRuleService(s: DeviationRuleService): void {
     this.deviationRuleService = s;
   }
-  setAntagonisticReviewService(s: IPlanReviewService): void {
-    this.antagonisticReviewService = s;
+  setPlanReviewService(s: IPlanReviewService): void {
+    this.planReviewService = s;
   }
   setHITLFormService(s: HITLFormService): void {
     this.hitlFormService = s;
@@ -466,7 +466,7 @@ export class LeadEngineerService {
         settingsService: this.settingsService,
         factStoreService: this.factStoreService,
         leadHandoffService: this.handoffService,
-        antagonisticReviewService: this.antagonisticReviewService,
+        planReviewService: this.planReviewService,
         hitlFormService: this.hitlFormService,
         trajectoryStoreService: this.trajectoryStoreService,
         deviationRuleService: this.deviationRuleService,

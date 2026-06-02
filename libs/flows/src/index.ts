@@ -21,17 +21,6 @@ export {
   getLastAssistantMessage,
 } from './graphs/utils/subgraph-wrapper.js';
 
-// Antagonistic review flow (graph-based)
-export {
-  AntagonisticReviewStateAnnotation,
-  AntagonisticReviewStateSchema,
-  type AntagonisticReviewState,
-  type AntagonisticReviewStateType,
-  type AgentQueryOptions,
-  createAntagonisticReviewGraph,
-  antagonisticReviewGraph,
-} from './antagonistic-review/index.js';
-
 // Maintenance flow (board health check → LLM analysis → Discord report)
 export {
   createMaintenanceFlow,

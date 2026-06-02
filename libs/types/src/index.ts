@@ -668,24 +668,6 @@ export type {
 export { EscalationSeverity, EscalationSource } from './escalation.js';
 export type { EscalationSignal, EscalationChannel } from './escalation.js';
 
-// Antagonistic Review Pipeline types
-export type {
-  ReviewVerdict,
-  SectionReview,
-  ReviewerPerspective,
-  AntagonisticReviewResult,
-  ReviewState,
-  ContentBrief,
-  DeliverableType,
-  PairReviewResult,
-  FlowReviewConfig,
-} from './review.js';
-export { DistillationDepth } from './review.js';
-
-// Antagonistic Review service types (ReviewResult, ConsolidatedReview, ReviewRequest)
-export type { ReviewResult, ConsolidatedReview, ReviewRequest } from './antagonistic-review.js';
-export { extractPRDFromText } from './antagonistic-review.js';
-
 // Metrics ledger types (persistent append-only analytics)
 export type {
   MetricsLedgerRecord,

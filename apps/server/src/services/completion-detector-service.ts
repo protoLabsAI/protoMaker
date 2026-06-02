@@ -221,10 +221,9 @@ export class CompletionDetectorService {
       //   c) Look up the Plane project from workspace/projects.yaml by matching
       //      the GitHub repo associated with the feature's projectSlug
       //
-      // Once mapped, call:
-      //   import { updatePlaneIssue } from './planning-service.js';
-      //   await updatePlaneIssue(issueId, projectId, 'completed',
-      //     `Feature "${feature.title}" completed.${feature.prUrl ? ` PR: ${feature.prUrl}` : ''}`);
+      // Once mapped, call the Plane MCP/API to set the issue to "completed" with
+      // a note like:
+      //   `Feature "${feature.title}" completed.${feature.prUrl ? ` PR: ${feature.prUrl}` : ''}`
 
       // 1. Epic completion check
       if (feature.epicId) {
