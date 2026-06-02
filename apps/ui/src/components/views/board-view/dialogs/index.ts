@@ -2,6 +2,7 @@ export { AddFeatureDialog } from './add-feature-dialog';
 export { AgentOutputModal } from './agent-output-modal';
 export { BacklogPlanDialog } from './backlog-plan-dialog';
 export { CompletedFeaturesModal } from './completed-features-modal';
+export { ArchivedFeaturesModal } from './archived-features-modal';
 export { ArchiveAllVerifiedDialog } from './archive-all-verified-dialog';
 export { DeleteCompletedFeatureDialog } from './delete-completed-feature-dialog';
 export { DependencyLinkDialog, type DependencyLinkType } from './dependency-link-dialog';

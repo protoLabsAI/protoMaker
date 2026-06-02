@@ -12,7 +12,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Button } from '@protolabsai/ui/atoms';
 import { KanbanColumn, KanbanCard, EmptyStateCard } from './components';
 import { Feature, useAppStore, formatShortcut } from '@/store/app-store';
-import { Archive, CheckSquare, GripVertical, Plus } from 'lucide-react';
+import { Archive, CheckSquare, GripVertical, History, Plus } from 'lucide-react';
 import { useResponsiveKanban } from '@/hooks/use-responsive-kanban';
 import { COLUMNS, type ColumnId } from './constants';
 import { cn } from '@/lib/utils';
@@ -49,6 +49,7 @@ interface KanbanBoardProps {
   onArchiveAllVerified: () => void;
   onAddFeature: () => void;
   onShowCompletedModal: () => void;
+  onShowArchivedModal: () => void;
   completedCount: number;
   // Selection mode props
   isSelectionMode?: boolean;
@@ -284,6 +285,7 @@ export function KanbanBoard({
   onArchiveAllVerified,
   onAddFeature,
   onShowCompletedModal,
+  onShowArchivedModal,
   completedCount,
   isSelectionMode = false,
   selectionTarget = null,
@@ -380,6 +382,16 @@ export function KanbanBoard({
                               {completedCount > 99 ? '99+' : completedCount}
                             </span>
                           )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={onShowArchivedModal}
+                          title="Archived Features"
+                          data-testid="archived-features-button"
+                        >
+                          <History className="w-3.5 h-3.5 text-muted-foreground" />
                         </Button>
                       </div>
                     ) : column.id === 'backlog' ? (

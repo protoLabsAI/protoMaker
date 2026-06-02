@@ -130,6 +130,17 @@ export const queryKeys = {
   },
 
   // ============================================
+  // Archived features (#4035)
+  // ============================================
+  archives: {
+    /** Archived features for a project */
+    list: (projectPath: string) => ['archives', 'list', projectPath] as const,
+    /** Full detail (feature.json + agent output) for one archived feature */
+    detail: (projectPath: string, featureId: string) =>
+      ['archives', 'detail', projectPath, featureId] as const,
+  },
+
+  // ============================================
   // Running Agents
   // ============================================
   runningAgents: {
