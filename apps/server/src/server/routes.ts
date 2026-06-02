@@ -79,8 +79,6 @@ import { createAgentRoutes } from '../routes/agents.js';
 import { createOpsRoutes } from '../routes/ops/index.js';
 import { createQaRoutes } from '../routes/qa/index.js';
 import { createContextEngineRoutes } from '../routes/context-engine.js';
-import { createA2ARoutes, createA2AHandlerRoutes } from '../routes/a2a/index.js';
-import { PlanningService } from '../services/planning-service.js';
 
 const logger = createLogger('Server:Routes');
 
@@ -191,19 +189,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // Webhooks at root level (unauthenticated - uses signature verification)
   app.use('/webhooks', createWebhooksRoutes(events, settingsService, topicBus));
 
-  // A2A agent discovery — unauthenticated (spec requires open discovery)
-  app.use('/.well-known', createA2ARoutes());
-
-  // Planning pipeline: PlanningService orchestrates plan + plan_resume A2A skills
-  const planningService = new PlanningService({
-    antagonisticReview: antagonisticReviewService,
-    projectService,
-    featureLoader,
-    events,
-  });
-
-  // A2A message handler — manual X-API-Key check inside (same pattern as /webhooks)
-  app.use('/a2a', createA2AHandlerRoutes(repoRoot, { planningService, settingsService }));
+  // NOTE: protoMaker's A2A surface (/.well-known agent card + POST /a2a) was retired
+  // (#3985). Per protoWorkstacean ADR-0002, ws↔pm is HTTP + webhooks + bus /publish —
+  // never A2A — and the fleet migrated off it. protoMaker is a pure executor that
+  // reacts to events/requests over HTTP; it no longer advertises or serves A2A.
 
   // --- AUTHENTICATION MIDDLEWARE ---
   // Apply authentication to all /api/* routes
