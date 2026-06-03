@@ -63,18 +63,22 @@ jobs:
 
       - name: Get version
         id: version
+        # Pass event/inputs via env (never interpolate ${{ }} into the script body
+        # — zizmor template-injection / CWE-94).
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_PREV: ${{ inputs.previous_version }}
         run: |
           # Manual re-post mode: workflow_dispatch with an explicit `version`.
           # Skips tagging and just re-posts notes for the given range.
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.version }}" ]; then
-            RAW="${{ inputs.version }}"
-            VERSION="${RAW#v}"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ -n "$INPUT_VERSION" ]; then
+            VERSION="${INPUT_VERSION#v}"
             echo "version=$VERSION" >> $GITHUB_OUTPUT
             echo "repost=true" >> $GITHUB_OUTPUT
             echo "already_tagged=true" >> $GITHUB_OUTPUT
-            PREV="${{ inputs.previous_version }}"
-            echo "prev=$PREV" >> $GITHUB_OUTPUT
-            echo "Re-post mode: notes for v${VERSION} (previous: ${PREV:-<unset>})"
+            echo "prev=$INPUT_PREV" >> $GITHUB_OUTPUT
+            echo "Re-post mode: notes for v${VERSION} (previous: ${INPUT_PREV:-<unset>})"
             exit 0
           fi
 
