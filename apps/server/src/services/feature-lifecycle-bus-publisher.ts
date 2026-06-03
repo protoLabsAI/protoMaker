@@ -5,20 +5,28 @@
  *
  * Subscribes to the existing `feature:status-changed` event (emitted by
  * FeatureLoader.update) and, when a feature transitions into a terminal state,
- * publishes `feature.completed` (status -> done) or `feature.failed`
- * (status -> blocked / escalated) to protoWorkstacean's /publish endpoint —
- * the dotted, unprefixed topics workstacean's consumers subscribe to. The
- * payload echoes the originating
- * signal metadata so a consumer (e.g. the Linear ↔ protoMaker bridge) can
- * reconstruct lineage and post a "feature done" comment on the source issue.
- * See protoLabsAI/protoMaker#3549 and the downstream consumer
- * protoLabsAI/protoWorkstacean#482.
+ * publishes one of three dotted, unprefixed topics workstacean's consumers
+ * subscribe to:
+ *
+ *   - `done`      → `feature.completed`
+ *   - `blocked`   → `feature.blocked`   (carries a `kind` failure discriminator)
+ *   - `escalated` → `feature.failed`    (already escalated — no auto-remediation)
+ *
+ * `feature.blocked` is split out of the generic `feature.failed` so
+ * workstacean's FeatureRemediationPlugin can route a per-feature signal to
+ * ignore / HITL / dispatch-Roxy based on `kind`. See protoLabsAI/protoMaker#4067
+ * (this side) and protoLabsAI/protoWorkstacean#779 / #776 (the consumer + the
+ * flag day that depends on this emission). Greenfield: a `blocked` transition
+ * emits ONLY `feature.blocked`, never also `feature.failed`.
+ *
+ * The payload echoes the originating signal metadata so a consumer (e.g. the
+ * Linear ↔ protoMaker bridge) can reconstruct lineage and post a status comment
+ * on the source issue. See protoLabsAI/protoMaker#3549 and the downstream
+ * consumer protoLabsAI/protoWorkstacean#482.
  *
  * Opt-in: only active when WORKSTACEAN_URL is explicitly set, so installs
  * without protoWorkstacean don't attempt (and log) a publish on every feature
- * completion. The canonical board has a single terminal state (`done`); the
- * TERMINAL_STATUSES and FAILURE_STATUSES sets are the extension point if more
- * are added later.
+ * completion.
  */
 
 import { createLogger } from '@protolabsai/utils';
@@ -28,11 +36,124 @@ import { publish as workstaceanPublish } from '../client/workstacean-api.client.
 
 const logger = createLogger('FeatureLifecycleBusPublisher');
 
-/** Board statuses treated as terminal (success) for lifecycle-event purposes. */
+/** Board statuses treated as terminal (success) — emit `feature.completed`. */
 const TERMINAL_STATUSES: ReadonlySet<string> = new Set(['done']);
 
-/** Board statuses treated as terminal (failure) — emit `feature.failed`. */
-const FAILURE_STATUSES: ReadonlySet<string> = new Set(['blocked', 'escalated']);
+/** Board status that emits the kinded `feature.blocked` (remediable failure). */
+const BLOCKED_STATUSES: ReadonlySet<string> = new Set(['blocked']);
+
+/** Board status that emits `feature.failed` (already escalated — no remediation). */
+const ESCALATED_STATUSES: ReadonlySet<string> = new Set(['escalated']);
+
+/**
+ * Failure-category discriminator workstacean's router consumes to decide
+ * ignore vs HITL vs dispatch-Roxy. Mirrors the `kind` vocabulary in
+ * protoLabsAI/protoWorkstacean#779. `undefined` is safe — the router treats a
+ * missing kind as remediable (dispatches Roxy).
+ */
+export type BlockedKind =
+  | 'dependency_unsatisfied'
+  | 'external_dependency_unsatisfied'
+  | 'cost_exceeded'
+  | 'runtime_exceeded'
+  | 'quota'
+  | 'rate_limit'
+  | 'worktree_safety'
+  | 'ci_failure'
+  | 'merge_conflict'
+  | 'changes_requested'
+  | 'retries_exhausted';
+
+/**
+ * Map a human block reason to a workstacean `kind`. First match wins, ordered
+ * most-specific → least. Returns `undefined` for an unrecognized reason so the
+ * router falls back to its remediable default. This is the keyword-matching
+ * fallback described in #4067; if a structured failure category is later
+ * threaded onto the feature record, prefer it over this text match.
+ *
+ * Routing reference (protoWorkstacean#779):
+ *   dependency_unsatisfied / external_dependency_unsatisfied → ignored (self-heals)
+ *   cost_exceeded / runtime_exceeded / quota / rate_limit / worktree_safety → HITL
+ *   ci_failure / merge_conflict / changes_requested / retries_exhausted / else → Roxy
+ */
+export function deriveBlockedKind(reason: string | undefined): BlockedKind | undefined {
+  const r = (reason ?? '').toLowerCase();
+  if (!r) return undefined;
+
+  // Feature-DAG dependency not satisfied — protoMaker self-heals on staleDeps,
+  // so the router ignores it. Matched narrowly so npm/missing-module errors
+  // (which Roxy CAN fix) are NOT silently swallowed here.
+  if (
+    /stale.?dep|dependenc(?:y|ies) (?:unsatisfied|not (?:met|satisfied))|blocked by (?:its )?(?:upstream|dependenc|feature)|waiting (?:on|for) (?:its )?(?:upstream|dependenc)/.test(
+      r
+    )
+  ) {
+    return 'dependency_unsatisfied';
+  }
+
+  // Worktree safety guard (dirty / uncommitted / refusing to corrupt main). HITL.
+  if (
+    /worktree.*(?:safety|uncommitted|dirty|corrupt)|refus\w* to fall back|main working tree/.test(r)
+  ) {
+    return 'worktree_safety';
+  }
+
+  // Cost / budget ceiling. HITL.
+  if (/cost.*(?:exceed|limit|cap)|budget.*(?:exceed|exhaust|cap)|error.?budget/.test(r)) {
+    return 'cost_exceeded';
+  }
+
+  // API rate limit. HITL.
+  if (/rate.?limit|too many requests|\b429\b|throttl/.test(r)) {
+    return 'rate_limit';
+  }
+
+  // Usage quota. HITL.
+  if (/quota|usage limit/.test(r)) {
+    return 'quota';
+  }
+
+  // Retries / PR iterations exhausted. Roxy. (Before runtime: both say "exceeded".)
+  if (
+    /retr(?:y|ies).*(?:exhaust|exceed)|exhaust\w*.*retr|max.*(?:retr|attempt|iteration)\w*.*(?:exceed|reach)|max pr iterations|attempts? exceeded/.test(
+      r
+    )
+  ) {
+    return 'retries_exhausted';
+  }
+
+  // Runtime / timeout. HITL.
+  if (
+    /runtime.*exceed|run.?time exceeded|timed? ?out|timeout|deadline exceeded|took too long|execution.*(?:exceed|too long|timed)/.test(
+      r
+    )
+  ) {
+    return 'runtime_exceeded';
+  }
+
+  // PR review requested changes (either word order). Roxy.
+  if (/changes.?requested|requested changes/.test(r)) {
+    return 'changes_requested';
+  }
+
+  // Git merge conflict. Roxy.
+  if (
+    /merge conflict|unmerged files|rebase.*conflict|fix conflicts|\bconflict(?:s|ing)?\b/.test(r)
+  ) {
+    return 'merge_conflict';
+  }
+
+  // CI / checks / tests / automated review block. Roxy.
+  if (
+    /\bci\b|check(?:s)? fail|status check|test(?:s)? fail|build fail|pipeline fail|fresh-eyes review block|automated review|review block/.test(
+      r
+    )
+  ) {
+    return 'ci_failure';
+  }
+
+  return undefined;
+}
 
 /** Subset of the `feature:status-changed` payload this publisher needs. */
 interface StatusChangedPayload {
@@ -73,11 +194,11 @@ export class FeatureLifecycleBusPublisher {
   }
 
   /**
-   * Publish `feature.completed` when a feature reaches a terminal
-   * success state (done), or `feature.failed` when it reaches a
-   * terminal failure state (blocked / escalated). Loads the feature fresh to
-   * echo its source signal metadata and PR tracking fields. Never throws — a
-   * publish failure must not affect the board transition.
+   * Publish the lifecycle event for a terminal transition:
+   *   done → feature.completed, blocked → feature.blocked (kinded),
+   *   escalated → feature.failed. Loads the feature fresh to echo its source
+   *   signal metadata and PR tracking fields. Never throws — a publish failure
+   *   must not affect the board transition.
    */
   async handleStatusChange(payload: StatusChangedPayload): Promise<void> {
     const { featureId, newStatus, oldStatus, projectPath } = payload ?? {};
@@ -86,8 +207,9 @@ export class FeatureLifecycleBusPublisher {
     }
 
     const isTerminal = TERMINAL_STATUSES.has(newStatus);
-    const isFailure = FAILURE_STATUSES.has(newStatus);
-    if (!isTerminal && !isFailure) {
+    const isBlocked = BLOCKED_STATUSES.has(newStatus);
+    const isEscalated = ESCALATED_STATUSES.has(newStatus);
+    if (!isTerminal && !isBlocked && !isEscalated) {
       return;
     }
 
@@ -99,9 +221,13 @@ export class FeatureLifecycleBusPublisher {
     }
 
     // Dotted, unprefixed topics — exactly what workstacean's consumers
-    // subscribe to (`feature.completed` / `feature.failed`). The earlier
-    // `protomaker.`-prefixed names never matched, so #482 stayed silent.
-    const topic = isTerminal ? 'feature.completed' : 'feature.failed';
+    // subscribe to. `blocked` is its own remediable signal; `escalated` stays
+    // `feature.failed` (no auto-remediation); `done` is `feature.completed`.
+    const topic = isTerminal
+      ? 'feature.completed'
+      : isBlocked
+        ? 'feature.blocked'
+        : 'feature.failed';
     const owner = process.env.GITHUB_REPO_OWNER;
     const name = process.env.GITHUB_REPO_NAME;
     const repo = owner && name ? `${owner}/${name}` : undefined;
@@ -111,10 +237,12 @@ export class FeatureLifecycleBusPublisher {
       feature?.sourceMeta && typeof feature.sourceMeta === 'object'
         ? feature.sourceMeta
         : { sourceChannel: feature?.sourceChannel, signalMetadata: feature?.signalMetadata };
+    const timestampKey = isTerminal ? 'completedAt' : isBlocked ? 'blockedAt' : 'failedAt';
     const data: Record<string, unknown> = {
       // projectSlug is REQUIRED by workstacean's feature-notifier (resolves the
       // dev channel); fall back so the event is never dropped for lacking it.
       projectSlug: feature?.projectSlug ?? process.env.WORKSTACEAN_PROJECT_SLUG ?? 'protomaker',
+      projectPath,
       featureId,
       featureTitle: feature?.title,
       prNumber: feature?.prNumber,
@@ -122,11 +250,23 @@ export class FeatureLifecycleBusPublisher {
       repo,
       previousStatus: oldStatus,
       sourceMeta,
-      [isTerminal ? 'completedAt' : 'failedAt']: new Date().toISOString(),
+      [timestampKey]: new Date().toISOString(),
     };
-    if (!isTerminal) {
+
+    if (isBlocked) {
+      // feature.blocked carries the human reason + a kind discriminator the
+      // workstacean router uses to pick ignore / HITL / dispatch-Roxy.
+      const reason = (feature?.statusChangeReason ?? payload?.reason ?? 'blocked').slice(0, 400);
+      data.reason = reason;
+      const kind = deriveBlockedKind(feature?.statusChangeReason ?? payload?.reason);
+      if (kind) {
+        data.kind = kind;
+      }
+    } else if (isEscalated) {
+      // feature.failed keeps the historical `error` field for existing consumers.
       data.error = (feature?.statusChangeReason ?? payload?.reason ?? 'failed').slice(0, 400);
     }
+
     try {
       const result = await this.publishFn({ event: topic, data });
       if (!result.ok) {

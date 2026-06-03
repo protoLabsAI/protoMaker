@@ -123,7 +123,7 @@ describe('FeatureLifecycleBusPublisher', () => {
     expect(onSpy).not.toHaveBeenCalled();
   });
 
-  it('publishes feature.failed with error on transition to blocked', async () => {
+  it('publishes kinded feature.blocked (not feature.failed) on transition to blocked', async () => {
     const feature = {
       id: 'f2',
       title: 'Blocked feature',
@@ -143,12 +143,54 @@ describe('FeatureLifecycleBusPublisher', () => {
 
     expect(publishFn).toHaveBeenCalledTimes(1);
     const arg = publishFn.mock.calls[0][0];
-    expect(arg.event).toBe('feature.failed');
+    // Greenfield: blocked emits ONLY feature.blocked, never feature.failed.
+    expect(arg.event).toBe('feature.blocked');
     expect(arg.data.featureId).toBe('f2');
     expect(arg.data.prNumber).toBe(42);
-    expect(arg.data.error).toBe('CI checks failed after 3 retries');
-    expect(arg.data.failedAt).toBeDefined();
+    expect(arg.data.projectPath).toBe('/p');
+    // feature.blocked carries `reason` + `kind`, not the `error` field.
+    expect(arg.data.reason).toBe('CI checks failed after 3 retries');
+    expect(arg.data.error).toBeUndefined();
+    // "CI checks failed after 3 retries" → ci_failure (the dominant signal;
+    // "3 retries" is not a retries-exhausted phrasing). Router dispatches Roxy.
+    expect(arg.data.kind).toBe('ci_failure');
+    expect(arg.data.blockedAt).toBeDefined();
+    expect(arg.data.failedAt).toBeUndefined();
     expect(arg.data.previousStatus).toBe('in_progress');
+  });
+
+  it('derives the kind discriminator from the block reason', async () => {
+    const cases: Array<[string, string | undefined]> = [
+      ['Worktree has uncommitted changes — manual review needed', 'worktree_safety'],
+      ['Refusing to fall back to main working tree', 'worktree_safety'],
+      ['Cost budget exceeded for this feature', 'cost_exceeded'],
+      ['API rate limit reached (429)', 'rate_limit'],
+      ['Usage quota exhausted', 'quota'],
+      ['Max PR iterations exceeded (5)', 'retries_exhausted'],
+      ['Execution deadline exceeded — timed out', 'runtime_exceeded'],
+      ['Reviewer requested changes on the PR', 'changes_requested'],
+      ['Worktree has unresolved merge conflicts', 'merge_conflict'],
+      ['Fresh-eyes review BLOCK: blocked by automated review', 'ci_failure'],
+      ['Blocked by its upstream dependency', 'dependency_unsatisfied'],
+      ['Some entirely novel failure nobody mapped', undefined],
+    ];
+
+    for (const [reason, expectedKind] of cases) {
+      const publishFn = vi.fn().mockResolvedValue({ ok: true });
+      const { pub } = makePublisher({
+        feature: { id: 'fk', title: 'k', projectSlug: 'proj', statusChangeReason: reason },
+        publishFn,
+      });
+      await pub.handleStatusChange({
+        featureId: 'fk',
+        projectPath: '/p',
+        oldStatus: 'in_progress',
+        newStatus: 'blocked',
+      });
+      const arg = publishFn.mock.calls[0][0];
+      expect(arg.event).toBe('feature.blocked');
+      expect(arg.data.kind, `reason="${reason}"`).toBe(expectedKind);
+    }
   });
 
   it('publishes feature.failed on transition to escalated', async () => {
@@ -185,7 +227,7 @@ describe('FeatureLifecycleBusPublisher', () => {
     expect(arg.data.error).toBeUndefined();
   });
 
-  it('falls back to payload reason for the error when feature has none', async () => {
+  it('falls back to payload reason on feature.blocked when feature has none', async () => {
     const feature = { id: 'f5', title: 'No reason on feature', projectSlug: 'proj' };
     const { pub, publishFn } = makePublisher({ feature });
 
@@ -197,6 +239,25 @@ describe('FeatureLifecycleBusPublisher', () => {
       reason: 'from payload',
     });
 
-    expect(publishFn.mock.calls[0][0].data.error).toBe('from payload');
+    const arg = publishFn.mock.calls[0][0];
+    expect(arg.event).toBe('feature.blocked');
+    expect(arg.data.reason).toBe('from payload');
+  });
+
+  it('falls back to payload reason for the error on feature.failed (escalated)', async () => {
+    const feature = { id: 'f6', title: 'No reason on feature', projectSlug: 'proj' };
+    const { pub, publishFn } = makePublisher({ feature });
+
+    await pub.handleStatusChange({
+      featureId: 'f6',
+      projectPath: '/p',
+      oldStatus: 'review',
+      newStatus: 'escalated',
+      reason: 'from payload',
+    });
+
+    const arg = publishFn.mock.calls[0][0];
+    expect(arg.event).toBe('feature.failed');
+    expect(arg.data.error).toBe('from payload');
   });
 });
