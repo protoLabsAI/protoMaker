@@ -64,7 +64,7 @@ export function createLifecycleRoutes(
     '/save-milestones',
     validatePathParams('projectPath'),
     validateSlugs('projectSlug'),
-    createSaveMilestonesHandler(lifecycleService)
+    createSaveMilestonesHandler(lifecycleService, projectService)
   );
 
   router.post(
