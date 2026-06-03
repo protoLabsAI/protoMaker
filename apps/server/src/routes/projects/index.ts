@@ -31,7 +31,10 @@ import {
 } from './routes/ceremony-timeline.js';
 import { createLifecycleRoutes } from './lifecycle/index.js';
 import { createResearchHandler } from './lifecycle/research.js';
+import { createPauseHandler } from './routes/pause.js';
+import { createResumeHandler } from './routes/resume.js';
 import type { ProjectLifecycleService } from '../../services/project-lifecycle-service.js';
+import type { ProjectPauseService } from '../../services/project-pause-service.js';
 import { createProjectTools, toExpressRouter } from '@protolabsai/tools';
 import type { EventLedgerService } from '../../services/event-ledger-service.js';
 
@@ -40,7 +43,8 @@ export function createProjectsRoutes(
   events: EventEmitter,
   projectService: ProjectService,
   lifecycleService?: ProjectLifecycleService,
-  eventLedgerService?: EventLedgerService
+  eventLedgerService?: EventLedgerService,
+  pauseService?: ProjectPauseService
 ): Router {
   const router = Router();
 
@@ -99,6 +103,12 @@ export function createProjectsRoutes(
     validateSlugs('projectSlug'),
     createArchiveHandler(projectService)
   );
+
+  // App-level pause/resume (keyed by projectPath) — first-class per-project pause
+  if (pauseService) {
+    router.post('/pause', validatePathParams('projectPath'), createPauseHandler(pauseService));
+    router.post('/resume', validatePathParams('projectPath'), createResumeHandler(pauseService));
+  }
 
   // Timeline route — GET /api/projects/:slug/timeline
   if (eventLedgerService) {

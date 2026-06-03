@@ -25,6 +25,7 @@ import { createSessionsRoutes } from '../routes/sessions/index.js';
 import { createFeaturesRoutes } from '../routes/features/index.js';
 import { createBackfillProjectSlugHandler } from '../routes/features/routes/backfill-project-slug.js';
 import { createProjectsRoutes } from '../routes/projects/index.js';
+import { ProjectPauseService } from '../services/project-pause-service.js';
 import { createAutoModeRoutes } from '../routes/auto-mode/index.js';
 import { createEnhancePromptRoutes } from '../routes/enhance-prompt/index.js';
 import { createWorktreeRoutes } from '../routes/worktree/index.js';
@@ -319,9 +320,21 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     authMiddleware,
     createBriefingRoutes(eventHistoryService, briefingCursorService)
   );
+  const projectPauseService = new ProjectPauseService(
+    projectService,
+    autoModeService,
+    settingsService
+  );
   app.use(
     '/api/projects',
-    createProjectsRoutes(featureLoader, events, projectService, projectLifecycleService)
+    createProjectsRoutes(
+      featureLoader,
+      events,
+      projectService,
+      projectLifecycleService,
+      undefined,
+      projectPauseService
+    )
   );
   app.use('/api/automations', createAutomationsRoutes(automationService));
   app.use('/api/ava', createAvaRoutes());

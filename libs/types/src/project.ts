@@ -21,6 +21,7 @@ export type ProjectStatus =
   | 'approved' // PRD approved, ready to scaffold
   | 'scaffolded' // Project structure created
   | 'active' // Features created, work in progress
+  | 'paused' // App-level pause; work halted, prior status preserved in pausedFrom
   | 'completed' // All features done
   | 'cancelled'; // Project abandoned or killed at any gate
 
@@ -241,6 +242,15 @@ export interface Project {
   /** Current status in the orchestration pipeline */
   status: ProjectStatus;
 
+  /** Status this project held before being paused (restored on resume) */
+  pausedFrom?: ProjectStatus;
+
+  /** Optional reason supplied when the project's app was paused */
+  pauseReason?: string;
+
+  /** ISO timestamp of when the project was paused */
+  pausedAt?: string;
+
   /** Milestones within this project */
   milestones: Milestone[];
 
@@ -453,6 +463,15 @@ export interface UpdateProjectInput {
 
   /** Update status */
   status?: ProjectStatus;
+
+  /** Status this project held before being paused (restored on resume) */
+  pausedFrom?: ProjectStatus;
+
+  /** Optional reason supplied when the project's app was paused */
+  pauseReason?: string;
+
+  /** ISO timestamp of when the project was paused */
+  pausedAt?: string;
 
   /** ISO timestamp of when the project was completed */
   completedAt?: string;
