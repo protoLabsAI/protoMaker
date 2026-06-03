@@ -208,5 +208,4 @@ Inject the PM provider via `setPMWorldStateProvider(provider)` after both servic
 ## See Also
 
 - [Auto Mode Service](./auto-mode-service) — schedules features and delegates to `LeadEngineerService`
-- [Antagonistic Review](./antagonistic-review) — plan quality gate called from `PlanProcessor`
 - [Worktree Recovery Service](./worktree-recovery-service) — post-agent hook in `ExecuteProcessor`
