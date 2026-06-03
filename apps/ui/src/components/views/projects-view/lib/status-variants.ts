@@ -30,6 +30,8 @@ export function getProjectStatusVariant(status: string): BadgeVariant {
       return 'info';
     case 'active':
       return 'warning';
+    case 'paused':
+      return 'muted';
     case 'completed':
       return 'success';
     case 'cancelled':

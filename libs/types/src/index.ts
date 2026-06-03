@@ -395,6 +395,8 @@ export {
   // Environment presets
   ENVIRONMENT_PRESETS,
   getDeploymentEnvironment,
+  // App-level pause registry helper
+  isProjectPathPaused,
 } from './settings.js';
 
 // Model display constants

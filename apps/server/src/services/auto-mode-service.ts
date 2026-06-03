@@ -49,6 +49,7 @@ import {
   isClaudeModel,
   stripProviderPrefix,
   deriveVerificationTier,
+  isProjectPathPaused,
 } from '@protolabsai/types';
 import { getVerificationTierInstructions } from '@protolabsai/prompts';
 import {
@@ -817,6 +818,15 @@ export class AutoModeService {
       const message = buildComplianceRefusalMessage(projectPath, compliance.violations);
       logger.warn(`[compliance] ${message}`);
       throw new Error(message);
+    }
+
+    // App-level pause gate. The durable `pausedProjects` registry is the enforced
+    // source of truth — refuse to start a loop for a paused app until it is resumed.
+    if (this.settingsService) {
+      const settings = await this.settingsService.getGlobalSettings();
+      if (isProjectPathPaused(settings, projectPath)) {
+        throw new Error(`Project is paused: ${projectPath}. Resume it before starting auto-mode.`);
+      }
     }
 
     // Compute key early so we can synchronously claim it before any await.

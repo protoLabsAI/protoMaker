@@ -525,6 +525,17 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectPath: args.projectPath,
       });
 
+    case 'pause_project':
+      return apiCall('/projects/pause', {
+        projectPath: args.projectPath,
+        reason: args.reason,
+      });
+
+    case 'resume_project':
+      return apiCall('/projects/resume', {
+        projectPath: args.projectPath,
+      });
+
     case 'get_execution_order': {
       const result = (await apiCall('/features/list', {
         projectPath: args.projectPath,

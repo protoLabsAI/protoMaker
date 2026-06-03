@@ -116,6 +116,42 @@ export const orchestrationTools: Tool[] = [
     },
   },
   {
+    name: 'pause_project',
+    description:
+      'Pause an app/project (keyed by projectPath). Records the app as paused, marks every non-terminal project slug as paused for board visibility, and stops any running auto-mode loop. Auto-mode refuses to start while paused until resumed.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          minLength: 1,
+          description: 'Absolute path to the project directory',
+        },
+        reason: {
+          type: 'string',
+          description: 'Optional human-readable reason for the pause',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'resume_project',
+    description:
+      "Resume a paused app/project (keyed by projectPath). Removes it from the pause registry and restores each paused slug's prior status. Does NOT auto-restart auto-mode.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          minLength: 1,
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
     name: 'get_execution_order',
     description:
       'Get the resolved execution order for features based on dependencies. Useful for planning.',

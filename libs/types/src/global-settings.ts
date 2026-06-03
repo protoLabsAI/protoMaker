@@ -584,6 +584,21 @@ export interface GlobalSettings {
   };
 
   /**
+   * App-level pause registry. Keyed by `projectPath` (one app/projectPath may
+   * hold many project slugs under `.automaker/projects/`). The durable,
+   * enforced source of truth for whether an app is paused. While paused,
+   * auto-mode refuses to start a loop for the projectPath.
+   */
+  pausedProjects?: Array<{
+    /** Absolute path to the paused app/project directory */
+    projectPath: string;
+    /** Optional human-supplied reason for the pause */
+    reason?: string;
+    /** ISO timestamp of when the pause was recorded */
+    pausedAt: string;
+  }>;
+
+  /**
    * Discord integration settings.
    * @see DiscordSettings
    */
@@ -779,6 +794,8 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
     enabled: false,
     projects: [],
   },
+  // App-level pause registry (empty by default)
+  pausedProjects: [],
   // Feature flags — all on in development by default
   featureFlags: DEFAULT_FEATURE_FLAGS,
   // Scheduler settings — no task overrides by default
@@ -790,3 +807,11 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
     requiredLabel: 'board-intake',
   },
 };
+
+/**
+ * Pure helper: returns true if the given app/projectPath is currently paused
+ * according to the durable `pausedProjects` registry in global settings.
+ */
+export function isProjectPathPaused(settings: GlobalSettings, projectPath: string): boolean {
+  return (settings.pausedProjects ?? []).some((p) => p.projectPath === projectPath);
+}

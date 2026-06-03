@@ -3,6 +3,7 @@
 import { access, unlink, rename, mkdir } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { createLogger, setLogLevel, LogLevel } from '@protolabsai/utils';
+import { isProjectPathPaused } from '@protolabsai/types';
 
 import type { ServiceContainer } from './services.js';
 import { initOtel } from '../lib/otel.js';
@@ -357,6 +358,15 @@ export async function runStartup(
         const { projectPath, branchName, maxConcurrency, reason } = target;
         const worktreeDesc = branchName ? `worktree ${branchName}` : 'main worktree';
         try {
+          // Guard: never re-arm a paused app. The durable `pausedProjects`
+          // registry is the enforced source of truth — resume is required first.
+          if (isProjectPathPaused(settings, projectPath)) {
+            logger.info(
+              `[AUTO-START] ${projectPath} is paused — skipping auto-mode start (resume to re-arm)`
+            );
+            continue;
+          }
+
           // Guard: skip start if the project has no ready backlog features.
           // Starting loops for idle projects wastes memory and contributes to OOM on
           // restart when multiple apps are configured. The loop can be started later
