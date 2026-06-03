@@ -73,6 +73,10 @@ jobs:
           # Manual re-post mode: workflow_dispatch with an explicit `version`.
           # Skips tagging and just re-posts notes for the given range.
           if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ -n "$INPUT_VERSION" ]; then
+            if [ -z "$INPUT_PREV" ]; then
+              echo "::error::Re-post mode requires previous_version (the diff range start, e.g. v0.108.0)."
+              exit 1
+            fi
             VERSION="${INPUT_VERSION#v}"
             echo "version=$VERSION" >> $GITHUB_OUTPUT
             echo "repost=true" >> $GITHUB_OUTPUT
