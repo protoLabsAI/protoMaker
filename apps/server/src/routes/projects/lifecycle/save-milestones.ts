@@ -8,9 +8,13 @@
 
 import type { Request, Response } from 'express';
 import type { ProjectLifecycleService } from '../../../services/project-lifecycle-service.js';
+import type { ProjectService } from '../../../services/project-service.js';
 import { getErrorMessage, logError } from '../common.js';
 
-export function createSaveMilestonesHandler(lifecycleService: ProjectLifecycleService) {
+export function createSaveMilestonesHandler(
+  lifecycleService: ProjectLifecycleService,
+  projectService: ProjectService
+) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath, projectSlug, milestones } = req.body as {
@@ -26,6 +30,12 @@ export function createSaveMilestonesHandler(lifecycleService: ProjectLifecycleSe
 
       if (!Array.isArray(milestones) || milestones.length === 0) {
         res.status(400).json({ success: false, error: 'milestones must be a non-empty array' });
+        return;
+      }
+
+      const existing = await projectService.getProject(projectPath, projectSlug);
+      if (!existing) {
+        res.status(404).json({ success: false, error: `Project "${projectSlug}" not found` });
         return;
       }
 
