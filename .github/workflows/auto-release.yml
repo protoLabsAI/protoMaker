@@ -6,6 +6,10 @@ name: Auto Release
 # gateway-themed release notes to Discord via @protolabsai/release-tools.
 # No GitHub Release is created. If the version is already tagged, the workflow
 # no-ops — bump the version in a PR before merging if you want a new release.
+#
+# Manual re-post: run via workflow_dispatch with `version` (e.g. v0.109.0) set to
+# re-generate + re-post notes for an already-tagged release (bypasses the tag
+# guard, never tags). Useful to backfill notes after a transient gateway failure.
 
 on:
   push:
@@ -17,6 +21,15 @@ on:
       - '**.md'
       - '.automaker/**'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Re-post notes for this tag (e.g. v0.109.0). Blank = normal version-detect from libs/types.'
+        required: false
+        default: ''
+      previous_version:
+        description: 'Previous tag for the diff range (e.g. v0.108.0). Required when version is set.'
+        required: false
+        default: ''
 
 permissions: read-all
 
@@ -50,9 +63,32 @@ jobs:
 
       - name: Get version
         id: version
+        # Pass event/inputs via env (never interpolate ${{ }} into the script body
+        # — zizmor template-injection / CWE-94).
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_PREV: ${{ inputs.previous_version }}
         run: |
+          # Manual re-post mode: workflow_dispatch with an explicit `version`.
+          # Skips tagging and just re-posts notes for the given range.
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ -n "$INPUT_VERSION" ]; then
+            if [ -z "$INPUT_PREV" ]; then
+              echo "::error::Re-post mode requires previous_version (the diff range start, e.g. v0.108.0)."
+              exit 1
+            fi
+            VERSION="${INPUT_VERSION#v}"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "repost=true" >> $GITHUB_OUTPUT
+            echo "already_tagged=true" >> $GITHUB_OUTPUT
+            echo "prev=$INPUT_PREV" >> $GITHUB_OUTPUT
+            echo "Re-post mode: notes for v${VERSION} (previous: ${INPUT_PREV:-<unset>})"
+            exit 0
+          fi
+
           VERSION=$(node -p "require('./libs/types/package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "repost=false" >> $GITHUB_OUTPUT
           echo "Detected version: v${VERSION}"
 
           if git tag -l "v${VERSION}" | grep -q "v${VERSION}"; then
@@ -63,7 +99,7 @@ jobs:
           fi
 
       - name: Create tag
-        if: steps.version.outputs.already_tagged != 'true'
+        if: steps.version.outputs.repost != 'true' && steps.version.outputs.already_tagged != 'true'
         run: |
           VERSION="v${{ steps.version.outputs.version }}"
           git tag -a "$VERSION" -m "$VERSION"
@@ -71,24 +107,24 @@ jobs:
 
       - name: Resolve previous tag
         id: prev
-        if: steps.version.outputs.already_tagged != 'true' && env.DISCORD_RELEASE_WEBHOOK != ''
+        if: steps.version.outputs.repost != 'true' && steps.version.outputs.already_tagged != 'true' && env.DISCORD_RELEASE_WEBHOOK != ''
         run: |
           VERSION="v${{ steps.version.outputs.version }}"
           PREV_TAG=$(git tag --sort=-v:refname | grep -v "^${VERSION}$" | head -1)
           echo "tag=$PREV_TAG" >> $GITHUB_OUTPUT
 
       - name: Rewrite and post release notes to Discord
-        if: steps.version.outputs.already_tagged != 'true' && env.DISCORD_RELEASE_WEBHOOK != ''
+        if: (steps.version.outputs.repost == 'true' || steps.version.outputs.already_tagged != 'true') && env.DISCORD_RELEASE_WEBHOOK != ''
         uses: protoLabsAI/release-tools@fac24459b61aa7ab44c423b103a524d5c9f9e6ee # v1
         with:
           version: v${{ steps.version.outputs.version }}
-          previous-version: ${{ steps.prev.outputs.tag }}
+          previous-version: ${{ steps.version.outputs.repost == 'true' && steps.version.outputs.prev || steps.prev.outputs.tag }}
         env:
           GATEWAY_API_KEY: ${{ secrets.GATEWAY_API_KEY }}
           DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
 
       - name: Alert on release failure
-        if: failure() && steps.version.outputs.already_tagged != 'true'
+        if: failure() && (steps.version.outputs.repost == 'true' || steps.version.outputs.already_tagged != 'true')
         run: |
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           MSG="ALERT: Auto-release FAILED. Tag or release-notes post may be incomplete. ${RUN_URL}"
