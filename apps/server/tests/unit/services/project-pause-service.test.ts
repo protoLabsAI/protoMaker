@@ -61,10 +61,18 @@ function makeProjectService(projects: Project[]) {
 }
 
 describe('ProjectPauseService (#4062)', () => {
-  let autoModeService: { stopAutoLoopForProject: ReturnType<typeof vi.fn> };
+  let autoModeService: {
+    stopAutoLoopForProject: ReturnType<typeof vi.fn>;
+    getActiveAutoLoopWorktrees: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
-    autoModeService = { stopAutoLoopForProject: vi.fn(async () => 1) };
+    autoModeService = {
+      stopAutoLoopForProject: vi.fn(async () => 1),
+      // No active worktree loops by default → pauseProject falls back to a
+      // single null-branch stop (covered by the existing assertions).
+      getActiveAutoLoopWorktrees: vi.fn(() => []),
+    };
   });
 
   it('pause records pausedProjects, strips autoModeAlwaysOn, pauses non-terminal slugs, and stops the loop', async () => {
@@ -114,6 +122,38 @@ describe('ProjectPauseService (#4062)', () => {
     expect(autoModeService.stopAutoLoopForProject).toHaveBeenCalledWith(PROJECT_PATH);
     expect(result.loopsStopped).toBe(1);
     expect(result.alreadyPaused).toBe(false);
+  });
+
+  it('pause stops EVERY active worktree loop for the app and ignores other apps', async () => {
+    const settings = makeSettingsService();
+    const projectService = makeProjectService([makeProject('active-one', 'active')]);
+
+    autoModeService.getActiveAutoLoopWorktrees.mockReturnValue([
+      { projectPath: PROJECT_PATH, branchName: null },
+      { projectPath: PROJECT_PATH, branchName: 'feature/a' },
+      { projectPath: '/app/other', branchName: null },
+    ]);
+    // Two loops for our app, 1 each.
+    autoModeService.stopAutoLoopForProject.mockResolvedValue(1);
+
+    const service = new ProjectPauseService(
+      projectService as unknown as ProjectService,
+      autoModeService as unknown as AutoModeService,
+      settings as unknown as SettingsService
+    );
+
+    const result = await service.pauseProject(PROJECT_PATH);
+
+    // Both loops for this app stopped, with their respective branch names.
+    expect(autoModeService.stopAutoLoopForProject).toHaveBeenCalledWith(PROJECT_PATH, null);
+    expect(autoModeService.stopAutoLoopForProject).toHaveBeenCalledWith(PROJECT_PATH, 'feature/a');
+    // The other app's loop is left alone.
+    expect(autoModeService.stopAutoLoopForProject).not.toHaveBeenCalledWith(
+      '/app/other',
+      expect.anything()
+    );
+    expect(autoModeService.stopAutoLoopForProject).toHaveBeenCalledTimes(2);
+    expect(result.loopsStopped).toBe(2);
   });
 
   it('persists paused intent before stopping the loop (durable even if stop fails)', async () => {

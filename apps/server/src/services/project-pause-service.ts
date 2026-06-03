@@ -93,8 +93,26 @@ export class ProjectPauseService {
       slugsPaused.push(slug);
     }
 
-    // (f) stop the running loop (best-effort — durable state already recorded)
-    const loopsStopped = await this.autoModeService.stopAutoLoopForProject(projectPath);
+    // (f) stop EVERY active loop for the app (best-effort — durable state already
+    // recorded). An app may run concurrent worktree loops, each keyed by branch;
+    // stopping only the null-branch loop would leave worktree loops alive on a
+    // paused app. Enumerate active worktrees for this app and stop each. If none
+    // are active, fall back to a single null-branch stop (covers the main loop).
+    const activeForApp = this.autoModeService
+      .getActiveAutoLoopWorktrees()
+      .filter((w) => w.projectPath === projectPath);
+
+    let loopsStopped = 0;
+    if (activeForApp.length > 0) {
+      for (const w of activeForApp) {
+        loopsStopped += await this.autoModeService.stopAutoLoopForProject(
+          projectPath,
+          w.branchName
+        );
+      }
+    } else {
+      loopsStopped = await this.autoModeService.stopAutoLoopForProject(projectPath);
+    }
 
     logger.info(
       `Paused app ${projectPath}: ${slugsPaused.length} slug(s) paused, ${loopsStopped} loop(s) stopped${

@@ -799,6 +799,19 @@ export class AutoModeService {
   }
 
   /**
+   * Whether the given app/projectPath is currently paused per the durable
+   * `pausedProjects` registry in global settings. Shared guard used by every
+   * loop start/resume entry point so a paused app cannot be revived. Returns
+   * false when no settingsService is wired (pause is unenforceable without it).
+   * @param projectPath - The project path to check
+   */
+  private async isProjectPathPausedNow(projectPath: string): Promise<boolean> {
+    if (!this.settingsService) return false;
+    const settings = await this.settingsService.getGlobalSettings();
+    return isProjectPathPaused(settings, projectPath);
+  }
+
+  /**
    * Start the auto mode loop for a specific project/worktree (supports multiple concurrent projects and worktrees)
    * @param projectPath - The project to start auto mode for
    * @param branchName - The branch name for worktree scoping, null for main worktree
@@ -822,11 +835,8 @@ export class AutoModeService {
 
     // App-level pause gate. The durable `pausedProjects` registry is the enforced
     // source of truth — refuse to start a loop for a paused app until it is resumed.
-    if (this.settingsService) {
-      const settings = await this.settingsService.getGlobalSettings();
-      if (isProjectPathPaused(settings, projectPath)) {
-        throw new Error(`Project is paused: ${projectPath}. Resume it before starting auto-mode.`);
-      }
+    if (await this.isProjectPathPausedNow(projectPath)) {
+      throw new Error(`Project is paused: ${projectPath}. Resume it before starting auto-mode.`);
     }
 
     // Compute key early so we can synchronously claim it before any await.
@@ -1050,7 +1060,19 @@ export class AutoModeService {
    * @param branchName - The branch name, or null for main worktree
    * @returns true if the loop was resumed, false if no paused loop was found
    */
-  resumeAutoLoopForProject(projectPath: string, branchName: string | null = null): boolean {
+  async resumeAutoLoopForProject(
+    projectPath: string,
+    branchName: string | null = null
+  ): Promise<boolean> {
+    // App-level pause gate. A paused app must not have its loop revived until
+    // it is resumed through ProjectPauseService.
+    if (await this.isProjectPathPausedNow(projectPath)) {
+      logger.info(
+        `[AutoLoop] Refusing to resume loop — app is paused: ${projectPath}. Resume it before restarting auto-mode.`
+      );
+      return false;
+    }
+
     const worktreeKey = this.coordinator.makeKey(projectPath, branchName);
     const existingState = this.coordinator.getState(worktreeKey);
     if (!existingState) {
@@ -3992,6 +4014,15 @@ You can use the Read tool to view these images at any time during implementation
    * This should be called during server initialization
    */
   async resumeInterruptedFeatures(projectPath: string): Promise<void> {
+    // App-level pause gate. A paused app must not have interrupted features
+    // revived — that would silently restart work the user explicitly halted.
+    if (await this.isProjectPathPausedNow(projectPath)) {
+      logger.info(
+        `Skipping interrupted-feature resume — app is paused: ${projectPath}. Resume it before restarting auto-mode.`
+      );
+      return;
+    }
+
     // Only run once per project per server lifecycle.
     // The UI calls this on every board mount — subsequent calls are no-ops.
     if (this.resumeCheckedProjects.has(projectPath)) {
