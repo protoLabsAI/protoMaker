@@ -1,5 +1,144 @@
 # @protolabsai/ui
 
+## 0.109.0
+
+### Minor Changes
+
+- ### Features
+  - board 'Archived' view over the archive read endpoints (#4035) (#4055)
+  - wire read endpoints over ArchiveQueryService (#4025) (#4034)
+  - caller_trace_id on REVIEW + DEPLOY spans (#4024) (#4032)
+  - propagate upstream trace.traceId on signal/submit (#3995) (#4023)
+  - add `feature delete` + fix --help/--version Error noise (#4020)
+  - pass channelContext through /api/engine/signal/submit intake (#3992)
+  - add roxy persona command (per-project autonomous operator, CLI-only) (#3965)
+  - add feature dependency management to the protomaker CLI (#3962) (#3964)
+  - auto-generate feature title server-side so CLI/MCP/API features get names like the UI (#3961)
+  - persist ProjectRef github/defaultBranch at setup (#3948) (#3953)
+  - route micro-tasks through the nano tier via phaseModels (#3859) (#3943)
+  - require resolved conversations for auto-merge (#3798/#3801) (#3940)
+  - file-read tools (read_file, list_directory) for the chat agent (#3791) (#3938)
+  - initialize a .beads/ store from the UI Beads view (beads gyd) (#3927)
+  - get_run_telemetry self-query tool (beads 3um, #3906) (#3919)
+  - harness auto-improvement — file eval-gated improvement for top failure mode (beads 39l, #3905) (#3917)
+  - harness-evolver proposer — top failure mode → suggested fix (beads 2fq, #3905) (#3916)
+  - quantified failure-mode taxonomy report (beads 2u4, #3905) (#3915)
+  - verifier-evidence gate at EXECUTE exit (beads zg4, #3906) (#3914)
+  - harness eval substrate — golden scenarios, scorecard, regression gate (#3904) (#3908)
+  - install rabbit-hole-cli (rh) in the server image (#3896)
+  - reasoning-tier audit of bot review feedback over the trajectory (#3901) (#3903)
+  - add github + defaultBranch fields to ProjectRef (#3899)
+  - add_github_comment — post comments to existing issues (#3817) (#3891)
+  - add /cli-control skill — manage board + crew via the protomaker CLI (#3890)
+  - smart branch names via the fast tier + training capture (#3794) (#3864)
+  - agent-driven PRD review gate (POST /lifecycle/review-prd) (#3877)
+  - add recommended .gitignore to the fleet standard (#89) (#3884)
+  - hard-refuse non-compliant apps before auto-mode (#90) (#3885)
+  - enforce lockfile sync on package.json manifest changes
+  - feed request-changes feedback into PRD regeneration (#3875)
+  - wire lifecycle status truth (scaffolded / active / researching) (#3872)
+  - [Epic] Agent integration & docs (#3852)
+  - CLI docs, agent skill, and bin build wiring (#3851)
+  - install beads_rust `br` CLI in the server image (#3835)
+  - Core board commands epic — complete CLI command surface (#3833)
+  - consolidate board+query and context+sitrep+health commands
+  - emit feature lifecycle events on the workstacean bus (#3784)
+  - auto-dismiss stale CHANGES_REQUESTED bot reviews (#3744)
+  - add safeExec/safeGit primitives + assertSafeRef (#3654)
+
+  ### Bug Fixes
+  - require real merge evidence for completion (#4041, #4051, #4052) (#4053)
+  - stop hooks leaking project identity across sessions (#4050)
+  - detect & retry gateway empty-stream timeouts (#4044 A) (#4049)
+  - stop enabling GitHub native auto-merge — platform owns the merge gate (#4047)
+  - wire git push auth via gh credential helper (homelab-iac#126) (#4045)
+  - seed proto auth-type in container so feature execution works (#4042) (#4043)
+  - install @protolabsai/proto agent CLI in image (#4039) (#4040)
+  - route all direct Anthropic SDK + flow-model calls through the gateway (#4028) (#4029)
+  - refuse closure-equivalent classifications on unverified evidence (#3972) (#4001)
+  - route GitHub-issue signals to the correct project by repo (#3975) (#3996)
+  - registry cache for image builds — gha cache token expired mid-build (#3993) (#3994)
+  - stop protoMaker self-spawning agents from background loops (#3990)
+  - worktree-recovery preserves work only — single guarded PR chokepoint (#3979) (#3984)
+  - enforce epic-orchestration invariants + regression harness (#3970) (#3974)
+  - finish Ava orchestrator + portfolio removal on main (incident #3970) (#3973)
+  - SessionStart hook resolves project from session cwd, not stale AUTOMAKER_ROOT (#3960)
+  - resolve project from session cwd instead of stale AUTOMAKER_ROOT
+  - keep Tailscale callback URLs on http so the agent card is reachable (#3956) (#3957)
+  - resolve argv[1] symlink so the global `protomaker` bin actually runs (#3954)
+  - read-only features complete at done, not blocked; CLI execution-mode/workflow flags (#3946) (#3952)
+  - resume loops at saved concurrency after restart (#3949) (#3951)
+  - whole-word keyword matching so code features aren't downgraded to read-only (#3946) (#3947)
+  - complete epic when branch is 0 commits ahead of base, don't block (#3803) (#3933)
+  - settings-driven staging delta + git-settings docs (#3894, #3874) (#3931)
+  - repair feature command group + global flag propagation (beads 3do) (#3924)
+  - emit feature.completed/failed correctly so workstacean's Linear bridge fires (#3810) (#3913)
+  - make every command actually produce output + fix running-agent display (#3909)
+  - run stale-bot-review sweep on critical tier (5min) (#3901) (#3902)
+  - wire zizmor + actionlint into onboarding CI (#3819) (#3897)
+  - stop Quinn CHANGES_REQUESTED from blocking on pending CI (#3886) (#3895)
+  - dedupe triage automation before filing new GitHub issues (#3879)
+  - platform owns the merge — never enable GitHub auto-merge (#88) (#3882)
+  - enforce lockfile sync on manifest change (#3876)
+  - resolve epic branch base instead of hardcoding origin/dev (#3867) (#3869)
+  - don't relaunch on max-turns retry after stop (#3789) (#3863)
+  - auto-retry empty agent executions instead of parking (#3860) (#3862)
+  - reject lockfile/generated-only changes at REVIEW guard (#3820) (#3858)
+  - un-stale reused feature worktree branches (#3825) (#3857)
+  - reap orphaned server processes by signature in launch script (#3840) (#3855)
+  - detect committed branch work against the real base (#3845) (#3854)
+  - docs-followup features use 'standard' workflow so they deliver (#3853)
+  - bump base from Bookworm to Trixie so the `br` binary loads (#3836)
+  - prevent script injection via commit message in deploy workflows (#3812)
+  - worktree defaults + local review + workflow default; ops cleanup (#3802)
+  - use outputHelp() so no-command exits 2, not 0
+  - remove illegal top-level return statements (TS1108)
+  - harden agent against HOME tmpfs fill corrupting .claude.json (#3782)
+  - gateway-key startup guard + A2A native-session skill routing (#3774)
+  - invalidate stale embeddings + HyPE on chunk content update (#3660)
+  - correct thundering-herd in withFileLock mutex
+  - route all Claude aliases through the protoLabs gateway (#3671)
+  - respect created_at/updated_at when pruning stale chunks (#3659)
+  - replace broken CF Pages git-integration with wrangler deploy (#3658)
+  - migrate worktree-lifecycle-service to safeGit (#3656)
+  - migrate worktree-recovery-service to safeGit/safeExec (#3655)
+  - three-tier gateway defaults — fast / smart / reasoning (#3652)
+  - use mergedAt, not merged, in `gh pr view --json` (#3651)
+
+  ### Refactors
+  - Doc: CLI dispatch quickstart
+  - SYNTH V1 marker
+  - E5: Docs/CLAUDE.md/README cleanup for Ava orchestrator removal
+  - E4: Remove Ava gateway heartbeat + #ava hivemind coordination
+  - Naming parity test + feature-naming reference doc
+  - feat(server): auto-generate feature title server-side so CLI/MCP/API fea
+  - Fix broken --complexity default in protomaker CLI feature create
+  - Tool-gateway audit: trim + tighten MCP tool schemas (beads protomaker-hs
+  - feat(types): add github + defaultBranch fields to ProjectRef
+  - chore(ci): add zizmor + actionlint workflow security linters
+  - docs: link the Proto SDK smoke test from the server docs index
+  - Emit feature lifecycle bus events (feature.completed / feature.failed)
+  - queue + auto-mode commands
+  - agent commands
+  - feature commands
+  - Enforce package-lock sync in the git-workflow (all managed projects)
+  - Output + flag conventions
+  - API client + config resolution
+  - Scaffold the CLI workspace package
+  - Serialize project switching in KnowledgeStoreService so async work survi
+  - Guard EXECUTE -> REVIEW transition: require a PR or commits, not just ab
+  - Serialize TrustTierService writes to avoid lost records
+  - Apply deletes and renames during nested worktree D/R recovery
+  - Guard WorkIntakeService.tick against re-entrant overlap
+  - Implement workflow match-rule scoring in WorkflowLoader.resolveForFeatur
+  - Add per-key in-flight dedup to auto-filing services
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.109.0
+  - @protolabsai/utils@0.109.0
+
 ## 0.108.0
 
 ### Minor Changes
