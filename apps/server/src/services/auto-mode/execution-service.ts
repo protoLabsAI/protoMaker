@@ -1869,8 +1869,10 @@ Output the branch name only.`,
           logger.info(`Feature ${featureId} failure count: ${newFailureCount}`);
 
           // Pure-executor: protoMaker does not self-spawn remediation agents.
-          // The terminal `feature.failed` lifecycle event is published for
-          // protoWorkstacean to decide on remediation. See CLAUDE.md.
+          // The terminal lifecycle event (kinded `feature.blocked` when the
+          // feature lands in `blocked`, else `feature.failed` when escalated) is
+          // published for protoWorkstacean to decide on remediation. See
+          // CLAUDE.md and FeatureLifecycleBusPublisher.
         }
 
         // Detect git commit / pre-commit hook failures. These are deterministic — retrying
