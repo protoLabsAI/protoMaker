@@ -1,14 +1,9 @@
-# Database
-*.db
-*.db-shm
-*.db-wal
-
-# Lock files
-*.lock
-
-# Temporary
-last-touched
-*.tmp
-
-# Br runtime history (per-process snapshots — not portable)
-.br_history/
+# Allowlist form (protoLabs workspace-config standard): ignore everything,
+# then re-include the committed source-of-truth files. New volatile files br
+# adds (beads.db*, *.lock, .br_history/, last-touched, metadata.json, *.tmp)
+# are ignored automatically with no .gitignore churn.
+*
+!issues.jsonl
+!config.yaml
+!routes.jsonl
+!.gitignore
