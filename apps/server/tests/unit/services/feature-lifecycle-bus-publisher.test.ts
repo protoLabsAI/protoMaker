@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { FeatureLifecycleBusPublisher } from '@/services/feature-lifecycle-bus-publisher.js';
+import {
+  FeatureLifecycleBusPublisher,
+  failureCategoryToKind,
+} from '@/services/feature-lifecycle-bus-publisher.js';
 
 function makePublisher(opts?: { feature?: unknown; publishFn?: ReturnType<typeof vi.fn> }) {
   const publishFn = opts?.publishFn ?? vi.fn().mockResolvedValue({ ok: true });
@@ -191,6 +194,54 @@ describe('FeatureLifecycleBusPublisher', () => {
       expect(arg.event).toBe('feature.blocked');
       expect(arg.data.kind, `reason="${reason}"`).toBe(expectedKind);
     }
+  });
+
+  it('maps structured FailureCategory → routing kind (#4069)', () => {
+    expect(failureCategoryToKind('rate_limit')).toBe('rate_limit');
+    expect(failureCategoryToKind('quota')).toBe('quota');
+    expect(failureCategoryToKind('merge_conflict')).toBe('merge_conflict');
+    expect(failureCategoryToKind('test_failure')).toBe('ci_failure');
+    expect(failureCategoryToKind('retry_exhausted')).toBe('retries_exhausted');
+    // No precise routing kind → undefined (reason-text fallback / Roxy default).
+    expect(failureCategoryToKind('transient')).toBeUndefined();
+    expect(failureCategoryToKind('validation')).toBeUndefined();
+    expect(failureCategoryToKind('tool_error')).toBeUndefined();
+    expect(failureCategoryToKind('authentication')).toBeUndefined();
+    expect(failureCategoryToKind('unknown')).toBeUndefined();
+    expect(failureCategoryToKind(undefined)).toBeUndefined();
+    // CRITICAL: the classifier's `dependency` (fixable missing module) must NOT
+    // become `dependency_unsatisfied` (the IGNORE kind) or Roxy never sees it.
+    expect(failureCategoryToKind('dependency')).toBeUndefined();
+  });
+
+  it('prefers the persisted failureClassification over the reason-text match (#4069)', async () => {
+    // Reason text alone would keyword-match to ci_failure, but the structured
+    // classifier said rate_limit — the structured signal wins.
+    const feature = {
+      id: 'fc1',
+      title: 'Classified',
+      projectSlug: 'proj',
+      statusChangeReason: 'tests failed in CI',
+      failureClassification: { category: 'rate_limit', confidence: 0.9, recoveryStrategy: { type: 'retry' }, retryable: true, timestamp: 't' },
+    };
+    const { pub, publishFn } = makePublisher({ feature });
+    await pub.handleStatusChange({ featureId: 'fc1', projectPath: '/p', oldStatus: 'in_progress', newStatus: 'blocked' });
+    const arg = publishFn.mock.calls[0][0];
+    expect(arg.data.kind).toBe('rate_limit');
+  });
+
+  it('falls back to the reason-text match when the classification has no precise kind (#4069)', async () => {
+    // category 'tool_error' → undefined, so the reason text decides (merge_conflict).
+    const feature = {
+      id: 'fc2',
+      title: 'Classified-but-vague',
+      projectSlug: 'proj',
+      statusChangeReason: 'unresolved merge conflict on rebase',
+      failureClassification: { category: 'tool_error', confidence: 0.5, recoveryStrategy: { type: 'retry' }, retryable: true, timestamp: 't' },
+    };
+    const { pub, publishFn } = makePublisher({ feature });
+    await pub.handleStatusChange({ featureId: 'fc2', projectPath: '/p', oldStatus: 'in_progress', newStatus: 'blocked' });
+    expect(publishFn.mock.calls[0][0].data.kind).toBe('merge_conflict');
   });
 
   it('publishes feature.failed on transition to escalated', async () => {

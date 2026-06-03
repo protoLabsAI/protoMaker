@@ -155,6 +155,39 @@ export function deriveBlockedKind(reason: string | undefined): BlockedKind | und
   return undefined;
 }
 
+/**
+ * Map protoMaker's structured `FailureClassifierService` category (persisted on
+ * `feature.failureClassification.category` by the lead-engineer ESCALATE path)
+ * to the workstacean routing `kind`. Preferred over `deriveBlockedKind`'s prose
+ * keyword match when a classification is present — it's a deterministic enum,
+ * not a regex on free text (#4069). Returns `undefined` for categories with no
+ * precise routing kind so the caller falls back to the reason text, then to the
+ * router's remediable default.
+ *
+ * NOTE: the classifier's `dependency` (a missing npm/module dep that Roxy CAN
+ * fix) is deliberately NOT mapped to `dependency_unsatisfied` (feature-DAG
+ * upstream gating that the router IGNORES) — mapping it would silently swallow a
+ * fixable failure. It falls through to the remediable default instead.
+ */
+export function failureCategoryToKind(category: string | undefined): BlockedKind | undefined {
+  switch (category) {
+    case 'rate_limit':
+      return 'rate_limit';
+    case 'quota':
+      return 'quota';
+    case 'merge_conflict':
+      return 'merge_conflict';
+    case 'test_failure':
+      return 'ci_failure';
+    case 'retry_exhausted':
+      return 'retries_exhausted';
+    default:
+      // transient / validation / tool_error / dependency / authentication /
+      // unknown → no precise kind; let the reason-text fallback decide.
+      return undefined;
+  }
+}
+
 /** Subset of the `feature:status-changed` payload this publisher needs. */
 interface StatusChangedPayload {
   featureId: string;
@@ -258,7 +291,13 @@ export class FeatureLifecycleBusPublisher {
       // workstacean router uses to pick ignore / HITL / dispatch-Roxy.
       const reason = (feature?.statusChangeReason ?? payload?.reason ?? 'blocked').slice(0, 400);
       data.reason = reason;
-      const kind = deriveBlockedKind(feature?.statusChangeReason ?? payload?.reason);
+      // Prefer the structured classification persisted by the ESCALATE path; it
+      // is a deterministic enum rather than a regex over prose. Fall back to the
+      // reason-text keyword match (#4069), then to the router's remediable
+      // default when neither yields a kind.
+      const kind =
+        failureCategoryToKind(feature?.failureClassification?.category) ??
+        deriveBlockedKind(feature?.statusChangeReason ?? payload?.reason);
       if (kind) {
         data.kind = kind;
       }
