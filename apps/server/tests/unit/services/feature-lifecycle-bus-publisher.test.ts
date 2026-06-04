@@ -222,10 +222,21 @@ describe('FeatureLifecycleBusPublisher', () => {
       title: 'Classified',
       projectSlug: 'proj',
       statusChangeReason: 'tests failed in CI',
-      failureClassification: { category: 'rate_limit', confidence: 0.9, recoveryStrategy: { type: 'retry' }, retryable: true, timestamp: 't' },
+      failureClassification: {
+        category: 'rate_limit',
+        confidence: 0.9,
+        recoveryStrategy: { type: 'retry' },
+        retryable: true,
+        timestamp: 't',
+      },
     };
     const { pub, publishFn } = makePublisher({ feature });
-    await pub.handleStatusChange({ featureId: 'fc1', projectPath: '/p', oldStatus: 'in_progress', newStatus: 'blocked' });
+    await pub.handleStatusChange({
+      featureId: 'fc1',
+      projectPath: '/p',
+      oldStatus: 'in_progress',
+      newStatus: 'blocked',
+    });
     const arg = publishFn.mock.calls[0][0];
     expect(arg.data.kind).toBe('rate_limit');
   });
@@ -237,10 +248,21 @@ describe('FeatureLifecycleBusPublisher', () => {
       title: 'Classified-but-vague',
       projectSlug: 'proj',
       statusChangeReason: 'unresolved merge conflict on rebase',
-      failureClassification: { category: 'tool_error', confidence: 0.5, recoveryStrategy: { type: 'retry' }, retryable: true, timestamp: 't' },
+      failureClassification: {
+        category: 'tool_error',
+        confidence: 0.5,
+        recoveryStrategy: { type: 'retry' },
+        retryable: true,
+        timestamp: 't',
+      },
     };
     const { pub, publishFn } = makePublisher({ feature });
-    await pub.handleStatusChange({ featureId: 'fc2', projectPath: '/p', oldStatus: 'in_progress', newStatus: 'blocked' });
+    await pub.handleStatusChange({
+      featureId: 'fc2',
+      projectPath: '/p',
+      oldStatus: 'in_progress',
+      newStatus: 'blocked',
+    });
     expect(publishFn.mock.calls[0][0].data.kind).toBe('merge_conflict');
   });
 
