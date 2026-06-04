@@ -308,6 +308,10 @@ export class FeatureLifecycleBusPublisher {
       prNumber: feature?.prNumber,
       branchName: feature?.branchName,
       repo,
+      // Originating GitHub issue (captured at intake), echoed so the
+      // workstacean close-the-loop can close it when the feature ships —
+      // otherwise issues created on intake never get closed on resolution.
+      githubIssueNumber: feature?.githubIssueNumber,
       previousStatus: oldStatus,
       sourceMeta,
       [timestampKey]: new Date().toISOString(),

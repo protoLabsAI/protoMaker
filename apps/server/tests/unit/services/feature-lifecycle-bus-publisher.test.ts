@@ -281,6 +281,26 @@ describe('FeatureLifecycleBusPublisher', () => {
     expect(publishFn.mock.calls[0][0].data.featureId).toBe('f3');
   });
 
+  it('echoes githubIssueNumber on completed so the close-the-loop can close it', async () => {
+    const feature = {
+      id: 'f7',
+      title: 'Shipped from an issue',
+      projectSlug: 'proj',
+      prNumber: 12,
+      githubIssueNumber: 345,
+    };
+    const { pub, publishFn } = makePublisher({ feature });
+    await pub.handleStatusChange({
+      featureId: 'f7',
+      projectPath: '/p',
+      oldStatus: 'review',
+      newStatus: 'done',
+    });
+    const arg = publishFn.mock.calls[0][0];
+    expect(arg.event).toBe('feature.completed');
+    expect(arg.data.githubIssueNumber).toBe(345);
+  });
+
   it('includes prNumber in completed payload (no status/reason fields)', async () => {
     const feature = { id: 'f4', title: 'Completed with PR', projectSlug: 'proj', prNumber: 99 };
     const { pub, publishFn } = makePublisher({ feature });
