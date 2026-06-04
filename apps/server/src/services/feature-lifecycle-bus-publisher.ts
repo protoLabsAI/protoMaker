@@ -46,6 +46,22 @@ const BLOCKED_STATUSES: ReadonlySet<string> = new Set(['blocked']);
 const ESCALATED_STATUSES: ReadonlySet<string> = new Set(['escalated']);
 
 /**
+ * Active board statuses that, when transitioned INTO from `blocked`, mean the
+ * feature recovered — emit `feature.unblocked`. This is the recovery signal
+ * workstacean's FeatureRemediationPlugin subscribes to so it can clear a
+ * feature's remediation tracker (attempts / escalation / cooldown) and let a
+ * later re-block start from a fresh budget. Without it, that state only ages
+ * out via a 1h TTL sweep. See protoLabsAI/protoWorkstacean#783 and the
+ * consumer's `feature.unblocked` subscription. `blocked -> done` is a terminal
+ * recovery and is covered by `feature.completed` instead.
+ */
+const UNBLOCKED_TARGET_STATUSES: ReadonlySet<string> = new Set([
+  'in_progress',
+  'backlog',
+  'review',
+]);
+
+/**
  * Failure-category discriminator workstacean's router consumes to decide
  * ignore vs HITL vs dispatch-Roxy. Mirrors the `kind` vocabulary in
  * protoLabsAI/protoWorkstacean#779. `undefined` is safe — the router treats a
@@ -63,6 +79,35 @@ export type BlockedKind =
   | 'merge_conflict'
   | 'changes_requested'
   | 'retries_exhausted';
+
+/**
+ * Map protoMaker's structured FailureCategory to workstacean's BlockedKind.
+ * Returns undefined for categories that don't have a direct equivalent,
+ * allowing the keyword fallback to try.
+ *
+ * CRITICAL: 'dependency' (npm/package missing) does NOT map to
+ * 'dependency_unsatisfied' (feature-DAG dep that self-heals).
+ * The keyword fallback in deriveBlockedKind matches narrowly to preserve
+ * this distinction.
+ */
+export function mapFailureCategoryToKind(category: string): BlockedKind | undefined {
+  switch (category) {
+    case 'rate_limit':
+      return 'rate_limit';
+    case 'quota':
+      return 'quota';
+    case 'test_failure':
+      return 'ci_failure';
+    case 'merge_conflict':
+      return 'merge_conflict';
+    case 'retry_exhausted':
+      return 'retries_exhausted';
+    // 'dependency' → undefined (npm dep ≠ feature-DAG dep)
+    // 'transient', 'validation', 'tool_error', 'authentication', 'unknown' → undefined
+    default:
+      return undefined;
+  }
+}
 
 /**
  * Map a human block reason to a workstacean `kind`. First match wins, ordered
@@ -194,11 +239,13 @@ export class FeatureLifecycleBusPublisher {
   }
 
   /**
-   * Publish the lifecycle event for a terminal transition:
+   * Publish the lifecycle event for a tracked transition:
    *   done → feature.completed, blocked → feature.blocked (kinded),
-   *   escalated → feature.failed. Loads the feature fresh to echo its source
-   *   signal metadata and PR tracking fields. Never throws — a publish failure
-   *   must not affect the board transition.
+   *   escalated → feature.failed, and blocked → {in_progress,backlog,review} →
+   *   feature.unblocked (recovery — lets the remediation consumer clear its
+   *   tracker). Loads the feature fresh to echo its source signal metadata and
+   *   PR tracking fields. Never throws — a publish failure must not affect the
+   *   board transition.
    */
   async handleStatusChange(payload: StatusChangedPayload): Promise<void> {
     const { featureId, newStatus, oldStatus, projectPath } = payload ?? {};
@@ -209,7 +256,11 @@ export class FeatureLifecycleBusPublisher {
     const isTerminal = TERMINAL_STATUSES.has(newStatus);
     const isBlocked = BLOCKED_STATUSES.has(newStatus);
     const isEscalated = ESCALATED_STATUSES.has(newStatus);
-    if (!isTerminal && !isBlocked && !isEscalated) {
+    // Recovery: a transition OUT of `blocked` into an active status. `blocked ->
+    // done` is excluded (covered by feature.completed); `blocked -> escalated`
+    // is excluded (got worse, not recovered).
+    const isUnblock = oldStatus === 'blocked' && UNBLOCKED_TARGET_STATUSES.has(newStatus);
+    if (!isTerminal && !isBlocked && !isEscalated && !isUnblock) {
       return;
     }
 
@@ -221,13 +272,16 @@ export class FeatureLifecycleBusPublisher {
     }
 
     // Dotted, unprefixed topics — exactly what workstacean's consumers
-    // subscribe to. `blocked` is its own remediable signal; `escalated` stays
+    // subscribe to. `blocked` is its own remediable signal; `unblocked` is the
+    // recovery signal that clears remediation tracking; `escalated` stays
     // `feature.failed` (no auto-remediation); `done` is `feature.completed`.
     const topic = isTerminal
       ? 'feature.completed'
       : isBlocked
         ? 'feature.blocked'
-        : 'feature.failed';
+        : isUnblock
+          ? 'feature.unblocked'
+          : 'feature.failed';
     const owner = process.env.GITHUB_REPO_OWNER;
     const name = process.env.GITHUB_REPO_NAME;
     const repo = owner && name ? `${owner}/${name}` : undefined;
@@ -237,7 +291,13 @@ export class FeatureLifecycleBusPublisher {
       feature?.sourceMeta && typeof feature.sourceMeta === 'object'
         ? feature.sourceMeta
         : { sourceChannel: feature?.sourceChannel, signalMetadata: feature?.signalMetadata };
-    const timestampKey = isTerminal ? 'completedAt' : isBlocked ? 'blockedAt' : 'failedAt';
+    const timestampKey = isTerminal
+      ? 'completedAt'
+      : isBlocked
+        ? 'blockedAt'
+        : isUnblock
+          ? 'unblockedAt'
+          : 'failedAt';
     const data: Record<string, unknown> = {
       // projectSlug is REQUIRED by workstacean's feature-notifier (resolves the
       // dev channel); fall back so the event is never dropped for lacking it.
@@ -258,10 +318,20 @@ export class FeatureLifecycleBusPublisher {
       // workstacean router uses to pick ignore / HITL / dispatch-Roxy.
       const reason = (feature?.statusChangeReason ?? payload?.reason ?? 'blocked').slice(0, 400);
       data.reason = reason;
-      const kind = deriveBlockedKind(feature?.statusChangeReason ?? payload?.reason);
+      // Prefer structured failureClassification.category over keyword fallback.
+      const fcCategory = feature?.failureClassification?.category;
+      const kind =
+        (fcCategory ? mapFailureCategoryToKind(fcCategory) : undefined) ??
+        deriveBlockedKind(feature?.statusChangeReason ?? payload?.reason);
       if (kind) {
         data.kind = kind;
       }
+    } else if (isUnblock) {
+      // feature.unblocked is a pure recovery signal — no error/kind. Echo where
+      // the feature recovered to so consumers can log/route if they care; the
+      // consumer keys eviction on projectSlug/projectPath + featureId (already
+      // in the common payload above).
+      data.newStatus = newStatus;
     } else if (isEscalated) {
       // feature.failed keeps the historical `error` field for existing consumers.
       data.error = (feature?.statusChangeReason ?? payload?.reason ?? 'failed').slice(0, 400);
