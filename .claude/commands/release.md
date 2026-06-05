@@ -1,78 +1,68 @@
 # Release Command
 
-Bump the package.json version (major, minor, or patch) and build the Electron app with the new version.
+Cut a new release by bumping the fixed `@protolabsai/*` package group via **changesets**, then merging the release PR — `auto-release.yml` tags the version and posts release notes to Discord on merge to `main`.
+
+> The release version is read from **`libs/types/package.json`** by `auto-release.yml`. The whole `@protolabsai/*` group is versioned together (changesets `fixed` group). There is no Electron build and no manual tagging — do **not** hand-edit `apps/ui`/`apps/server` `package.json` versions.
 
 ## Usage
 
-This command accepts a version bump type as input:
-
-- `patch` - Bump patch version (0.1.0 -> 0.1.1)
-- `minor` - Bump minor version (0.1.0 -> 0.2.0)
-- `major` - Bump major version (0.1.0 -> 1.0.0)
+Optionally accepts a bump type (`patch` | `minor` | `major`). If omitted, `release:prepare` derives it from conventional commits since the last tag (`feat:` → minor, `fix:`/`perf:`/`refactor:` → patch, `BREAKING CHANGE` → major).
 
 ## Instructions
 
-1. **Get the bump type from the user**
-   - The bump type should be provided as an argument (patch, minor, or major)
-   - If no type is provided, ask the user which type they want
+1. **Branch off main**
 
-2. **Bump the version**
-   - Run the version bump script:
-     ```bash
-     node apps/ui/scripts/bump-version.mjs <type>
-     ```
-   - This updates both `apps/ui/package.json` and `apps/server/package.json` with the new version (keeps them in sync)
-   - Verify the version was updated correctly by checking the output
+   ```bash
+   git checkout main && git pull
+   git checkout -b chore/release-vX.Y.Z   # fill in after step 2 prints the version
+   ```
 
-3. **Build the Electron app**
-   - Run the electron build:
-     ```bash
-     npm run build:electron --workspace=apps/ui
-     ```
-   - The build process automatically:
-     - Uses the version from `package.json` for artifact names (e.g., `Automaker-1.2.3-x64.zip`)
-     - Injects the version into the app via Vite's `__APP_VERSION__` constant
-     - Displays the version below the logo in the sidebar
+2. **Prepare the changeset** — auto-generates `.changeset/<id>.md` from conventional commits since the last tag:
 
-4. **Commit the version bump**
-   - Stage the updated version files:
-     ```bash
-     git add apps/ui/package.json apps/server/package.json packages/mcp-server/plugins/automaker/.claude-plugin/plugin.json
-     ```
-   - Commit with a release message:
-     ```bash
-     git commit -m "chore: release v<version>"
-     ```
+   ```bash
+   npm run release:prepare
+   ```
 
-5. **Create and push the git tag**
-   - Create an annotated tag for the release:
-     ```bash
-     git tag -a v<version> -m "Release v<version>"
-     ```
-   - Push the commit and tag to remote:
-     ```bash
-     git push && git push --tags
-     ```
+   It prints the computed bump type, the commit summary, and the resulting version. (To force a bump type, write a changeset by hand with `npm run changeset` instead.)
 
-6. **Verify the release**
-   - Check that the build completed successfully
-   - Confirm the version appears correctly in the built artifacts
-   - The version will be displayed in the app UI below the logo
-   - Verify the tag is visible on the remote repository
+3. **Apply the version bump** — bumps the fixed `@protolabsai/*` group and writes CHANGELOGs:
 
-## Version Centralization
+   ```bash
+   npm run changeset:version
+   npm install --package-lock-only   # sync package-lock.json with the new internal versions
+   ```
 
-The version is centralized and synchronized across `apps/ui/package.json`, `apps/server/package.json`, and `packages/mcp-server/plugins/automaker/.claude-plugin/plugin.json`:
+   Verify: `node -p "require('./libs/types/package.json').version"` shows the new version, and `git status` shows the package.json/CHANGELOG group + lockfile changed (and the `.changeset/<id>.md` consumed).
 
-- **Electron builds**: Automatically read from `apps/ui/package.json` via electron-builder's `${version}` variable in `artifactName`
-- **App display**: Injected at build time via Vite's `define` config as `__APP_VERSION__` constant (defined in `apps/ui/vite.config.mts`)
-- **Server API**: Read from `apps/server/package.json` via `apps/server/src/lib/version.ts` utility (used in health check endpoints)
-- **Type safety**: Defined in `apps/ui/src/vite-env.d.ts` as `declare const __APP_VERSION__: string`
+4. **Commit the release**
 
-This ensures consistency across:
+   ```bash
+   git add -A
+   git commit -m "chore: release vX.Y.Z"
+   ```
 
-- Build artifact names (e.g., `Automaker-1.2.3-x64.zip`)
-- App UI display (shown as `v1.2.3` below the logo in `apps/ui/src/components/layout/sidebar/components/automaker-logo.tsx`)
-- Server health endpoints (`/` and `/detailed`)
-- Claude Code plugin metadata (`plugin.json` version reported to Claude)
-- Package metadata (UI, server, and plugin stay in sync)
+   Keep the subject lowercase after `chore:` (commitlint `subject-case`). The body can list the bundled `feat`/`fix` commits since the last tag.
+
+5. **Open the PR and merge to main**
+
+   ```bash
+   git push -u origin chore/release-vX.Y.Z
+   gh pr create --base main --title "chore: release vX.Y.Z" --body "..."
+   ```
+
+   Merge once CI is green. The release PR changes `package.json` + lockfile (not just `**.md`), so the merge is **not** ignored by `auto-release.yml`'s `paths-ignore`.
+
+6. **Verify the release fired**
+   - `auto-release.yml` runs on the merge commit: reads the version from `libs/types/package.json`, creates the `vX.Y.Z` tag, and posts gateway-themed release notes to the Discord release channel.
+   - It **no-ops** if `vX.Y.Z` is already tagged (so always bump in the PR before merging).
+   - Confirm with `git ls-remote --tags origin vX.Y.Z` and check the Discord release channel.
+
+## Manual re-post
+
+To re-post notes for an already-tagged release (e.g. after a transient Discord failure), run `auto-release.yml` via `workflow_dispatch` with `version` (e.g. `v0.110.0`) and `previous_version` set — it regenerates + re-posts notes and never tags.
+
+## Key files
+
+- `scripts/prepare-release-changeset.mjs` — `release:prepare` (conventional-commit → changeset)
+- `.changeset/config.json` — the fixed `@protolabsai/*` package group
+- `.github/workflows/auto-release.yml` — tags from `libs/types/package.json` + posts Discord notes on merge to `main`
