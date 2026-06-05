@@ -277,6 +277,21 @@ export interface ProjectSettings {
    * as a global server overrides it for this project.
    */
   mcpServers?: MCPServerConfig[];
+
+  // Execution Stance (per-project)
+  /**
+   * Per-project delivery-vs-observe stance for signal-intake features.
+   *
+   * - 'delivery' (default): agents branch → push → PR → review → merge.
+   *   Signal-intake creates features with standard (push+PR) workflow.
+   * - 'observe': read-only triage/analysis, no PRs. Signal-intake creates
+   *   features with executionMode: 'read-only'.
+   *
+   * Independent of the PM agent's read-only-on-code mandate. A delivery-managed
+   * project with a read-only PM should still produce PRs from its execution agents.
+   * @see #4073 follow-up
+   */
+  executionStance?: 'delivery' | 'observe';
 }
 
 /** Default project settings (empty - all settings are optional and fall back to global) */

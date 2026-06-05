@@ -10,6 +10,7 @@ import { ProjectDocsSection } from './project-docs-section';
 import { ProjectModelsSection } from './project-models-section';
 import { ProjectWebhooksSection } from './project-webhooks-section';
 import { ProjectAgentsSection } from './project-agents-section';
+import { ProjectExecutionStanceSection } from './project-execution-stance-section';
 import { DangerZoneSection } from '../settings-view/danger-zone/danger-zone-section';
 import { DeleteProjectDialog } from '../settings-view/components/delete-project-dialog';
 import { SettingsScopeToggle } from '../settings-view/components/settings-scope-toggle';
@@ -73,6 +74,8 @@ export function ProjectSettingsView() {
         return <ProjectWebhooksSection project={currentProject} />;
       case 'agents':
         return <ProjectAgentsSection project={currentProject} />;
+      case 'execution':
+        return <ProjectExecutionStanceSection project={currentProject} />;
       case 'danger':
         return (
           <DangerZoneSection

@@ -7,6 +7,7 @@ import {
   Webhook,
   Bot,
   Library,
+  GitPullRequest,
 } from 'lucide-react';
 import type { SettingsNavigationItem } from '@/components/shared/settings';
 import type { ProjectSettingsViewId } from '../hooks/use-project-settings-view';
@@ -31,6 +32,7 @@ export const PROJECT_NAV_GROUPS: ProjectNavigationGroup[] = [
       { id: 'claude', label: 'Models', icon: Workflow },
       { id: 'webhooks', label: 'Webhooks', icon: Webhook },
       { id: 'agents', label: 'Agents', icon: Bot },
+      { id: 'execution', label: 'Execution Stance', icon: GitPullRequest },
     ],
   },
   {

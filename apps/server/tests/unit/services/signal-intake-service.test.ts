@@ -1169,4 +1169,188 @@ describe('SignalIntakeService', () => {
       expect(lastCreateProjectPath()).toBe('/test/path');
     });
   });
+
+  describe('execution stance (#4073 follow-up)', () => {
+    let freshEmitter: EventEmitter;
+    let freshFeatureLoader: FeatureLoader;
+    let freshSettingsService: SettingsService;
+
+    function createFreshService(settingsOverride?: ProjectSettings): SignalIntakeService {
+      freshEmitter = createMockEventEmitter() as unknown as EventEmitter;
+      freshFeatureLoader = createMockFeatureLoader([], {
+        create: vi.fn().mockResolvedValue({
+          id: 'feature-stance-test',
+          title: 'Stance Test Feature',
+          status: 'backlog',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }),
+      }) as unknown as FeatureLoader;
+      freshSettingsService = createMockSettingsService({
+        getGlobalSettings: vi.fn().mockResolvedValue({}),
+        getProjectSettings: vi.fn().mockResolvedValue(settingsOverride ?? {}),
+      }) as unknown as SettingsService;
+
+      return new SignalIntakeService(
+        freshEmitter,
+        freshFeatureLoader,
+        '/test/path',
+        freshSettingsService
+      );
+    }
+
+    it('should create feature WITHOUT executionMode when stance is delivery (default)', async () => {
+      // Default: no executionStance set → delivery → no executionMode on feature
+      createFreshService({});
+
+      freshEmitter.emit(
+        'signal:received',
+        createTestSignal({
+          source: 'github',
+          author: { id: 'gh-stance-1', name: 'Dev' },
+          content: 'Delivery stance feature',
+        })
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(freshFeatureLoader.create).toHaveBeenCalledTimes(1);
+      // @ts-expect-error — create is a vi mock
+      const createCall = freshFeatureLoader.create.mock.calls[0]?.[1];
+      expect(createCall?.executionMode).toBeUndefined();
+    });
+
+    it('should create feature WITHOUT executionMode when stance is explicitly delivery', async () => {
+      createFreshService({ executionStance: 'delivery' });
+
+      freshEmitter.emit(
+        'signal:received',
+        createTestSignal({
+          source: 'github',
+          author: { id: 'gh-stance-2', name: 'Dev' },
+          content: 'Explicit delivery stance',
+        })
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(freshFeatureLoader.create).toHaveBeenCalledTimes(1);
+      // @ts-expect-error — create is a vi mock
+      const createCall = freshFeatureLoader.create.mock.calls[0]?.[1];
+      expect(createCall?.executionMode).toBeUndefined();
+    });
+
+    it('should create feature WITH executionMode: read-only when stance is observe', async () => {
+      createFreshService({ executionStance: 'observe' });
+
+      freshEmitter.emit(
+        'signal:received',
+        createTestSignal({
+          source: 'github',
+          author: { id: 'gh-stance-3', name: 'Dev' },
+          content: 'Observe stance feature',
+        })
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(freshFeatureLoader.create).toHaveBeenCalledTimes(1);
+      // @ts-expect-error — create is a vi mock
+      const createCall = freshFeatureLoader.create.mock.calls[0]?.[1];
+      expect(createCall).toMatchObject({ executionMode: 'read-only' });
+    });
+
+    it('should default to delivery when getProjectSettings throws', async () => {
+      // If reading project settings fails, default to delivery (no executionMode)
+      freshEmitter = createMockEventEmitter() as unknown as EventEmitter;
+      freshFeatureLoader = createMockFeatureLoader([], {
+        create: vi.fn().mockResolvedValue({
+          id: 'feature-stance-test',
+          title: 'Stance Test Feature',
+          status: 'backlog',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }),
+      }) as unknown as FeatureLoader;
+      freshSettingsService = createMockSettingsService({
+        getGlobalSettings: vi.fn().mockResolvedValue({}),
+        getProjectSettings: vi.fn().mockRejectedValue(new Error('Settings file not found')),
+      }) as unknown as SettingsService;
+
+      const service = new SignalIntakeService(
+        freshEmitter,
+        freshFeatureLoader,
+        '/test/path',
+        freshSettingsService
+      );
+
+      freshEmitter.emit(
+        'signal:received',
+        createTestSignal({
+          source: 'github',
+          author: { id: 'gh-stance-4', name: 'Dev' },
+          content: 'Settings read failure',
+        })
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(freshFeatureLoader.create).toHaveBeenCalledTimes(1);
+      // @ts-expect-error — create is a vi mock
+      const createCall = freshFeatureLoader.create.mock.calls[0]?.[1];
+      expect(createCall?.executionMode).toBeUndefined();
+    });
+
+    it('should default to delivery when no settingsService is provided', async () => {
+      const noSettingsEmitter = createMockEventEmitter() as unknown as EventEmitter;
+      const noSettingsLoader = createMockFeatureLoader([], {
+        create: vi.fn().mockResolvedValue({
+          id: 'feature-stance-test',
+          title: 'Stance Test Feature',
+          status: 'backlog',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }),
+      }) as unknown as FeatureLoader;
+
+      const service = new SignalIntakeService(noSettingsEmitter, noSettingsLoader, '/test/path');
+
+      noSettingsEmitter.emit(
+        'signal:received',
+        createTestSignal({
+          source: 'github',
+          author: { id: 'gh-stance-5', name: 'Dev' },
+          content: 'No settings service',
+        })
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(noSettingsLoader.create).toHaveBeenCalledTimes(1);
+      // @ts-expect-error — create is a vi mock
+      const createCall = noSettingsLoader.create.mock.calls[0]?.[1];
+      expect(createCall?.executionMode).toBeUndefined();
+    });
+
+    it('should set executionMode: read-only for observe stance on Discord signals', async () => {
+      createFreshService({ executionStance: 'observe' });
+
+      freshEmitter.emit(
+        'signal:received',
+        createTestSignal({
+          source: 'discord',
+          author: { id: 'disc-stance-1', name: 'User' },
+          content: 'Discord observe signal',
+          channelContext: { channelName: 'dev-chat' },
+        })
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(freshFeatureLoader.create).toHaveBeenCalledTimes(1);
+      // @ts-expect-error — create is a vi mock
+      const createCall = freshFeatureLoader.create.mock.calls[0]?.[1];
+      expect(createCall).toMatchObject({ executionMode: 'read-only' });
+    });
+  });
 });

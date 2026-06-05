@@ -636,6 +636,16 @@ export class SignalIntakeService {
 
       // Ops signals: route to Lead Engineer state machine
 
+      // Resolve project execution stance (#4073 follow-up).
+      // 'observe' → read-only feature (no branches/PRs); 'delivery' (default) → standard workflow.
+      const projectSettings = this.settingsService
+        ? await this.settingsService.getProjectSettings(projectPath).catch((err) => {
+            logger.warn(`Failed to read project settings for stance resolution:`, err);
+            return null;
+          })
+        : null;
+      const isObserveStance = projectSettings?.executionStance === 'observe';
+
       // Create feature with idea state
       this.updateRingBufferEntry(bufferEntry.id, 'creating');
       const feature = await this.featureLoader.create(projectPath, {
@@ -646,6 +656,7 @@ export class SignalIntakeService {
         complexity: 'medium',
         workItemState: 'idea',
         sourceChannel: sourceToChannel(signal.source),
+        ...(isObserveStance ? { executionMode: 'read-only' as const } : {}),
         // Store GitHub issue number for auto-close on PR merge AND for future
         // idempotency lookups. Any caller that plumbs an issueNumber through
         // channelContext gets it persisted, not just native github-webhook

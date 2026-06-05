@@ -8,6 +8,7 @@ export type ProjectSettingsViewId =
   | 'claude'
   | 'webhooks'
   | 'agents'
+  | 'execution'
   | 'danger';
 
 interface UseProjectSettingsViewOptions {
