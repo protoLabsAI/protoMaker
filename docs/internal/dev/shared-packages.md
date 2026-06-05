@@ -164,7 +164,7 @@ await openInEditor('/path/to/project', 'cursor');
 import { resolveModelString, DEFAULT_MODELS } from '@protolabsai/model-resolver';
 
 // Convert user input to model ID
-const modelId = resolveModelString('sonnet'); // → 'claude-sonnet-4-5-20250929'
+const modelId = resolveModelString('sonnet'); // → 'protolabs/smart'
 
 // Use default for auto-mode feature implementation
 const autoModeModel = DEFAULT_MODELS.autoMode; // → sonnet
@@ -174,9 +174,9 @@ const autoModeModel = DEFAULT_MODELS.autoMode; // → sonnet
 
 **Model aliases:**
 
-- `haiku` → `claude-haiku-4-5-20251001` (fast, simple/trivial tasks)
-- `sonnet` → `claude-sonnet-4-5-20250929` (balanced, feature implementation)
-- `opus` → `claude-opus-4-5-20251101` (maximum capability, orchestration/architecture)
+- `haiku` → `protolabs/fast` (fast, simple/trivial tasks)
+- `sonnet` → `protolabs/smart` (balanced, feature implementation)
+- `opus` → `protolabs/reasoning` (maximum capability, orchestration/architecture)
 
 **DEFAULT_MODELS use cases:**
 

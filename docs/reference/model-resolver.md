@@ -1,27 +1,29 @@
 # Model Resolver
 
-The Model Resolver (`@protolabsai/model-resolver`) converts human-friendly model aliases to full model identifiers used by AI providers. This system enables consistent model selection across protoLabs Studio while simplifying configuration.
+The Model Resolver (`@protolabsai/model-resolver`) converts human-friendly model aliases into the provider strings the runtime actually uses. For Claude, that target is a **protoLabs gateway tier** — all Claude routing goes through the gateway (`api.proto-labs.ai`), and the gateway-issued API key is the only credential the product expects.
 
 ## Overview
 
-Instead of using full model strings like `claude-sonnet-4-6-20250929`, users can specify aliases like `sonnet`. The resolver handles:
+Instead of pinning a versioned model string, code and config use a short alias like `sonnet` or `opus`. `resolveModelString()` handles:
 
-- **Alias expansion** - `sonnet` → `claude-sonnet-4-6`
-- **Version pinning** - Specific versions for reproducibility
-- **Provider detection** - Auto-detect Claude vs OpenAI vs custom
-- **Fallback handling** - Graceful degradation when models are unavailable
+- **Alias → gateway tier** — `sonnet` → `protolabs/smart`
+- **Legacy migration** — old versioned IDs (`claude-sonnet-4-6`, `claude-opus-4-5`, …) migrate to the equivalent gateway tier
+- **Provider pass-through** — Cursor (`cursor-*`), Codex (`codex-*`), OpenCode, and Groq model strings are returned unchanged for their providers
+- **Default fallback** — an empty/unknown alias returns `DEFAULT_MODELS.claude` (`protolabs/reasoning`)
 
 ## Model Hierarchy
 
-protoLabs Studio uses a three-tier model system:
+Claude work resolves to one of three gateway tiers:
 
-| Alias    | Model ID                    | Provider | Use Case                              | Cost (per 1M tokens)        |
-| -------- | --------------------------- | -------- | ------------------------------------- | --------------------------- |
-| `haiku`  | `claude-haiku-4-5-20251001` | Claude   | Quick tasks, simple features          | $0.80 input, $4.00 output   |
-| `sonnet` | `claude-sonnet-4-6`         | Claude   | Standard features (default)           | $3.00 input, $15.00 output  |
-| `opus`   | `claude-opus-4-6`           | Claude   | Architectural decisions, complex work | $15.00 input, $75.00 output |
+| Alias    | Canonical ID    | Resolves to           | Use Case                                      |
+| -------- | --------------- | --------------------- | --------------------------------------------- |
+| `haiku`  | `claude-haiku`  | `protolabs/fast`      | Quick/trivial tasks, commits, branch names    |
+| `sonnet` | `claude-sonnet` | `protolabs/smart`     | Standard feature implementation (workhorse)   |
+| `opus`   | `claude-opus`   | `protolabs/reasoning` | Architecture, spec generation, deep reasoning |
 
-**Auto-escalation:** Features that fail 2+ times automatically escalate to opus on retry.
+The gateway maps each tier to a concrete frontier model; the product never needs a versioned Claude ID. See the auto-mode model hierarchy in the project README/CLAUDE.md for how tiers map to feature complexity.
+
+**Auto-escalation:** features that fail 2+ times escalate to `DEFAULT_MODELS.claude` (`protolabs/reasoning`) on retry.
 
 ## Usage
 
@@ -30,18 +32,24 @@ protoLabs Studio uses a three-tier model system:
 ```typescript
 import { resolveModelString } from '@protolabsai/model-resolver';
 
-// Alias expansion
-resolveModelString('sonnet'); // → 'claude-sonnet-4-6'
-resolveModelString('opus'); // → 'claude-opus-4-6'
-resolveModelString('haiku'); // → 'claude-haiku-4-5-20251001'
+// Alias → gateway tier
+resolveModelString('sonnet'); // → 'protolabs/smart'
+resolveModelString('opus'); // → 'protolabs/reasoning'
+resolveModelString('haiku'); // → 'protolabs/fast'
 
-// Pass-through for full model strings
-resolveModelString('claude-sonnet-4-6'); // → 'claude-sonnet-4-6'
-resolveModelString('gpt-4-turbo'); // → 'gpt-4-turbo'
+// Canonical aliases resolve to the same tiers
+resolveModelString('claude-sonnet'); // → 'protolabs/smart'
 
-// Undefined/null returns default
-resolveModelString(undefined); // → 'claude-sonnet-4-6'
-resolveModelString(null); // → 'claude-sonnet-4-6'
+// Legacy versioned IDs migrate to the tier
+resolveModelString('claude-sonnet-4-6'); // → 'protolabs/smart'
+resolveModelString('claude-opus-4-5'); // → 'protolabs/reasoning'
+
+// Other providers pass through unchanged
+resolveModelString('cursor-composer-1'); // → 'cursor-composer-1'
+resolveModelString('codex-gpt-5.5'); // → 'codex-gpt-5.5'
+
+// Undefined/empty returns the default (DEFAULT_MODELS.claude)
+resolveModelString(undefined); // → 'protolabs/reasoning'
 ```
 
 ### In Agent Configuration
@@ -49,341 +57,134 @@ resolveModelString(null); // → 'claude-sonnet-4-6'
 ```typescript
 import { resolveModelString } from '@protolabsai/model-resolver';
 
-// Use in agent configuration
-const model = resolveModelString('sonnet'); // Returns 'claude-sonnet-4-6'
-
-// Use in auto-mode settings
 const config = {
-  defaultModel: resolveModelString('sonnet'),
-  escalationModel: resolveModelString('opus'),
+  defaultModel: resolveModelString('sonnet'), // → 'protolabs/smart'
+  escalationModel: resolveModelString('opus'), // → 'protolabs/reasoning'
 };
 ```
 
 ### In Feature Execution
 
 ```typescript
-import { resolveModelString } from '@protolabsai/model-resolver';
-
 // Model resolution happens inside the Lead Engineer INTAKE phase.
 // When creating a feature, specify the alias — the pipeline resolves it:
 mcp__plugin_protolabs_studio__create_feature({
   projectPath: '/path/to/project',
   title: 'Core Infrastructure',
-  model: 'opus', // Resolved to claude-opus-4-6 at INTAKE
+  model: 'opus', // Resolved to protolabs/reasoning at INTAKE
   complexity: 'architectural',
 });
-
-// Or resolve manually for direct SDK calls:
-const model = resolveModelString('opus'); // → 'claude-opus-4-6'
 ```
 
 ### In MCP Tools
 
 ```typescript
-// MCP tool call with alias
+// Alias — resolved by the pipeline
 mcp__plugin_protolabs_studio__start_agent({
   projectPath: '/path/to/project',
   featureId: 'feature-123',
-  model: 'sonnet', // Automatically resolved to claude-sonnet-4-6
+  model: 'sonnet', // → protolabs/smart
 });
 
-// Or use full model string
+// A gateway tier or any provider string is also accepted as-is
 mcp__plugin_protolabs_studio__start_agent({
   projectPath: '/path/to/project',
   featureId: 'feature-123',
-  model: 'claude-opus-4-6', // Passed through as-is
+  model: 'protolabs/reasoning',
 });
 ```
 
 ## Supported Aliases
 
-### Claude Models
+### Claude (resolve to gateway tiers)
 
-```typescript
-const CLAUDE_ALIASES = {
-  // Latest generations (recommended)
-  opus: 'claude-opus-4-6',
-  sonnet: 'claude-sonnet-4-6',
-  haiku: 'claude-haiku-4-5-20251001',
+| Input                                                       | Resolves to           |
+| ----------------------------------------------------------- | --------------------- |
+| `haiku`, `claude-haiku`, `claude-haiku-4-5*`                | `protolabs/fast`      |
+| `sonnet`, `claude-sonnet`, `claude-sonnet-4-5*`, `…-4-6`    | `protolabs/smart`     |
+| `opus`, `claude-opus`, `claude-opus-4-5`, `claude-opus-4-6` | `protolabs/reasoning` |
 
-  // Versioned aliases (pinned for reproducibility)
-  'opus-4-6': 'claude-opus-4-6',
-  'sonnet-4-6': 'claude-sonnet-4-6',
-  'sonnet-4-5': 'claude-sonnet-4-5',
-  'haiku-4-5': 'claude-haiku-4-5-20251001',
+The bare aliases (`CLAUDE_MODEL_MAP`), canonical IDs (`CLAUDE_CANONICAL_MAP`), and legacy versioned strings (`LEGACY_CLAUDE_FULL_MODEL_MAP`) all live in `libs/types/src/model.ts`.
 
-  // Legacy (for compatibility)
-  'claude-4': 'claude-sonnet-4-6', // Default to sonnet
-};
-```
+### Other providers
 
-### OpenAI Models
-
-```typescript
-const OPENAI_ALIASES = {
-  'gpt-4': 'gpt-4-turbo',
-  'gpt-3.5': 'gpt-3.5-turbo',
-  o1: 'o1-preview',
-};
-```
-
-### Custom Models
-
-Any model string not matching an alias is passed through unchanged:
-
-```typescript
-resolveModelString('custom-model-v1'); // → 'custom-model-v1'
-resolveModelString('local-llama-70b'); // → 'local-llama-70b'
-```
-
-## Provider Detection
-
-The resolver can extract provider information from model strings:
-
-```typescript
-import { stripProviderPrefix } from '@protolabsai/types';
-
-// Removes provider prefix
-stripProviderPrefix('claude-sonnet-4-6'); // → 'sonnet-4-6'
-stripProviderPrefix('gpt-4-turbo'); // → '4-turbo'
-stripProviderPrefix('custom:my-model'); // → 'my-model'
-
-// Detect provider
-function getProvider(model: string): string {
-  if (model.startsWith('claude-')) return 'anthropic';
-  if (model.startsWith('gpt-') || model.startsWith('o1-')) return 'openai';
-  return 'custom';
-}
-```
+| Input pattern                         | Behavior                                        |
+| ------------------------------------- | ----------------------------------------------- |
+| `cursor-*`                            | Passed through (Cursor CLI provider)            |
+| `codex-*`                             | Passed through (Codex/OpenAI provider)          |
+| OpenCode (`opencode-*` or `prov/mod`) | Passed through (OpenCode provider)              |
+| Groq aliases / IDs / `groq/*`         | Resolved/passed through (Groq provider)         |
+| Anything else                         | Passed through unchanged (custom gateway model) |
 
 ## Configuration
 
-### Global Default Model
+### Default Model
 
-Set the default model in `settings.json` or environment variables:
-
-```json
-{
-  "defaultModel": "sonnet"
-}
-```
-
-Or via environment variable:
-
-```bash
-AUTOMAKER_DEFAULT_MODEL=opus npm run dev
-```
-
-### Per-Project Override
-
-Override model selection in `.automaker/settings.json`:
-
-```json
-{
-  "defaultModel": "haiku",
-  "complexityThresholds": {
-    "small": "haiku",
-    "medium": "sonnet",
-    "large": "sonnet",
-    "architectural": "opus"
-  }
-}
-```
+The default returned for an unspecified/unknown model is `DEFAULT_MODELS.claude` (`protolabs/reasoning`), defined in `libs/types/src/model.ts`. Per-tier model defaults are configurable in **Settings → AI Models → Model Defaults**.
 
 ### Per-Feature Override
-
-Specify model when creating a feature:
 
 ```typescript
 mcp__plugin_protolabs_studio__create_feature({
   projectPath: '/path/to/project',
   title: 'Performance Optimization',
   description: '...',
-  model: 'opus', // Override default
+  model: 'opus', // Override the tier for this feature
   complexity: 'architectural',
 });
 ```
 
 ## Complexity-Based Model Selection
 
-protoLabs Studio automatically selects models based on feature complexity:
+Auto-mode selects a tier from feature complexity (see the Model Hierarchy in CLAUDE.md):
 
-```typescript
-interface ComplexityMapping {
-  small: string; // Trivial tasks → haiku
-  medium: string; // Standard features → sonnet
-  large: string; // Complex features → sonnet
-  architectural: string; // System design → opus
-}
-
-const DEFAULT_MAPPING: ComplexityMapping = {
-  small: 'haiku',
-  medium: 'sonnet',
-  large: 'sonnet',
-  architectural: 'opus',
-};
-```
-
-**Usage:**
-
-```typescript
-import { resolveModelString } from '@protolabsai/model-resolver';
-
-function getModelForComplexity(complexity: string): string {
-  const mapping = settings.complexityThresholds || DEFAULT_MAPPING;
-  const alias = mapping[complexity] || 'sonnet';
-  return resolveModelString(alias);
-}
-
-// Example
-const model = getModelForComplexity('architectural'); // → 'claude-opus-4-6'
-```
+| Complexity             | Tier                                    |
+| ---------------------- | --------------------------------------- |
+| `small`                | `protolabs/fast`                        |
+| `medium`, `large`      | `protolabs/smart`                       |
+| `architectural`        | `protolabs/reasoning`                   |
+| any, after 2+ failures | `protolabs/reasoning` (auto-escalation) |
 
 ## Auto-Escalation
 
-When a feature fails multiple times, the Lead Engineer state machine auto-escalates to a more capable model:
+When a feature fails multiple times, the Lead Engineer state machine escalates:
 
-1. Feature fails at current tier (e.g., Sonnet)
-2. `LeadEngineerService` increments `failureCount` and transitions to ESCALATE
-3. On retry, the INTAKE phase checks `failureCount >= 2` and selects Opus
-4. If Opus also fails, the feature stays in ESCALATE for human intervention
+1. Feature fails at its current tier.
+2. `LeadEngineerService` increments `failureCount` and transitions to ESCALATE.
+3. On retry, INTAKE checks `failureCount >= 2` and selects `DEFAULT_MODELS.claude` (`protolabs/reasoning`).
+4. If that also fails, the feature stays in ESCALATE for human intervention.
 
-This is handled automatically by the pipeline — no manual escalation code needed. The `FeatureScheduler` tracks failures via `DispatchResult` outcomes and the circuit breaker pauses after 3 consecutive failures.
-
-## Version Pinning
-
-For reproducibility, use versioned aliases:
-
-```typescript
-// ❌ Unpinned (may change over time)
-model: 'sonnet'; // Resolves to latest sonnet
-
-// ✅ Pinned (stable)
-model: 'sonnet-4-6'; // Always uses claude-sonnet-4-6
-
-// ✅ Fully qualified (most stable)
-model: 'claude-sonnet-4-6-20250929'; // Specific build
-```
-
-**When to pin:**
-
-- Production deployments
-- Reproducible research
-- Compliance requirements
-
-**When to use latest:**
-
-- Development
-- Rapid iteration
-- Benefit from latest improvements
-
-## Custom Resolvers
-
-You can extend the resolver with custom logic:
-
-```typescript
-import { resolveModelString } from '@protolabsai/model-resolver';
-
-function customResolve(input: string | undefined): string {
-  // Custom logic
-  if (input === 'experimental') {
-    return 'claude-opus-4-6';
-  }
-
-  // Fallback to default resolver
-  return resolveModelString(input);
-}
-
-// Use in your code
-const model = customResolve('experimental'); // → 'claude-opus-4-6'
-```
+This is automatic — no manual escalation code needed. The circuit breaker pauses dispatch after consecutive failures.
 
 ## Testing
-
-### Unit Tests
 
 ```typescript
 import { resolveModelString } from '@protolabsai/model-resolver';
 import { describe, it, expect } from 'vitest';
 
 describe('resolveModelString', () => {
-  it('resolves aliases', () => {
-    expect(resolveModelString('sonnet')).toBe('claude-sonnet-4-6');
-    expect(resolveModelString('opus')).toBe('claude-opus-4-6');
-    expect(resolveModelString('haiku')).toBe('claude-haiku-4-5-20251001');
+  it('resolves aliases to gateway tiers', () => {
+    expect(resolveModelString('sonnet')).toBe('protolabs/smart');
+    expect(resolveModelString('opus')).toBe('protolabs/reasoning');
+    expect(resolveModelString('haiku')).toBe('protolabs/fast');
   });
 
-  it('passes through full model strings', () => {
-    expect(resolveModelString('claude-sonnet-4-6')).toBe('claude-sonnet-4-6');
-    expect(resolveModelString('gpt-4-turbo')).toBe('gpt-4-turbo');
+  it('migrates legacy versioned IDs to tiers', () => {
+    expect(resolveModelString('claude-sonnet-4-6')).toBe('protolabs/smart');
   });
 
-  it('returns default for undefined', () => {
-    expect(resolveModelString(undefined)).toBe('claude-sonnet-4-6');
-    expect(resolveModelString(null)).toBe('claude-sonnet-4-6');
-  });
-});
-```
-
-### Integration Tests
-
-```typescript
-import { resolveModelString } from '@protolabsai/model-resolver';
-
-describe('Model resolution in feature pipeline', () => {
-  it('resolves alias to full model string', () => {
-    expect(resolveModelString('haiku')).toBe('claude-haiku-4-5-20251001');
-    expect(resolveModelString('sonnet')).toBe('claude-sonnet-4-6');
-    expect(resolveModelString('opus')).toBe('claude-opus-4-6');
+  it('passes through non-Claude provider strings', () => {
+    expect(resolveModelString('cursor-composer-1')).toBe('cursor-composer-1');
   });
 
-  it('returns default for undefined', () => {
-    expect(resolveModelString(undefined)).toBe('claude-sonnet-4-6');
+  it('returns the default for undefined', () => {
+    expect(resolveModelString(undefined)).toBe('protolabs/reasoning');
   });
 });
-```
-
-## Troubleshooting
-
-### \"Model not found\"
-
-**Issue:** Provider doesn't recognize resolved model string.
-
-**Solution:** Check if model ID is current. Update resolver if model was renamed:
-
-```typescript
-// Update alias mapping in libs/model-resolver/src/index.ts
-const CLAUDE_ALIASES = {
-  sonnet: 'claude-sonnet-4-7', // Updated
-};
-```
-
-### \"Unexpected model behavior\"
-
-**Issue:** Model output differs from expected.
-
-**Solution:** Verify correct model is resolved:
-
-```typescript
-import { resolveModelString } from '@protolabsai/model-resolver';
-
-console.log('Resolved model:', resolveModelString('sonnet'));
-// Should print: 'claude-sonnet-4-6'
-```
-
-### \"Cannot resolve custom alias\"
-
-**Issue:** Custom alias not recognized.
-
-**Solution:** Use full model string or update resolver:
-
-```typescript
-// Option 1: Use full string
-model: 'custom-model-v1';
-
-// Option 2: Extend resolver (see Custom Resolvers section)
 ```
 
 ## Learn More
 
-- [Claude Model Docs](https://docs.anthropic.com/claude/docs/models-overview) - Official model documentation
+- [AI Providers](../integrations/ai-providers.md) — provider abstraction and gateway routing
+- `libs/types/src/model.ts` — the alias/canonical/legacy maps and `DEFAULT_MODELS`
+- `libs/model-resolver/src/resolver.ts` — `resolveModelString()` implementation

@@ -67,7 +67,7 @@ server:
 agents:
   defaults:
     count: 2
-    model: claude-opus-4-6
+    model: opus
     maxTokens: 8192
 
   pool:
