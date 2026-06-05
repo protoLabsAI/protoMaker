@@ -282,4 +282,5 @@ export interface ProjectSettings {
 /** Default project settings (empty - all settings are optional and fall back to global) */
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   version: PROJECT_SETTINGS_VERSION,
+  useWorktrees: true,
 };
