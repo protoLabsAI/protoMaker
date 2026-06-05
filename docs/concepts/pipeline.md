@@ -4,27 +4,23 @@ The complete lifecycle of work in protoLabs Studio, from initial signal through 
 
 ## Overview
 
-Every piece of work flows through an 8-phase pipeline with two human gates. The pipeline has two branches (ops and gtm), three authority agents, a Lead Engineer state machine, and fast-path supervisor rules.
+Every piece of work flows through an 8-phase pipeline with two human gates. The pipeline has a single ops branch, three authority agents, a Lead Engineer state machine, and fast-path supervisor rules.
 
 ```
 Signal → TRIAGE → RESEARCH → SPEC → SPEC_REVIEW → DESIGN → PLAN → EXECUTE → PUBLISH
                                          ^ GATE                               ^ GATE
 ```
 
-GTM branch skips DESIGN and PLAN (content doesn't need architectural decomposition).
-
 ## Signal entry
 
 Work enters through four channels, all routed by `SignalIntakeService`:
 
-| Source                | Classification  | Path                          |
-| --------------------- | --------------- | ----------------------------- |
-| GitHub issue/PR event | ops             | Lead Engineer state machine   |
-| Discord event         | ops / gtm       | Signal classification + route |
-| MCP `create_feature`  | ops (fast path) | Direct to board, skip PM      |
-| MCP `process_idea`    | ops (full path) | PM Agent research + PRD       |
-
-**GTM gate:** The entire GTM branch is controlled by the `gtmEnabled` global setting (default: `false`). When disabled, `SignalIntakeService` forces all signals to ops, content API routes return 403, and the UI hides GTM-related nodes. Enable via settings to activate GTM routing.
+| Source                   | Classification  | Path                          |
+| ------------------------ | --------------- | ----------------------------- |
+| GitHub issue/PR event    | ops             | Lead Engineer state machine   |
+| Discord event            | ops             | Signal classification + route |
+| MCP `create_feature`     | ops (fast path) | Direct to board, skip PM      |
+| UI / API idea submission | ops (full path) | PM Agent research + PRD       |
 
 **Fast path** skips the PM pipeline -- feature goes straight to the board and Lead Engineer picks it up. Use when you know exactly what needs building.
 
@@ -32,16 +28,16 @@ Work enters through four channels, all routed by `SignalIntakeService`:
 
 ### Signal intent classification
 
-`SignalIntakeService` applies a second classification layer -- intent -- independent of the ops/gtm routing. Intent identifies the nature of the signal so the Lead Engineer and downstream agents can handle it appropriately without re-classifying.
+`SignalIntakeService` applies a second classification layer -- intent -- independent of the routing. Intent identifies the nature of the signal so the Lead Engineer and downstream agents can handle it appropriately without re-classifying.
 
 **Type:** `SignalIntent` in `libs/types/src/signal-intent.ts`
 
 | Intent           | Description                                                                              | Routing                                                                   |
 | ---------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | `work_order`     | Concrete task ready for implementation (MCP create_feature, UI board action)             | Ops pipeline -- normal execution                                          |
-| `idea`           | Vague concept needing PM refinement (MCP process_idea, Discord brainstorm channels)      | PM Agent research + PRD                                                   |
+| `idea`           | Vague concept needing PM refinement (idea-intent signal, Discord brainstorm channels)    | PM Agent research + PRD                                                   |
 | `feedback`       | Commentary on existing work (PR review, Discord discussion)                              | Routes to running agent via `sendMessageToAgent()` or `followUpFeature()` |
-| `conversational` | Casual message or question -- no work item created (Discord @mentions, social exchanges) | GTM or acknowledged without feature creation                              |
+| `conversational` | Casual message or question -- no work item created (Discord @mentions, social exchanges) | Acknowledged without feature creation                                     |
 | `interrupt`      | Urgent signal requiring immediate human attention (SLA breach, emergency)                | Bypasses PM pipeline entirely -- creates HITL form directly               |
 
 The `intent` field is threaded onto all `signal:routed` events. The interrupt fast-path uses `HITLFormService` (wired via `setHITLFormService()` at server startup).
@@ -54,7 +50,7 @@ Defined in `libs/types/src/pipeline-phase.ts`.
 
 **Gate:** auto | **Agent:** SignalIntakeService | **workItemState:** `idea`
 
-Classify the signal as ops or gtm. Create the feature. Emit `authority:idea-injected`.
+Classify the signal and route it. Create the feature. Emit `authority:idea-injected`.
 
 ### Phase 1.5: TRIAGE + CLARIFICATION (optional HITL gate)
 
@@ -76,29 +72,25 @@ PM Agent generates a SPARC PRD (Situation, Problem, Approach, Results, Constrain
 
 ### Phase 4: SPEC_REVIEW
 
-**Gate:** review (ops) / manual (gtm) | **Agent:** none (human) | **workItemState:** `prd_ready`
+**Gate:** review | **Agent:** none (human) | **workItemState:** `prd_ready`
 
 **First human gate.** The pipeline holds here (`awaitingGate: true`). CTO reviews the PRD and approves or requests changes. On approval, emits `authority:pm-review-approved` and transitions to `approved`.
 
-The PRD approval endpoint (`/api/engine/signal/approve-prd`) bridges directly to `pipelineOrchestrator.resolveGate()`, so approving the PRD also advances the pipeline gate in a single action. Rejecting the PRD resets the feature to `idea` state and rejects the gate.
+The PRD approval endpoint (`/api/engine/signal/approve-prd`) emits `ideation:prd-approved`, which the PM Agent consumes to trigger decomposition and advance past the gate. Rejecting the PRD resets the feature to `idea` state so it can be re-submitted.
 
 If a HITL form is pending for the feature (e.g., clarification questions), clicking the gated node in the flow graph or the amber gate indicator in the progress bar opens the HITL form dialog directly.
 
-### Phase 5: DESIGN (ops only)
+### Phase 5: DESIGN
 
 **Gate:** auto | **Agent:** ProjM Agent | **workItemState:** `approved`
 
 ProjM creates a project with milestones. Only one milestone can be in-progress at a time (sequential execution). Emits `milestone:planned`.
 
-GTM branch skips this phase entirely.
-
-### Phase 6: PLAN (ops only)
+### Phase 6: PLAN
 
 **Gate:** auto | **Agent:** ProjM Agent | **workItemState:** `planned`
 
 ProjM decomposes milestone phases into child features with dependencies. Sets up the execution order. Emits `milestone:started`. Features transition to `ready`.
-
-GTM branch skips this phase entirely.
 
 ### Phase 7: EXECUTE
 
@@ -108,13 +100,13 @@ The Lead Engineer state machine takes over. See the Lead Engineer section below 
 
 ### Phase 8: PUBLISH
 
-**Gate:** review (ops) / manual (gtm) | **Agent:** Merge orchestrator | **workItemState:** `done`
+**Gate:** review | **Agent:** Merge orchestrator | **workItemState:** `done`
 
 **Second human gate.** PR is created, CI runs, CodeRabbit reviews. The pipeline can hold here for human review if issues are found. On clean pass, auto-proceeds. PR merges to target branch (main, or the parent epic branch for epic children). Board status updates to `done`. Emits `feature:pr-merged`.
 
 ## Gate system
 
-Defined in `pipeline-orchestrator.ts`.
+Gate state lives in `PipelineState` (`libs/types/src/pipeline-phase.ts`). There is no standalone orchestrator class — phase/gate transitions are driven by the engine signal routes (`/api/engine/signal/*`) and Lead Engineer events.
 
 Three gate modes control phase transitions:
 
@@ -334,28 +326,28 @@ The flow graph view tracks all concurrent pipelines, not just one. When multiple
 
 ## Key files
 
-| File                                                                     | Purpose                           |
-| ------------------------------------------------------------------------ | --------------------------------- |
-| `libs/types/src/pipeline-phase.ts`                                       | 8 phases, gate modes, transitions |
-| `libs/types/src/feature.ts`                                              | Feature status, pipelineState     |
-| `libs/types/src/authority.ts`                                            | WorkItemState (15 states)         |
-| `libs/types/src/lead-engineer.ts`                                        | Lead Engineer types               |
-| `apps/server/src/services/pipeline-orchestrator.ts`                      | Phase transitions and gates       |
-| `apps/server/src/services/signal-intake-service.ts`                      | Signal classification             |
-| `apps/server/src/services/lead-engineer-service.ts`                      | State machine                     |
-| `apps/server/src/services/lead-engineer-rules.ts`                        | Fast-path rules                   |
-| `apps/server/src/services/auto-mode-service.ts`                          | Orchestration, worktree mgmt      |
-| `apps/server/src/services/feature-scheduler.ts`                          | Scheduling loop, dep resolution   |
-| `apps/server/src/services/notification-router.ts`                        | Notification signal routing       |
-| `apps/server/src/services/hitl-form-service.ts`                          | HITL form creation and responses  |
-| `apps/server/src/services/escalation-router.ts`                          | Escalation signal routing         |
-| `apps/server/src/services/authority-agents/pm-agent.ts`                  | PM (research + PRD + HITL)        |
-| `apps/server/src/services/authority-agents/projm-agent.ts`               | ProjM (milestone planning)        |
-| `apps/server/src/services/authority-agents/em-agent.ts`                  | EM (capacity + execution)         |
-| `apps/ui/src/components/views/flow-graph/hooks/use-pipeline-progress.ts` | Multi-pipeline tracking hook      |
-| `apps/ui/src/components/views/flow-graph/pipeline-pill-selector.tsx`     | Pipeline selector UI              |
-| `apps/ui/src/components/views/flow-graph/pipeline-progress-bar.tsx`      | Phase stepper + gate button       |
-| `apps/ui/src/components/shared/hitl-form/hitl-form-dialog.tsx`           | HITL form dialog                  |
+| File                                                                     | Purpose                                |
+| ------------------------------------------------------------------------ | -------------------------------------- |
+| `libs/types/src/pipeline-phase.ts`                                       | 8 phases, gate modes, transitions      |
+| `libs/types/src/feature.ts`                                              | Feature status, pipelineState          |
+| `libs/types/src/authority.ts`                                            | WorkItemState (15 states)              |
+| `libs/types/src/lead-engineer.ts`                                        | Lead Engineer types                    |
+| `libs/types/src/pipeline-phase.ts`                                       | PipelinePhase, GateMode, PipelineState |
+| `apps/server/src/services/signal-intake-service.ts`                      | Signal classification                  |
+| `apps/server/src/services/lead-engineer-service.ts`                      | State machine                          |
+| `apps/server/src/services/lead-engineer-rules.ts`                        | Fast-path rules                        |
+| `apps/server/src/services/auto-mode-service.ts`                          | Orchestration, worktree mgmt           |
+| `apps/server/src/services/feature-scheduler.ts`                          | Scheduling loop, dep resolution        |
+| `apps/server/src/services/notification-router.ts`                        | Notification signal routing            |
+| `apps/server/src/services/hitl-form-service.ts`                          | HITL form creation and responses       |
+| `apps/server/src/services/escalation-router.ts`                          | Escalation signal routing              |
+| `apps/server/src/services/authority-agents/pm-agent.ts`                  | PM (research + PRD + HITL)             |
+| `apps/server/src/services/authority-agents/projm-agent.ts`               | ProjM (milestone planning)             |
+| `apps/server/src/services/authority-agents/em-agent.ts`                  | EM (capacity + execution)              |
+| `apps/ui/src/components/views/flow-graph/hooks/use-pipeline-progress.ts` | Multi-pipeline tracking hook           |
+| `apps/ui/src/components/views/flow-graph/pipeline-pill-selector.tsx`     | Pipeline selector UI                   |
+| `apps/ui/src/components/views/flow-graph/pipeline-progress-bar.tsx`      | Phase stepper + gate button            |
+| `apps/ui/src/components/shared/hitl-form/hitl-form-dialog.tsx`           | HITL form dialog                       |
 
 ## Next steps
 
