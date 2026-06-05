@@ -360,28 +360,13 @@ Haiku removes:
 - Critical error fixes
 - High-importance patterns (importance > 0.8)
 
-### Manual Compaction
+### Compaction Trigger
 
-You can trigger compaction manually via the API:
-
-```bash
-curl -X POST http://localhost:3008/api/knowledge/compact \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "projectPath": "/path/to/project",
-    "categoryFile": "patterns.md",
-    "threshold": 50000
-  }'
-```
-
-Or via MCP:
+Compaction is an internal `KnowledgeStoreService` operation (`compactCategory`),
+run during knowledge-store maintenance — not a user-facing endpoint or MCP tool.
 
 ```typescript
-mcp__plugin_protolabs_studio__compact_memory({
-  projectPath: '/path/to/project',
-  categoryFile: 'patterns.md',
-  threshold: 30000, // Custom threshold
-});
+knowledgeStore.compactCategory(projectPath, 'patterns.md');
 ```
 
 ## Pruning
@@ -411,23 +396,8 @@ A chunk is pruned if **both** conditions are true:
 
 **Why retrieval_count = 0?** If a chunk was retrieved at least once, it might be useful. Even if it hasn't been retrieved in 90 days, keep it.
 
-### Manual Pruning
-
-```bash
-curl -X POST http://localhost:3008/api/knowledge/prune \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "projectPath": "/path/to/project"
-  }'
-```
-
-Or via MCP:
-
-```typescript
-mcp__plugin_protolabs_studio__prune_knowledge({
-  projectPath: '/path/to/project',
-});
-```
+Pruning is internal (`KnowledgeStoreService.pruneStaleChunks`), invoked during
+maintenance — there is no user-facing prune endpoint or MCP tool.
 
 ## Adding New Memory Categories
 
@@ -511,12 +481,12 @@ Check `retrieval_mode` in response — should be `"hybrid"` if embeddings are wo
 
 ### Common Issues
 
-| Issue                    | Diagnosis                           | Fix                                  |
-| ------------------------ | ----------------------------------- | ------------------------------------ |
-| No results returned      | `totalChunks: 0` in `/stats`        | Run `/rebuild` to reindex            |
-| `retrieval_mode: "bm25"` | Embeddings not ready                | Check `/embedding-status`, wait      |
-| Poor ranking             | BM25 scores near 0                  | Query too broad or corpus incomplete |
-| Slow search (> 500ms)    | Too many candidates or large corpus | Lower candidate limit or use ANN     |
+| Issue                    | Diagnosis                           | Fix                                     |
+| ------------------------ | ----------------------------------- | --------------------------------------- |
+| No results returned      | `totalChunks: 0` in `/stats`        | Run `/rebuild` to reindex               |
+| `retrieval_mode: "bm25"` | Embeddings not ready                | Check `POST /api/knowledge/stats`, wait |
+| Poor ranking             | BM25 scores near 0                  | Query too broad or corpus incomplete    |
+| Slow search (> 500ms)    | Too many candidates or large corpus | Lower candidate limit or use ANN        |
 
 ### Force Rebuild
 
@@ -639,8 +609,10 @@ See [Knowledge Hive](../reference/knowledge-hive.md#api-endpoints) for full API 
 
 - `POST /api/knowledge/search` — Search knowledge store
 - `POST /api/knowledge/rebuild` — Reindex after edits
-- `POST /api/knowledge/compact` — Compact oversized files
-- `POST /api/knowledge/prune` — Remove stale chunks
+- `POST /api/knowledge/stats` — Store stats and embedding readiness
+
+(Compaction and pruning are internal maintenance operations, not HTTP endpoints.)
+
 - `GET /api/knowledge/stats` — Corpus statistics
 
 ## Related

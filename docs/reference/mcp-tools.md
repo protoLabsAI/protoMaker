@@ -1,17 +1,18 @@
 # MCP Tools Reference
 
-Complete catalog of **104 MCP tools** exposed by the protoLabs server. See `packages/mcp-server/src/tools/` for the full definitions.
+Complete catalog of **100 MCP tools** exposed by the protoLabs server. See `packages/mcp-server/src/tools/` for the full definitions.
 
 For installation and configuration, see [Claude Plugin Setup](../integrations/claude-plugin.md). For commands and examples, see [Plugin Commands](../integrations/plugin-commands.md).
 
 > This page is generated from `packages/mcp-server/src/tools/*.ts`. Regenerate with `node scripts/gen-mcp-tools-doc.mjs`.
 
-## Feature Management (9 tools)
+## Feature Management (10 tools)
 
 | Tool                          | Description                                                                                                                                  |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `list_features`               | List all features in a project. Returns features organized by status (backlog, in-progress, review, done).                                   |
 | `get_feature`                 | Get detailed information about a specific feature including its description, status, and agent output.                                       |
+| `get_run_telemetry`           | Self-diagnose a feature's run: returns a structured digest of its execution history (attempts, failures, repeated error, cost, turns, rem... |
 | `create_feature`              | Create a new feature on the Kanban board. Features start in the backlog by default.                                                          |
 | `update_feature`              | Update a feature's properties. Can be used to change status, title, description, or move between columns.                                    |
 | `delete_feature`              | Delete a feature from the board. This is a destructive action.                                                                               |
@@ -47,7 +48,7 @@ For installation and configuration, see [Claude Plugin Setup](../integrations/cl
 | `create_context_file` | Create a new context file that will be injected into all agent prompts for this project.                          |
 | `delete_context_file` | Delete a context file.                                                                                            |
 
-## Orchestration (6 tools)
+## Orchestration (8 tools)
 
 | Tool                       | Description                                                                                                                                  |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -56,6 +57,8 @@ For installation and configuration, see [Claude Plugin Setup](../integrations/cl
 | `start_auto_mode`          | Start auto-mode for a project. Agents will automatically pick up and process backlog features respecting dependencies.                       |
 | `stop_auto_mode`           | Stop auto-mode for a project.                                                                                                                |
 | `get_auto_mode_status`     | Check if auto-mode is running for a project and get its status.                                                                              |
+| `pause_project`            | Pause an app/project (keyed by projectPath). Records the app as paused, marks every non-terminal project slug as paused for board visibil... |
+| `resume_project`           | Resume a paused app/project (keyed by projectPath). Removes it from the pause registry and restores each paused slug's prior status. Does... |
 | `get_execution_order`      | Get the resolved execution order for features based on dependencies. Useful for planning.                                                    |
 
 ## Project Orchestration (17 tools)
@@ -80,7 +83,7 @@ For installation and configuration, see [Claude Plugin Setup](../integrations/cl
 | `assign_project`          | Assign a project to an instance. Writes assignedTo, assignedAt, and assignedBy fields to the project.                                        |
 | `unassign_project`        | Clear the assignment fields on a project.                                                                                                    |
 
-## GitHub Operations (9 tools)
+## GitHub Operations (11 tools)
 
 | Tool                      | Description                                                                                                                                   |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -93,6 +96,8 @@ For installation and configuration, see [Claude Plugin Setup](../integrations/cl
 | `create_pr_from_worktree` | Commit, push, and create a PR from a worktree. Handles the full workflow: stage changes, commit, push branch, create GitHub PR.               |
 | `get_pr_review_comments`  | List inline code review comment threads on a PR via GitHub GraphQL API. Returns thread IDs, file paths, line numbers, and comment bodies.     |
 | `resolve_pr_comment`      | Resolve a single PR review thread by thread ID via GitHub GraphQL resolveReviewThread mutation.                                               |
+| `add_github_comment`      | Post a comment to an existing GitHub issue. Returns the comment URL and confirmation.                                                         |
+| `verify_triage_evidence`  | Deterministically verify that the file paths you cite as triage evidence actually exist at a git ref, BEFORE applying a classification. Y...  |
 
 ## Git Operations (2 tools)
 
@@ -105,10 +110,10 @@ For installation and configuration, see [Claude Plugin Setup](../integrations/cl
 
 | Tool                       | Description                                                                                                                                  |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `start_lead_engineer`      | Start the Lead Engineer to manage a project through the production phase. Orchestrates auto-mode, reacts to events with fast-path rules,...  |
-| `stop_lead_engineer`       | Stop the Lead Engineer from managing a project.                                                                                              |
-| `get_lead_engineer_status` | Get Lead Engineer status including world state, flow state, rule execution log, and metrics.                                                 |
-| `get_feature_handoff`      | Get the latest Lead Engineer phase handoff document for a feature. Handoff documents summarise what was done in each lifecycle phase (INT... |
+| `start_lead_engineer`      | Start the lead engineer agent to coordinate feature development. The lead engineer reviews PRs, manages dependencies, and orchestrates mu... |
+| `stop_lead_engineer`       | Stop the lead engineer agent.                                                                                                                |
+| `get_lead_engineer_status` | Get the current status of the lead engineer agent.                                                                                           |
+| `get_feature_handoff`      | Get the handoff state for a feature. Returns what the lead engineer has reviewed, approved, or flagged for changes.                          |
 
 ## Notes & Workspace (6 tools)
 
@@ -120,17 +125,6 @@ For installation and configuration, see [Claude Plugin Setup](../integrations/cl
 | `write_note_tab`  | Write content to a specific note tab. Requires agentWrite permission on the tab. Supports replace (default) or append mode. Content shoul... |
 | `create_note_tab` | Create a new note tab in the workspace. Returns the created tab with its ID.                                                                 |
 | `delete_note_tab` | Delete a note tab from the workspace. Cannot delete the last remaining tab.                                                                  |
-
-## Content Pipeline (6 tools)
-
-| Tool                          | Description                                                                                                                                  |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `create_content`              | Start a new content creation pipeline flow. Runs research → outline → writing → antagonistic review → export phases via LangGraph. Runs a... |
-| `get_content_status`          | Get the current status of a content creation flow run. Returns progress (0-100), current node, review scores for each phase (research/out... |
-| `list_content`                | List all content items for a project. Returns metadata about generated content including topic, format, status, review scores, and output... |
-| `review_content`              | Submit a HITL review decision at a content flow interrupt gate. Only applicable when the flow was started with enableHITL=true and is cur... |
-| `export_content`              | Export completed content to a specific format. The run must be in "completed" status. Formats: markdown (raw .md), frontmatter-md (YAML f... |
-| `execute_antagonistic_review` | Run an antagonistic quality review on content text. Scores across 6 dimensions on a 1-10 scale: Accuracy (factual correctness), Usefulnes... |
 
 ## Observability (5 tools)
 
@@ -144,51 +138,43 @@ For installation and configuration, see [Claude Plugin Setup](../integrations/cl
 
 ## Knowledge (4 tools)
 
-| Tool                | Description                                                                                                                                  |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `knowledge_search`  | Search the knowledge store using hybrid retrieval (BM25 + vector). Returns relevant chunks for the given query, optionally filtered by do... |
-| `knowledge_ingest`  | Add a text chunk to the knowledge store with a required domain tag for categorization.                                                       |
-| `knowledge_rebuild` | Rebuild the knowledge store FTS5 index. Use after bulk changes to ensure search reflects the latest content.                                 |
-| `knowledge_stats`   | Get statistics about the knowledge store, including total chunk counts grouped by domain.                                                    |
+| Tool                | Description                                                                                                                               |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `knowledge_search`  | Search the project knowledge base for relevant documents, code snippets, and documentation. Returns ranked results with relevance scores. |
+| `knowledge_ingest`  | Ingest documents into the knowledge base. Supports markdown, text, and code files. Automatically extracts and indexes content.            |
+| `knowledge_rebuild` | Rebuild the entire knowledge base index. Use this after major project changes or if search results seem stale.                            |
+| `knowledge_stats`   | Get statistics about the knowledge base: document count, index size, last update time, and search performance metrics.                    |
 
 ## QA (1 tools)
 
 | Tool           | Description                                                                                                                                  |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `run_qa_check` | Run a consolidated QA health check that aggregates server health, service wiring, scheduler timers, deployment tracking, DORA metrics, bo... |
-
-## Portfolio (2 tools)
-
-| Tool                   | Description                                                                                                                                  |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sync_registry`        | Compare Studio settings.projects[] against the Workstacean project registry. Reports missing projects (in Workstacean but not in settings... |
-| `get_portfolio_sitrep` | Get a fleet-wide portfolio status report aggregating all active projects in one call. Returns per-project health (green/yellow/red), acti... |
+| `run_qa_check` | Run automated quality assurance checks on a project or feature. Checks include code quality, test coverage, documentation completeness, a... |
 
 ## Scheduler (2 tools)
 
-| Tool                      | Description                                                                                                                                  |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `get_scheduler_status`    | Get the status of all scheduled timers (cron tasks and managed intervals) including their schedules, enable/disable state, execution coun... |
-| `update_maintenance_task` | Update a maintenance task — enable/disable it or change its cron schedule. Changes persist across server restarts via GlobalSettings.        |
+| Tool                      | Description                                                                                                            |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `get_scheduler_status`    | Get the status of the maintenance task scheduler. Returns scheduled tasks, next run times, and last execution results. |
+| `update_maintenance_task` | Update a maintenance task configuration. Can change schedule, enable/disable, or update parameters.                    |
 
-## Cross-Repo (3 tools)
+## Cross-Repo (2 tools)
 
-| Tool                            | Description                                                                                                                                  |
-| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `get_cross_repo_dependencies`   | Get the cross-repository dependency graph across all projects in the portfolio. Returns nodes (repos), edges (dependencies with type and...  |
-| `flag_cross_repo_dependency`    | Record a cross-repository dependency on a feature. Call this when a PR introduces a breaking interface change that affects other repos (e... |
-| `resolve_cross_repo_dependency` | Mark a cross-repository dependency as satisfied. Call this when the foreign feature has reached done/review status and the blocking dep s... |
+| Tool                            | Description                                                                                          |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `flag_cross_repo_dependency`    | Flag a cross-repository dependency. Creates a dependency record with status "pending".               |
+| `resolve_cross_repo_dependency` | Mark a cross-repository dependency as resolved. Updates status to "resolved" with a resolution note. |
 
 ## SetupLab (6 tools)
 
 | Tool                | Description                                                                                                                                  |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `research_repo`     | Scan a repository to detect its current tech stack, structure, and configuration. Returns detailed research results including monorepo se... |
-| `analyze_gaps`      | Compare repository research results against the ProtoLabs gold standard. Returns a structured gap analysis report with alignment score, g... |
-| `propose_alignment` | Convert gap analysis into alignment features organized into milestones. Optionally creates features on the Automaker board. Returns miles... |
-| `provision_discord` | Create Discord category and channels for a project. Creates a category named after the project with #general, #updates, and #dev channels.   |
-| `generate_report`   | Generate a self-contained HTML report from gap analysis and research results. Saves to {projectPath}/protoLabs.report.html and automatica... |
-| `run_full_setup`    | Run the complete setup pipeline: clone (if git URL), research repo, analyze gaps, generate HTML report, initialize .automaker, generate p... |
+| `research_repo`     | Research a repository by reading key files (package.json, README, tsconfig, etc.) and generating a RepoResearchResult. Use this before se... |
+| `analyze_gaps`      | Analyze gaps between current repository state and desired Automaker configuration. Returns a list of missing or misconfigured items.         |
+| `propose_alignment` | Generate a proposed alignment plan to fix gaps identified by analyze_gaps. Returns actionable steps.                                         |
+| `provision_discord` | Provision a Discord integration for the project. Creates a webhook and stores credentials securely.                                          |
+| `generate_report`   | Generate a comprehensive project report including board status, metrics, and recommendations.                                                |
+| `run_full_setup`    | Run the complete setup pipeline: research → analyze → propose → execute alignment. Automates the entire onboarding process.                  |
 
 ## Integrations (4 tools)
 
