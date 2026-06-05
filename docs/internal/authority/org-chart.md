@@ -6,47 +6,43 @@ The authority system implements a trust-gated hierarchy where AI agents govern w
 
 The system has three layers:
 
-1. **Types** (`libs/types/src/policy.ts`, `authority.ts`) - Pure type definitions
-2. **Policy Engine** (`libs/policy-engine/`) - Stateless `checkPolicy()` function
+1. **Types** (`libs/types/src/policy.ts`, `libs/types/src/authority.ts`) - Pure type definitions
+2. **Policy Engine** (`apps/server/src/services/policy-engine.ts`) - Stateless `checkPolicy()` function plus the default permission matrix and status transitions
 3. **Authority Service** (`apps/server/src/services/authority-service.ts`) - Orchestrates agents, approval queue, events
 
 ## Organization Chart
 
+protoMaker is a **pure executor** (see the CLAUDE.md "Philosophy: protoMaker Is a Pure Executor"). Only four authority agents actually exist in this repo, and all four are pipeline steps under the Lead Engineer — not free-standing team members. Portfolio orchestration (the "Ava" brain, planning pipeline, cross-project routing) lives in **protoWorkstacean**, not here.
+
 ```text
-Project Owner (CEO, Human)
-├── AVA, Opus, Trust=3 — Engineering
-│   ├── Frontend, Sonnet, Trust=2
-│   ├── Infrastructure, Sonnet, Trust=2
-│   ├── DevOps, Sonnet, Trust=2
-│   ├── Cindi, Sonnet, Trust=2
-│   ├── Backend Engineer, Sonnet, Trust=2
-│   ├── Product Manager, Sonnet, Trust=1
-│   ├── Engineering Manager, Sonnet, Trust=1
-│   ├── PR Maintainer, Haiku, Trust=2
-│   └── Board Janitor, Haiku, Trust=1
-└── Jon, Sonnet, Trust=1 — Go-to-Market
+Project Owner (Human, Trust=3)
+└── Lead Engineer (service, not an agent) — production orchestration
+    ├── PM (Product Manager), Trust=1 — idea research + PRD generation
+    ├── ProjM (Project Manager), Trust=1 — epic decomposition + dependencies
+    ├── EM (Engineering Manager), Trust=1 — assignment + capacity / WIP
+    └── Research, — codebase research before planning/triage
 ```
 
-> **Source of truth:** `docs/authority/roles.md` defines the canonical agent roster. This org chart should match that file.
+> **Source of truth:** `apps/server/src/services/authority-agents/` (`pm-agent.ts`, `projm-agent.ts`, `em-agent.ts`, `research-agent.ts`) is the canonical roster. The companion [roles.md](./roles.md) describes each role. This chart and that file must match the code.
 
 **Notes:**
 
-- PM, ProjM, and EM authority agents still exist in code but are now absorbed into the pipeline's automated steps (PRD generation, milestone decomposition, auto-mode orchestration) rather than being standalone team members. Their policy roles remain active for trust-gated permission checks.
-- System Health and PR State Sync functionality has been absorbed into the Lead Engineer state machine. See [Engine Architecture](../archived/engine-architecture.md) for details.
+- PM, ProjM, and EM are authority agents in code but run as the pipeline's automated steps (PRD generation, milestone decomposition, auto-mode orchestration) rather than as standalone team members. Their policy roles remain active for trust-gated permission checks.
+- There is no Chief of Staff / "Ava", content-writer, or GTM agent in protoMaker — those are protoWorkstacean concerns. Per-project operation is driven by **Roxy** (a CLI persona, not an authority agent); the portfolio brain is **Ava** = protoWorkstacean.
+- "Board Janitor" and "PR Maintainer" are not agents. Those behaviors were absorbed into the Lead Engineer fast-path rules (`apps/server/src/services/lead-engineer-rules.ts`), along with System Health and PR State Sync.
 
 ## Roles
 
-| Role                | Code     | Trust           | Owns                       | Description                                                                                         |
-| ------------------- | -------- | --------------- | -------------------------- | --------------------------------------------------------------------------------------------------- |
-| Project Owner       | `CTO`    | 3 (Autonomous)  | Strategy & direction       | **The human user.** Full access to all actions. Sets vision, approves proposals, sets trust levels. |
-| Chief of Staff      | `CoS`    | 2 (Conditional) | Operations & orchestration | AI operational leader. Signal triage, antagonistic review.                                          |
-| GTM Specialist      | `GTM`    | 2 (Conditional) | Growth & Go-to-Market      | Content pipeline, brand strategy, antagonistic review (market perspective).                         |
-| Lead Engineer       | —        | —               | Production orchestration   | Service (not an agent). Fast-path rules, auto-mode management, event-driven actions.                |
-| DevOps Engineer     | `DevOps` | 1 (Assisted)    | Infrastructure             | Deployment, monitoring, Docker, CI/CD, system health.                                               |
-| Product Manager     | `PM`     | 1 (Assisted)    | What & Why                 | PRD generation pipeline step. Creates work and manages scope changes.                               |
-| Project Manager     | `ProjM`  | 1 (Assisted)    | When & How                 | Milestone decomposition pipeline step. Manages dependencies.                                        |
-| Engineering Manager | `EM`     | 1 (Assisted)    | Who & Capacity             | Auto-mode orchestration step. Capacity/WIP limits, quality gates.                                   |
-| Principal Engineer  | `PE`     | 2 (Conditional) | Architecture & Quality     | Reviews architecture decisions, approves work, blocks releases for quality.                         |
+| Role                | Code    | Trust          | Owns                     | Description                                                                                         |
+| ------------------- | ------- | -------------- | ------------------------ | --------------------------------------------------------------------------------------------------- |
+| Project Owner       | `CTO`   | 3 (Autonomous) | Strategy & direction     | **The human user.** Full access to all actions. Sets vision, approves proposals, sets trust levels. |
+| Lead Engineer       | —       | —              | Production orchestration | Service (not an agent). Fast-path rules, auto-mode management, event-driven actions.                |
+| Product Manager     | `PM`    | 1 (Assisted)   | What & Why               | Idea research + PRD generation pipeline step. Creates work and manages scope changes.               |
+| Project Manager     | `ProjM` | 1 (Assisted)   | When & How               | Epic / milestone decomposition pipeline step. Manages dependencies.                                 |
+| Engineering Manager | `EM`    | 1 (Assisted)   | Who & Capacity           | Assignment + capacity pipeline step. Capacity/WIP limits, quality gates.                            |
+| Research            | —       | —              | Investigation            | Codebase research run before planning or triage. Not a policy role.                                 |
+
+> The `policy.ts` permission matrix (`AgentRoleName = 'CTO' | 'PM' | 'ProjM' | 'EM' | 'PE' | 'GTM'`) also defines `PE` (Principal Engineer) and `GTM` policy codes for trust-gated permission checks, but protoMaker ships **no** Principal-Engineer or GTM authority agent — those roles are exercised by protoWorkstacean / the human owner, not by any agent in this repo. There is no `CoS` policy code.
 
 ## Trust Levels
 
@@ -77,27 +73,27 @@ Trust evolves over time based on performance:
 
 ### Actions by Role
 
-| Action                | Owner | GTM | CoS | DevOps | PM  | ProjM | EM  | PE  |
-| --------------------- | ----- | --- | --- | ------ | --- | ----- | --- | --- |
-| `create_work`         | Y     | Y   | Y   | -      | Y   | Y     | -   | -   |
-| `assign`              | Y     | -   | Y   | -      | -   | Y     | Y   | -   |
-| `change_scope`        | Y     | Y   | Y   | -      | Y   | -     | -   | -   |
-| `block_release`       | Y     | -   | Y   | Y      | -   | -     | Y   | Y   |
-| `modify_architecture` | Y     | -   | -   | -      | -   | -     | -   | Y   |
-| `approve_work`        | Y     | -   | Y   | -      | -   | -     | -   | Y   |
+Source: `DEFAULT_PERMISSION_MATRIX` in `apps/server/src/services/policy-engine.ts`.
+
+| Action                | Owner (CTO) | PM  | ProjM | EM  | PE  | GTM |
+| --------------------- | ----------- | --- | ----- | --- | --- | --- |
+| `create_work`         | Y           | Y   | Y     | -   | -   | Y   |
+| `assign`              | Y           | -   | Y     | Y   | -   | -   |
+| `change_scope`        | Y           | Y   | -     | -   | -   | -   |
+| `block_release`       | Y           | -   | -     | Y   | Y   | -   |
+| `modify_architecture` | Y           | -   | -     | -   | Y   | -   |
+| `approve_work`        | Y           | -   | -     | -   | Y   | -   |
 
 ### Max Risk Without Approval
 
-| Role           | Max Risk               |
-| -------------- | ---------------------- |
-| Owner          | `critical` (unlimited) |
-| GTM Specialist | `medium`               |
-| Chief of Staff | `high`                 |
-| DevOps         | `medium`               |
-| PM             | `medium`               |
-| ProjM          | `medium`               |
-| EM             | `high`                 |
-| PE             | `high`                 |
+| Role        | Max Risk               |
+| ----------- | ---------------------- |
+| Owner (CTO) | `critical` (unlimited) |
+| PM          | `medium`               |
+| ProjM       | `medium`               |
+| EM          | `high`                 |
+| PE          | `high`                 |
+| GTM         | `low`                  |
 
 ### Extended Actions (Authority Layer)
 
@@ -132,16 +128,18 @@ backlog -> in_progress -> review -> done
 
 ### Transition Guards
 
-| From          | To            | Allowed Roles         | Notes                                 |
-| ------------- | ------------- | --------------------- | ------------------------------------- |
-| `backlog`     | `in_progress` | Owner, CoS, ProjM, EM | Starting work                         |
-| `in_progress` | `review`      | Owner, CoS, PE, EM    | Submitting for review                 |
-| `review`      | `done`        | Owner, CoS, PE        | Requires approval above `medium` risk |
-| `in_progress` | `blocked`     | Owner, CoS, EM, PE    | Blocking work                         |
-| `review`      | `blocked`     | Owner, CoS, EM, PE    | Blocking reviewed work                |
-| `blocked`     | `in_progress` | Owner, CoS, EM, PE    | Unblocking work                       |
-| `in_progress` | `backlog`     | All roles             | Moving back to backlog                |
-| `review`      | `backlog`     | All roles             | Moving back to backlog                |
+Source: `DEFAULT_STATUS_TRANSITIONS` in `apps/server/src/services/policy-engine.ts`.
+
+| From          | To            | Allowed Roles            | Notes                                 |
+| ------------- | ------------- | ------------------------ | ------------------------------------- |
+| `backlog`     | `in_progress` | Owner, ProjM, EM         | Starting work                         |
+| `in_progress` | `review`      | Owner, PE, EM            | Submitting for review                 |
+| `review`      | `done`        | Owner, PE                | Requires approval above `medium` risk |
+| `in_progress` | `blocked`     | Owner, EM, PE            | Blocking work                         |
+| `review`      | `blocked`     | Owner, EM, PE            | Blocking reviewed work                |
+| `blocked`     | `in_progress` | Owner, EM, PE            | Unblocking work                       |
+| `in_progress` | `backlog`     | Owner, PM, ProjM, EM, PE | Moving back to backlog                |
+| `review`      | `backlog`     | Owner, PM, ProjM, EM, PE | Moving back to backlog                |
 
 ### Work Item States (Extended)
 
@@ -279,21 +277,21 @@ The authority system emits these events via WebSocket:
 
 ## File Locations
 
-| File                                                       | Purpose                                            |
-| ---------------------------------------------------------- | -------------------------------------------------- |
-| `libs/types/src/policy.ts`                                 | All policy and trust type definitions              |
-| `libs/types/src/authority.ts`                              | Authority agent and work item types                |
-| `libs/policy-engine/src/engine.ts`                         | Core `checkPolicy()` function                      |
-| `libs/policy-engine/src/defaults.ts`                       | Default permission matrix and transitions          |
-| `libs/policy-engine/tests/engine.test.ts`                  | Unit tests for policy engine                       |
-| `apps/server/src/services/authority-service.ts`            | Authority service (registry, proposals, approvals) |
-| `apps/server/src/routes/authority/index.ts`                | REST API routes                                    |
-| `apps/server/src/services/authority-agents/pm-agent.ts`    | PM agent (idea research + PRD + epics)             |
-| `apps/server/src/services/authority-agents/projm-agent.ts` | ProjM agent (epic decomposition + deps)            |
-| `apps/server/src/services/authority-agents/em-agent.ts`    | EM agent (assignment + capacity)                   |
-| `apps/server/src/services/lead-engineer-service.ts`        | Lead Engineer state machine, fast-path rules       |
-| `apps/server/src/services/audit-service.ts`                | Append-only JSONL audit trail                      |
-| `apps/server/src/services/worktree-lifecycle-service.ts`   | Auto-cleanup on merge/complete                     |
+| File                                                          | Purpose                                                        |
+| ------------------------------------------------------------- | -------------------------------------------------------------- |
+| `libs/types/src/policy.ts`                                    | All policy and trust type definitions                          |
+| `libs/types/src/authority.ts`                                 | Authority agent and work item types                            |
+| `apps/server/src/services/policy-engine.ts`                   | `checkPolicy()` + default permission matrix & transitions      |
+| `apps/server/src/services/authority-service.ts`               | Authority service (registry, proposals, approvals)             |
+| `apps/server/src/routes/authority/index.ts`                   | REST API routes                                                |
+| `apps/server/src/services/authority-agents/pm-agent.ts`       | PM agent (idea research + PRD + epics)                         |
+| `apps/server/src/services/authority-agents/projm-agent.ts`    | ProjM agent (epic decomposition + deps)                        |
+| `apps/server/src/services/authority-agents/em-agent.ts`       | EM agent (assignment + capacity)                               |
+| `apps/server/src/services/authority-agents/research-agent.ts` | Research agent (codebase research)                             |
+| `apps/server/src/services/lead-engineer-service.ts`           | Lead Engineer state machine                                    |
+| `apps/server/src/services/lead-engineer-rules.ts`             | Lead Engineer fast-path rules (absorbed janitor/PR-maintainer) |
+| `apps/server/src/services/audit-service.ts`                   | Append-only JSONL audit trail                                  |
+| `apps/server/src/services/worktree-lifecycle-service.ts`      | Auto-cleanup on merge/complete                                 |
 
 ## Persistence
 

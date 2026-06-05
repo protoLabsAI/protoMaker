@@ -12,8 +12,8 @@ The complete lifecycle from an idea entering the system through to code merged o
 flowchart TD
     subgraph Intake["1. Intake"]
         A[Idea / Signal] --> B{Source?}
-        B -->|Human| C[Josh creates PRD via CLI]
-        B -->|CoS| D["Ava submits PRD via submit_prd MCP"]
+        B -->|Human| C[Operator creates PRD via CLI]
+        B -->|Portfolio| D["protoWorkstacean submits PRD via submit_prd MCP"]
         B -->|External| E[GitHub issue / Discord signal]
         C --> F[SPARC PRD Document]
         D --> F
@@ -40,17 +40,17 @@ flowchart TD
         R --> S[Topological sort by dependencies]
         S --> T[Filter: deps satisfied + not blocked]
         T --> U[Pick highest priority unblocked feature]
-        U --> V[Create git worktree]
-        V --> W["Agent starts (Sonnet default)"]
+        U --> V[Lead Engineer: INTAKE → create worktree]
+        V --> W["EXECUTE: agent starts (Sonnet default)"]
     end
 
     subgraph AgentWork["4. Agent Implementation"]
         W --> X[Read feature description + context files]
-        X --> Y[Ava sends context message]
+        X --> Y[Build prompt + assign agent role]
         Y --> Z[Agent implements in worktree]
         Z --> AA[Agent runs tests]
         AA --> AB{Tests pass?}
-        AB -->|Yes| AC[Agent marks verified]
+        AB -->|Yes| AC[Agent completes]
         AB -->|No| AD[Agent iterates / fixes]
         AD --> Z
         AC --> AE{Hit turn limit?}
@@ -58,8 +58,8 @@ flowchart TD
         AE -->|Yes| AG[Partial work in worktree]
     end
 
-    subgraph PostFlight["5. Post-Flight PR Pipeline"]
-        AF --> AH[Ava: Check worktree commits]
+    subgraph PostFlight["5. Post-Completion PR Pipeline (runPostCompletionWorkflow)"]
+        AF --> AH[Git workflow: check worktree commits]
         AG --> AH
         AH --> AI[Rebase on origin/main]
         AI --> AJ[Prettier format fix]
@@ -123,19 +123,20 @@ flowchart TD
 
 ### ProjM Decomposition Flow (Detail)
 
-The Project Manager agent's internal flow when receiving a PRD from the Chief of Staff.
+The Project Manager agent's internal flow when a PRD enters the board. The PRD source is external — a human operator via the CLI, an external signal, or the **protoWorkstacean** portfolio brain. protoMaker is a pure executor: it does not initiate cross-project planning or schedule its own work. Once features exist, the Lead Engineer state machine and the post-completion workflow drive execution and PRs.
 
 ```mermaid
 sequenceDiagram
-    participant CoS as Ava (Chief of Staff)
+    participant Portfolio as protoWorkstacean / Operator
     participant API as Server API
     participant ProjM as ProjM Agent
     participant Board as protoLabs Board
+    participant Lead as Lead Engineer
     participant Git as Git / Worktrees
 
-    CoS->>API: POST /api/cos/submit-prd
+    Portfolio->>API: submit_prd (MCP)
     API->>Board: Create epic feature
-    API-->>CoS: Epic ID returned
+    API-->>Portfolio: Epic ID returned
 
     API->>ProjM: Trigger decomposition
     ProjM->>ProjM: Deep research (codebase scan)
@@ -152,19 +153,18 @@ sequenceDiagram
     end
 
     ProjM->>Board: Scaffold .automaker/projects/
-    ProjM-->>CoS: Decomposition complete event
+    ProjM-->>Portfolio: Decomposition complete event
 
-    CoS->>Board: Review features + deps
-    CoS->>Board: start_auto_mode()
+    Portfolio->>Board: start_auto_mode()
 
     loop Auto-mode tick
         Board->>Board: Pick next unblocked feature
-        Board->>Git: Create worktree
-        Board->>ProjM: Start agent (Sonnet)
-        Note over ProjM,Git: Agent implements in isolation
-        ProjM-->>Board: Feature verified
-        CoS->>Git: Post-flight (rebase, format, push)
-        CoS->>Board: Create PR, enable auto-merge
+        Board->>Lead: process(feature)
+        Lead->>Git: INTAKE → create worktree
+        Lead->>Git: EXECUTE — agent implements in isolation
+        Note over Lead,Git: Agent completes, work committed in worktree
+        Lead->>Git: runPostCompletionWorkflow (rebase, format, push)
+        Lead->>Board: Create PR, enable auto-merge, move to review
     end
 ```
 

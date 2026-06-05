@@ -30,24 +30,27 @@ protoLabs is organized into two branches — **Operations** and **Engineering** 
 
 Market positioning, content strategy, and external communication. Agents on this team evaluate ideas through a customer/business lens and produce outward-facing content.
 
-| Agent               | Type         | Responsibilities                                                       |
-| ------------------- | ------------ | ---------------------------------------------------------------------- |
-| **Project Owner**   | Human (CEO)  | Ideas, direction, final approval                                       |
-| **Ava** (CoS)       | AI Orchestr. | Signal triage, planning pipeline, antagonistic review, ceremonies      |
-| **Jon** (GTM)       | AI Agent     | Market perspective, content strategy, positioning, antagonistic review |
-| **Cindi** (Content) | AI Agent     | Blog posts, technical docs, SEO, content pipeline                      |
+Ava (CoS), Jon (GTM), and Cindi (Content) are **protoWorkstacean** agents — the portfolio brain that owns signal triage, the planning pipeline, antagonistic review, and ceremonies. protoMaker is a pure executor and does not run these.
+
+| Agent               | Type         | Repo             | Responsibilities                                                       |
+| ------------------- | ------------ | ---------------- | ---------------------------------------------------------------------- |
+| **Project Owner**   | Human (CEO)  | —                | Ideas, direction, final approval                                       |
+| **Ava** (CoS)       | AI Orchestr. | protoWorkstacean | Signal triage, planning pipeline, antagonistic review, ceremonies      |
+| **Jon** (GTM)       | AI Agent     | protoWorkstacean | Market perspective, content strategy, positioning, antagonistic review |
+| **Cindi** (Content) | AI Agent     | protoWorkstacean | Blog posts, technical docs, SEO, content pipeline                      |
 
 ### Engineering (Dev Team)
 
 Production orchestration, auto-mode execution, QA, infrastructure, and code quality. The Lead Engineer uses fast-path rules (pure functions, no LLM) for routine decisions and escalates to full agent execution only when needed.
 
-| Agent                | Type         | A2A Endpoint | Responsibilities                                                        |
-| -------------------- | ------------ | ------------ | ----------------------------------------------------------------------- |
-| **Ava** (CoS)        | AI Orchestr. | `:3008`      | Planning, board health, auto-mode, feature management                   |
-| **Quinn** (QA)       | AI Agent     | `:7870`      | Bug triage, PR review, QA reports, board audits                         |
-| **Frank** (DevOps)   | AI Agent     | `:7880`      | Infrastructure, deploys, monitoring, system reliability                 |
-| **Lead Engineer**    | Service      | internal     | Production orchestrator — fast-path rules, auto-mode management, events |
-| **Auto-mode Agents** | Sonnet/Opus  | —            | Feature implementation in isolated git worktrees                        |
+protoMaker owns only the bottom three rows (Lead Engineer, auto-mode, the PR pipeline). Quinn and Frank are protoWorkstacean fleet agents; protoMaker exposes capabilities (the board, A2A skills, the API) that they drive.
+
+| Agent                | Type        | A2A Endpoint | Repo             | Responsibilities                                                        |
+| -------------------- | ----------- | ------------ | ---------------- | ----------------------------------------------------------------------- |
+| **Quinn** (QA)       | AI Agent    | `:7870`      | protoWorkstacean | Bug triage, PR review, QA reports, board audits                         |
+| **Frank** (DevOps)   | AI Agent    | `:7880`      | protoWorkstacean | Infrastructure, deploys, monitoring, system reliability                 |
+| **Lead Engineer**    | Service     | internal     | protoMaker       | Production orchestrator — fast-path rules, auto-mode management, events |
+| **Auto-mode Agents** | Sonnet/Opus | —            | protoMaker       | Feature implementation in isolated git worktrees                        |
 
 ### Knowledge
 
@@ -105,9 +108,9 @@ Ideas arrive from any connected interface plugin:
 
 Every signal enters the Workstacean bus with `source` metadata (which interface, which channel, which user) and a `reply` field (topic and format for sending responses back). Workstacean mints a `correlationId` at intake that follows the signal through its entire lifecycle.
 
-### 2. PRD Consolidation + Antagonistic Review
+### 2. PRD Consolidation + Antagonistic Review (protoWorkstacean)
 
-Workstacean routes ideas to Ava's `plan` skill. Every idea gets a SPARC PRD (Situation, Problem, Approach, Results, Constraints). Two agents review it from opposing perspectives:
+Workstacean routes ideas to Ava's `plan` skill — this entire planning pipeline lives in **protoWorkstacean**, not protoMaker. Every idea gets a SPARC PRD (Situation, Problem, Approach, Results, Constraints). Two agents review it from opposing perspectives:
 
 - **Ava (operational feasibility)**: Is this technically feasible? Does it align with current capacity? What's the risk?
 - **Jon (strategic value)**: Does this create customer value? Can we sell this? Does it strengthen our positioning?
@@ -119,11 +122,11 @@ They challenge each other in a 3-stage sequential review. The output is a consol
 Two paths based on antagonistic review scores:
 
 - **Auto-approved**: Both Ava (operational) and Jon (strategic) score > 4.0 — project and features are created immediately. No human in the loop.
-- **HITL path**: Ava publishes an `HITLRequest` to the `reply.topic` from the original signal. The message flows back through the bus to the originating interface plugin, which renders it natively (Discord embed with approve/reject buttons, voice prompt, Slack interactive message, etc.). The A2A call returns immediately with `{ status: "pending_approval", correlationId }`. When the human responds, an `HITLResponse` is published on the bus, routed back to Ava's `plan_resume` skill, which restores state from a SQLite checkpoint (`plans.db`, 7-day TTL) and creates the project + features.
+- **HITL path**: Ava publishes an `HITLRequest` to the `reply.topic` from the original signal. The message flows back through the bus to the originating interface plugin, which renders it natively (Discord embed with approve/reject buttons, voice prompt, Slack interactive message, etc.). The A2A call returns immediately with `{ status: "pending_approval", correlationId }`. When the human responds, an `HITLResponse` is published on the bus, routed back to Ava's `plan_resume` skill, which restores state from a SQLite checkpoint (`plans.db`, 7-day TTL) and creates the project + features. (Approval, `plan_resume`, and checkpointing all live in protoWorkstacean.)
 
 ### 4. Planning & Research
 
-ProjM takes the approved PRD and does deep research:
+Once a project + features exist, protoMaker's ProjM authority agent takes the approved PRD and does deep research:
 
 - Analyzes the codebase for relevant patterns
 - Identifies files that need modification
