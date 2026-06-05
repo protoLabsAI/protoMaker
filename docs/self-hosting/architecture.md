@@ -266,9 +266,12 @@ Browser                 nginx (UI)              Express (Server)
 │       │                  │                  │                 │          │
 │       ▼                  ▼                  ▼                 ▼          │
 │  ┌─────────┐      ┌─────────────┐    ┌───────────┐    ┌────────────┐    │
-│  │  test   │      │  e2e-tests  │    │ pr-check  │    │format-check│    │
+│  │  test   │      │  e2e-tests  │    │ pr-check  │    │   checks   │    │
 │  │         │      │             │    │           │    │            │    │
-│  │ vitest  │      │ playwright  │    │ build:dir │    │  prettier  │    │
+│  │ vitest  │      │ playwright  │    │ build:dir │    │ format +   │    │
+│  │         │      │             │    │           │    │ lint +     │    │
+│  │         │      │             │    │           │    │ typecheck +│    │
+│  │         │      │             │    │           │    │ npm audit  │    │
 │  └─────────┘      └─────────────┘    └───────────┘    └────────────┘    │
 │       │                  │                  │                 │          │
 │       └──────────────────┴──────────────────┴─────────────────┘          │
@@ -282,24 +285,23 @@ Browser                 nginx (UI)              Express (Server)
 └──────────────────────────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                         Release Published                                 │
+│                    auto-release (on push to main)                         │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                           │
-│  ┌─────────────────┬─────────────────┬─────────────────┐                 │
-│  │                 │                 │                 │                 │
-│  ▼                 ▼                 ▼                 │                 │
-│  ┌───────────┐  ┌───────────┐  ┌───────────┐          │                 │
-│  │  macOS    │  │  Windows  │  │  Linux    │          │                 │
-│  │           │  │           │  │           │          │                 │
-│  │ .dmg .zip │  │   .exe    │  │ .AppImage │          │                 │
-│  │           │  │           │  │ .deb .rpm │          │                 │
-│  └─────┬─────┘  └─────┬─────┘  └─────┬─────┘          │                 │
-│        │              │              │                │                 │
-│        └──────────────┴──────────────┘                │                 │
-│                       │                               │                 │
-│                       ▼                               │                 │
-│               Upload to Release                       │                 │
-│                                                       │                 │
+│   Read version from libs/types/package.json                               │
+│                       │                                                   │
+│                       ▼                                                   │
+│              Already tagged?  ── yes ──▶  skip (no-op)                     │
+│                       │ no                                                 │
+│                       ▼                                                   │
+│              Create + push git tag (vX.Y.Z)                               │
+│                       │                                                   │
+│                       ▼                                                   │
+│       Rewrite + post release notes to Discord webhook                     │
+│                                                                           │
+│   No GitHub Release is created. No installer binaries are built —         │
+│   the desktop shell is Tauri and built from source on demand.             │
+│                                                                           │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 

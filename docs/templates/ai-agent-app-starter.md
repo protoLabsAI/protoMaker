@@ -4,6 +4,10 @@ outline: deep
 
 # Create an AI agent app
 
+::: warning Planned — not yet implemented
+This kit does **not** exist yet. `ai-agent-app` is not a valid `StarterKitType` (the real kits are `docs`, `portfolio`, `landing-page`, and `general`) and there is no `starters/ai-agent-app/` directory. `npx create-protolab` will **not** offer it. This page documents the intended design only — do not try to scaffold it.
+:::
+
 This guide covers scaffolding and customizing the AI agent app starter. By the end you have a running three-package npm monorepo with a streaming chat UI, a Node.js/Express server with an agentic tool loop, and a shared tool-definition library.
 
 ## What the starter includes

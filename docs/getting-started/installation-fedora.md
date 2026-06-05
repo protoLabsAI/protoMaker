@@ -1,16 +1,19 @@
 # Installing protoLabs on Fedora/RHEL
 
-This guide covers installation of protoLabs on Fedora, RHEL, Rocky Linux, AlmaLinux, and other RPM-based distributions.
+This guide covers running protoLabs on Fedora, RHEL, Rocky Linux, AlmaLinux, and other RPM-based distributions.
+
+protoLabs runs as a **server + web UI** (the primary way to use it) plus the `protomaker` CLI for driving the board from a terminal. There is also an optional **Tauri 2** desktop shell (`apps/desktop`) that wraps the same UI; it is built from source with the Rust toolchain rather than shipped as a prebuilt RPM. On Linux, most users run the server/UI and open the board in a browser.
 
 ## Prerequisites
 
 protoLabs requires:
 
 - **64-bit x86_64 architecture**
-- **Fedora 39+** or **RHEL 9+** (earlier versions may work but not officially supported)
+- **Fedora 39+** or **RHEL 9+** (earlier versions may work but are not officially supported)
 - **4GB RAM minimum**, 8GB recommended
-- **~300MB disk space** for installation
 - **Internet connection** for installation and Claude API access
+- **Node.js 22+** and **npm 10+** (the server and UI run on Node)
+- **Git** (worktree-based agent execution requires it)
 
 ### Authentication
 
@@ -23,57 +26,86 @@ See the [installation guide authentication section](./installation.md#authentica
 
 ## Installation
 
-### Option 1: Download and Install from GitHub
+protoLabs is installed from source. There is no prebuilt RPM package — the desktop shell is Tauri-based and built locally when you need it.
 
-1. Visit [GitHub Releases](https://github.com/protoLabsAI/protomaker/releases)
-2. Find the latest release and download the `.rpm` file:
-   - Download: `protoLabs-<version>-x86_64.rpm`
-
-3. Install using dnf (Fedora):
-
-   ```bash
-   sudo dnf install ./protoLabs-<version>-x86_64.rpm
-   ```
-
-   Or using yum (RHEL/CentOS):
-
-   ```bash
-   sudo yum localinstall ./protoLabs-<version>-x86_64.rpm
-   ```
-
-### Option 2: Install Directly from URL
-
-Install from GitHub releases URL without downloading first. Visit [releases page](https://github.com/protoLabsAI/protomaker/releases) to find the latest version.
+### 1. Install system dependencies
 
 **Fedora:**
 
 ```bash
-# Replace v0.11.0 with the actual latest version
-sudo dnf install https://github.com/protoLabsAI/protomaker/releases/download/v0.11.0/protoLabs-0.11.0-x86_64.rpm
+sudo dnf install nodejs npm git
 ```
 
-**RHEL/CentOS:**
+**RHEL/CentOS (enable EPEL first if needed):**
 
 ```bash
-# Replace v0.11.0 with the actual latest version
-sudo yum install https://github.com/protoLabsAI/protomaker/releases/download/v0.11.0/protoLabs-0.11.0-x86_64.rpm
+sudo dnf install epel-release
+sudo dnf install nodejs npm git
 ```
+
+Verify Node.js is 22 or newer:
+
+```bash
+node --version   # should print v22.x or higher
+```
+
+### 2. Clone and build
+
+```bash
+# Clone repository
+git clone https://github.com/protoLabsAI/protomaker.git
+cd protomaker
+
+# Install dependencies
+npm install
+
+# Build shared packages
+npm run build:packages
+```
+
+### 3. Start the server and UI
+
+```bash
+npm run dev:full      # Starts UI (:3007) AND server (:3008) together
+```
+
+Then open `http://localhost:3007` in your browser. The backend API listens on `:3008` and the docs site (if running) on `:3009`.
 
 ## Running protoLabs
 
-After successful installation, launch protoLabs:
+### Web UI
 
-### From Application Menu
+After `npm run dev:full`, open the board at `http://localhost:3007`.
 
-- Open Activities/Applications
-- Search for "protoLabs"
-- Click to launch
+### `protomaker` CLI
 
-### From Terminal
+The `protomaker` CLI drives the board, agents, and auto-mode from a terminal. See [CLI Commands](../reference/cli-commands.md) for the full reference.
 
 ```bash
-automaker
+protomaker --help
 ```
+
+If the `protomaker` command is not on your `PATH`, run it directly from the build output:
+
+```bash
+node packages/cli/dist/cli.js --help
+```
+
+### Desktop shell (optional, Tauri)
+
+The desktop app is a [Tauri 2](https://v2.tauri.app/) shell around the same UI. Building it requires the Rust toolchain and the Tauri CLI in addition to Node.js:
+
+```bash
+# Install Rust (rustup) and the Tauri CLI prerequisites for your distro
+# See https://v2.tauri.app/start/prerequisites/
+
+cd apps/desktop
+npm run build:desktop   # cargo tauri build
+# or, for a live-reload dev window:
+npm run dev             # cargo tauri dev
+```
+
+Tauri uses the system WebView (WebKitGTK) rather than bundling Chromium, so the dependency footprint is much smaller than a typical Electron app.
 
 ## System Requirements & Capabilities
 
@@ -83,34 +115,20 @@ automaker
 | ------------ | ----------------- | ----------- |
 | CPU          | Modern multi-core | 4+ cores    |
 | RAM          | 4GB               | 8GB+        |
-| Disk         | 300MB             | 1GB+        |
+| Disk         | 1GB               | 2GB+        |
 | Architecture | x86_64            | x86_64      |
 
-### Required Dependencies
+### Tauri desktop prerequisites
 
-The RPM package automatically installs these dependencies:
+If you build the optional desktop shell, install the WebKitGTK toolchain Tauri needs:
 
-```
-gtk3              - GTK+ GUI library
-libnotify         - Desktop notification library
-nss               - Network Security Services
-libXScrnSaver     - X11 screensaver library
-libXtst           - X11 testing library
-xdg-utils         - XDG standards utilities
-at-spi2-core      - Accessibility library
-libuuid           - UUID library
+**Fedora:**
+
+```bash
+sudo dnf install webkit2gtk4.1-devel openssl-devel curl wget file libappindicator-gtk3-devel librsvg2-devel
 ```
 
-Most of these are pre-installed on typical Fedora/RHEL systems.
-
-### Optional Dependencies
-
-For development (source builds only):
-
-- Node.js 22+
-- npm 10+
-
-Building from source requires system Node.js.
+Follow the official [Tauri Linux prerequisites](https://v2.tauri.app/start/prerequisites/) for the exact package set on your distribution.
 
 ## Supported Distributions
 
@@ -123,7 +141,7 @@ Building from source requires system Node.js.
 **Should Work:**
 
 - CentOS Stream 9+
-- openSUSE Leap/Tumbleweed (with compatibility layer)
+- openSUSE Leap/Tumbleweed
 - RHEL 9+
 
 **Not Supported:**
@@ -140,93 +158,48 @@ Set authentication via environment variable:
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
-automaker
+npm run dev:full
 ```
 
-Or create `~/.config/automaker/.env`:
+Or create a `.env` file in the repository root:
 
 ```
 ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-### Configuration Directory
+### Data Directory
 
-protoLabs stores configuration and cache in:
+protoLabs stores global data in the `DATA_DIR` directory (default `./data` in the repository, or `/data` in Docker):
 
 ```
-~/.automaker/                # Project-specific data
-~/.config/automaker/         # Application configuration
-~/.cache/automaker/          # Cache and temporary files
+data/settings.json          # Global settings, profiles, shortcuts
+data/credentials.json       # API keys
+data/agent-sessions/        # Conversation histories
 ```
+
+Per-project data lives in each project's `.automaker/` directory.
 
 ## Troubleshooting
 
-### Application Won't Start
+### Server Won't Start
 
-**Check installation:**
-
-```bash
-rpm -qi automaker
-rpm -V automaker
-```
-
-**Verify desktop file:**
+**Check Node.js version:**
 
 ```bash
-cat /usr/share/applications/automaker.desktop
+node --version   # must be v22+
 ```
 
-**Run from terminal for error output:**
+**Run the server directly for error output:**
 
 ```bash
-automaker
+npm run dev:server
 ```
-
-### Missing Dependencies
-
-If dependencies fail to install automatically:
-
-**Fedora:**
-
-```bash
-sudo dnf install gtk3 libnotify nss libXScrnSaver libXtst xdg-utils at-spi2-core libuuid
-```
-
-**RHEL/CentOS (enable EPEL first if needed):**
-
-```bash
-sudo dnf install epel-release
-sudo dnf install gtk3 libnotify nss libXScrnSaver libXtst xdg-utils at-spi2-core libuuid
-```
-
-### SELinux Denials
-
-If protoLabs fails on SELinux-enforced systems:
-
-**Temporary workaround (testing):**
-
-```bash
-# Set SELinux to permissive mode
-sudo setenforce 0
-
-# Run protoLabs
-automaker
-
-# Check for denials
-sudo ausearch -m avc -ts recent | grep automaker
-
-# Re-enable SELinux
-sudo setenforce 1
-```
-
-**Permanent fix (not recommended for production):**
-Create custom SELinux policy based on ausearch output. For support, see [GitHub Issues](https://github.com/protoLabsAI/protomaker/issues).
 
 ### Port Conflicts
 
-protoLabs uses port 3008 for the internal server. If port is already in use:
+protoLabs uses port 3008 for the server, 3007 for the UI, and 3009 for the docs site. If a port is already in use:
 
-**Find process using port 3008:**
+**Find the process using port 3008:**
 
 ```bash
 sudo ss -tlnp | grep 3008
@@ -240,50 +213,26 @@ lsof -i :3008
 sudo kill -9 <PID>
 ```
 
-Or configure protoLabs to use different port (see Configuration section).
+Or set `PORT` to a different value (see Configuration section).
 
 ### Firewall Issues
 
 On Fedora with firewalld enabled:
 
 ```bash
-# Allow internal traffic (local development only)
-sudo firewall-cmd --add-port=3008/tcp
-sudo firewall-cmd --permanent --add-port=3008/tcp
-```
-
-### GPU/Acceleration
-
-protoLabs uses Chromium for rendering. GPU acceleration should work automatically on supported systems.
-
-**Check acceleration:**
-
-- Look for "GPU acceleration" status in application settings
-- Verify drivers: `lspci | grep VGA`
-
-**Disable acceleration if issues occur:**
-
-```bash
-DISABLE_GPU_ACCELERATION=1 automaker
+# Allow local UI/server traffic (local use only)
+sudo firewall-cmd --add-port=3007/tcp --add-port=3008/tcp
+sudo firewall-cmd --permanent --add-port=3007/tcp --add-port=3008/tcp
 ```
 
 ### Terminal/Worktree Issues
 
-If terminal emulator fails or git worktree operations hang:
+If a terminal session fails or git worktree operations hang:
 
 1. Check disk space: `df -h`
 2. Verify git installation: `git --version`
 3. Check /tmp permissions: `ls -la /tmp`
 4. File a GitHub issue with error output
-
-### Unresponsive GUI
-
-If the application freezes:
-
-1. Wait 30 seconds (AI operations may be processing)
-2. Check process: `ps aux | grep automaker`
-3. Force quit if necessary: `killall automaker`
-4. Check system resources: `free -h`, `top`
 
 ### Network Issues
 
@@ -300,97 +249,16 @@ curl -I https://api.anthropic.com
 [ -n "$ANTHROPIC_API_KEY" ] && echo "API key is set" || echo "API key is NOT set"
 ```
 
-## Uninstallation
-
-### Remove Application
-
-**Fedora:**
-
-```bash
-sudo dnf remove automaker
-```
-
-**RHEL/CentOS:**
-
-```bash
-sudo yum remove automaker
-```
-
-### Clean Configuration (Optional)
-
-Remove all user data and configuration:
-
-```bash
-# Remove project-specific data
-rm -rf ~/.automaker
-
-# Remove application configuration
-rm -rf ~/.config/automaker
-
-# Remove cache
-rm -rf ~/.cache/automaker
-```
-
-**Warning:** This removes all saved projects and settings. Ensure you have backups if needed.
-
-## Building from Source
-
-To build protoLabs from source on Fedora/RHEL:
-
-**Prerequisites:**
-
-```bash
-# Fedora
-sudo dnf install nodejs npm git
-
-# RHEL (enable EPEL first)
-sudo dnf install epel-release
-sudo dnf install nodejs npm git
-```
-
-**Build steps:**
-
-```bash
-# Clone repository
-git clone https://github.com/protoLabsAI/protomaker.git
-cd protomaker
-
-# Install dependencies
-npm install
-
-# Build packages
-npm run build:packages
-
-# Build web application
-npm run build
-
-# Start the server
-npm run dev:full
-```
-
-See the [installation guide](./installation.md#building) for detailed build instructions.
-
 ## Updating protoLabs
 
-**Automatic Updates:**
-protoLabs checks for updates on startup. Install available updates through notifications.
-
-**Manual Update:**
-
 ```bash
-# Fedora
-sudo dnf update automaker
+# Pull latest code
+cd protomaker
+git pull
 
-# RHEL/CentOS
-sudo yum update automaker
-
-# Or reinstall latest release
-sudo dnf remove automaker
-
-# Download the latest .rpm from releases page
-# https://github.com/protoLabsAI/protomaker/releases
-# Then reinstall with:
-# sudo dnf install ./protoLabs-<VERSION>-x86_64.rpm
+# Reinstall dependencies and rebuild
+npm install
+npm run build:packages
 ```
 
 ## Getting Help
@@ -408,29 +276,22 @@ When reporting Fedora/RHEL issues, include:
 
 ```bash
 # System information
-lsb_release -a
+cat /etc/os-release
 uname -m
 
-# protoLabs version
-rpm -qi automaker
+# Node.js version
+node --version
 
 # Error output (run from terminal)
-automaker 2>&1 | tee automaker.log
-
-# SELinux status
-getenforce
-
-# Relevant system logs
-sudo journalctl -xeu automaker.service (if systemd service exists)
+npm run dev:full 2>&1 | tee protomaker.log
 ```
 
 ## Performance Tips
 
-1. **Use SSD**: Faster than spinning disk, significantly improves performance
+1. **Use SSD**: Significantly improves worktree and build performance
 2. **Close unnecessary applications**: Free up RAM for AI agent processing
-3. **Disable GPU acceleration if glitchy**: Set `DISABLE_GPU_ACCELERATION=1`
-4. **Keep system updated**: `sudo dnf update`
-5. **Use latest Fedora/RHEL**: Newer versions have better Node.js and browser support
+3. **Keep system updated**: `sudo dnf update`
+4. **Use latest Fedora/RHEL**: Newer versions have better Node.js support
 
 ## Security Considerations
 
@@ -443,43 +304,20 @@ Never commit API keys to version control:
 export ANTHROPIC_API_KEY=sk-ant-...
 
 # Good: Use .env file (not in git)
-echo "ANTHROPIC_API_KEY=sk-ant-..." > ~/.config/automaker/.env
+echo "ANTHROPIC_API_KEY=sk-ant-..." > .env
 
-# Bad: Hardcoded in files
-ANTHROPIC_API_KEY="sk-ant-..." (in any tracked file)
+# Bad: Hardcoded in any tracked file
 ```
-
-### SELinux Security
-
-Running with SELinux disabled (`setenforce 0`) reduces security. Create custom policy:
-
-1. Generate policy from audit logs: `ausearch -m avc -ts recent | grep automaker`
-2. Use selinux-policy tools to create module
-3. Install and test module
-4. Keep SELinux enforcing
 
 ### File Permissions
 
-Ensure configuration files are readable by user only:
+Ensure secret files are readable by your user only:
 
 ```bash
-chmod 600 ~/.config/automaker/.env
-chmod 700 ~/.automaker/
-chmod 700 ~/.config/automaker/
+chmod 600 .env
+chmod 700 data/
 ```
-
-## Known Limitations
-
-1. **Single display support**: Multi-monitor setups may have cursor synchronization issues
-2. **X11 only**: Wayland support limited (runs under XWayland)
-3. **No native systemd service**: Manual launcher or desktop file shortcut
-4. **ARM/ARM64**: Not supported, x86_64 only
 
 ## Contributing
 
-Found an issue or want to improve Fedora support? See [CONTRIBUTING.md](https://github.com/protoLabsAI/protomaker/blob/main/CONTRIBUTING.md).
-
----
-
-**Last Updated**: 2026-01-16
-**Tested On**: Fedora 40, Rocky Linux 9, AlmaLinux 9
+Found an issue or want to improve Linux support? See [CONTRIBUTING.md](https://github.com/protoLabsAI/protomaker/blob/main/CONTRIBUTING.md).

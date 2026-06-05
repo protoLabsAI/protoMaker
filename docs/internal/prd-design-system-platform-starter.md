@@ -1,5 +1,7 @@
 # PRD: Design System Platform Starter Kit
 
+> **Status: Not implemented — this kit was never built (not in `StarterKitType`).** The real starter kits are `docs`, `portfolio`, `landing-page`, and `general`. There is no `design-system` kit type and no `starters/design-system/` directory. This document is retained as a historical planning artifact.
+
 **Author**: Ava (synthesized from deep research + due diligence agents)
 **Date**: 2026-03-15
 **Status**: Draft (awaiting approval)

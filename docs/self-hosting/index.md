@@ -73,9 +73,13 @@ docker compose up -d
 
 ### 4. Production (systemd)
 
+Two units ship in the repo — pick exactly one (see [systemd](./systemd.md)):
+
 ```bash
-sudo systemctl enable protomaker
-sudo systemctl start protomaker
+# Containerized:
+sudo systemctl enable --now automaker-docker.service
+# OR bare-metal host process:
+sudo systemctl enable --now automaker-host.service
 ```
 
 ## Key Files
@@ -118,10 +122,11 @@ sudo systemctl start protomaker
 
 ### Service
 
-| File                 | Purpose                     |
-| -------------------- | --------------------------- |
-| `protomaker.service` | systemd unit file           |
-| `apps/ui/nginx.conf` | Reverse proxy configuration |
+| File                       | Purpose                                  |
+| -------------------------- | ---------------------------------------- |
+| `automaker-docker.service` | systemd unit — Docker compose deployment |
+| `automaker-host.service`   | systemd unit — bare-metal host process   |
+| `apps/ui/nginx.conf`       | Reverse proxy configuration              |
 
 ## Ports
 

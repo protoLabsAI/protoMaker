@@ -15,9 +15,12 @@ This page covers what starter kits are, how to use them, and what each one inclu
 | [Documentation site](./docs-starter)              | scaffold | VitePress                                    | Docs sites, API references, knowledge bases        |
 | [Portfolio / marketing site](./portfolio-starter) | scaffold | Astro + React 19 + Tailwind CSS 4            | Personal sites, marketing pages, project showcases |
 | [Landing page](./landing-page-starter)            | scaffold | Astro + Tailwind CSS 4 + composable sections | Product landing pages, waitlist pages              |
-| [AI agent app](./ai-agent-app-starter)            | scaffold | Node.js + React 19 + Anthropic SDK           | Chat apps, tool-using agents, AI prototypes        |
 | [Browser extension](#browser-extension)           | clone    | WXT + React 19 + TypeScript                  | Chrome + Firefox extensions (Manifest V3)          |
 | [General project](#general-project)               | scaffold | Blank `.automaker/` structure                | Bring-your-own codebase                            |
+
+The four scaffold kit types are `docs`, `portfolio`, `landing-page`, and `general` (see `StarterKitType` in `@protolabsai/templates`). The browser extension is provisioned by `git clone`, not a scaffold `kitType`.
+
+> An [AI agent app starter](./ai-agent-app-starter) is **planned but not yet implemented** — it is not a valid `StarterKitType` and has no starter directory. Do not attempt to scaffold it.
 
 ## Scaffold a starter
 
@@ -77,20 +80,18 @@ Creates a dark-themed product landing page with eight composable sections: Hero,
 
 See [Landing page starter](./landing-page-starter) for a full walkthrough.
 
-### AI agent app
+### AI agent app (planned — not yet implemented)
 
-**Source:** scaffold (local copy)
-**Kit type:** `ai-agent-app`
-**Stack:** Node.js, Express, React 19, Anthropic SDK, Vercel AI SDK, Zod
+> **Status: planned / not yet implemented.** `ai-agent-app` is **not** a valid `StarterKitType` and has no starter directory. The [AI agent app starter](./ai-agent-app-starter) page describes the intended design, but the kit cannot be scaffolded today.
 
-Creates a three-package npm monorepo for building AI agent apps. The `packages/server` package runs an Express server with a server-side agentic loop that detects tool-use blocks, executes registered tools, and streams results back. The `packages/ui` package provides a streaming chat UI with `useChat`. The `packages/tools` package holds shared tool definitions that compile to MCP, LangGraph, or Express adapters via the `defineSharedTool` pattern.
+The planned kit would create a three-package npm monorepo for building AI agent apps: an Express server with a server-side agentic loop, a streaming chat UI, and a shared tool-definition library that compiles to MCP, LangGraph, or Express adapters via the `defineSharedTool` pattern.
 
-See [AI agent app starter](./ai-agent-app-starter) for a full walkthrough.
+See [AI agent app starter](./ai-agent-app-starter) for the planned design.
 
 ### Browser extension
 
 **Source:** clone (GitHub repository)
-**Kit type:** `extension`
+**Provisioning:** `git clone` (not a `StarterKitType` — clone-only)
 **Stack:** WXT, React 19, TypeScript, Tailwind CSS 4, Vitest, Playwright, web-ext
 
 Cloned from `https://github.com/protoLabsAI/browser-extension-template`. Because browser extension tooling requires native build scripts, this kit is provisioned via `git clone` rather than local file copy. The repository includes a background service worker, content script scaffold, popup and options pages, and CI pipelines for both the Chrome Web Store and Firefox AMO.
@@ -107,18 +108,18 @@ The agent analyzes your codebase on the first run and populates `app_spec.txt` w
 
 ## Scaffold vs clone
 
-|                           | Scaffold                                             | Clone                        |
-| ------------------------- | ---------------------------------------------------- | ---------------------------- |
-| How it works              | Files copied from `@protolabsai/templates` package   | `git clone` from GitHub      |
-| Offline support           | Yes                                                  | No — requires network access |
-| Project name substitution | Automatic (`package.json`, config files)             | Manual after clone           |
-| Used by                   | docs, portfolio, landing-page, ai-agent-app, general | browser-extension            |
+|                           | Scaffold                                           | Clone                        |
+| ------------------------- | -------------------------------------------------- | ---------------------------- |
+| How it works              | Files copied from `@protolabsai/templates` package | `git clone` from GitHub      |
+| Offline support           | Yes                                                | No — requires network access |
+| Project name substitution | Automatic (`package.json`, config files)           | Manual after clone           |
+| Used by                   | docs, portfolio, landing-page, general             | browser-extension            |
 
 ## Next steps
 
 - [Documentation site starter](./docs-starter)
 - [Portfolio site starter](./portfolio-starter)
 - [Landing page starter](./landing-page-starter)
-- [AI agent app starter](./ai-agent-app-starter)
+- [AI agent app starter](./ai-agent-app-starter) (planned — not yet implemented)
 - [Architecture: how the template system works](./architecture)
 - [Add a new starter kit](./add-a-starter)
