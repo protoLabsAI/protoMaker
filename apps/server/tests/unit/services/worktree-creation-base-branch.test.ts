@@ -536,17 +536,13 @@ describe('AutoModeService - createWorktreeForBranch base branch resolution', () 
       branchName: 'feature/test-branch',
     });
 
-    const result = await (svc as any).createWorktreeForBranch(
-      PROJECT_PATH,
-      BRANCH_NAME,
-      childFeature
-    );
-
-    // Auto-push failed → worktree creation should return null (escalates to blocked)
-    expect(result).toBeNull();
+    // Auto-push failed → worktree creation throws with the real stderr (escalates to
+    // blocked; the caller surfaces the message on statusChangeReason — #4086).
+    await expect(
+      (svc as any).createWorktreeForBranch(PROJECT_PATH, BRANCH_NAME, childFeature)
+    ).rejects.toThrow(/permission denied to refs\/heads\/epic\/my-feature/);
     expect(mockLogger.error).toHaveBeenCalledWith(
-      expect.stringContaining(`Failed to create worktree for branch "${BRANCH_NAME}"`),
-      expect.any(Error)
+      expect.stringContaining(`Failed to create worktree for branch "${BRANCH_NAME}"`)
     );
   });
 });

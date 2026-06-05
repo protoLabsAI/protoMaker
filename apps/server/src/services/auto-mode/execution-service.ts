@@ -523,18 +523,20 @@ export class ExecutionService {
         } else {
           // Auto-create worktree if it doesn't exist
           logger.info(`Auto-creating worktree for branch "${branchName}"`);
-          worktreePath = await this.callbacks.createWorktreeForBranch(
-            projectPath,
-            branchName,
-            feature
-          );
-          if (worktreePath) {
+          try {
+            worktreePath = await this.callbacks.createWorktreeForBranch(
+              projectPath,
+              branchName,
+              feature
+            );
             logger.info(`Created worktree for branch "${branchName}": ${worktreePath}`);
-          } else {
+          } catch (worktreeErr) {
             // FATAL: Never fall back to projectPath when worktrees are enabled.
             // Falling back silently causes agents to write into the main working tree,
-            // corrupting it and losing work from other features.
-            const reason = `Worktree creation failed for branch "${branchName}" (feature ${featureId}). Blocking feature to prevent main working tree corruption.`;
+            // corrupting it and losing work from other features. Surface the real
+            // failure (git stderr) on statusChangeReason so it's diagnosable (#4086).
+            const detail = worktreeErr instanceof Error ? worktreeErr.message : String(worktreeErr);
+            const reason = `Worktree creation failed for branch "${branchName}" (feature ${featureId}): ${detail}. Blocking feature to prevent main working tree corruption.`;
             logger.error(reason);
             await this.featureLoader.update(projectPath, featureId, {
               status: 'blocked',
@@ -625,26 +627,28 @@ Output the branch name only.`,
         );
         if (!worktreePath) {
           logger.info(`Auto-creating worktree for generated branch "${generatedBranchName}"`);
-          worktreePath = await this.callbacks.createWorktreeForBranch(
-            projectPath,
-            generatedBranchName,
-            feature
-          );
-        }
-        if (!worktreePath) {
-          const reason = `Worktree creation failed for generated branch "${generatedBranchName}" (feature ${featureId}).`;
-          logger.error(reason);
-          await this.featureLoader.update(projectPath, featureId, {
-            status: 'blocked',
-            statusChangeReason: reason,
-          });
-          this.events.emit('feature:error', {
-            projectPath,
-            featureId,
-            error: reason,
-            projectSlug: feature?.projectSlug,
-          });
-          return;
+          try {
+            worktreePath = await this.callbacks.createWorktreeForBranch(
+              projectPath,
+              generatedBranchName,
+              feature
+            );
+          } catch (worktreeErr) {
+            const detail = worktreeErr instanceof Error ? worktreeErr.message : String(worktreeErr);
+            const reason = `Worktree creation failed for generated branch "${generatedBranchName}" (feature ${featureId}): ${detail}.`;
+            logger.error(reason);
+            await this.featureLoader.update(projectPath, featureId, {
+              status: 'blocked',
+              statusChangeReason: reason,
+            });
+            this.events.emit('feature:error', {
+              projectPath,
+              featureId,
+              error: reason,
+              projectSlug: feature?.projectSlug,
+            });
+            return;
+          }
         }
       }
 

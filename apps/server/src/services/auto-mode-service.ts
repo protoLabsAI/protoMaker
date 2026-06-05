@@ -1827,16 +1827,17 @@ export class AutoModeService {
       } else {
         // Auto-create worktree if it doesn't exist
         logger.info(`Follow-up auto-creating worktree for branch "${branchName}"`);
-        worktreePath = await this.createWorktreeForBranch(
-          projectPath,
-          branchName,
-          feature ?? undefined
-        );
-        if (worktreePath) {
+        try {
+          worktreePath = await this.createWorktreeForBranch(
+            projectPath,
+            branchName,
+            feature ?? undefined
+          );
           workDir = worktreePath;
           logger.info(`Follow-up created worktree for branch "${branchName}": ${workDir}`);
-        } else {
-          const reason = `Follow-up worktree creation failed for branch "${branchName}" (feature ${featureId}). Refusing to fall back to main working tree.`;
+        } catch (worktreeErr) {
+          const detail = worktreeErr instanceof Error ? worktreeErr.message : String(worktreeErr);
+          const reason = `Follow-up worktree creation failed for branch "${branchName}" (feature ${featureId}): ${detail}. Refusing to fall back to main working tree.`;
           logger.error(reason);
           await this.featureLoader.update(projectPath, featureId, {
             status: 'blocked',
@@ -3044,7 +3045,9 @@ Format your response as a structured markdown document.`;
     projectPath: string,
     branchName: string,
     feature?: Feature
-  ): Promise<string | null> {
+  ): Promise<string> {
+    // Throws on failure (with the real git stderr) rather than returning null — the
+    // caller surfaces the message on statusChangeReason so failures are diagnosable (#4086).
     try {
       // Sanitize branch name for directory usage
       const sanitizedName = branchName.replace(/[^a-zA-Z0-9_-]/g, '-');
@@ -3398,8 +3401,16 @@ Format your response as a structured markdown document.`;
 
       return path.resolve(worktreePath);
     } catch (error) {
-      logger.error(`Failed to create worktree for branch "${branchName}":`, error);
-      return null;
+      // Surface the real failure (including git stderr) instead of swallowing it to
+      // null. Callers put this on statusChangeReason so a worktree-creation failure is
+      // diagnosable from the board, not just buried in server logs (#4086).
+      const stderr =
+        error && typeof error === 'object' && 'stderr' in error
+          ? String((error as { stderr: unknown }).stderr).trim()
+          : '';
+      const detail = stderr || (error instanceof Error ? error.message : String(error));
+      logger.error(`Failed to create worktree for branch "${branchName}": ${detail}`);
+      throw new Error(`git worktree creation failed for "${branchName}": ${detail}`);
     }
   }
 

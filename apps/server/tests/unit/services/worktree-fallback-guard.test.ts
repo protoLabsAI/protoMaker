@@ -279,32 +279,35 @@ describe('Worktree fallback guard', () => {
   });
 
   describe('when worktree creation fails and useWorktrees is true', () => {
-    it('blocks the feature instead of falling back to projectPath', async () => {
+    it('blocks the feature and surfaces the real error on statusChangeReason (#4086)', async () => {
       const callbacks = makeCallbacks(feature, {
         findExistingWorktreeForBranch: vi.fn(async () => null),
-        createWorktreeForBranch: vi.fn(async () => null), // Simulates failure
+        // Simulates failure: createWorktreeForBranch throws with the real git stderr.
+        createWorktreeForBranch: vi.fn(async () => {
+          throw new Error('git worktree creation failed for "feature/wt-test": fatal: boom');
+        }),
       });
       const service = makeService(callbacks, featureLoader, recoveryService, events);
 
       await service.executeFeature(PROJECT_PATH, FEATURE_ID, true);
 
-      // Feature should be updated to blocked status
+      // Feature should be blocked AND carry the real underlying error (not just the generic reason)
       expect(featureLoader.update).toHaveBeenCalledWith(
         PROJECT_PATH,
         FEATURE_ID,
         expect.objectContaining({
           status: 'blocked',
-          statusChangeReason: expect.stringContaining('Worktree creation failed'),
+          statusChangeReason: expect.stringContaining('fatal: boom'),
         })
       );
 
-      // Error event should be emitted
+      // Error event should be emitted with the surfaced detail
       expect(events.emit).toHaveBeenCalledWith(
         'feature:error',
         expect.objectContaining({
           projectPath: PROJECT_PATH,
           featureId: FEATURE_ID,
-          error: expect.stringContaining('Worktree creation failed'),
+          error: expect.stringContaining('fatal: boom'),
         })
       );
 
@@ -322,7 +325,10 @@ describe('Worktree fallback guard', () => {
       const noBranchFeature = makeFeature({ branchName: null });
       const callbacks = makeCallbacks(noBranchFeature, {
         findExistingWorktreeForBranch: vi.fn(async () => null),
-        createWorktreeForBranch: vi.fn(async () => null), // creation fails
+        // creation fails — throws with the real git stderr
+        createWorktreeForBranch: vi.fn(async () => {
+          throw new Error('git worktree creation failed: fatal: boom');
+        }),
       });
       const noBranchLoader = makeFeatureLoader(noBranchFeature);
       const service = makeService(callbacks, noBranchLoader, recoveryService, events);
