@@ -138,7 +138,7 @@ export function startCommand(parent: Command): void {
       projectPath: flags.project,
       featureId,
       force: opts.force ?? false,
-      useWorktrees: opts.worktree ?? false,
+      useWorktrees: opts.worktree ?? true,
     });
 
     if (!result.ok) {

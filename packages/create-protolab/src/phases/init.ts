@@ -85,6 +85,20 @@ export async function init(options: InitOptions): Promise<InitResult> {
       filesCreated.push('protolab.config');
     }
 
+    // 6. Generate project settings with explicit useWorktrees: true
+    const settingsPath = path.join(automakerDir, 'settings.json');
+
+    if (await fileExists(settingsPath)) {
+      filesCreated.push('.automaker/settings.json (already exists)');
+    } else {
+      await fs.writeFile(
+        settingsPath,
+        JSON.stringify({ version: 1, useWorktrees: true }, null, 2),
+        'utf-8'
+      );
+      filesCreated.push('.automaker/settings.json');
+    }
+
     return {
       success: true,
       filesCreated,

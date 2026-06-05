@@ -317,7 +317,7 @@ describe('ExecutionService - IAutoModeCallbacks contract', () => {
   });
 
   it('agent start: auto-mode:event emitted with auto_mode_feature_start', async () => {
-    await service.executeFeature(PROJECT_PATH, FEATURE_ID);
+    await service.executeFeature(PROJECT_PATH, FEATURE_ID, false);
 
     expect(events.emit).toHaveBeenCalledWith(
       'auto-mode:event',
@@ -330,7 +330,7 @@ describe('ExecutionService - IAutoModeCallbacks contract', () => {
   });
 
   it('agent success: updateFeatureStatus called with terminal status and recordSuccessForProject called', async () => {
-    await service.executeFeature(PROJECT_PATH, FEATURE_ID);
+    await service.executeFeature(PROJECT_PATH, FEATURE_ID, false);
 
     // Status must be set to in_progress first
     expect(callbacks.updateFeatureStatus).toHaveBeenCalledWith(
@@ -353,7 +353,7 @@ describe('ExecutionService - IAutoModeCallbacks contract', () => {
     const testError = new Error('Agent execution failed');
     vi.spyOn(service as any, 'runAgent').mockRejectedValue(testError);
 
-    await service.executeFeature(PROJECT_PATH, FEATURE_ID);
+    await service.executeFeature(PROJECT_PATH, FEATURE_ID, false);
 
     expect(callbacks.trackFailureAndCheckPauseForProject).toHaveBeenCalledWith(
       PROJECT_PATH,
@@ -379,7 +379,7 @@ describe('ExecutionService - IAutoModeCallbacks contract', () => {
       await hitlCallbacks.waitForPlanApproval(FEATURE_ID, PROJECT_PATH);
     });
 
-    await hitlService.executeFeature(PROJECT_PATH, FEATURE_ID);
+    await hitlService.executeFeature(PROJECT_PATH, FEATURE_ID, false);
 
     expect(hitlCallbacks.waitForPlanApproval).toHaveBeenCalledWith(FEATURE_ID, PROJECT_PATH);
   });
@@ -965,7 +965,7 @@ describe('ExecutionService - match rule auto-assign', () => {
       confidence: 1.0,
     });
 
-    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID, false);
 
     expect(featureLoader.update).toHaveBeenCalledWith(
       PROJECT_PATH,
@@ -997,7 +997,7 @@ describe('ExecutionService - match rule auto-assign', () => {
       confidence: 0.8,
     });
 
-    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID, false);
 
     expect(featureLoader.update).toHaveBeenCalledWith(
       PROJECT_PATH,
@@ -1023,7 +1023,7 @@ describe('ExecutionService - match rule auto-assign', () => {
       confidence: 0.9,
     });
 
-    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID, false);
 
     expect(featureLoader.update).toHaveBeenCalledWith(
       PROJECT_PATH,
@@ -1046,7 +1046,7 @@ describe('ExecutionService - match rule auto-assign', () => {
 
     mockMatchFeature.mockResolvedValue(null);
 
-    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID, false);
 
     const autoAssignCall = featureLoader.update.mock.calls.find(
       ([, , updates]) => 'assignedRole' in updates
@@ -1060,7 +1060,7 @@ describe('ExecutionService - match rule auto-assign', () => {
     featureLoader = makeFeatureLoader(feat);
     const svc = makeService(callbacks, featureLoader, makeRecoveryService());
 
-    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID, false);
 
     expect(mockMatchFeature).not.toHaveBeenCalled();
   });
@@ -1075,7 +1075,7 @@ describe('ExecutionService - match rule auto-assign', () => {
       agentConfig: { autoAssignEnabled: false },
     });
 
-    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID, false);
 
     expect(mockMatchFeature).not.toHaveBeenCalled();
   });
@@ -1091,7 +1091,7 @@ describe('ExecutionService - match rule auto-assign', () => {
     });
     mockMatchFeature.mockResolvedValue(null);
 
-    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID, false);
 
     expect(mockMatchFeature).toHaveBeenCalledWith(
       PROJECT_PATH,
@@ -1108,7 +1108,7 @@ describe('ExecutionService - match rule auto-assign', () => {
     mockMatchFeature.mockRejectedValue(new Error('Manifest parse error'));
 
     // Should not throw — execution continues normally
-    await expect(svc.executeFeature(PROJECT_PATH, FEATURE_ID)).resolves.not.toThrow();
+    await expect(svc.executeFeature(PROJECT_PATH, FEATURE_ID, false)).resolves.not.toThrow();
   });
 });
 
@@ -1161,7 +1161,9 @@ describe('ExecutionService - concurrency and runningFeatures', () => {
       previousErrors: [],
     });
 
-    await expect(svc.executeFeature(PROJECT_PATH, FEATURE_ID)).rejects.toThrow(/already running/);
+    await expect(svc.executeFeature(PROJECT_PATH, FEATURE_ID, false)).rejects.toThrow(
+      /already running/
+    );
   });
 
   it('skips duplicate check when isRecursive is true', async () => {
@@ -1210,7 +1212,7 @@ describe('ExecutionService - concurrency and runningFeatures', () => {
     const svc = makeService(callbacks, featureLoader, makeRecoveryService());
 
     // Should NOT return early — review is not terminal
-    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID, false);
 
     // The feature must have been set to in_progress (execution proceeded)
     expect(callbacks.updateFeatureStatus).toHaveBeenCalledWith(
@@ -1226,7 +1228,7 @@ describe('ExecutionService - concurrency and runningFeatures', () => {
     const featureLoader = makeFeatureLoader(feature);
     const svc = makeService(callbacks, featureLoader, makeRecoveryService());
 
-    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID, false);
 
     // Should return early — done is terminal, so updateFeatureStatus never called with in_progress
     expect(callbacks.updateFeatureStatus).not.toHaveBeenCalledWith(
@@ -1244,7 +1246,7 @@ describe('ExecutionService - concurrency and runningFeatures', () => {
     const featureLoader = makeFeatureLoader(feature);
     const svc = makeService(callbacks, featureLoader, makeRecoveryService());
 
-    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID, false);
 
     // Should return early — interrupted is terminal
     expect(callbacks.updateFeatureStatus).not.toHaveBeenCalledWith(
@@ -1300,7 +1302,7 @@ describe('ExecutionService — exit-code-1 degenerate-success fingerprint (issue
     );
     vi.spyOn(svc as any, 'runAgent').mockRejectedValue(degenerateError);
 
-    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID, false);
 
     // Circuit breaker must trip: feature should be marked interrupted
     const updateCalls: Array<[string, string, Record<string, unknown>]> = (
@@ -1349,7 +1351,7 @@ describe('ExecutionService — exit-code-1 degenerate-success fingerprint (issue
       return Promise.resolve();
     });
 
-    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID, false);
 
     // failureCount must have been written to 2 (feature.failureCount=1 + 1) BEFORE runAgent ran
     expect(failureCountAtRunAgentTime).toBe(2);

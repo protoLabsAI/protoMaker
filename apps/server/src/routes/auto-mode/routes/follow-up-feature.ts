@@ -31,9 +31,7 @@ export function createFollowUpFeatureHandler(autoModeService: AutoModeService) {
       // Start follow-up in background
       // followUpFeature derives workDir from feature.branchName
       autoModeService
-        // Default to false to match run-feature/resume-feature behavior.
-        // Worktrees should only be used when explicitly enabled by the user.
-        .followUpFeature(projectPath, featureId, prompt, imagePaths, useWorktrees ?? false)
+        .followUpFeature(projectPath, featureId, prompt, imagePaths, useWorktrees ?? true)
         .catch((error) => {
           logger.error(`[AutoMode] Follow up feature ${featureId} error:`, error);
         })

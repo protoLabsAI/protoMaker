@@ -354,7 +354,7 @@ export class ExecutionService {
   async executeFeature(
     projectPath: string,
     featureId: string,
-    useWorktrees = false,
+    useWorktrees = true,
     isAutoMode = false,
     providedWorktreePath?: string,
     options?: ExecuteFeatureOptions
