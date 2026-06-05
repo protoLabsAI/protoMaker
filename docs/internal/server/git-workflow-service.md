@@ -4,65 +4,48 @@ Post-execution automation that commits, pushes, and creates pull requests after 
 
 ## Overview
 
-`GitWorkflowService` runs immediately after an agent finishes a feature in auto-mode. It handles the full git pipeline:
+`GitWorkflowService.runPostCompletionWorkflow()` is the **single guarded PR-creation chokepoint**. It runs after an agent finishes a feature and handles the full git pipeline, each step gated by the resolved git-workflow settings:
 
-- **Commit** staged changes with a feature-title-derived message
-- **Push** the branch to remote
-- **Create PR** via `gh` CLI with issue-closing references
-- **Resolve bot review threads** via `CodeRabbitResolverService`
-- **Merge** the PR according to configured `AutoMergeSettings`
-- **Retry** all operations with exponential backoff (3 attempts: 2s, 4s, 8s delays)
+- **Commit** staged changes with a feature-title-derived message (`autoCommit`)
+- **Push** the branch to remote (`autoPush`)
+- **Create PR** via `gh` CLI with issue-closing references and an ownership watermark (`autoCreatePR`)
+- **Auto-merge** the PR when enabled and eligible (`autoMergePR`)
+- **Enforce the epic-base invariant** — features in an epic must base their PR on the epic branch, never on `main` (auto-creates the epic branch on the remote if missing)
+- **Retry** push/PR operations with exponential backoff
+
+Read-only features short-circuit before any git work (it logs a warning for `featureType: code` read-only features, since that usually means a mis-route — see [issue #4073]).
 
 ## Architecture
 
-```text
-GitWorkflowService
-  ├── commitAndPush()           — stage, commit, push
-  ├── createPullRequest()       — gh pr create with ownership watermark
-  ├── mergePR()                 — CodeRabbitResolverService + GitHubMergeService
-  └── merge()                   — public entry point (full pipeline)
-```
-
-### Full Pipeline Flow
+`runPostCompletionWorkflow` is the only public workflow entry point; the steps are private helpers it calls in sequence:
 
 ```text
-merge(feature, worktreePath, settings)
-  → commitAndPush()
-      → git add (pathspec-based staging)
-      → git commit -m "feat: <title>"
-      → git push -u origin <branch>
-  → createPullRequest()
-      → Build PR body with feature summary + issue close refs ("Closes #<id>")
-      → Append PR ownership watermark
-      → gh pr create --base <prBaseBranch>
-  → mergePR()
-      → codeRabbitResolverService.resolveThreads()   — clear bot threads
-      → mergeEligibilityService.evaluatePR()          — check auto-merge settings
-      → githubMergeService.mergePR()                  — gh pr merge
+runPostCompletionWorkflow(projectPath, featureId, feature, workDir, settings, epicBranchName?, events?, projectPrBaseBranch?)
+  → read-only? → log + return null (no git work)
+  → resolveGitWorkflowSettings(feature, settings, projectPrBaseBranch)
+  → resolve PR base branch (epic-base invariant: epic children base on the epic branch)
+  → if autoCommit  → commitChanges()           (pathspec staging + prettier; amend/force paths for already-pushed branches)
+  → if autoPush    → pushToRemote()             (--force-with-lease when needed)
+  → if autoCreatePR→ createPullRequest()        (PR body + "Closes #<id>" + ownership watermark; size/critical-thread gates)
+  → if autoMergePR → CodeRabbit thread resolution + GitHubMergeService merge
   → GitWorkflowResult
 ```
 
+There is no `merge()` / `commitAndPush()` / `mergePR()` method — those are not real. `saveAgentProgress()` (a lightweight WIP commit+push, no PR) and `resolveGitWorkflowSettings()` are the other public methods.
+
 ## Configuration
 
-Settings come from `GitWorkflowSettings` in `.automaker/settings.json`:
+Settings resolve through `resolveGitWorkflowSettings()`, which merges per-feature `gitWorkflow` overrides over global `GitWorkflowSettings` over `DEFAULT_GIT_WORKFLOW_SETTINGS` (`libs/types/src/git-settings.ts`). Key fields:
 
-```typescript
-interface GitWorkflowSettings {
-  commitMessage?: string; // default: derived from feature title
-  prBaseBranch?: string; // default: 'main'
-  prTemplate?: string; // PR body template
-  autoMerge?: boolean; // enable auto-merge
-  mergeStrategy?: PRMergeStrategy; // 'merge' | 'squash' | 'rebase'
-  closeIssues?: boolean; // add "Closes #<id>" refs
-}
-```
-
-| Setting         | Default    | Description                                 |
-| --------------- | ---------- | ------------------------------------------- |
-| `prBaseBranch`  | `'main'`   | Target branch for PR creation               |
-| `mergeStrategy` | `'squash'` | How the PR is merged                        |
-| `autoMerge`     | `true`     | Enable GitHub auto-merge if CI is pending   |
-| `closeIssues`   | `true`     | Include issue-closing references in PR body |
+| Setting           | Default    | Description                                                |
+| ----------------- | ---------- | ---------------------------------------------------------- |
+| `autoCommit`      | `true`     | Commit staged changes                                      |
+| `autoPush`        | `true`     | Push to remote (requires `autoCommit`)                     |
+| `autoCreatePR`    | `true`     | Create the PR (requires `autoPush`)                        |
+| `autoMergePR`     | `true`     | Enable auto-merge after creation (requires `autoCreatePR`) |
+| `prMergeStrategy` | `'squash'` | How the PR is merged (`merge` \| `squash` \| `rebase`)     |
+| `waitForCI`       | —          | Wait for CI before merging                                 |
+| `prBaseBranch`    | `'main'`   | Target branch for PR creation                              |
 
 ## PR Ownership Watermark
 
@@ -103,6 +86,6 @@ interface GitWorkflowResult {
 
 ## See Also
 
-- [Worktree Recovery Service](./worktree-recovery-service) — fallback path when agent exits with uncommitted work
-- [Auto Mode Service](./auto-mode-service) — calls `gitWorkflowService.merge()` on execution success
+- [Worktree Recovery Service](./worktree-recovery-service) — fallback path when an agent exits with uncommitted work (commit + push only, no PR)
+- [Lead Engineer Service](./lead-engineer-service) — drives feature execution and invokes `runPostCompletionWorkflow` on success
 - [GitHub Merge Service](./github-merge-service) — handles the actual merge call
