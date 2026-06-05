@@ -84,11 +84,12 @@ export interface IAutoModeCallbacks {
 
   // Worktree management
   findExistingWorktreeForBranch(projectPath: string, branchName: string): Promise<string | null>;
+  /** Throws on failure (carrying the real git stderr) so callers can surface it (#4086). */
   createWorktreeForBranch(
     projectPath: string,
     branchName: string,
     feature: Feature
-  ): Promise<string | null>;
+  ): Promise<string>;
 
   // State persistence
   saveExecutionState(projectPath: string): Promise<void>;
