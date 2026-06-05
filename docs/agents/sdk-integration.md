@@ -1,6 +1,6 @@
-# Claude Agent SDK Integration
+# Proto SDK Integration
 
-protoLabs Studio integrates with the Claude Agent SDK to power its AI agent execution system. This guide explains the architecture, configuration patterns, and how agents are invoked.
+protoLabs Studio integrates with the **proto SDK** (`@protolabsai/sdk`) to power its AI agent execution system. The proto SDK is the namesake, primary driver; Claude-family models run through its `@protolabsai/sdk/anthropic-compat` compatibility entrypoint. This guide explains the architecture, configuration patterns, and how agents are invoked.
 
 ## Architecture Overview
 
@@ -13,7 +13,7 @@ AgentService (apps/server/src/services/agent-service.ts)
     ↓
 ProviderFactory (apps/server/src/providers/provider-factory.ts)
     ↓
-Claude Agent SDK (chat function with tool use)
+Proto SDK — query() driven by an Options object (with tool use)
     ↓
 Agent Execution in Worktree
 ```
@@ -27,38 +27,54 @@ Agent Execution in Worktree
 
 ## Provider Architecture
 
-protoLabs Studio uses a provider abstraction to support multiple LLM backends:
+protoLabs Studio uses a provider abstraction to support multiple LLM backends. Providers self-register with the `ProviderFactory` and are matched by priority (highest wins). The **Proto provider** (priority 100) is the default driver.
 
 ### Supported Providers
 
-| Provider   | Model IDs       | SDK Used              |
-| ---------- | --------------- | --------------------- |
-| **Claude** | `claude-*`      | @anthropic/agent-sdk  |
-| **OpenAI** | `gpt-*`, `o1-*` | openai                |
-| **Custom** | Any             | Custom implementation |
+| Priority | Provider              | Model IDs                              | SDK / backend                                |
+| -------- | --------------------- | -------------------------------------- | -------------------------------------------- |
+| 100      | **Proto** (default)   | `protolabs/*` (smart/fast/reasoning)   | `@protolabsai/sdk` via the protoLabs gateway |
+| 10       | **Cursor**            | `cursor-*`                             | Cursor CLI                                   |
+| 5        | **Codex**             | `gpt-*`, `o*`                          | OpenAI Codex CLI                             |
+| 4        | **Groq**              | `groq/*` and known Groq IDs            | `groq-sdk`                                   |
+| 3        | **OpenCode**          | `opencode-*`                           | OpenCode CLI                                 |
+| 2        | **OpenAI-compatible** | configured OpenAI-compatible model IDs | OpenAI-compatible HTTP API                   |
+| 0        | **Claude**            | `claude-*`, `opus`, `sonnet`, `haiku`  | `@protolabsai/sdk/anthropic-compat`          |
+
+Model aliases resolve to the Proto gateway tiers: `haiku` → `protolabs/fast`, `sonnet` → `protolabs/smart`, `opus` → `protolabs/reasoning`. A `fake` provider is also registered for tests.
 
 ### Provider Selection
 
-The system automatically selects the provider based on model ID:
+The system selects a provider by model ID. To look up the configured provider for a given model, use `getProviderByModelId()` (it lives in `apps/server/src/lib/settings-helpers.ts` and is **async**):
 
 ```typescript
-import { getProviderByModelId } from '@protolabsai/utils';
+import { getProviderByModelId } from '../lib/settings-helpers.js';
 
-// Resolves to Claude provider
-const provider = getProviderByModelId('claude-sonnet-4-6');
-
-// Resolves to OpenAI provider
-const provider = getProviderByModelId('gpt-4-turbo');
+// Async — searches enabled providers for the model and resolves credentials
+const { provider, modelConfig, credentials, resolvedModel } = await getProviderByModelId(
+  'claude-sonnet-4-6',
+  settingsService
+);
 ```
 
-### Claude SDK Chat Options
+For runtime routing in the execution path, the `ProviderFactory` picks the implementation directly from the model string:
 
-When using Claude models, the SDK is configured via `createChatOptions()`:
+```typescript
+import { ProviderFactory } from '../providers/provider-factory.js';
+
+const provider = ProviderFactory.getProviderForModel('protolabs/smart');
+const stream = provider.executeQuery(options);
+```
+
+### SDK Options
+
+The SDK is driven by an `Options` object built via `createChatOptions()` and passed to the proto SDK's `query()`:
 
 ```typescript
 import { createChatOptions } from '../lib/sdk-options.js';
+import { query } from '@protolabsai/sdk/anthropic-compat';
 
-const chatOptions = createChatOptions({
+const options = createChatOptions({
   workingDirectory: '/path/to/worktree',
   model: 'claude-sonnet-4-6',
   thinkingLevel: 'medium', // 'low' | 'medium' | 'high'
@@ -69,11 +85,10 @@ const chatOptions = createChatOptions({
   subagents: { enabled: true, custom: [] },
 });
 
-// Pass to Claude SDK
-const response = await chat({
-  ...chatOptions,
-  messages: conversationHistory,
-});
+// Drive the proto SDK with the Options object and stream messages
+for await (const message of query({ prompt, options })) {
+  // handle streamed messages
+}
 ```
 
 ## Agent Session Management
@@ -96,7 +111,7 @@ interface Session {
   workingDirectory: string;
   model?: string;
   thinkingLevel?: ThinkingLevel;
-  sdkSessionId?: string; // Claude SDK session ID for continuity
+  sdkSessionId?: string; // proto SDK session ID for continuity
   promptQueue: QueuedPrompt[]; // Auto-run queue
   featureContext?: {
     projectPath: string;
@@ -230,12 +245,12 @@ protoLabs Studio supports Model Context Protocol (MCP) servers for tool augmenta
 
 ### Available MCP Servers
 
-| Server           | Tools                                         | Use Case                         |
-| ---------------- | --------------------------------------------- | -------------------------------- |
-| **automaker**    | 135 tools (feature mgmt, agents, queue, etc.) | Core protoLabs Studio operations |
-| **github**       | PR management, issue tracking                 | GitHub integration               |
-| **filesystem**   | File read/write, directory operations         | Advanced file ops                |
-| **brave-search** | Web search                                    | Research tasks                   |
+| Server           | Tools                                          | Use Case                         |
+| ---------------- | ---------------------------------------------- | -------------------------------- |
+| **automaker**    | ~159 tools (feature mgmt, agents, queue, etc.) | Core protoLabs Studio operations |
+| **github**       | PR management, issue tracking                  | GitHub integration               |
+| **filesystem**   | File read/write, directory operations          | Advanced file ops                |
+| **brave-search** | Web search                                     | Research tasks                   |
 
 ## Skills and Subagents
 
@@ -316,10 +331,15 @@ The service uses `AbortController` to gracefully cancel SDK calls:
 const abortController = new AbortController();
 session.abortController = abortController;
 
-const response = await chat({
-  ...chatOptions,
-  signal: abortController.signal,
+// The abort signal is threaded into the Options object passed to query()
+const options = createChatOptions({
+  ...baseOptions,
+  abortController,
 });
+
+for await (const message of query({ prompt, options })) {
+  // handle streamed messages
+}
 ```
 
 ## Streaming Responses

@@ -25,7 +25,7 @@ This guide explains how **Model Context Protocol (MCP) tools** interact with pro
 **protoLabs's MCP Server:**
 
 - **Location:** `packages/mcp-server/`
-- **Exposes:** 112 tools for controlling protoLabs programmatically
+- **Exposes:** ~159 tools for controlling protoLabs programmatically
 - **Used By:** The Chief of Staff agent, other AI agents, external integrations
 
 **Official Docs:** [MCP Specification](https://spec.modelcontextprotocol.io/)
@@ -41,7 +41,7 @@ This guide explains how **Model Context Protocol (MCP) tools** interact with pro
 ┌──────────────────────▼──────────────────────────────────┐
 │  protoLabs MCP Server                                   │
 │  Location: packages/mcp-server/src/index.ts            │
-│  - Tool definitions (112 tools)                         │
+│  - Tool definitions (~159 tools)                        │
 │  - API client (calls protoLabs server)                  │
 │  - Auth (AUTOMAKER_API_KEY)                            │
 └──────────────────────┬──────────────────────────────────┘
@@ -141,8 +141,8 @@ async *executeQuery(options: ExecuteOptions): AsyncGenerator<ProviderMessage> {
   }
 }
 
-// 6. Claude SDK executes agent
-// @anthropic-ai/claude-agent-sdk (native)
+// 6. Proto SDK executes agent
+// @protolabsai/sdk (Claude-family via @protolabsai/sdk/anthropic-compat)
 // - Manages context window
 // - Tracks costs
 // - Checkpoints files

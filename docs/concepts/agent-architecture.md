@@ -54,24 +54,26 @@ protoLabs's agent system is built on three key concepts from Claude's agent ecos
                        │
 ┌──────────────────────▼──────────────────────────────────────┐
 │  Provider Layer                                             │
-│  - ProviderFactory (routes model → provider)               │
-│  - ClaudeProvider (native SDK)                             │
-│  - CursorProvider, CodexProvider, OpencodeProvider         │
+│  - ProviderFactory (routes model → provider, by priority)  │
+│  - ProtoProvider (gateway-first, default driver)           │
+│  - ClaudeProvider (proto SDK via anthropic-compat)         │
+│  - CursorProvider, CodexProvider, GroqProvider, OpencodeProvider │
 └──────────────────────┬──────────────────────────────────────┘
                        │
 ┌──────────────────────▼──────────────────────────────────────┐
 │  Execution Layer                                            │
-│  - @anthropic-ai/claude-agent-sdk                          │
-│  - Native SDK features: hooks, checkpointing, cost tracking│
+│  - @protolabsai/sdk (the proto SDK — primary driver)       │
+│  - @protolabsai/sdk/anthropic-compat (Claude compat shim)  │
+│  - SDK features: hooks, checkpointing, cost tracking       │
 │  - Session management, context compaction                   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ## Execution Model
 
-### All Agents Use Native Claude SDK
+### All Agents Use the Proto SDK
 
-**Every agent in protoLabs** (whether triggered by UI, CLI, or MCP) executes via the native Claude Agent SDK with full capabilities:
+**Every agent in protoLabs** (whether triggered by UI, CLI, or MCP) executes via `@protolabsai/sdk` — the proto SDK — with full capabilities. Claude-family models run through the SDK's `@protolabsai/sdk/anthropic-compat` compatibility shim, and routing is gateway-first by default:
 
 - ✅ **Cost tracking** - Every agent execution tracks `total_cost_usd`
 - ✅ **File checkpointing** - Safe rollback on errors without git operations
@@ -214,14 +216,14 @@ const contextResult = await loadContextFiles({
 
 ### 1. Provider Abstraction
 
-**Why:** Support multiple AI providers (Claude, Cursor, Codex, OpenCode) without changing agent logic
-**How:** `ProviderFactory` routes model IDs to appropriate provider implementations
+**Why:** Support multiple AI providers (Proto, Claude, Cursor, Codex, Groq, OpenCode) without changing agent logic
+**How:** `ProviderFactory` routes model IDs to provider implementations by priority — the Proto provider (priority 100) is the default driver for `protolabs/*` gateway tiers
 **Benefit:** Easy to add new providers, users choose their preferred AI backend
 
-### 2. Native SDK Everywhere
+### 2. Proto SDK Everywhere
 
-**Why:** Claude SDK provides battle-tested agent loop, context management, and advanced features
-**When:** Migrated in Feb 2026 via "Agent Runner Evolution" project
+**Why:** `@protolabsai/sdk` provides a battle-tested agent loop, context management, and advanced features; its `anthropic-compat` entrypoint keeps the Claude-family API surface available
+**When:** Migrated in Feb 2026 via "Agent Runner Evolution" project, then moved off `@anthropic-ai/claude-agent-sdk` onto `@protolabsai/sdk`
 **Benefit:** Cost tracking, session resume, file checkpointing, thinking budgets out-of-the-box
 
 ### 3. Worktree Isolation

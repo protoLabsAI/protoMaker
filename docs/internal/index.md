@@ -11,7 +11,7 @@ This directory is NOT included in the public VitePress build. Content here is fo
 
 ## Agents
 
-- [SDK Integration](./agents/sdk-integration.md)
+- [SDK Integration](../agents/sdk-integration.md)
 - [Prompt Techniques](./agents/prompt-techniques.md)
 - [Adding Teammates](./agents/adding-teammates.md)
 - [Adding Team Members](./agents/adding-team-members.md)
