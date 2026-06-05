@@ -357,4 +357,4 @@ interface GatewayStatus {
 ## See Also
 
 - [Ava Chat System — Architecture Pipeline](../dev/ava-chat-system.md#architecture-pipeline) — full end-to-end request flow diagram
-- [SDK Integration](../agents/sdk-integration.md) — Claude Agent SDK query options and session management
+- [SDK Integration](../../agents/sdk-integration.md) — proto SDK query options and session management

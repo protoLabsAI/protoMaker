@@ -464,4 +464,4 @@ apps/ui/src/components/views/chat-overlay/
 ## See Also
 
 - [Ava Chat Server API](../server/ava-chat.md) — MCP server config, trust model
-- [SDK Integration](../agents/sdk-integration.md) — Claude Agent SDK query options and session management
+- [SDK Integration](../../agents/sdk-integration.md) — proto SDK query options and session management

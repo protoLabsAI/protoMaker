@@ -1,6 +1,6 @@
 # Provider Architecture Reference
 
-This document describes the modular provider architecture in `apps/server/src/providers/` that enables support for multiple AI model providers (Claude SDK, OpenAI Codex CLI, Cursor, OpenCode, and more).
+This document describes the modular provider architecture in `apps/server/src/providers/` that enables support for multiple AI model providers. The **Proto provider** (gateway-first, priority 100) is the default driver; the others (Cursor, Codex, Groq, OpenCode, OpenAI-compatible, Claude SDK) handle their own model namespaces.
 
 ---
 
@@ -29,17 +29,18 @@ The provider architecture separates AI model execution logic from business logic
 └──────────────────┬──────────────────────┘
                    │
          ┌─────────▼──────────┐
-         │  ProviderFactory   │  Registry-based routing
-         │  (Routes by model) │  "claude-*" → Claude
-         └─────────┬──────────┘  "gpt-*" → Codex
-                   │              "cursor-*" → Cursor
-      ┌────────────┼────────────┐ "opencode-*" → OpenCode
-      │            │            │
-┌─────▼──────┐ ┌──▼──────┐ ┌──▼──────────┐
-│   Claude   │ │  Codex  │ │ Cursor /    │
-│  Provider  │ │ Provider│ │ OpenCode    │
-│ (Agent SDK)│ │ (CLI)   │ │ (CLI)       │
-└────────────┘ └─────────┘ └─────────────┘
+         │  ProviderFactory   │  Registry-based routing (highest
+         │  (Routes by model) │  priority wins). "protolabs/*" → Proto
+         └─────────┬──────────┘  "cursor-*" → Cursor, "gpt-*" → Codex
+                   │              "groq/*" → Groq, "opencode-*" → OpenCode
+   ┌───────────────┼───────────────┐ "claude-*"/opus/sonnet/haiku → Claude
+   │               │               │
+┌──▼───────┐ ┌────▼─────┐ ┌────────▼────┐
+│  Proto   │ │  Claude  │ │ Codex /     │
+│ Provider │ │ Provider │ │ Cursor /    │
+│ (gateway,│ │ (proto   │ │ Groq /      │
+│ default) │ │  SDK)    │ │ OpenCode    │
+└──────────┘ └──────────┘ └─────────────┘
                    │
             ┌──────▼──────┐
             │   Traced    │  (Langfuse wrapper,
@@ -162,11 +163,46 @@ export interface ContentBlock {
 
 ## Available Providers
 
-### 1. Claude Provider (SDK-based)
+Providers are checked in priority order (highest first). The Proto provider (priority 100) is the default and wins whenever it claims a model.
+
+| Priority | Provider          | Location                        | Model namespace                              |
+| -------- | ----------------- | ------------------------------- | -------------------------------------------- |
+| 100      | Proto (default)   | `proto-provider.ts`             | `protolabs/*` gateway tiers (smart/fast/...) |
+| 10       | Cursor            | `cursor-provider.ts`            | `cursor-*`                                   |
+| 5        | Codex             | `codex-provider.ts`             | `gpt-*`, `o*`                                |
+| 4        | Groq              | `groq-provider.ts`              | `groq/*` and known Groq IDs                  |
+| 3        | OpenCode          | `opencode-provider.ts`          | `opencode-*`                                 |
+| 2        | OpenAI-compatible | `openai-compatible-provider.ts` | configured OpenAI-compatible model IDs       |
+| 0        | Claude            | `claude-provider.ts`            | `claude-*`, `opus`, `sonnet`, `haiku`        |
+
+A `fake` provider (`fake-provider.ts`) is also registered for tests (`AUTOMAKER_MOCK_AGENT=true`).
+
+### 1. Proto Provider (gateway-first, default)
+
+**Location**: `apps/server/src/providers/proto-provider.ts`
+
+The namesake `@protolabsai/sdk` provider and the **primary/default driver** (priority 100). All `protolabs/*` gateway tiers route here, and the protoLabs gateway (`api.proto-labs.ai`) is the credential path that "just works" out of the box — the gateway-issued API key is the only credential needed.
+
+#### Features
+
+- ✅ Gateway-first: routes through `api.proto-labs.ai` using the gateway-issued key
+- ✅ Drives the tiered model defaults (`protolabs/reasoning`, `protolabs/smart`, `protolabs/fast`)
+- ✅ Streaming responses
+- ✅ Highest priority (100) — wins whenever `isProtoModel()` claims a model
+
+#### Model Detection
+
+Routes models that `isProtoModel()` claims — today, anything prefixed `protolabs/` (e.g., `protolabs/smart`, `protolabs/fast`, `protolabs/reasoning`). Model aliases resolve to these gateway tiers: `haiku` → `protolabs/fast`, `sonnet` → `protolabs/smart`, `opus` → `protolabs/reasoning`.
+
+#### Authentication
+
+Uses the protoLabs gateway-issued API key (the default credential — no separate Anthropic key required).
+
+### 2. Claude Provider (SDK-based)
 
 **Location**: `apps/server/src/providers/claude-provider.ts`
 
-Uses `@anthropic-ai/claude-agent-sdk` for direct SDK integration.
+Uses `@protolabsai/sdk` via the `@protolabsai/sdk/anthropic-compat` entrypoint for direct SDK integration. The SDK surface used is `query()` driven by an `Options` object (built via `createChatOptions()`), not a standalone `chat()` function. Priority 0 — the fallback for Claude-family models. By default, Claude routing also goes through the protoLabs gateway.
 
 #### Features
 
@@ -186,9 +222,7 @@ Routes models that:
 
 #### Authentication
 
-Requires:
-
-- `ANTHROPIC_API_KEY` environment variable
+By default, Claude routing flows through the protoLabs gateway using the gateway-issued API key — no separate credential is required out of the box. `ANTHROPIC_API_KEY` is only needed for the optional direct-to-Anthropic path, which the product no longer depends on.
 
 #### Example Usage
 
@@ -229,7 +263,7 @@ for (const msg of historyMessages) {
 
 ---
 
-### 2. Codex Provider (CLI-based)
+### 3. Codex Provider (CLI-based)
 
 **Location**: `apps/server/src/providers/codex-provider.ts`
 
@@ -355,34 +389,57 @@ Routes requests to the appropriate provider based on model string.
 The factory uses a registry pattern where providers self-register with model matching functions:
 
 ```typescript
-// Provider registration (happens on import)
-registerProvider('claude', {
-  factory: () => new ClaudeProvider(),
-  canHandleModel: (model) =>
-    model.startsWith('claude-') || ['haiku', 'sonnet', 'opus'].includes(model),
+// Provider registration (happens on import).
+// The Proto provider is the default driver and wins on any tie (priority 100).
+registerProvider('proto', {
+  factory: () => new ProtoProvider(),
+  aliases: ['protolabs'],
+  canHandleModel: (model) => isProtoModel(model), // claims `protolabs/*`
+  priority: 100,
+});
+
+registerProvider('cursor', {
+  factory: () => new CursorProvider(),
+  canHandleModel: (model) => isCursorModel(model),
   priority: 10,
 });
 
 registerProvider('codex', {
   factory: () => new CodexProvider(),
   canHandleModel: (model) => isCodexModel(model),
+  priority: 5,
 });
 
-registerProvider('cursor', {
-  factory: () => new CursorProvider(),
-  canHandleModel: (model) => isCursorModel(model),
+registerProvider('groq', {
+  factory: () => new GroqProvider(),
+  canHandleModel: (model) => isGroqModel(model),
+  priority: 4,
 });
 
 registerProvider('opencode', {
   factory: () => new OpencodeProvider(),
   canHandleModel: (model) => isOpencodeModel(model),
+  priority: 3,
+});
+
+registerProvider('openai-compatible', {
+  factory: () => new OpenAICompatibleProvider(),
+  canHandleModel: (model) => isOpenAICompatibleModel(model),
+  priority: 2,
+});
+
+registerProvider('claude', {
+  factory: () => new ClaudeProvider(),
+  canHandleModel: (model) =>
+    model.startsWith('claude-') || ['haiku', 'sonnet', 'opus'].some((n) => model.includes(n)),
+  priority: 0, // Default Claude-family fallback
 });
 
 // Factory routes by checking each provider's canHandleModel()
 export class ProviderFactory {
   static getProviderForModel(model: string): BaseProvider {
     // Iterates registered providers sorted by priority (highest first)
-    // Returns first match, or defaults to Claude
+    // Returns first match; the Proto provider (priority 100) is the default
   }
 }
 ```
@@ -515,7 +572,7 @@ The provider architecture handles everything automatically.
 - Native multi-turn support
 - Streaming via async generators
 
-**Example**: ClaudeProvider using `@anthropic-ai/claude-agent-sdk`
+**Example**: ClaudeProvider using `@protolabsai/sdk` (via `@protolabsai/sdk/anthropic-compat`)
 
 **Advantages**:
 
@@ -703,10 +760,15 @@ describe('Provider Integration', () => {
 
 ## Environment Variables
 
+### Proto Provider (default)
+
+The Proto provider uses the protoLabs gateway-issued API key, which is the default credential out of the box — no per-provider environment variable is required for the standard setup.
+
 ### Claude Provider
 
 ```bash
-# Required:
+# Optional — only for the direct-to-Anthropic path (not used by default; Claude
+# routing flows through the protoLabs gateway like everything else):
 ANTHROPIC_API_KEY=sk-ant-...
 ```
 
@@ -763,7 +825,7 @@ CODEX_CLI_PATH=/custom/path/to/codex
 
 ---
 
-### 3. Cursor Provider (CLI-based)
+### 4. Cursor Provider (CLI-based)
 
 **Location**: `apps/server/src/providers/cursor-provider.ts`
 
@@ -779,7 +841,7 @@ Uses the Cursor CLI as a subprocess for code-focused AI interactions. Extends `C
 
 **Location**: `apps/server/src/providers/cursor-config-manager.ts`
 
-### 4. OpenCode Provider (CLI-based)
+### 5. OpenCode Provider (CLI-based)
 
 **Location**: `apps/server/src/providers/opencode-provider.ts`
 
@@ -790,7 +852,7 @@ Open-source model provider via CLI subprocess.
 - CLI-based execution
 - Model detection for `opencode-*` prefixed models
 
-### 5. Groq Provider (SDK-based)
+### 6. Groq Provider (SDK-based)
 
 **Location**: `apps/server/src/providers/groq-provider.ts`
 
