@@ -681,6 +681,48 @@ describe('feature-loader.ts', () => {
     });
   });
 
+  describe('findByIssueNumber', () => {
+    it('should find the feature linked to a GitHub issue number', async () => {
+      vi.mocked(fs.access).mockResolvedValue(undefined);
+      vi.mocked(fs.readdir).mockResolvedValue([
+        { name: 'feature-1', isDirectory: () => true } as any,
+        { name: 'feature-2', isDirectory: () => true } as any,
+      ]);
+      vi.mocked(fs.readFile)
+        .mockResolvedValueOnce(
+          JSON.stringify({ id: 'feature-1000-abc', title: 'A', githubIssueNumber: 235 })
+        )
+        .mockResolvedValueOnce(
+          JSON.stringify({ id: 'feature-2000-def', title: 'B', githubIssueNumber: 443 })
+        );
+
+      const result = await loader.findByIssueNumber(testProjectPath, 443);
+
+      expect(result).not.toBeNull();
+      expect(result?.id).toBe('feature-2000-def');
+    });
+
+    it('should return null when no feature is linked to the issue', async () => {
+      vi.mocked(fs.access).mockResolvedValue(undefined);
+      vi.mocked(fs.readdir).mockResolvedValue([
+        { name: 'feature-1', isDirectory: () => true } as any,
+      ]);
+      vi.mocked(fs.readFile).mockResolvedValueOnce(
+        JSON.stringify({ id: 'feature-1000-abc', title: 'A', githubIssueNumber: 235 })
+      );
+
+      const result = await loader.findByIssueNumber(testProjectPath, 999);
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null for a falsy issue number (no scan)', async () => {
+      const result = await loader.findByIssueNumber(testProjectPath, 0);
+      expect(result).toBeNull();
+      expect(fs.readdir).not.toHaveBeenCalled();
+    });
+  });
+
   describe('findDuplicateTitle', () => {
     it('should find duplicate title', async () => {
       vi.mocked(fs.access).mockResolvedValue(undefined);

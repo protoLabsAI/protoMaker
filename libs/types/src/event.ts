@@ -33,6 +33,8 @@ export type EventType =
   | 'epic:auto-completed'
   | 'feature:pr-merged'
   | 'feature:pr-closed-unmerged'
+  | 'feature:issue-closed'
+  | 'feature:issue-reopened'
   | 'feature:auto-reconciled'
   | 'feature:verify-pending'
   | 'feature:blocked'
@@ -469,6 +471,21 @@ export interface EventPayloadMap {
     projectPath: string;
     prNumber: number;
     prUrl?: string;
+  };
+  'feature:issue-closed': {
+    featureId: string;
+    projectPath: string;
+    issueNumber: number;
+    repository: string;
+    // 'completed' (shipped) vs 'not_planned' (wontfix/duplicate/abandoned); null on
+    // older webhook payloads. Lets consumers distinguish completion from abandonment.
+    stateReason?: 'completed' | 'not_planned' | 'reopened' | null;
+  };
+  'feature:issue-reopened': {
+    featureId: string;
+    projectPath: string;
+    issueNumber: number;
+    repository: string;
   };
   'feature:verify-pending': {
     featureId: string;

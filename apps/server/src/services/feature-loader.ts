@@ -658,6 +658,33 @@ export class FeatureLoader implements FeatureStore {
   }
 
   /**
+   * Find the feature linked to a GitHub issue number.
+   *
+   * Used by the webhook handler to close out a feature when its source issue is
+   * closed on GitHub (the symmetric counterpart to issue-`opened` intake). Matches
+   * on `githubIssueNumber`, the field intake populates from the issue.
+   *
+   * @param projectPath - Path to the project
+   * @param issueNumber - The GitHub issue number
+   * @returns The linked feature, or null if none
+   */
+  async findByIssueNumber(projectPath: string, issueNumber: number): Promise<Feature | null> {
+    if (!issueNumber) {
+      return null;
+    }
+
+    const features = await this.getAll(projectPath);
+
+    for (const feature of features) {
+      if (feature.githubIssueNumber === issueNumber) {
+        return feature;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Check if a title already exists on another active feature (for duplicate detection).
    * Archived features are excluded — delete-then-recreate and archive-then-recreate must work.
    *
