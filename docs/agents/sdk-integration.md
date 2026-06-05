@@ -427,5 +427,5 @@ const myTool: ToolDefinition = {
 ## Learn More
 
 - [Creating MCP Tools](../dev/creating-mcp-tools.md) - Build custom MCP tools
-- [MCP Tools Reference](../integrations/mcp-tools-reference.md) - Complete tool catalog
+- [MCP Tools Reference](../reference/mcp-tools.md) - Complete tool catalog
 - [Monorepo Architecture](../dev/monorepo-architecture.md) - Package structure

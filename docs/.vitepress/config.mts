@@ -142,12 +142,6 @@ export default defineConfig({
           items: generateSidebar('server', '/server'),
         },
       ],
-      '/infra/': [
-        {
-          text: 'Infrastructure',
-          items: generateSidebar('infra', '/infra'),
-        },
-      ],
     },
 
     socialLinks: [{ icon: 'github', link: 'https://github.com/protoLabsAI/protomaker' }],

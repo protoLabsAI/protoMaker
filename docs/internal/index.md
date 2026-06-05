@@ -92,7 +92,6 @@ This directory is NOT included in the public VitePress build. Content here is fo
 - [Harness Eval](./server/harness-eval.md)
 - [Issue Dedupe](./server/issue-dedupe.md)
 - [CodeRabbit Resolver](./server/coderabbit-resolver-service.md)
-- [Reactive Spawner](./server/reactive-spawner.md)
 - [Project Service](./server/project-service.md)
 - [Work Intake Service](./server/work-intake-service.md)
 - [Actionable Items](./server/actionable-items.md)
