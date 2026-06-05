@@ -54,7 +54,7 @@
 | [Auto Mode](./reference/auto-mode.md)                 | Autonomous feature processing service        |
 | [Knowledge Store](./reference/knowledge-store.md)     | SQLite FTS5 knowledge base for agent context |
 | [Knowledge Hive](./reference/knowledge-hive.md)       | Multi-source knowledge aggregation           |
-| [MCP Tools](./reference/mcp-tools.md)                 | Full MCP tool catalog (120+ tools)           |
+| [MCP Tools](./reference/mcp-tools.md)                 | Full MCP tool catalog (100 tools)            |
 | [API Key Profiles](./reference/api-key-profiles.md)   | Unified API key and provider profile system  |
 | [CLI Commands](./reference/cli-commands.md)           | Complete protomaker CLI command reference    |
 

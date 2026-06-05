@@ -1,6 +1,6 @@
 # Claude Agent SDK Integration
 
-protoLabs Studio integrates with the [Claude Agent SDK](https://github.com/anthropics/agent-sdk-typescript) to power its AI agent execution system. This guide explains the architecture, configuration patterns, and how agents are invoked.
+protoLabs Studio integrates with `@protolabsai/sdk` with `ProtoProvider` as the default gateway. This guide explains the architecture, configuration patterns, and how agents are invoked using `query()` not `chat()`.
 
 ## Architecture Overview
 
@@ -39,29 +39,29 @@ protoLabs Studio uses a provider abstraction to support multiple LLM backends:
 
 ### Provider Selection
 
-The system automatically selects the provider based on model ID:
+The system automatically selects the provider based on model ID. ProtoProvider (priority 100) is the default gateway:
 
 ```typescript
 import { getProviderByModelId } from '@protolabsai/utils';
 
-// Resolves to Claude provider
-const provider = getProviderByModelId('claude-sonnet-4-6');
+// Resolves to ProtoProvider (default gateway)
+const provider = getProviderByModelId('protolabs/smart');
 
-// Resolves to OpenAI provider
+// Pass-through for full model strings
 const provider = getProviderByModelId('gpt-4-turbo');
 ```
 
-### Claude SDK Chat Options
+### Claude SDK Query Options
 
-When using Claude models, the SDK is configured via `createChatOptions()`:
+When using Claude models, the SDK is configured via `createQueryOptions()`:
 
 ```typescript
-import { createChatOptions } from '../lib/sdk-options.js';
+import { createQueryOptions } from '@protolabsai/sdk';
 
-const chatOptions = createChatOptions({
+const queryOptions = createQueryOptions({
   workingDirectory: '/path/to/worktree',
-  model: 'claude-sonnet-4-6',
-  thinkingLevel: 'medium', // 'low' | 'medium' | 'high'
+  model: 'protolabs/smart', // gateway tier alias
+  systemPrompt: 'You are a helpful assistant.',
   contextFiles: ['.automaker/context/CLAUDE.md'],
   mcpServers: ['automaker', 'github'],
   customInstructions: 'Always use conventional commits',
@@ -69,11 +69,8 @@ const chatOptions = createChatOptions({
   subagents: { enabled: true, custom: [] },
 });
 
-// Pass to Claude SDK
-const response = await chat({
-  ...chatOptions,
-  messages: conversationHistory,
-});
+// Execute via ProtoProvider
+const response = await provider.executeQuery(queryOptions);
 ```
 
 ## Agent Session Management

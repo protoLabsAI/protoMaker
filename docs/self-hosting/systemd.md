@@ -1,10 +1,9 @@
 # systemd Service Configuration
 
-This guide covers running protoLabs as a systemd service for persistent deployments.
+This guide covers running protoLabs as a systemd service for persistent deployments. Two service files are provided:
 
-## Service File
-
-The service file is located at `automaker.service` in the repository root.
+- **`automaker-docker.service`** - Runs protoLabs via Docker Compose (recommended)
+- **`automaker-host.service`** - Runs protoLabs in direct host mode
 
 ```ini
 [Unit]
@@ -34,18 +33,27 @@ Environment=COMPOSE_PROJECT_NAME=automaker
 WantedBy=multi-user.target
 ```
 
+## Docker Service (automaker-docker.service)
+
+The recommended service file runs protoLabs via Docker Compose. Copy `automaker-docker.service` from the repository root to `/etc/systemd/system/`.
+
+## Host Service (automaker-host.service)
+
+For direct host mode (without Docker), copy `automaker-host.service` from the repository root to `/etc/systemd/system/`.
+
 ## Installation
 
 ### 1. Copy Service File
 
 ```bash
-sudo cp automaker.service /etc/systemd/system/automaker.service
+sudo cp automaker-docker.service /etc/systemd/system/
+sudo chmod 644 /etc/systemd/system/automaker-docker.service
 ```
 
 ### 2. Edit for Your Environment
 
 ```bash
-sudo nano /etc/systemd/system/automaker.service
+sudo nano /etc/systemd/system/automaker-docker.service
 ```
 
 Update:

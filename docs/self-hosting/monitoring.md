@@ -45,67 +45,9 @@ Possible statuses:
 - `unhealthy` - Health check failing
 - `starting` - Within start period
 
-### Using the /devops Skill
+### Health Monitoring
 
-```
-/devops health
-```
-
-This runs a comprehensive health check including:
-
-- Docker daemon status
-- Container states
-- Volume availability
-- API endpoint responses
-- WebSocket connectivity
-- CLI tool availability
-- Authentication status
-
-## Logging
-
-### Container Logs
-
-```bash
-# All services
-docker compose logs -f
-
-# Server only
-docker compose logs -f server
-
-# UI only
-docker compose logs -f ui
-
-# Last 100 lines
-docker compose logs --tail=100 server
-
-# Since timestamp
-docker compose logs --since="2026-02-05T10:00:00" server
-```
-
-### Log Levels
-
-Server logs use structured output with levels:
-
-```
-[INFO] Server started on port 3008
-[WARN] No ANTHROPIC_API_KEY found, using CLI auth
-[ERROR] Failed to connect to database
-```
-
-### Log Analysis with /devops
-
-```
-/devops logs
-```
-
-Analyzes container logs for:
-
-- Error patterns and stack traces
-- Warning frequencies
-- Request/response patterns
-- Performance indicators
-
-## Container Metrics
+Add a health check that stops the service if containers are unhealthy:
 
 ### Resource Usage
 
@@ -160,37 +102,6 @@ The server emits events for:
 - Terminal output
 - Auto-mode progress
 
-## Application Metrics
-
-### Board Summary
-
-```bash
-curl http://localhost:3008/api/board/summary \
-  -H "X-API-Key: YOUR_API_KEY"
-```
-
-Response:
-
-```json
-{
-  "columns": {
-    "backlog": 5,
-    "in-progress": 2,
-    "review": 1,
-    "done": 10
-  },
-  "runningAgents": 2,
-  "queuedFeatures": 3
-}
-```
-
-### Running Agents
-
-```bash
-curl http://localhost:3008/api/agents/running \
-  -H "X-API-Key: YOUR_API_KEY"
-```
-
 ## Alerting
 
 ### Docker Compose Health Dependencies
@@ -236,14 +147,16 @@ For production deployments, consider:
 | Grafana      | Visualization          |
 | PagerDuty    | Alerting               |
 
-## Prometheus + Grafana (Production)
+## Monitoring Stack
 
-The production compose (`docker-compose.prod.yml`) includes Prometheus and Grafana:
+The monitoring stack is defined in `docker-compose.infra.yml` and includes:
 
 | Service    | Port | Purpose               |
 | ---------- | ---- | --------------------- |
 | Prometheus | 9091 | Metrics collection    |
-| Grafana    | 3000 | Metrics visualization |
+| Grafana    | 3001 | Metrics visualization |
+
+**Note:** Anonymous auth is used for Grafana — set up a reverse proxy with authentication in front of it for production deployments.
 
 ### Configuration
 
@@ -266,16 +179,13 @@ The server exposes metrics when `ENABLE_METRICS=true` and `METRICS_PORT=9090` ar
 
 ```bash
 # Deploy with monitoring
-docker stack deploy -c docker-compose.prod.yml automaker
-
-# Or with docker-compose
-docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.infra.yml up -d
 ```
 
 ### Grafana Setup
 
-1. Access Grafana at `http://localhost:3000`
-2. Default admin password is in the `grafana_admin_password` Docker secret - **change immediately**
+1. Access Grafana at `http://localhost:3001`
+2. Anonymous auth is enabled by default — configure a reverse proxy with authentication for production
 3. Add Prometheus data source: `http://prometheus:9090`
 4. Import dashboards from `grafana-dashboards/` (if configured)
 

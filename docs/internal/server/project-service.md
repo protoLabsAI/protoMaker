@@ -129,7 +129,7 @@ Key invariant: **approval lands in `scaffolded`, and only `launch()` sets `activ
 
 ## Calendar Integration
 
-When `CalendarService` is wired in via `setCalendarService()`, project milestone dates can be synced to calendar events. This is optional; the service functions normally without it.
+> **Note:** Calendar integration is a planned feature. Project milestone dates can be synced to calendar events when `CalendarService` is wired in.
 
 ## Key Files
 

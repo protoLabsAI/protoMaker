@@ -266,7 +266,7 @@ When the Lead Engineer can't resolve a situation, signals are routed through the
 
 ## Fast-path supervisor rules
 
-Defined in `apps/server/src/services/lead-engineer-rules.ts`. 16 pure functions (no LLM) that react to events. Key rules:
+Defined in `apps/server/src/services/lead-engineer-rules.ts`. 13 pure functions (no LLM) that react to events. Key rules:
 
 | Rule                 | Trigger                          | Action                                    |
 | -------------------- | -------------------------------- | ----------------------------------------- |
@@ -274,24 +274,26 @@ Defined in `apps/server/src/services/lead-engineer-rules.ts`. 16 pure functions 
 | orphanedInProgress   | In-progress >4h, no agent        | Reset to backlog (block if 3+ failures)   |
 | staleDeps            | Blocked + all deps done          | Unblock                                   |
 | autoModeHealth       | Backlog >0 + auto-mode off       | Restart auto-mode                         |
-| staleReview          | Review >30min, no auto-merge     | Enable auto-merge                         |
 | stuckAgent           | Agent running >2h                | Abort and resume with wrap-up prompt      |
-| prApproved           | PR approved                      | Enable auto-merge, resolve threads        |
+| prApproved           | PR approved                      | Resolve threads                           |
 | capacityRestart      | Feature completed + more backlog | Restart auto-mode                         |
 | projectCompleting    | All features done                | Trigger project completion                |
 | classifiedRecovery   | Escalation with retryable error  | Auto-retry if confidence >=0.7            |
 | hitlFormResponse     | HITL form submitted              | Retry / provide context / skip / close    |
-| reviewQueueSaturated | Review count >= max (5)          | Log warning, scheduler pauses pickup      |
+| reviewQueueSaturated | Review count >= max (5)          | Log warning, scheduler pauses pickup     |
 | errorBudgetExhausted | Budget exhausted                 | Log warning, restrict to bug-fix features |
+| prMergedDrift        | PR merged, feature not done      | Transition to done                        |
 
 ## Feature status system
 
-Five canonical statuses on the board (`libs/types/src/feature.ts`):
+Six canonical statuses on the board (`libs/types/src/feature.ts`):
 
 ```
 backlog → in_progress → review → done
-             |           |
-          blocked < < < -+
+             ↓           ↓
+          blocked ← ← ← ┘
+             ↑
+        interrupted
 ```
 
 ### Pipeline phase to status mapping

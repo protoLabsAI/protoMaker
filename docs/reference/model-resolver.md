@@ -1,27 +1,27 @@
 # Model Resolver
 
-The Model Resolver (`@protolabsai/model-resolver`) converts human-friendly model aliases to full model identifiers used by AI providers. This system enables consistent model selection across protoLabs Studio while simplifying configuration.
+The Model Resolver (`@protolabsai/model-resolver`) converts human-friendly model aliases to gateway tier identifiers used by AI providers. This system enables consistent model selection across protoLabs Studio while simplifying configuration.
 
 ## Overview
 
 Instead of using full model strings like `claude-sonnet-4-6-20250929`, users can specify aliases like `sonnet`. The resolver handles:
 
-- **Alias expansion** - `sonnet` → `claude-sonnet-4-6`
+- **Alias expansion** - `sonnet` → `protolabs/smart`
+- **Gateway tiers** - `protolabs/fast`, `protolabs/smart`, `protolabs/reasoning`
 - **Version pinning** - Specific versions for reproducibility
-- **Provider detection** - Auto-detect Claude vs OpenAI vs custom
 - **Fallback handling** - Graceful degradation when models are unavailable
 
 ## Model Hierarchy
 
-protoLabs Studio uses a three-tier model system:
+protoLabs Studio uses a three-tier gateway model system:
 
-| Alias    | Model ID                    | Provider | Use Case                              | Cost (per 1M tokens)        |
-| -------- | --------------------------- | -------- | ------------------------------------- | --------------------------- |
-| `haiku`  | `claude-haiku-4-5-20251001` | Claude   | Quick tasks, simple features          | $0.80 input, $4.00 output   |
-| `sonnet` | `claude-sonnet-4-6`         | Claude   | Standard features (default)           | $3.00 input, $15.00 output  |
-| `opus`   | `claude-opus-4-6`           | Claude   | Architectural decisions, complex work | $15.00 input, $75.00 output |
+| Alias    | Gateway Tier       | Provider | Use Case                              | Cost (per 1M tokens)        |
+| -------- | ------------------ | -------- | ------------------------------------- | --------------------------- |
+| `haiku`  | `protolabs/fast`   | Claude   | Quick tasks, simple features          | $0.80 input, $4.00 output   |
+| `sonnet` | `protolabs/smart`  | Claude   | Standard features (default)           | $3.00 input, $15.00 output  |
+| `opus`   | `protolabs/reasoning` | Claude   | Architectural decisions, complex work | $15.00 input, $75.00 output |
 
-**Auto-escalation:** Features that fail 2+ times automatically escalate to opus on retry.
+**Auto-escalation:** Features that fail 2+ times automatically escalate to `protolabs/reasoning` on retry.
 
 ## Usage
 
@@ -31,17 +31,17 @@ protoLabs Studio uses a three-tier model system:
 import { resolveModelString } from '@protolabsai/model-resolver';
 
 // Alias expansion
-resolveModelString('sonnet'); // → 'claude-sonnet-4-6'
-resolveModelString('opus'); // → 'claude-opus-4-6'
-resolveModelString('haiku'); // → 'claude-haiku-4-5-20251001'
+resolveModelString('sonnet'); // → 'protolabs/smart'
+resolveModelString('opus'); // → 'protolabs/reasoning'
+resolveModelString('haiku'); // → 'protolabs/fast'
 
 // Pass-through for full model strings
-resolveModelString('claude-sonnet-4-6'); // → 'claude-sonnet-4-6'
+resolveModelString('protolabs/smart'); // → 'protolabs/smart'
 resolveModelString('gpt-4-turbo'); // → 'gpt-4-turbo'
 
 // Undefined/null returns default
-resolveModelString(undefined); // → 'claude-sonnet-4-6'
-resolveModelString(null); // → 'claude-sonnet-4-6'
+resolveModelString(undefined); // → 'protolabs/smart'
+resolveModelString(null); // → 'protolabs/smart'
 ```
 
 ### In Agent Configuration

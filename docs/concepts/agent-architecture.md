@@ -18,7 +18,7 @@ protoLabs's agent system is built on three key concepts from Claude's agent ecos
 ### Skills
 
 **What:** Reusable CLI commands that invoke specific modes or workflows
-**protoLabs Examples:** `/ava` (Chief of Staff), `/board` (Kanban management), `/headsdown` (autonomous work mode)
+**protoLabs Examples:** `/board` (Kanban management), `/ship` (git workflow), `/roxy` (chief of staff), `/quinn` (dev workflow), `/sparc-prd` (PRD creation)
 **Claude Docs:** [Skills explained](https://claude.com/blog/skills-explained)
 
 ### Subagents
@@ -60,24 +60,23 @@ protoLabs's agent system is built on three key concepts from Claude's agent ecos
 └──────────────────────┬──────────────────────────────────────┘
                        │
 ┌──────────────────────▼──────────────────────────────────────┐
-│  Execution Layer                                            │
-│  - @anthropic-ai/claude-agent-sdk                          │
-│  - Native SDK features: hooks, checkpointing, cost tracking│
+│  Execution Layer                                             │
+│  - @protolabsai/sdk (ProtoProvider, priority 100)         │
+│  - query() method (not chat())                              │
 │  - Session management, context compaction                   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ## Execution Model
 
-### All Agents Use Native Claude SDK
+### All Agents Use ProtoProvider (SDK)
 
-**Every agent in protoLabs** (whether triggered by UI, CLI, or MCP) executes via the native Claude Agent SDK with full capabilities:
+**Every agent in protoLabs** (whether triggered by UI, CLI, or MCP) executes via `@protolabsai/sdk` with ProtoProvider (priority 100) as the default gateway. All providers use `query()` not `chat()`:
 
 - ✅ **Cost tracking** - Every agent execution tracks `total_cost_usd`
-- ✅ **File checkpointing** - Safe rollback on errors without git operations
 - ✅ **Session resume** - Failed agents can continue from where they left off
 - ✅ **Context management** - Automatic compaction and context window handling
-- ✅ **Thinking budgets** - Extended thinking for complex reasoning tasks
+- ✅ **Gateway tiers** - Model aliases resolve to `protolabs/fast`, `protolabs/smart`, `protolabs/reasoning`
 
 ### Execution Paths
 

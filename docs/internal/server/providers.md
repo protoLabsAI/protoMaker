@@ -166,7 +166,7 @@ export interface ContentBlock {
 
 **Location**: `apps/server/src/providers/claude-provider.ts`
 
-Uses `@anthropic-ai/claude-agent-sdk` for direct SDK integration.
+Uses `@protolabsai/sdk` with `ProtoProvider` (priority 100) as the default gateway provider. All providers use `query()` not `chat()`.
 
 #### Features
 
@@ -184,6 +184,8 @@ Routes models that:
 - Start with `"claude-"` (e.g., `"claude-opus-4-5-20251101"`)
 - Are Claude aliases: `"opus"`, `"sonnet"`, `"haiku"`
 
+Aliases resolve to gateway tiers: `"protolabs/smart"`, `"protolabs/reasoning"`, `"protolabs/fast"`.
+
 #### Authentication
 
 Requires:
@@ -193,12 +195,11 @@ Requires:
 #### Example Usage
 
 ```typescript
-const provider = new ClaudeProvider();
+import { createQueryOptions } from '@protolabsai/sdk';
 
-const stream = provider.executeQuery({
-  prompt: 'What is 2+2?',
-  model: 'claude-opus-4-5-20251101',
-  cwd: '/project/path',
+const queryOptions = createQueryOptions({
+  workingDirectory: '/path/to/worktree',
+  model: 'protolabs/smart', // resolved alias
   systemPrompt: 'You are a helpful assistant.',
   maxTurns: 20,
   allowedTools: ['Read', 'Write', 'Bash'],
@@ -208,6 +209,9 @@ const stream = provider.executeQuery({
     { role: 'assistant', content: 'Hi! How can I help?' },
   ],
 });
+
+// Execute via ProtoProvider (default)
+const stream = provider.executeQuery(queryOptions);
 
 for await (const msg of stream) {
   if (msg.type === 'assistant') {
@@ -388,6 +392,10 @@ export class ProviderFactory {
 ```
 
 When Langfuse is configured, the factory automatically wraps providers in `TracedProvider` for observability.
+
+### Default Provider (ProtoProvider)
+
+The system ships with `ProtoProvider` (priority 100) as the default gateway provider. It is automatically selected when no explicit provider matches the model string. All providers use `query()` (not `chat()`) for execution.
 
 ### Usage in Services
 

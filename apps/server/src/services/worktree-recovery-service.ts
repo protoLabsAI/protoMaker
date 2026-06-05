@@ -36,12 +36,10 @@ export interface WorktreeRecoveryResult {
 /**
  * Check for uncommitted work in a worktree after agent exit and recover if found.
  *
- * Steps when uncommitted work is detected:
  * 1. Stage changed files (excluding .automaker/ except memory/)
  * 1.5. Format staged files with prettier (non-fatal) and re-stage
  * 2. Commit with HUSKY=0 / --no-verify to bypass hooks
  * 3. Push to remote with -u
- * 4. Create PR via gh CLI targeting prBaseBranch
  *
  * Returns a structured result. The caller is responsible for updating feature
  * status, emitting events, and deciding how to proceed.
@@ -49,7 +47,7 @@ export interface WorktreeRecoveryResult {
  * @param feature - The feature being processed
  * @param worktreePath - Absolute path to the worktree
  * @param projectPath - Absolute path to the main project root (for resolving prettier binary)
- * @param prBaseBranch - Base branch for PR creation and rebase (from settings, defaults to DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch)
+ * @param prBaseBranch - Base branch for rebase and push (from settings, defaults to DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch)
  */
 export async function checkAndRecoverUncommittedWork(
   feature: Feature,

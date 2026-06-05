@@ -2,12 +2,14 @@
 
 ## Canonical Status Flow
 
-protoLabs uses a consolidated status system for all features:
+protoLabs uses six canonical statuses for all features:
 
 ```
 backlog → in_progress → review → done
              ↓           ↓
           blocked ← ← ← ┘
+             ↑
+        interrupted
 ```
 
 `interrupted` is an exceptional state (server shutdown mid-execution) — it sits outside the normal flow and is treated the same as `blocked` for recovery purposes.

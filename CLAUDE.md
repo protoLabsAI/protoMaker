@@ -378,9 +378,9 @@ Project-specific rules are stored in `.automaker/context/` and automatically loa
 
 Use `resolveModelString()` from `@protolabsai/model-resolver` to convert model aliases:
 
-- `haiku` → `claude-haiku-4-5-20251001`
-- `sonnet` → `claude-sonnet-4-6`
-- `opus` → `claude-opus-4-6`
+- `haiku` → `protolabs/fast`
+- `sonnet` → `protolabs/smart`
+- `opus` → `protolabs/reasoning`
 
 ### Lead Engineer State Machine
 

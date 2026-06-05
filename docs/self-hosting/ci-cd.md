@@ -4,16 +4,17 @@ protoLabs.studio uses GitHub Actions for continuous integration and delivery. CI
 
 ## Workflows Overview
 
-| Workflow           | Trigger                  | Runner      | Purpose                      |
-| ------------------ | ------------------------ | ----------- | ---------------------------- |
-| `checks.yml`       | PR, push to main, weekly | self-hosted | Format, lint, audit          |
-| `test.yml`         | PR, push to main         | self-hosted | Unit tests                   |
-| `e2e-tests.yml`    | Push to main, manual     | self-hosted | End-to-end tests             |
-| `pr-check.yml`     | PR, push to main         | self-hosted | Build verification           |
-| `auto-release.yml` | Push to main             | self-hosted | Version tag + GitHub Release |
-| `deploy-docs.yml`  | Push to main             | self-hosted | Publish VitePress docs site  |
+| Workflow           | Trigger                  | Runner                           | Purpose                      |
+| ------------------ | ------------------------ | -------------------------------- | ---------------------------- |
+| `checks.yml`       | PR, push to main, weekly | namespace-profile-protolabs-linux | Format, lint, audit          |
+| `test.yml`         | PR, push to main         | namespace-profile-protolabs-linux | Unit tests                   |
+| `e2e-tests.yml`    | Push to main, manual     | namespace-profile-protolabs-linux | End-to-end tests             |
+| `pr-check.yml`     | PR, push to main         | namespace-profile-protolabs-linux | Build verification           |
+| `auto-release.yml` | Push to main             | namespace-profile-protolabs-linux | Version tag + GitHub Release |
+| `deploy-docs.yml`  | Push to main             | namespace-profile-protolabs-linux | Publish VitePress docs site  |
+| `publish-image.yml`| Push to main             | ubuntu-latest                    | Docker image publish         |
 
-> **Note:** Format checking, linting, and security audit are consolidated into `checks.yml`. There is no separate `format-check.yml` or `security-audit.yml`.
+> **Note:** All workflows use Namespace cloud runners (`namespace-profile-protolabs-linux`) except `publish-image.yml` which uses `ubuntu-latest` for Docker image publishing. There is no self-hosted runner fleet.
 
 ## Checks (`checks.yml`)
 
@@ -32,7 +33,7 @@ on:
 
 jobs:
   checks:
-    runs-on: self-hosted
+    runs-on: namespace-profile-protolabs-linux
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-project
@@ -75,7 +76,7 @@ on:
 
 jobs:
   test:
-    runs-on: self-hosted
+    runs-on: namespace-profile-protolabs-linux
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-project
@@ -105,7 +106,7 @@ on:
 
 jobs:
   e2e:
-    runs-on: self-hosted
+    runs-on: namespace-profile-protolabs-linux
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -165,7 +166,7 @@ on:
 
 jobs:
   build:
-    runs-on: self-hosted
+    runs-on: namespace-profile-protolabs-linux
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-project
@@ -288,9 +289,9 @@ IaC source of truth: `scripts/infra/rulesets/main.json`
 | `GH_PAT`            | PAT for `auto-release.yml` tag push (enables downstream workflow triggers) |
 | `ANTHROPIC_API_KEY` | LLM release notes rewriting (Haiku 4.5)                                    |
 
-## Self-Hosted Runner Capabilities
+## Namespace Cloud Runner Capabilities
 
-The self-hosted runner has access to resources that GitHub-hosted runners don't:
+Namespace cloud runners provide the following capabilities (replacing the previous self-hosted fleet):
 
 | Capability                 | What It Enables                                          |
 | -------------------------- | -------------------------------------------------------- |

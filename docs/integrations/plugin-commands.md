@@ -201,22 +201,6 @@ Ship current changes with full git workflow automation.
 - Enables auto-merge
 - Handles conflicts automatically
 
-### /headsdown
-
-Deep work mode for autonomous feature processing.
-
-```bash
-/headsdown                # Enter deep work mode
-```
-
-**What It Does:**
-
-- Autonomously processes features from the backlog
-- Merges approved PRs
-- Grooms the board
-- Stays productive until the system is void of work
-- Minimal human interaction required
-
 ### /due-diligence
 
 Validate approaches and question architectures with evidence-based research.
@@ -282,29 +266,6 @@ Analyze, critique, and improve prompts for LLM agents.
 - Identifies anti-patterns
 - Rewrites with improvements and explanations
 
-### /ava
-
-Autonomous operator -- identifies friction, ships fixes, keeps work flowing. Supports multi-project delegation across repos.
-
-```bash
-/ava                      # Activate in current project
-/ava /path/to/project     # Activate for a specific project
-```
-
-**Capabilities:**
-
-- Full control surface: features, agents, worktrees, PRs, context files, auto-mode
-- Multi-project awareness -- can switch between repos
-- Delegation tree: spawns subagents for parallel work
-- Autonomous decision-making: creates features, starts agents, merges PRs
-- Session continuity: state persists across compaction via hooks
-
-**When to Use:**
-
-- Hands-off autonomous operation ("go work on the backlog")
-- Operational leadership across multiple projects
-- When things need to get done without step-by-step guidance
-
 ### /setuplab
 
 Point at any repo -- scan it, measure the gap against the protoLabs gold standard, initialize automation, and propose alignment work. The entry point for onboarding projects.
@@ -342,9 +303,41 @@ Guided plugin version upgrade. Handles uninstall, reinstall, env migration, and 
 
 > **Note:** This is a temporary command for early tester onboarding. It will be removed once all testers are on v0.15.x+.
 
+### /roxy
+
+Chief of Staff agent -- orchestrates work across the board, manages features, coordinates agents.
+
+```bash
+/roxy                     # Activate chief of staff
+/roxy [instruction]       # Give specific instruction
+```
+
+**What It Does:**
+
+- Manages feature lifecycle
+- Coordinates agent execution
+- Reports status and blockers
+- Proposes next actions
+
+### /quinn
+
+Developer workflow agent -- implements features, writes tests, handles git workflow.
+
+```bash
+/quinn                    # Activate dev workflow
+/quinn [feature-id]       # Work on specific feature
+```
+
+**What It Does:**
+
+- Implements feature requirements
+- Writes and runs tests
+- Handles git operations (commit, push, PR)
+- Reviews own work for quality
+
 ## Subagents
 
-The plugin includes 13 specialized agents for complex tasks. Invoke them via the `Task` tool with `subagent_type: "protolabs:<agent-name>"`.
+The plugin includes 11 specialized agents for complex tasks. Invoke them via the `Task` tool with `subagent_type: "protolabs:<agent-name>"`.
 
 ### protolabs:feature-planner
 
@@ -443,14 +436,14 @@ Backup and restore Docker volumes.
 | `/orchestrate`     | --     | No model (direct tool calls) |
 | `/context`         | --     | No model (direct tool calls) |
 | `/ship`            | --     | No model (direct tool calls) |
-| `/headsdown`       | --     | No model (direct tool calls) |
 | `/improve-prompts` | --     | No model (direct tool calls) |
 | `/due-diligence`   | Sonnet | Evidence-based analysis      |
 | `/plan-project`    | Sonnet | Complex orchestration        |
 | `/sparc-prd`       | Sonnet | Sophisticated analysis       |
-| `/ava`             | --     | No model (direct tool calls) |
 | `/setuplab`        | Sonnet | Complex multi-phase pipeline |
 | `/update-plugin`   | --     | No model (direct tool calls) |
+| `/roxy`            | --     | No model (direct tool calls) |
+| `/quinn`           | --     | No model (direct tool calls) |
 
 ### Agent Models
 

@@ -113,7 +113,7 @@ import {
 
 ### @protolabsai/model-resolver
 
-Converts model aliases to full model strings.
+Converts model aliases to gateway tier identifiers.
 
 **Key exports:**
 
@@ -121,9 +121,9 @@ Converts model aliases to full model strings.
 import { resolveModelString } from '@protolabsai/model-resolver';
 
 // Usage
-resolveModelString('sonnet'); // → 'claude-sonnet-4-6'
-resolveModelString('opus'); // → 'claude-opus-4-6'
-resolveModelString('haiku'); // → 'claude-haiku-4-5-20251001'
+resolveModelString('sonnet'); // → 'protolabs/smart'
+resolveModelString('opus'); // → 'protolabs/reasoning'
+resolveModelString('haiku'); // → 'protolabs/fast'
 ```
 
 See [Model Resolver Reference](../reference/model-resolver.md) for details.
