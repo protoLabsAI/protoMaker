@@ -875,44 +875,107 @@ export async function getEffectivePrBaseBranch(
   settingsService?: SettingsService | null,
   logPrefix = '[PrBaseBranch]'
 ): Promise<string> {
+  // Precedence (first usable match wins):
+  //   1. Project-level `workflow.gitWorkflow.prBaseBranch` — explicit per-repo intent.
+  //   2. The repo's own default branch (`origin/HEAD`) — repo reality outranks a global
+  //      blanket default, which is the least repo-aware signal we have.
+  //   3. Global `gitWorkflow.prBaseBranch` — a true fallback for repos that expose no
+  //      detectable default branch.
+  //   4. DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch ('main') — hardcoded floor.
+  //
+  // A *configured* candidate (project or global) that does not exist on the remote is
+  // skipped rather than returned: returning a non-existent base ref makes
+  // `git worktree add ... origin/<base>` fail with `fatal: invalid reference` and
+  // hard-blocks the feature (#4086). It is only skipped when the remote is reachable and
+  // definitively reports the branch absent — a transient check failure honors the
+  // configured value (fail-open to stated intent). origin/HEAD comes from a local ref
+  // that points at a real branch by construction, so it is trusted without a remote probe.
+
+  // 1. Project-level override.
   if (settingsService) {
     try {
-      // 1. Check per-project gitWorkflow settings
       const projectSettings = await settingsService.getProjectSettings(projectPath);
       const projectBranch = projectSettings.workflow?.gitWorkflow?.prBaseBranch;
       if (projectBranch) {
-        logger.debug(`${logPrefix} Using project-level prBaseBranch: ${projectBranch}`);
-        return projectBranch;
-      }
-      // 2. Check global gitWorkflow settings
-      const globalSettings = await settingsService.getGlobalSettings();
-      const globalBranch = globalSettings.gitWorkflow?.prBaseBranch;
-      if (globalBranch) {
-        logger.debug(`${logPrefix} Using global-level prBaseBranch: ${globalBranch}`);
-        return globalBranch;
+        if (await isUsableBaseBranch(projectPath, projectBranch)) {
+          logger.debug(`${logPrefix} Using project-level prBaseBranch: ${projectBranch}`);
+          return projectBranch;
+        }
+        logger.warn(
+          `${logPrefix} Project-level prBaseBranch "${projectBranch}" not found on origin — falling through to repo default`
+        );
       }
     } catch (err) {
-      logger.warn(`${logPrefix} Failed to read settings for prBaseBranch:`, err);
+      logger.warn(`${logPrefix} Failed to read project settings for prBaseBranch:`, err);
     }
   }
 
-  // 3. Auto-detect from remote HEAD
+  // 2. The repo's own default branch (origin/HEAD) outranks the global default.
+  const originHead = await detectOriginHeadBranch(projectPath);
+  if (originHead) {
+    logger.debug(`${logPrefix} Using repo default branch from origin/HEAD: ${originHead}`);
+    return originHead;
+  }
+
+  // 3. Global default — fallback when the repo exposes no default branch.
+  if (settingsService) {
+    try {
+      const globalSettings = await settingsService.getGlobalSettings();
+      const globalBranch = globalSettings.gitWorkflow?.prBaseBranch;
+      if (globalBranch) {
+        if (await isUsableBaseBranch(projectPath, globalBranch)) {
+          logger.debug(`${logPrefix} Using global-level prBaseBranch: ${globalBranch}`);
+          return globalBranch;
+        }
+        logger.warn(
+          `${logPrefix} Global prBaseBranch "${globalBranch}" not found on origin — using default "${DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch}"`
+        );
+      }
+    } catch (err) {
+      logger.warn(`${logPrefix} Failed to read global settings for prBaseBranch:`, err);
+    }
+  }
+
+  // 4. Hardcoded floor.
+  return DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch;
+}
+
+/**
+ * Read a repo's default branch from its local `origin/HEAD` symbolic ref
+ * (set at clone time, e.g. `refs/remotes/origin/main`). Returns null when the
+ * ref is unset or git is unavailable.
+ */
+async function detectOriginHeadBranch(projectPath: string): Promise<string | null> {
   try {
     const { stdout } = await execFileAsync('git', ['symbolic-ref', 'refs/remotes/origin/HEAD'], {
       cwd: projectPath,
       timeout: 5000,
       encoding: 'utf-8',
     });
-    const ref = stdout.trim(); // e.g., refs/remotes/origin/main
-    const branch = ref.replace('refs/remotes/origin/', '');
-    if (branch) {
-      logger.debug(`${logPrefix} Auto-detected prBaseBranch from remote HEAD: ${branch}`);
-      return branch;
-    }
+    const branch = stdout.trim().replace('refs/remotes/origin/', '');
+    return branch || null;
   } catch {
-    // origin/HEAD not set or git not available — fall through to default
+    // origin/HEAD not set or git not available.
+    return null;
   }
+}
 
-  // 5. Final fallback
-  return DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch;
+/**
+ * Whether a configured base branch is usable. Returns true unless the remote is
+ * reachable and definitively reports the branch absent. `git ls-remote --exit-code`
+ * exits 2 when no ref matches (a definitive "absent"); any other failure (not a repo,
+ * no network, timeout) is inconclusive and returns true so an explicitly configured
+ * branch is honored rather than silently downgraded.
+ */
+async function isUsableBaseBranch(projectPath: string, branch: string): Promise<boolean> {
+  try {
+    await execFileAsync('git', ['ls-remote', '--exit-code', '--heads', 'origin', branch], {
+      cwd: projectPath,
+      timeout: 8000,
+    });
+    return true; // branch present on origin
+  } catch (err) {
+    const code = (err as { code?: number }).code;
+    return code !== 2;
+  }
 }
