@@ -387,5 +387,5 @@ VITE_HOSTNAME=localhost
 
 - [Monorepo Architecture](./monorepo-architecture.md) - Package structure
 - [Git Workflow](./git-workflow.md) - Branch strategies
-- [MCP Tools Reference](../integrations/mcp-tools-reference.md) - MCP server configuration
+- [MCP Tools Reference](../reference/mcp-tools.md) - MCP server configuration
 - [Self-Hosting](../self-hosting/deployment.md) - Production deployment guide
