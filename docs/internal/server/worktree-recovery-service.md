@@ -1,6 +1,6 @@
 # Worktree Recovery Service
 
-Post-agent safety net that detects uncommitted work after an agent exits and automatically creates a PR to preserve the work.
+Post-agent safety net that detects uncommitted work after an agent exits and **preserves it (commit + push)**. It does **not** create a PR — PR creation is owned by the single guarded chokepoint (`GitWorkflowService.runPostCompletionWorkflow`), per the pure-executor principle.
 
 ## Overview
 
@@ -10,11 +10,10 @@ Post-agent safety net that detects uncommitted work after an agent exits and aut
 2. **Formats** changed files with Prettier (non-fatal if it fails)
 3. **Stages** changes using pathspec-based `git add`, with fallback to `git add .`
 4. **Commits** with `--no-verify` and `HUSKY=0` to bypass pre-commit hooks
-5. **Rebases** onto `origin/<baseBranch>` to avoid conflicting PRs
-6. **Pushes** the branch to remote
-7. **Creates a PR** via `gh pr create` and **enables auto-merge** (`--squash`)
+5. **Rebases** onto `origin/<baseBranch>` to avoid diverging from the base
+6. **Pushes** the branch to remote — and **stops there**
 
-The function returns a structured `WorktreeRecoveryResult`. The **caller** is responsible for updating feature status and emitting events.
+It never calls `gh pr create` or enables auto-merge. The net exists only to keep work from being lost; turning that work into a PR is a separate, guarded step. The function returns a structured `WorktreeRecoveryResult`; the **caller** updates feature status and emits events.
 
 ## Recovery Flow
 
@@ -29,18 +28,16 @@ checkAndRecoverUncommittedWork(feature, worktreePath, projectPath, prBaseBranch?
   → Step 3: git commit --no-verify -m "refactor: <feature title>"  (HUSKY=0)
   → Step 3.5: git fetch origin <baseBranch> && git rebase origin/<baseBranch>
       → conflict? → git rebase --abort, push without rebase
-  → Step 4: git push [-–force-with-lease] -u origin <branchName>
-  → Step 5: gh pr create --base <baseBranch> --head <branchName>
-  → gh pr merge <prNumber> --auto --squash
-  → return { detected: true, recovered: true, prUrl, prNumber, prCreatedAt }
+  → Step 4: git push [--force-with-lease] -u origin <branchName>
+  → return { detected: true, recovered: true }   // work preserved; NO PR
 ```
 
 ## Rebase Strategy
 
-After committing, the service fetches and rebases onto `origin/<baseBranch>` (default: `main`). This prevents the PR from diverging from the base branch.
+After committing, the service fetches and rebases onto `origin/<baseBranch>` (default: `main`). This keeps the pushed branch from diverging from the base.
 
 - **On success:** push uses `--force-with-lease` (safe force push)
-- **On conflict:** rebases is aborted, push proceeds without force flag
+- **On conflict:** the rebase is aborted, push proceeds without the force flag
 
 Branch name is sanitized (`/[^a-zA-Z0-9_./-]/g` stripped) to prevent shell injection.
 
@@ -49,10 +46,7 @@ Branch name is sanitized (`/[^a-zA-Z0-9_./-]/g` stripped) to prevent shell injec
 ```typescript
 interface WorktreeRecoveryResult {
   detected: boolean; // uncommitted changes were found
-  recovered: boolean; // commit + push + PR succeeded
-  prUrl?: string; // e.g., https://github.com/org/repo/pull/42
-  prNumber?: number;
-  prCreatedAt?: string; // ISO-8601 timestamp
+  recovered: boolean; // work preserved (commit + push succeeded); PR creation is NOT done here
   error?: string; // message if recovery failed
 }
 ```
@@ -74,5 +68,5 @@ If the pathspec stages nothing (e.g., all files are in unusual locations), the s
 
 ## See Also
 
-- [Git Workflow Service](./git-workflow-service) — the primary happy-path git pipeline (agent commits correctly)
-- [Auto Mode Service](./auto-mode-service) — owns the execution loop that triggers recovery
+- [Git Workflow Service](./git-workflow-service) — the happy-path git pipeline and the single guarded PR-creation chokepoint (`runPostCompletionWorkflow`)
+- [Lead Engineer Service](./lead-engineer-service) — owns the execution loop that triggers recovery
