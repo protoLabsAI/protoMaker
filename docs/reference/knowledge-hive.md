@@ -424,11 +424,11 @@ Search the knowledge store using hybrid retrieval.
 }
 ```
 
-### GET /stats
+### POST /stats
 
 Get statistics about the knowledge store.
 
-**Query Parameters:**
+**Body Parameters:**
 
 - `projectPath` (required)
 
@@ -567,7 +567,7 @@ Use the top 3 results to inform your implementation.
 The protoLabs Studio MCP server exposes knowledge search:
 
 ```typescript
-mcp__plugin_protolabs_studio__search_knowledge({
+mcp__plugin_protolabs_studio__knowledge_search({
   projectPath: '/path/to/project',
   query: 'how to add a new memory category',
   maxResults: 5,
@@ -583,7 +583,7 @@ The protoLabs Studio UI (future) will include a knowledge search panel.
 ### Check Embedding Status
 
 ```bash
-curl http://localhost:3008/api/knowledge/stats?projectPath=/path/to/project
+curl -X POST http://localhost:3008/api/knowledge/stats -H 'Content-Type: application/json' -d '{"projectPath":"/path/to/project"}'
 ```
 
 Look for `enabledHybridRetrieval: false` if embeddings aren't working.
