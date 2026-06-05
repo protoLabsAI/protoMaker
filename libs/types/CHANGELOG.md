@@ -1,5 +1,12 @@
 # @protolabsai/types
 
+## 0.112.1
+
+### Patch Changes
+
+- ### Bug Fixes
+  - not_planned issue close emits feature.cancelled, not completed (#4103) (#4106)
+
 ## 0.112.0
 
 ### Minor Changes
