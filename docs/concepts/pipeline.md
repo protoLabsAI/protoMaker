@@ -4,49 +4,47 @@ The complete lifecycle of work in protoLabs Studio, from initial signal through 
 
 ## Overview
 
-Every piece of work flows through an 8-phase pipeline with two human gates. The pipeline has two branches (ops and gtm), three authority agents, a Lead Engineer state machine, and fast-path supervisor rules.
+Every piece of work flows through a 9-phase pipeline with two human gates. The pipeline has one branch (ops), three authority agents, a Lead Engineer state machine, and fast-path supervisor rules.
 
 ```
-Signal → TRIAGE → RESEARCH → SPEC → SPEC_REVIEW → DESIGN → PLAN → EXECUTE → PUBLISH
-                                         ^ GATE                               ^ GATE
+Signal → TRIAGE → RESEARCH → SPEC → SPEC_REVIEW → DESIGN → PLAN → EXECUTE → VERIFY → PUBLISH
+                                         ^ GATE                                      ^ GATE
 ```
 
-GTM branch skips DESIGN and PLAN (content doesn't need architectural decomposition).
+The ops branch handles all work: features, fixes, docs, and infrastructure. The pipeline is defined in `libs/types/src/pipeline-phase.ts`.
 
 ## Signal entry
 
 Work enters through four channels, all routed by `SignalIntakeService`:
 
-| Source                | Classification  | Path                          |
-| --------------------- | --------------- | ----------------------------- |
-| GitHub issue/PR event | ops             | Lead Engineer state machine   |
-| Discord event         | ops / gtm       | Signal classification + route |
-| MCP `create_feature`  | ops (fast path) | Direct to board, skip PM      |
-| MCP `process_idea`    | ops (full path) | PM Agent research + PRD       |
-
-**GTM gate:** The entire GTM branch is controlled by the `gtmEnabled` global setting (default: `false`). When disabled, `SignalIntakeService` forces all signals to ops, content API routes return 403, and the UI hides GTM-related nodes. Enable via settings to activate GTM routing.
+| Source                 | Classification | Path                          |
+| ---------------------- | -------------- | ----------------------------- |
+| GitHub issue/PR event  | ops            | Lead Engineer state machine   |
+| Discord event          | ops            | Signal classification + route |
+| MCP `create_feature`   | ops (fast)     | Direct to board, skip PM      |
+| MCP `initiate_project` | ops (full)     | PM Agent research + PRD       |
 
 **Fast path** skips the PM pipeline -- feature goes straight to the board and Lead Engineer picks it up. Use when you know exactly what needs building.
 
-**Full path** routes through PM Agent for research, PRD generation, and CTO approval before decomposition.
+**Full path** routes through PM Agent for research, PRD generation, and approval before decomposition.
 
 ### Signal intent classification
 
-`SignalIntakeService` applies a second classification layer -- intent -- independent of the ops/gtm routing. Intent identifies the nature of the signal so the Lead Engineer and downstream agents can handle it appropriately without re-classifying.
+`SignalIntakeService` applies a second classification layer -- intent -- independent of channel routing. Intent identifies the nature of the signal so the Lead Engineer and downstream agents can handle it appropriately without re-classifying.
 
 **Type:** `SignalIntent` in `libs/types/src/signal-intent.ts`
 
 | Intent           | Description                                                                              | Routing                                                                   |
 | ---------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | `work_order`     | Concrete task ready for implementation (MCP create_feature, UI board action)             | Ops pipeline -- normal execution                                          |
-| `idea`           | Vague concept needing PM refinement (MCP process_idea, Discord brainstorm channels)      | PM Agent research + PRD                                                   |
+| `idea`           | Vague concept needing PM refinement (MCP initiate_project, Discord brainstorm channels)  | PM Agent research + PRD                                                   |
 | `feedback`       | Commentary on existing work (PR review, Discord discussion)                              | Routes to running agent via `sendMessageToAgent()` or `followUpFeature()` |
-| `conversational` | Casual message or question -- no work item created (Discord @mentions, social exchanges) | GTM or acknowledged without feature creation                              |
+| `conversational` | Casual message or question -- no work item created (Discord @mentions, social exchanges) | Acknowledged without feature creation                                     |
 | `interrupt`      | Urgent signal requiring immediate human attention (SLA breach, emergency)                | Bypasses PM pipeline entirely -- creates HITL form directly               |
 
 The `intent` field is threaded onto all `signal:routed` events. The interrupt fast-path uses `HITLFormService` (wired via `setHITLFormService()` at server startup).
 
-## The 8 phases
+## The 9 phases
 
 Defined in `libs/types/src/pipeline-phase.ts`.
 
@@ -54,7 +52,7 @@ Defined in `libs/types/src/pipeline-phase.ts`.
 
 **Gate:** auto | **Agent:** SignalIntakeService | **workItemState:** `idea`
 
-Classify the signal as ops or gtm. Create the feature. Emit `authority:idea-injected`.
+Classify the signal as ops. Create the feature. Emit `authority:idea-injected`.
 
 ### Phase 1.5: TRIAGE + CLARIFICATION (optional HITL gate)
 
@@ -76,29 +74,25 @@ PM Agent generates a SPARC PRD (Situation, Problem, Approach, Results, Constrain
 
 ### Phase 4: SPEC_REVIEW
 
-**Gate:** review (ops) / manual (gtm) | **Agent:** none (human) | **workItemState:** `prd_ready`
+**Gate:** review (ops) | **Agent:** none (human) | **workItemState:** `prd_ready`
 
 **First human gate.** The pipeline holds here (`awaitingGate: true`). CTO reviews the PRD and approves or requests changes. On approval, emits `authority:pm-review-approved` and transitions to `approved`.
 
-The PRD approval endpoint (`/api/engine/signal/approve-prd`) bridges directly to `pipelineOrchestrator.resolveGate()`, so approving the PRD also advances the pipeline gate in a single action. Rejecting the PRD resets the feature to `idea` state and rejects the gate.
+The PRD approval endpoint (`/api/engine/signal/approve-prd`) resolves the pipeline gate, so approving the PRD also advances the pipeline gate in a single action. Rejecting the PRD resets the feature to `idea` state and rejects the gate.
 
 If a HITL form is pending for the feature (e.g., clarification questions), clicking the gated node in the flow graph or the amber gate indicator in the progress bar opens the HITL form dialog directly.
 
-### Phase 5: DESIGN (ops only)
+### Phase 5: DESIGN
 
 **Gate:** auto | **Agent:** ProjM Agent | **workItemState:** `approved`
 
 ProjM creates a project with milestones. Only one milestone can be in-progress at a time (sequential execution). Emits `milestone:planned`.
 
-GTM branch skips this phase entirely.
-
-### Phase 6: PLAN (ops only)
+### Phase 6: PLAN
 
 **Gate:** auto | **Agent:** ProjM Agent | **workItemState:** `planned`
 
 ProjM decomposes milestone phases into child features with dependencies. Sets up the execution order. Emits `milestone:started`. Features transition to `ready`.
-
-GTM branch skips this phase entirely.
 
 ### Phase 7: EXECUTE
 
@@ -106,15 +100,21 @@ GTM branch skips this phase entirely.
 
 The Lead Engineer state machine takes over. See the Lead Engineer section below for the full sub-state machine (INTAKE, PLAN, EXECUTE, REVIEW, MERGE, DEPLOY, DONE).
 
-### Phase 8: PUBLISH
+### Phase 8: VERIFY
 
-**Gate:** review (ops) / manual (gtm) | **Agent:** Merge orchestrator | **workItemState:** `done`
+**Gate:** review | **Agent:** Lead Engineer (REVIEW, MERGE, DEPLOY) | **workItemState:** `testing`
 
-**Second human gate.** PR is created, CI runs, CodeRabbit reviews. The pipeline can hold here for human review if issues are found. On clean pass, auto-proceeds. PR merges to target branch (main, or the parent epic branch for epic children). Board status updates to `done`. Emits `feature:pr-merged`.
+PR is created, CI runs, CodeRabbit reviews. The pipeline can hold here for human review if issues are found. On clean pass, auto-proceeds. PR merges to target branch (main, or the parent epic branch for epic children). Board status updates to `review`. Emits `feature:pr-merged`.
+
+### Phase 9: PUBLISH
+
+**Gate:** auto | **Agent:** none | **workItemState:** `done`
+
+Terminal phase. Board status updates to `done`. Feature is complete.
 
 ## Gate system
 
-Defined in `pipeline-orchestrator.ts`.
+Defined in `libs/types/src/pipeline-phase.ts`.
 
 Three gate modes control phase transitions:
 
@@ -126,16 +126,17 @@ Three gate modes control phase transitions:
 
 ### Default gate configuration (ops)
 
-| Phase transition     | Gate       |
-| -------------------- | ---------- |
-| TRIAGE → RESEARCH    | auto       |
-| RESEARCH → SPEC      | auto       |
-| SPEC → SPEC_REVIEW   | auto       |
-| SPEC_REVIEW → DESIGN | **review** |
-| DESIGN → PLAN        | auto       |
-| PLAN → EXECUTE       | auto       |
-| EXECUTE → PUBLISH    | **review** |
-| PUBLISH → done       | auto       |
+| Phase       | Gate       |
+| ----------- | ---------- |
+| TRIAGE      | auto       |
+| RESEARCH    | auto       |
+| SPEC        | auto       |
+| SPEC_REVIEW | **review** |
+| DESIGN      | auto       |
+| PLAN        | auto       |
+| EXECUTE     | auto       |
+| VERIFY      | **review** |
+| PUBLISH     | auto       |
 
 ### Gate hold state
 
@@ -151,7 +152,7 @@ When a gate holds, the feature's `pipelineState` records:
 
 Gate resolution emits `pipeline:gate-resolved` and advances to the next phase.
 
-**Duplicate event guard:** Multiple events can map to the same phase completion (e.g., both `authority:pm-prd-ready` and `ideation:prd-generated` map to SPEC completed). The orchestrator's `handlePhaseEvent` checks `!pipelineState.awaitingGate` before calling `advancePhase`, preventing duplicate gate holds from redundant events.
+**Duplicate event guard:** Multiple events can map to the same phase completion (e.g., both `authority:pm-prd-ready` and `ideation:prd-generated` map to SPEC completed). The pipeline checks `!pipelineState.awaitingGate` before advancing, preventing duplicate gate holds from redundant events.
 
 ## Authority agents
 
@@ -306,6 +307,7 @@ backlog → in_progress → review → done
 | DESIGN         | approved      | backlog      |
 | PLAN           | planned       | backlog      |
 | EXECUTE        | in_progress   | in_progress  |
+| VERIFY         | testing       | review       |
 | PUBLISH        | done          | done         |
 
 ## Dependency resolution
@@ -327,7 +329,7 @@ The flow graph view tracks all concurrent pipelines, not just one. When multiple
 **Components:**
 
 - `PipelinePillSelector` -- horizontal row of chips, each showing feature title + status dot (violet=active, amber=gated, emerald=done). Auto-hides when <=1 pipeline active.
-- `PipelineProgressBar` -- unchanged, always shows the selected pipeline's 8-phase stepper.
+- `PipelineProgressBar` -- unchanged, always shows the selected pipeline's 9-phase stepper.
 - `usePipelineProgress` hook -- tracks a `Map<featureId, PipelineEntry>` internally. WebSocket events upsert by `featureId`. Exposes `pipelines` array + `selectedFeatureId` + `setSelectedFeatureId`.
 
 **Gate interaction:** Clicking the amber gate indicator on the progress bar or a gated pipeline-stage node opens the pending HITL form for the selected pipeline's feature (if one exists). The `Advance`/`Reject` buttons in the progress bar resolve the selected pipeline's gate.
@@ -336,11 +338,10 @@ The flow graph view tracks all concurrent pipelines, not just one. When multiple
 
 | File                                                                     | Purpose                           |
 | ------------------------------------------------------------------------ | --------------------------------- |
-| `libs/types/src/pipeline-phase.ts`                                       | 8 phases, gate modes, transitions |
+| `libs/types/src/pipeline-phase.ts`                                       | 9 phases, gate modes, transitions |
 | `libs/types/src/feature.ts`                                              | Feature status, pipelineState     |
 | `libs/types/src/authority.ts`                                            | WorkItemState (15 states)         |
 | `libs/types/src/lead-engineer.ts`                                        | Lead Engineer types               |
-| `apps/server/src/services/pipeline-orchestrator.ts`                      | Phase transitions and gates       |
 | `apps/server/src/services/signal-intake-service.ts`                      | Signal classification             |
 | `apps/server/src/services/lead-engineer-service.ts`                      | State machine                     |
 | `apps/server/src/services/lead-engineer-rules.ts`                        | Fast-path rules                   |

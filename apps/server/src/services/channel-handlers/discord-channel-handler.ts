@@ -47,7 +47,7 @@ export interface ChannelHandler {
 /**
  * UIChannelHandler — no-op fallback for features without a Discord channel.
  *
- * The pipeline:gate-waiting event is already emitted by PipelineOrchestrator and
+ * The pipeline:gate-waiting event is already emitted and
  * the frontend renders the gate in the board UI, so no additional notification
  * is needed here.
  */

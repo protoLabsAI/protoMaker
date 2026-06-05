@@ -527,8 +527,8 @@ export class LeadEngineerService {
         });
       }
 
-      // Emit pipeline:phase-sync after each LE state transition so PipelineOrchestrator
-      // can keep the 9-phase model in sync with the Lead Engineer's actual progress.
+      // Emit pipeline:phase-sync after each LE state transition so the
+      // 9-phase pipeline model stays in sync with the Lead Engineer's actual progress.
       const phaseSyncStates = new Set(['REVIEW', 'MERGE', 'DEPLOY', 'DONE']);
       const unsubPipelineSync = this.events.subscribe((type: EventType, payload: unknown) => {
         if (type !== ('pipeline:state-entered' as EventType)) return;

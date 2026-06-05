@@ -26,14 +26,14 @@ const logger = createLogger('ChannelRouter');
  *
  * All methods are no-ops because the UI receives gate and form events
  * through the existing WebSocket event pipeline:
- * - Gate holds → pipeline:gate-waiting (emitted by PipelineOrchestrator)
+ * - Gate holds → pipeline:gate-waiting
  * - HITL forms → hitl:form-requested (emitted by HITLFormService)
  */
 class UIChannelHandler implements ChannelHandler {
   readonly channel: SignalChannel = 'ui';
 
   async requestApproval(_feature: Feature, _context: string): Promise<void> {
-    // No-op: UI already receives pipeline:gate-waiting from PipelineOrchestrator
+    // No-op: UI already receives pipeline:gate-waiting
     logger.debug(`[ui] requestApproval: already handled via pipeline:gate-waiting`);
   }
 

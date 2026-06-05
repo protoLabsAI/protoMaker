@@ -591,7 +591,6 @@ Services are wired in strict order via register modules in `server/wiring.ts`:
 | Deploy processor         | `apps/server/src/services/lead-engineer-deploy-processor.ts` |
 | Maintenance tasks        | `apps/server/src/services/maintenance-tasks.ts`              |
 | Signal intake service    | `apps/server/src/services/signal-intake-service.ts`          |
-| Pipeline orchestrator    | `apps/server/src/services/pipeline-orchestrator.ts`          |
 | Service container        | `apps/server/src/server/services.ts`                         |
 | Wiring orchestrator      | `apps/server/src/server/wiring.ts`                           |
 | Event emitter            | `apps/server/src/lib/events.ts`                              |
