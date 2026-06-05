@@ -52,6 +52,9 @@ export function WorktreePreferencesSection({ project }: WorktreePreferencesSecti
   const projectUseWorktrees = getProjectUseWorktrees(project.path);
   const effectiveUseWorktrees = projectUseWorktrees ?? globalUseWorktrees;
 
+  // Execution stance (#4074): 'delivery' (default) = agents branch/push/PR;
+  // 'observe' = read-only triage/analysis, no PRs. Local state — no dedicated store.
+  const [executionStance, setExecutionStance] = useState<'delivery' | 'observe'>('delivery');
   const [scriptContent, setScriptContent] = useState('');
   const [originalContent, setOriginalContent] = useState('');
   const [scriptExists, setScriptExists] = useState(false);
@@ -97,6 +100,9 @@ export function WorktreePreferencesSection({ project }: WorktreePreferencesSecti
               currentPath,
               response.settings.autoDismissInitScriptIndicator
             );
+          }
+          if (response.settings.executionStance) {
+            setExecutionStance(response.settings.executionStance);
           }
         }
       } catch (error) {
@@ -278,6 +284,45 @@ export function WorktreePreferencesSection({ project }: WorktreePreferencesSecti
             <p className="text-xs text-muted-foreground/80 leading-relaxed">
               Creates isolated git branches for each feature in this project. When disabled, agents
               work directly in the main project directory.
+            </p>
+          </div>
+        </div>
+
+        {/* Separator */}
+        <div className="border-t border-border/30" />
+
+        {/* Execution Stance: observe-only mode (#4074) */}
+        <div className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 -mx-3">
+          <Checkbox
+            id="project-observe-only"
+            checked={executionStance === 'observe'}
+            onCheckedChange={async (checked) => {
+              const value: 'delivery' | 'observe' = checked === true ? 'observe' : 'delivery';
+              setExecutionStance(value);
+              try {
+                const httpClient = getHttpApiClient();
+                await httpClient.settings.updateProject(project.path, {
+                  executionStance: value,
+                });
+              } catch (error) {
+                console.error('Failed to persist executionStance:', error);
+              }
+            }}
+            className="mt-1"
+            data-testid="project-observe-only-checkbox"
+          />
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="project-observe-only"
+              className="text-foreground cursor-pointer font-medium flex items-center gap-2"
+            >
+              <FileCode className="w-4 h-4 text-brand-500" />
+              Observe-only (read-only, no PRs)
+            </Label>
+            <p className="text-xs text-muted-foreground/80 leading-relaxed">
+              When enabled, signal-intake features on this project run read-only (triage/analysis,
+              no branches or PRs). Leave off for delivery — agents branch, push, and open PRs.
+              Independent of the PM agent's read-only-on-code stance.
             </p>
           </div>
         </div>

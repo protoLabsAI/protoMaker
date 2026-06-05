@@ -636,6 +636,26 @@ export class SignalIntakeService {
 
       // Ops signals: route to Lead Engineer state machine
 
+      // Per-project execution stance (#4074): observe-managed projects create
+      // read-only features (no branch/push/PR); delivery-managed (the default) create
+      // standard delivery features. This is independent of the PM agent's
+      // read-only-on-code stance — a delivery project with a read-only PM still ships PRs.
+      let stanceExecutionMode: 'read-only' | undefined;
+      try {
+        const projectSettings = await this.settingsService?.getProjectSettings(projectPath);
+        if (projectSettings?.executionStance === 'observe') {
+          stanceExecutionMode = 'read-only';
+          logger.info(
+            `Project ${projectPath} is observe-managed — creating signal-intake feature as read-only`
+          );
+        }
+      } catch (err) {
+        logger.warn(
+          `Failed to resolve execution stance for ${projectPath} (defaulting to delivery):`,
+          err
+        );
+      }
+
       // Create feature with idea state
       this.updateRingBufferEntry(bufferEntry.id, 'creating');
       const feature = await this.featureLoader.create(projectPath, {
@@ -646,6 +666,9 @@ export class SignalIntakeService {
         complexity: 'medium',
         workItemState: 'idea',
         sourceChannel: sourceToChannel(signal.source),
+        // Observe-managed project → read-only execution (#4074). Delivery projects
+        // leave executionMode unset so it defaults to standard delivery.
+        ...(stanceExecutionMode ? { executionMode: stanceExecutionMode } : {}),
         // Store GitHub issue number for auto-close on PR merge AND for future
         // idempotency lookups. Any caller that plumbs an issueNumber through
         // channelContext gets it persisted, not just native github-webhook
