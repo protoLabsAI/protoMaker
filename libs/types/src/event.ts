@@ -33,6 +33,8 @@ export type EventType =
   | 'epic:auto-completed'
   | 'feature:pr-merged'
   | 'feature:pr-closed-unmerged'
+  | 'feature:issue-closed'
+  | 'feature:issue-reopened'
   | 'feature:auto-reconciled'
   | 'feature:verify-pending'
   | 'feature:blocked'
@@ -469,6 +471,18 @@ export interface EventPayloadMap {
     projectPath: string;
     prNumber: number;
     prUrl?: string;
+  };
+  'feature:issue-closed': {
+    featureId: string;
+    projectPath: string;
+    issueNumber: number;
+    repository: string;
+  };
+  'feature:issue-reopened': {
+    featureId: string;
+    projectPath: string;
+    issueNumber: number;
+    repository: string;
   };
   'feature:verify-pending': {
     featureId: string;

@@ -388,6 +388,91 @@ export function createGitHubWebhookHandler(
           });
         }
 
+        // Close out (or recover) the linked feature when the issue's state flips.
+        // Symmetric to `opened` intake: intake CREATES a feature from a new issue, so
+        // a closed issue should DRIVE its feature to done — otherwise shipped work
+        // piles up as phantom backlog (the board drifts out of sync with GitHub).
+        // Push-model: no GitHub read needed, so this works even where the server's
+        // token can't read the repo's issues.
+        if (issuePayload.action === 'closed' || issuePayload.action === 'reopened') {
+          const issueNumber = issuePayload.issue.number;
+          const repoFullName = issuePayload.repository.full_name;
+          const isClosed = issuePayload.action === 'closed';
+
+          // Resolve the project by scanning for one that has a feature linked to
+          // this issue (same strategy the PR-merge path uses for branches).
+          const projectPath = await findProjectPathForFeature(
+            featureLoader,
+            settings.projects,
+            (path) => featureLoader.findByIssueNumber(path, issueNumber).then(Boolean)
+          );
+
+          if (!projectPath) {
+            logger.debug(
+              `No project has a feature linked to issue #${issueNumber} (${repoFullName}) — nothing to ${issuePayload.action}`
+            );
+            res.json({ success: true, message: 'No feature linked to this issue' });
+            return;
+          }
+
+          const linked = await featureLoader.findByIssueNumber(projectPath, issueNumber);
+          if (!linked) {
+            res.json({ success: true, message: 'No feature linked to this issue' });
+            return;
+          }
+
+          const TERMINAL_STATUSES = new Set(['done', 'completed', 'verified']);
+          const isTerminal = TERMINAL_STATUSES.has(linked.status ?? '');
+
+          if (isClosed) {
+            // Idempotency: don't re-mark an already-terminal feature (duplicate deliveries).
+            if (isTerminal) {
+              logger.debug(
+                `Feature ${linked.id} already '${linked.status}' — skipping close for issue #${issueNumber}`
+              );
+              res.json({ success: true, message: 'Feature already terminal' });
+              return;
+            }
+            logger.info(
+              `GitHub issue #${issueNumber} closed (${repoFullName}) — syncing feature ${linked.id} to done`
+            );
+            await featureLoader.update(projectPath, linked.id, {
+              status: 'done',
+              statusChangeReason: `GitHub issue #${issueNumber} closed — auto-synced to done`,
+            });
+            events.emit('feature:issue-closed', {
+              featureId: linked.id,
+              projectPath,
+              issueNumber,
+              repository: repoFullName,
+            });
+            res.json({ success: true, message: `Feature ${linked.id} synced to done` });
+            return;
+          }
+
+          // reopened: recover a terminal feature back to backlog so it's actionable
+          // again; leave non-terminal features as-is (they're already in flight).
+          if (!isTerminal) {
+            res.json({ success: true, message: 'Feature already active, no recovery needed' });
+            return;
+          }
+          logger.info(
+            `GitHub issue #${issueNumber} reopened (${repoFullName}) — recovering feature ${linked.id} to backlog`
+          );
+          await featureLoader.update(projectPath, linked.id, {
+            status: 'backlog',
+            statusChangeReason: `GitHub issue #${issueNumber} reopened — auto-recovered to backlog`,
+          });
+          events.emit('feature:issue-reopened', {
+            featureId: linked.id,
+            projectPath,
+            issueNumber,
+            repository: repoFullName,
+          });
+          res.json({ success: true, message: `Feature ${linked.id} recovered to backlog` });
+          return;
+        }
+
         res.json({ success: true, message: 'Issue event processed' });
         return;
       }
