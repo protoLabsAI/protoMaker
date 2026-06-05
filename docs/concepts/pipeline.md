@@ -266,23 +266,24 @@ When the Lead Engineer can't resolve a situation, signals are routed through the
 
 ## Fast-path supervisor rules
 
-Defined in `apps/server/src/services/lead-engineer-rules.ts`. 16 pure functions (no LLM) that react to events. Key rules:
+Defined in `apps/server/src/services/lead-engineer-rules.ts`. 13 pure functions (no LLM) that react to events. The rules:
 
-| Rule                 | Trigger                          | Action                                    |
-| -------------------- | -------------------------------- | ----------------------------------------- |
-| mergedNotDone        | PR merged, status still review   | Move to done                              |
-| orphanedInProgress   | In-progress >4h, no agent        | Reset to backlog (block if 3+ failures)   |
-| staleDeps            | Blocked + all deps done          | Unblock                                   |
-| autoModeHealth       | Backlog >0 + auto-mode off       | Restart auto-mode                         |
-| staleReview          | Review >30min, no auto-merge     | Enable auto-merge                         |
-| stuckAgent           | Agent running >2h                | Abort and resume with wrap-up prompt      |
-| prApproved           | PR approved                      | Enable auto-merge, resolve threads        |
-| capacityRestart      | Feature completed + more backlog | Restart auto-mode                         |
-| projectCompleting    | All features done                | Trigger project completion                |
-| classifiedRecovery   | Escalation with retryable error  | Auto-retry if confidence >=0.7            |
-| hitlFormResponse     | HITL form submitted              | Retry / provide context / skip / close    |
-| reviewQueueSaturated | Review count >= max (5)          | Log warning, scheduler pauses pickup      |
-| errorBudgetExhausted | Budget exhausted                 | Log warning, restrict to bug-fix features |
+| Rule                 | Trigger                           | Action                                    |
+| -------------------- | --------------------------------- | ----------------------------------------- |
+| mergedNotDone        | PR merged, status still review    | Move to done                              |
+| orphanedInProgress   | In-progress >4h, no agent         | Reset to backlog (block if 3+ failures)   |
+| staleDeps            | Blocked + all deps done           | Unblock                                   |
+| autoModeHealth       | Backlog >0 + auto-mode off        | Restart auto-mode                         |
+| stuckAgent           | Agent running >2h                 | Abort and resume with wrap-up prompt      |
+| capacityRestart      | Feature completed + more backlog  | Restart auto-mode                         |
+| projectCompleting    | All features done                 | Trigger project completion                |
+| prApproved           | PR approved                       | Resolve unresolved threads directly       |
+| threadsBlocking      | Merge blocked by critical threads | Resolve threads directly                  |
+| classifiedRecovery   | Escalation with retryable error   | Auto-retry if confidence >=0.7            |
+| hitlFormResponse     | HITL form submitted               | Retry / provide context / skip / close    |
+| errorBudgetExhausted | Budget exhausted                  | Log warning, restrict to bug-fix features |
+| reviewQueueSaturated | Review count >= max (5)           | Log warning, scheduler pauses pickup      |
+| errorBudgetExhausted | Budget exhausted                  | Log warning, restrict to bug-fix features |
 
 ## Feature status system
 

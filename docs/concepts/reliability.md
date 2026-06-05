@@ -270,7 +270,7 @@ When a feature enters EXECUTE, the Lead Engineer loads trajectories from recentl
 
 ```typescript
 const siblings = features
-  .filter((f) => f.status === 'verified' && f.lastExecutionTime)
+  .filter((f) => f.status === 'done' && f.lastExecutionTime)
   .sort((a, b) => (b.lastExecutionTime || 0) - (a.lastExecutionTime || 0))
   .slice(0, 3); // max 3 reflections
 ```
@@ -366,7 +366,7 @@ interface Feature {
 }
 ```
 
-All 4 git workflow catch blocks in `auto-mode-service.ts` persist errors to `feature.json` instead of silently logging them. Feature status remains unchanged (e.g., stays `verified`) — the error field provides a separate visibility channel.
+All 4 git workflow catch blocks in `auto-mode-service.ts` persist errors to `feature.json` instead of silently logging them. Feature status remains unchanged (e.g., stays `done`) — the error field provides a separate visibility channel.
 
 **Source:** `libs/types/src/feature.ts`, `apps/server/src/services/auto-mode-service.ts`
 

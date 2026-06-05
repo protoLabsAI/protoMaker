@@ -70,23 +70,22 @@ The project lifecycle operates at the **project level**. The [8-phase pipeline](
 
 ## MCP tools
 
-| Tool                     | Description                                                        |
-| ------------------------ | ------------------------------------------------------------------ |
-| `process_idea`           | LangGraph flow to validate idea with optional HITL gate            |
-| `initiate_project`       | Dedup check + create project + write idea doc                      |
-| `generate_project_prd`   | Check for existing PRD, suggest generation if missing              |
-| `approve_project_prd`    | Create board features from milestones                              |
-| `launch_project`         | Set project to "started" + start auto-mode                         |
-| `start_lead_engineer`    | Manually start Lead Engineer for a project (auto-starts on launch) |
-| `get_lifecycle_status`   | Read local state, return current phase + next actions              |
-| `collect_related_issues` | Move existing issues into a project                                |
+| Tool                      | Description                                                        |
+| ------------------------- | ------------------------------------------------------------------ |
+| `initiate_project`        | Dedup check + create project + write idea doc                      |
+| `generate_project_prd`    | Check for existing PRD, suggest generation if missing              |
+| `approve_project_prd`     | Create board features from milestones                              |
+| `create_project_features` | Materialize milestone/phase features onto the board                |
+| `launch_project`          | Set project to "started" + start auto-mode                         |
+| `start_lead_engineer`     | Manually start Lead Engineer for a project (auto-starts on launch) |
+| `get_lifecycle_status`    | Read local state, return current phase + next actions              |
 
 ### MCP tool flow
 
 The tools are designed to be called in sequence, with human gates between steps:
 
 ```
-process_idea → initiate_project → generate_project_prd → [HUMAN REVIEW] → approve_project_prd → launch_project
+initiate_project → generate_project_prd → [HUMAN REVIEW] → approve_project_prd → launch_project
 ```
 
 Each tool checks prerequisites and returns clear error messages if called out of order. The `/plan-project` skill wraps this entire flow with interactive prompts.
@@ -130,7 +129,7 @@ When `launch_project` is called, the server emits a `project:lifecycle:launched`
 
 The Lead Engineer is **not an LLM agent** — it's a service that evaluates fast-path rules (pure functions) on every relevant event. It only invokes LLM agents when a situation exceeds what rules can handle.
 
-**Fast-path rules** (defined in `lead-engineer-rules.ts`, 16 rules total):
+**Fast-path rules** (defined in `lead-engineer-rules.ts`, 13 rules total):
 
 | Rule                 | What it does                                                                   |
 | -------------------- | ------------------------------------------------------------------------------ |
@@ -138,7 +137,8 @@ The Lead Engineer is **not an LLM agent** — it's a service that evaluates fast
 | `orphanedInProgress` | Resets in-progress features with no running agent (>4h); blocks if 3+ failures |
 | `staleDeps`          | Unblocks features when all dependencies are done                               |
 | `autoModeHealth`     | Restarts auto-mode if it stopped unexpectedly                                  |
-| `staleReview`        | Enables auto-merge on PRs stuck in review (>30min)                             |
+| `prApproved`         | Resolves unresolved PR threads directly once the PR is approved                |
+| `threadsBlocking`    | Resolves critical threads directly when they block a merge                     |
 | `stuckAgent`         | Aborts agents running >2h and resumes with wrap-up prompt                      |
 | `capacityRestart`    | Restarts auto-mode when capacity frees up                                      |
 | `projectCompleting`  | Detects when all features are done and triggers completion                     |
@@ -235,7 +235,7 @@ After creation, project files are organized as:
 | ---------------------------------------------------------------- | ------------------------------------------------------ |
 | `apps/server/src/services/project-lifecycle-service.ts`          | Service orchestrating the lifecycle                    |
 | `apps/server/src/services/lead-engineer-service.ts`              | Lead Engineer production orchestrator                  |
-| `apps/server/src/services/lead-engineer-rules.ts`                | 16 fast-path rules (pure functions, no LLM)            |
+| `apps/server/src/services/lead-engineer-rules.ts`                | 13 fast-path rules (pure functions, no LLM)            |
 | `apps/server/src/services/event-ledger-service.ts`               | Append-only JSONL event persistence                    |
 | `apps/server/src/services/project-artifact-service.ts`           | Project artifact persistence                           |
 | `apps/server/src/routes/projects/lifecycle/`                     | Route handlers                                         |
