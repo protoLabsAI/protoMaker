@@ -186,11 +186,11 @@ Execution is blocked when:
 
 Before launching the agent, the processor validates the worktree environment:
 
-| Check                 | What It Does                                                          |
-| --------------------- | --------------------------------------------------------------------- |
-| **Worktree currency** | `git fetch` + `git rebase origin/dev` to sync with the latest changes |
-| **Package builds**    | Ensures all required packages are compiled before the agent runs      |
-| **Dependency merge**  | Verifies blocking dependencies have been merged and are available     |
+| Check                 | What It Does                                                           |
+| --------------------- | ---------------------------------------------------------------------- |
+| **Worktree currency** | `git fetch` + `git rebase origin/main` to sync with the latest changes |
+| **Package builds**    | Ensures all required packages are compiled before the agent runs       |
+| **Dependency merge**  | Verifies blocking dependencies have been merged and are available      |
 
 Pre-flight checks can be disabled globally via `preFlightChecks.enabled: false`.
 

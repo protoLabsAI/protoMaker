@@ -10,7 +10,7 @@ claude plugin marketplace add /path/to/automaker/packages/mcp-server/plugins
 claude plugin install protolabs
 
 # Verify connectivity
-mcp__protolabs__health_check({})
+mcp__plugin_protolabs_studio__health_check({})
 ```
 
 All tools follow this response structure:
@@ -34,7 +34,7 @@ Manage features on the Kanban board.
 List all features in a project.
 
 ```typescript
-mcp__protolabs__list_features({
+mcp__plugin_protolabs_studio__list_features({
   projectPath: '/home/user/my-project',
   status: 'backlog', // Optional: filter by status
 });
@@ -52,7 +52,7 @@ mcp__protolabs__list_features({
 Get details for a specific feature.
 
 ```typescript
-mcp__protolabs__get_feature({
+mcp__plugin_protolabs_studio__get_feature({
   projectPath: '/home/user/my-project',
   featureId: 'feature-1741234567890-abc123',
 });
@@ -63,7 +63,7 @@ mcp__protolabs__get_feature({
 Create a new feature on the board.
 
 ```typescript
-mcp__protolabs__create_feature({
+mcp__plugin_protolabs_studio__create_feature({
   projectPath: '/home/user/my-project',
   title: 'Add user authentication',
   description: 'Implement JWT-based authentication with login/logout endpoints',
@@ -89,7 +89,7 @@ mcp__protolabs__create_feature({
 Update a feature's properties.
 
 ```typescript
-mcp__protolabs__update_feature({
+mcp__plugin_protolabs_studio__update_feature({
   projectPath: '/home/user/my-project',
   featureId: 'feature-1741234567890-abc123',
   title: 'Updated title',
@@ -102,7 +102,7 @@ mcp__protolabs__update_feature({
 Delete a feature from the board.
 
 ```typescript
-mcp__protolabs__delete_feature({
+mcp__plugin_protolabs_studio__delete_feature({
   projectPath: '/home/user/my-project',
   featureId: 'feature-1741234567890-abc123',
 });
@@ -113,7 +113,7 @@ mcp__protolabs__delete_feature({
 Move a feature to a different status.
 
 ```typescript
-mcp__protolabs__move_feature({
+mcp__plugin_protolabs_studio__move_feature({
   projectPath: '/home/user/my-project',
   featureId: 'feature-1741234567890-abc123',
   status: 'in_progress',
@@ -129,7 +129,7 @@ Start, stop, and monitor AI agents.
 Start an agent on a feature.
 
 ```typescript
-mcp__protolabs__start_agent({
+mcp__plugin_protolabs_studio__start_agent({
   projectPath: '/home/user/my-project',
   featureId: 'feature-1741234567890-abc123',
   model: 'sonnet', // Optional: override default model
@@ -142,7 +142,7 @@ mcp__protolabs__start_agent({
 Stop a running agent.
 
 ```typescript
-mcp__protolabs__stop_agent({
+mcp__plugin_protolabs_studio__stop_agent({
   projectPath: '/home/user/my-project',
   featureId: 'feature-1741234567890-abc123',
 });
@@ -153,7 +153,7 @@ mcp__protolabs__stop_agent({
 List all currently running agents.
 
 ```typescript
-mcp__protolabs__list_running_agents({
+mcp__plugin_protolabs_studio__list_running_agents({
   projectPath: '/home/user/my-project',
 });
 ```
@@ -163,7 +163,7 @@ mcp__protolabs__list_running_agents({
 Get the output from a completed or running agent.
 
 ```typescript
-mcp__protolabs__get_agent_output({
+mcp__plugin_protolabs_studio__get_agent_output({
   projectPath: '/home/user/my-project',
   featureId: 'feature-1741234567890-abc123',
 });
@@ -174,7 +174,7 @@ mcp__protolabs__get_agent_output({
 Send a message to a running agent.
 
 ```typescript
-mcp__protolabs__send_message_to_agent({
+mcp__plugin_protolabs_studio__send_message_to_agent({
   projectPath: '/home/user/my-project',
   featureId: 'feature-1741234567890-abc123',
   message: 'Also add TypeScript types for the response schema',
@@ -190,7 +190,7 @@ Manage the auto-mode processing queue.
 Add a feature to the auto-mode processing queue.
 
 ```typescript
-mcp__protolabs__queue_feature({
+mcp__plugin_protolabs_studio__queue_feature({
   projectPath: '/home/user/my-project',
   featureId: 'feature-1741234567890-abc123',
   priority: 1, // Optional: higher priority = processed first
@@ -202,7 +202,7 @@ mcp__protolabs__queue_feature({
 List all features in the processing queue.
 
 ```typescript
-mcp__protolabs__list_queue({
+mcp__plugin_protolabs_studio__list_queue({
   projectPath: '/home/user/my-project',
 });
 ```
@@ -212,7 +212,7 @@ mcp__protolabs__list_queue({
 Remove all features from the queue.
 
 ```typescript
-mcp__protolabs__clear_queue({
+mcp__plugin_protolabs_studio__clear_queue({
   projectPath: '/home/user/my-project',
 });
 ```
@@ -226,7 +226,7 @@ Manage `.automaker/context/` files that define agent rules and conventions.
 List all context files for a project.
 
 ```typescript
-mcp__protolabs__list_context_files({
+mcp__plugin_protolabs_studio__list_context_files({
   projectPath: '/home/user/my-project',
 });
 ```
@@ -236,7 +236,7 @@ mcp__protolabs__list_context_files({
 Read a context file's content.
 
 ```typescript
-mcp__protolabs__get_context_file({
+mcp__plugin_protolabs_studio__get_context_file({
   projectPath: '/home/user/my-project',
   fileName: 'CLAUDE.md',
 });
@@ -247,7 +247,7 @@ mcp__protolabs__get_context_file({
 Create a new context file.
 
 ```typescript
-mcp__protolabs__create_context_file({
+mcp__plugin_protolabs_studio__create_context_file({
   projectPath: '/home/user/my-project',
   fileName: 'testing-conventions.md',
   content: '# Testing Conventions\n\nAlways write unit tests for services...',
@@ -259,7 +259,7 @@ mcp__protolabs__create_context_file({
 Delete a context file.
 
 ```typescript
-mcp__protolabs__delete_context_file({
+mcp__plugin_protolabs_studio__delete_context_file({
   projectPath: '/home/user/my-project',
   fileName: 'outdated-rules.md',
 });
@@ -274,7 +274,7 @@ Create and manage hierarchical project plans.
 Create a new project with PRD and milestones.
 
 ```typescript
-mcp__protolabs__create_project({
+mcp__plugin_protolabs_studio__create_project({
   projectPath: '/home/user/my-project',
   title: 'User Authentication System',
   goal: 'Implement secure JWT-based authentication',
@@ -308,7 +308,7 @@ mcp__protolabs__create_project({
 List all projects in a workspace.
 
 ```typescript
-mcp__protolabs__list_projects({
+mcp__plugin_protolabs_studio__list_projects({
   projectPath: '/home/user/my-project',
 });
 ```
@@ -318,7 +318,7 @@ mcp__protolabs__list_projects({
 Get full project details including milestones and phases.
 
 ```typescript
-mcp__protolabs__get_project({
+mcp__plugin_protolabs_studio__get_project({
   projectPath: '/home/user/my-project',
   projectSlug: 'user-authentication-system',
 });
@@ -329,7 +329,7 @@ mcp__protolabs__get_project({
 Convert project phases to board features.
 
 ```typescript
-mcp__protolabs__create_project_features({
+mcp__plugin_protolabs_studio__create_project_features({
   projectPath: '/home/user/my-project',
   projectSlug: 'user-authentication-system',
   createEpics: true, // Create epic per milestone
@@ -342,7 +342,7 @@ mcp__protolabs__create_project_features({
 Set dependencies between features.
 
 ```typescript
-mcp__protolabs__set_feature_dependencies({
+mcp__plugin_protolabs_studio__set_feature_dependencies({
   projectPath: '/home/user/my-project',
   featureId: 'feature-456',
   dependsOn: ['feature-123', 'feature-789'],
@@ -354,7 +354,7 @@ mcp__protolabs__set_feature_dependencies({
 Get the full dependency graph for a project.
 
 ```typescript
-mcp__protolabs__get_dependency_graph({
+mcp__plugin_protolabs_studio__get_dependency_graph({
   projectPath: '/home/user/my-project',
 });
 ```
@@ -364,7 +364,7 @@ mcp__protolabs__get_dependency_graph({
 Get the topologically sorted execution order.
 
 ```typescript
-mcp__protolabs__get_execution_order({
+mcp__plugin_protolabs_studio__get_execution_order({
   projectPath: '/home/user/my-project',
 });
 ```
@@ -378,7 +378,7 @@ Start and stop autonomous feature processing.
 Start auto-mode for a project.
 
 ```typescript
-mcp__protolabs__start_auto_mode({
+mcp__plugin_protolabs_studio__start_auto_mode({
   projectPath: '/home/user/my-project',
   respectDependencies: true, // Process in dependency order
 });
@@ -389,7 +389,7 @@ mcp__protolabs__start_auto_mode({
 Stop auto-mode.
 
 ```typescript
-mcp__protolabs__stop_auto_mode({
+mcp__plugin_protolabs_studio__stop_auto_mode({
   projectPath: '/home/user/my-project',
 });
 ```
@@ -399,7 +399,7 @@ mcp__protolabs__stop_auto_mode({
 Get auto-mode status and current queue.
 
 ```typescript
-mcp__protolabs__get_auto_mode_status({
+mcp__plugin_protolabs_studio__get_auto_mode_status({
   projectPath: '/home/user/my-project',
 });
 ```
@@ -413,7 +413,7 @@ Work with pull requests and CI status.
 Check the status of a pull request.
 
 ```typescript
-mcp__protolabs__check_pr_status({
+mcp__plugin_protolabs_studio__check_pr_status({
   projectPath: '/home/user/my-project',
   prNumber: 123,
 });
@@ -424,7 +424,7 @@ mcp__protolabs__check_pr_status({
 Merge an approved pull request.
 
 ```typescript
-mcp__protolabs__merge_pr({
+mcp__plugin_protolabs_studio__merge_pr({
   projectPath: '/home/user/my-project',
   prNumber: 123,
   mergeStrategy: 'squash', // 'squash' | 'merge' | 'rebase'
@@ -436,7 +436,7 @@ mcp__protolabs__merge_pr({
 Resolve all open review threads on a PR.
 
 ```typescript
-mcp__protolabs__resolve_pr_threads({
+mcp__plugin_protolabs_studio__resolve_pr_threads({
   projectPath: '/home/user/my-project',
   prNumber: 123,
 });
@@ -451,7 +451,7 @@ Access traces, costs, and evaluation data.
 List recent agent execution traces.
 
 ```typescript
-mcp__protolabs__langfuse_list_traces({
+mcp__plugin_protolabs_studio__langfuse_list_traces({
   limit: 20,
   userId: 'feature-1741234567890-abc123', // Optional: filter by feature
 });
@@ -462,7 +462,7 @@ mcp__protolabs__langfuse_list_traces({
 Get cost breakdown for a time period.
 
 ```typescript
-mcp__protolabs__langfuse_get_costs({
+mcp__plugin_protolabs_studio__langfuse_get_costs({
   fromDate: '2026-01-01',
   toDate: '2026-01-31',
 });
@@ -473,7 +473,7 @@ mcp__protolabs__langfuse_get_costs({
 Add a quality score to a trace.
 
 ```typescript
-mcp__protolabs__langfuse_score_trace({
+mcp__plugin_protolabs_studio__langfuse_score_trace({
   traceId: 'trace-abc123',
   name: 'code-quality',
   value: 0.9,
@@ -488,7 +488,7 @@ mcp__protolabs__langfuse_score_trace({
 Verify MCP server connectivity.
 
 ```typescript
-mcp__protolabs__health_check({});
+mcp__plugin_protolabs_studio__health_check({});
 // Returns: { success: true, data: { status: 'healthy', version: '1.0.0' } }
 ```
 
@@ -497,7 +497,7 @@ mcp__protolabs__health_check({});
 Get a summary of the current board state.
 
 ```typescript
-mcp__protolabs__get_board_summary({
+mcp__plugin_protolabs_studio__get_board_summary({
   projectPath: '/home/user/my-project',
 });
 ```
@@ -511,7 +511,7 @@ Manage the project specification document.
 Get the project specification from `.automaker/spec.md`.
 
 ```typescript
-mcp__protolabs__get_project_spec({
+mcp__plugin_protolabs_studio__get_project_spec({
   projectPath: '/home/user/my-project',
 });
 ```
@@ -521,7 +521,7 @@ mcp__protolabs__get_project_spec({
 Update the project specification.
 
 ```typescript
-mcp__protolabs__update_project_spec({
+mcp__plugin_protolabs_studio__update_project_spec({
   projectPath: '/home/user/my-project',
   content: '# Project Spec\n\n## Goals\n...',
 });

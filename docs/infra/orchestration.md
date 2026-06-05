@@ -114,7 +114,7 @@ interface Phase {
 ### Via MCP Tool
 
 ```typescript
-mcp__protolabs__create_project({
+mcp__plugin_protolabs_studio__create_project({
   projectPath: '/path/to/project',
   title: 'User Authentication System',
   goal: 'Implement secure JWT-based authentication',
@@ -176,7 +176,7 @@ curl -X POST http://localhost:3008/api/projects/create \
 Convert project phases to board features with milestones as epics:
 
 ```typescript
-mcp__protolabs__create_project_features({
+mcp__plugin_protolabs_studio__create_project_features({
   projectPath: '/path/to/project',
   projectSlug: 'user-authentication-system',
   createEpics: true, // Create epic for each milestone
@@ -196,7 +196,7 @@ Board Features:
 ### Without Epics
 
 ```typescript
-mcp__protolabs__create_project_features({
+mcp__plugin_protolabs_studio__create_project_features({
   projectPath: '/path/to/project',
   projectSlug: 'user-authentication-system',
   createEpics: false,
@@ -235,7 +235,7 @@ interface Feature {
 
 ```typescript
 // 1. Create epic feature
-mcp__protolabs__create_feature({
+mcp__plugin_protolabs_studio__create_feature({
   projectPath: '/path/to/project',
   title: 'Foundation Infrastructure',
   description: 'Core types, services, and utilities',
@@ -245,7 +245,7 @@ mcp__protolabs__create_feature({
 });
 
 // 2. Create child features
-mcp__protolabs__create_feature({
+mcp__plugin_protolabs_studio__create_feature({
   projectPath: '/path/to/project',
   title: 'Add Auth Types',
   description: 'TypeScript definitions for auth',
@@ -284,7 +284,7 @@ feat-a    feat-b    feat-c   Feature PRs (target epic branch)
 ### Setting Dependencies
 
 ```typescript
-mcp__protolabs__set_feature_dependencies({
+mcp__plugin_protolabs_studio__set_feature_dependencies({
   projectPath: '/path/to/project',
   featureId: 'feature-456',
   dependsOn: ['feature-123', 'feature-789'],
@@ -294,7 +294,7 @@ mcp__protolabs__set_feature_dependencies({
 ### Dependency Graph
 
 ```typescript
-const graph = await mcp__protolabs__get_dependency_graph({
+const graph = await mcp__plugin_protolabs_studio__get_dependency_graph({
   projectPath: '/path/to/project',
 });
 ```
@@ -314,7 +314,7 @@ const graph = await mcp__protolabs__get_dependency_graph({
 ### Execution Order
 
 ```typescript
-const order = await mcp__protolabs__get_execution_order({
+const order = await mcp__plugin_protolabs_studio__get_execution_order({
   projectPath: '/path/to/project',
 });
 // Returns: ["feature-123", "feature-456", "feature-789"]
@@ -325,7 +325,7 @@ const order = await mcp__protolabs__get_execution_order({
 Auto-mode processes features in dependency order:
 
 ```typescript
-mcp__protolabs__start_auto_mode({
+mcp__plugin_protolabs_studio__start_auto_mode({
   projectPath: '/path/to/project',
   respectDependencies: true,
 });

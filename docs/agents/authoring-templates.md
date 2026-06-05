@@ -145,7 +145,7 @@ console.log(template?.name); // 'Dana'
 
 ```typescript
 // Via MCP tool
-mcp__protolabs__start_agent({
+mcp__plugin_protolabs_studio__start_agent({
   projectPath: '/path/to/project',
   featureId: 'feature-123',
   agentRole: 'docs-writer', // Uses your new template

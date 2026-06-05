@@ -477,7 +477,7 @@ User: Create a feature to add a dark mode toggle
 
 Claude: I'll create that feature for you.
 
-[Calls mcp__protolabs__create_feature with:
+[Calls mcp__plugin_protolabs_studio__create_feature with:
   projectPath: "/path/to/project"
   title: "Add dark mode toggle"
   description: "## Overview
@@ -505,7 +505,7 @@ User: The dashboard feature should depend on the auth feature
 
 Claude: I'll set up that dependency.
 
-[Calls mcp__protolabs__set_feature_dependencies with:
+[Calls mcp__plugin_protolabs_studio__set_feature_dependencies with:
   projectPath: "/path/to/project"
   featureId: "dashboard-id"
   dependencies: ["auth-id"]]
@@ -521,7 +521,7 @@ User: Start auto-mode with 2 concurrent agents
 
 Claude: Starting auto-mode...
 
-[Calls mcp__protolabs__start_auto_mode with:
+[Calls mcp__plugin_protolabs_studio__start_auto_mode with:
   projectPath: "/path/to/project"
   maxConcurrency: 2]
 
@@ -540,7 +540,7 @@ User: What did the agent do on the auth feature?
 
 Claude: Let me check the agent output.
 
-[Calls mcp__protolabs__get_agent_output with:
+[Calls mcp__plugin_protolabs_studio__get_agent_output with:
   projectPath: "/path/to/project"
   featureId: "auth-id"]
 
@@ -574,7 +574,7 @@ name: my-command
 description: What this command does
 argument-hint: (optional arguments)
 allowed-tools:
-  - mcp__protolabs__tool_name
+  - mcp__plugin_protolabs_studio__tool_name
 ---
 # Command Instructions
 
@@ -592,7 +592,7 @@ description: What this agent does
 allowed-tools:
   - Read
   - Write
-  - mcp__protolabs__tool_name
+  - mcp__plugin_protolabs_studio__tool_name
 model: sonnet
 ---
 # Agent Instructions

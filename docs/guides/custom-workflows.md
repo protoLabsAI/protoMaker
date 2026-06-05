@@ -160,7 +160,7 @@ execution:
     autoPush: true
     autoCreatePR: true
     autoMergePR: false
-    prBaseBranch: dev
+    prBaseBranch: main
   outputDir: .automaker/reports # Custom output directory (optional)
   terminalStatus: done # Where feature goes after: 'done' or 'review'
 ```

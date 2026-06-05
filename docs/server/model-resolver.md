@@ -51,7 +51,7 @@ import { resolveModelString } from '@protolabsai/model-resolver';
 
 // Model resolution happens inside the Lead Engineer INTAKE phase.
 // When creating a feature, specify the alias — the pipeline resolves it:
-mcp__protolabs__create_feature({
+mcp__plugin_protolabs_studio__create_feature({
   projectPath: '/path/to/project',
   title: 'Core Infrastructure',
   model: 'opus', // Resolved to claude-opus-4-6 at INTAKE
@@ -66,14 +66,14 @@ const model = resolveModelString('opus'); // → 'claude-opus-4-6'
 
 ```typescript
 // MCP tool call with alias
-mcp__protolabs__start_agent({
+mcp__plugin_protolabs_studio__start_agent({
   projectPath: '/path/to/project',
   featureId: 'feature-123',
   model: 'sonnet', // Automatically resolved to claude-sonnet-4-6
 });
 
 // Or use full model string
-mcp__protolabs__start_agent({
+mcp__plugin_protolabs_studio__start_agent({
   projectPath: '/path/to/project',
   featureId: 'feature-123',
   model: 'claude-opus-4-6', // Passed through as-is
@@ -141,7 +141,7 @@ Override model selection in `.automaker/settings.json`:
 Specify model when creating a feature:
 
 ```typescript
-mcp__protolabs__create_feature({
+mcp__plugin_protolabs_studio__create_feature({
   projectPath: '/path/to/project',
   title: 'Performance Optimization',
   description: '...',

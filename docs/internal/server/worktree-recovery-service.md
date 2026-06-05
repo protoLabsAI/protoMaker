@@ -37,7 +37,7 @@ checkAndRecoverUncommittedWork(feature, worktreePath, projectPath, prBaseBranch?
 
 ## Rebase Strategy
 
-After committing, the service fetches and rebases onto `origin/<baseBranch>` (default: `dev`). This prevents the PR from diverging from the base branch.
+After committing, the service fetches and rebases onto `origin/<baseBranch>` (default: `main`). This prevents the PR from diverging from the base branch.
 
 - **On success:** push uses `--force-with-lease` (safe force push)
 - **On conflict:** rebases is aborted, push proceeds without force flag

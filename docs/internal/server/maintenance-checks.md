@@ -14,7 +14,7 @@ Signal features:
 **How to create a signal feature via MCP:**
 
 ```typescript
-mcp__protolabs__create_feature({
+mcp__plugin_protolabs_studio__create_feature({
   projectPath: '/path/to/project',
   title: 'Signal: rabbit-hole.io CI failing on main',
   description: 'CI checks on rabbit-hole.io main are red. Investigate and document root cause.',
@@ -29,7 +29,7 @@ mcp__protolabs__create_feature({
 **Immediate recovery for stuck signal features:** If you find existing features stuck in `review` with no `prNumber` that describe external-repo issues, update them in place:
 
 ```typescript
-mcp__protolabs__update_feature({
+mcp__plugin_protolabs_studio__update_feature({
   projectPath: '/path/to/project',
   featureId: 'feature-...',
   featureType: 'signal',

@@ -49,7 +49,7 @@ Settings come from `GitWorkflowSettings` in `.automaker/settings.json`:
 ```typescript
 interface GitWorkflowSettings {
   commitMessage?: string; // default: derived from feature title
-  prBaseBranch?: string; // default: 'dev'
+  prBaseBranch?: string; // default: 'main'
   prTemplate?: string; // PR body template
   autoMerge?: boolean; // enable auto-merge
   mergeStrategy?: PRMergeStrategy; // 'merge' | 'squash' | 'rebase'
@@ -59,7 +59,7 @@ interface GitWorkflowSettings {
 
 | Setting         | Default    | Description                                 |
 | --------------- | ---------- | ------------------------------------------- |
-| `prBaseBranch`  | `'dev'`    | Target branch for PR creation               |
+| `prBaseBranch`  | `'main'`   | Target branch for PR creation               |
 | `mergeStrategy` | `'squash'` | How the PR is merged                        |
 | `autoMerge`     | `true`     | Enable GitHub auto-merge if CI is pending   |
 | `closeIssues`   | `true`     | Include issue-closing references in PR body |
