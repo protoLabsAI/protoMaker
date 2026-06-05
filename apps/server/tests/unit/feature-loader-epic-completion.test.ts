@@ -286,3 +286,75 @@ describe('FeatureLoader — epic completion delegation', () => {
     expect(writtenEpic?.status).not.toBe('done');
   });
 });
+
+describe('FeatureLoader — promote-to-delivery (#4073)', () => {
+  let loader: FeatureLoader;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    loader = new FeatureLoader();
+  });
+
+  it('clears stale read-only gitWorkflow + workflow overrides when promoting executionMode to standard', async () => {
+    const feature = makeFeature({
+      id: 'ro-1',
+      status: 'backlog',
+      executionMode: 'read-only',
+      workflow: 'read-only',
+      gitWorkflow: { autoCommit: false, autoPush: false, autoCreatePR: false },
+    });
+    mockFeatureStore([feature]);
+    const { getWritten } = captureWrites();
+
+    const result = await loader.update(PROJECT_PATH, 'ro-1', { executionMode: 'standard' });
+
+    // The stale all-false gitWorkflow and the read-only workflow pin must be cleared so the
+    // feature re-inherits delivery defaults and re-resolves cleanly (not snap back to read-only).
+    expect(result.executionMode).toBe('standard');
+    expect(result.gitWorkflow).toBeUndefined();
+    expect(result.workflow).toBeUndefined();
+
+    const written = getWritten('ro-1');
+    expect(written?.gitWorkflow).toBeUndefined();
+    expect(written?.workflow).toBeUndefined();
+  });
+
+  it('does NOT clobber gitWorkflow/workflow that the caller sets explicitly in the same update', async () => {
+    const feature = makeFeature({
+      id: 'ro-2',
+      status: 'backlog',
+      executionMode: 'read-only',
+      gitWorkflow: { autoCommit: false, autoPush: false, autoCreatePR: false },
+    });
+    mockFeatureStore([feature]);
+    const { getWritten } = captureWrites();
+
+    const result = await loader.update(PROJECT_PATH, 'ro-2', {
+      executionMode: 'standard',
+      gitWorkflow: { autoCommit: true, autoPush: true, autoCreatePR: false },
+      workflow: 'audit',
+    });
+
+    expect(result.gitWorkflow).toEqual({ autoCommit: true, autoPush: true, autoCreatePR: false });
+    expect(result.workflow).toBe('audit');
+    const written = getWritten('ro-2');
+    expect(written?.gitWorkflow).toEqual({ autoCommit: true, autoPush: true, autoCreatePR: false });
+  });
+
+  it('leaves gitWorkflow untouched for a normal (non-promoting) update', async () => {
+    const feature = makeFeature({
+      id: 'std-1',
+      status: 'backlog',
+      executionMode: 'standard',
+      gitWorkflow: { autoCommit: true, autoPush: true, autoCreatePR: true },
+    });
+    mockFeatureStore([feature]);
+    const { getWritten } = captureWrites();
+
+    await loader.update(PROJECT_PATH, 'std-1', { title: 'Renamed' });
+
+    const written = getWritten('std-1');
+    expect(written?.gitWorkflow).toEqual({ autoCommit: true, autoPush: true, autoCreatePR: true });
+    expect(written?.executionMode).toBe('standard');
+  });
+});

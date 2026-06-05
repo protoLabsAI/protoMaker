@@ -430,6 +430,7 @@ export class WorkflowLoader {
       if (!match) continue;
 
       let score = 0;
+      let categoryMatched = false;
       const category = (feature.category ?? '').toLowerCase();
       const title = (feature.title ?? '').toLowerCase();
       const description = (feature.description ?? '').toLowerCase();
@@ -440,6 +441,7 @@ export class WorkflowLoader {
         for (const cat of match.categories) {
           if (category === cat.toLowerCase()) {
             score += 10;
+            categoryMatched = true;
             break;
           }
         }
@@ -460,6 +462,23 @@ export class WorkflowLoader {
       // Legacy executionMode match
       if (match.executionMode && feature.executionMode === match.executionMode) {
         score += 10;
+      }
+
+      // Delivery guard (#4073): a code-delivery feature must not be stripped of
+      // worktree isolation + PR creation by a *keyword-only* match. Routing a real
+      // code feature into a no-worktree/no-PR workflow (audit, research, signal,
+      // tech-debt-scan, ...) requires an explicit signal — an exact category match,
+      // an explicit feature.workflow, or feature.executionMode: 'read-only' (the latter
+      // two are handled by the short-circuits above). Keyword hits alone are far too
+      // noisy: words like "audit"/"review"/"analyze"/"research"/"check" routinely appear
+      // in ordinary delivery features (e.g. a "zizmor-remediation" task), and silently
+      // disabling delivery means the agent runs, auto-commits locally, and produces no
+      // branch/push/PR while the board still marks it done. This is the same false-positive
+      // class as the #3946 substring bug, generalized to whole-word keyword hits.
+      const featureType = feature.featureType ?? 'code';
+      const stripsDelivery = workflow.execution.useWorktrees === false;
+      if (featureType === 'code' && stripsDelivery && !categoryMatched) {
+        continue;
       }
 
       if (score > bestScore) {

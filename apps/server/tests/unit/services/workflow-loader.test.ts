@@ -61,7 +61,12 @@ describe('WorkflowLoader', () => {
       expect(result.execution.useWorktrees).toBe(false);
     });
 
-    it('should resolve title containing "research" to the research workflow', async () => {
+    it('does NOT route a code feature to a read-only workflow on keyword-only hits (#4073)', async () => {
+      // A code-delivery feature whose text merely contains "research"/"explore" must
+      // stay on standard (worktree + commit + PR). Keyword-only matches are too noisy
+      // to silently strip delivery — that produced the #4073 "done with no PR" incident.
+      // To intentionally route research work, set category: 'research' (see below) or an
+      // explicit workflow. Generalizes the #3946 substring guard to whole-word hits.
       const feature = createFeature({
         category: 'code',
         title: 'Research authentication options',
@@ -70,8 +75,40 @@ describe('WorkflowLoader', () => {
 
       const result = await loader.resolveForFeature(testProjectPath, feature);
 
+      expect(result.name).toBe('standard');
+      expect(result.execution.useWorktrees).toBe(true);
+    });
+
+    it('routes a code feature into a read-only workflow on an EXACT category match (#4073)', async () => {
+      // The delivery guard only blocks keyword-only matches; an exact category match is
+      // an explicit signal and still routes to the read-only workflow.
+      const feature = createFeature({
+        category: 'research',
+        title: 'Research authentication options',
+        description: 'Explore different auth libraries',
+      });
+
+      const result = await loader.resolveForFeature(testProjectPath, feature);
+
       expect(result.name).toBe('research');
       expect(result.execution.useWorktrees).toBe(false);
+    });
+
+    it('does NOT route a code feature to read-only on audit/security keyword hits (#4073 repro)', async () => {
+      // Mirrors the release-tools "zizmor-remediation" incident: a genuine code feature
+      // whose description contains audit/security/review keywords must NOT be downgraded
+      // to a no-PR workflow. It is real delivery work and must keep worktree + PR.
+      const feature = createFeature({
+        category: 'Signal Intake',
+        title: '[github] Remediate zizmor security findings in workflows',
+        description:
+          'Audit the GitHub Actions workflows and review/fix the security issues zizmor flagged.',
+      });
+
+      const result = await loader.resolveForFeature(testProjectPath, feature);
+
+      expect(result.name).toBe('standard');
+      expect(result.execution.useWorktrees).toBe(true);
     });
 
     it('does NOT route a code feature to a read-only workflow on a substring keyword false-positive (#3946)', async () => {

@@ -1141,6 +1141,22 @@ export class FeatureLoader implements FeatureStore {
       }
     }
 
+    // Promote-to-delivery (#4073): when a feature is moved off read-only execution, the
+    // stale all-false gitWorkflow override (and any read-only workflow pin) must be cleared
+    // too. Otherwise the promotion is a no-op in practice: resolveGitWorkflowSettings still
+    // honors the false autoCommit/autoPush/autoCreatePR overrides (so no PR), and the next
+    // workflow re-resolution can snap the feature straight back to read-only. Clearing both
+    // lets it re-inherit project/global delivery defaults and re-resolve cleanly. A
+    // caller that sets gitWorkflow/workflow explicitly in the same update wins.
+    if (updates.executionMode === 'standard' && feature.executionMode === 'read-only') {
+      if (!('gitWorkflow' in updates)) updates.gitWorkflow = undefined;
+      if (!('workflow' in updates)) updates.workflow = undefined;
+      logger.info(
+        `Promoting feature ${featureId} to delivery — cleared stale read-only ` +
+          `gitWorkflow/workflow overrides so it re-inherits delivery defaults`
+      );
+    }
+
     // Merge updates
     const updatedFeature: Feature = {
       ...feature,

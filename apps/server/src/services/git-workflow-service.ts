@@ -410,7 +410,22 @@ export class GitWorkflowService {
   ): Promise<GitWorkflowResult | null> {
     // Read-only features should never reach git workflow, but guard defensively.
     if (feature.executionMode === 'read-only') {
-      logger.debug(`Skipping git workflow for read-only feature ${featureId}`);
+      // De-silenced (#4073): a code-delivery feature reaching here read-only is almost
+      // always a mis-route — the agent runs and may auto-commit locally, but no branch,
+      // push, or PR is created, yet the board can still mark it done. Surface that at
+      // warn so the silent "done with no PR" failure mode is visible in logs and points
+      // at the remedy (promote it: set executionMode=standard so it re-resolves to a
+      // delivery workflow). Genuine read-only work (audit/research/signal) stays debug.
+      const featureType = feature.featureType ?? 'code';
+      if (featureType === 'code') {
+        logger.warn(
+          `Skipping git workflow for read-only feature ${featureId} (featureType=code) — ` +
+            `no branch/push/PR will be created. If this is delivery work, promote it ` +
+            `(set executionMode=standard) so it re-resolves to a delivery workflow.`
+        );
+      } else {
+        logger.debug(`Skipping git workflow for read-only feature ${featureId}`);
+      }
       return null;
     }
 
