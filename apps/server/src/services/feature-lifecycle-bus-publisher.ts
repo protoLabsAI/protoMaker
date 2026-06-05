@@ -8,9 +8,10 @@
  * publishes one of three dotted, unprefixed topics workstacean's consumers
  * subscribe to:
  *
- *   - `done`      → `feature.completed`
- *   - `blocked`   → `feature.blocked`   (carries a `kind` failure discriminator)
- *   - `escalated` → `feature.failed`    (already escalated — no auto-remediation)
+ *   - `done`               → `feature.completed`
+ *   - `done` + `archived`  → `feature.cancelled`  (terminal but not shipped, #4103)
+ *   - `blocked`            → `feature.blocked`    (carries a `kind` failure discriminator)
+ *   - `escalated`          → `feature.failed`     (already escalated — no auto-remediation)
  *
  * `feature.blocked` is split out of the generic `feature.failed` so
  * workstacean's FeatureRemediationPlugin can route a per-feature signal to
@@ -60,6 +61,22 @@ const UNBLOCKED_TARGET_STATUSES: ReadonlySet<string> = new Set([
   'backlog',
   'review',
 ]);
+
+/**
+ * One lifecycle signal per transition. `cancelled` is a terminal feature that was
+ * archived on close (e.g. its issue was closed "not planned", #4103) — NOT shipped,
+ * so it's distinct from `completed`. Topic = what workstacean's consumers subscribe
+ * to; timestampKey = the field name carrying the transition time.
+ */
+type LifecycleSignal = 'cancelled' | 'completed' | 'blocked' | 'unblocked' | 'failed';
+
+const LIFECYCLE_SIGNALS: Record<LifecycleSignal, { topic: string; timestampKey: string }> = {
+  cancelled: { topic: 'feature.cancelled', timestampKey: 'cancelledAt' },
+  completed: { topic: 'feature.completed', timestampKey: 'completedAt' },
+  blocked: { topic: 'feature.blocked', timestampKey: 'blockedAt' },
+  unblocked: { topic: 'feature.unblocked', timestampKey: 'unblockedAt' },
+  failed: { topic: 'feature.failed', timestampKey: 'failedAt' },
+};
 
 /**
  * Failure-category discriminator workstacean's router consumes to decide
@@ -271,17 +288,20 @@ export class FeatureLifecycleBusPublisher {
       logger.warn(`Could not load feature ${featureId} for lifecycle event:`, err);
     }
 
-    // Dotted, unprefixed topics — exactly what workstacean's consumers
-    // subscribe to. `blocked` is its own remediable signal; `unblocked` is the
-    // recovery signal that clears remediation tracking; `escalated` stays
-    // `feature.failed` (no auto-remediation); `done` is `feature.completed`.
-    const topic = isTerminal
-      ? 'feature.completed'
-      : isBlocked
-        ? 'feature.blocked'
-        : isUnblock
-          ? 'feature.unblocked'
-          : 'feature.failed';
+    // Classify into exactly one lifecycle signal (see LIFECYCLE_SIGNALS). A terminal
+    // feature that was ARCHIVED on close is a cancellation, not a completion — e.g. its
+    // GitHub issue was closed "not planned" (#4103) — so workstacean doesn't record it
+    // as shipped or run the close-the-loop it does for feature.completed. (archiveFeature
+    // writes its stub without a status-changed event, so this only fires for the in-band
+    // not-planned close that archives via update().)
+    const isCancelled = isTerminal && feature?.archived === true;
+    let signal: LifecycleSignal = 'failed';
+    if (isCancelled) signal = 'cancelled';
+    else if (isTerminal) signal = 'completed';
+    else if (isBlocked) signal = 'blocked';
+    else if (isUnblock) signal = 'unblocked';
+    const { topic, timestampKey } = LIFECYCLE_SIGNALS[signal];
+
     const owner = process.env.GITHUB_REPO_OWNER;
     const name = process.env.GITHUB_REPO_NAME;
     const repo = owner && name ? `${owner}/${name}` : undefined;
@@ -291,13 +311,6 @@ export class FeatureLifecycleBusPublisher {
       feature?.sourceMeta && typeof feature.sourceMeta === 'object'
         ? feature.sourceMeta
         : { sourceChannel: feature?.sourceChannel, signalMetadata: feature?.signalMetadata };
-    const timestampKey = isTerminal
-      ? 'completedAt'
-      : isBlocked
-        ? 'blockedAt'
-        : isUnblock
-          ? 'unblockedAt'
-          : 'failedAt';
     const data: Record<string, unknown> = {
       // projectSlug is REQUIRED by workstacean's feature-notifier (resolves the
       // dev channel); fall back so the event is never dropped for lacking it.
@@ -339,6 +352,10 @@ export class FeatureLifecycleBusPublisher {
     } else if (isEscalated) {
       // feature.failed keeps the historical `error` field for existing consumers.
       data.error = (feature?.statusChangeReason ?? payload?.reason ?? 'failed').slice(0, 400);
+    }
+    if (isCancelled) {
+      // Why it was cancelled (e.g. "closed as not planned"), for consumer logging.
+      data.reason = (feature?.statusChangeReason ?? payload?.reason ?? 'cancelled').slice(0, 400);
     }
 
     try {
