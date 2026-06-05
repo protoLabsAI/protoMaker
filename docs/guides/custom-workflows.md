@@ -176,7 +176,13 @@ match:
   executionMode: read-only # Match legacy executionMode field
 ```
 
-Match rules are not yet used for auto-assignment -- they are reserved for future workflow auto-detection.
+Match rules drive automatic workflow assignment via a scoring pass (see [Resolution Order](#resolution-order)): an exact `category` match scores 10, each whole-word `keyword` hit in the title/description scores 1, and an `executionMode` match scores 10. The highest-scoring workflow with a non-zero score wins.
+
+::: warning Delivery guard for code features
+A `featureType: 'code'` feature (the default) is **never** routed into a workflow that disables worktrees (`useWorktrees: false`) on a **keyword-only** match. Stripping a code feature of delivery (worktree → branch → push → PR) requires an explicit signal — an **exact category match**, an explicit `feature.workflow`, or `feature.executionMode: 'read-only'`.
+
+This prevents the false-positive class where ordinary delivery work whose text happens to contain words like `audit`, `review`, `analyze`, `research`, or `check` is silently downgraded to a no-PR read-only run (#4073). To intentionally route code work to a read-only workflow, set its `category` to one the workflow matches exactly, or pin `workflow` explicitly.
+:::
 
 ## Backward Compatibility
 
@@ -299,8 +305,14 @@ See `tools/swebench/` for the evaluation harness that uses this workflow.
 
 When the Lead Engineer picks up a feature, it resolves the workflow in this order:
 
-1. `feature.workflow` field (explicit assignment)
-2. `feature.executionMode === 'read-only'` maps to `read-only` workflow
-3. Falls back to `standard`
+1. `feature.workflow` field (explicit assignment) — if set but unknown, falls back to `standard`
+2. `feature.featureType === 'signal'` maps to the `signal` workflow
+3. `feature.executionMode === 'read-only'` maps to the `read-only` workflow
+4. **Match-rule scoring** across all built-in and project workflows (see [Match Rules](#match-rules)), subject to the **delivery guard** — a `featureType: 'code'` feature can only be scored into a `useWorktrees: false` workflow via an **exact category match**, not keyword hits alone
+5. Falls back to `standard`
 
 Project-level YAML files (`.automaker/workflows/{name}.yml`) take priority over built-in defaults with the same name, allowing you to override built-in behavior.
+
+### Promoting a read-only feature to delivery
+
+If a feature ended up read-only and you want it to branch/push/PR, set `executionMode: 'standard'` via the feature update API. The update path also clears the stale all-false `gitWorkflow` overrides and any read-only `workflow` pin (unless you set them explicitly in the same update), so the feature re-inherits delivery defaults and re-resolves cleanly instead of snapping back to read-only.
