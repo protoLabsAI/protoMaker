@@ -1,5 +1,7 @@
 # Backlog scoping — decision-bound issues (2026-05-27)
 
+> **Status: Historical.** Point-in-time scoping snapshot from 2026-05-27; several items have since shipped or changed. Kept as a planning record, not a current source of truth.
+
 Scoping plans for the open issues that need a product/infra decision or are large
 enough to warrant a plan before coding. Each entry: **what**, **approach**, **key
 files**, **effort**, **risk**, **decision needed**. Lanes A+B of the day plan

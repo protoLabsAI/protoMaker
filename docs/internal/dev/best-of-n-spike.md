@@ -1,5 +1,7 @@
 # Spike: Best-of-N Multi-Trajectory Sampling (architectural tier)
 
+> **Status: Historical spike.** Design/cost record only — no feature shipped here. Kept for reference if the recommended slice is greenlit.
+
 Investigation + recommendation for beads `26d`. **Outcome: build the cheap slice (best-of-N on PLAN) behind a default-off flag; defer best-of-N on full execution.** This is a spike — no feature shipped here; this records the design, cost model, and go/no-go so a follow-up can implement the recommended slice if greenlit.
 
 ## Idea
