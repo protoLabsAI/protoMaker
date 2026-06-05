@@ -51,6 +51,33 @@ describe('FeatureLifecycleBusPublisher', () => {
     expect(arg.data.sourceMeta.sourceChannel).toBe('github');
   });
 
+  it('publishes feature.cancelled (not completed) when a terminal feature is archived', async () => {
+    // A not_planned issue close terminalizes to done AND archives the feature (#4103):
+    // it must read as a cancellation, never as shipped work.
+    const feature = {
+      id: 'f9',
+      title: 'Abandoned',
+      projectSlug: 'proj',
+      archived: true,
+      statusChangeReason: 'GitHub issue #5 closed as not planned — archived (not shipped)',
+    };
+    const { pub, publishFn } = makePublisher({ feature });
+
+    await pub.handleStatusChange({
+      featureId: 'f9',
+      projectPath: '/p',
+      oldStatus: 'backlog',
+      newStatus: 'done',
+    });
+
+    expect(publishFn).toHaveBeenCalledTimes(1);
+    const arg = publishFn.mock.calls[0][0];
+    expect(arg.event).toBe('feature.cancelled');
+    expect(arg.data.cancelledAt).toBeDefined();
+    expect(arg.data.completedAt).toBeUndefined();
+    expect(arg.data.reason).toContain('not planned');
+  });
+
   it('echoes feature.sourceMeta when present (manage_feature meta)', async () => {
     const feature = {
       id: 'f1',

@@ -437,21 +437,22 @@ export function createGitHubWebhookHandler(
               res.json({ success: true, message: 'Feature already terminal' });
               return;
             }
-            // Distinguish a genuine completion from an abandonment (wontfix/duplicate).
-            // The board has a single terminal status (`done`), so both terminalize here
-            // to clear phantom backlog — but the reason and the emitted event carry
-            // state_reason so consumers/metrics can tell shipped from abandoned. A
-            // dedicated `cancelled` terminal is tracked as a follow-up.
+            // A genuine completion (`completed`) terminalizes to `done` →
+            // feature.completed. An abandonment (`not_planned`: wontfix/duplicate) is
+            // terminalized AND archived: it clears the active board without counting as
+            // shipped, and the lifecycle bus turns done+archived into feature.cancelled
+            // instead of feature.completed (#4103).
             const stateReason = issuePayload.issue.state_reason ?? null;
             const notPlanned = stateReason === 'not_planned';
             logger.info(
               `GitHub issue #${issueNumber} closed as ${notPlanned ? 'not planned' : 'completed'} ` +
-                `(${repoFullName}) — syncing feature ${linked.id} to done`
+                `(${repoFullName}) — ${notPlanned ? 'archiving' : 'syncing'} feature ${linked.id}`
             );
             await featureLoader.update(projectPath, linked.id, {
               status: 'done',
+              ...(notPlanned ? { archived: true } : {}),
               statusChangeReason: notPlanned
-                ? `GitHub issue #${issueNumber} closed as not planned — auto-synced to done (was not shipped)`
+                ? `GitHub issue #${issueNumber} closed as not planned — archived (not shipped)`
                 : `GitHub issue #${issueNumber} closed — auto-synced to done`,
             });
             events.emit('feature:issue-closed', {
@@ -461,7 +462,12 @@ export function createGitHubWebhookHandler(
               repository: repoFullName,
               stateReason,
             });
-            res.json({ success: true, message: `Feature ${linked.id} synced to done` });
+            res.json({
+              success: true,
+              message: notPlanned
+                ? `Feature ${linked.id} archived (closed not planned)`
+                : `Feature ${linked.id} synced to done`,
+            });
             return;
           }
 
@@ -476,6 +482,7 @@ export function createGitHubWebhookHandler(
           );
           await featureLoader.update(projectPath, linked.id, {
             status: 'backlog',
+            archived: false, // un-archive in case it was closed as not_planned (#4103)
             statusChangeReason: `GitHub issue #${issueNumber} reopened — auto-recovered to backlog`,
           });
           events.emit('feature:issue-reopened', {
