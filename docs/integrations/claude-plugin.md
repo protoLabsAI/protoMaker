@@ -391,7 +391,7 @@ If neither of the above applies:
 ### Tools Not Available
 
 1. Check the health endpoint: `/board` — if it fails, start protoLabs
-2. Verify MCP tools are loaded: `mcp__protolabs__health_check()`
+2. Verify MCP tools are loaded: `mcp__plugin_protolabs_studio__health_check()`
 
 ### Feature Dependencies Not Working
 

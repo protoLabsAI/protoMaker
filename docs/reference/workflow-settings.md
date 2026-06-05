@@ -134,7 +134,7 @@ interface WorkflowSettings {
 
 When enabled (`true`), the EXECUTE processor runs three checks before launching the agent:
 
-1. **Worktree currency** — syncs worktree with `git fetch` + `git rebase origin/dev`
+1. **Worktree currency** — syncs worktree with `git fetch` + `git rebase origin/main`
 2. **Package builds** — validates required packages compile successfully
 3. **Dependency merge** — verifies all blocking upstream features are merged
 

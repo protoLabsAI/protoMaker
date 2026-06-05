@@ -366,7 +366,7 @@ Conditional registration: `data-integrity` requires `IntegrityWatchdogService`, 
 
 ### Branch-Aware Tasks
 
-Tasks marked "Branch-Aware" in the table above call `resolveIntegrationBranch()` to determine the correct target branch from the project's `gitWorkflow.prBaseBranch` setting (defaults to `dev`). This means:
+Tasks marked "Branch-Aware" in the table above call `resolveIntegrationBranch()` to determine the correct target branch from the project's `gitWorkflow.prBaseBranch` setting (defaults to `main`). This means:
 
 - **`stale-worktrees`** uses the integration branch when determining which branches are safe to clean (covers both worktree removal and merged branch deletion)
 

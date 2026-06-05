@@ -47,7 +47,7 @@ agent-browser uses an accessibility tree with semantic element references (`@e1`
 Single-call QA health snapshot that consolidates multiple verification sources.
 
 ```typescript
-mcp__protolabs__run_qa_check({
+mcp__plugin_protolabs_studio__run_qa_check({
   projectPath: '/home/josh/dev/ava',
 });
 ```
@@ -227,7 +227,7 @@ Aggregation endpoint that returns a consolidated QA snapshot for a project.
 
 ```typescript
 // MCP call
-mcp__protolabs__run_qa_check({
+mcp__plugin_protolabs_studio__run_qa_check({
   projectPath: '/home/josh/dev/ava',
 });
 ```

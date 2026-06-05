@@ -567,7 +567,7 @@ Use the top 3 results to inform your implementation.
 The protoLabs Studio MCP server exposes knowledge search:
 
 ```typescript
-mcp__protolabs__search_knowledge({
+mcp__plugin_protolabs_studio__search_knowledge({
   projectPath: '/path/to/project',
   query: 'how to add a new memory category',
   maxResults: 5,

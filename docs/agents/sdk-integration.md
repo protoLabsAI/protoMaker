@@ -120,7 +120,7 @@ POST /api/agent/start-session
 }
 
 // Via MCP Tool
-mcp__protolabs__start_agent({
+mcp__plugin_protolabs_studio__start_agent({
   projectPath: '/path/to/project',
   featureId: 'feature-123',
   model: 'claude-sonnet-4-6',

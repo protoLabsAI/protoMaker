@@ -42,7 +42,7 @@ This guide provides a comprehensive overview of protoLabs's context loading syst
 
 ```bash
 # Via MCP tool
-mcp__protolabs__create_context_file({
+mcp__plugin_protolabs_studio__create_context_file({
   projectPath: '/path/to/project',
   filename: 'code-quality.md',
   content: '# Code Quality Standards\n\n...'

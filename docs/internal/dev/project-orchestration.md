@@ -108,7 +108,7 @@ This keeps the base branch clean while allowing incremental feature development 
 
 ```typescript
 // Create project plan
-mcp__protolabs__create_project({
+mcp__plugin_protolabs_studio__create_project({
   projectPath: '/path/to/project',
   title: 'My Feature',
   goal: 'Implement X functionality',
@@ -137,7 +137,7 @@ mcp__protolabs__create_project({
 });
 
 // Convert to board features
-mcp__protolabs__create_project_features({
+mcp__plugin_protolabs_studio__create_project_features({
   projectPath: '/path/to/project',
   projectSlug: 'my-feature',
   createEpics: true,
