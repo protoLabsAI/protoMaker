@@ -10,7 +10,7 @@ For setup instructions, see [Claude Plugin Setup](./claude-plugin.md). For comma
 packages/mcp-server/
 ├── src/
 │   ├── index.ts              # MCP server entry point (stdio transport)
-│   └── tools/                # Tool definition modules (22 files)
+│   └── tools/                # Tool definition modules (18 files)
 │       ├── feature-tools.ts
 │       ├── agent-tools.ts
 │       ├── git-tools.ts
@@ -33,12 +33,12 @@ packages/mcp-server/
     │   └── scripts/
     │       ├── post-edit-typecheck.js
     │       └── evaluate-session.js
-    ├── commands/              # Slash command definitions (18 files)
+    ├── commands/              # Slash command definitions (19 files)
     │   ├── board.md
-    │   ├── ava.md
+    │   ├── roxy.md
     │   ├── setuplab.md
     │   └── ...
-    ├── agents/                # Subagent definitions (13 files)
+    ├── agents/                # Subagent definitions (11 files)
     │   ├── feature-planner.md
     │   ├── codebase-analyzer.md
     │   └── ...
@@ -121,26 +121,26 @@ Some tools compute results in the MCP process without a server endpoint:
 
 All tools are defined as static schemas in separate module files under `packages/mcp-server/src/tools/`, then aggregated in `index.ts`.
 
-| Module             | File                     | Description                                    |
-| ------------------ | ------------------------ | ---------------------------------------------- |
-| Feature Management | `feature-tools.ts`       | Feature CRUD, git settings                     |
-| Agent Control      | `agent-tools.ts`         | Start/stop agents, templates, dynamic executor |
-| Queue              | `queue-tools.ts`         | Feature queue (add, list, clear)               |
-| Orchestration      | `orchestration-tools.ts` | Auto-mode, dependencies, execution order       |
-| Context & Skills   | `context-tools.ts`       | Context files, skills CRUD                     |
-| Git & GitHub       | `git-tools.ts`           | PRs, reviews, worktree management              |
-| Git Operations     | `git-ops-tools.ts`       | Repository status and file details             |
-| Worktree Git       | `worktree-git-tools.ts`  | Cherry-pick, stash, abort/continue             |
-| File Operations    | `file-ops-tools.ts`      | Copy, move, browse files                       |
-| Project Lifecycle  | `project-tools.ts`       | Projects, PRD, milestones, phases              |
-| Integrations       | `integration-tools.ts`   | Discord, HITL forms                            |
-| Lead Engineer      | `lead-engineer-tools.ts` | Lead engineer state machine control            |
-| Observability      | `observability-tools.ts` | Langfuse traces, costs, scoring, datasets      |
-| Quarantine         | `quarantine-tools.ts`    | Quarantine entries, trust tiers                |
-| Scheduler          | `scheduler-tools.ts`     | Scheduler status, maintenance tasks            |
-| Setup              | `setup-tools.ts`         | SetupLab: research, gap analysis, alignment    |
-| Utilities          | `utility-tools.ts`       | Health, board summary, briefing, metrics       |
-| Workspace          | `workspace-tools.ts`     | Worktrees, notes, escalation                   |
+| Module             | File                     | Description                                          |
+| ------------------ | ------------------------ | ---------------------------------------------------- |
+| Feature Management | `feature-tools.ts`       | Feature CRUD, git settings                           |
+| Agent Control      | `agent-tools.ts`         | Start/stop agents, output, messaging                 |
+| Queue              | `queue-tools.ts`         | Feature queue (add, list, clear)                     |
+| Orchestration      | `orchestration-tools.ts` | Auto-mode, dependencies, execution order             |
+| Context            | `context-tools.ts`       | Context files CRUD                                   |
+| Git & GitHub       | `git-tools.ts`           | PRs, reviews, worktrees, triage evidence             |
+| Git Operations     | `git-ops-tools.ts`       | Repository status and file details                   |
+| Cross-Repo         | `cross-repo-tools.ts`    | Flag/resolve cross-repo dependencies                 |
+| Project Lifecycle  | `project-tools.ts`       | Projects, PRD, milestones, phases                    |
+| Integrations       | `integration-tools.ts`   | HITL request/response forms                          |
+| Knowledge          | `knowledge-tools.ts`     | Knowledge search, ingest, rebuild, stats             |
+| QA                 | `qa-tools.ts`            | Run QA checks                                        |
+| Lead Engineer      | `lead-engineer-tools.ts` | Lead engineer state machine control                  |
+| Observability      | `observability-tools.ts` | Settings, project/capacity metrics, forecast         |
+| Scheduler          | `scheduler-tools.ts`     | Scheduler status, maintenance tasks                  |
+| Setup              | `setup-tools.ts`         | SetupLab: research, gap analysis, alignment, Discord |
+| Utilities          | `utility-tools.ts`       | Health, board summary, briefing, sitrep              |
+| Workspace          | `workspace-tools.ts`     | Board query, note tabs                               |
 
 Each module exports a `Tool[]` array:
 
@@ -220,7 +220,7 @@ Injects board state into Claude's context. Reads feature JSON files directly fro
 
 #### compaction-prime-directive.sh
 
-Identity restoration after context window compaction. Outputs mandatory instructions to invoke `/ava`, reads the saved session state, and injects hardcoded operational rules (no server restart, no worktree `cd`, max 2-3 concurrent agents).
+Identity restoration after context window compaction. Outputs mandatory instructions to invoke `/roxy`, reads the saved session state, and injects hardcoded operational rules (no server restart, no worktree `cd`, max 2-3 concurrent agents).
 
 Only fires on the `compact` matcher -- not on normal startup or resume.
 
@@ -317,9 +317,9 @@ temporary-reason: '...'
 | Context    | Full conversation history      | Only the prompt provided                      |
 | Use case   | Interactive workflows          | Parallelizable, isolated tasks                |
 
-### Current Commands (17)
+### Current Commands (19)
 
-`/auto-mode`, `/ava`, `/board`, `/context`, `/deep-research`, `/due-diligence`, `/headsdown`, `/improve-prompts`, `/orchestrate`, `/plan-project`, `/promote`, `/setuplab`, `/ship`, `/sparc-prd`, `/update-plugin`, `/welcome`
+`/auto-mode`, `/board`, `/bug_triage`, `/cli-control`, `/context`, `/deep-research`, `/due-diligence`, `/improve-prompts`, `/orchestrate`, `/plan-project`, `/provision_discord`, `/quinn`, `/roxy`, `/setup-tracing`, `/setuplab`, `/ship`, `/sparc-prd`, `/update-plugin`, `/welcome`
 
 ## Session Lifecycle
 

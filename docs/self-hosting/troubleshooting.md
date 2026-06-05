@@ -4,10 +4,11 @@ Common issues and their solutions.
 
 ## Quick Diagnostics
 
-Run the DevOps health check:
+Run the DevOps health check — invoke `/frank` and ask for a health check:
 
 ```
-/devops health
+/frank
+> run a health check
 ```
 
 Or manually:

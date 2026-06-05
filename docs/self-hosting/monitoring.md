@@ -45,13 +45,16 @@ Possible statuses:
 - `unhealthy` - Health check failing
 - `starting` - Within start period
 
-### Using the /devops Skill
+### Using Frank (DevOps Persona)
+
+Invoke `/frank` and ask for a health check:
 
 ```
-/devops health
+/frank
+> run a health check
 ```
 
-This runs a comprehensive health check including:
+Frank (via the `devops-health-check` agent) runs a comprehensive health check including:
 
 - Docker daemon status
 - Container states
@@ -92,13 +95,16 @@ Server logs use structured output with levels:
 [ERROR] Failed to connect to database
 ```
 
-### Log Analysis with /devops
+### Log Analysis with Frank
+
+Invoke `/frank` and ask for log analysis:
 
 ```
-/devops logs
+/frank
+> analyze the container logs
 ```
 
-Analyzes container logs for:
+Frank (via the `devops-logs` agent) analyzes container logs for:
 
 - Error patterns and stack traces
 - Warning frequencies

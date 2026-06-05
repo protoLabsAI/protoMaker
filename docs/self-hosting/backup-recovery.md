@@ -132,13 +132,16 @@ Add to crontab:
 0 2 * * * /home/user/scripts/backup-automaker.sh >> /var/log/automaker-backup.log 2>&1
 ```
 
-### Using /devops Skill
+### Using Frank (DevOps Persona)
+
+Invoke `/frank` and ask for a backup:
 
 ```
-/devops backup
+/frank
+> back up the volumes
 ```
 
-This interactive command:
+Frank (via the `devops-backup` agent) interactively:
 
 1. Shows current volume sizes
 2. Confirms backup location
