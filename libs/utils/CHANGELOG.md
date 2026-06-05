@@ -1,5 +1,26 @@
 # @protolabsai/utils
 
+## 0.111.0
+
+### Minor Changes
+
+- ### Features
+  - per-project execution stance — delivery vs observe (closes #4074) (#4099)
+
+  ### Bug Fixes
+  - repo default branch outranks global prBaseBranch + validate base exists (#4086) (#4100)
+  - rewrite /release command to the changesets flow (closes #4080) (#4097)
+  - surface real worktree-creation error on statusChangeReason (#4086) (#4096)
+
+  ### Refactors
+  - [github] Default useWorktrees to true for new projects (always isolate a (#4077)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.111.0
+  - @protolabsai/platform@0.111.0
+
 ## 0.110.0
 
 ### Minor Changes
