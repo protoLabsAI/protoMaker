@@ -376,11 +376,13 @@ Project-specific rules are stored in `.automaker/context/` and automatically loa
 
 ### Model Resolution
 
-Use `resolveModelString()` from `@protolabsai/model-resolver` to convert model aliases:
+Use `resolveModelString()` from `@protolabsai/model-resolver` to convert model aliases to protoLabs gateway tiers (all Claude routing goes through the gateway):
 
-- `haiku` → `claude-haiku-4-5-20251001`
-- `sonnet` → `claude-sonnet-4-6`
-- `opus` → `claude-opus-4-6`
+- `haiku` → `protolabs/fast`
+- `sonnet` → `protolabs/smart`
+- `opus` → `protolabs/reasoning`
+
+Legacy versioned IDs (e.g. `claude-sonnet-4-6`) and the canonical `claude-haiku|sonnet|opus` aliases also resolve to these tiers. The default is `DEFAULT_MODELS.claude` (`protolabs/reasoning`).
 
 ### Lead Engineer State Machine
 

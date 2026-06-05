@@ -132,7 +132,7 @@ import { LangfuseClient, executeTrackedPrompt } from '@protolabsai/observability
 
 const langfuse = new LangfuseClient();
 const smartModel = ProviderFactory.create('anthropic', {
-  modelId: 'claude-sonnet-4-5-20250929',
+  modelId: 'protolabs/smart',
 });
 
 // Wrap node with tracing
