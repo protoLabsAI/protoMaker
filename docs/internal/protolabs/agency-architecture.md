@@ -36,7 +36,7 @@ graph TB
         end
     end
 
-    subgraph PLANNING["3. PLANNING PIPELINE"]
+    subgraph PLANNING["3. PLANNING PIPELINE (protoWorkstacean)"]
         PLAN_SKILL["Ava: plan skill<br/>SPARC PRD generation"]
         BOARD_CTX["Board Context<br/>FeatureLoader.getAll()<br/>active + backlog features"]
         ANTAG_REVIEW["Antagonistic Review<br/>Ava: ops agent-loop · Read/Glob/Grep tools<br/>pushes back on capacity + timeline conflicts<br/>Jon: GTM agent-loop · brand filter<br/>checks positioning + ROI vs board load"]
@@ -135,17 +135,16 @@ For the complete 8-phase pipeline reference (TRIAGE through PUBLISH), see [Idea 
 
 The agency is organized into two branches with clear boundaries:
 
-### Operations (Ava, Chief of Staff)
+### Operations (Ava, Chief of Staff — protoWorkstacean)
 
-Signal triage, quality gates, team health, and external communication.
+Signal triage, quality gates, team health, and external communication. **This branch lives in protoWorkstacean, not protoMaker.**
 
 - **Signal classification** — Routes incoming ideas, bugs, ops improvements, GTM work
 - **Antagonistic review** — Ava runs as an ops agent-loop (Read/Glob/Grep tools, board context) alongside Jon (GTM agent-loop, brand filter); both can push back on capacity conflicts, timeline misalignment, or weak business case before approval
-- **Lead Engineer** — Event-driven orchestrator with fast-path rules, state machine
 - **Ceremonies** — Standup, retro, project-retro via Discord
 - **Discord comms** — Status updates, alerts, Josh coordination
 
-### Engineering (Lead Engineer)
+### Engineering (Lead Engineer — protoMaker)
 
 Production orchestration, auto-mode execution, and code quality.
 
@@ -205,7 +204,7 @@ Communication channels:
 
 - **Workstacean bus** for all inter-agent routing (`message.inbound.*`, `message.outbound.*`)
 - **Interface plugins** for human-facing I/O (Discord, voice, Slack, GitHub, Plane, raw API)
-- **MCP tools** for system operations (48+ tools)
+- **MCP tools** for system operations (~159 tools)
 - **Events** for system-to-system (`feature:completed`, `project:lifecycle:launched`, etc.)
 - **Agent memory** for persistent cross-session learning
 - **Domain tools** for feature management, git ops, and project orchestration
@@ -213,30 +212,25 @@ Communication channels:
 
 ## Component Inventory
 
-| Component                       | Location                                                    | Notes                                                   |
-| ------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------- |
-| **Idea processing flow**        | `libs/tools/src/domains/ideas/process-idea.ts`              | LangGraph flow with HITL checkpoints                    |
-| **Antagonistic review**         | `apps/server/src/services/antagonistic-review-service.ts`   | 3-stage: Ava ops → Jon market → consolidated resolution |
-| **Antagonistic review adapter** | `apps/server/src/services/antagonistic-review-adapter.ts`   | LangGraph flow wrapper with Langfuse tracing            |
-| **Lead Engineer service**       | `apps/server/src/services/lead-engineer-service.ts`         | Production orchestrator with fast-path rules            |
-| **Lead Engineer rules**         | `apps/server/src/services/lead-engineer-rules.ts`           | 8 pure-function rules (no LLM, no service imports)      |
-| **SharedTool system**           | `libs/tools/src/types.ts`, `define-tool.ts`                 | Zod-validated tool definitions for MCP/LangGraph/REST   |
-| **Feature domain tools**        | `libs/tools/src/domains/features/`                          | CRUD operations via SharedTool pattern                  |
-| **Project lifecycle**           | `apps/server/src/services/project-lifecycle-service.ts`     | 6 MCP tool steps from idea to launch                    |
-| **submit_prd MCP tool**         | `packages/mcp-server/src/index.ts`                          | Creates epic, ProjM decomposes                          |
-| **SPARC PRD skill**             | `plugins/automaker/commands/sparc-prd.md`                   | Interactive PRD creation                                |
-| **ProjM deep research**         | `apps/server/src/services/authority-agents/`                | Milestone/phase decomposition                           |
-| **Auto-mode execution**         | `apps/server/src/services/auto-mode-service.ts`             | Dependency-aware, model escalation                      |
-| **Worktree isolation**          | `apps/server/src/services/agent-service.ts`                 | Per-feature branches                                    |
-| **PR pipeline**                 | `apps/server/src/services/git-workflow-service.ts`          | Create, push, merge                                     |
-| **CodeRabbit integration**      | Branch protection + `resolve_review_threads`                | Required check                                          |
-| **CI/CD**                       | `.github/workflows/`                                        | Build, test, format, audit                              |
-| **Escalation pipeline**         | `apps/server/src/services/escalation-router.ts`             | 5 channels, SLA engine                                  |
-| **Signal accumulator**          | `apps/server/src/services/`                                 | Severity classification + briefing                      |
-| **Agent memory**                | `.automaker/memory/*.md`                                    | Per-agent learning files                                |
-| **Discord MCP**                 | `packages/mcp-server/plugins/automaker/`                    | Send, read, channels, webhooks                          |
-| **Idea processing service**     | `apps/server/src/services/idea-processing-service.ts`       | Session management for LangGraph idea flow              |
-| **Content review pipeline**     | `libs/flows/src/content/subgraphs/antagonistic-reviewer.ts` | 8-dimension scoring for content quality                 |
+protoMaker components only. Idea intake, the planning/PRD flow, antagonistic review, and content review live in **protoWorkstacean** (see the Architecture Boundaries table below) and are intentionally absent here.
+
+| Component                  | Location                                                   | Notes                                                 |
+| -------------------------- | ---------------------------------------------------------- | ----------------------------------------------------- |
+| **Lead Engineer service**  | `apps/server/src/services/lead-engineer-service.ts`        | Production orchestrator with fast-path rules          |
+| **Lead Engineer rules**    | `apps/server/src/services/lead-engineer-rules.ts`          | Pure-function rules (no LLM, no service imports)      |
+| **SharedTool system**      | `libs/tools/src/types.ts`, `define-tool.ts`                | Zod-validated tool definitions for MCP/LangGraph/REST |
+| **Feature domain tools**   | `libs/tools/src/domains/features/`                         | CRUD operations via SharedTool pattern                |
+| **Project lifecycle**      | `apps/server/src/services/project-lifecycle-service.ts`    | MCP tool steps from approved PRD to launch            |
+| **ProjM deep research**    | `apps/server/src/services/authority-agents/projm-agent.ts` | Milestone/phase decomposition                         |
+| **Authority agents**       | `apps/server/src/services/authority-agents/`               | PM, ProjM, EM, Research only                          |
+| **Auto-mode execution**    | `apps/server/src/services/auto-mode-service.ts`            | Dependency-aware, model escalation                    |
+| **Worktree isolation**     | `apps/server/src/services/agent-service.ts`                | Per-feature branches                                  |
+| **PR pipeline**            | `apps/server/src/services/git-workflow-service.ts`         | Create, push, merge (single guarded chokepoint)       |
+| **CodeRabbit integration** | Branch protection + `resolve_review_threads`               | Required check                                        |
+| **CI/CD**                  | `.github/workflows/`                                       | Build, test, format, audit                            |
+| **Escalation pipeline**    | `apps/server/src/services/escalation-router.ts`            | 5 channels, SLA engine                                |
+| **Agent memory**           | `.automaker/memory/*.md`                                   | Per-agent learning files                              |
+| **Discord MCP**            | `packages/mcp-server/plugins/automaker/`                   | Send, read, channels, webhooks                        |
 
 ## Quality Guardrails
 

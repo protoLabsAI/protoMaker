@@ -1,42 +1,31 @@
 # Team Roles
 
-> Canonical agent roster for protoLabs Studio.
+> Canonical authority-agent roster for protoMaker.
 >
-> Last generated: 2026-02-21
+> protoMaker is a **pure executor** (see CLAUDE.md "Philosophy: protoMaker Is a Pure Executor"). The only authority agents that exist in this repo live in `apps/server/src/services/authority-agents/` and run as steps in the Lead Engineer pipeline. Portfolio orchestration — the "Ava" brain, the planning pipeline, content/GTM agents, and cross-project routing — lives in **protoWorkstacean**, not here.
 
 ## Organization Chart
 
 ```text
-Project Owner (CEO, Human)
-├── AVA, Opus, Trust=3 — Engineering
-│   ├── Frontend, Sonnet, Trust=2
-│   ├── Infrastructure, Sonnet, Trust=2
-│   ├── DevOps, Sonnet, Trust=2
-│   ├── Cindi, Sonnet, Trust=2
-│   ├── Backend Engineer, Sonnet, Trust=2
-│   ├── Product Manager, Sonnet, Trust=1
-│   ├── Engineering Manager, Sonnet, Trust=1
-│   ├── PR Maintainer, Haiku, Trust=2
-│   └── Board Janitor, Haiku, Trust=1
-└── Jon, Sonnet, Trust=1 — Go-to-Market
+Project Owner (Human, Trust=3)
+└── Lead Engineer (service, not an agent) — production orchestration
+    ├── Product Manager (PM), Trust=1 — idea research + PRD generation
+    ├── Project Manager (ProjM), Trust=1 — epic decomposition + dependencies
+    ├── Engineering Manager (EM), Trust=1 — assignment + capacity / WIP
+    └── Research — codebase research before planning/triage
 ```
 
 ## Active Roster
 
-| Agent                                       | Role                 | Model  | Trust           | Reports To    | Capabilities                  | Exposure     |
-| ------------------------------------------- | -------------------- | ------ | --------------- | ------------- | ----------------------------- | ------------ |
-| **Project Owner**                           | CEO & Founder        | —      | 3 (Autonomous)  | —             | All                           | —            |
-| [AVA](#ava)                                 | chief-of-staff       | Opus   | 3 (Autonomous)  | Owner         | Bash, Edit, Commit, PR, Spawn | CLI, Discord |
-| [Frontend agent](#matt)                     | frontend-engineer    | Sonnet | 2 (Conditional) | AVA           | Bash, Edit, Commit, PR        | CLI, Discord |
-| [Infrastructure agent](#sam)                | agent-infra-engineer | Sonnet | 2 (Conditional) | AVA           | Bash, Edit, Commit, PR        | CLI, Discord |
-| [DevOps agent](#frank)                      | devops-engineer      | Sonnet | 2 (Conditional) | AVA           | Bash, Edit, Commit, PR        | CLI, Discord |
-| [Cindi](#cindi)                             | content-writer       | Sonnet | 2 (Conditional) | AVA           | Edit, Commit, PR              | CLI, Discord |
-| [Backend Engineer](#backend-engineer)       | backend-engineer     | Sonnet | 2 (Conditional) | AVA           | Bash, Edit, Commit, PR        | Internal     |
-| [Product Manager](#product-manager)         | product-manager      | Sonnet | 1 (Assisted)    | AVA           | Read-only                     | Internal     |
-| [Engineering Manager](#engineering-manager) | engineering-manager  | Sonnet | 1 (Assisted)    | AVA           | Read-only                     | Internal     |
-| [PR Maintainer](#pr-maintainer)             | pr-maintainer        | Haiku  | 2 (Conditional) | AVA           | Bash, Edit, Commit, PR        | Internal     |
-| [Board Janitor](#board-janitor)             | board-janitor        | Haiku  | 1 (Assisted)    | AVA           | Read-only                     | Internal     |
-| [Jon](#jon)                                 | gtm-specialist       | Sonnet | 1 (Assisted)    | Project Owner | Bash, Edit                    | CLI, Discord |
+| Agent                                       | Role                | Code    | Trust          | Reports To    | Capabilities | Exposure |
+| ------------------------------------------- | ------------------- | ------- | -------------- | ------------- | ------------ | -------- |
+| **Project Owner**                           | CEO & Founder       | `CTO`   | 3 (Autonomous) | —             | All          | —        |
+| [Product Manager](#product-manager)         | product-manager     | `PM`    | 1 (Assisted)   | Lead Engineer | Read-only    | Internal |
+| [Project Manager](#project-manager)         | project-manager     | `ProjM` | 1 (Assisted)   | Lead Engineer | Read-only    | Internal |
+| [Engineering Manager](#engineering-manager) | engineering-manager | `EM`    | 1 (Assisted)   | Lead Engineer | Read-only    | Internal |
+| [Research](#research)                       | research            | —       | —              | Lead Engineer | Read-only    | Internal |
+
+> **Not in protoMaker.** "Ava" (chief-of-staff), Cindi (content-writer), Jon (gtm-specialist), and the Researcher-as-Ava-subagent are **protoWorkstacean** concepts — see [org-architecture.md](../org-architecture.md). "Board Janitor" and "PR Maintainer" are **not** agents: those behaviors were absorbed into the Lead Engineer fast-path rules (`apps/server/src/services/lead-engineer-rules.ts`). Per-project operation is driven by **Roxy**, a CLI persona (`packages/mcp-server/plugins/automaker/commands/roxy.md`), not an authority agent.
 
 ## Project Owner {#josh}
 
@@ -48,226 +37,75 @@ Project Owner (CEO, Human)
 
 Technical architecture decisions, product vision, hands-on coding. The goal is to offload everything that isn't creative vision and deep technical work to the AI team.
 
-### Direct Reports
-
-- [AVA](#ava) — Autonomous operator with full authority
-- [Jon](#jon) — GTM Specialist — content strategy, brand positioning, social media, competitive research, and launch execution
-
----
-
-## AVA — Autonomous Virtual Agency {#ava}
-
-**Type:** AI
-**Role:** chief-of-staff
-**Model:** Opus
-**Trust Level:** 3 (Autonomous)
-**Reports to:** Project Owner
-**Exposure:** CLI, Discord
-**Capabilities:** Bash, Edit, Commit, PR, Spawn
-**Tags:** operations, leadership, autonomous
-
-### Description
-
-Autonomous operator with full authority. Manages operations, coordinates agents, and drives execution.
-
-### Direct Reports
-
-- [Frontend agent](#matt) — Frontend engineering specialist
-- [Infrastructure agent](#sam) — AI agent infrastructure engineer
-- [DevOps agent](#frank) — Manages infrastructure, CI/CD, deployments, monitoring, and system reliability
-- [Cindi](#cindi) — Content writing specialist for protoLabs
-- [Backend Engineer](#backend-engineer) — Implements server-side features, APIs, services, and database logic
-- [Product Manager](#product-manager) — Manages requirements, priorities, roadmap, and stakeholder communication
-- [Engineering Manager](#engineering-manager) — Oversees engineering execution, code review, team coordination, and technical decisions
-- [PR Maintainer](#pr-maintainer) — Handles PR pipeline mechanics: auto-merge enablement, CodeRabbit thread resolution, format fixing in worktrees, branch rebasing, and PR creation from orphaned worktrees
-- [Board Janitor](#board-janitor) — Maintains board consistency: moves merged-PR features to done, resets stale in-progress features, repairs dependency chains
-
-### Delegation
-
-Can spawn sub-agents with roles: backend-engineer, frontend-engineer, devops-engineer
-
----
-
-## Frontend Agent {#matt}
-
-**Type:** AI
-**Role:** frontend-engineer
-**Model:** Sonnet
-**Trust Level:** 2 (Conditional)
-**Reports to:** AVA
-**Exposure:** CLI, Discord
-**Capabilities:** Bash, Edit, Commit, PR
-**Tags:** implementation, frontend, ui, design-system, storybook
-
-### Description
-
-Frontend engineering specialist. Implements UI components, design systems, theming, and Storybook. Reports to Ava.
-
----
-
-## Infrastructure Agent {#sam}
-
-**Type:** AI
-**Role:** agent-infra-engineer
-**Model:** Sonnet
-**Trust Level:** 2 (Conditional)
-**Reports to:** AVA
-**Exposure:** CLI, Discord
-**Capabilities:** Bash, Edit, Commit, PR
-**Tags:** implementation, ai-agents, langgraph, observability, flows
-
-### Description
-
-AI agent engineer. Designs multi-agent flows, LangGraph state graphs, LLM provider integrations, and observability pipelines. Reports to Ava.
-
----
-
-## DevOps Agent {#frank}
-
-**Type:** AI
-**Role:** devops-engineer
-**Model:** Sonnet
-**Trust Level:** 2 (Conditional)
-**Reports to:** AVA
-**Exposure:** CLI, Discord
-**Capabilities:** Bash, Edit, Commit, PR
-**Tags:** infrastructure, devops, ci-cd
-
-### Description
-
-Manages infrastructure, CI/CD, deployments, monitoring, and system reliability.
-
----
-
-## Cindi {#cindi}
-
-**Type:** AI
-**Role:** content-writer
-**Model:** Sonnet
-**Trust Level:** 2 (Conditional)
-**Reports to:** AVA
-**Exposure:** CLI, Discord
-**Capabilities:** Edit, Commit, PR
-**Tags:** content, writing, blog, documentation, seo, training-data
-
-### Description
-
-Content writing specialist for protoLabs. Uses content pipeline flows to produce blog posts, technical docs, training data, and marketing content. Expert in SEO, antagonistic review, and multi-format output.
-
----
-
-## Backend Engineer {#backend-engineer}
-
-**Type:** AI
-**Role:** backend-engineer
-**Model:** Sonnet
-**Trust Level:** 2 (Conditional)
-**Reports to:** AVA
-**Exposure:** Internal
-**Capabilities:** Bash, Edit, Commit, PR
-**Tags:** implementation, backend, api
-
-### Description
-
-Implements server-side features, APIs, services, and database logic.
-
 ---
 
 ## Product Manager {#product-manager}
 
-**Type:** AI
-**Role:** product-manager
-**Model:** Sonnet
+**Type:** AI authority agent (`apps/server/src/services/authority-agents/pm-agent.ts`)
+**Role:** product-manager (`PM`)
 **Trust Level:** 1 (Assisted)
-**Reports to:** AVA
+**Reports to:** Lead Engineer pipeline
 **Exposure:** Internal
 **Capabilities:** Read-only
 **Tags:** planning, product, requirements
 
 ### Description
 
-Manages requirements, priorities, roadmap, and stakeholder communication.
+Picks up injected ideas, researches the codebase, and generates SPARC PRDs and epics. Runs as the PRD-generation step of the pipeline.
+
+---
+
+## Project Manager {#project-manager}
+
+**Type:** AI authority agent (`apps/server/src/services/authority-agents/projm-agent.ts`)
+**Role:** project-manager (`ProjM`)
+**Trust Level:** 1 (Assisted)
+**Reports to:** Lead Engineer pipeline
+**Exposure:** Internal
+**Capabilities:** Read-only
+**Tags:** planning, decomposition, dependencies
+
+### Description
+
+Decomposes approved epics into tasks and sets dependencies. Runs as the milestone-decomposition step of the pipeline.
 
 ---
 
 ## Engineering Manager {#engineering-manager}
 
-**Type:** AI
-**Role:** engineering-manager
-**Model:** Sonnet
+**Type:** AI authority agent (`apps/server/src/services/authority-agents/em-agent.ts`)
+**Role:** engineering-manager (`EM`)
 **Trust Level:** 1 (Assisted)
-**Reports to:** AVA
+**Reports to:** Lead Engineer pipeline
 **Exposure:** Internal
 **Capabilities:** Read-only
-**Tags:** management, review, coordination
+**Tags:** management, assignment, capacity
 
 ### Description
 
-Oversees engineering execution, code review, team coordination, and technical decisions.
+Assigns ready work and enforces capacity / WIP limits and quality gates. Runs as the auto-mode orchestration step of the pipeline.
 
 ---
 
-## PR Maintainer {#pr-maintainer}
+## Research {#research}
 
-**Type:** AI
-**Role:** pr-maintainer
-**Model:** Haiku
-**Trust Level:** 2 (Conditional)
-**Reports to:** AVA
-**Exposure:** Internal
-**Capabilities:** Bash, Edit, Commit, PR
-**Tags:** pr, pipeline, maintenance, formatting, coderabbit
-
-### Description
-
-Handles PR pipeline mechanics: auto-merge enablement, CodeRabbit thread resolution, format fixing in worktrees, branch rebasing, and PR creation from orphaned worktrees.
-
----
-
-## Board Janitor {#board-janitor}
-
-**Type:** AI
-**Role:** board-janitor
-**Model:** Haiku
-**Trust Level:** 1 (Assisted)
-**Reports to:** AVA
+**Type:** AI authority agent (`apps/server/src/services/authority-agents/research-agent.ts`)
+**Role:** research
+**Reports to:** Lead Engineer pipeline
 **Exposure:** Internal
 **Capabilities:** Read-only
-**Tags:** board, maintenance, cleanup, dependencies
+**Tags:** research, investigation
 
 ### Description
 
-Maintains board consistency: moves merged-PR features to done, resets stale in-progress features, repairs dependency chains.
+Investigates the codebase across sub-topics (architecture, integration points, libraries, testing) before planning or triage, producing structured findings.
 
 ---
 
-## Jon {#jon}
+## Adding a New Authority Agent
 
-**Type:** AI
-**Role:** gtm-specialist
-**Model:** Sonnet
-**Trust Level:** 1 (Assisted)
-**Reports to:** Project Owner
-**Exposure:** CLI, Discord
-**Capabilities:** Bash, Edit
-**Tags:** marketing, content, growth, gtm, brand
-
-### Description
-
-GTM Specialist — content strategy, brand positioning, social media, competitive research, and launch execution.
-
----
-
-## Unassigned Templates
-
-These templates exist in the registry but are not placed in the org hierarchy:
-
-- **Backend agent** (kai) — Backend engineer. Implements Express routes, services, API design, error handling, and server-side features. Reports to Ava.
-
-## Adding a New Team Member
-
-1. Create a prompt file in `libs/prompts/src/agents/<name>.ts`
-2. Register the prompt in `libs/prompts/src/prompt-registry.ts`
-3. Create a CLI skill file in `.claude/commands/<name>.md`
-4. Add the agent to the org hierarchy in `scripts/generate-org-docs.ts`
-5. See `docs/agents/adding-team-members.md` for the full guide
+1. Create the agent in `apps/server/src/services/authority-agents/<name>-agent.ts` (see the existing PM/ProjM/EM/Research agents and `agent-utils.ts`).
+2. Wire it into the Lead Engineer pipeline / `AuthorityService` registration.
+3. If it needs a new policy code, add it to `AgentRoleName` in `libs/types/src/policy.ts` and to `DEFAULT_PERMISSION_MATRIX` / `DEFAULT_STATUS_TRANSITIONS` in `apps/server/src/services/policy-engine.ts`.
+4. Update this file and [org-chart.md](./org-chart.md) by hand — keep them in sync with the code.
+5. See `docs/internal/agents/adding-team-members.md` for the full guide.

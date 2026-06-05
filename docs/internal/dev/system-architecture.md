@@ -2,7 +2,7 @@
 
 The complete runtime architecture of protoLabs Studio -- from signal entry through feature completion, with all timing, concurrency, and self-healing behaviors documented.
 
-This is the canonical reference for how the system works at runtime. For the 8-phase pipeline abstraction, see [Idea to Production](./idea-to-production.md).
+This is the canonical reference for how the system works at runtime. For the detailed per-feature processor logic, see [Lead Engineer Pipeline](./lead-engineer-pipeline.md).
 
 ## System Diagram
 
@@ -347,7 +347,9 @@ PR base branch resolution: feature in epic -> epic branch; epic itself -> main; 
 
 ## Maintenance Tasks (Cron)
 
-Eight scheduled tasks run alongside the main loop.
+A small set of local housekeeping tasks runs alongside the main loop. These are non-orchestrating: they preserve worktrees, clean up merged branches, and reconcile board state. They do **not** initiate cross-project work or self-directed PR side-effects.
+
+> **Direction (see CLAUDE.md "Philosophy: protoMaker Is a Pure Executor").** Orchestration loops, ceremonies, and scheduled cross-project triggers belong to **protoWorkstacean**, not protoMaker. Do not add new `SchedulerService` cron tasks for orchestration here — drive recurring behavior from protoWorkstacean (its ceremonies/cron into protoMaker via A2A) or as event-reactions. The former "Ava cron tasks" (daily board-health sweep, PR triage) have been removed from this repo and migrated to protoWorkstacean.
 
 | Task                         | Cron          | Interval        | What It Does                                                              |
 | ---------------------------- | ------------- | --------------- | ------------------------------------------------------------------------- |
@@ -358,13 +360,6 @@ Eight scheduled tasks run alongside the main loop.
 | Board Health Reconciliation  | `0 */6 * * *` | Every 6 hours   | Auto-fix: orphaned epics, dangling deps, stale running, stale gates       |
 | Auto-Merge Eligible PRs      | `*/5 * * * *` | Every 5 min     | Poll features in `review`, merge if all checks pass                       |
 | GitHub Actions Runner Health | `*/5 * * * *` | Every 5 min     | Detect stuck builds >10min, cancel + retrigger; alert on >50% utilization |
-
-### Ava Cron Tasks
-
-| Task                   | Cron / Interval | Description                                                      |
-| ---------------------- | --------------- | ---------------------------------------------------------------- |
-| ava-daily-board-health | `0 9 * * *`     | Daily 9 AM -- check stale features, blocked agents, failing CI   |
-| ava-pr-triage          | `0 */4 * * *`   | Every 4 hours -- scan CodeRabbit threads, CI failures, conflicts |
 
 ---
 
@@ -466,21 +461,21 @@ Non-cron periodic tasks running in the server process.
 
 ### Service Groups
 
-| Group                     | Count | Key Services                                                                                                                          |
-| ------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Core Event Infrastructure | 2     | EventEmitter, EventStreamBuffer                                                                                                       |
-| Feature & Project         | 5     | FeatureLoader, ProjectService, ProjectLifecycleService, ProjectSlugResolver, ProjectPMService                                         |
-| Agent Execution           | 4     | AgentService, AutoModeService, LeadEngineerService, WorkIntakeService                                                                 |
-| Knowledge & Metrics       | 6     | KnowledgeStoreService, MetricsService, DoraMetricsService, ErrorBudgetService, LedgerService, ArchivalService                         |
-| Scheduling & Automation   | 3     | SchedulerService, AutomationService, JobExecutorService                                                                               |
-| Discord                   | 4     | DiscordService, DiscordBotService, AgentDiscordRouter, NotificationRouter                                                             |
-| Authority & Governance    | 6     | AuthorityService, PM/GTM/EM/ProjM Agents, AuditService                                                                                |
-| Pipeline & State          | 6     | PipelineOrchestrator, PipelineCheckpointService, LeadHandoffService, FactStoreService, TrajectoryStoreService, ContextFidelityService |
-| Health & Monitoring       | 3     | HealthMonitorService, FeatureHealthService, IntegrityWatchdogService                                                                  |
-| WebSocket & Real-Time     | 4     | DevServerService, NotificationService, ActionableItemService, ActionableItemBridge                                                    |
-| Settings & Context        | 4     | SettingsService, UserIdentityService, ContextAggregator, SensorRegistryService                                                        |
-| Communication & Routing   | 4     | ChannelRouter, EscalationRouter, SignalIntakeService, HITLFormService                                                                 |
-| Review                    | 3     | AntagonisticReviewService, WorktreeLifecycleService, ReconciliationService                                                            |
+| Group                     | Count | Key Services                                                                                                    |
+| ------------------------- | ----- | --------------------------------------------------------------------------------------------------------------- |
+| Core Event Infrastructure | 2     | EventEmitter, EventStreamBuffer                                                                                 |
+| Feature & Project         | 5     | FeatureLoader, ProjectService, ProjectLifecycleService, ProjectSlugResolver, ProjectPMService                   |
+| Agent Execution           | 4     | AgentService, AutoModeService, LeadEngineerService, WorkIntakeService                                           |
+| Knowledge & Metrics       | 6     | KnowledgeStoreService, MetricsService, DoraMetricsService, ErrorBudgetService, LedgerService, ArchivalService   |
+| Scheduling & Automation   | 2     | SchedulerService, AutomationService                                                                             |
+| Discord                   | 4     | DiscordService, DiscordBotService, AgentDiscordRouter, NotificationRouter                                       |
+| Authority & Governance    | 6     | AuthorityService, PM/ProjM/EM/Research Agents, AuditService                                                     |
+| Pipeline & State          | 5     | PipelineCheckpointService, LeadHandoffService, FactStoreService, TrajectoryStoreService, ContextFidelityService |
+| Health & Monitoring       | 3     | HealthMonitorService, FeatureHealthService, IntegrityWatchdogService                                            |
+| WebSocket & Real-Time     | 4     | DevServerService, NotificationService, ActionableItemService, ActionableItemBridge                              |
+| Settings & Context        | 4     | SettingsService, UserIdentityService, ContextAggregator, SensorRegistryService                                  |
+| Communication & Routing   | 4     | ChannelRouter, EscalationRouter, SignalIntakeService, HITLFormService                                           |
+| Review                    | 2     | WorktreeLifecycleService, ReconciliationService                                                                 |
 
 ### Wiring Order
 
@@ -495,7 +490,7 @@ Services are wired in strict order via register modules in `server/wiring.ts`:
 6.  registerWorktreeLifecycle     Auto-cleanup + drift detection
 7.  registerDiscord               Bot + event routing
 8.  registerScheduler             Cron executor + task registration
-9.  registerInfrastructure        Health monitor + Ava Gateway
+9.  registerInfrastructure        Health monitor event wiring
 10. registerProjectPm             PM Agent event sync
 11. registerEventLedger           Lifecycle events -> audit log
 12. registerWorkIntake            Pull-based phase claiming
@@ -521,11 +516,12 @@ Services are wired in strict order via register modules in `server/wiring.ts`:
 ```text
 1. Emit server:shutdown (200ms for WebSocket clients)
 2. Write .clean-shutdown marker
-3. Destroy LeadEngineerService
-4. Destroy PipelineOrchestrator
-5. Shutdown AutoModeService
-6. Stop HealthMonitorService
-7. Stop SchedulerService
+3. LeadEngineerService.destroy()
+4. AutoModeService.shutdown()
+5. MaintenanceOrchestrator.stop()
+6. HealthMonitorService.stopMonitoring()
+7. SchedulerService.stop()
+8. Terminal / worktree / webhook / agent services cleanup
 8. Shutdown WorktreeLifecycleService
 9. Shutdown HITLFormService
 10. Stop AgentDiscordRouter
@@ -608,9 +604,8 @@ Services are wired in strict order via register modules in `server/wiring.ts`:
 
 ## Related Documentation
 
-- [Idea to Production](./idea-to-production.md) -- 8-phase pipeline abstraction
 - [Lead Engineer Pipeline](./lead-engineer-pipeline.md) -- Detailed processor logic (INTAKE, PLAN, EXECUTE)
-- [Project Lifecycle](./project-lifecycle.md) -- Project-level state machine
-- [Feature Status System](./feature-status-system.md) -- Canonical 5-status board lifecycle
+- [Project Lifecycle](../../concepts/project-lifecycle.md) -- Project-level state machine
+- [Feature Lifecycle](../../concepts/feature-lifecycle.md) -- Canonical 5-status board lifecycle
 - [Branch Strategy](./branch-strategy.md) -- Single-trunk git workflow
 - [Event Ledger](./event-ledger.md) -- Append-only event persistence

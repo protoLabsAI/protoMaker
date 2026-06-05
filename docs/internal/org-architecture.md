@@ -2,7 +2,9 @@
 
 Canonical reference for every layer of the protoLabs stack. Use this as the starting point when onboarding agents, new team members, or systems that need to understand how everything connects.
 
-Cross-links: [Fleet Architecture](./protolabs/fleet-architecture.md) | [Portfolio Philosophy](./portfolio-philosophy.md) | Ava Operating Model (now in [protoWorkstacean](https://github.com/protoLabsAI/protoworkstacean))
+Cross-links: [Fleet Architecture](./protolabs/fleet-architecture.md) | [Portfolio Philosophy](./portfolio-philosophy.md) | [Authority Org Chart](./authority/org-chart.md) | Ava Operating Model (now in [protoWorkstacean](https://github.com/protoLabsAI/protoworkstacean))
+
+> protoMaker is a **pure executor** of one project's work — the board, Lead Engineer, auto-mode, and PR pipeline. The portfolio brain ("Ava"), the planning/PRD pipeline, and cross-project orchestration live in **protoWorkstacean**. The agents in the Agent Layer below run in protoWorkstacean and its sidecars, not in this repo.
 
 ---
 
@@ -113,7 +115,7 @@ Tool surface for Claude Code agents. Exposes ~159 tools organized by category (f
 - **Port**: `3009` (internal), consumed by Claude Code plugin
 - **Talks to**: protoMaker API (`automaker-server:3008`)
 - **Talked to by**: Claude Code agents via MCP protocol
-- **Config lives in**: `packages/mcp-server/` in the `ava` repo
+- **Config lives in**: `packages/mcp-server/` in the `protoMaker` repo
 
 ### OpenWebUI
 
@@ -208,12 +210,13 @@ All A2A agents expose `/.well-known/agent.json` and accept JSON-RPC 2.0 `message
 
 ### Ava — Portfolio Orchestrator
 
-- **A2A Endpoint**: `http://automaker-server:3008/a2a`
+> Ava and the planning pipeline (`plan` / `plan_resume`, PRD generation, antagonistic review) live in **protoWorkstacean** — not in protoMaker. protoMaker is a pure executor; it exposes the board, auto-mode, and PR pipeline that Ava drives via A2A.
+
 - **Team**: Dev (primary orchestrator across all teams)
 - **Skills**: `plan`, `plan_resume`, `sitrep`, `manage_feature`, `auto_mode`, `board_health`, `onboard_project`
 - **Projects served**: All — Ava is the single orchestration entry point
 - **Activation**: Receives signals from Workstacean bus; also directly addressable via A2A
-- **Config lives in**: `ava` repo, `.claude/commands/` for skill definitions
+- **Config lives in**: `protoWorkstacean` repo (skill definitions); drives protoMaker over A2A at `http://automaker-server:3008/a2a`
 
 ### Quinn — QA Engineer / Bug Triage
 
@@ -240,7 +243,7 @@ All A2A agents expose `/.well-known/agent.json` and accept JSON-RPC 2.0 `message
 - **Skills**: `market_review`, `positioning`, `antagonistic_review`
 - **Projects served**: All — provides strategic lens during planning pipeline
 - **Activation**: Ava calls Jon during antagonistic review in the `plan` skill
-- **Config lives in**: `ava` repo, `.claude/commands/jon.md`
+- **Config lives in**: `protoWorkstacean` repo, `.claude/commands/jon.md`
 
 ### Cindi — Content Execution
 
@@ -249,7 +252,7 @@ All A2A agents expose `/.well-known/agent.json` and accept JSON-RPC 2.0 `message
 - **Skills**: `blog`, `seo`, `content_review`
 - **Projects served**: protoLabs content pipeline, marketing, docs
 - **Activation**: Ava calls Cindi for content tasks; also triggered by content pipeline flows
-- **Config lives in**: `ava` repo, `.claude/commands/cindi.md`
+- **Config lives in**: `protoWorkstacean` repo, `.claude/commands/cindi.md`
 
 ### Researcher — Deep Research
 
@@ -258,7 +261,7 @@ All A2A agents expose `/.well-known/agent.json` and accept JSON-RPC 2.0 `message
 - **Skills**: `research`, `entity_extract`
 - **Projects served**: Any — called when deep research is needed before planning or triage
 - **Activation**: Ava or Quinn invoke Researcher before planning or complex triage
-- **Config lives in**: `ava` repo, `.claude/commands/researcher.md`
+- **Config lives in**: `protoWorkstacean` repo, `.claude/commands/researcher.md`
 
 ---
 
@@ -291,7 +294,7 @@ The board engine and agent execution environment. Manages the full feature lifec
 
 ### Config lives in
 
-- `ava` repo (protoMaker on GitHub)
+- `protoMaker` repo (the GitHub repo name; internal packages use `@protolabsai/*`)
 - `.automaker/` per managed project
 - `data/settings.json` for global settings
 
@@ -420,14 +423,14 @@ Remote seedbox. Handles media and large file transfers.
 
 Three repos, three responsibilities. No overlap.
 
-| Boundary                 | Repo               | Owns                                                                                                            |
-| ------------------------ | ------------------ | --------------------------------------------------------------------------------------------------------------- |
-| **Deployment**           | `homelab-iac`      | Docker Compose, volume mounts, env vars, network config, port mappings                                          |
-| **Bus + Registry**       | `protoWorkstacean` | Message routing, skill matching, interface plugins, `agents.yaml`, `projects.yaml`, correlationId minting       |
-| **Planning + Execution** | `ava` (protoMaker) | Planning pipeline, PRD generation, antagonistic review, board management, Lead Engineer, auto-mode, PR pipeline |
+| Boundary                           | Repo               | Owns                                                                                                                                                                                                               |
+| ---------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Deployment**                     | `homelab-iac`      | Docker Compose, volume mounts, env vars, network config, port mappings                                                                                                                                             |
+| **Orchestration + Bus + Registry** | `protoWorkstacean` | Portfolio orchestration (the "Ava" brain), planning pipeline, PRD generation, antagonistic review, cross-project routing, skill matching, interface plugins, `agents.yaml`, `projects.yaml`, correlationId minting |
+| **Execution**                      | `protoMaker`       | Board management, Lead Engineer state machine, auto-mode, PR pipeline. A pure executor of one project's work.                                                                                                      |
 
 ### What each repo does NOT own
 
 - `homelab-iac` — no agent logic, no skill definitions, no routing rules
 - `protoWorkstacean` — no plan execution, no board state, no agent runs
-- `ava` — no agent registry (reads from Workstacean API), no project registry, no message routing
+- `protoMaker` — no autonomous orchestration loops, no portfolio planning, no agent/project registry (reads from Workstacean API), no message routing
