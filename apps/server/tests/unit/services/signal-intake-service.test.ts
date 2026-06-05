@@ -153,6 +153,54 @@ describe('SignalIntakeService', () => {
     });
   });
 
+  describe('per-project execution stance (#4074)', () => {
+    it('creates a read-only feature on an observe-managed project', async () => {
+      vi.mocked(mockSettingsService.getProjectSettings).mockResolvedValue({
+        version: 1,
+        executionStance: 'observe',
+      } as never);
+
+      const signal = createTestSignal({ source: 'github', content: 'Investigate flaky CI' });
+      mockEmitter.emit('signal:received', signal);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockFeatureLoader.create).toHaveBeenCalledWith(
+        '/test/path',
+        expect.objectContaining({ executionMode: 'read-only' })
+      );
+    });
+
+    it('creates a standard (delivery) feature on a delivery-managed project', async () => {
+      vi.mocked(mockSettingsService.getProjectSettings).mockResolvedValue({
+        version: 1,
+        executionStance: 'delivery',
+      } as never);
+
+      const signal = createTestSignal({ source: 'github', content: 'Add a search endpoint' });
+      mockEmitter.emit('signal:received', signal);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const createArg = vi.mocked(mockFeatureLoader.create).mock.calls.at(-1)?.[1] as
+        | Record<string, unknown>
+        | undefined;
+      expect(createArg).toBeDefined();
+      expect(createArg?.executionMode).toBeUndefined();
+    });
+
+    it('defaults to delivery when no stance is set', async () => {
+      // mockSettingsService.getProjectSettings defaults to {} → no executionStance
+      const signal = createTestSignal({ source: 'github', content: 'Fix the login bug' });
+      mockEmitter.emit('signal:received', signal);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const createArg = vi.mocked(mockFeatureLoader.create).mock.calls.at(-1)?.[1] as
+        | Record<string, unknown>
+        | undefined;
+      expect(createArg).toBeDefined();
+      expect(createArg?.executionMode).toBeUndefined();
+    });
+  });
+
   describe('deduplication logic', () => {
     it('should prevent duplicate GitHub issue signals by repo+issueNumber', async () => {
       // Same repo + issue number → same dedup key, regardless of author

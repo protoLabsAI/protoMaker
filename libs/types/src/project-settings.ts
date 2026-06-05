@@ -190,6 +190,20 @@ export interface ProjectSettings {
   /** Maximum concurrent agents for this project (overrides global maxConcurrency) */
   maxConcurrentAgents?: number;
 
+  // Execution Stance (per-project)
+  /**
+   * Whether agents on this project DELIVER code (branch → push → PR → review →
+   * merge) or only OBSERVE (read-only triage/analysis, no PRs). Signal-intake
+   * features are created with this stance: `'observe'` → read-only execution,
+   * `'delivery'` → standard execution. This is independent of the PM agent's
+   * read-only-on-code stance — a delivery-managed project with a read-only PM
+   * still produces PRs from its execution agents.
+   *
+   * Undefined defaults to `'delivery'` (the opinionated default; observe is the
+   * explicit opt-in). See #4074 / #4073.
+   */
+  executionStance?: 'delivery' | 'observe';
+
   // Phase Model Overrides (per-project)
   /**
    * Override phase model settings for this project.
