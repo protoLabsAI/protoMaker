@@ -477,6 +477,9 @@ export interface EventPayloadMap {
     projectPath: string;
     issueNumber: number;
     repository: string;
+    // 'completed' (shipped) vs 'not_planned' (wontfix/duplicate/abandoned); null on
+    // older webhook payloads. Lets consumers distinguish completion from abandonment.
+    stateReason?: 'completed' | 'not_planned' | 'reopened' | null;
   };
   'feature:issue-reopened': {
     featureId: string;

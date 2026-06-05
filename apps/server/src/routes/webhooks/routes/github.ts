@@ -52,6 +52,10 @@ interface GitHubIssuePayload {
     title: string;
     body: string | null;
     state: string;
+    // Why the issue is in its current state. For `closed`: 'completed' (shipped) vs
+    // 'not_planned' (wontfix/duplicate/abandoned). Drives whether the linked feature's
+    // close-out reads as genuine completion or abandonment. Absent on older payloads.
+    state_reason?: 'completed' | 'not_planned' | 'reopened' | null;
     created_at: string;
     html_url: string;
     user: {
@@ -433,18 +437,29 @@ export function createGitHubWebhookHandler(
               res.json({ success: true, message: 'Feature already terminal' });
               return;
             }
+            // Distinguish a genuine completion from an abandonment (wontfix/duplicate).
+            // The board has a single terminal status (`done`), so both terminalize here
+            // to clear phantom backlog — but the reason and the emitted event carry
+            // state_reason so consumers/metrics can tell shipped from abandoned. A
+            // dedicated `cancelled` terminal is tracked as a follow-up.
+            const stateReason = issuePayload.issue.state_reason ?? null;
+            const notPlanned = stateReason === 'not_planned';
             logger.info(
-              `GitHub issue #${issueNumber} closed (${repoFullName}) — syncing feature ${linked.id} to done`
+              `GitHub issue #${issueNumber} closed as ${notPlanned ? 'not planned' : 'completed'} ` +
+                `(${repoFullName}) — syncing feature ${linked.id} to done`
             );
             await featureLoader.update(projectPath, linked.id, {
               status: 'done',
-              statusChangeReason: `GitHub issue #${issueNumber} closed — auto-synced to done`,
+              statusChangeReason: notPlanned
+                ? `GitHub issue #${issueNumber} closed as not planned — auto-synced to done (was not shipped)`
+                : `GitHub issue #${issueNumber} closed — auto-synced to done`,
             });
             events.emit('feature:issue-closed', {
               featureId: linked.id,
               projectPath,
               issueNumber,
               repository: repoFullName,
+              stateReason,
             });
             res.json({ success: true, message: `Feature ${linked.id} synced to done` });
             return;
