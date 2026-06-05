@@ -755,6 +755,7 @@ export type FeatureStatus =
   | 'review' // PR created, under review
   | 'blocked' // Temporary halt (dependency/issue/failure - consolidates: failed)
   | 'done' // PR merged, work complete (consolidates: completed, waiting_approval, verified)
+  | 'cancelled' // Feature abandoned (wontfix/duplicate/not_planned) — terminal, not shipped
   | 'interrupted'; // Server shut down while feature was running
 
 /**
@@ -798,6 +799,7 @@ export function normalizeFeatureStatus(
     'review',
     'blocked',
     'done',
+    'cancelled',
     'interrupted',
   ];
   if (canonical.includes(status as FeatureStatus)) {

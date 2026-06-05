@@ -425,7 +425,7 @@ export function createGitHubWebhookHandler(
             return;
           }
 
-          const TERMINAL_STATUSES = new Set(['done', 'completed', 'verified']);
+          const TERMINAL_STATUSES = new Set(['done', 'cancelled', 'completed', 'verified']);
           const isTerminal = TERMINAL_STATUSES.has(linked.status ?? '');
 
           if (isClosed) {
@@ -438,20 +438,18 @@ export function createGitHubWebhookHandler(
               return;
             }
             // Distinguish a genuine completion from an abandonment (wontfix/duplicate).
-            // The board has a single terminal status (`done`), so both terminalize here
-            // to clear phantom backlog — but the reason and the emitted event carry
-            // state_reason so consumers/metrics can tell shipped from abandoned. A
-            // dedicated `cancelled` terminal is tracked as a follow-up.
+            // `completed` → `done` (shipped), `not_planned` → `cancelled` (abandoned).
             const stateReason = issuePayload.issue.state_reason ?? null;
             const notPlanned = stateReason === 'not_planned';
+            const targetStatus = notPlanned ? 'cancelled' : 'done';
             logger.info(
               `GitHub issue #${issueNumber} closed as ${notPlanned ? 'not planned' : 'completed'} ` +
-                `(${repoFullName}) — syncing feature ${linked.id} to done`
+                `(${repoFullName}) — syncing feature ${linked.id} to ${targetStatus}`
             );
             await featureLoader.update(projectPath, linked.id, {
-              status: 'done',
+              status: targetStatus,
               statusChangeReason: notPlanned
-                ? `GitHub issue #${issueNumber} closed as not planned — auto-synced to done (was not shipped)`
+                ? `GitHub issue #${issueNumber} closed as not planned — auto-synced to cancelled`
                 : `GitHub issue #${issueNumber} closed — auto-synced to done`,
             });
             events.emit('feature:issue-closed', {
@@ -461,7 +459,7 @@ export function createGitHubWebhookHandler(
               repository: repoFullName,
               stateReason,
             });
-            res.json({ success: true, message: `Feature ${linked.id} synced to done` });
+            res.json({ success: true, message: `Feature ${linked.id} synced to ${targetStatus}` });
             return;
           }
 
@@ -652,7 +650,7 @@ export function createGitHubWebhookHandler(
       // Idempotency guard: skip update if feature is already in a terminal status.
       // Prevents double-updating completedAt or re-emitting feature:pr-merged on duplicate
       // webhook deliveries.
-      const TERMINAL_STATUSES = new Set(['done', 'completed', 'verified']);
+      const TERMINAL_STATUSES = new Set(['done', 'cancelled', 'completed', 'verified']);
       const wasAlreadyTerminal = TERMINAL_STATUSES.has(currentFeature.status ?? '');
 
       if (wasAlreadyTerminal) {

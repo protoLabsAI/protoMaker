@@ -47,6 +47,11 @@ export const EMPTY_STATE_CONFIGS: Record<string, EmptyStateConfig> = {
     description: 'Features that are temporarily blocked will appear here.',
     icon: 'clock',
   },
+  cancelled: {
+    title: 'No Cancelled Features',
+    description: 'Features that were abandoned or marked not planned will appear here.',
+    icon: 'clock',
+  },
   done: {
     title: 'No Completed Features',
     description: 'Features with merged PRs will appear here.',
@@ -73,7 +78,7 @@ export interface Column {
   colorClass: string;
 }
 
-// Canonical 5-status columns
+// Canonical 6-status columns
 export const COLUMNS: Column[] = [
   { id: 'backlog', title: 'Backlog', colorClass: 'bg-[var(--status-backlog)]' },
   {
@@ -90,6 +95,11 @@ export const COLUMNS: Column[] = [
     id: 'blocked',
     title: 'Blocked',
     colorClass: 'bg-[var(--status-blocked)]',
+  },
+  {
+    id: 'cancelled',
+    title: 'Cancelled',
+    colorClass: 'bg-[var(--status-cancelled)]',
   },
   {
     id: 'done',

@@ -36,6 +36,7 @@ export type FeatureStatusWithPipeline =
   | 'review'
   | 'blocked'
   | 'done'
+  | 'cancelled'
   | 'verified'
   | 'interrupted' // Server shut down while feature was running
   | 'ready' // Dependencies satisfied, ready for execution

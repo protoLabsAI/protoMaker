@@ -5,10 +5,11 @@
  *
  * Subscribes to the existing `feature:status-changed` event (emitted by
  * FeatureLoader.update) and, when a feature transitions into a terminal state,
- * publishes one of three dotted, unprefixed topics workstacean's consumers
+ * publishes one of four dotted, unprefixed topics workstacean's consumers
  * subscribe to:
  *
  *   - `done`      → `feature.completed`
+ *   - `cancelled` → `feature.cancelled`  (abandoned — wontfix/duplicate/not_planned)
  *   - `blocked`   → `feature.blocked`   (carries a `kind` failure discriminator)
  *   - `escalated` → `feature.failed`    (already escalated — no auto-remediation)
  *
@@ -18,6 +19,10 @@
  * (this side) and protoLabsAI/protoWorkstacean#779 / #776 (the consumer + the
  * flag day that depends on this emission). Greenfield: a `blocked` transition
  * emits ONLY `feature.blocked`, never also `feature.failed`.
+ *
+ * `feature.cancelled` is the signal for abandoned features (issue closed as
+ * not_planned). Unlike `feature.completed`, it does NOT count as shipped work
+ * in board metrics. See protoLabsAI/protoMaker#4102 follow-up.
  *
  * The payload echoes the originating signal metadata so a consumer (e.g. the
  * Linear ↔ protoMaker bridge) can reconstruct lineage and post a status comment
@@ -38,6 +43,9 @@ const logger = createLogger('FeatureLifecycleBusPublisher');
 
 /** Board statuses treated as terminal (success) — emit `feature.completed`. */
 const TERMINAL_STATUSES: ReadonlySet<string> = new Set(['done']);
+
+/** Board status that emits `feature.cancelled` (abandoned — terminal, not shipped). */
+const CANCELLED_STATUSES: ReadonlySet<string> = new Set(['cancelled']);
 
 /** Board status that emits the kinded `feature.blocked` (remediable failure). */
 const BLOCKED_STATUSES: ReadonlySet<string> = new Set(['blocked']);
@@ -240,12 +248,12 @@ export class FeatureLifecycleBusPublisher {
 
   /**
    * Publish the lifecycle event for a tracked transition:
-   *   done → feature.completed, blocked → feature.blocked (kinded),
-   *   escalated → feature.failed, and blocked → {in_progress,backlog,review} →
-   *   feature.unblocked (recovery — lets the remediation consumer clear its
-   *   tracker). Loads the feature fresh to echo its source signal metadata and
-   *   PR tracking fields. Never throws — a publish failure must not affect the
-   *   board transition.
+   *   done → feature.completed, cancelled → feature.cancelled,
+   *   blocked → feature.blocked (kinded), escalated → feature.failed, and
+   *   blocked → {in_progress,backlog,review} → feature.unblocked (recovery —
+   *   lets the remediation consumer clear its tracker). Loads the feature fresh
+   *   to echo its source signal metadata and PR tracking fields. Never throws —
+   *   a publish failure must not affect the board transition.
    */
   async handleStatusChange(payload: StatusChangedPayload): Promise<void> {
     const { featureId, newStatus, oldStatus, projectPath } = payload ?? {};
@@ -254,13 +262,14 @@ export class FeatureLifecycleBusPublisher {
     }
 
     const isTerminal = TERMINAL_STATUSES.has(newStatus);
+    const isCancelled = CANCELLED_STATUSES.has(newStatus);
     const isBlocked = BLOCKED_STATUSES.has(newStatus);
     const isEscalated = ESCALATED_STATUSES.has(newStatus);
     // Recovery: a transition OUT of `blocked` into an active status. `blocked ->
     // done` is excluded (covered by feature.completed); `blocked -> escalated`
     // is excluded (got worse, not recovered).
     const isUnblock = oldStatus === 'blocked' && UNBLOCKED_TARGET_STATUSES.has(newStatus);
-    if (!isTerminal && !isBlocked && !isEscalated && !isUnblock) {
+    if (!isTerminal && !isCancelled && !isBlocked && !isEscalated && !isUnblock) {
       return;
     }
 
@@ -274,14 +283,17 @@ export class FeatureLifecycleBusPublisher {
     // Dotted, unprefixed topics — exactly what workstacean's consumers
     // subscribe to. `blocked` is its own remediable signal; `unblocked` is the
     // recovery signal that clears remediation tracking; `escalated` stays
-    // `feature.failed` (no auto-remediation); `done` is `feature.completed`.
+    // `feature.failed` (no auto-remediation); `done` is `feature.completed`;
+    // `cancelled` is `feature.cancelled` (abandoned — not shipped).
     const topic = isTerminal
       ? 'feature.completed'
-      : isBlocked
-        ? 'feature.blocked'
-        : isUnblock
-          ? 'feature.unblocked'
-          : 'feature.failed';
+      : isCancelled
+        ? 'feature.cancelled'
+        : isBlocked
+          ? 'feature.blocked'
+          : isUnblock
+            ? 'feature.unblocked'
+            : 'feature.failed';
     const owner = process.env.GITHUB_REPO_OWNER;
     const name = process.env.GITHUB_REPO_NAME;
     const repo = owner && name ? `${owner}/${name}` : undefined;
@@ -293,11 +305,13 @@ export class FeatureLifecycleBusPublisher {
         : { sourceChannel: feature?.sourceChannel, signalMetadata: feature?.signalMetadata };
     const timestampKey = isTerminal
       ? 'completedAt'
-      : isBlocked
-        ? 'blockedAt'
-        : isUnblock
-          ? 'unblockedAt'
-          : 'failedAt';
+      : isCancelled
+        ? 'cancelledAt'
+        : isBlocked
+          ? 'blockedAt'
+          : isUnblock
+            ? 'unblockedAt'
+            : 'failedAt';
     const data: Record<string, unknown> = {
       // projectSlug is REQUIRED by workstacean's feature-notifier (resolves the
       // dev channel); fall back so the event is never dropped for lacking it.
@@ -330,6 +344,11 @@ export class FeatureLifecycleBusPublisher {
       if (kind) {
         data.kind = kind;
       }
+    } else if (isCancelled) {
+      // feature.cancelled carries the abandonment reason so consumers can
+      // distinguish wontfix / duplicate / abandoned from genuine completions.
+      const reason = (feature?.statusChangeReason ?? payload?.reason ?? 'cancelled').slice(0, 400);
+      data.reason = reason;
     } else if (isUnblock) {
       // feature.unblocked is a pure recovery signal — no error/kind. Echo where
       // the feature recovered to so consumers can log/route if they care; the
