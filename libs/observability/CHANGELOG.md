@@ -1,5 +1,18 @@
 # @protolabsai/observability
 
+## 0.112.0
+
+### Minor Changes
+
+- ### Features
+  - auto-close the linked feature when a GitHub issue closes (#4102)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.112.0
+  - @protolabsai/utils@0.112.0
+
 ## 0.111.0
 
 ### Minor Changes
