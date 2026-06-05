@@ -135,15 +135,17 @@ sudo systemctl start protomaker
 
 See [deployment.md](./deployment.md) for a complete list of environment variables.
 
-## Using the /devops Skill
+## Using Frank (DevOps Persona)
 
-protoLabs includes a `/devops` skill for managing infrastructure from Claude Code:
+protoLabs ships `/frank`, a DevOps persona for managing infrastructure from Claude Code. Frank takes natural-language requests (and an optional `[project-path]`) rather than fixed subcommands — just describe what you need:
 
 ```
-/devops           # Show container status
-/devops health    # Run health diagnostics
-/devops logs      # Analyze container logs
-/devops backup    # Backup volumes
-/devops restart   # Restart containers
-/devops info      # Show configuration info
+/frank
+> show container status
+> run a health check
+> analyze the container logs
+> back up the volumes
+> restart the containers
 ```
+
+Under the hood Frank can invoke the plugin's devops agents (`devops-health-check`, `devops-logs`, `devops-backup`) to do the work.

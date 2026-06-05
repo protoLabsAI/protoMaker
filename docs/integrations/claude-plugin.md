@@ -67,27 +67,31 @@ claude
 > /board
 ```
 
-That's it! You now have access to ~170 MCP tools and slash commands for managing your Kanban board directly from Claude Code.
+That's it! You now have access to ~159 MCP tools and 19 slash commands for managing your Kanban board directly from Claude Code.
 
 ### What You Can Do
 
-| Command            | Description                                       |
-| ------------------ | ------------------------------------------------- |
-| `/welcome`         | User onboarding and status refresh                |
-| `/board`           | View and manage your Kanban board                 |
-| `/auto-mode`       | Start/stop autonomous feature processing          |
-| `/orchestrate`     | Manage feature dependencies                       |
-| `/context`         | Manage AI agent context files                     |
-| `/plan-project`    | Full project orchestration pipeline               |
-| `/ship`            | Stage, commit, push, create PR, auto-merge        |
-| `/headsdown`       | Deep work mode — process features autonomously    |
-| `/due-diligence`   | Validate approaches with evidence-based research  |
-| `/deep-research`   | Research codebase before planning                 |
-| `/sparc-prd`       | Create a SPARC-style PRD                          |
-| `/improve-prompts` | Analyze and improve LLM prompts                   |
-| `/ava`             | Autonomous operator with multi-project delegation |
-| `/setuplab`        | 7-phase project onboarding pipeline               |
-| `/update-plugin`   | Guided plugin version upgrade                     |
+| Command              | Description                                        |
+| -------------------- | -------------------------------------------------- |
+| `/welcome`           | User onboarding and status refresh                 |
+| `/board`             | View and manage your Kanban board                  |
+| `/auto-mode`         | Start/stop autonomous feature processing           |
+| `/orchestrate`       | Manage feature dependencies                        |
+| `/context`           | Manage AI agent context files                      |
+| `/plan-project`      | Full project orchestration pipeline                |
+| `/ship`              | Stage, commit, push, create PR, auto-merge         |
+| `/roxy`              | Per-project autonomous operator (CLI-driven)       |
+| `/cli-control`       | Manage the board and crew via the `protomaker` CLI |
+| `/quinn`             | QA engineer — release verification, regression     |
+| `/bug_triage`        | Autonomous PR remediation and antagonistic review  |
+| `/due-diligence`     | Validate approaches with evidence-based research   |
+| `/deep-research`     | Research codebase before planning                  |
+| `/sparc-prd`         | Create a SPARC-style PRD                           |
+| `/improve-prompts`   | Analyze and improve LLM prompts                    |
+| `/provision_discord` | Provision a Discord category and project channels  |
+| `/setup-tracing`     | Set up Langfuse tracing for Claude Code            |
+| `/setuplab`          | Project onboarding pipeline                        |
+| `/update-plugin`     | Guided plugin version upgrade                      |
 
 See [Plugin Commands](./plugin-commands.md) for full command reference and examples.
 
@@ -213,7 +217,7 @@ The plugin configuration is in `packages/mcp-server/plugins/automaker/.claude-pl
 {
   "name": "automaker",
   "description": "protoLabs Studio — AI Development Studio. Manage Kanban boards, AI agents, and feature orchestration.",
-  "version": "1.1.1",
+  "version": "<managed by the release process>",
   "mcpServers": {
     "automaker": {
       "command": "bash",

@@ -23,23 +23,23 @@ There are two main Claude-oriented layers in this repo:
 
 ## Recommended Codex Mapping
 
-| Existing Asset Type                 | Current Location                                                                 | Codex-Native Target                         | Notes                                                  |
-| ----------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------ |
-| Repo rules                          | `CLAUDE.md`, `.claude/settings.json`                                             | `AGENTS.md`                                 | Keep stable instructions here                          |
-| Ava operator workflow               | `plugins/.../commands/ava.md`                                                    | `.codex/skills/ava/SKILL.md`                | Main orchestration skill                               |
-| Headsdown workflow                  | `plugins/.../commands/headsdown.md`                                              | `.codex/skills/headsdown/SKILL.md`          | Continuous deep work skill                             |
-| Lightweight operational specialists | `.claude/skills/board-janitor.md`, `.claude/skills/pr-maintainer.md`             | Ava playbooks first                         | Promote to full skills only if needed                  |
-| Team role specialists               | `.claude/skills/matt.md`, `kai.md`, `frank.md`, `jon.md`, `cindi.md`             | future Codex skills or subagent conventions | Create only as demand appears                          |
-| Analysis agents                     | `.claude/agents/deepdive.md`, `deepcode.md`, `security-vulnerability-scanner.md` | future subagent patterns                    | Better as delegation patterns than static prose clones |
-| Plugin commands                     | `plugins/.../commands/*.md`                                                      | Codex skills selectively                    | Only port the workflows that matter                    |
-| Capability tools                    | `packages/mcp-server/`                                                           | unchanged MCP server                        | Reuse directly from Codex                              |
+| Existing Asset Type           | Current Location                                                                 | Codex-Native Target                         | Notes                                                  |
+| ----------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------ |
+| Repo rules                    | `CLAUDE.md`, `.claude/settings.json`                                             | `AGENTS.md`                                 | Keep stable instructions here                          |
+| Per-project operator workflow | `plugins/.../commands/roxy.md`                                                   | `.codex/skills/roxy/SKILL.md`               | Main per-project orchestration skill                   |
+| CLI-control workflow          | `plugins/.../commands/cli-control.md`                                            | `.codex/skills/cli-control/SKILL.md`        | Deterministic board/crew control via the CLI           |
+| Operational utility skills    | `.claude/skills/board_health.md`, `.claude/skills/plan_resume.md`                | Roxy playbooks first                        | Promote to full skills only if needed                  |
+| Team role specialists         | `.claude/commands/matt.md`, `kai.md`, `frank.md`, `sam.md`                       | future Codex skills or subagent conventions | Create only as demand appears                          |
+| Analysis agents               | `.claude/agents/deepdive.md`, `deepcode.md`, `security-vulnerability-scanner.md` | future subagent patterns                    | Better as delegation patterns than static prose clones |
+| Plugin commands               | `plugins/.../commands/*.md`                                                      | Codex skills selectively                    | Only port the workflows that matter                    |
+| Capability tools              | `packages/mcp-server/`                                                           | unchanged MCP server                        | Reuse directly from Codex                              |
 
 ## Immediate Migration Set
 
 These are the highest-value Codex-native equivalents to maintain operator continuity:
 
-- `ava`
-- `headsdown`
+- `roxy`
+- `cli-control`
 - `deep-research`
 - `deep-dive`
 - `due-diligence`
@@ -52,28 +52,27 @@ These are the highest-value Codex-native equivalents to maintain operator contin
 These should likely come next if the Codex workflow sticks:
 
 - `setuplab`
-- role-specialist skills such as `matt`, `kai`, `frank`, `jon`, `cindi`
+- role-specialist skills such as `matt`, `kai`, `frank`, `sam`
 
 ## Team Skill Interpretation
 
-The project-level Claude skills split into two groups:
+The project-level Claude assets split into two groups:
 
 ### Specialist Implementers
 
 - `matt`
 - `kai`
 - `frank`
-- `jon`
-- `cindi`
+- `sam`
 
-These map well to future Codex skills if you want explicit role activation.
+These team personas live in `.claude/commands/` and map well to future Codex skills if you want explicit role activation.
 
 ### Operational Utilities
 
-- `pr-maintainer`
-- `board-janitor`
+- `board_health`
+- `plan_resume`
 
-These may not need standalone skills immediately. Many of their behaviors can live as Ava playbooks until the workflow volume justifies separate Codex skills.
+These `.claude/skills/` helpers may not need standalone skills immediately. Many of their behaviors can live as Roxy playbooks until the workflow volume justifies separate Codex skills.
 
 ## Agent Interpretation
 

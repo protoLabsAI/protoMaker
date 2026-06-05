@@ -201,21 +201,49 @@ Ship current changes with full git workflow automation.
 - Enables auto-merge
 - Handles conflicts automatically
 
-### /headsdown
+### /roxy
 
-Deep work mode for autonomous feature processing.
+Per-project autonomous operator. Manages a single project board end-to-end using only the `protomaker` CLI (no MCP tools).
 
 ```bash
-/headsdown                # Enter deep work mode
+/roxy                     # Operate the current project
+/roxy /path/to/project    # Operate a specific project
 ```
 
 **What It Does:**
 
-- Autonomously processes features from the backlog
-- Merges approved PRs
-- Grooms the board
-- Stays productive until the system is void of work
-- Minimal human interaction required
+- Creates features, dispatches crew, monitors agents, merges PRs
+- Scoped to one repo — the per-project operator role
+- Drives everything through the `protomaker` CLI for deterministic control
+
+### /cli-control
+
+Manage the board and crew entirely through the `protomaker` CLI (no MCP).
+
+```bash
+/cli-control              # Drive the board via the CLI
+```
+
+**What It Does:**
+
+- Deterministic shell control over features, agents, auto-mode, and PRs
+- Useful when MCP is unavailable, in scripts/CI, or for repeatable automation
+
+### /quinn
+
+QA engineer persona — validates releases, runs regression checks, verifies service wiring, tests API endpoints, and generates pass/fail reports.
+
+```bash
+/quinn                    # Activate Quinn for QA work
+```
+
+### /bug_triage
+
+Autonomous PR remediation. Triages a failing or blocked PR, files a fix feature on the target project board, then antagonistically reviews on completion. Dispatched by protoWorkstacean's pr-remediator plugin.
+
+```bash
+/bug_triage               # Triage and remediate a failing/blocked PR
+```
 
 ### /due-diligence
 
@@ -282,28 +310,21 @@ Analyze, critique, and improve prompts for LLM agents.
 - Identifies anti-patterns
 - Rewrites with improvements and explanations
 
-### /ava
+### /provision_discord
 
-Autonomous operator -- identifies friction, ships fixes, keeps work flowing. Supports multi-project delegation across repos.
+Provision a Discord category and the standard set of project channels (e.g. `#dev`).
 
 ```bash
-/ava                      # Activate in current project
-/ava /path/to/project     # Activate for a specific project
+/provision_discord        # Set up a Discord category and channels
 ```
 
-**Capabilities:**
+### /setup-tracing
 
-- Full control surface: features, agents, worktrees, PRs, context files, auto-mode
-- Multi-project awareness -- can switch between repos
-- Delegation tree: spawns subagents for parallel work
-- Autonomous decision-making: creates features, starts agents, merges PRs
-- Session continuity: state persists across compaction via hooks
+Set up Langfuse tracing for Claude Code in the current project. Configures the Stop hook and environment variables so every conversation turn is traced.
 
-**When to Use:**
-
-- Hands-off autonomous operation ("go work on the backlog")
-- Operational leadership across multiple projects
-- When things need to get done without step-by-step guidance
+```bash
+/setup-tracing            # Configure Langfuse tracing
+```
 
 ### /setuplab
 
@@ -340,11 +361,9 @@ Guided plugin version upgrade. Handles uninstall, reinstall, env migration, and 
 - Migrates environment variables
 - Verifies MCP server connectivity
 
-> **Note:** This is a temporary command for early tester onboarding. It will be removed once all testers are on v0.15.x+.
-
 ## Subagents
 
-The plugin includes 13 specialized agents for complex tasks. Invoke them via the `Task` tool with `subagent_type: "protolabs:<agent-name>"`.
+The plugin includes 11 specialized agents for complex tasks. Invoke them via the `Task` tool with `subagent_type: "protolabs:<agent-name>"`.
 
 ### protolabs:feature-planner
 
@@ -434,23 +453,27 @@ Backup and restore Docker volumes.
 
 ### Command Models
 
-| Command            | Model  | Rationale                    |
-| ------------------ | ------ | ---------------------------- |
-| `/welcome`         | Sonnet | Adaptive conversational flow |
-| `/deep-research`   | Haiku  | Fast exploration             |
-| `/board`           | --     | No model (direct tool calls) |
-| `/auto-mode`       | --     | No model (direct tool calls) |
-| `/orchestrate`     | --     | No model (direct tool calls) |
-| `/context`         | --     | No model (direct tool calls) |
-| `/ship`            | --     | No model (direct tool calls) |
-| `/headsdown`       | --     | No model (direct tool calls) |
-| `/improve-prompts` | --     | No model (direct tool calls) |
-| `/due-diligence`   | Sonnet | Evidence-based analysis      |
-| `/plan-project`    | Sonnet | Complex orchestration        |
-| `/sparc-prd`       | Sonnet | Sophisticated analysis       |
-| `/ava`             | --     | No model (direct tool calls) |
-| `/setuplab`        | Sonnet | Complex multi-phase pipeline |
-| `/update-plugin`   | --     | No model (direct tool calls) |
+| Command              | Model  | Rationale                    |
+| -------------------- | ------ | ---------------------------- |
+| `/welcome`           | Sonnet | Adaptive conversational flow |
+| `/deep-research`     | Haiku  | Fast exploration             |
+| `/board`             | --     | No model (direct tool calls) |
+| `/auto-mode`         | --     | No model (direct tool calls) |
+| `/orchestrate`       | --     | No model (direct tool calls) |
+| `/context`           | --     | No model (direct tool calls) |
+| `/ship`              | --     | No model (direct tool calls) |
+| `/roxy`              | --     | No model (CLI-driven)        |
+| `/cli-control`       | --     | No model (CLI-driven)        |
+| `/quinn`             | Sonnet | QA judgment                  |
+| `/bug_triage`        | Sonnet | PR remediation analysis      |
+| `/improve-prompts`   | --     | No model (direct tool calls) |
+| `/due-diligence`     | Sonnet | Evidence-based analysis      |
+| `/plan-project`      | Sonnet | Complex orchestration        |
+| `/sparc-prd`         | Sonnet | Sophisticated analysis       |
+| `/provision_discord` | --     | No model (direct tool calls) |
+| `/setup-tracing`     | --     | No model (direct tool calls) |
+| `/setuplab`          | Sonnet | Complex multi-phase pipeline |
+| `/update-plugin`     | --     | No model (direct tool calls) |
 
 ### Agent Models
 
