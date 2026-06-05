@@ -1,5 +1,7 @@
 # PRD: AI Agent App Starter Kit
 
+> **Status: Not implemented — this kit was never built (not in `StarterKitType`).** The real starter kits are `docs`, `portfolio`, `landing-page`, and `general`. There is no `ai-agent-app` kit type and no `starters/ai-agent-app/` directory. This document is retained as a historical planning artifact.
+
 **Author**: SPARC PRD Agent
 **Date**: 2026-03-14
 **Status**: Draft

@@ -2,13 +2,24 @@
 
 This guide covers running protoLabs as a systemd service for persistent deployments.
 
-## Service File
+Two systemd units ship in the repository root. **Pick exactly one per host** — do not enable both:
 
-The service file is located at `automaker.service` in the repository root.
+| Unit                       | Runs                                               | When to use                                                                                            |
+| -------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `automaker-docker.service` | `docker compose up -d`                             | Containerized prod, full filesystem isolation, no host CLI access from agents                          |
+| `automaker-host.service`   | `npm start` (= `start-automaker.mjs --production`) | Bare-metal prod. Agents can shell out to host CLIs (`gh`, `codex`, `opencode`, `infisical`, `claude`). |
+
+The host-process variant exists because agents spawn external tools via `child_process`; in containers those tools either aren't installed or can't see the host's auth files. If your operator workflow depends on `gh auth login` or `codex login` happening on the host, use `automaker-host.service`.
+
+This page is the systemd reference. The [Deployment guide](./deployment.md#systemd) covers the same units in the context of the full deployment options.
+
+## The Docker variant
+
+`automaker-docker.service` (repository root):
 
 ```ini
 [Unit]
-Description=protoLabs AI Development Studio
+Description=protoLabs AI Development Studio (Docker)
 Documentation=https://github.com/protoLabsAI/protomaker
 After=docker.service
 Requires=docker.service
@@ -16,7 +27,7 @@ Requires=docker.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/path/to/protomaker
+WorkingDirectory=/opt/protomaker
 ExecStart=/usr/bin/docker compose up -d
 ExecStop=/usr/bin/docker compose down
 ExecReload=/usr/bin/docker compose restart
@@ -25,8 +36,8 @@ TimeoutStopSec=60
 Restart=on-failure
 RestartSec=10
 
-User=youruser
-Group=youruser
+User=automaker
+Group=automaker
 
 Environment=COMPOSE_PROJECT_NAME=automaker
 
@@ -34,49 +45,61 @@ Environment=COMPOSE_PROJECT_NAME=automaker
 WantedBy=multi-user.target
 ```
 
-## Installation
+The shipped file uses the default `docker-compose.yml`. For a prod deploy, set `WorkingDirectory` to the directory containing `docker-compose.prod.yml` and add `Environment=COMPOSE_FILE=docker-compose.prod.yml` to the `[Service]` block.
 
-### 1. Copy Service File
-
-```bash
-sudo cp automaker.service /etc/systemd/system/automaker.service
-```
-
-### 2. Edit for Your Environment
+### Install
 
 ```bash
-sudo nano /etc/systemd/system/automaker.service
+# Copy the service file
+sudo cp automaker-docker.service /etc/systemd/system/
+
+# Edit for your environment
+sudo nano /etc/systemd/system/automaker-docker.service
+#   WorkingDirectory = path containing the compose file
+#   User / Group     = deploy user (must have Docker access)
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now automaker-docker.service
 ```
 
-Update:
+## The host-process variant
 
-- `WorkingDirectory` - Path to your protoLabs installation
-- `User` / `Group` - Your username
+`automaker-host.service` (repository root) runs the server directly on the host with `npm start`. Use it when agents must reach host CLIs.
 
-### 3. Reload systemd
+### Install
+
+```bash
+# Copy the service file
+sudo cp automaker-host.service /etc/systemd/system/
+
+# Edit for your environment if defaults don't match
+sudo nano /etc/systemd/system/automaker-host.service
+#   WorkingDirectory  = clone path (default: /opt/protomaker)
+#   User / Group      = deploy user (default: automaker)
+#   Environment=HOME  = $HOME for that user (default: /home/automaker)
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now automaker-host.service
+journalctl -u automaker-host -f
+```
+
+## Enable and start
 
 ```bash
 sudo systemctl daemon-reload
+
+# Pick exactly one:
+sudo systemctl enable --now automaker-host.service
+# OR
+sudo systemctl enable --now automaker-docker.service
 ```
 
-### 4. Enable and Start
-
-```bash
-# Enable on boot
-sudo systemctl enable automaker
-
-# Start now
-sudo systemctl start automaker
-```
-
-## Service Options Explained
+## Service Options Explained (Docker variant)
 
 ### Unit Section
 
 ```ini
 [Unit]
-Description=protoLabs AI Development Studio
-Documentation=https://github.com/protoLabsAI/protomaker
 After=docker.service
 Requires=docker.service
 ```
@@ -101,100 +124,66 @@ ExecStop=/usr/bin/docker compose down
 ExecReload=/usr/bin/docker compose restart
 ```
 
-- `ExecStart` - Command to start service
-- `ExecStop` - Command to stop service
-- `ExecReload` - Command to reload (restart containers)
-
-```ini
-TimeoutStartSec=120
-TimeoutStopSec=60
-```
-
-- Timeouts for start/stop operations (pulling images may take time)
+- `ExecStart` / `ExecStop` / `ExecReload` - Start, stop, and restart the containers
 
 ```ini
 Restart=on-failure
 RestartSec=10
 ```
 
-- Automatically restart on failure
-- Wait 10 seconds between restart attempts
+- Automatically restart on failure, waiting 10 seconds between attempts
 
 ```ini
-User=youruser
-Group=youruser
+User=automaker
+Group=automaker
 ```
 
-- Run as a non-root user (must have Docker access)
-
-### Install Section
-
-```ini
-[Install]
-WantedBy=multi-user.target
-```
-
-- Start when system reaches multi-user mode (normal boot)
+- Run as a non-root user (must have Docker access for the Docker variant)
 
 ## Management Commands
+
+Substitute the unit you enabled (`automaker-docker` or `automaker-host`).
 
 ### Status
 
 ```bash
-sudo systemctl status automaker
-```
-
-Output:
-
-```
-● automaker.service - protoLabs AI Development Studio
-     Loaded: loaded (/etc/systemd/system/automaker.service; enabled)
-     Active: active (exited) since Wed 2026-02-05 10:00:00 UTC
-       Docs: https://github.com/protoLabsAI/protomaker
-    Process: 1234 ExecStart=/usr/bin/docker compose up -d (code=exited, status=0/SUCCESS)
-   Main PID: 1234 (code=exited, status=0/SUCCESS)
+sudo systemctl status automaker-docker
+# or
+sudo systemctl status automaker-host
 ```
 
 ### Start / Stop / Restart
 
 ```bash
-# Start
-sudo systemctl start automaker
+sudo systemctl start automaker-docker
+sudo systemctl stop automaker-docker
+sudo systemctl restart automaker-docker
 
-# Stop
-sudo systemctl stop automaker
-
-# Restart
-sudo systemctl restart automaker
-
-# Reload (restart containers)
-sudo systemctl reload automaker
+# Reload (Docker variant only — restarts containers)
+sudo systemctl reload automaker-docker
 ```
 
 ### Enable / Disable
 
 ```bash
-# Enable on boot
-sudo systemctl enable automaker
-
-# Disable on boot
-sudo systemctl disable automaker
+sudo systemctl enable automaker-docker
+sudo systemctl disable automaker-docker
 ```
 
 ### View Logs
 
 ```bash
 # Recent logs
-sudo journalctl -u automaker
+sudo journalctl -u automaker-docker
 
 # Follow logs
-sudo journalctl -u automaker -f
+sudo journalctl -u automaker-host -f
 
 # Since boot
-sudo journalctl -u automaker -b
+sudo journalctl -u automaker-docker -b
 
 # Last hour
-sudo journalctl -u automaker --since="1 hour ago"
+sudo journalctl -u automaker-host --since="1 hour ago"
 ```
 
 ## Environment Variables
@@ -209,7 +198,7 @@ GH_TOKEN=ghp_xxx
 AUTOMAKER_API_KEY=your-key
 ```
 
-Update service file:
+Add to the service file:
 
 ```ini
 [Service]
@@ -223,19 +212,9 @@ sudo chmod 600 /etc/automaker.env
 sudo chown root:root /etc/automaker.env
 ```
 
-### Via Service File
+### Via docker-compose.override.yml (Docker variant)
 
-```ini
-[Service]
-Environment=ANTHROPIC_API_KEY=sk-ant-xxx
-Environment=AUTOMAKER_API_KEY=your-key
-```
-
-**Warning**: Avoid this method for secrets as service files may be readable by users.
-
-### Via docker-compose.override.yml
-
-Preferred method - keep secrets in your docker-compose override:
+Preferred for the Docker variant — keep secrets in your compose override:
 
 ```yaml
 # docker-compose.override.yml
@@ -246,15 +225,15 @@ services:
       - GH_TOKEN=${GH_TOKEN}
 ```
 
-Then source from `.env` file in the working directory.
+Then source from a `.env` file in the working directory.
 
-## User Permissions
+## User Permissions (Docker variant)
 
-The service runs as a non-root user who must have Docker access:
+The Docker variant runs as a non-root user who must have Docker access:
 
 ```bash
 # Add user to docker group
-sudo usermod -aG docker yourusername
+sudo usermod -aG docker automaker
 
 # Log out and back in, or:
 newgrp docker
@@ -266,27 +245,27 @@ newgrp docker
 
 ```bash
 # Check status
-sudo systemctl status automaker
+sudo systemctl status automaker-docker
 
 # Check detailed logs
-sudo journalctl -u automaker -n 50
+sudo journalctl -u automaker-docker -n 50
 
-# Check Docker
+# For the Docker variant, check the containers directly
 docker compose ps
 docker compose logs
 ```
 
-### Permission Denied
+### Permission Denied (Docker variant)
 
 ```bash
 # Verify Docker group membership
-groups yourusername
+groups automaker
 
 # Verify Docker socket permissions
 ls -la /var/run/docker.sock
 ```
 
-### Containers Not Starting
+### Containers Not Starting (Docker variant)
 
 ```bash
 # Check if Docker is running
@@ -296,12 +275,12 @@ sudo systemctl status docker
 sudo systemctl start docker
 
 # Then restart protoLabs
-sudo systemctl restart automaker
+sudo systemctl restart automaker-docker
 ```
 
 ### Service Times Out
 
-Increase timeout values:
+Increase the timeout values in the `[Service]` block:
 
 ```ini
 [Service]
@@ -309,86 +288,7 @@ TimeoutStartSec=300
 TimeoutStopSec=120
 ```
 
-## Advanced Configuration
-
-### Health Monitoring
-
-Add a health check that stops the service if containers are unhealthy:
-
-```bash
-#!/bin/bash
-# /usr/local/bin/automaker-healthcheck.sh
-
-if ! docker compose ps | grep -q "healthy"; then
-    echo "Containers unhealthy, triggering restart"
-    systemctl restart automaker
-fi
-```
-
-Create a timer:
-
-```ini
-# /etc/systemd/system/automaker-healthcheck.timer
-[Unit]
-Description=protoLabs Health Check
-
-[Timer]
-OnBootSec=5min
-OnUnitActiveSec=5min
-
-[Install]
-WantedBy=timers.target
-```
-
-```ini
-# /etc/systemd/system/automaker-healthcheck.service
-[Unit]
-Description=protoLabs Health Check
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/automaker-healthcheck.sh
-```
-
-Enable the timer:
-
-```bash
-sudo systemctl enable automaker-healthcheck.timer
-sudo systemctl start automaker-healthcheck.timer
-```
-
-### Multiple Instances
-
-For running multiple protoLabs instances:
-
-```ini
-# /etc/systemd/system/automaker@.service
-[Unit]
-Description=protoLabs AI Development Studio - %i
-After=docker.service
-Requires=docker.service
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-WorkingDirectory=/home/%i/automaker
-ExecStart=/usr/bin/docker compose -p automaker-%i up -d
-ExecStop=/usr/bin/docker compose -p automaker-%i down
-User=%i
-Group=%i
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Usage:
-
-```bash
-sudo systemctl start automaker@user1
-sudo systemctl start automaker@user2
-```
-
-## Comparison: systemd vs Docker
+## Comparison: systemd vs plain Docker
 
 | Feature             | systemd                | Docker Only                |
 | ------------------- | ---------------------- | -------------------------- |
@@ -398,8 +298,4 @@ sudo systemctl start automaker@user2
 | Dependencies        | `After=` / `Requires=` | `depends_on`               |
 | Management          | systemctl              | docker compose             |
 
-Both approaches work well. Use systemd if you want:
-
-- Integration with system init
-- Centralized logging via journalctl
-- Consistent management with other services
+Both approaches work well. Use systemd if you want integration with system init, centralized logging via journalctl, and consistent management with other services.

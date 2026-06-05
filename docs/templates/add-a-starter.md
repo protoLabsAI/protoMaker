@@ -93,7 +93,7 @@ function resolveStarterDir(kitName: 'docs' | 'portfolio' | 'general' | 'my-kit')
 Open `libs/templates/src/types.ts` and add your kit name to the union:
 
 ```typescript
-export type StarterKitType = 'docs' | 'portfolio' | 'extension' | 'general' | 'my-kit';
+export type StarterKitType = 'docs' | 'portfolio' | 'landing-page' | 'general' | 'my-kit';
 ```
 
 ### 4. Register the kit in the server route

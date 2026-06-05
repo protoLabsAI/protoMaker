@@ -15,8 +15,7 @@ Response:
 ```json
 {
   "status": "healthy",
-  "timestamp": "2026-02-05T10:30:00.000Z",
-  "version": "1.0.0"
+  "timestamp": "2026-02-05T10:30:00.000Z"
 }
 ```
 
@@ -170,32 +169,18 @@ The server emits events for:
 
 ### Board Summary
 
-```bash
-curl http://localhost:3008/api/board/summary \
-  -H "X-API-Key: YOUR_API_KEY"
-```
-
-Response:
-
-```json
-{
-  "columns": {
-    "backlog": 5,
-    "in-progress": 2,
-    "review": 1,
-    "done": 10
-  },
-  "runningAgents": 2,
-  "queuedFeatures": 3
-}
-```
-
-### Running Agents
+Board state (per-status counts, WIP saturation) is exposed through the
+**`get_board_summary` MCP tool**, not a public REST endpoint. There is no
+`/api/board/summary` or `/api/agents/running` HTTP route. Query the board via the
+`protomaker` CLI:
 
 ```bash
-curl http://localhost:3008/api/agents/running \
-  -H "X-API-Key: YOUR_API_KEY"
+protomaker board          # per-status summary table
+protomaker board --json   # raw JSON
 ```
+
+See [MCP Tools](./../reference/mcp-tools.md) for `get_board_summary` and the
+related feature/agent query tools.
 
 ## Alerting
 
@@ -224,11 +209,11 @@ RestartSec=10
 Check for failures:
 
 ```bash
-# Recent failures
-journalctl -u automaker --since="1 hour ago" | grep -i fail
+# Recent failures (substitute the unit you enabled)
+journalctl -u automaker-docker --since="1 hour ago" | grep -i fail
 
 # Follow logs
-journalctl -u automaker -f
+journalctl -u automaker-host -f
 ```
 
 ### External Monitoring
@@ -242,50 +227,49 @@ For production deployments, consider:
 | Grafana      | Visualization          |
 | PagerDuty    | Alerting               |
 
-## Prometheus + Grafana (Production)
+## Prometheus + Grafana (Monitoring Stack)
 
-The production compose (`docker-compose.prod.yml`) includes Prometheus and Grafana:
+The Prometheus / Grafana / Loki monitoring stack lives in **`docker-compose.infra.yml`**
+(services `automaker-prometheus`, `automaker-grafana`, `automaker-loki`, plus
+`automaker-promtail` for log shipping). The production app compose
+(`docker-compose.prod.yml`) only runs `ui` + `server` — it does not include monitoring.
 
-| Service    | Port | Purpose               |
-| ---------- | ---- | --------------------- |
-| Prometheus | 9091 | Metrics collection    |
-| Grafana    | 3000 | Metrics visualization |
+| Service    | Container              | Host Port | Purpose                  |
+| ---------- | ---------------------- | --------- | ------------------------ |
+| Prometheus | `automaker-prometheus` | 9090      | Metrics collection       |
+| Loki       | `automaker-loki`       | 3100      | Log aggregation          |
+| Grafana    | `automaker-grafana`    | 3010      | Metrics & log dashboards |
 
 ### Configuration
 
-Prometheus config at `prometheus.yml`:
+Config files are mounted from `infra/`:
 
-```yaml
-global:
-  scrape_interval: 15s
-
-scrape_configs:
-  - job_name: 'automaker'
-    static_configs:
-      - targets: ['server:3008']
-    metrics_path: '/api/metrics'
-```
-
-The server exposes metrics when `ENABLE_METRICS=true` and `METRICS_PORT=9090` are set (configured in `docker-compose.prod.yml`).
+- Prometheus scrape config: `infra/prometheus/prometheus.yml`
+- Loki config: `infra/loki/config.yml`
+- Promtail config: `infra/promtail/config.yml`
+- Grafana datasources (auto-provisioned): `infra/grafana/datasources.yml`
 
 ### Deploying
 
 ```bash
-# Deploy with monitoring
-docker stack deploy -c docker-compose.prod.yml automaker
-
-# Or with docker-compose
-docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.infra.yml up -d
 ```
 
 ### Grafana Setup
 
-1. Access Grafana at `http://localhost:3000`
-2. Default admin password is in the `grafana_admin_password` Docker secret - **change immediately**
-3. Add Prometheus data source: `http://prometheus:9090`
-4. Import dashboards from `grafana-dashboards/` (if configured)
+Grafana is configured for anonymous Admin access by default (`GF_AUTH_ANONYMOUS_ENABLED=true`),
+so there is no admin password secret to rotate out of the box.
 
-**Note:** The `/api/metrics` endpoint is a work in progress. Currently the health endpoint provides basic observability. Full Prometheus metrics will be added in a future release.
+1. Access Grafana at `http://localhost:3010`
+2. Prometheus and Loki data sources are provisioned automatically from
+   `infra/grafana/datasources.yml`
+3. For a non-local deployment, restrict Grafana's exposure (reverse proxy / auth)
+   before opening it beyond localhost.
+
+**Note:** A `/api/metrics` Prometheus exporter on the server is not yet implemented.
+Currently the `/api/health` endpoint provides basic application observability;
+the infra stack scrapes container/host metrics. Full server-side application metrics
+will be added in a future release.
 
 ## Debugging
 

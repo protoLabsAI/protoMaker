@@ -5,7 +5,7 @@
 | Document                                                               | Description                                     |
 | ---------------------------------------------------------------------- | ----------------------------------------------- |
 | [Overview](./getting-started/index.md)                                 | What is protoLabs, quick tutorial, key concepts |
-| [Installation](./getting-started/installation.md)                      | Install the desktop app                         |
+| [Installation](./getting-started/installation.md)                      | Install and run the server, UI, and CLI         |
 | [Installation (Fedora/RHEL)](./getting-started/installation-fedora.md) | Install on Fedora/RHEL Linux                    |
 
 ## Concepts
@@ -14,7 +14,7 @@
 | ------------------------------------------------------ | --------------------------------------------------------- |
 | [Agent Philosophy](./concepts/agent-philosophy.md)     | Why named personas, model tiers, worktree isolation       |
 | [Agent Architecture](./concepts/agent-architecture.md) | Agent types, execution model, architecture layers         |
-| [How It Works](./concepts/how-it-works.md)             | LangGraph agent execution flows and patterns              |
+| [How It Works](./concepts/how-it-works.md)             | End-to-end pipeline flows from idea to merged PR          |
 | [Prompt Engineering](./concepts/prompt-engineering.md) | Prompt composition, registry, writing effective prompts   |
 | [Reliability & Recovery](./concepts/reliability.md)    | Failure handling, escalation, health sweeps               |
 | [Escalation Routing](./concepts/escalation-routing.md) | Escalation channels, dedup, rate limiting, acknowledgment |
@@ -54,7 +54,7 @@
 | [Auto Mode](./reference/auto-mode.md)                 | Autonomous feature processing service        |
 | [Knowledge Store](./reference/knowledge-store.md)     | SQLite FTS5 knowledge base for agent context |
 | [Knowledge Hive](./reference/knowledge-hive.md)       | Multi-source knowledge aggregation           |
-| [MCP Tools](./reference/mcp-tools.md)                 | Full MCP tool catalog (120+ tools)           |
+| [MCP Tools](./reference/mcp-tools.md)                 | Full MCP tool catalog (~159 tools)           |
 | [API Key Profiles](./reference/api-key-profiles.md)   | Unified API key and provider profile system  |
 | [CLI Commands](./reference/cli-commands.md)           | Complete protomaker CLI command reference    |
 

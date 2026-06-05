@@ -22,14 +22,14 @@ The UI layer defines what templates to show and how to present them. The server 
 
 **Location:** `libs/templates/`
 
-The package exports three scaffold functions and the types they use.
+The package exports four scaffold functions and the types they use.
 
 ### Types
 
 **`StarterKitType`** — the union of valid kit names:
 
 ```typescript
-type StarterKitType = 'docs' | 'portfolio' | 'extension' | 'general';
+type StarterKitType = 'docs' | 'portfolio' | 'landing-page' | 'general';
 ```
 
 **`ScaffoldOptions`** — input to every scaffold function:
@@ -56,13 +56,14 @@ interface ScaffoldResult {
 
 ### Scaffold functions
 
-| Function                            | Kit type    | Source directory      |
-| ----------------------------------- | ----------- | --------------------- |
-| `scaffoldDocsStarter(options)`      | `docs`      | `starters/docs/`      |
-| `scaffoldPortfolioStarter(options)` | `portfolio` | `starters/portfolio/` |
-| `scaffoldGeneralStarter(options)`   | `general`   | `starters/general/`   |
+| Function                              | Kit type       | Source directory         |
+| ------------------------------------- | -------------- | ------------------------ |
+| `scaffoldDocsStarter(options)`        | `docs`         | `starters/docs/`         |
+| `scaffoldPortfolioStarter(options)`   | `portfolio`    | `starters/portfolio/`    |
+| `scaffoldLandingPageStarter(options)` | `landing-page` | `starters/landing-page/` |
+| `scaffoldGeneralStarter(options)`     | `general`      | `starters/general/`      |
 
-All three functions follow the same pattern:
+All four functions follow the same pattern:
 
 1. Resolve the source directory path relative to the compiled package
 2. Recursively copy the directory to `outputDir`, skipping `node_modules` and `package-lock.json`
@@ -108,6 +109,13 @@ libs/templates/starters/
 │   │   └── pages/
 │   ├── astro.config.mjs
 │   └── package.json
+├── landing-page/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── content/
+│   │   └── pages/
+│   ├── astro.config.mjs
+│   └── package.json
 └── general/
     └── .automaker/
         ├── settings.json
@@ -124,11 +132,11 @@ These files are the exact files that get copied to the user's project. Edit them
 
 **Request body:**
 
-| Field         | Type                                 | Required | Description                                            |
-| ------------- | ------------------------------------ | -------- | ------------------------------------------------------ |
-| `projectPath` | `string`                             | Yes      | Absolute or relative path to the destination directory |
-| `kitType`     | `'docs' \| 'portfolio' \| 'general'` | Yes      | Which starter kit to scaffold                          |
-| `projectName` | `string`                             | No       | Overrides the name derived from the directory basename |
+| Field         | Type                                                   | Required | Description                                            |
+| ------------- | ------------------------------------------------------ | -------- | ------------------------------------------------------ |
+| `projectPath` | `string`                                               | Yes      | Absolute or relative path to the destination directory |
+| `kitType`     | `'docs' \| 'portfolio' \| 'landing-page' \| 'general'` | Yes      | Which starter kit to scaffold                          |
+| `projectName` | `string`                                               | No       | Overrides the name derived from the directory basename |
 
 **Response:**
 
@@ -163,7 +171,7 @@ interface StarterTemplate {
   name: string;
   description: string;
   source: 'scaffold' | 'clone';
-  kitType?: 'docs' | 'portfolio' | 'extension'; // for scaffold source
+  kitType?: 'docs' | 'portfolio' | 'landing-page'; // for scaffold source
   repoUrl?: string; // for clone source
   techStack: string[];
   features: string[];
@@ -192,7 +200,7 @@ When a user creates a project from the New Project dialog:
 1. User selects a template in new-project-modal.tsx
 2. UI reads template.source
    ├── 'scaffold' → POST /api/setup/scaffold-starter { projectPath, kitType, projectName }
-   │     └── Server calls scaffoldDocsStarter / scaffoldPortfolioStarter / scaffoldGeneralStarter
+   │     └── Server calls scaffoldDocsStarter / scaffoldPortfolioStarter / scaffoldLandingPageStarter / scaffoldGeneralStarter
    │           └── copyDir(starters/<kit>/, outputDir) + applySubstitutions()
    └── 'clone'    → git clone <repoUrl> <projectPath>
 3. On success, Studio opens the new project
