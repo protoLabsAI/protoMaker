@@ -1,5 +1,17 @@
 # @protolabsai/mcp-server
 
+## 0.112.0
+
+### Minor Changes
+
+- ### Features
+  - auto-close the linked feature when a GitHub issue closes (#4102)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/tools@0.112.0
+
 ## 0.111.0
 
 ### Minor Changes
