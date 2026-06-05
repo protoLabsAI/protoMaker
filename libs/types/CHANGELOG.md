@@ -1,5 +1,18 @@
 # @protolabsai/types
 
+## 0.110.0
+
+### Minor Changes
+
+- ### Features
+  - echo githubIssueNumber on feature.completed (close-the-loop prerequisite) (#4072)
+  - emit feature.unblocked on recovery from blocked (#4071)
+  - emit kinded feature.blocked to workstacean (#4067) (#4068)
+  - first-class per-project pause/resume (#4062) (#4066)
+
+  ### Bug Fixes
+  - keep code features on delivery + promote-to-delivery path (#4073) (#4075)
+
 ## 0.109.0
 
 ### Minor Changes
