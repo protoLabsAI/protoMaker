@@ -993,7 +993,7 @@ export class FeatureScheduler {
 
       const doneWithPrGuard = allFeatures.filter(
         (f) =>
-          (f.status === 'backlog' || f.status === 'blocked') &&
+          (f.status === 'backlog' || f.status === 'blocked' || f.status === 'review') &&
           !alreadyReconciled.has(f.id) &&
           (f.statusHistory ?? []).some(
             (t) =>
