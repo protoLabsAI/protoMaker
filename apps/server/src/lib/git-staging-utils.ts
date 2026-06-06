@@ -94,3 +94,46 @@ export function buildGitAddArgs(workDir: string): string[] {
 
   return [...args, '--', ...pathspecs];
 }
+
+/**
+ * Files that should be gitignored but may have been committed before the
+ * .gitignore entry was added, causing them to remain tracked.
+ *
+ * When a new worktree branch is created, these files are removed from the
+ * index via `git rm --cached` so that subsequent commits don't include them.
+ */
+const TRACKED_BUT_GITIGNORED = ['.automaker-lock'];
+
+/**
+ * Unstage files that are tracked by git but should be gitignored.
+ *
+ * `.automaker-lock` was committed before `.gitignore` was updated. Every
+ * agent modifies it, causing `force-with-lease` rejections and rebase
+ * conflicts. This function removes such files from the index on worktree
+ * init so they no longer participate in git operations.
+ *
+ * Safe to call repeatedly — if the file is not tracked, `git rm --cached`
+ * will fail silently and we swallow the error.
+ */
+export async function unstageGitignoredFiles(workDir: string): Promise<void> {
+  const { execFile } = await import('child_process');
+  const { promisify } = await import('util');
+  const execFileAsync = promisify(execFile);
+
+  for (const file of TRACKED_BUT_GITIGNORED) {
+    try {
+      // Only unstage if the file is actually tracked in this worktree.
+      // `git ls-files --error-unmatch` exits 0 if tracked, 1 if not.
+      await execFileAsync('git', ['ls-files', '--error-unmatch', file], {
+        cwd: workDir,
+      });
+
+      // File is tracked — remove it from the index.
+      await execFileAsync('git', ['rm', '--cached', file], {
+        cwd: workDir,
+      });
+    } catch {
+      // File not tracked or already unstaged — no-op.
+    }
+  }
+}

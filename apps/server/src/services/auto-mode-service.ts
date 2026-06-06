@@ -16,7 +16,7 @@ import { simpleQuery } from '../providers/simple-query-service.js';
 import { StreamObserver } from './stream-observer-service.js';
 import { getWorkflowSettings, getEffectivePrBaseBranch } from '../lib/settings-helpers.js';
 import { setFeatureContext } from '@protolabsai/error-tracking';
-import { buildGitAddCommand } from '../lib/git-staging-utils.js';
+import { buildGitAddCommand, unstageGitignoredFiles } from '../lib/git-staging-utils.js';
 
 /**
  * Error thrown when stream observer detects an agent loop.
@@ -3297,6 +3297,16 @@ Format your response as a structured markdown document.`;
         logger.debug(`Set local git identity in worktree: ${resolvedWorktreePath}`);
       } catch (err) {
         logger.warn('Failed to set local git identity in worktree (non-fatal):', err);
+      }
+
+      // Unstage files that are tracked by git but should be gitignored.
+      // `.automaker-lock` was committed before `.gitignore` was updated, so it
+      // remains tracked. Removing it from the index prevents every agent commit
+      // from including it, which caused force-with-lease rejections and rebase conflicts.
+      try {
+        await unstageGitignoredFiles(resolvedWorktreePath);
+      } catch (err) {
+        logger.warn('Failed to unstage gitignored files (non-fatal):', err);
       }
 
       // Exclude .automaker/features/ from worktree git status to prevent

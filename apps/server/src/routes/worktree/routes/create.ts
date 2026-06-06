@@ -26,6 +26,7 @@ import { trackBranch } from './branch-tracking.js';
 import { createLogger } from '@protolabsai/utils';
 import { runInitScript } from '../../../services/init-script-service.js';
 import { installWorktreeDependencies } from '../../../services/worktree-lifecycle-service.js';
+import { unstageGitignoredFiles } from '../../../lib/git-staging-utils.js';
 const logger = createLogger('Worktree');
 
 const execAsync = promisify(exec);
@@ -197,6 +198,16 @@ export function createCreateHandler(events: EventEmitter) {
         logger.debug(`Set local git identity in worktree: ${worktreePath}`);
       } catch (err) {
         logger.warn(`Failed to set local git identity in worktree (non-fatal): ${err}`);
+      }
+
+      // Unstage files that are tracked by git but should be gitignored.
+      // `.automaker-lock` was committed before `.gitignore` was updated, so it
+      // remains tracked. Removing it from the index prevents every agent commit
+      // from including it, which caused force-with-lease rejections and rebase conflicts.
+      try {
+        await unstageGitignoredFiles(worktreePath);
+      } catch (err) {
+        logger.warn(`Failed to unstage gitignored files (non-fatal): ${err}`);
       }
 
       // Note: We intentionally do NOT symlink .automaker to worktrees
