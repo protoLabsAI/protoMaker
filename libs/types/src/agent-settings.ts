@@ -222,6 +222,12 @@ export interface PhaseModelConfig {
    * When a flow runs with a matching flowId, its model entry overrides the default.
    */
   flowModels?: Record<string, PhaseModelEntry>;
+
+  // Specialist agent models — review agents that were previously hardcoded to 'haiku'
+  /** Model for antagonistic plan review (PlanReviewService — standard + goal-backward review) */
+  antagonisticReviewModel: PhaseModelEntry;
+  /** Model for inline fallback review when PlanReviewService is not wired (PlanProcessor) */
+  inlineReviewModel: PhaseModelEntry;
 }
 
 /**
@@ -280,6 +286,10 @@ export const DEFAULT_PHASE_MODELS: PhaseModelConfig = {
   complexityMediumModel: { model: 'protolabs/smart' },
   complexityLargeModel: { model: 'protolabs/smart' },
   complexityArchitecturalModel: { model: 'protolabs/reasoning' },
+
+  // Specialist agent models — review agents (fast tier matches previous 'haiku' default)
+  antagonisticReviewModel: { model: 'protolabs/fast' },
+  inlineReviewModel: { model: 'protolabs/fast' },
 };
 
 /**

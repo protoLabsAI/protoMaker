@@ -12,8 +12,10 @@
 
 import { createLogger } from '@protolabsai/utils';
 import type { StructuredPlan } from '@protolabsai/types';
-import { resolveModelString } from '@protolabsai/model-resolver';
+import { resolvePhaseModel } from '@protolabsai/model-resolver';
 import { simpleQuery } from '../providers/simple-query-service.js';
+import { getPhaseModelWithOverrides } from '../lib/settings-helpers.js';
+import type { SettingsService } from './settings-service.js';
 
 const logger = createLogger('PlanReview');
 
@@ -37,6 +39,7 @@ export class PlanReviewService {
     planOutput: string;
     projectPath: string;
     structuredPlan?: StructuredPlan;
+    settingsService?: SettingsService | null;
   }): Promise<{
     approved: boolean;
     reason?: string;
@@ -50,7 +53,16 @@ export class PlanReviewService {
       planOutput,
       projectPath,
       structuredPlan,
+      settingsService,
     } = params;
+
+    // Resolve model from phase model config
+    const { phaseModel } = await getPhaseModelWithOverrides(
+      'antagonisticReviewModel',
+      settingsService,
+      projectPath
+    );
+    const model = resolvePhaseModel(phaseModel).model;
 
     logger.info('[verifyPlan] Running plan review', {
       featureTitle,
@@ -67,6 +79,8 @@ export class PlanReviewService {
         planOutput,
         projectPath,
         structuredPlan,
+        model,
+        settingsService,
       });
     }
 
