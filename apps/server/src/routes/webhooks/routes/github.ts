@@ -627,19 +627,40 @@ export function createGitHubWebhookHandler(
       // a feature with a matching branch name. Falls back to process.cwd() for
       // webhooks whose repo isn't tied to a configured project — the feature lookup
       // below will then return no match and we skip processing.
-      const projectPath: string =
+      let projectPath: string =
         (await findProjectPathForFeature(featureLoader, settings.projects, (path) =>
           findFeatureByBranch(featureLoader, path, branchName).then(Boolean)
         )) ?? process.cwd();
 
       // Find feature by branch name
-      const feature = await findFeatureByBranch(featureLoader, projectPath, branchName);
+      let feature = await findFeatureByBranch(featureLoader, projectPath, branchName);
 
       if (!feature) {
-        logger.info(`No feature found for branch: ${branchName}`);
+        // Fallback: try finding by PR number across all projects.
+        // Covers board-only features where prNumber was linked but branchName was not.
+        const prProjectPath = await findProjectPathForFeature(
+          featureLoader,
+          settings.projects,
+          (path) => featureLoader.findByPRNumber(path, prNumber).then(Boolean)
+        );
+
+        if (prProjectPath) {
+          const featureByPr = await featureLoader.findByPRNumber(prProjectPath, prNumber);
+          if (featureByPr) {
+            logger.info(
+              `PR #${prNumber} merged: found feature "${featureByPr.title}" (${featureByPr.id}) via PR number fallback (branch "${branchName}" had no match)`
+            );
+            projectPath = prProjectPath;
+            feature = { featureId: featureByPr.id, title: featureByPr.title || featureByPr.id };
+          }
+        }
+      }
+
+      if (!feature) {
+        logger.info(`No feature found for branch "${branchName}" or PR #${prNumber}`);
         res.json({
           success: true,
-          message: `No feature found for branch ${branchName}`,
+          message: `No feature found for branch ${branchName} or PR #${prNumber}`,
         });
         return;
       }
