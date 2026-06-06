@@ -7,6 +7,7 @@ import {
   getBlockingDependenciesFromMap,
   wouldCreateCircularDependency,
   dependencyExists,
+  getBlockingInfo,
 } from '../src/resolver';
 import type { Feature } from '@protolabsai/types';
 
@@ -18,6 +19,7 @@ function createFeature(
     status?: string;
     priority?: number;
     isFoundation?: boolean;
+    isEpic?: boolean;
   } = {}
 ): Feature {
   return {
@@ -28,6 +30,7 @@ function createFeature(
     status: options.status || 'pending',
     priority: options.priority,
     isFoundation: options.isFoundation,
+    isEpic: options.isEpic,
   };
 }
 
@@ -776,6 +779,200 @@ describe('resolver.ts', () => {
       const features = [createFeature('A'), createFeature('B', { dependencies: [] })];
 
       expect(dependencyExists(features, 'A', 'B')).toBe(false);
+    });
+  });
+
+  describe('isEpic dependency handling', () => {
+    describe('areDependenciesSatisfied', () => {
+      it('should satisfy child when epic dep is in backlog', () => {
+        const epic = createFeature('Epic', { status: 'backlog', isEpic: true });
+        const child = createFeature('Child', { dependencies: ['Epic'] });
+        const allFeatures = [epic, child];
+
+        expect(areDependenciesSatisfied(child, allFeatures)).toBe(true);
+      });
+
+      it('should satisfy child when epic dep is in pending', () => {
+        const epic = createFeature('Epic', { status: 'pending', isEpic: true });
+        const child = createFeature('Child', { dependencies: ['Epic'] });
+        const allFeatures = [epic, child];
+
+        expect(areDependenciesSatisfied(child, allFeatures)).toBe(true);
+      });
+
+      it('should satisfy child when epic dep is in_progress', () => {
+        const epic = createFeature('Epic', { status: 'in_progress' as any, isEpic: true });
+        const child = createFeature('Child', { dependencies: ['Epic'] });
+        const allFeatures = [epic, child];
+
+        expect(areDependenciesSatisfied(child, allFeatures)).toBe(true);
+      });
+
+      it('should satisfy child when epic dep is done', () => {
+        const epic = createFeature('Epic', { status: 'done', isEpic: true });
+        const child = createFeature('Child', { dependencies: ['Epic'] });
+        const allFeatures = [epic, child];
+
+        expect(areDependenciesSatisfied(child, allFeatures)).toBe(true);
+      });
+
+      it('should STILL block child when epic dep is explicitly blocked', () => {
+        const epic = createFeature('Epic', { status: 'blocked', isEpic: true });
+        const child = createFeature('Child', { dependencies: ['Epic'] });
+        const allFeatures = [epic, child];
+
+        expect(areDependenciesSatisfied(child, allFeatures)).toBe(false);
+      });
+
+      it('should block child when non-epic dep is in backlog', () => {
+        const nonEpic = createFeature('NonEpic', { status: 'backlog', isEpic: false });
+        const child = createFeature('Child', { dependencies: ['NonEpic'] });
+        const allFeatures = [nonEpic, child];
+
+        expect(areDependenciesSatisfied(child, allFeatures)).toBe(false);
+      });
+
+      it('should satisfy child with mixed deps when epic is backlog and normal dep is done', () => {
+        const epic = createFeature('Epic', { status: 'backlog', isEpic: true });
+        const normalDep = createFeature('NormalDep', { status: 'done' });
+        const child = createFeature('Child', { dependencies: ['Epic', 'NormalDep'] });
+        const allFeatures = [epic, normalDep, child];
+
+        expect(areDependenciesSatisfied(child, allFeatures)).toBe(true);
+      });
+
+      it('should block child with mixed deps when epic is backlog but normal dep is pending', () => {
+        const epic = createFeature('Epic', { status: 'backlog', isEpic: true });
+        const normalDep = createFeature('NormalDep', { status: 'pending' });
+        const child = createFeature('Child', { dependencies: ['Epic', 'NormalDep'] });
+        const allFeatures = [epic, normalDep, child];
+
+        expect(areDependenciesSatisfied(child, allFeatures)).toBe(false);
+      });
+    });
+
+    describe('resolveDependencies blockedFeatures', () => {
+      it('should NOT mark child as blocked when epic dep is in backlog', () => {
+        const epic = createFeature('Epic', { status: 'backlog', isEpic: true });
+        const child = createFeature('Child', { dependencies: ['Epic'], status: 'pending' });
+        const features = [epic, child];
+
+        const result = resolveDependencies(features);
+
+        expect(result.blockedFeatures.has('Child')).toBe(false);
+      });
+
+      it('should NOT mark child as blocked when epic dep is in_progress', () => {
+        const epic = createFeature('Epic', { status: 'in_progress' as any, isEpic: true });
+        const child = createFeature('Child', { dependencies: ['Epic'], status: 'pending' });
+        const features = [epic, child];
+
+        const result = resolveDependencies(features);
+
+        expect(result.blockedFeatures.has('Child')).toBe(false);
+      });
+
+      it('should STILL mark child as blocked when epic dep is explicitly blocked', () => {
+        const epic = createFeature('Epic', { status: 'blocked', isEpic: true });
+        const child = createFeature('Child', { dependencies: ['Epic'], status: 'pending' });
+        const features = [epic, child];
+
+        const result = resolveDependencies(features);
+
+        expect(result.blockedFeatures.has('Child')).toBe(true);
+        expect(result.blockedFeatures.get('Child')).toContain('Epic');
+      });
+    });
+
+    describe('getBlockingDependencies', () => {
+      it('should not include epic dep in blocking list when epic is backlog', () => {
+        const epic = createFeature('Epic', { status: 'backlog', isEpic: true });
+        const child = createFeature('Child', { dependencies: ['Epic'] });
+        const allFeatures = [epic, child];
+
+        expect(getBlockingDependencies(child, allFeatures)).toEqual([]);
+      });
+
+      it('should not include epic dep in blocking list when epic is in_progress', () => {
+        const epic = createFeature('Epic', { status: 'in_progress' as any, isEpic: true });
+        const child = createFeature('Child', { dependencies: ['Epic'] });
+        const allFeatures = [epic, child];
+
+        expect(getBlockingDependencies(child, allFeatures)).toEqual([]);
+      });
+
+      it('should include epic dep in blocking list when epic is blocked', () => {
+        const epic = createFeature('Epic', { status: 'blocked', isEpic: true });
+        const child = createFeature('Child', { dependencies: ['Epic'] });
+        const allFeatures = [epic, child];
+
+        expect(getBlockingDependencies(child, allFeatures)).toEqual(['Epic']);
+      });
+
+      it('should filter out epic dep but include blocking normal dep', () => {
+        const epic = createFeature('Epic', { status: 'backlog', isEpic: true });
+        const normalDep = createFeature('NormalDep', { status: 'pending' });
+        const child = createFeature('Child', { dependencies: ['Epic', 'NormalDep'] });
+        const allFeatures = [epic, normalDep, child];
+
+        const blocking = getBlockingDependencies(child, allFeatures);
+        expect(blocking).not.toContain('Epic');
+        expect(blocking).toContain('NormalDep');
+      });
+    });
+
+    describe('getBlockingDependenciesFromMap', () => {
+      it('should not include epic dep when epic is backlog', () => {
+        const epic = createFeature('Epic', { status: 'backlog', isEpic: true });
+        const child = createFeature('Child', { dependencies: ['Epic'] });
+        const allFeatures = [epic, child];
+        const featureMap = createFeatureMap(allFeatures);
+
+        expect(getBlockingDependenciesFromMap(child, featureMap)).toEqual([]);
+      });
+
+      it('should include epic dep when epic is blocked', () => {
+        const epic = createFeature('Epic', { status: 'blocked', isEpic: true });
+        const child = createFeature('Child', { dependencies: ['Epic'] });
+        const allFeatures = [epic, child];
+        const featureMap = createFeatureMap(allFeatures);
+
+        expect(getBlockingDependenciesFromMap(child, featureMap)).toEqual(['Epic']);
+      });
+    });
+
+    describe('getBlockingInfo', () => {
+      it('should not be blocked when only epic dep is in backlog', () => {
+        const epic = createFeature('Epic', { status: 'backlog', isEpic: true });
+        const child = createFeature('Child', { dependencies: ['Epic'] });
+        const allFeatures = [epic, child];
+
+        const info = getBlockingInfo(child, allFeatures);
+        expect(info.isBlocked).toBe(false);
+        expect(info.blockers).toEqual([]);
+      });
+
+      it('should be blocked when epic dep is explicitly blocked', () => {
+        const epic = createFeature('Epic', { status: 'blocked', isEpic: true });
+        const child = createFeature('Child', { dependencies: ['Epic'] });
+        const allFeatures = [epic, child];
+
+        const info = getBlockingInfo(child, allFeatures);
+        expect(info.isBlocked).toBe(true);
+        expect(info.blockers).toContain('Epic');
+      });
+
+      it('should skip epic dep but report blocking normal dep', () => {
+        const epic = createFeature('Epic', { status: 'backlog', isEpic: true });
+        const normalDep = createFeature('NormalDep', { status: 'pending' });
+        const child = createFeature('Child', { dependencies: ['Epic', 'NormalDep'] });
+        const allFeatures = [epic, normalDep, child];
+
+        const info = getBlockingInfo(child, allFeatures);
+        expect(info.isBlocked).toBe(true);
+        expect(info.blockers).not.toContain('Epic');
+        expect(info.blockers).toContain('NormalDep');
+      });
     });
   });
 });
