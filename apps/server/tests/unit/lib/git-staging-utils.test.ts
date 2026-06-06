@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, mkdirSync, rmSync } from 'fs';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import { execSync } from 'child_process';
 
 import {
   buildGitAddCommand,
   isGitignoreManaged,
+  unstageGitignoredFiles,
   DEFAULT_STAGING_EXCLUSIONS,
 } from '../../../src/lib/git-staging-utils.js';
 
@@ -76,5 +78,73 @@ describe('buildGitAddCommand', () => {
       expect(DEFAULT_STAGING_EXCLUSIONS).toContain('.claude/worktrees/');
       expect(DEFAULT_STAGING_EXCLUSIONS).toContain('.worktrees/');
     });
+  });
+});
+
+describe('unstageGitignoredFiles', () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = mkdtempSync(join(tmpdir(), 'git-staging-unstage-test-'));
+    execSync('git init', { cwd: tempDir, stdio: 'ignore' });
+    execSync('git config user.name Test', { cwd: tempDir, stdio: 'ignore' });
+    execSync('git config user.email test@test.com', { cwd: tempDir, stdio: 'ignore' });
+  });
+
+  afterEach(() => {
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('removes .automaker-lock from index when tracked', async () => {
+    writeFileSync(join(tempDir, '.automaker-lock'), '{}');
+    execSync('git add .automaker-lock', { cwd: tempDir, stdio: 'ignore' });
+    execSync('git commit -m "add lock"', { cwd: tempDir, stdio: 'ignore' });
+
+    // Verify it's tracked before
+    const before = execSync('git ls-files --cached .automaker-lock', {
+      cwd: tempDir,
+    }).toString().trim();
+    expect(before).toBe('.automaker-lock');
+
+    await unstageGitignoredFiles(tempDir);
+
+    // Verify it's no longer tracked
+    const after = execSync('git ls-files --cached .automaker-lock', {
+      cwd: tempDir,
+    }).toString().trim();
+    expect(after).toBe('');
+
+    // File should still exist on disk
+    expect(() => execSync('test -f .automaker-lock', { cwd: tempDir })).not.toThrow();
+  });
+
+  it('does nothing when .automaker-lock is not tracked', async () => {
+    // No .automaker-lock file at all
+    await unstageGitignoredFiles(tempDir);
+    // Should not throw
+  });
+
+  it('does nothing in a non-git directory', async () => {
+    const nonGitDir = mkdtempSync(join(tmpdir(), 'git-staging-non-git-'));
+    try {
+      await unstageGitignoredFiles(nonGitDir);
+      // Should not throw
+    } finally {
+      rmSync(nonGitDir, { recursive: true, force: true });
+    }
+  });
+
+  it('is idempotent — second call is a no-op', async () => {
+    writeFileSync(join(tempDir, '.automaker-lock'), '{}');
+    execSync('git add .automaker-lock', { cwd: tempDir, stdio: 'ignore' });
+    execSync('git commit -m "add lock"', { cwd: tempDir, stdio: 'ignore' });
+
+    await unstageGitignoredFiles(tempDir);
+    await unstageGitignoredFiles(tempDir);
+
+    const after = execSync('git ls-files --cached .automaker-lock', {
+      cwd: tempDir,
+    }).toString().trim();
+    expect(after).toBe('');
   });
 });
