@@ -573,35 +573,43 @@ export class ExecutionService {
               cwd: projectPath,
               maxTurns: 1,
               allowedTools: [],
-              systemPrompt:
-                'You generate git branch names. Output ONLY the branch name, nothing else — no explanation, no punctuation, no quotes.',
-              prompt: `Generate a concise git branch name for this feature. Rules:
+              systemPrompt: `You generate git branch names. Respond with the branch name wrapped in <branch> tags. No other output before or after the tags.
+
+Examples:
+
+<branch>fix/worktree-auto-recovery-abc1234</branch>
+<branch>feature/add-discord-webhook-registry-def5678</branch>`,
+              prompt: `Generate a git branch name for this feature.
+
+Rules:
 - Prefix: "${branchPrefix}/"
 - Lowercase letters, numbers, hyphens only
-- Max 60 characters total (including prefix)
-- Must be URL-safe (no spaces, slashes beyond the prefix, special chars)
-- End with the last 7 chars of the feature ID: "${featureId.slice(-7)}"
+- Max 60 characters total
+- End with the last 7 chars of the feature ID
 
-Feature title: ${titleForPrompt}
-Feature category: ${feature.category ?? 'feature'}
-Feature ID: ${featureId}
+Title: ${titleForPrompt}
+Category: ${feature.category ?? 'feature'}
+Feature ID suffix: ${featureId.slice(-7)}
 
-Output the branch name only.`,
+<branch>`,
             });
-            const raw = result.text?.trim().replace(/['"]/g, '') ?? '';
-            // Validate: must start with a known prefix/, only safe chars, reasonable length
-            if (/^[a-z]+\/[a-z0-9][a-z0-9-]{1,58}$/.test(raw)) {
-              generatedBranchName = raw;
+            const raw = result.text ?? '';
+            // 1. Extract content between <branch> tags
+            const tagMatch = raw.match(/<branch>\s*([^<]+)\s*<\/branch>/);
+            if (tagMatch && /^[a-z]+\/[a-z0-9][a-z0-9-]{1,58}$/.test(tagMatch[1])) {
+              generatedBranchName = tagMatch[1];
             } else {
-              // Sanitize the raw output as a fallback
-              const slug = raw
-                .replace(/^[a-z]+\//, '')
-                .toLowerCase()
-                .replace(/[^a-z0-9-]/g, '-')
-                .replace(/-+/g, '-')
-                .replace(/^-|-$/g, '')
-                .slice(0, 52);
-              generatedBranchName = `${branchPrefix}/${slug}-${featureId.slice(-7)}`;
+              // 2. Fallback: extract bare slug after the prefill tag (model may have
+              // written just the slug without a closing tag)
+              const bareMatch = raw.match(/<branch>\s*([a-z]+\/[a-z0-9][a-z0-9-]{1,58})/);
+              if (bareMatch) {
+                generatedBranchName = bareMatch[1];
+              } else {
+                // 3. Last resort: deterministic fallback — log a warning
+                logger.warn(
+                  `branchNameModel returned unparseable output for ${featureId}: ${JSON.stringify(raw.slice(0, 200))}`
+                );
+              }
             }
           }
         } catch (err) {
