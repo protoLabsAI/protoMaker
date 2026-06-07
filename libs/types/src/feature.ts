@@ -533,6 +533,13 @@ export interface Feature {
   justFinishedAt?: string;
   /** Reason for the most recent status change (used in status transition history) */
   statusChangeReason?: string;
+  /**
+   * Reason why a feature reached terminal 'done' status without a local PR merge.
+   * Set when the agent reports the work was completed elsewhere (e.g. "merged in #123"
+   * or "completed in other-repo"). Populated by the agent-output-parser reconciliation
+   * logic. Examples: "reconciled from PR #123", "completed in protoWorkstacean #167".
+   */
+  doneReason?: string;
   reviewStartedAt?: string; // When the feature entered review status
   /**
    * History of all status transitions for this feature.
@@ -755,7 +762,8 @@ export type FeatureStatus =
   | 'review' // PR created, under review
   | 'blocked' // Temporary halt (dependency/issue/failure - consolidates: failed)
   | 'done' // PR merged, work complete (consolidates: completed, waiting_approval, verified)
-  | 'interrupted'; // Server shut down while feature was running
+  | 'interrupted' // Server shut down while feature was running
+  | 'needs_human'; // Agent completed but requires human action (credential, config, etc.)
 
 /**
  * Legacy status values for backwards compatibility
@@ -799,6 +807,7 @@ export function normalizeFeatureStatus(
     'blocked',
     'done',
     'interrupted',
+    'needs_human',
   ];
   if (canonical.includes(status as FeatureStatus)) {
     return status as FeatureStatus;

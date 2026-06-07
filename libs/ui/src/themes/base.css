@@ -87,6 +87,7 @@
   --color-status-waiting: var(--status-waiting);
   --color-status-review: var(--status-review);
   --color-status-blocked: var(--status-blocked);
+  --color-status-needs-human: var(--status-needs-human);
   --color-status-done: var(--status-done);
 
   /* Border radius — Linear-inspired: tight, geometric */
@@ -180,6 +181,7 @@
   --status-waiting: oklch(0.65 0.14 50);
   --status-review: oklch(0.55 0.14 230);
   --status-blocked: oklch(0.55 0.16 25);
+  --status-needs-human: oklch(0.65 0.18 70);
   --status-done: oklch(0.55 0.15 145);
 
   /* Shadows */
@@ -277,6 +279,7 @@
     --status-waiting: oklch(0.7 0.14 50);
     --status-review: oklch(0.65 0.14 230);
     --status-blocked: oklch(0.65 0.16 25);
+    --status-needs-human: oklch(0.75 0.18 70);
     --status-done: oklch(0.65 0.14 145);
 
     /* Shadows */

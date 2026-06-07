@@ -83,6 +83,7 @@
   --status-waiting: oklch(0.65 0.14 50);
   --status-review: oklch(0.55 0.14 230);
   --status-blocked: oklch(0.55 0.16 25);
+  --status-needs-human: oklch(0.65 0.18 70);
   --status-done: oklch(0.55 0.15 145);
 
   /* Shadows */
