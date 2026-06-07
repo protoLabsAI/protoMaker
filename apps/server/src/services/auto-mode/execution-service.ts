@@ -85,6 +85,7 @@ import { PromptBuilder } from '../../lib/prompt-builder.js';
 import { FeatureLoader } from '../feature-loader.js';
 import type { SettingsService } from '../settings-service.js';
 import type { AuthorityService } from '../authority-service.js';
+import { parseAgentOutput, buildDoneReason } from '../agent-output-parser.js';
 import {
   getAutoLoadClaudeMdSetting,
   filterClaudeMdFromContext,
@@ -424,7 +425,14 @@ export class ExecutionService {
       // This prevents zombie loops where done/verified features keep getting restarted
       // by health checks, reconciliation, or stale retry timers.
       // 'interrupted' is included: features that tripped the circuit breaker must not be retried.
-      const TERMINAL_STATUSES = new Set(['done', 'verified', 'completed', 'interrupted']);
+      // 'needs_human' is terminal — the agent completed its work, waiting on human action.
+      const TERMINAL_STATUSES = new Set([
+        'done',
+        'verified',
+        'completed',
+        'interrupted',
+        'needs_human',
+      ]);
       if (TERMINAL_STATUSES.has(feature.status ?? '')) {
         logger.warn(
           `Refusing to execute feature ${featureId} — already in terminal status "${feature.status}". ` +
@@ -1365,6 +1373,59 @@ Feature ID suffix: ${featureId.slice(-7)}
               );
             } catch (summaryError) {
               logger.warn(`Failed to save summary for feature ${featureId}:`, summaryError);
+            }
+          }
+        }
+
+        // Parse agent output for terminal-state signals (#needs_human / #done_elsewhere).
+        // If the agent reports it needs human action or the work was done elsewhere,
+        // transition to the appropriate terminal state and skip the git workflow.
+        // This prevents false-block clusters where well-structured agent reports
+        // are treated as failures and retried.
+        if (agentOutput) {
+          const parsed = parseAgentOutput(agentOutput);
+
+          if (parsed.signal === 'needs_human' && parsed.needsHumanAction) {
+            logger.info(
+              `[AgentOutput] Feature ${featureId} signals needs_human — transitioning to terminal state (no retry)`
+            );
+            await this.featureLoader.update(projectPath, featureId, {
+              status: 'needs_human',
+              statusChangeReason: `Awaiting human action: ${parsed.needsHumanAction}`,
+            });
+            this.typedEventBus.emitAutoModeEvent('auto_mode_feature_complete', {
+              featureId,
+              featureName: feature?.title,
+              branchName: feature?.branchName ?? null,
+              passes: true,
+              message: `Requires human action: ${parsed.needsHumanAction.slice(0, 200)}`,
+              projectPath,
+            });
+            return;
+          }
+
+          if (parsed.signal === 'already_done' && parsed.prReferences.length > 0) {
+            const doneReason = buildDoneReason(parsed.prReferences);
+            // Only reconcile if no PR was created by this run (no prUrl yet).
+            // If the agent cites a merged PR and we have no local PR, mark done.
+            if (doneReason) {
+              logger.info(
+                `[AgentOutput] Feature ${featureId} signals already_done — marking done (reason: ${doneReason})`
+              );
+              await this.featureLoader.update(projectPath, featureId, {
+                status: 'done',
+                doneReason,
+                statusChangeReason: `Work completed elsewhere: ${doneReason}`,
+              });
+              this.typedEventBus.emitAutoModeEvent('auto_mode_feature_complete', {
+                featureId,
+                featureName: feature?.title,
+                branchName: feature?.branchName ?? null,
+                passes: true,
+                message: `Already done: ${doneReason}`,
+                projectPath,
+              });
+              return;
             }
           }
         }

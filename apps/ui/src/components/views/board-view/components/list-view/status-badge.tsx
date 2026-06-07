@@ -41,6 +41,12 @@ const BASE_STATUS_DISPLAY: Record<string, StatusDisplay> = {
     bgClass: 'bg-[var(--status-success)]/15',
     borderClass: 'border-[var(--status-success)]/30',
   },
+  needs_human: {
+    label: 'Needs Human',
+    colorClass: 'text-[var(--status-needs-human)]',
+    bgClass: 'bg-[var(--status-needs-human)]/15',
+    borderClass: 'border-[var(--status-needs-human)]/30',
+  },
 };
 
 /**
