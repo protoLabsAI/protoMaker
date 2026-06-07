@@ -4,7 +4,13 @@
  * All types shared across the lead-engineer subsystem files.
  */
 
-import type { ContextMetrics, Feature, AgentRole, StructuredPlan } from '@protolabsai/types';
+import type {
+  ContextMetrics,
+  Feature,
+  AgentRole,
+  StructuredPlan,
+  CIFailureEvidence,
+} from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
@@ -149,6 +155,8 @@ export interface StateContext {
   planRetryCount: number;
   escalationReason?: string;
   reviewFeedback?: string;
+  /** Structured CI failure evidence collected by the evidence collector */
+  ciFailureEvidence?: CIFailureEvidence[];
   /** Learnings from sibling features: structured facts (markdown, grouped by category) from facts.json, or raw reflection.md content as fallback */
   siblingReflections?: string[];
   /** Aggregated facts from completed milestones in this project, formatted as "Project Knowledge" markdown section */

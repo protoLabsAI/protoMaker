@@ -9,7 +9,7 @@ import { exec } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { promisify } from 'node:util';
 import { createLogger } from '@protolabsai/utils';
-import type { EventType, PRMergeStrategy } from '@protolabsai/types';
+import type { EventType, PRMergeStrategy, CIFailureEvidence } from '@protolabsai/types';
 import {
   buildFreshEyesReviewPrompt,
   parseFreshEyesVerdict,
@@ -43,6 +43,10 @@ import {
   RemediationBudgetEnforcer,
   DEFAULT_CI_REACTION_SETTINGS,
 } from './remediation-budget-enforcer.js';
+import {
+  collectCIFailureEvidence,
+  formatCIFailureEvidence,
+} from './ci-failure-evidence-collector.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('LeadEngineerService');
@@ -433,7 +437,7 @@ export class ReviewProcessor implements StateProcessor {
     }
 
     if (reviewState === 'ci_failed') {
-      // Check CI remediation budget
+      // Resolve settings (env var overrides applied at DEFAULT_CI_REACTION_SETTINGS init time)
       const ciWorkflowSettings = await getWorkflowSettings(
         ctx.projectPath,
         this.serviceContext.settingsService,
@@ -442,6 +446,62 @@ export class ReviewProcessor implements StateProcessor {
       const ciReactionSettings =
         ciWorkflowSettings.ciReactionSettings ?? DEFAULT_CI_REACTION_SETTINGS;
 
+      // Fetch failing CI check names first (needed for evidence count + progress tracking)
+      let ciFailureNames: string[] = [];
+      try {
+        const { stdout } = await execAsync(
+          `gh pr view ${ctx.prNumber} --json statusCheckRollup --jq '[(.statusCheckRollup // [])[] | select(.conclusion == "FAILURE") | .context] | join(", ")'`,
+          { cwd: ctx.projectPath, timeout: 15000 }
+        );
+        const names = stdout.trim();
+        if (names) {
+          ciFailureNames = names.split(', ').filter(Boolean);
+        }
+      } catch (err) {
+        logger.warn('[REVIEW] Failed to fetch CI check failure names:', err);
+      }
+
+      // Collect structured CI failure evidence (annotations, log excerpts)
+      let evidences: CIFailureEvidence[] = [];
+      try {
+        evidences = await collectCIFailureEvidence(ctx);
+        if (evidences.length > 0) {
+          ctx.ciFailureEvidence = evidences;
+          const evidenceNames = evidences.map((e) => e.checkName).join(', ');
+          ctx.reviewFeedback = `CI checks failed: ${evidenceNames || ciFailureNames.join(', ')}`;
+          logger.info(
+            `[REVIEW] Collected CI failure evidence for ${evidences.length} check(s): ${evidenceNames}`
+          );
+        } else if (ciFailureNames.length > 0) {
+          ctx.reviewFeedback = `CI checks failed: ${ciFailureNames.join(', ')}`;
+          logger.info(
+            `[REVIEW] CI check failures (no structured evidence): ${ciFailureNames.join(', ')}`
+          );
+        }
+      } catch (err) {
+        logger.warn('[REVIEW] Failed to collect CI failure evidence:', err);
+        if (ciFailureNames.length > 0) {
+          ctx.reviewFeedback = `CI checks failed: ${ciFailureNames.join(', ')}`;
+        }
+      }
+
+      // Record remediation history for progress-aware budget extension
+      try {
+        const history = ctx.feature._remediationHistory ?? [];
+        history.push({
+          timestamp: new Date().toISOString(),
+          ciFailureCount: ciFailureNames.length,
+          failingCheckNames: ciFailureNames,
+        });
+        await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+          _remediationHistory: history,
+        });
+        ctx.feature._remediationHistory = history;
+      } catch (err) {
+        logger.warn('[REVIEW] Failed to persist remediation history:', err);
+      }
+
+      // Check CI remediation budget
       const persistedCiCount = (ctx.feature.ciRemediationCount as number | undefined) ?? 0;
       const persistedReviewCount =
         (ctx.feature.reviewRemediationCount as number | undefined) ?? ctx.remediationAttempts;
@@ -457,6 +517,19 @@ export class ReviewProcessor implements StateProcessor {
       });
 
       if (!ciBudgetResult.allowed) {
+        // Check if progress was made before escalating
+        const progressCheck = ciEnforcer.checkProgressAndExtend(ctx.feature, evidences);
+        if (progressCheck.extended) {
+          logger.info(`[REVIEW] Budget extended due to progress: ${progressCheck.reason}`);
+          // Allow one more cycle despite budget exhaustion
+          ctx.remediationAttempts++;
+          return {
+            nextState: 'EXECUTE',
+            shouldContinue: true,
+            reason: `Budget extended (progress: ${progressCheck.reason}), remediating`,
+            context: { remediation: true, ciFailures: ciFailureNames },
+          };
+        }
         ctx.escalationReason = ciBudgetResult.message;
         return {
           nextState: 'ESCALATE',
@@ -474,23 +547,6 @@ export class ReviewProcessor implements StateProcessor {
           shouldContinue: true,
           reason: ctx.escalationReason,
         };
-      }
-
-      // Fetch failing CI check names for remediation context
-      let ciFailureNames: string[] = [];
-      try {
-        const { stdout } = await execAsync(
-          `gh pr view ${ctx.prNumber} --json statusCheckRollup --jq '[(.statusCheckRollup // [])[] | select(.conclusion == "FAILURE") | .context] | join(", ")'`,
-          { cwd: ctx.projectPath, timeout: 15000 }
-        );
-        const names = stdout.trim();
-        if (names) {
-          ciFailureNames = names.split(', ').filter(Boolean);
-          ctx.reviewFeedback = `CI checks failed: ${names}`;
-          logger.info(`[REVIEW] CI check failures: ${names}`);
-        }
-      } catch (err) {
-        logger.warn('[REVIEW] Failed to fetch CI check failure names:', err);
       }
 
       ctx.remediationAttempts++;
