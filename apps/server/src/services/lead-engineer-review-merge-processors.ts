@@ -47,6 +47,48 @@ import {
 const execAsync = promisify(exec);
 const logger = createLogger('LeadEngineerService');
 
+/** Max chars of per-check output folded into the remediation context. */
+const CI_FAILURE_DETAIL_MAX = 800;
+
+/**
+ * Fetch the OUTPUT (summary/text — test assertions, error lines) of a PR's
+ * failing CI checks, so the remediating agent gets the concrete failure, not
+ * just the check name. Best-effort: returns '' on any error so the caller falls
+ * back to names-only. See protoMaker #4124.
+ */
+async function fetchCiFailureDetail(prNumber: number, projectPath: string): Promise<string> {
+  try {
+    const { stdout: sha } = await execAsync(
+      `gh pr view ${prNumber} --json headRefOid --jq .headRefOid`,
+      { cwd: projectPath, timeout: 15000 }
+    );
+    const headSha = sha.trim();
+    if (!headSha) return '';
+    const { stdout: runsJson } = await execAsync(
+      `gh api repos/{owner}/{repo}/commits/${headSha}/check-runs`,
+      { cwd: projectPath, timeout: 20000, maxBuffer: 10 * 1024 * 1024 }
+    );
+    const parsed = JSON.parse(runsJson) as {
+      check_runs?: Array<{
+        name?: string;
+        conclusion?: string;
+        output?: { summary?: string; text?: string };
+      }>;
+    };
+    const blocks = (parsed.check_runs ?? [])
+      .filter((r) => r.conclusion === 'failure')
+      .map((r) => {
+        const out = `${r.output?.summary ?? ''}\n${r.output?.text ?? ''}`.trim();
+        return out ? `### ${r.name ?? 'check'}\n${out.slice(0, CI_FAILURE_DETAIL_MAX)}` : '';
+      })
+      .filter(Boolean);
+    return blocks.join('\n\n');
+  } catch (err) {
+    logger.warn('[REVIEW] Failed to fetch CI failure output (names only):', err);
+    return '';
+  }
+}
+
 /**
  * Validate and sanitize a PR number to prevent shell injection.
  * Returns the validated integer or throws if invalid.
@@ -476,7 +518,11 @@ export class ReviewProcessor implements StateProcessor {
         };
       }
 
-      // Fetch failing CI check names for remediation context
+      // Fetch failing CI checks for remediation context — names AND each check's
+      // output (test assertions / error lines), so the remediating agent can fix
+      // what the check actually reported instead of re-guessing from "test failed".
+      // The output fetch is best-effort: on any error it falls back to names-only,
+      // preserving prior behavior (no regression).
       let ciFailureNames: string[] = [];
       try {
         const { stdout } = await execAsync(
@@ -486,8 +532,11 @@ export class ReviewProcessor implements StateProcessor {
         const names = stdout.trim();
         if (names) {
           ciFailureNames = names.split(', ').filter(Boolean);
-          ctx.reviewFeedback = `CI checks failed: ${names}`;
-          logger.info(`[REVIEW] CI check failures: ${names}`);
+          const detail = await fetchCiFailureDetail(ctx.prNumber, ctx.projectPath);
+          ctx.reviewFeedback = detail
+            ? `CI checks failed: ${names}\n\n${detail}`
+            : `CI checks failed: ${names}`;
+          logger.info(`[REVIEW] CI check failures: ${names}${detail ? ' (+output)' : ''}`);
         }
       } catch (err) {
         logger.warn('[REVIEW] Failed to fetch CI check failure names:', err);
