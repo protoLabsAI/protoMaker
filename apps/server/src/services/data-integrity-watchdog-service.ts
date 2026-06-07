@@ -17,6 +17,38 @@ import * as secureFs from '../lib/secure-fs.js';
 import path from 'path';
 import type { EventEmitter } from '../lib/events.js';
 
+/**
+ * Simple async mutex using a promise chain.
+ * Serializes access to the critical section so that concurrent
+ * read-modify-write cycles on integrity-state.json never interleave.
+ *
+ * Usage:
+ *   const mutex = new AsyncMutex();
+ *   await mutex.withLock(async () => { ... });
+ */
+class AsyncMutex {
+  private chain: Promise<void> = Promise.resolve();
+
+  async withLock<T>(fn: () => Promise<T>): Promise<T> {
+    // Push this task onto the chain
+    const prev = this.chain;
+    let resolveChain: () => void;
+    this.chain = new Promise<void>((resolve) => {
+      resolveChain = resolve;
+    });
+
+    try {
+      // Wait for all prior tasks
+      await prev;
+      // Execute critical section
+      return await fn();
+    } finally {
+      // Release: allow next waiter to proceed
+      resolveChain!();
+    }
+  }
+}
+
 const logger = createLogger('DataIntegrityWatchdog');
 
 /**
@@ -80,6 +112,7 @@ const CRITICAL_DROP_THRESHOLD = 0.5;
 export class DataIntegrityWatchdogService {
   private stateFilePath: string;
   private events: EventEmitter | null = null;
+  private stateMutex = new AsyncMutex();
 
   constructor(dataDir: string) {
     this.stateFilePath = path.join(dataDir, 'integrity-state.json');
@@ -109,24 +142,30 @@ export class DataIntegrityWatchdogService {
   }
 
   /**
-   * Write integrity state to disk atomically
+   * Write integrity state to disk atomically.
+   *
+   * Serialized behind stateMutex so that concurrent read-modify-write
+   * cycles (e.g. parallel bulk-delete) never interleave.  The tmp name
+   * includes a random suffix so parallel writes never collide on rename.
    */
   private async writeState(state: IntegrityState): Promise<void> {
-    const tempPath = `${this.stateFilePath}.tmp.${Date.now()}`;
-    const content = JSON.stringify(state, null, 2);
+    return this.stateMutex.withLock(async () => {
+      const tempPath = `${this.stateFilePath}.tmp.${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const content = JSON.stringify(state, null, 2);
 
-    try {
-      await secureFs.writeFile(tempPath, content, 'utf-8');
-      await secureFs.rename(tempPath, this.stateFilePath);
-    } catch (error) {
-      // Clean up temp file if it exists
       try {
-        await secureFs.unlink(tempPath);
-      } catch {
-        // Ignore cleanup errors
+        await secureFs.writeFile(tempPath, content, 'utf-8');
+        await secureFs.rename(tempPath, this.stateFilePath);
+      } catch (error) {
+        // Clean up temp file if it exists
+        try {
+          await secureFs.unlink(tempPath);
+        } catch {
+          // Ignore cleanup errors
+        }
+        throw error;
       }
-      throw error;
-    }
+    });
   }
 
   /**
