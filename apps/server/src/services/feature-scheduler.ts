@@ -124,6 +124,11 @@ export interface SchedulerCallbacks {
    * due to an error budget freeze. Running agents are NOT affected.
    */
   isPickupFrozen?(): boolean;
+  /**
+   * Optional hook: returns true when a project is blocked due to quota exhaustion.
+   * Blocks all dispatch paths until manually cleared.
+   */
+  isQuotaBlocked?(projectPath: string): boolean;
 }
 
 /** Interface for the feature health auditor (optional). */
@@ -441,6 +446,18 @@ export class FeatureScheduler {
           if (this.callbacks.isPickupFrozen?.()) {
             logger.warn(
               `[AutoLoop] Error budget frozen — pausing new feature pickup for ${worktreeDesc}`
+            );
+            await this.callbacks.sleep(
+              SLEEP_INTERVAL_CAPACITY_MS,
+              projectState.abortController.signal
+            );
+            continue;
+          }
+
+          // Quota gate: skip dispatch when project is quota-blocked
+          if (this.callbacks.isQuotaBlocked?.(projectPath)) {
+            logger.warn(
+              `[AutoLoop] Quota blocked — pausing new feature pickup for ${worktreeDesc}`
             );
             await this.callbacks.sleep(
               SLEEP_INTERVAL_CAPACITY_MS,

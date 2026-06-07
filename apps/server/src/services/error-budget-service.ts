@@ -75,6 +75,13 @@ export class ErrorBudgetService {
    */
   private _isExhaustedState = false;
 
+  /**
+   * Whether pickup is currently frozen due to quota exhaustion.
+   * Separate from error-budget exhaustion — quota is a billing condition,
+   * not a code quality signal.
+   */
+  private _isQuotaFrozen = false;
+
   constructor(
     dataDir: string,
     events?: EventEmitter | null,
@@ -190,6 +197,31 @@ export class ErrorBudgetService {
       windowDays: this.windowMs / (24 * 60 * 60 * 1000),
       threshold: this.threshold,
     };
+  }
+
+  /**
+   * Freeze pickups for this project due to quota exhaustion.
+   * Makes isPickupFrozen() return true until unfreezeForQuota() is called.
+   */
+  freezeForQuota(): void {
+    this._isQuotaFrozen = true;
+    logger.warn(`[ErrorBudget] Quota freeze activated for ${this.dataDir}`);
+  }
+
+  /**
+   * Unfreeze quota freeze for this project (called during manual resume).
+   */
+  unfreezeForQuota(): void {
+    this._isQuotaFrozen = false;
+    logger.info(`[ErrorBudget] Quota freeze cleared for ${this.dataDir}`);
+  }
+
+  /**
+   * Return true when new feature pickup should be frozen.
+   * Returns true if either the error budget is exhausted or quota is frozen.
+   */
+  isPickupFrozen(): boolean {
+    return this._isExhaustedState || this._isQuotaFrozen;
   }
 
   // ---------------------------------------------------------------------------
