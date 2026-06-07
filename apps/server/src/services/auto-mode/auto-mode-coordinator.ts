@@ -23,6 +23,13 @@ export class AutoModeCoordinator {
   /** Whether new feature pickup is currently frozen by an error budget exhaustion. */
   private _pickupFrozen = false;
 
+  /**
+   * Set of project paths currently blocked due to quota exhaustion.
+   * Checked by the feature scheduler before dispatching any feature.
+   * Cleared by unfreezeForQuota() during manual resume.
+   */
+  private _quotaBlockedProjects = new Set<string>();
+
   private readonly events: EventEmitter;
   private readonly settingsService: SettingsService | null;
 
@@ -48,6 +55,32 @@ export class AutoModeCoordinator {
    */
   isPickupFrozen(): boolean {
     return this._pickupFrozen;
+  }
+
+  /**
+   * Freeze new feature pickup for a specific project due to quota exhaustion.
+   * This blocks all dispatch paths that check isQuotaBlocked().
+   */
+  freezeForQuota(projectPath: string): void {
+    this._quotaBlockedProjects.add(projectPath);
+    logger.warn(
+      `[AutoModeCoordinator] Quota freeze for ${projectPath} — new feature pickup blocked until manually cleared`
+    );
+  }
+
+  /**
+   * Unfreeze quota block for a specific project (called during manual resume).
+   */
+  unfreezeForQuota(projectPath: string): void {
+    this._quotaBlockedProjects.delete(projectPath);
+    logger.info(`[AutoModeCoordinator] Quota unfreeze for ${projectPath}`);
+  }
+
+  /**
+   * Returns true when a project is blocked due to quota exhaustion.
+   */
+  isQuotaBlocked(projectPath: string): boolean {
+    return this._quotaBlockedProjects.has(projectPath);
   }
 
   // ── Private handlers ───────────────────────────────────────────────────────

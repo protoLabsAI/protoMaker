@@ -403,6 +403,7 @@ export class AutoModeService {
       HEAP_USAGE_STOP_NEW_AGENTS_THRESHOLD: this.HEAP_USAGE_STOP_NEW_AGENTS_THRESHOLD,
       HEAP_USAGE_ABORT_AGENTS_THRESHOLD: this.HEAP_USAGE_ABORT_AGENTS_THRESHOLD,
       isPickupFrozen: () => this.autoModeCoordinator.isPickupFrozen(),
+      isQuotaBlocked: (projectPath: string) => this.autoModeCoordinator.isQuotaBlocked(projectPath),
     };
     this.scheduler = new FeatureScheduler({
       featureLoader: this.featureLoader,
@@ -663,26 +664,51 @@ export class AutoModeService {
       `Circuit breaker triggered for ${projectPath} after ${failureCount} consecutive failures. Last error: ${errorInfo.type}`
     );
 
-    // Emit event to notify UI
-    const cooldownMinutes = Math.floor(COOLDOWN_PERIOD_MS / 60000);
-    this.emitAutoModeEvent('auto_mode_paused_failures', {
-      message:
-        failureCount >= 2
-          ? `Auto Mode paused: ${failureCount} consecutive failures detected. Circuit breaker activated. Auto-resume in ${cooldownMinutes} minutes.`
-          : `Auto Mode paused: Critical error detected (${errorInfo.type}). Circuit breaker activated. Auto-resume in ${cooldownMinutes} minutes.`,
-      errorType: errorInfo.type,
-      originalError: errorInfo.message,
-      failureCount,
-      projectPath,
-      cooldownMs: COOLDOWN_PERIOD_MS,
-    });
+    // Determine the failure type for loop-state tracking
+    const isQuota = errorInfo.type === 'quota_exhausted';
+    const isRateLimit = errorInfo.type === 'rate_limit';
+    const isErrorBudget = errorInfo.type === 'error_budget';
+    const failureType: LoopState['lastCircuitBreakerFailureType'] = isQuota
+      ? 'quota_exhausted'
+      : isRateLimit
+        ? 'rate_limit'
+        : isErrorBudget
+          ? 'error_budget'
+          : 'other';
+
+    // Emit distinct event for quota exhaustion (no auto-resume) vs. other failures
+    if (isQuota) {
+      this.emitAutoModeEvent('auto_mode_paused_quota', {
+        message: `Auto Mode paused: quota exhausted. Manual intervention required — upgrade or wait for billing reset.`,
+        errorType: errorInfo.type,
+        originalError: errorInfo.message,
+        failureCount,
+        projectPath,
+      });
+
+      // Freeze the error budget and coordinator quota gate for this project
+      this.autoModeCoordinator.freezeForQuota(projectPath);
+    } else {
+      const cooldownMinutes = Math.floor(COOLDOWN_PERIOD_MS / 60000);
+      this.emitAutoModeEvent('auto_mode_paused_failures', {
+        message:
+          failureCount >= 2
+            ? `Auto Mode paused: ${failureCount} consecutive failures detected. Circuit breaker activated. Auto-resume in ${cooldownMinutes} minutes.`
+            : `Auto Mode paused: Critical error detected (${errorInfo.type}). Circuit breaker activated. Auto-resume in ${cooldownMinutes} minutes.`,
+        errorType: errorInfo.type,
+        originalError: errorInfo.message,
+        failureCount,
+        projectPath,
+        cooldownMs: COOLDOWN_PERIOD_MS,
+      });
+    }
 
     // Pause (not stop) the loop — keeps state in the coordinator map so the
     // cooldown timer reference remains valid and autoResumeAfterCooldown can
     // find the state via getState().  stopAutoLoopForProject deletes state,
     // which caused the cooldown timer to write to a dangling reference and
     // auto-resume to silently fail.
-    this.coordinator.pauseLoop(worktreeKey);
+    this.coordinator.pauseLoop(worktreeKey, failureType);
 
     // Clear retry timers for features in this project to prevent zombie restarts
     for (const [featureId, timer] of this.retryTimers) {
@@ -724,6 +750,17 @@ export class AutoModeService {
       return;
     }
 
+    // Quota exhaustion is not self-resolving — auto-resume would just hit the same
+    // quota wall.  Skip automatic resumption and require manual intervention.
+    if (projectState.lastCircuitBreakerFailureType === 'quota_exhausted') {
+      projectState.cooldownTimer = null;
+      logger.info(
+        `Skipping auto-resume for ${projectPath}: last circuit breaker trigger was quota_exhausted. ` +
+          `Manual intervention required (upgrade or wait for billing reset).`
+      );
+      return;
+    }
+
     logger.info(`Auto-resuming auto loop for ${projectPath} after cooldown period`);
 
     // Reset failure tracking
@@ -756,6 +793,62 @@ export class AutoModeService {
         error: errorMessage,
         projectPath,
       });
+    }
+  }
+
+  /**
+   * Manually resume auto-mode after quota resolution (e.g. user upgraded or billing reset).
+   * Clears all quota-related blocks and restores normal operation.
+   *
+   * @param projectPath - The project to resume
+   * @param branchName - The branch name, or null for main worktree
+   */
+  public async manualResumeAfterQuota(
+    projectPath: string,
+    branchName: string | null = null
+  ): Promise<void> {
+    const worktreeKey = this.coordinator.makeKey(projectPath, branchName);
+    const projectState = this.coordinator.getState(worktreeKey);
+
+    // Clear quota block on the coordinator
+    this.autoModeCoordinator.unfreezeForQuota(projectPath);
+
+    // Clear cooldown timer if still pending
+    if (projectState) {
+      if (projectState.cooldownTimer !== null) {
+        clearTimeout(projectState.cooldownTimer);
+        projectState.cooldownTimer = null;
+      }
+      // Reset failure tracking and pause state
+      this.coordinator.resetFailures(worktreeKey);
+    }
+
+    logger.info(`Manual quota resume for ${projectPath} — clearing all quota blocks`);
+
+    // Notify user about manual resume
+    this.emitAutoModeEvent('auto_mode_resumed_quota_cleared', {
+      message: 'Quota block cleared. Auto Mode resuming after manual intervention.',
+      projectPath,
+      reason: 'manual_quota_resume',
+    });
+
+    // Restart auto-mode if it was paused
+    if (projectState?.isPaused) {
+      try {
+        await this.startAutoLoopForProject(projectPath, projectState.branchName ?? null);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes('already running')) {
+          logger.warn('Auto loop already running during manual quota resume:', errorMessage);
+          return;
+        }
+        logger.error('Failed to manually resume after quota clearance:', error);
+        this.emitAutoModeEvent('auto_mode_error', {
+          message: 'Failed to resume after quota clearance',
+          error: errorMessage,
+          projectPath,
+        });
+      }
     }
   }
 

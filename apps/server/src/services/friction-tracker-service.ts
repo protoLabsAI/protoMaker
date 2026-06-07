@@ -41,8 +41,16 @@ const OCCURRENCE_THRESHOLD = 3;
  * - 'unknown': Catch-all fallback — unrelated unclassified failures must not accumulate
  *   into a spurious ticket. Warn-level logs in FailureClassifierService surface the
  *   original reasons for pattern expansion analysis.
+ * - 'quota': Billing/credit exhaustion is an external user-facing condition, not a
+ *   code defect. The circuit breaker + distinct event emission handle this case.
+ *   Filing System Improvement features for quota generates board clutter and noise.
  */
-const EXCLUDED_FROM_FRICTION_TRACKING = new Set<string>(['rate_limit', 'transient', 'unknown']);
+const EXCLUDED_FROM_FRICTION_TRACKING = new Set<string>([
+  'rate_limit',
+  'transient',
+  'unknown',
+  'quota',
+]);
 
 /** How long (ms) to remember in-process filings so concurrent `recordFailure` calls
  *  don't double-fire `featureLoader.create()` for the same pattern. */

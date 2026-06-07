@@ -92,6 +92,13 @@ export interface LoopState {
 
   /** Suppresses repeated idle events until work resumes */
   hasEmittedIdleEvent: boolean;
+
+  /**
+   * The failure type that last triggered the circuit breaker pause.
+   * Used by autoResumeAfterCooldown to skip automatic resumption for
+   * non-self-resolving conditions like quota exhaustion.
+   */
+  lastCircuitBreakerFailureType?: 'rate_limit' | 'quota_exhausted' | 'error_budget' | 'other';
 }
 
 // ─── Coordinator ────────────────────────────────────────────────────────────
@@ -197,9 +204,15 @@ export class AutoLoopCoordinator {
    * caller can inspect it after stopping (e.g. to schedule a cooldown
    * timer that will call resumeLoop).
    *
+   * When `failureType` is provided, it is recorded on the state so that
+   * auto-resume logic can distinguish quota exhaustion from transient errors.
+   *
    * Returns true if the loop was found and paused, false otherwise.
    */
-  pauseLoop(key: string): boolean {
+  pauseLoop(
+    key: string,
+    failureType?: 'rate_limit' | 'quota_exhausted' | 'error_budget' | 'other'
+  ): boolean {
     const state = this.loops.get(key);
     if (!state) return false;
     if (state.isPaused) return true; // already paused
@@ -208,7 +221,14 @@ export class AutoLoopCoordinator {
     state.isRunning = false;
     state.abortController.abort();
 
-    logger.info(`[AutoLoopCoordinator] Loop paused: ${key}`);
+    if (failureType) {
+      state.lastCircuitBreakerFailureType = failureType;
+    }
+
+    logger.info(
+      `[AutoLoopCoordinator] Loop paused: ${key}` +
+        (failureType ? ` (failureType=${failureType})` : '')
+    );
     return true;
   }
 
