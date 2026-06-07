@@ -165,21 +165,30 @@ export function resolveDependencies(features: Feature[]): DependencyResolutionRe
 
         // Check if dependency is incomplete (blocking)
         const depFeature = featureMap.get(depId)!;
+
+        // Epic exemption: grouping/shell epics are transparent to dependency resolution.
+        // They have no implementation work — they exist purely as containers.
+        // Only explicitly blocked epics (operator intent) still block children.
+        if (depFeature.isEpic && depFeature.status !== 'blocked') {
+          // Epic is transparent — don't add to blockedFeatures
+        }
         // Foundation deps require 'done' (merged) — 'review' is NOT sufficient.
         // Non-foundation deps can proceed when dep is in 'review'.
-        const isComplete = depFeature.isFoundation
-          ? depFeature.status === 'completed' ||
-            depFeature.status === 'verified' ||
-            depFeature.status === 'done'
-          : depFeature.status === 'completed' ||
-            depFeature.status === 'verified' ||
-            depFeature.status === 'done' ||
-            depFeature.status === 'review';
-        if (!isComplete) {
-          if (!blockedFeatures.has(feature.id)) {
-            blockedFeatures.set(feature.id, []);
+        else {
+          const isComplete = depFeature.isFoundation
+            ? depFeature.status === 'completed' ||
+              depFeature.status === 'verified' ||
+              depFeature.status === 'done'
+            : depFeature.status === 'completed' ||
+              depFeature.status === 'verified' ||
+              depFeature.status === 'done' ||
+              depFeature.status === 'review';
+          if (!isComplete) {
+            if (!blockedFeatures.has(feature.id)) {
+              blockedFeatures.set(feature.id, []);
+            }
+            blockedFeatures.get(feature.id)!.push(depId);
           }
-          blockedFeatures.get(feature.id)!.push(depId);
         }
       }
     }
@@ -342,6 +351,11 @@ export function areDependenciesSatisfied(
       return dep.status !== 'running' && dep.status !== 'in_progress';
     }
 
+    // Epic exemption: grouping/shell epics are transparent unless explicitly blocked.
+    if (dep.isEpic && dep.status !== 'blocked') {
+      return true;
+    }
+
     // Foundation dependencies require 'done' (merged) — 'review' is NOT sufficient.
     // This prevents downstream agents from starting on stale worktrees when the
     // foundation (e.g., package scaffold) hasn't been merged to main yet.
@@ -378,6 +392,9 @@ export function getBlockingDependencies(feature: Feature, allFeatures: Feature[]
   return feature.dependencies.filter((depId: string) => {
     const dep = allFeatures.find((f) => f.id === depId);
     if (!dep) return false; // Missing dependency is not blocking (not found in feature list)
+
+    // Epic exemption: grouping/shell epics are transparent unless explicitly blocked
+    if (dep.isEpic && dep.status !== 'blocked') return false;
 
     // Foundation deps require 'done' (merged) — 'review' is NOT sufficient
     if (dep.isFoundation) {
@@ -433,6 +450,11 @@ export function getBlockingDependenciesFromMap(
       continue; // Missing dependency is not blocking (not found in feature list)
     }
 
+    // Epic exemption: grouping/shell epics are transparent unless explicitly blocked
+    if (dep.isEpic && dep.status !== 'blocked') {
+      continue;
+    }
+
     // Foundation deps require 'done' (merged) — 'review' is NOT sufficient
     if (dep.isFoundation) {
       if (dep.status !== 'done' && dep.status !== 'completed' && dep.status !== 'verified') {
@@ -485,6 +507,11 @@ export function getBlockingInfo(feature: Feature, allFeatures: Feature[]): Block
     const dep = allFeatures.find((f) => f.id === depId);
     if (!dep) {
       continue; // Missing dependency is not blocking (not found in feature list)
+    }
+
+    // Epic exemption: grouping/shell epics are transparent unless explicitly blocked
+    if (dep.isEpic && dep.status !== 'blocked') {
+      continue;
     }
 
     // Check if dependency is incomplete (blocking)
