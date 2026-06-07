@@ -74,3 +74,57 @@ export interface RemediationBudgetInput {
   /** Settings that define the budget limits */
   settings: CIReactionSettings;
 }
+
+// ============================================================================
+// CI Failure Evidence — structured test failure details for agent prompts
+// ============================================================================
+
+/**
+ * Structured evidence extracted from a failed CI check run.
+ * Populated by ci-failure-evidence-collector using GitHub check run annotations
+ * and log output parsing.
+ */
+export interface CIFailureEvidence {
+  /** Check name as reported by GitHub (e.g. "CI / test") */
+  checkName: string;
+  /** URL to the check run on GitHub */
+  checkUrl?: string;
+  /** File where the failure occurred (e.g. "src/services/foo.test.ts") */
+  testFile?: string;
+  /** Human-readable test name or description */
+  testName?: string;
+  /** Assertion that failed (e.g. "expect(escalations).toHaveLength(1)") */
+  assertion?: string;
+  /** Expected value from the assertion */
+  expectedValue?: string;
+  /** Received/actual value from the assertion */
+  receivedValue?: string;
+  /** File:line location of the failure */
+  location?: string;
+  /** Relevant log excerpt (truncated, filtered for failure patterns) */
+  logExcerpt?: string;
+  /** Raw annotation objects from the GitHub check run */
+  annotations?: Array<{
+    path?: string;
+    start_line?: number;
+    end_line?: number;
+    annotation_level?: 'notice' | 'warning' | 'failure';
+    message?: string;
+    title?: string;
+    raw_details?: string;
+  }>;
+}
+
+/**
+ * Per-cycle remediation history entry for progress-aware budget extension.
+ * Tracks the number of CI failures at each cycle so the budget enforcer can
+ * detect when the agent is making measurable progress (fewer failures).
+ */
+export interface RemediationCycleSnapshot {
+  /** ISO 8601 timestamp */
+  timestamp: string;
+  /** Number of failing checks at this cycle */
+  ciFailureCount: number;
+  /** Names of the failing checks */
+  failingCheckNames?: string[];
+}

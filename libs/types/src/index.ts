@@ -107,6 +107,8 @@ export type {
   CIReactionSettings,
   RemediationBudgetCheckResult,
   RemediationBudgetInput,
+  CIFailureEvidence,
+  RemediationCycleSnapshot,
 } from './ci-reaction.js';
 
 // Quarantine types

@@ -18,6 +18,7 @@ import type {
   PipelinePhase,
   StructuredPlan,
   VerifiedTrajectory,
+  CIFailureEvidence,
 } from '@protolabsai/types';
 import { deriveVerificationTier } from '@protolabsai/types';
 import type {
@@ -27,6 +28,7 @@ import type {
   StateTransitionResult,
 } from './lead-engineer-types.js';
 import { EXECUTE_TIMEOUT_MS, MAX_AGENT_RETRIES, MAX_INFRA_RETRIES } from './lead-engineer-types.js';
+import { formatCIFailureEvidence } from './ci-failure-evidence-collector.js';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -1945,6 +1947,14 @@ export class ExecuteProcessor implements StateProcessor {
         contextParts.push(this.formatStructuredPlan(ctx.structuredPlan));
       } else if (ctx.planOutput) {
         contextParts.push(`## Implementation Plan\n\n${ctx.planOutput}`);
+      }
+      // Inject structured CI failure evidence (test names, assertions, log excerpts)
+      // when available — takes priority over plain review feedback for CI failures.
+      if (ctx.ciFailureEvidence && ctx.ciFailureEvidence.length > 0) {
+        const formatted = formatCIFailureEvidence(ctx.ciFailureEvidence);
+        if (formatted) {
+          contextParts.push(formatted);
+        }
       }
       if (ctx.reviewFeedback) {
         contextParts.push(

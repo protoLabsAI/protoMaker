@@ -461,6 +461,16 @@ export interface Feature {
    */
   reviewRemediationCount?: number;
   /**
+   * Per-cycle remediation history for progress-aware budget extension.
+   * Each entry records the number of CI failures at that cycle so the budget
+   * enforcer can detect when the agent is making measurable progress.
+   */
+  _remediationHistory?: Array<{
+    timestamp: string;
+    ciFailureCount: number;
+    failingCheckNames?: string[];
+  }>;
+  /**
    * Head commit SHA at which the review feedback audit last auto-dismissed a
    * bot CHANGES_REQUESTED review. Paired with reviewAuditDismissCount as a loop
    * guard: if a bot re-requests changes on the same head we already cleared,
