@@ -141,6 +141,7 @@ import {
 import { runInitScript } from './init-script-service.js';
 import { checkFeatureRestartOutcome } from './startup-recovery-service.js';
 import { checkAppCompliance, buildComplianceRefusalMessage } from './app-compliance-service.js';
+import { validateRepoSlug, buildRepoSlugMismatchMessage } from './repo-remote-validation.js';
 import type {
   RunningFeature,
   PendingApproval,
@@ -830,6 +831,24 @@ export class AutoModeService {
     if (!compliance.compliant && !compliance.skipped) {
       const message = buildComplianceRefusalMessage(projectPath, compliance.violations);
       logger.warn(`[compliance] ${message}`);
+      throw new Error(message);
+    }
+
+    // Repo-remote alignment gate.  Refuse to run auto-mode when the project's
+    // `expectedRepoSlug` setting disagrees with the git remote origin at that path.
+    // Prevents cross-repo corruption where .automaker/ targets one repo but the
+    // git remote points to another.  AUTOMAKER_SKIP_REPO_SLUG_CHECK bypasses.
+    const projectSettings = this.settingsService
+      ? await this.settingsService.getProjectSettings(projectPath).catch(() => null)
+      : null;
+    const slugValidation = await validateRepoSlug(projectPath, projectSettings?.expectedRepoSlug);
+    if (!slugValidation.valid && !slugValidation.skipped) {
+      const message = buildRepoSlugMismatchMessage(
+        projectPath,
+        slugValidation.expectedSlug!,
+        slugValidation.actualSlug
+      );
+      logger.warn(`[repo-remote] ${message}`);
       throw new Error(message);
     }
 
