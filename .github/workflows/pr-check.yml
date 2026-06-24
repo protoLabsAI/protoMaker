@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: namespace-profile-protolabs-linux
+    runs-on: ${{ vars.NSC_RUNNER || 'namespace-profile-protolabs-linux' }}
     if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
     outputs:
       docs_only: ${{ steps.changes.outputs.docs_only }}
@@ -69,7 +69,7 @@ jobs:
           NODE_OPTIONS: '--max-old-space-size=4096'
 
   ci-complete:
-    runs-on: namespace-profile-protolabs-linux
+    runs-on: ${{ vars.NSC_RUNNER || 'namespace-profile-protolabs-linux' }}
     needs: [build]
     if: always() && (github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request')
     steps:

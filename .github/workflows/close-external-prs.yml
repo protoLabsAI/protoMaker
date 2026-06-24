@@ -10,7 +10,7 @@ on:
 jobs:
   close-external-pr:
     name: Close external code contributions
-    runs-on: namespace-profile-protolabs-linux
+    runs-on: ${{ vars.NSC_RUNNER || 'namespace-profile-protolabs-linux' }}
     # Only run for PRs from forks (external contributors)
     if: github.event.pull_request.head.repo.fork == true
     permissions:

@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   notify-acceptance:
-    runs-on: namespace-profile-protolabs-linux
+    runs-on: ${{ vars.NSC_RUNNER || 'namespace-profile-protolabs-linux' }}
     if: "github.event.label.name == 'status: accepted'"
     steps:
       - name: Post acceptance comment
