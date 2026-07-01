@@ -291,6 +291,18 @@ export interface ProjectSettings {
    * as a global server overrides it for this project.
    */
   mcpServers?: MCPServerConfig[];
+
+  // Repository Alignment (per-project)
+  /**
+   * Expected GitHub repo slug in "owner/repo" form (e.g. "protoLabsAI/ava").
+   * When set, auto-mode validates that the git remote origin at this project's
+   * path resolves to the same slug. If they disagree, auto-mode refuses to start
+   * and surfaces a project-health warning on the board.
+   *
+   * This prevents cross-repo corruption where the .automaker/ board targets one
+   * repo but the git remote points to another.
+   */
+  expectedRepoSlug?: string;
 }
 
 /** Default project settings (empty - all settings are optional and fall back to global) */
