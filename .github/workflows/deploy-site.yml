@@ -30,7 +30,7 @@ permissions:
 
 jobs:
   deploy:
-    runs-on: ${{ vars.NSC_RUNNER || 'namespace-profile-protolabs-linux' }}
+    runs-on: ubuntu-latest
     if: github.repository == 'protoLabsAI/protoMaker'
     timeout-minutes: 10
     concurrency:

@@ -5,7 +5,7 @@ on:
 
 jobs:
   regenerate:
-    runs-on: ${{ vars.NSC_RUNNER || 'namespace-profile-protolabs-linux' }}
+    runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write

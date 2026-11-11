@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   triage:
-    runs-on: ${{ vars.NSC_RUNNER || 'namespace-profile-protolabs-linux' }}
+    runs-on: ubuntu-latest
     steps:
       - name: Add needs-triage label
         run: |

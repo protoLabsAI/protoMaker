@@ -438,10 +438,11 @@ npx -y @protolabsai/release-tools verify-workspace-config --repo <owner>/<repo>
 
 - Exit 0 → conformant. Proceed.
 - `workflows-use-owned-runners` error → one or more workflows still use a
-  GitHub-hosted runner (`ubuntu/windows/macos-*`). This is a per-workflow code
-  edit the scaffolder can't make automatically: change `runs-on:` to
-  `namespace-profile-protolabs-linux` in the listed files and open a PR. Note it
-  in the completion report.
+  runner label that isn't GitHub-hosted (for example a leftover
+  `namespace-profile-*` label). This is a per-workflow code edit the scaffolder
+  can't make automatically: change `runs-on:` to `ubuntu-latest` (or
+  `macos-latest`/`windows-latest` for macOS/Windows jobs) in the listed files and
+  open a PR. Note it in the completion report.
 - Any other error → re-run Step 4 (`init-workspace-config`); the scaffolder is
   idempotent and fills whatever is missing.
 
