@@ -19,6 +19,7 @@ import type { EventEmitter } from '../lib/events.js';
 import type { ProjectService } from './project-service.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { SettingsService } from './settings-service.js';
+import { validateRepoSlug } from './repo-remote-validation.js';
 
 const logger = createLogger('ProjectHealth');
 
@@ -55,6 +56,21 @@ export class ProjectHealthService {
         return project.health ?? 'on-track';
       }
 
+      // Repo-remote alignment check — a misaligned project is always off-track.
+      const alignment = await this.checkRepoAlignment(projectPath);
+      if (alignment && !alignment.aligned) {
+        const targetHealth: ProjectHealth = 'off-track';
+        if (project.health !== targetHealth) {
+          await this.projectService.updateProject(projectPath, projectSlug, {
+            health: targetHealth,
+          });
+          logger.warn(
+            `Project "${projectSlug}" health -> off-track (repo mismatch: expected ${alignment.expected}, got ${alignment.actual})`
+          );
+        }
+        return targetHealth;
+      }
+
       const factors = await this.computeFactors(projectPath, project);
       const health = this.deriveHealth(factors);
 
@@ -85,6 +101,46 @@ export class ProjectHealthService {
       }
     } catch (err) {
       logger.warn(`Failed to compute health for projects in ${projectPath}:`, err);
+    }
+  }
+
+  /**
+   * Check whether a project's git remote origin aligns with its declared
+   * `expectedRepoSlug` in project settings.
+   *
+   * Returns `null` when `expectedRepoSlug` is not configured (nothing to check).
+   * Returns `{ aligned: true }` when the remote matches.
+   * Returns `{ aligned: false, expected, actual }` on mismatch.
+   *
+   * This is a public, settings-service-free entry point so that the board UI
+   * or other services can query alignment without going through the full health
+   * compute pipeline.
+   */
+  async checkRepoAlignment(projectPath: string): Promise<{
+    aligned: boolean;
+    expected?: string;
+    actual?: string | null;
+  } | null> {
+    try {
+      const projectSettings = await this.settingsService
+        .getProjectSettings(projectPath)
+        .catch(() => null);
+      if (!projectSettings?.expectedRepoSlug) return null;
+
+      const result = await validateRepoSlug(projectPath, projectSettings.expectedRepoSlug);
+
+      if (result.notConfigured || result.skipped) {
+        return null;
+      }
+
+      return {
+        aligned: result.valid,
+        expected: result.expectedSlug,
+        actual: result.actualSlug,
+      };
+    } catch (err) {
+      logger.warn(`Failed to check repo alignment for ${projectPath}:`, err);
+      return null;
     }
   }
 
