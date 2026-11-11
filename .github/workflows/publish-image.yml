@@ -16,7 +16,6 @@ env:
 
 jobs:
   build:
-    # workspace-config: allow-hosted-runner docker buildx build + registry push
     runs-on: ubuntu-latest
     permissions:
       contents: read
